@@ -35,8 +35,7 @@ setup(name='bgc_md2',
         #        ]
         #},
         install_requires=[
-            #"bibtexparser"
-            ,"CompartmentalSystems"
+            "CompartmentalSystems"
             #,"testinfrastructure"
             ,"concurrencytest"
             #,"requests"
