@@ -46,6 +46,7 @@ setup(name='bgc_md2',
             #,'sqlalchemy'
             #,'oslash'
             #,'pypandoc'
+            ,"networkx"
         ],
         include_package_data=True,
         #zip_safe=False

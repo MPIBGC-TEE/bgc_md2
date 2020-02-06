@@ -1,4 +1,8 @@
+from .inspect_type_hints import input_mvars, output_mvar
 from functools import lru_cache,reduce
+import networkx as nx
+
+
 def powerlist(S):
     # We do not want to rely on the set union operation (which necessiates the creation of sets
     # in the first place which is a O(n^2) operation)
@@ -9,14 +13,16 @@ def powerlist(S):
     # and gradually enhance it
     return reduce(lambda acc,el:acc+[ subset +[el] for subset in acc],S,initial)
 
-def sparse_powerset_Graph(allMvars,allComputers):
-    raise('not implemented for the new Mvars and Computers as annototed functions')
-    new_nodes=frozenset([frozenset({v}) for v in allMvars])
-    G=nx.DiGraph()
-    G.add_nodes_from(new_nodes)
-    G_final,new_nodes=updated_Graph(G,new_nodes,allMvars,allComputers)
-    # new_nodes is now empty 
-    return G_final
+def sparse_powerset_graph(mvars, computers):
+    g = nx.DiGraph()
+    g.add_nodes_from(frozenset({v}) for v in mvars)
+    for computer in computers:
+        _input = frozenset(input_mvars(computer))
+        _output = frozenset({output_mvar(computer)})
+        g.add_node(_input)
+        g.add_edge(_input, _output, computer=computer)
+    return g
+
 
 def draw_multigraph_graphviz(allMvars,allComputers):
     # build initial multigraph

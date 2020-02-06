@@ -53,6 +53,15 @@ sig=signature(reservoirModel)
 sig.return_annotation.__name__
 # 'SmoothReservoirModel'
 
+def input_mvars(computer):
+    params = signature(computer).parameters.values()
+    return {param.annotation for param in params}
+
+
+def output_mvar(computer):
+    return signature(computer).return_annotation
+
+
 # allComputers is the union of all functions in the computers 
 # module
 # The set of all Mvartypes is the union of the signatures of all
