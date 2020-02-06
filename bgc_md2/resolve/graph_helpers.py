@@ -24,6 +24,13 @@ def sparse_powerset_graph(mvars, computers):
     return g
 
 
+def direct_prerequisites(graph, mvar):
+    node = frozenset({mvar})
+    return set(
+        (pre, data['computer'])
+        for pre, _, data in graph.in_edges(node, data=True))
+
+
 def draw_multigraph_graphviz(allMvars,allComputers):
     # build initial multigraph
     # for visualization draw the directed Multigraph with the MVars as nodes

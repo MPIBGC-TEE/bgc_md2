@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import matplotlib.pyplot as plt
 from bgc_md2.resolve.graph_helpers import ( 
-    # direct_predecessor_nodes
+    direct_prerequisites,
     #,minimal_startnodes_for_single_var
     #,minimal_startnodes_for_node
     #,update_step
@@ -132,34 +132,28 @@ class TestGraphs(TestCase):
             f_from_b,
         }
     
-    @skip(" until new Version of MVars and Computers  are derived from files")
-    def test_direct_predecessor_nodes(self):
-        pns=direct_predecessor_nodes(frozenset({self.Mvars['a']}),self.Mvars,self.Computers) # this function should also return the computers it used 
-        self.assertSetEqual(
-             pns
-            ,frozenset({
-                 frozenset({self.Mvars['i']})
-                })
-        )
-        #print(nodes_2_string(pns))
+    def test_direct_prerequisites(self):
+        g = sparse_powerset_graph(self.mvars, self.computers)
         
-        pns=direct_predecessor_nodes(frozenset({self.Mvars['b']}),self.Mvars,self.Computers) # this function should also return the computers it used 
         self.assertSetEqual(
-             pns
-            ,frozenset({
-                 frozenset({self.Mvars['c'],self.Mvars['d']})
-                ,frozenset({self.Mvars['f'],self.Mvars['e']})
-                })
-        )
-        pns=direct_predecessor_nodes(
-                frozenset({ self.Mvars['c'],self.Mvars['d']}) ,self.Mvars,self.Computers) # this function should also return the computers it used 
+            direct_prerequisites(g, A), {(frozenset({I}), a_from_i)})
+        
         self.assertSetEqual(
-             pns
-            ,frozenset({
-                 frozenset({self.Mvars['b']})
-                ,frozenset({self.Mvars['h'],self.Mvars['c'],self.Mvars['g']})
-                })
-        )
+            direct_prerequisites(g, B),
+            {
+                (frozenset({C, D}), b_from_c_d),
+                (frozenset({E, F}), b_from_e_f),
+            })
+
+        # pns=direct_predecessor_nodes(
+        #         frozenset({ self.Mvars['c'],self.Mvars['d']}) ,self.Mvars,self.Computers) # this function should also return the computers it used 
+        # self.assertSetEqual(
+        #      pns
+        #     ,frozenset({
+        #          frozenset({self.Mvars['b']})
+        #         ,frozenset({self.Mvars['h'],self.Mvars['c'],self.Mvars['g']})
+        #         })
+        # )
 
     @skip(" until new Version of MVars and Computers  are derived from files")
     def test_update_step(self):
