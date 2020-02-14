@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 import matplotlib.pyplot as plt
 from bgc_md2.resolve.graph_helpers import ( 
-    direct_prerequisites,
-    #,minimal_startnodes_for_single_var
-    #,minimal_startnodes_for_node
-    #,update_step
+    # Thomas's functions
+    direct_prerequisites_Thomas
+    ,graph_Thomas
+    #
+    #
+    # Markus's functions
+    ,sparse_powerset_graph
+    ,direct_predecessor_nodes
+    ,minimal_startnodes_for_single_var
+    ,minimal_startnodes_for_node
+    ,update_step
     #,remove_supersets
-    #,node_2_string
-    #,nodes_2_string
-    #,edge_2_string
+    ,node_2_string
+    ,nodes_2_string
+    ,edge_2_string
     #,cartesian_union
     #,create_multigraph
-    #,draw_multigraph_graphviz
-    #,draw_multigraph_matplotlib
+    ,draw_multigraph_graphviz
+    ,draw_multigraph_matplotlib
     #,draw_multigraph_plotly
-    sparse_powerset_graph,
-    #,draw_Graph_png
+    ,draw_Graph_svg
     #,powerlist
 )
 from copy import copy,deepcopy
@@ -121,7 +127,7 @@ class TestGraphs(TestCase):
         # fixme mm 02-03-2020: 
         # assemble this set from a file of annotated functions in 
         # special file
-        self.computers = {
+        self.computers = frozenset({
             a_from_i,
             b_from_c_d,
             b_from_e_f,
@@ -130,87 +136,85 @@ class TestGraphs(TestCase):
             d_from_g_h,
             e_from_b,
             f_from_b,
-        }
+        })
     
-    def test_direct_prerequisites(self):
-        g = sparse_powerset_graph(self.mvars, self.computers)
-        
-        self.assertSetEqual(
-            direct_prerequisites(g, A), {(frozenset({I}), a_from_i)})
-        
-        self.assertSetEqual(
-            direct_prerequisites(g, B),
-            {
-                (frozenset({C, D}), b_from_c_d),
-                (frozenset({E, F}), b_from_e_f),
-            })
-
         # pns=direct_predecessor_nodes(
-        #         frozenset({ self.Mvars['c'],self.Mvars['d']}) ,self.Mvars,self.Computers) # this function should also return the computers it used 
+        #         frozenset({ self.mvars['c'],self.mvars['d']}) ,self.mvars,self.computers) # this function should also return the computers it used 
         # self.assertSetEqual(
         #      pns
         #     ,frozenset({
-        #          frozenset({self.Mvars['b']})
-        #         ,frozenset({self.Mvars['h'],self.Mvars['c'],self.Mvars['g']})
+        #          frozenset({self.mvars['b']})
+        #         ,frozenset({self.mvars['h'],self.mvars['c'],self.mvars['g']})
         #         })
         # )
+    
 
-    @skip(" until new Version of MVars and Computers  are derived from files")
+    def test_direct_predecessor_nodes(self):
+        self.assertSetEqual(
+            direct_predecessor_nodes(
+                frozenset({A})
+                ,self.computers
+            ) 
+            ,frozenset({
+                 frozenset({I})
+            })
+        )
+
+        self.assertSetEqual(
+             direct_predecessor_nodes(
+                 frozenset({B})
+                 ,self.computers
+            )
+            ,frozenset({
+                 frozenset({C,D})
+                ,frozenset({F,E})
+            })
+        )
+
+        self.assertSetEqual(
+            direct_predecessor_nodes(
+                frozenset({C,D})
+                ,self.computers
+            ) 
+            ,frozenset({
+                 frozenset({B})
+                ,frozenset({H,C,G})
+            })
+        )
+
     def test_update_step(self):
-        new_nodes=frozenset([frozenset({v}) for v in self.Mvars])
+        new_nodes=frozenset([frozenset({v}) for v in self.mvars])
         G=nx.DiGraph()
         G.add_nodes_from(new_nodes)
-        draw_Graph_png(G,"original_Graph")
-        G_new,new_nodes=update_step(G,new_nodes,self.Mvars,self.Computers)
-        draw_Graph_png(G_new,"updated_Graph_1")
+        draw_Graph_svg(G,"test_update_step_original_Graph")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_1")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_2")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_3")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_4")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_5")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_6")
         
-    @skip(" until new Version of MVars and Computers  are derived from files")
-    def test_minimal_startnodes_for_single_var(self):
-        G=sparse_powerset_graph(self.Mvars,self.Computers)
-        res=minimal_startnodes_for_single_var(G,self.Mvars['b'])
-        print(nodes_2_string(res))
-        
-        
-    @skip(" until new Version of MVars and Computers  are derived from files")
-    def test_minimal_startnodes_for_node(self):
-        G=sparse_powerset_graph(self.Mvars,self.Computers)
-        targetVars=frozenset({self.Mvars['a'],self.Mvars['b']})
-        res=minimal_startnodes_for_node(
-                 G
-                ,targetVars
-        )
-        print('###############################')
-        print('miminal startsets for: ', node_2_string(targetVars),nodes_2_string(res))
-        print('###############################')
-        
-    @skip(" until new Version of MVars and Computers  are derived from files")
     def test_draw_multigraph_graphviz(self):
-        draw_multigraph_graphviz(self.Mvars,self.Computers)
+        draw_multigraph_graphviz(self.mvars,self.computers)
     
-    @skip(" until new Version of MVars and Computers  are derived from files")
     def test_draw_multigraph_matplotlib(self):
-        draw_multigraph_matplotlib(self.Mvars,self.Computers)
+        draw_multigraph_matplotlib(self.mvars,self.computers)
     
-    @skip(" until new Version of MVars and Computers  are derived from files")
+    @skip("very immature and nearly manual, but maybe neccessary to make the connections clickable") 
     def test_draw_multigraph_plotly(self):
-        draw_multigraph_plotly(self.Mvars,self.Computers)
-    
-    def test_creation(self):
-        # only for visualization draw the connections of the mvars via computers
-        # note that this is not a graph we can query for connectivity
+        draw_multigraph_plotly(self.mvars,self.computers)
         
-        # Now we build the directed Graph we can use to compute connectivity
-        # the Nodes are sets of Mvars (elemenst of the powerset of all Mvars)
-        # and a connection between two sets indicates computability of the target set from 
-        # the source set.
-        # The complete graph would contain all elements of the powerset of allMvars and all
-        # possible connections, which is prohibitively expensive.
-        # Instead we will compute a subgraph where we start with one element sets as targets
-        # and infer the predecessors of those sets and then the predecessors of the predecessors and so on until we do not find new nodes=start_sets.
-         
-        g = sparse_powerset_graph(self.mvars, self.computers)
-        # After the graph has been computed we can use it
-        # to infer computability of all Mvars
+   
+
+
+    def test_Thomas_graph_creation(self):
+        g = graph_Thomas(self.mvars, self.computers)
 
         self.assertEqual({
             frozenset({E}),
@@ -237,3 +241,67 @@ class TestGraphs(TestCase):
             (frozenset({C, D}), frozenset({B})),
             (frozenset({E, F}), frozenset({B})),
         }, g.edges())
+    
+
+    def test_direct_prerequisites_Thomas(self):
+        g = graph_Thomas(self.mvars, self.computers)
+        
+        self.assertSetEqual(
+            direct_prerequisites_Thomas(g, A), {(frozenset({I}), a_from_i)}
+        )
+        
+        self.assertSetEqual(
+            direct_prerequisites_Thomas(g, B),
+            {
+                (frozenset({C, D}), b_from_c_d),
+                (frozenset({E, F}), b_from_e_f)
+            }
+        )
+
+    
+    def test_Markus_graph_creation(self):
+        # Now we build the directed Graph we can use to compute connectivity
+        # the Nodes are sets of Mvars (elemenst of the powerset of all Mvars)
+        # and a connection between two sets indicates computability of the target set from 
+        # the source set.
+        # The complete graph would contain all elements of the powerset of allMvars and all
+        # possible connections, which is prohibitively expensive.
+        # Instead we will compute a subgraph where we start with one element sets as targets
+        # and infer the predecessors of those sets and then the predecessors of the predecessors and so on until we do not find new nodes=start_sets.
+        G=sparse_powerset_graph(self.mvars,self.computers)
+
+    def test_minimal_startnodes_for_single_var(self):
+        spsg=sparse_powerset_graph(self.mvars,self.computers)
+        # After the graph has been computed we can use it
+        # to infer computability of all Mvars
+        res=minimal_startnodes_for_single_var(spsg,B)
+        #print(nodes_2_string(res))
+        self.assertSetEqual(
+            res,
+            frozenset({ 
+                frozenset({E,F}),
+                frozenset({C,D}),
+                frozenset({H,C,G})
+            })
+        )
+        
+        
+    def test_minimal_startnodes_for_node(self):
+        spsg=sparse_powerset_graph(self.mvars,self.computers)
+        targetVars=frozenset({A,B})
+        res=minimal_startnodes_for_node(
+                 spsg
+                ,targetVars
+        )
+        #print('###############################')
+        #print('miminal startsets for: ', node_2_string(targetVars),nodes_2_string(res))
+        #print('###############################')
+        self.assertSetEqual(
+            res,
+            frozenset({ 
+                frozenset({E,F,I}),
+                frozenset({C,D,I}),
+                frozenset({H,C,G,I})
+            })
+        )
+        

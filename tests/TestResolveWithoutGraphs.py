@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 import matplotlib.pyplot as plt
-from bgc_md2.resolve.graph_helpers import ( 
-    direct_prerequisites,
-    sparse_powerset_graph
+from bgc_md2.resolve.non_graph_helpers import  (
+    computable_mvars
+	,directly_computable_mvars
+	,input_mvars
+	,arg_set
+	,arg_set_set
+	,output_mvar
+	,all_mvars
+	,applicable_computers
+	,all_computers_for_mvar
 )
-from bgc_md2.resolve.non_graph_helpers import  computable_mvars,directly_computable_mvars,input_mvars,output_mvar,all_mvars,applicable_computers
 
 from unittest import TestCase,skip
 
@@ -97,6 +103,7 @@ class TestResolveWithoutGraphs(TestCase):
                 b_form_a,
                 f_from_e
         })
+
     def test_signature(self):
         self.assertEqual(
             input_mvars(f_from_b),
@@ -106,11 +113,32 @@ class TestResolveWithoutGraphs(TestCase):
             input_mvars(d_from_a_c),
             frozenset({A,C})
         )
+    
+    def test_all_computers_for_mvar(self):
+        self.assertEqual(
+            all_computers_for_mvar(D,self.computers),
+            frozenset({ d_from_a_c ,d_from_b_c })
+         )
 
     def test_all_mvars(self):
         self.assertEqual(
             all_mvars(self.computers),
             frozenset({A, B, C, D, E, F })
+         )
+
+    def test_arg_set(self):
+        self.assertEqual(
+            arg_set(d_from_a_c),
+            frozenset({A, C})
+         )
+
+    def test_arg_set_set(self):
+        self.assertEqual(
+            arg_set_set(D,self.computers),
+            frozenset({
+                frozenset({A, C}),
+                frozenset({B, C})
+            })
          )
 
     def test_applicable_computers(self):

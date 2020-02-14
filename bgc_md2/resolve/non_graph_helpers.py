@@ -34,11 +34,32 @@ def directly_computable_mvars(
 def applicable_computers(
          allComputers:Set[Callable],
          available_mvars:Set[type]
-        )->Set[Callable]:
+    )->Set[Callable]:
     return frozenset(
         [c for c in allComputers if input_mvars(c).issubset(available_mvars)]
     )
 
+@lru_cache(maxsize=None) 
+def all_computers_for_mvar(
+        mvar:type,
+        allComputers:Set[Callable]
+    )->Set[Callable]:
+    return frozenset(
+        [c for c in allComputers if output_mvar(c)==mvar]
+    )
+
+def arg_set(computer:Callable)->Set[type]:
+    params = signature(computer).parameters.values()
+    return frozenset({param.annotation for param in params})
+
+@lru_cache(maxsize=None) 
+def arg_set_set( 
+        mvar :type,
+        allComputers:Set[Callable]
+    )->Set[Set[type]]:
+    # return the set of arg_name_sets for all computers that
+    # return this mvar
+    return frozenset([ arg_set(c) for c in all_computers_for_mvar(mvar,allComputers)])
 
 @lru_cache(maxsize=None) 
 def all_mvars(all_computers: Set[Callable])->Set[type]:
@@ -50,7 +71,12 @@ def all_mvars(all_computers: Set[Callable])->Set[type]:
         frozenset({})
     )
 
+def pretty_name(mvar:type):
+    s=mvar.__name__
+    #return ((s.split('<')[1]).split('>')[0]).split('.')[-1]
+    return s
 
+# synonym for arg_set
 def input_mvars(computer:Callable)->Set[type]:
     params = signature(computer).parameters.values()
     return frozenset({param.annotation for param in params})
