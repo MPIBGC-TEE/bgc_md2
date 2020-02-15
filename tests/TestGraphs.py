@@ -29,15 +29,57 @@ import networkx as nx
 from unittest import TestCase,skip
 from copy import copy
 
+class A_minus_1:
+    pass
+
+class A_minus_2:
+    pass
+
 
 
 class A:
     """A variable we assume to be given"""
-
+    pass
 
 class B:
     pass
 
+class A_minus_2:
+    pass
+
+class A_minus_1:
+    pass
+
+class A0:
+    pass
+
+class A1:
+    pass
+
+class A2:
+    pass
+
+class A3:
+    pass
+
+class B_minus_2:
+    pass
+
+
+class B_minus_1:
+    pass
+
+class B0:
+    pass
+
+class B1:
+    pass
+
+class B2:
+    pass
+
+class B3:
+    pass
 
 class C:
     pass
@@ -69,43 +111,75 @@ class I:
 
 def a_from_i(i: I) -> A:
     """Computes a from i"""
-    return i**2
+    return A()
 
 
 def b_from_c_d(c: C, d: D) -> B:
     """Computes b from c and d"""
-    return 3
+    return B()
 
 
 def b_from_e_f(e: E, f: F) -> B:
     """Computes b from e and f"""
-    return 3
+    return B()
 
 
 def c_from_b(b: B) -> C:
     """Computes c from b"""
-    return 2*b
+    return C()
 
 
 def d_from_b(b: B) -> D:
     """Computes d from b"""
-    return 5
+    return D() 
 
 
 def d_from_g_h(g: G, h: H) -> D:
     """Computes d from g and h"""
-    return 5
+    return D()
 
 
 def e_from_b(b: B) -> E:
     """Computes e from b"""
-    return 4
+    return E()
 
 
 def f_from_b(b: B) -> F:
     """Computes f from b"""
-    return 4
+    return F()
 
+def a_minus_1_from_a_minus_2(x:A_minus_2)->A_minus_1:
+    return A_minus_1()
+
+def a0_from_a_minus_1(x:A_minus_1)->A0:
+    return A0()
+
+def a1_from_a0(a0:A0) -> A1:
+    return A1()
+
+def a2_from_a1(a1:A1) -> A2:
+    return A2()
+
+def a3_from_a2(a2:A2) -> A3:
+    return A3()
+
+def a0_from_b0(x:B0)->A0:
+    return A0()
+
+def b_minus_1_from_b_minus_2(x:B_minus_2)->B_minus_1:
+    return B_minus_1()
+
+def b0_from_b_minus_1(x:B_minus_1)->B0:
+    return B0()
+
+def b1_from_b0(b0:B0) -> B1:
+    return B1()
+
+def b2_from_b1(b1:B1) -> B2:
+    return B2()
+
+def b3_from_b2(b2:B2) -> B3:
+    return B3()
 
 class TestGraphs(TestCase):
     # we produce a small set of Mvars with a loop (b could be something like a CompartmentalSystem that can be computed # in different ways and can also be queried about its constituents.
@@ -268,8 +342,93 @@ class TestGraphs(TestCase):
         # possible connections, which is prohibitively expensive.
         # Instead we will compute a subgraph where we start with one element sets as targets
         # and infer the predecessors of those sets and then the predecessors of the predecessors and so on until we do not find new nodes=start_sets.
-        G=sparse_powerset_graph(self.mvars,self.computers)
+        #spsg=sparse_powerset_graph(self.mvars,self.computers)
 
+        ################# linear A1->A2->A3
+        spsg=sparse_powerset_graph(
+            frozenset({A1,A2,A3}),
+            frozenset({a2_from_a1,a3_from_a2})
+        )
+        self.assertSetEqual(
+            set(spsg.nodes()),
+            {
+                frozenset({A1}),
+                frozenset({A2}),
+                frozenset({A3})
+            }
+        )
+        self.assertSetEqual(
+            set(spsg.edges()),
+            {
+                (frozenset({A1}),frozenset({A2})),
+                (frozenset({A2}),frozenset({A3}))
+            }
+        )
+        ################## cross
+        #       B-2->B-1->B0->B1->B2
+        #                  || 
+        #                  \/ 
+        #       A-2->A-1->A0->A1->A2
+        spsg=sparse_powerset_graph(
+            frozenset({
+                B_minus_2
+                ,B_minus_1
+                ,B0
+                ,B1
+                ,B2
+                ,A_minus_2
+                ,A_minus_1
+                ,A0
+                ,A1
+                ,A2
+                })
+            ,frozenset({
+                 b_minus_1_from_b_minus_2
+                ,b0_from_b_minus_1
+                ,b1_from_b0
+                ,b2_from_b1
+                ,b3_from_b2
+                #
+                ,a0_from_b0
+                #
+                ,a_minus_1_from_a_minus_2
+                ,a0_from_a_minus_1
+                ,a1_from_a0
+                ,a2_from_a1
+                ,a3_from_a2
+             })
+        )
+        self.assertSetEqual(
+            set(spsg.nodes()),
+            {
+                frozenset({B_minus_1})
+                ,frozenset({B_minus_2})
+                ,frozenset({B0})
+                ,frozenset({B1})
+                ,frozenset({B2})
+                ,frozenset({A_minus_1})
+                ,frozenset({A_minus_2})
+                ,frozenset({A0})
+                ,frozenset({A1})
+                ,frozenset({A2})
+            }
+        )
+        self.assertSetEqual(
+            set(spsg.edges()),
+            {
+                (frozenset({B_minus_2}),frozenset({B_minus_1}))
+                ,(frozenset({B_minus_1}),frozenset({B0}))
+                ,(frozenset({B0}),frozenset({B1}))
+                ,(frozenset({B1}),frozenset({B2}))
+                #
+                ,(frozenset({B0}),frozenset({A0})) 
+                #
+                ,(frozenset({A_minus_2}),frozenset({A_minus_1}))
+                ,(frozenset({A_minus_1}),frozenset({A0}))
+                ,(frozenset({A0}),frozenset({A1}))
+                ,(frozenset({A1}),frozenset({A2}))
+            }
+        )
     def test_minimal_startnodes_for_single_var(self):
         spsg=sparse_powerset_graph(self.mvars,self.computers)
         # After the graph has been computed we can use it
