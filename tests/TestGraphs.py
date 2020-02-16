@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import matplotlib.pyplot as plt
+from frozendict import frozendict
 from bgc_md2.resolve.graph_helpers import ( 
     # Thomas's functions
     direct_prerequisites_Thomas
@@ -9,6 +10,7 @@ from bgc_md2.resolve.graph_helpers import (
     # Markus's functions
     ,sparse_powerset_graph
     ,direct_predecessor_nodes
+    ,arg_set_graph
     ,minimal_startnodes_for_single_var
     ,minimal_startnodes_for_node
     ,update_step
@@ -22,6 +24,7 @@ from bgc_md2.resolve.graph_helpers import (
     ,draw_multigraph_matplotlib
     #,draw_multigraph_plotly
     ,draw_Graph_svg
+    ,draw_Graph_with_computers_svg
     #,powerlist
 )
 from copy import copy,deepcopy
@@ -212,81 +215,6 @@ class TestGraphs(TestCase):
             f_from_b,
         })
     
-        # pns=direct_predecessor_nodes(
-        #         frozenset({ self.mvars['c'],self.mvars['d']}) ,self.mvars,self.computers) # this function should also return the computers it used 
-        # self.assertSetEqual(
-        #      pns
-        #     ,frozenset({
-        #          frozenset({self.mvars['b']})
-        #         ,frozenset({self.mvars['h'],self.mvars['c'],self.mvars['g']})
-        #         })
-        # )
-    
-
-    def test_direct_predecessor_nodes(self):
-        self.assertSetEqual(
-            direct_predecessor_nodes(
-                frozenset({A})
-                ,self.computers
-            ) 
-            ,frozenset({
-                 frozenset({I})
-            })
-        )
-
-        self.assertSetEqual(
-             direct_predecessor_nodes(
-                 frozenset({B})
-                 ,self.computers
-            )
-            ,frozenset({
-                 frozenset({C,D})
-                ,frozenset({F,E})
-            })
-        )
-
-        self.assertSetEqual(
-            direct_predecessor_nodes(
-                frozenset({C,D})
-                ,self.computers
-            ) 
-            ,frozenset({
-                 frozenset({B})
-                ,frozenset({H,C,G})
-            })
-        )
-
-    def test_update_step(self):
-        new_nodes=frozenset([frozenset({v}) for v in self.mvars])
-        G=nx.DiGraph()
-        G.add_nodes_from(new_nodes)
-        draw_Graph_svg(G,"test_update_step_original_Graph")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_1")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_2")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_3")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_4")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_5")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_6")
-        
-    def test_draw_multigraph_graphviz(self):
-        draw_multigraph_graphviz(self.mvars,self.computers)
-    
-    def test_draw_multigraph_matplotlib(self):
-        draw_multigraph_matplotlib(self.mvars,self.computers)
-    
-    @skip("very immature and nearly manual, but maybe neccessary to make the connections clickable") 
-    def test_draw_multigraph_plotly(self):
-        draw_multigraph_plotly(self.mvars,self.computers)
-        
-   
-
-
     def test_Thomas_graph_creation(self):
         g = graph_Thomas(self.mvars, self.computers)
 
@@ -331,6 +259,120 @@ class TestGraphs(TestCase):
                 (frozenset({E, F}), b_from_e_f)
             }
         )
+
+    
+    def test_arg_set_graph(self):
+        asg=arg_set_graph(D,self.computers)
+        draw_Graph_with_computers_svg(asg,'asg')
+        self.assertSetEqual(
+            set(asg.nodes())
+            ,{
+                frozenset({D})
+                ,frozenset({B})
+                ,frozenset({G, H})
+            }
+         )
+       
+        def immutable_edge(edge):
+            s,d,dat=edge
+            return (s,d,frozendict(dat))
+
+        edge_set=set(immutable_edge(e) for e in asg.edges(data=True))
+        print(edge_set)
+        self.assertSetEqual(
+            edge_set
+            ,{
+                
+                (
+                    frozenset({B})
+                    ,frozenset({D})
+                    ,frozendict({'computers':frozenset({d_from_b})})
+                )
+                ,(
+                    frozenset({G, H})
+                    ,frozenset({D})
+                    ,frozendict({'computers':frozenset({d_from_g_h})})
+                )
+            }
+         )
+
+    #@skip('not implemented yet') 
+    #def test_direct_predecessor_graph(self):
+    #    dpg=direct_predecessor_graph(
+    #        frozenset({A})
+    #        ,self.computers
+    #    ) 
+    #    self.assertSetEqual(
+    #        ,frozenset({
+    #             frozenset({I})
+    #        })
+    #    )
+
+
+    def test_direct_predecessor_nodes(self):
+        self.assertSetEqual(
+            direct_predecessor_nodes(
+                frozenset({A})
+                ,self.computers
+            ) 
+            ,frozenset({
+                 frozenset({I})
+            })
+        )
+
+        self.assertSetEqual(
+             direct_predecessor_nodes(
+                 frozenset({B})
+                 ,self.computers
+            )
+            ,frozenset({
+                 frozenset({C,D})
+                ,frozenset({F,E})
+            })
+        )
+
+        self.assertSetEqual(
+            direct_predecessor_nodes(
+                frozenset({C,D})
+                ,self.computers
+            ) 
+            ,frozenset({
+                 frozenset({B})
+                ,frozenset({H,C,G})
+            })
+        )
+
+    def test_update_step(self):
+        new_nodes=frozenset([frozenset({v}) for v in self.mvars])
+        G=nx.DiGraph()
+        G.add_nodes_from(new_nodes)
+        draw_Graph_svg(G,"test_update_step_original_Graph")
+
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_1")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_2")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_3")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_4")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_5")
+        G,new_nodes=update_step(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_updated_Graph_6")
+        
+    def test_draw_multigraph_graphviz(self):
+        draw_multigraph_graphviz(self.mvars,self.computers)
+    
+    def test_draw_multigraph_matplotlib(self):
+        draw_multigraph_matplotlib(self.mvars,self.computers)
+    
+    @skip("very immature and nearly manual, but maybe neccessary to make the connections clickable") 
+    def test_draw_multigraph_plotly(self):
+        draw_multigraph_plotly(self.mvars,self.computers)
+        
+   
+
 
     
     def test_Markus_graph_creation(self):

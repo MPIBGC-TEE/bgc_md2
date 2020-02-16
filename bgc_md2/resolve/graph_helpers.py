@@ -21,7 +21,7 @@ from .non_graph_helpers import  (
 def powerlist(S):
     # We do not want to rely on the set union operation (which necessiates the creation of sets
     # in the first place which is a O(n^2) operation)
-    # So we avoid the manyfold occurence of a sublit in the  resultlist 'manually' by not creating
+    # So we avoid the manyfold occurence of a sublist in the  resultlist 'manually' by not creating
     # it in the first place
     # we start with an empty list
     initial=[[]]
@@ -71,6 +71,43 @@ def remove_supersets(sets):
     else:
         return remove_supersets(new_nodes)
     
+@lru_cache(maxsize=None) 
+def arg_set_graph( 
+        mvar :type,
+        allComputers:Set[Callable]
+    )->nx.DiGraph:
+    # return the subgraph of arg_name_sets for all computers that
+    # return this mvar
+    target=frozenset({mvar})
+    g = nx.DiGraph()
+    g.add_node(target)
+    for c in all_computers_for_mvar(mvar,allComputers):
+        g.add_edge(arg_set(c), target,computers=frozenset({c}))
+    return g
+
+def direct_predecessor_graph(
+        node        :Set[type],
+        allComputers:Set[Callable]
+    )->nx.DiGraph:
+    
+    # fixme: Markus 02-15-2020 
+    # this function could possibly replace direct_predecessor_nodes
+    # Instead of just the nodes (sets of Mvars) it returns a small subgraph with the node as
+    # destination and also stores the computers used as an attribute of the edge
+    
+    raise
+
+    #res=cartesian_union(
+    #    [ {frozenset({v})}.union(arg_set_set(v,allComputers)) for v in node]
+    #)
+    ##pe('node',locals())
+
+    ## note that the cartesian product contains the original node
+    ## we remove all nodes that are just supersets of it
+    ## and afterwards the node itself
+    ##return res.difference(frozenset({node}))
+    #return remove_supersets(res).difference(frozenset({node}))
+
 def direct_predecessor_nodes(
         node        :Set[type],
         allComputers:Set[Callable]
@@ -95,7 +132,7 @@ def direct_predecessor_nodes(
     return remove_supersets(res).difference(frozenset({node}))
 
 # fixme: Markus 2-14 2020
-# I do not know what we can use this graph for
+# I do not yet know what we can use this graph for
 # I renamed it since it is not the "sparse_powerset_graph" (my = Markus's) tests. 
 def graph_Thomas(mvars, computers):
     g = nx.DiGraph()
@@ -111,91 +148,15 @@ def graph_Thomas(mvars, computers):
 # fixme: Markus 2-14 2020
 # added the suffix _Thomas to distinguish this function from the rest, since its
 # functionality is not used at the moment.
-# The information it provides is presently retrieved from the computers directly
+# The information that it provides is presently retrieved from the computers directly
 # by the function 'arg_set_set'
-# The function could possibly be used to reimplement parts of the creation of the 
+# The function could possibly be used as a blueprint to reimplement parts of the creation of the 
 # original (Markus's) "sparse_powerset_graph"
 def direct_prerequisites_Thomas(graph, mvar):
     node = frozenset({mvar})
     return set(
         (pre, data['computer'])
         for pre, _, data in graph.in_edges(node, data=True))
-
-
-def draw_multigraph_graphviz(allMvars,allComputers):
-    # build initial multigraph
-    # for visualization draw the directed Multigraph with the MVars as nodes
-    # unfortunately it is not useful for connectivity computations
-    # since all 'edges' defined by a computer c are misleading in the sense that 
-    # we need the union of all the source variables of c to go to the target Mvar of c 
-    # while the arrows suggest ways from any of the arguments...
-    # for visualization it would helpful to draw all arcs belonging to the same computer
-    # in the same color.
-    # Since we do not compute anything from this graph we actually do not need a 
-    # graph library
-    # but can visualize it immediately with graphviz
-    # We use a uniqud .draw('Multigraph.svg',prog="circo") # draw using circo
-    colordict=TABLEAU_COLORS
-    color_names=[n for n in colordict.keys()]
-    computer_colors={c.__name__:color_names[i] for i,c in enumerate(allComputers)}
-    A=AGraph(directed=True)
-    A.node_attr['style']='filled'
-    A.node_attr['shape']='circle'
-    A.node_attr['fixedsize']='false'
-    A.node_attr['fontcolor']='#FFFFFF'
-    A.node_attr['color']='black'
-    A.add_nodes_from([pretty_name(v) for v in allMvars])
-    cols=['blue','red','green','orange'] 
-    for v in allMvars:
-        for c in all_computers_for_mvar(v,allComputers):
-            ans=input_mvars(c)
-            edges=[(pretty_name(an),pretty_name(v))  for an in ans]
-            for e in edges:
-                A.add_edge(e)
-                Ae=A.get_edge(e[0],e[1])
-                Ae.attr['color']=colordict[computer_colors[c.__name__]]
-                Ae.attr['fontcolor']=colordict[computer_colors[c.__name__]]
-                Ae.attr['label']=c.__name__
-    #print(A.string()) # print to screen
-    A.draw('Multigraph.svg',prog="circo") # draw using circo
-
-
-
-
-def draw_multigraph_matplotlib(allMvars,allComputers):
-    # only for visualization draw the connections of the mvars via computers
-    # note that this is not a graph we can query for connectivity
-    colordict=TABLEAU_COLORS
-    color_names=[n for n in colordict.keys()]
-    computer_colors={c.__name__:color_names[i] for i,c in enumerate(allComputers)}
-    G=create_multigraph(allMvars,allComputers)
-    # possibly create new Graph with text nodes
-    g=G
-    # create a colorlist for the edges using the computer attribute 
-    edgelist=[e for e in g.edges]
-    computers=[g[e[0]][e[1]]['computer'] for e in edgelist]
-    edge_color=[computer_colors[c.__name__] for c in computers]
-    fig=plt.figure(figsize=(5,5))
-    axes=fig.add_subplot(1,1,1)
-    nx.draw_networkx(
-            g
-            ,edgelist=edgelist
-            ,edge_color=edge_color
-            ,ax=axes)
-    fig.savefig("Multigraph_matplotlib.pdf")
-
-def create_multigraph(allMvars,allComputers):
-    G=nx.DiGraph()
-    for v in allMvars:
-        for c in all_computers_for_mvar(v,allComputers):
-            ans=input_mvars(c)
-            for an in ans:
-                G.add_edge(
-                     pretty_name(an)
-                    ,pretty_name(v)
-                    ,computer=c
-                )
-    return G
 
 
 
@@ -290,25 +251,140 @@ def minimal_startnodes_for_node(
     minimal_startnodes=[n for n in filter(filter_func,minimal_startnodes)]
 
 
-
-
-def draw_Graph_svg(G,file_name_trunk):
+def draw_Graph_svg(spsg,file_name_trunk):
     # the next line is the standard translation 
     # We could do this using the attributes of the edges to
     # make much niceer pictures representing the different computers in different
     # colors or annotate them....
-    A=nx.nx_agraph.to_agraph(G)
+    A=nx.nx_agraph.to_agraph(spsg)
     A=AGraph(directed=True)
     A.node_attr['style']='filled'
     A.node_attr['shape']='rectangle'
     A.node_attr['fixedsize']='false'
     A.node_attr['fontcolor']='black'
     
-    for node in G.nodes:
+    for node in spsg.nodes:
         A.add_node(node_2_string(node))
-    for edge in G.edges:
+    for edge in spsg.edges:
         A.add_edge(node_2_string(edge[0]),node_2_string(edge[1]))
     #print(A.string()) # print to screen
     #A.draw(file_name_trunk+'.png',prog="circo") # draw to png using circo
     A.draw(file_name_trunk+'.svg',prog='circo') 
+
+
+def draw_Graph_with_computers_svg(spsg,file_name_trunk):
+    # the next line is the standard translation 
+    # We could do this using the attributes of the edges to
+    # make much niceer pictures representing the different computers in different
+    # colors or annotate them....
+    allComputers=reduce(
+        lambda acc,edge:acc.union(edge[2]['computers'],acc)
+        ,spsg.edges(data=True)
+        ,set()
+    )
+    colordict=TABLEAU_COLORS
+    color_names=[n for n in colordict.keys()]
+    computer_colors={c.__name__:color_names[i] for i,c in enumerate(allComputers)}
+    A=nx.nx_agraph.to_agraph(spsg)
+    A=AGraph(directed=True)
+    A.node_attr['style']='filled'
+    A.node_attr['shape']='rectangle'
+    A.node_attr['fixedsize']='false'
+    A.node_attr['fontcolor']='black'
+    
+    for node in spsg.nodes:
+        A.add_node(node_2_string(node))
+    edges=spsg.edges(data=True)
+    for edge in edges:
+        s,t,data_dict=edge
+        computer_set=data_dict['computers']
+        print('computer_set')
+        print(computer_set)
+        ss,st=tuple(map(node_2_string,(s,t)))
+        A.add_edge(ss,st)
+        for c in computer_set:
+            Ae=A.get_edge(ss,st)
+            #Ae.attr['color']=colordict[computer_colors[c.__name__]]
+            Ae.attr['fontcolor']=colordict[computer_colors[c.__name__]]
+            Ae.attr['label']=c.__name__
+    #print(A.string()) # print to screen
+    #A.draw(file_name_trunk+'.png',prog="circo") # draw to png using circo
+    A.draw(file_name_trunk+'.svg',prog='circo') 
+
+
+def draw_multigraph_graphviz(allMvars,allComputers):
+    # build initial multigraph
+    # for visualization draw the directed Multigraph with the MVars as nodes
+    # unfortunately it is not useful for connectivity computations
+    # since all 'edges' defined by a computer c are misleading in the sense that 
+    # we need the union of all the source variables of c to go to the target Mvar of c 
+    # while the arrows suggest ways from any of the arguments...
+    # for visualization it would helpful to draw all arcs belonging to the same computer
+    # in the same color.
+    # Since we do not compute anything from this graph we actually do not need a 
+    # graph library
+    # but can visualize it immediately with graphviz
+    # We use a uniqud .draw('Multigraph.svg',prog="circo") # draw using circo
+    colordict=TABLEAU_COLORS
+    color_names=[n for n in colordict.keys()]
+    computer_colors={c.__name__:color_names[i] for i,c in enumerate(allComputers)}
+    A=AGraph(directed=True)
+    A.node_attr['style']='filled'
+    A.node_attr['shape']='circle'
+    A.node_attr['fixedsize']='false'
+    A.node_attr['fontcolor']='#FFFFFF'
+    A.node_attr['color']='black'
+    A.add_nodes_from([pretty_name(v) for v in allMvars])
+    cols=['blue','red','green','orange'] 
+    for v in allMvars:
+        for c in all_computers_for_mvar(v,allComputers):
+            ans=input_mvars(c)
+            edges=[(pretty_name(an),pretty_name(v))  for an in ans]
+            for e in edges:
+                A.add_edge(e)
+                Ae=A.get_edge(e[0],e[1])
+                Ae.attr['color']=colordict[computer_colors[c.__name__]]
+                Ae.attr['fontcolor']=colordict[computer_colors[c.__name__]]
+                Ae.attr['label']=c.__name__
+    #print(A.string()) # print to screen
+    A.draw('Multigraph.svg',prog="circo") # draw using circo
+
+
+
+
+def draw_multigraph_matplotlib(allMvars,allComputers):
+    # only for visualization draw the connections of the mvars via computers
+    # note that this is not a graph we can query for connectivity
+    colordict=TABLEAU_COLORS
+    color_names=[n for n in colordict.keys()]
+    computer_colors={c.__name__:color_names[i] for i,c in enumerate(allComputers)}
+    G=create_multigraph(allMvars,allComputers)
+    # possibly create new Graph with text nodes
+    g=G
+    # create a colorlist for the edges using the computer attribute 
+    edgelist=[e for e in g.edges]
+    computers=[g[e[0]][e[1]]['computer'] for e in edgelist]
+    edge_color=[computer_colors[c.__name__] for c in computers]
+    fig=plt.figure(figsize=(5,5))
+    axes=fig.add_subplot(1,1,1)
+    nx.draw_networkx(
+            g
+            ,edgelist=edgelist
+            ,edge_color=edge_color
+            ,ax=axes)
+    fig.savefig("Multigraph_matplotlib.pdf")
+
+def create_multigraph(allMvars,allComputers):
+    G=nx.DiGraph()
+    for v in allMvars:
+        for c in all_computers_for_mvar(v,allComputers):
+            ans=input_mvars(c)
+            for an in ans:
+                G.add_edge(
+                     pretty_name(an)
+                    ,pretty_name(v)
+                    ,computer=c
+                )
+    return G
+
 
