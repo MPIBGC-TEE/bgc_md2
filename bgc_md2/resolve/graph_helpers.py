@@ -6,6 +6,7 @@ from pygraphviz.agraph import AGraph
 from typing import List,Set,Tuple,Callable
 from copy import deepcopy
 from frozendict import frozendict
+from testinfrastructure.helpers import pp,pe
 
 
 from .non_graph_helpers import  (
@@ -54,6 +55,10 @@ def cartesian_product(l:List[Set])->Set[Tuple]:
         right_tupels=cartesian_product(l[1:])
         return frozenset([lt+rt for lt in left_tupels for  rt in right_tupels ])
 
+
+def list_product_graph(l:List[nx.MultiDiGraph])->nx.MultiDiGraph:
+    return reduce( lambda acc,g:product_graph(acc,g) ,l)
+
 def cartesian_union(l:List[Set])->Set[Set]:
     #pe('l',locals())
     return frozenset([frozenset(t) for t in cartesian_product(l)])
@@ -81,7 +86,9 @@ def product_edge_triple(e1,e2):
 def product_graph(
          g1:nx.MultiDiGraph
         ,g2:nx.MultiDiGraph
-    )->nx.DiGraph:
+    )->nx.MultiDiGraph:
+    if max((map(nx.dag_longest_path_length,(g1,g2))))>1:
+        raise Exception("at the moments only implemented for graphs of lenght 1") 
     # find the nodes that have no outgoing edges
     targets_1,targets_2=tuple(map(find_single_target,(g1,g2)))
 
@@ -131,11 +138,11 @@ def remove_supersets(sets):
 def arg_set_graph( 
         mvar :type,
         allComputers:Set[Callable]
-    )->nx.DiGraph:
+    )->nx.MultiGraph:
     # return the subgraph of arg_name_sets for all computers that
     # return this mvar
     target=frozenset({mvar})
-    g = nx.DiGraph()
+    g = nx.MultiDiGraph()
     g.add_node(target)
     for c in all_computers_for_mvar(mvar,allComputers):
         g.add_edge(arg_set(c), target,computers=frozenset({c}))
@@ -182,10 +189,14 @@ def direct_predecessor_nodes(
     # we call this set the 'cartesian_union(A,B) with  A=s_a v {a}  and B=s_b v {b} 
     # This can be generalized to an arbitrary list of sets. We build the cartesian product of the sets A,B,... and then
     # transform every tupel of the product to a set (thereby removing the duplicates and order)
+    cp=cartesian_product([ {frozenset({v})}.union(arg_set_set(v,allComputers)) for v in node])
     res=cartesian_union(
         [ {frozenset({v})}.union(arg_set_set(v,allComputers)) for v in node]
     )
-    #pe('node',locals())
+    pe('node',locals())
+    pe('cp',locals())
+    pe('res',locals())
+
 
     # note that the cartesian product contains the original node
     # we remove all nodes that are just supersets of it
@@ -313,6 +324,7 @@ def minimal_startnodes_for_node(
     minimal_startnodes=[n for n in filter(filter_func,minimal_startnodes)]
 
 def draw_SetDiGraph(spsg,ax,**kwargs):
+    # obsolete since we usually draw Multigraphs (several edges between A and B ) now
     pos=nx.spring_layout(spsg)
     nx.draw(
         spsg

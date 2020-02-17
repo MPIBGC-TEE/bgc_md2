@@ -4,6 +4,7 @@ from frozendict import frozendict
 from copy import copy,deepcopy
 import networkx as nx
 from testinfrastructure.InDirTest import InDirTest
+from testinfrastructure.helpers import pp,pe
 from unittest import skip
 from copy import copy
 
@@ -19,26 +20,31 @@ from bgc_md2.resolve.graph_helpers import (
     ,direct_predecessor_nodes
     ,direct_predecessor_graph
     ,arg_set_graph
+    ,arg_set_graph
     ,minimal_startnodes_for_single_var
     ,minimal_startnodes_for_node
     ,update_step
-    #,remove_supersets
+    ,remove_supersets
     ,node_2_string
     ,nodes_2_string
     ,edge_2_string
     ,product_graph
     ,product_edge_triple
+    ,list_product_graph
+    ,cartesian_union
+    ,cartesian_product
     #,cartesian_union_graph
     #,create_multigraph
     ,draw_multigraph_graphviz
     ,draw_multigraph_matplotlib
     #,draw_multigraph_plotly
     ,draw_SetMultiDiGraph
-    ,draw_SetDiGraph
+    #,draw_SetDiGraph
     ,draw_Graph_svg
     ,draw_Graph_with_computers_svg
     #,powerlist
 )
+from bgc_md2.resolve.non_graph_helpers import  arg_set_set
 
 class A_minus_1:
     pass
@@ -129,6 +135,15 @@ class Y:
 class Z:
     pass
 
+def a_from_b_c(b: B, c: C) -> A:
+    return A()
+
+def a_from_b_d(b: B, d: D) -> A:
+    return A()
+
+def a_from_x(x:X)->A:
+    return A()
+
 def a_from_y(y:Y)->A:
     return A()
 
@@ -141,24 +156,30 @@ def a_from_z(z:Z)->A:
 def b_from_z(z:Z)->B:
     return B()
 
+def c_from_z(z:Z)->C:
+    return C()
+
 def a_from_i(i: I) -> A:
     """Computes a from i"""
     return A()
 
 
 def b_from_c_d(c: C, d: D) -> B:
-    """Computes b from c and d"""
     return B()
 
+def b_from_d_e(d: D,e: E) -> B:
+    return B()
 
 def b_from_e_f(e: E, f: F) -> B:
-    """Computes b from e and f"""
     return B()
 
 
 def c_from_b(b: B) -> C:
     """Computes c from b"""
     return C()
+
+def d_from_a(a: A) -> D:
+    return D() 
 
 
 def d_from_b(b: B) -> D:
@@ -369,6 +390,57 @@ class TestGraphs(InDirTest):
             ,({Z},{A,B},{a_from_z,b_from_z})
         )
 
+    def test_cartesian_product_graph(self):
+        # this is just a generalization 
+        # of the product of two graphs to 
+        # the product of a list of graphs
+        # we start with a very simpe example
+        computers=frozenset({a_from_x,b_from_y,c_from_z})
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        asg_C=arg_set_graph(C,computers)
+        res=list_product_graph([asg_A,asg_B,asg_C])
+        
+        ref=nx.MultiDiGraph()
+        ref.add_edge(
+            frozenset({X,Y,Z})
+            ,frozenset({A,B,C})
+            ,computers=frozenset({a_from_x,b_from_y,c_from_z})
+        )
+        self.assertGraphEqual(res,ref)
+        
+        fig1=plt.figure(figsize=(5,20))
+        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(413,frame_on=True,title="arg_set_graph(C)")
+        ax4=fig1.add_subplot(414,frame_on=True,title="product_graph(A,B,C)")
+        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        
+        draw_SetMultiDiGraph(     asg_A,ax=ax1)
+        draw_SetMultiDiGraph(     asg_B,ax=ax2)
+        draw_SetMultiDiGraph(     asg_C,ax=ax3)
+        draw_SetMultiDiGraph(     res,  ax=ax4)
+        fig1.savefig('ABC.pdf')
+
+        computers=frozenset({a_from_x,b_from_y,c_from_z})
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        asg_C=arg_set_graph(C,computers)
+        res=list_product_graph([asg_A,asg_B,asg_C])
+        
+        fig1=plt.figure(figsize=(5,20))
+        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(413,frame_on=True,title="arg_set_graph(C)")
+        ax4=fig1.add_subplot(414,frame_on=True,title="product_graph(A,B,C)")
+        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        
+        draw_SetMultiDiGraph(     asg_A,ax=ax1)
+        draw_SetMultiDiGraph(     asg_B,ax=ax2)
+        draw_SetMultiDiGraph(     asg_C,ax=ax3)
+        draw_SetMultiDiGraph(     res,  ax=ax4)
+        fig1.savefig('ABC.pdf')
+
     def test_product_graph(self):
         computers=frozenset({a_from_i,d_from_b})
         
@@ -408,8 +480,8 @@ class TestGraphs(InDirTest):
         ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
         ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
         #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        draw_SetDiGraph(     asg_A,ax=ax1)
-        draw_SetDiGraph(     asg_B,ax=ax2)
+        draw_SetMultiDiGraph(     asg_A,ax=ax1)
+        draw_SetMultiDiGraph(     asg_B,ax=ax2)
         draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
         #draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
         fig1.savefig('AB_Z.pdf')
@@ -455,12 +527,13 @@ class TestGraphs(InDirTest):
         ax2=fig2.add_subplot(4,1,2,title="arg_set_graph(B)") 
         ax3=fig2.add_subplot(4,1,3,title="product_graph(A,B)")
         ax4=fig2.add_subplot(4,1,4,title="ref")
-        draw_SetDiGraph(     asg_A,ax=ax1)
-        draw_SetDiGraph(     asg_B,ax=ax2)
+        draw_SetMultiDiGraph(    asg_A,ax=ax1)
+        draw_SetMultiDiGraph(    asg_B,ax=ax2)
         draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
         draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
         fig2.savefig('AB_YZ.pdf')
     
+    @skip('not implemented yes')
     def test_direct_predecessor_graph(self):
         # for a node N with a singel mvar M={mvar} this is the same graph as 
         # returned by arg_set_graph(mvar)
@@ -501,8 +574,58 @@ class TestGraphs(InDirTest):
         #        )
         #    }
         # )
+    def test_step_by_step(self):
+        #node=frozenset({A})
+        #v=A
+        computers=frozenset({a_from_b_d,a_from_b_c,b_from_d_e,d_from_a})
+        #assv=arg_set_set(v,computers)
+        #pp('assv',locals())
+        #u={frozenset({v})}.union(assv)
+        #pp('u',locals())
+        #l=[u]
+        #cp=cartesian_product(l) 
+        #pp('cp',locals())
+        #for x in cp:
+        #    print(x)
+        #cu=cartesian_union(l)
+        #pp('cu',locals())
+        #for x in cu:
+        #    print(x)
+        node=frozenset({B,D})
+        for v in node:
+            assv=arg_set_set(v,computers)
+            pp('assv',locals())
+            u={frozenset({v})}.union(assv)
+            pp('u',locals())
+        #l=[u]
+        #cp=cartesian_product(l) 
+        #pp('cp',locals())
+        #for x in cp:
+        #    print(x)
+        #cu=cartesian_union(l)
+        #pp('cu',locals())
+        #for x in cu:
+        #    print(x)
+        #print(cu)
+        #print(remove_supersets(cu))
+        #dpn=direct_predecessor_nodes(
+        #    frozenset({A})
+        #    ,computers
+        #) 
+        #print(dpn)
 
     def test_direct_predecessor_nodes(self):
+        self.assertSetEqual(
+            direct_predecessor_nodes(
+                frozenset({A})
+                ,frozenset({a_from_b_d,a_from_b_c})
+            ) 
+            ,frozenset({
+                 frozenset({B,C}) 
+                 ,frozenset({B,D}) 
+                 ,frozenset({B,C,D}) 
+            })
+        )
         self.assertSetEqual(
             direct_predecessor_nodes(
                 frozenset({A})
@@ -534,6 +657,7 @@ class TestGraphs(InDirTest):
                 ,frozenset({H,C,G})
             })
         )
+
 
     def test_update_step(self):
         new_nodes=frozenset([frozenset({v}) for v in self.mvars])
