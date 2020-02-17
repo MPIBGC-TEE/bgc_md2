@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 import matplotlib.pyplot as plt
 from frozendict import frozendict
+from copy import copy,deepcopy
+import networkx as nx
+from testinfrastructure.InDirTest import InDirTest
+from unittest import skip
+from copy import copy
+
 from bgc_md2.resolve.graph_helpers import ( 
     # Thomas's functions
     direct_prerequisites_Thomas
@@ -8,8 +14,10 @@ from bgc_md2.resolve.graph_helpers import (
     #
     #
     # Markus's functions
+    ,immutable_edge
     ,sparse_powerset_graph
     ,direct_predecessor_nodes
+    ,direct_predecessor_graph
     ,arg_set_graph
     ,minimal_startnodes_for_single_var
     ,minimal_startnodes_for_node
@@ -18,19 +26,19 @@ from bgc_md2.resolve.graph_helpers import (
     ,node_2_string
     ,nodes_2_string
     ,edge_2_string
-    #,cartesian_union
+    ,product_graph
+    ,product_edge_triple
+    #,cartesian_union_graph
     #,create_multigraph
     ,draw_multigraph_graphviz
     ,draw_multigraph_matplotlib
     #,draw_multigraph_plotly
+    ,draw_SetMultiDiGraph
+    ,draw_SetDiGraph
     ,draw_Graph_svg
     ,draw_Graph_with_computers_svg
     #,powerlist
 )
-from copy import copy,deepcopy
-import networkx as nx
-from unittest import TestCase,skip
-from copy import copy
 
 class A_minus_1:
     pass
@@ -111,6 +119,27 @@ class H:
 class I:
     pass
 
+class X:
+    pass
+
+class Y:
+    pass
+
+
+class Z:
+    pass
+
+def a_from_y(y:Y)->A:
+    return A()
+
+def b_from_y(y:Y)->B:
+    return B()
+
+def a_from_z(z:Z)->A:
+    return A()
+
+def b_from_z(z:Z)->B:
+    return B()
 
 def a_from_i(i: I) -> A:
     """Computes a from i"""
@@ -184,9 +213,30 @@ def b2_from_b1(b1:B1) -> B2:
 def b3_from_b2(b2:B2) -> B3:
     return B3()
 
-class TestGraphs(TestCase):
+#for easier debugging in ipython
+computers = frozenset({
+            a_from_i,
+            b_from_c_d,
+            b_from_e_f,
+            c_from_b,
+            d_from_b,
+            d_from_g_h,
+            e_from_b,
+            f_from_b,
+})
+
+class TestGraphs(InDirTest):
     # we produce a small set of Mvars with a loop (b could be something like a CompartmentalSystem that can be computed # in different ways and can also be queried about its constituents.
 
+    # we should build a graph comparison
+    def assertGraphEqual(self,g1,g2):
+        self.assertSetEqual(set(g1.nodes),set(g2.nodes))
+        self.assertSetEqual(
+            set(immutable_edge(e) for e in g1.edges(data=True))
+            ,set(immutable_edge(e) for e in g2.edges(data=True))
+        )
+
+        
     def setUp(self):
         # fixme mm 02-03-2020: 
         # assemble this set from a file of class definitions
@@ -204,16 +254,7 @@ class TestGraphs(TestCase):
         # fixme mm 02-03-2020: 
         # assemble this set from a file of annotated functions in 
         # special file
-        self.computers = frozenset({
-            a_from_i,
-            b_from_c_d,
-            b_from_e_f,
-            c_from_b,
-            d_from_b,
-            d_from_g_h,
-            e_from_b,
-            f_from_b,
-        })
+        self.computers = computers
     
     def test_Thomas_graph_creation(self):
         g = graph_Thomas(self.mvars, self.computers)
@@ -260,54 +301,206 @@ class TestGraphs(TestCase):
             }
         )
 
-    
+    def test_assertGraphEqual(self):
+        # this should be a test for a derived testClass
+        g1=nx.DiGraph()
+        g1.add_nodes_from([A,B,Z])
+        g1.add_edge(Z,A,computer=frozenset({a_from_z}))
+        g1.add_edge(Z,B,computer=frozenset({b_from_z}))
+
+        g2=nx.DiGraph()
+        g2.add_nodes_from([A,B,Z])
+        g2.add_edge(Z,A,computer=frozenset({a_from_z}))
+        g2.add_edge(Z,B,computer=frozenset({b_from_z}))
+        
+        self.assertGraphEqual(g1,g2)
+        g2_1=deepcopy(g2)
+        self.assertGraphEqual(g1,g2_1)
+        g2_1.add_node(D)
+        with self.assertRaises(Exception):
+            self.assertGraphEqual(g1,g2_1)
+
     def test_arg_set_graph(self):
         asg=arg_set_graph(D,self.computers)
+        
+        ref=nx.DiGraph()
+        ref.add_edge(
+            frozenset({B})
+            ,frozenset({D})
+            ,computers=frozenset({d_from_b})
+        )
+        ref.add_edge(
+            frozenset({G, H})
+            ,frozenset({D})
+            ,computers=frozenset({d_from_g_h})
+        )
+
+
+        self.assertGraphEqual(
+            asg , ref
+        )
+        draw_Graph_with_computers_svg(ref,'ref')
         draw_Graph_with_computers_svg(asg,'asg')
-        self.assertSetEqual(
-            set(asg.nodes())
-            ,{
-                frozenset({D})
-                ,frozenset({B})
-                ,frozenset({G, H})
-            }
-         )
+    
+    
+    def test_product_edge_triple(self):
+        self.assertEqual(
+            product_edge_triple(
+                 ({I},{A},{'computers':{a_from_i}})
+                ,({B},{D},{'computers':{d_from_b}})
+            )
+            ,({I,B},{A,D},{a_from_i,d_from_b})
+        )
+        
+        
+        # take an example where we could loose a costructor
+        # by just writing edges with the same start and destination
+        # so that only the edge that is written last remains.
+        # computers:a(z),b(z) 
+        #
+        #    {a(z)}          {b(z)}          {a(z),b(z)}
+        # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+
+        self.assertEqual(
+            product_edge_triple(
+                 ({Z},{A},{'computers':{a_from_z}})
+                ,({Z},{B},{'computers':{b_from_z}})
+            )
+            ,({Z},{A,B},{a_from_z,b_from_z})
+        )
+
+    def test_product_graph(self):
+        computers=frozenset({a_from_i,d_from_b})
+        
+        asg_A=arg_set_graph(A,computers)
+        asg_D=arg_set_graph(D,computers)
+        
+        pg_A_D=product_graph(asg_A,asg_D)
+
+        ref_pg_A_D=nx.MultiDiGraph()
+        ref_pg_A_D.add_edge(
+            frozenset({B,I})
+            ,frozenset({D,A})
+            ,computers=frozenset({a_from_i,d_from_b})
+        )
+        self.assertGraphEqual(pg_A_D,ref_pg_A_D)
+
+        # Now take an example where we could loose a costructor
+        # by just writing edges with the same start and destination
+        # so that only the edge that is written last remains.
+        # computers:a(z),b(z) 
+        computers=frozenset({a_from_z,b_from_z})
+        #
+        #    {a(z)}          {b(z)}          {a(z),b(z)}
+        # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        pg_A_B=product_graph(asg_A,asg_B)
+        ref_pg_A_B=nx.MultiDiGraph()
+        ref_pg_A_B.add_edge(
+            frozenset({Z})
+            ,frozenset({A,B})
+            ,computers=frozenset({a_from_z,b_from_z})
+        ) 
+        self.assertGraphEqual(pg_A_B,ref_pg_A_B)
+        fig1=plt.figure(figsize=(5,20))
+        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        draw_SetDiGraph(     asg_A,ax=ax1)
+        draw_SetDiGraph(     asg_B,ax=ax2)
+        draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
+        fig1.savefig('AB_Z.pdf')
+        
+        # Now take another example where we could loose a costructor
+        # by just writing edges with the same start and destination
+        # so that only the edge that is written last remains.
+        # computers: a(y),a(z)  ,b(y),b(z) 
+        # the interesting edge is {z,y} -> {a,b}
+        # which can be computed by the computer combinations
+        # {a(z),b(y)} and {a(y),
+        computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
+
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        pg_A_B=product_graph(asg_A,asg_B)
+        ref_pg_A_B=nx.MultiDiGraph()
+        
+        ref_pg_A_B.add_edge(
+            frozenset({Z})
+            ,frozenset({A,B})
+            ,computers=frozenset({a_from_z,b_from_z})
+        ) 
+        ref_pg_A_B.add_edge(
+            frozenset({Y})
+            ,frozenset({A,B})
+            ,computers=frozenset({a_from_y,b_from_y})
+        ) 
+        ref_pg_A_B.add_edge(
+            frozenset({Y,Z})
+            ,frozenset({A,B})
+            ,computers=frozenset({a_from_y,b_from_z})
+        ) 
+		# same nodes different computers (multigraph)
+        ref_pg_A_B.add_edge(
+            frozenset({Y,Z})
+            ,frozenset({A,B})
+            ,computers=frozenset({a_from_z,b_from_y})
+        ) 
+        self.assertGraphEqual(pg_A_B,ref_pg_A_B)
+        fig2=plt.figure(figsize=(5,20))
+        ax1=fig2.add_subplot(4,1,1,title="arg_set_graph(A)") 
+        ax2=fig2.add_subplot(4,1,2,title="arg_set_graph(B)") 
+        ax3=fig2.add_subplot(4,1,3,title="product_graph(A,B)")
+        ax4=fig2.add_subplot(4,1,4,title="ref")
+        draw_SetDiGraph(     asg_A,ax=ax1)
+        draw_SetDiGraph(     asg_B,ax=ax2)
+        draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
+        fig2.savefig('AB_YZ.pdf')
+    
+    def test_direct_predecessor_graph(self):
+        # for a node N with a singel mvar M={mvar} this is the same graph as 
+        # returned by arg_set_graph(mvar)
+        dpg=direct_predecessor_graph(
+            frozenset({D})
+            ,self.computers
+        ) 
+        #draw_Graph_with_computers_svg(dpg,'dpg')
+
+        #self.assertSetEqual(
+        #    set(asg.nodes())
+        #    ,{
+        #        frozenset({D})
+        #        ,frozenset({B})
+        #        ,frozenset({G, H})
+        #    }
+        # )
        
-        def immutable_edge(edge):
-            s,d,dat=edge
-            return (s,d,frozendict(dat))
+        #def immutable_edge(edge):
+        #    s,d,dat=edge
+        #    return (s,d,frozendict(dat))
 
-        edge_set=set(immutable_edge(e) for e in asg.edges(data=True))
-        print(edge_set)
-        self.assertSetEqual(
-            edge_set
-            ,{
-                
-                (
-                    frozenset({B})
-                    ,frozenset({D})
-                    ,frozendict({'computers':frozenset({d_from_b})})
-                )
-                ,(
-                    frozenset({G, H})
-                    ,frozenset({D})
-                    ,frozendict({'computers':frozenset({d_from_g_h})})
-                )
-            }
-         )
-
-    #@skip('not implemented yet') 
-    #def test_direct_predecessor_graph(self):
-    #    dpg=direct_predecessor_graph(
-    #        frozenset({A})
-    #        ,self.computers
-    #    ) 
-    #    self.assertSetEqual(
-    #        ,frozenset({
-    #             frozenset({I})
-    #        })
-    #    )
-
+        #edge_set=set(immutable_edge(e) for e in dpg.edges(data=True))
+        #print(edge_set)
+        #self.assertSetEqual(
+        #    edge_set
+        #    ,{
+        #        
+        #        (
+        #            frozenset({B})
+        #            ,frozenset({D})
+        #            ,frozendict({'computers':frozenset({d_from_b})})
+        #        )
+        #        ,(
+        #            frozenset({G, H})
+        #            ,frozenset({D})
+        #            ,frozendict({'computers':frozenset({d_from_g_h})})
+        #        )
+        #    }
+        # )
 
     def test_direct_predecessor_nodes(self):
         self.assertSetEqual(

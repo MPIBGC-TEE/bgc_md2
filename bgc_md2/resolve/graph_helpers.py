@@ -5,6 +5,8 @@ from matplotlib.colors import CSS4_COLORS,BASE_COLORS,TABLEAU_COLORS
 from pygraphviz.agraph import AGraph
 from typing import List,Set,Tuple,Callable
 from copy import deepcopy
+from frozendict import frozendict
+
 
 from .non_graph_helpers import  (
     computable_mvars
@@ -18,6 +20,10 @@ from .non_graph_helpers import  (
 	,all_computers_for_mvar
     ,pretty_name
 )
+def immutable_edge(edge):
+    s,d,dat=edge
+    return (s,d,frozendict(dat))
+
 def powerlist(S):
     # We do not want to rely on the set union operation (which necessiates the creation of sets
     # in the first place which is a O(n^2) operation)
@@ -27,6 +33,9 @@ def powerlist(S):
     initial=[[]]
     # and gradually enhance it
     return reduce(lambda acc,el:acc+[ subset +[el] for subset in acc],S,initial)
+
+def compset_2_string(compset):
+    return '{'+",".join([pretty_name(c) for c in compset])+'}'
 
 def node_2_string(node):
     return '{'+",".join([pretty_name(v) for v in node])+'}'
@@ -48,6 +57,53 @@ def cartesian_product(l:List[Set])->Set[Tuple]:
 def cartesian_union(l:List[Set])->Set[Set]:
     #pe('l',locals())
     return frozenset([frozenset(t) for t in cartesian_product(l)])
+
+def find_single_target(g:nx.DiGraph): ## in our use case ->frozenset
+    destinations =find_targets(g)
+    if len(destinations) >1:
+        # while the function makes send 
+        raise(Exception('no single head graph'))
+    else:
+        return destinations[0]
+
+def find_targets(g:nx.DiGraph):# in our use case ->List[frozenset]
+    return [n for n in g.nodes() if len(g.out_edges(n))==0]
+
+def product_edge_triple(e1,e2):
+    s1,d1,data1=e1
+    s2,d2,data2=e2
+    return (
+         s1.union(s2)
+        ,d1.union(d2)
+        ,data1['computers'].union(data2['computers'])
+    )
+
+def product_graph(
+         g1:nx.MultiDiGraph
+        ,g2:nx.MultiDiGraph
+    )->nx.DiGraph:
+    # find the nodes that have no outgoing edges
+    targets_1,targets_2=tuple(map(find_single_target,(g1,g2)))
+
+    pg=nx.MultiDiGraph()
+    new_target=targets_1.union(targets_2)
+    pg.add_node(new_target)
+    
+    incoming_1=g1.in_edges(targets_1,data=True) 
+    incoming_2=g2.in_edges(targets_2,data=True) 
+
+    edge_triple_list=[ 
+        product_edge_triple(e1,e2)
+        for e1 in incoming_1
+        for e2 in incoming_2
+    ]
+    # note that the list may have entries 
+    # that have the same source and destination but
+    # a different
+    for tr in edge_triple_list:
+        s,d,computers=tr
+        pg.add_edge(s,d,computers=computers)
+    return pg
 
 def remove_supersets_once(sets):
     key_func=lambda s:len(s)
@@ -85,6 +141,9 @@ def arg_set_graph(
         g.add_edge(arg_set(c), target,computers=frozenset({c}))
     return g
 
+
+
+
 def direct_predecessor_graph(
         node        :Set[type],
         allComputers:Set[Callable]
@@ -95,18 +154,21 @@ def direct_predecessor_graph(
     # Instead of just the nodes (sets of Mvars) it returns a small subgraph with the node as
     # destination and also stores the computers used as an attribute of the edge
     
-    raise
-
-    #res=cartesian_union(
-    #    [ {frozenset({v})}.union(arg_set_set(v,allComputers)) for v in node]
-    #)
+    res=cartesian_union_graph(
+        [ arg_set_graph(v,allComputers) for v in node]
+    )
+    print(res)
     ##pe('node',locals())
 
     ## note that the cartesian product contains the original node
     ## we remove all nodes that are just supersets of it
     ## and afterwards the node itself
-    ##return res.difference(frozenset({node}))
-    #return remove_supersets(res).difference(frozenset({node}))
+    res=remove_supersets(res).difference(frozenset({node}))
+    print(res)
+    return res
+
+
+
 
 def direct_predecessor_nodes(
         node        :Set[type],
@@ -133,7 +195,7 @@ def direct_predecessor_nodes(
 
 # fixme: Markus 2-14 2020
 # I do not yet know what we can use this graph for
-# I renamed it since it is not the "sparse_powerset_graph" (my = Markus's) tests. 
+# I renamed it since it is not the "sparse_powerset_graph" of my (= Markus's) tests. 
 def graph_Thomas(mvars, computers):
     g = nx.DiGraph()
     g.add_nodes_from(frozenset({v}) for v in mvars)
@@ -213,7 +275,7 @@ def sparse_powerset_graph(allMvars,allComputers):
     G=nx.DiGraph()
     G.add_nodes_from(new_nodes)
     G_final,new_nodes=updated_Graph(G,new_nodes,allMvars,allComputers)
-    # new_nodes is now empty 
+    # new_nodpg_B_D.svges is now empty 
     return G_final
 
 
@@ -250,6 +312,58 @@ def minimal_startnodes_for_node(
 
     minimal_startnodes=[n for n in filter(filter_func,minimal_startnodes)]
 
+def draw_SetDiGraph(spsg,ax,**kwargs):
+    pos=nx.spring_layout(spsg)
+    nx.draw(
+        spsg
+        ,labels={n:node_2_string(n) for n in spsg.nodes()}
+        ,ax=ax
+        ,node_size=1000
+        ,node_shape='s'
+        ,pos=pos
+        ,**kwargs
+    )
+    edge_labels= {e:compset_2_string(spsg.get_edge_data(*e)['computers']) for e in spsg.edges()}
+    nx.draw_networkx_edge_labels(
+        spsg 
+        ,ax=ax
+        ,edge_labels=edge_labels
+        ,pos=pos
+    )
+
+
+def draw_SetMultiDiGraph(spsg,ax,**kwargs):
+    pos=nx.spring_layout(spsg)
+    nx.draw(
+        spsg
+        ,labels={n:node_2_string(n) for n in spsg.nodes()}
+        ,ax=ax
+        ,node_size=1000
+        ,node_shape='s'
+        ,pos=pos
+        ,**kwargs
+    )
+    # at the moment it is not possible to draw
+    # more than one edge (egde_lables) between nodes
+    # directly (no edgelabels for MultiDiGraphs)
+    # therefore we draw only one line for all computersets
+    # and assemble the label from the different edges 
+    def edgeDict_to_string(ed):
+        target='computers'
+        comp_sets=[v[target] for v in ed.values() if target in v.keys()]
+        comp_set_strings=[compset_2_string(cs) for cs in comp_sets]
+        res="\n".join(comp_set_strings)
+        print(res)
+        return res
+    
+    edge_labels={e:edgeDict_to_string(spsg.get_edge_data(*e)) for e in spsg.edges()}  
+
+    nx.draw_networkx_edge_labels(
+        spsg 
+        ,ax=ax
+        ,edge_labels=edge_labels
+        ,pos=pos
+    )
 
 def draw_Graph_svg(spsg,file_name_trunk):
     # the next line is the standard translation 
@@ -302,11 +416,10 @@ def draw_Graph_with_computers_svg(spsg,file_name_trunk):
         print(computer_set)
         ss,st=tuple(map(node_2_string,(s,t)))
         A.add_edge(ss,st)
-        for c in computer_set:
-            Ae=A.get_edge(ss,st)
-            #Ae.attr['color']=colordict[computer_colors[c.__name__]]
-            Ae.attr['fontcolor']=colordict[computer_colors[c.__name__]]
-            Ae.attr['label']=c.__name__
+        Ae=A.get_edge(ss,st)
+        #Ae.attr['color']=colordict[computer_colors[c.__name__]]
+        #Ae.attr['fontcolor']=colordict[computer_colors[c.__name__]]
+        Ae.attr['label']="\n".join([c.__name__ for c in computer_set]) 
     #print(A.string()) # print to screen
     #A.draw(file_name_trunk+'.png',prog="circo") # draw to png using circo
     A.draw(file_name_trunk+'.svg',prog='circo') 

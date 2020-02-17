@@ -36,7 +36,7 @@ setup(name='bgc_md2',
         #},
         install_requires=[
             "CompartmentalSystems"
-            #,"testinfrastructure"
+            ,"testinfrastructure" #also on https://github.com/MPIBGC-TEE/testinfrastructure.githttps://github.com/MPIBGC-TEE/testinfrastructure.git
             ,"concurrencytest"
             #,"requests"
             #,"mendeley "
