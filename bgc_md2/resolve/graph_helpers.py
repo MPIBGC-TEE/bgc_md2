@@ -56,8 +56,8 @@ def cartesian_product(l:List[Set])->Set[Tuple]:
         return frozenset([lt+rt for lt in left_tupels for  rt in right_tupels ])
 
 
-def list_product_graph(l:List[nx.MultiDiGraph])->nx.MultiDiGraph:
-    return reduce( lambda acc,g:product_graph(acc,g) ,l)
+def list_product_graph_old(l:List[nx.MultiDiGraph])->nx.MultiDiGraph:
+    return reduce( lambda acc,g:product_graph_old(acc,g) ,l)
 
 def cartesian_union(l:List[Set])->Set[Set]:
     #pe('l',locals())
@@ -84,6 +84,30 @@ def product_edge_triple(e1,e2):
     )
 
 def product_graph(
+        *graphs:Tuple[nx.MultiDiGraph]
+    )->nx.MultiDiGraph:
+    return reduce(lambda u,v:product_graph_2(u,v),graphs)
+
+def product_graph_2(
+        g1:nx.MultiDiGraph
+        ,g2:nx.MultiDiGraph
+    )->nx.MultiDiGraph:
+    cp=nx.cartesian_product(g1,g2)
+    prod=nx.MultiDiGraph()
+
+
+    for edge in cp.edges(data=True):
+        s_tup,d_tup,data=edge
+        prod.add_edge(
+            reduce(lambda acc,n :acc.union(n), s_tup)
+            ,reduce(lambda acc,n :acc.union(n), d_tup)
+            ,computers=data['computers'])
+        
+    return prod
+
+
+    
+def product_graph_old(
          g1:nx.MultiDiGraph
         ,g2:nx.MultiDiGraph
     )->nx.MultiDiGraph:
@@ -233,7 +257,7 @@ def direct_prerequisites_Thomas(graph, mvar):
 
 
 
-def update_step(G,extendable_nodes,allComputers):
+def update_step_old(G,extendable_nodes,allComputers):
     
     # update the Graph by looking at the new_nodes and adding all their possible predecessors as new nodes 
     # The nodes representing one-element sets have been already treated by the first step 
@@ -273,7 +297,7 @@ def update_step(G,extendable_nodes,allComputers):
 
 
 def updated_Graph(G,extendable_nodes,allMvars,allComputers,counter=0):
-    G_new,extendable_nodes_new=update_step(G,extendable_nodes,allComputers)
+    G_new,extendable_nodes_new=update_step_old(G,extendable_nodes,allComputers)
     if len(extendable_nodes)==0: 
         return (G,extendable_nodes)
     else:

@@ -6,7 +6,7 @@ import networkx as nx
 from testinfrastructure.InDirTest import InDirTest
 from testinfrastructure.helpers import pp,pe
 from unittest import skip
-from copy import copy
+from copy import copy,deepcopy
 
 from bgc_md2.resolve.graph_helpers import ( 
     # Thomas's functions
@@ -20,17 +20,18 @@ from bgc_md2.resolve.graph_helpers import (
     ,direct_predecessor_nodes
     ,direct_predecessor_graph
     ,arg_set_graph
-    ,arg_set_graph
     ,minimal_startnodes_for_single_var
     ,minimal_startnodes_for_node
-    ,update_step
+    #,update_step
+    ,update_step_old
     ,remove_supersets
     ,node_2_string
     ,nodes_2_string
     ,edge_2_string
     ,product_graph
+    ,product_graph_old
     ,product_edge_triple
-    ,list_product_graph
+    ,list_product_graph_old
     ,cartesian_union
     ,cartesian_product
     #,cartesian_union_graph
@@ -44,7 +45,7 @@ from bgc_md2.resolve.graph_helpers import (
     ,draw_Graph_with_computers_svg
     #,powerlist
 )
-from bgc_md2.resolve.non_graph_helpers import  arg_set_set
+from bgc_md2.resolve.non_graph_helpers import  arg_set_set,all_mvars
 
 class A_minus_1:
     pass
@@ -364,174 +365,244 @@ class TestGraphs(InDirTest):
         draw_Graph_with_computers_svg(asg,'asg')
     
     
-    def test_product_edge_triple(self):
-        self.assertEqual(
-            product_edge_triple(
-                 ({I},{A},{'computers':{a_from_i}})
-                ,({B},{D},{'computers':{d_from_b}})
-            )
-            ,({I,B},{A,D},{a_from_i,d_from_b})
-        )
-        
-        
-        # take an example where we could loose a costructor
-        # by just writing edges with the same start and destination
-        # so that only the edge that is written last remains.
-        # computers:a(z),b(z) 
-        #
-        #    {a(z)}          {b(z)}          {a(z),b(z)}
-        # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
-
-        self.assertEqual(
-            product_edge_triple(
-                 ({Z},{A},{'computers':{a_from_z}})
-                ,({Z},{B},{'computers':{b_from_z}})
-            )
-            ,({Z},{A,B},{a_from_z,b_from_z})
-        )
-
-    def test_cartesian_product_graph(self):
-        # this is just a generalization 
-        # of the product of two graphs to 
-        # the product of a list of graphs
-        # we start with a very simpe example
-        computers=frozenset({a_from_x,b_from_y,c_from_z})
-        asg_A=arg_set_graph(A,computers)
-        asg_B=arg_set_graph(B,computers)
-        asg_C=arg_set_graph(C,computers)
-        res=list_product_graph([asg_A,asg_B,asg_C])
-        
-        ref=nx.MultiDiGraph()
-        ref.add_edge(
-            frozenset({X,Y,Z})
-            ,frozenset({A,B,C})
-            ,computers=frozenset({a_from_x,b_from_y,c_from_z})
-        )
-        self.assertGraphEqual(res,ref)
-        
-        fig1=plt.figure(figsize=(5,20))
-        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
-        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
-        ax3=fig1.add_subplot(413,frame_on=True,title="arg_set_graph(C)")
-        ax4=fig1.add_subplot(414,frame_on=True,title="product_graph(A,B,C)")
-        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        
-        draw_SetMultiDiGraph(     asg_A,ax=ax1)
-        draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        draw_SetMultiDiGraph(     asg_C,ax=ax3)
-        draw_SetMultiDiGraph(     res,  ax=ax4)
-        fig1.savefig('ABC.pdf')
-
-        computers=frozenset({a_from_x,b_from_y,c_from_z})
-        asg_A=arg_set_graph(A,computers)
-        asg_B=arg_set_graph(B,computers)
-        asg_C=arg_set_graph(C,computers)
-        res=list_product_graph([asg_A,asg_B,asg_C])
-        
-        fig1=plt.figure(figsize=(5,20))
-        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
-        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
-        ax3=fig1.add_subplot(413,frame_on=True,title="arg_set_graph(C)")
-        ax4=fig1.add_subplot(414,frame_on=True,title="product_graph(A,B,C)")
-        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        
-        draw_SetMultiDiGraph(     asg_A,ax=ax1)
-        draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        draw_SetMultiDiGraph(     asg_C,ax=ax3)
-        draw_SetMultiDiGraph(     res,  ax=ax4)
-        fig1.savefig('ABC.pdf')
-
+#    def test_product_edge_triple(self):
+#        self.assertEqual(
+#            product_edge_triple(
+#                 ({I},{A},{'computers':{a_from_i}})
+#                ,({B},{D},{'computers':{d_from_b}})
+#            )
+#            ,({I,B},{A,D},{a_from_i,d_from_b})
+#        )
+#        
+#        
+#        # take an example where we could loose a costructor
+#        # by just writing edges with the same start and destination
+#        # so that only the edge that is written last remains.
+#        # computers:a(z),b(z) 
+#        #
+#        #    {a(z)}          {b(z)}          {a(z),b(z)}
+#        # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+#
+#        self.assertEqual(
+#            product_edge_triple(
+#                 ({Z},{A},{'computers':{a_from_z}})
+#                ,({Z},{B},{'computers':{b_from_z}})
+#            )
+#            ,({Z},{A,B},{a_from_z,b_from_z})
+#        )
+#
+#    def test_cartesian_product_graph_old(self):
+#        # this is just a generalization 
+#        # of the product of two graphs to 
+#        # the product of a list of graphs
+#        # we start with a very simpe example
+#        computers=frozenset({a_from_x,b_from_y,c_from_z})
+#        asg_A=arg_set_graph(A,computers)
+#        asg_B=arg_set_graph(B,computers)
+#        asg_C=arg_set_graph(C,computers)
+#        res=list_product_graph_old([asg_A,asg_B,asg_C])
+#        
+#        ref=nx.MultiDiGraph()
+#        ref.add_edge(
+#            frozenset({X,Y,Z})
+#            ,frozenset({A,B,C})
+#            ,computers=frozenset({a_from_x,b_from_y,c_from_z})
+#        )
+#        self.assertGraphEqual(res,ref)
+#        
+#        fig1=plt.figure(figsize=(5,20))
+#        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+#        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+#        ax3=fig1.add_subplot(413,frame_on=True,title="arg_set_graph(C)")
+#        ax4=fig1.add_subplot(414,frame_on=True,title="product_graph_old(A,B,C)")
+#        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+#        
+#        draw_SetMultiDiGraph(     asg_A,ax=ax1)
+#        draw_SetMultiDiGraph(     asg_B,ax=ax2)
+#        draw_SetMultiDiGraph(     asg_C,ax=ax3)
+#        draw_SetMultiDiGraph(     res,  ax=ax4)
+#        fig1.savefig('ABC.pdf')
+#
+#        computers=frozenset({a_from_x,b_from_y,c_from_z})
+#        asg_A=arg_set_graph(A,computers)
+#        asg_B=arg_set_graph(B,computers)
+#        asg_C=arg_set_graph(C,computers)
+#        res=list_product_graph_old([asg_A,asg_B,asg_C])
+#        
+#        fig1=plt.figure(figsize=(5,20))
+#        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+#        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+#        ax3=fig1.add_subplot(413,frame_on=True,title="arg_set_graph(C)")
+#        ax4=fig1.add_subplot(414,frame_on=True,title="product_graph_old(A,B,C)")
+#        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+#        
+#        draw_SetMultiDiGraph(     asg_A,ax=ax1)
+#        draw_SetMultiDiGraph(     asg_B,ax=ax2)
+#        draw_SetMultiDiGraph(     asg_C,ax=ax3)
+#        draw_SetMultiDiGraph(     res,  ax=ax4)
+#        fig1.savefig('ABC.pdf')
+#
     def test_product_graph(self):
-        computers=frozenset({a_from_i,d_from_b})
-        
-        asg_A=arg_set_graph(A,computers)
-        asg_D=arg_set_graph(D,computers)
-        
-        pg_A_D=product_graph(asg_A,asg_D)
+        #computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
 
-        ref_pg_A_D=nx.MultiDiGraph()
-        ref_pg_A_D.add_edge(
-            frozenset({B,I})
-            ,frozenset({D,A})
-            ,computers=frozenset({a_from_i,d_from_b})
-        )
-        self.assertGraphEqual(pg_A_D,ref_pg_A_D)
-
-        # Now take an example where we could loose a costructor
-        # by just writing edges with the same start and destination
-        # so that only the edge that is written last remains.
-        # computers:a(z),b(z) 
-        computers=frozenset({a_from_z,b_from_z})
+        #asg_A=arg_set_graph(A,computers)
+        #asg_B=arg_set_graph(B,computers)
+        #pg_A_B=product_graph(asg_A,asg_B)
         #
-        #    {a(z)}          {b(z)}          {a(z),b(z)}
-        # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+        #fig1=plt.figure(figsize=(5,20))
+        #
+        #ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        #draw_SetMultiDiGraph(     asg_A,ax=ax1)
+        #draw_SetMultiDiGraph(     asg_B,ax=ax2)
+        #draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #fig1.savefig('AB_Z.pdf')
+    
+        #computers=frozenset({a_from_y,b_from_y,b_from_z})
+        #asg_A=arg_set_graph(A,computers)
+        #asg_B=arg_set_graph(B,computers)
+        #pg_A_B=product_graph(asg_A,asg_B)
+        #
+        #fig1=plt.figure(figsize=(10,30))
+        #ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        #draw_SetMultiDiGraph(     asg_A,ax=ax1)
+        #draw_SetMultiDiGraph(     asg_B,ax=ax2)
+        #draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #fig1.savefig('A_y_B_Y_B_Z.pdf')
+        ##    {a(z)}          {b(z)}          {a(z),b(z)}
+
+        ## {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+
+        #computers=frozenset({ a_from_z,b_from_z})
+        #asg_A=arg_set_graph(A,computers)
+        #asg_B=arg_set_graph(B,computers)
+        #pg_A_B=product_graph(asg_A,asg_B)
+        #
+        #fig1=plt.figure(figsize=(10,30))
+        #ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        #draw_SetMultiDiGraph(     asg_A,ax=ax1)
+        #draw_SetMultiDiGraph(     asg_B,ax=ax2)
+        #draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #fig1.savefig('A_Z_B_Y.pdf')
+
+        computers=frozenset({ a_from_z,b_from_z,c_from_b})
         asg_A=arg_set_graph(A,computers)
         asg_B=arg_set_graph(B,computers)
-        pg_A_B=product_graph(asg_A,asg_B)
-        ref_pg_A_B=nx.MultiDiGraph()
-        ref_pg_A_B.add_edge(
-            frozenset({Z})
-            ,frozenset({A,B})
-            ,computers=frozenset({a_from_z,b_from_z})
-        ) 
-        self.assertGraphEqual(pg_A_B,ref_pg_A_B)
-        fig1=plt.figure(figsize=(5,20))
-        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
-        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
-        ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        asg_C=arg_set_graph(C,computers)
+        asg_C=arg_set_graph(C,computers)
+        prod=product_graph(*[asg_A,asg_B,asg_C])
+        
+        fig1=plt.figure(figsize=(10,30))
+        ax1=fig1.add_subplot(511,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(512,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(513,frame_on=True,title="arg_set_graph(C)")
+        ax4=fig1.add_subplot(514,frame_on=True,title="product_graph(A,B,C)")
         #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
         draw_SetMultiDiGraph(     asg_A,ax=ax1)
         draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
-        #draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
-        fig1.savefig('AB_Z.pdf')
-        
-        # Now take another example where we could loose a costructor
-        # by just writing edges with the same start and destination
-        # so that only the edge that is written last remains.
-        # computers: a(y),a(z)  ,b(y),b(z) 
-        # the interesting edge is {z,y} -> {a,b}
-        # which can be computed by the computer combinations
-        # {a(z),b(y)} and {a(y),
-        computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
+        draw_SetMultiDiGraph(     asg_C,ax=ax3)
+        draw_SetMultiDiGraph(     prod ,ax=ax4)
+        fig1.savefig('ABC.pdf')
 
-        asg_A=arg_set_graph(A,computers)
-        asg_B=arg_set_graph(B,computers)
-        pg_A_B=product_graph(asg_A,asg_B)
-        ref_pg_A_B=nx.MultiDiGraph()
-        
-        ref_pg_A_B.add_edge(
-            frozenset({Z})
-            ,frozenset({A,B})
-            ,computers=frozenset({a_from_z,b_from_z})
-        ) 
-        ref_pg_A_B.add_edge(
-            frozenset({Y})
-            ,frozenset({A,B})
-            ,computers=frozenset({a_from_y,b_from_y})
-        ) 
-        ref_pg_A_B.add_edge(
-            frozenset({Y,Z})
-            ,frozenset({A,B})
-            ,computers=frozenset({a_from_y,b_from_z})
-        ) 
-		# same nodes different computers (multigraph)
-        ref_pg_A_B.add_edge(
-            frozenset({Y,Z})
-            ,frozenset({A,B})
-            ,computers=frozenset({a_from_z,b_from_y})
-        ) 
-        self.assertGraphEqual(pg_A_B,ref_pg_A_B)
-        fig2=plt.figure(figsize=(5,20))
-        ax1=fig2.add_subplot(4,1,1,title="arg_set_graph(A)") 
-        ax2=fig2.add_subplot(4,1,2,title="arg_set_graph(B)") 
-        ax3=fig2.add_subplot(4,1,3,title="product_graph(A,B)")
-        ax4=fig2.add_subplot(4,1,4,title="ref")
-        draw_SetMultiDiGraph(    asg_A,ax=ax1)
-        draw_SetMultiDiGraph(    asg_B,ax=ax2)
-        draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
-        draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
-        fig2.savefig('AB_YZ.pdf')
+  #  def test_product_graph_old(self):
+  #      computers=frozenset({a_from_i,d_from_b})
+  #      
+  #      asg_A=arg_set_graph(A,computers)
+  #      asg_D=arg_set_graph(D,computers)
+  #      
+  #      pg_A_D=product_graph_old(asg_A,asg_D)
+
+  #      ref_pg_A_D=nx.MultiDiGraph()
+  #      ref_pg_A_D.add_edge(
+  #          frozenset({B,I})
+  #          ,frozenset({D,A})
+  #          ,computers=frozenset({a_from_i,d_from_b})
+  #      )
+  #      self.assertGraphEqual(pg_A_D,ref_pg_A_D)
+
+  #      # Now take an example where we could loose a costructor
+  #      # by just writing edges with the same start and destination
+  #      # so that only the edge that is written last remains.
+  #      # computers:a(z),b(z) 
+  #      computers=frozenset({a_from_z,b_from_z})
+  #      #
+  #      #    {a(z)}          {b(z)}          {a(z),b(z)}
+  #      # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+  #      asg_A=arg_set_graph(A,computers)
+  #      asg_B=arg_set_graph(B,computers)
+  #      pg_A_B=product_graph_old(asg_A,asg_B)
+  #      ref_pg_A_B=nx.MultiDiGraph()
+  #      ref_pg_A_B.add_edge(
+  #          frozenset({Z})
+  #          ,frozenset({A,B})
+  #          ,computers=frozenset({a_from_z,b_from_z})
+  #      ) 
+  #      self.assertGraphEqual(pg_A_B,ref_pg_A_B)
+  #      fig1=plt.figure(figsize=(5,20))
+  #      ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+  #      ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+  #      ax3=fig1.add_subplot(413,frame_on=True,title="product_graph_old(A,B)")
+  #      #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+  #      draw_SetMultiDiGraph(     asg_A,ax=ax1)
+  #      draw_SetMultiDiGraph(     asg_B,ax=ax2)
+  #      draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+  #      #draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
+  #      fig1.savefig('AB_Z.pdf')
+  #      
+  #      # Now take another example where we could loose a costructor
+  #      # by just writing edges with the same start and destination
+  #      # so that only the edge that is written last remains.
+  #      # computers: a(y),a(z)  ,b(y),b(z) 
+  #      # the interesting edge is {z,y} -> {a,b}
+  #      # which can be computed by the computer combinations
+  #      # {a(z),b(y)} and {a(y),
+  #      computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
+
+  #      asg_A=arg_set_graph(A,computers)
+  #      asg_B=arg_set_graph(B,computers)
+  #      pg_A_B=product_graph_old(asg_A,asg_B)
+  #      ref_pg_A_B=nx.MultiDiGraph()
+  #      
+  #      ref_pg_A_B.add_edge(
+  #          frozenset({Z})
+  #          ,frozenset({A,B})
+  #          ,computers=frozenset({a_from_z,b_from_z})
+  #      ) 
+  #      ref_pg_A_B.add_edge(
+  #          frozenset({Y})
+  #          ,frozenset({A,B})
+  #          ,computers=frozenset({a_from_y,b_from_y})
+  #      ) 
+  #      ref_pg_A_B.add_edge(
+  #          frozenset({Y,Z})
+  #          ,frozenset({A,B})
+  #          ,computers=frozenset({a_from_y,b_from_z})
+  #      ) 
+  #  	# same nodes different computers (multigraph)
+  #      ref_pg_A_B.add_edge(
+  #          frozenset({Y,Z})
+  #          ,frozenset({A,B})
+  #          ,computers=frozenset({a_from_z,b_from_y})
+  #      ) 
+  #      self.assertGraphEqual(pg_A_B,ref_pg_A_B)
+  #      fig2=plt.figure(figsize=(5,20))
+  #      ax1=fig2.add_subplot(4,1,1,title="arg_set_graph(A)") 
+  #      ax2=fig2.add_subplot(4,1,2,title="arg_set_graph(B)") 
+  #      ax3=fig2.add_subplot(4,1,3,title="product_graph_old(A,B)")
+  #      ax4=fig2.add_subplot(4,1,4,title="ref")
+  #      draw_SetMultiDiGraph(    asg_A,ax=ax1)
+  #      draw_SetMultiDiGraph(    asg_B,ax=ax2)
+  #      draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+  #      draw_SetMultiDiGraph(ref_pg_A_B,ax=ax4)
+  #      fig2.savefig('AB_YZ.pdf')
     
     @skip('not implemented yes')
     def test_direct_predecessor_graph(self):
@@ -658,24 +729,64 @@ class TestGraphs(InDirTest):
             })
         )
 
+    def test_update_steps_with_edges(self):
+        # we implement the graph building algorithm manually for a 
+        # simple example
+        fig=plt.figure(figsize=(15,50))
+        ax1=fig.add_subplot(411,frame_on=True,title="1. draw asgs")
+        ax2=fig.add_subplot(412,frame_on=True,title="2 find startnodes and compute their predecessors")
+        ax3=fig.add_subplot(413,frame_on=True,title="")
+        
+        spsg=nx.MultiDiGraph()
+        computers=frozenset({a_from_b_c,a_from_b_d,b_from_e_f})
+        allMvars = all_mvars(computers) 
+        for v in allMvars:
+            spsg.add_edges_from(arg_set_graph(v,computers).edges(data=True))
 
-    def test_update_step(self):
+        
+        start_nodes= [n for n in spsg.nodes() if len(spsg.in_edges(n))==0]
+        print(nodes_2_string(start_nodes)) 
+        for node in start_nodes:
+            print(tuple(v for v in node))
+            pg=product_graph(*[arg_set_graph(v,computers) for v in node])
+            spsg.add_edges_from(pg.edges(data=True))
+
+        spsg_old=deepcopy(spsg)
+        start_nodes= [n for n in spsg.nodes() if len(spsg.in_edges(n))==0]
+        print(nodes_2_string(start_nodes)) 
+        for node in start_nodes:
+            print(tuple(v for v in node))
+            pg=product_graph(*[arg_set_graph(v,computers) for v in node])
+            spsg.add_edges_from(pg.edges(data=True))
+        
+        print(spsg==spsg)
+        ax3=fig.add_subplot(413,frame_on=True,title="3 find startnodes and compute their predecessors")
+        draw_SetMultiDiGraph(spsg,ax=ax1)
+        draw_SetMultiDiGraph(spsg,ax=ax2)
+        draw_SetMultiDiGraph(spsg,ax=ax3)
+
+        
+        
+        
+        fig.savefig('alg.pdf')
+
+    def test_update_step_old(self):
         new_nodes=frozenset([frozenset({v}) for v in self.mvars])
         G=nx.DiGraph()
         G.add_nodes_from(new_nodes)
-        draw_Graph_svg(G,"test_update_step_original_Graph")
+        draw_Graph_svg(G,"test_update_step_old_original_Graph")
 
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_1")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_2")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_3")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_4")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
-        draw_Graph_svg(G,"test_update_step_updated_Graph_5")
-        G,new_nodes=update_step(G,new_nodes,self.computers)
+        G,new_nodes=update_step_old(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_old_updated_Graph_1")
+        G,new_nodes=update_step_old(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_old_updated_Graph_2")
+        G,new_nodes=update_step_old(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_old_updated_Graph_3")
+        G,new_nodes=update_step_old(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_old_updated_Graph_4")
+        G,new_nodes=update_step_old(G,new_nodes,self.computers)
+        draw_Graph_svg(G,"test_update_step_old_updated_Graph_5")
+        G,new_nodes=update_step_old(G,new_nodes,self.computers)
         draw_Graph_svg(G,"test_update_step_updated_Graph_6")
         
     def test_draw_multigraph_graphviz(self):
