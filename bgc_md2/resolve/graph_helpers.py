@@ -92,27 +92,27 @@ def update_step(
         spsg:nx.MultiDiGraph,
         computers:Set[Callable]
     )->nx.MultiDiGraph:
-    spsg=deepcopy(spsg)
-    start_nodes= [n for n in spsg.nodes() if len(spsg.in_edges(n))==0]
+    new=deepcopy(spsg)
+    start_nodes= [n for n in new.nodes() if len(new.in_edges(n))==0]
     #print(nodes_2_string(start_nodes)) 
     for node in start_nodes:
-        print(tuple(v for v in node))
+        #print(tuple(v for v in node))
         pg=product_graph(*[arg_set_graph(v,computers) for v in node])
-        spsg.add_edges_from(pg.edges(data=True))
-        #spsg=nx.compose(spsg,pg)
+        #new.add_edges_from(pg.edges(data=True))
+        new=nx.compose(new,pg)
     
-    return spsg
+    return new
 
 def sparse_powerset_graph(
         computers:Set[Callable]
     )->nx.MultiDiGraph:
-    spsg=initial_sparse_powerset_graph(computers)
-    spsg_new=update_step(spsg,computers)
-    while not(graphs_equal(spsg,spsg_new)):
-        spsg_new=update_step(spsg,computers)
-        spsg=spsg
-
-    return spsg_new
+    old=initial_sparse_powerset_graph(computers)
+    new=update_step(old,computers)
+    while not(graphs_equal(old,new)):
+        new=update_step(old,computers)
+        old=new
+        print(graphs_equal(old,new))
+    return new
 class SequenceOfUpdates:
     def __iter__(self):
         self.a=1

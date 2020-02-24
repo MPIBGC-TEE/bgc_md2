@@ -127,6 +127,9 @@ def a_from_b_d(b: B, d: D) -> A:
 def a_from_x(x:X)->A:
     return A()
 
+def b_from_x(x:X)->B:
+    return B()
+
 def a_from_y(y:Y)->A:
     return A()
 
@@ -248,6 +251,31 @@ class TestGraphs(InDirTest):
         # assemble this set from a file of annotated functions in 
         # special file
         self.computers = computers
+    def test_graphs_equal(self):
+        g1=nx.MultiDiGraph()
+        g1.add_edge(
+            frozenset({X,Y})
+            ,frozenset({A,B})
+            ,computers=frozenset({ a_from_x,b_from_y})
+        )
+        g1.add_edge(
+            frozenset({X,Y})
+            ,frozenset({A,B})
+            ,computers=frozenset({ a_from_y,b_from_x})
+        )
+        
+        g2=nx.MultiDiGraph()
+        g2.add_edge(
+            frozenset({X,Y})
+            ,frozenset({A,B})
+            ,computers=frozenset({ a_from_y,b_from_x})
+        )
+        g2.add_edge(
+            frozenset({X,Y})
+            ,frozenset({A,B})
+            ,computers=frozenset({ a_from_x,b_from_y})
+        )
+        self.assertTrue(graphs_equal(g1,g2))
 
     def test_product_graph(self):
         #computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
@@ -343,14 +371,15 @@ class TestGraphs(InDirTest):
         print(graphs_equal(spsg_3,spsg_2))
         
         spsg_4=update_step(spsg_3,computers) 
-        print(graphs_equal(spsg_4,spsg_2))
+        print(graphs_equal(spsg_4,spsg_3))
 
 
         draw_SetMultiDiGraph(spsg_0,ax=ax1)
         draw_SetMultiDiGraph(spsg_1,ax=ax2)
         draw_SetMultiDiGraph(spsg_2,ax=ax3)
         draw_SetMultiDiGraph(spsg_3,ax=ax4)
-
+        
+        res=sparse_powerset_graph(computers)
         
         
         
