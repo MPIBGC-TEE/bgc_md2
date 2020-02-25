@@ -38,12 +38,31 @@ def immutable_edge(edge):
     return (s,d,frozendict(dat))
 
 def graphs_equal(
-        g1:nx.MultiDiGraph
-        ,g2:nx.MultiDiGraph
+        g1_multi:nx.MultiDiGraph
+        ,g2_multi:nx.MultiDiGraph
     )->bool:
-    s1=set(immutable_edge(e) for e in g1.edges(data=True)) 
-    s2=set(immutable_edge(e) for e in g2.edges(data=True))
-    return s1==s2
+    # since we deal with a multigraph
+    # it is possible to get several edges between two nodes.
+    # The method get_edge_data returns a dictionary
+    # with the numbers of these edges as keys.
+    # But we want to consider two graphs equivalent if the resulting
+    # SET is equal, in other words: 
+    # If a graph has two edges EACH from : A->B  
+    # we do not care which of the edges has which computerset
+    # Therefore we compare the set of computersets belonging
+
+
+    g1_single=toDiGraph(g1_multi) 
+    g2_single=toDiGraph(g2_multi)
+    return all(
+            [g1_single.get_edge_data(*e)
+                ==g2_single.get_edge_data(*e) 
+                for e in g1_single.edges()
+            ]
+            + [g1_single.get_edge_data(*e)
+                ==g2_single.get_edge_data(*e) 
+                for e in g2_single.edges()]
+            ) & (g1_single.nodes()==g2_single.nodes())
 
 @lru_cache(maxsize=None) 
 def arg_set_graph( 
@@ -113,34 +132,72 @@ def sparse_powerset_graph(
         old=new
         print(graphs_equal(old,new))
     return new
-class SequenceOfUpdates:
-    def __iter__(self):
-        self.a=1
-        return self
-    def __next__(self):
-        x=self.a
-        self.a+=1
-        return x
-    
-def update_sequence(
+
+def update_generator(
         computers:Set[Callable]
         ,max_it:int
     )->List[nx.MultiDiGraph]:
-    start_list=[initial_sparse_powerset_graph(computers)]
-    def add_to_list(acc,_):
-        last=acc[-1]
-        new=update_step(last,computers)
-        return acc+[new] if not(graphs_equal(last,new)) else []
 
-    result_list=reduce(
-        add_to_list(acc,x)
-        ,range(max_int)
-    )
-    return result_list
+    if max_it<0:
+        raise IndexError("update sequence indices have to be larger than 0")
+    
+    val=initial_sparse_powerset_graph(computers)
+    yield val
+    old=deepcopy(val)
+    val=update_step(val,computers)
+
+    print(graphs_equal(old,val))
+
+    counter=1
+    while max_it>counter and not(graphs_equal(old,val)):
+        yield val
+        old=deepcopy(val)
+        val=update_step(val,computers)
+        counter +=1
+        print(counter,graphs_equal(old,val))
 
 
 
+def draw_update_sequence(computers,max_it,file_name=None):
+    lg=[ g for g in update_generator(computers,max_it=max_it)]
+    nr=len(lg)
+    print("nr=",nr)
+    pos = nx.spring_layout(lg[-1], iterations=20)
+    #pos = nx.circular_layout(lg[-1] )
+    #pos = nx.kamada_kawai_layout (lg[-1])
+    #pos = nx.planar_layout (lg[-1])
+    #pos = nx.random_layout (lg[-1])
+    #pos = nx.shell_layout (lg[-1])
+    #pos = nx.spectral_layout (lg[-1])
+    #pos = nx.spiral_layout (lg[-1])
+    fig=plt.figure(figsize=(20,20*nr))   
+    axs=fig.subplots(nr,1,sharex=True,sharey=True)
+    for i in range(nr):
+        draw_SetMultiDiGraph(lg[i],axs[i],pos=pos)
+    
+    fig.savefig(file_name)
 
+def toDiGraph(
+        g_multi:nx.MultiDiGraph
+    )->nx.DiGraph:
+    def edgeDict_to_set(ed):
+        target='computers'
+        comp_set_set=frozenset(
+            [v[target] for v in ed.values() if target in v.keys()]
+        )
+        return comp_set_set
+
+    g_single=nx.DiGraph()
+    for e in g_multi.edges():
+        s,t=e
+        edgeDict=g_multi.get_edge_data(s,t)
+        comp_set_set=edgeDict_to_set(edgeDict)
+        if (g_single.has_edge(s,t)):
+            comp_set_set=comp_set_set.union( 
+                g_single.get_edge_data(s,t)['computers']
+            )
+        g_single.add_edge(s,t,computers=comp_set_set)
+    return g_single
 
 
 
@@ -254,8 +311,10 @@ def create_multigraph(allMvars,allComputers):
     return G
 
 
-def draw_SetMultiDiGraph(spsg,ax,**kwargs):
-    pos=nx.spring_layout(spsg)
+def draw_SetMultiDiGraph(spsg,ax,pos=None,**kwargs):
+    if pos is None:
+        pos=nx.spring_layout(spsg)
+    
     nx.draw(
         spsg
         ,labels={n:node_2_string(n) for n in spsg.nodes()}
@@ -275,7 +334,7 @@ def draw_SetMultiDiGraph(spsg,ax,**kwargs):
         comp_sets=[v[target] for v in ed.values() if target in v.keys()]
         comp_set_strings=[compset_2_string(cs) for cs in comp_sets]
         res="\n".join(comp_set_strings)
-        print(res)
+        #print(res)
         return res
     
     edge_labels={e:edgeDict_to_string(spsg.get_edge_data(*e)) for e in spsg.edges()}  

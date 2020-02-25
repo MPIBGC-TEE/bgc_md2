@@ -14,12 +14,15 @@ from bgc_md2.resolve.graph_helpers import (
     ,minimal_startnodes_for_single_var
     ,minimal_startnodes_for_node
     ,update_step
+    ,toDiGraph
     ,graphs_equal
     ,node_2_string
     ,nodes_2_string
     ,edge_2_string
     ,product_graph
     ,sparse_powerset_graph
+    ,update_generator
+    ,draw_update_sequence
     ,draw_multigraph_graphviz
     ,draw_multigraph_matplotlib
     #,draw_multigraph_plotly
@@ -251,6 +254,27 @@ class TestGraphs(InDirTest):
         # assemble this set from a file of annotated functions in 
         # special file
         self.computers = computers
+
+    def test_toDiGraph(self):
+        g_multi=nx.MultiDiGraph()
+        src =  frozenset({X,Y})
+        dest = frozenset({A,B})
+        computers_1=frozenset({ a_from_x,b_from_y})
+
+        computers_2=frozenset({ a_from_y,b_from_x})
+        g_multi.add_edge(
+            src
+            ,dest
+            ,computers=computers_1
+        )
+        g_multi.add_edge(
+            src
+            ,dest
+            ,computers=computers_2
+        )
+        g_single=toDiGraph(g_multi)
+        print(g_single.get_edge_data(src,dest))
+
     def test_graphs_equal(self):
         g1=nx.MultiDiGraph()
         g1.add_edge(
@@ -264,7 +288,8 @@ class TestGraphs(InDirTest):
             ,computers=frozenset({ a_from_y,b_from_x})
         )
         
-        g2=nx.MultiDiGraph()
+        g2=deepcopy(g1)
+        # now we exchange the edge data
         g2.add_edge(
             frozenset({X,Y})
             ,frozenset({A,B})
@@ -275,6 +300,7 @@ class TestGraphs(InDirTest):
             ,frozenset({A,B})
             ,computers=frozenset({ a_from_x,b_from_y})
         )
+        
         self.assertTrue(graphs_equal(g1,g2))
 
     def test_product_graph(self):
@@ -348,42 +374,43 @@ class TestGraphs(InDirTest):
         fig1.savefig('ABC.pdf')
 
 
-    def test_update_steps_with_edges(self):
+    def test_update_generator(self):
         # we implement the graph building algorithm manually for a 
         # simple example
-        fig=plt.figure(figsize=(25,100))
-        ax1=fig.add_subplot(711,title="1. draw asgs")
-        ax2=fig.add_subplot(712,title="2 find startnodes and compute their predecessors")
-        ax3=fig.add_subplot(713,title="3 find startnodes and compute their predecessors")
-        ax4=fig.add_subplot(714,title="3 find startnodes and compute their predecessors")
         
         #computers=frozenset({a_from_b_c,a_from_b_d,b_from_e_f})
         computers=self.computers
-        spsg_0=initial_sparse_powerset_graph(computers)
+        #spsg_0=initial_sparse_powerset_graph(computers)
 
-        spsg_1=update_step(spsg_0,computers) 
-        print(graphs_equal(spsg_1,spsg_0))
+        #spsg_1=update_step(spsg_0,computers) 
+        #print(graphs_equal(spsg_1,spsg_0))
 
-        spsg_2=update_step(spsg_1,computers) 
-        print(graphs_equal(spsg_2,spsg_1))
+        #spsg_2=update_step(spsg_1,computers) 
+        #print(graphs_equal(spsg_2,spsg_1))
 
-        spsg_3=update_step(spsg_2,computers) 
-        print(graphs_equal(spsg_3,spsg_2))
-        
-        spsg_4=update_step(spsg_3,computers) 
-        print(graphs_equal(spsg_4,spsg_3))
+        #spsg_3=update_step(spsg_2,computers) 
+        #print(graphs_equal(spsg_3,spsg_2))
+        #
+        #spsg_4=update_step(spsg_3,computers) 
+        #print(graphs_equal(spsg_4,spsg_3))
 
 
-        draw_SetMultiDiGraph(spsg_0,ax=ax1)
-        draw_SetMultiDiGraph(spsg_1,ax=ax2)
-        draw_SetMultiDiGraph(spsg_2,ax=ax3)
-        draw_SetMultiDiGraph(spsg_3,ax=ax4)
+        #draw_SetMultiDiGraph(spsg_0,ax=ax1)
+        #draw_SetMultiDiGraph(spsg_1,ax=ax2)
+        #draw_SetMultiDiGraph(spsg_2,ax=ax3)
+        #draw_SetMultiDiGraph(spsg_3,ax=ax4)
         
-        res=sparse_powerset_graph(computers)
+        #res=sparse_powerset_graph(computers)
+        #print(len([ g for g in update_generator(computers,max_it=7)]))
+        draw_update_sequence(computers,max_it=8,file_name='c1.pdf')
+        #draw_update_sequence(computers,max_it=2)
         
-        
-        
-        fig.savefig('alg.pdf')
+        #fig=plt.figure(figsize=(25,100))
+        #ax1=fig.add_subplot(711,title="1. draw asgs")
+        #ax2=fig.add_subplot(712,title="2 find startnodes and compute their predecessors")
+        #ax3=fig.add_subplot(713,title="3 find startnodes and compute their predecessors")
+        #ax4=fig.add_subplot(714,title="3 find startnodes and compute their predecessors")
+        #fig.savefig('alg.pdf')
 
         
     def test_draw_multigraph_graphviz(self):
