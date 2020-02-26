@@ -47,6 +47,7 @@ setup(name='bgc_md2',
             #,'oslash'
             #,'pypandoc'
             ,"networkx"
+            ,"pygraphviz"
         ],
         include_package_data=True,
         #zip_safe=False

@@ -518,16 +518,16 @@ class TestGraphs(InDirTest):
         spsg=sparse_powerset_graph(self.computers)
         ## After the graph has been computed we can use it
         ## to infer computability of all Mvars
-        #res=minimal_startnodes_for_single_var(spsg,B)
+        res=minimal_startnodes_for_single_var(spsg,B)
         ##print(nodes_2_string(res))
-        #self.assertSetEqual(
-        #    res,
-        #    frozenset({ 
-        #        frozenset({E,F}),
-        #        frozenset({C,D}),
-        #        frozenset({H,C,G})
-        #    })
-        #)
+        self.assertSetEqual(
+            res,
+            frozenset({ 
+                frozenset({E,F}),
+                frozenset({C,D}),
+                frozenset({H,C,G})
+            })
+        )
         
         
     def test_minimal_startnodes_for_node(self):
