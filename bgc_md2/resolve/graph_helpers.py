@@ -228,9 +228,10 @@ def minimal_target_subgraph_for_single_var(
         ,targetVar:type
     ):
     # all minimal starting points
+    targetNode=frozenset({targetVar})
     start_nodes=minimal_startnodes_for_single_var(spg,targetVar)
     path_list_list=[
-        nx.shortest_path(spg,target=targetVar, source=sn)
+        nx.shortest_path(spg,target=targetNode, source=sn)
         for sn in start_nodes
     ]
     connected_nodes=reduce(lambda acc, pl : acc.union(pl),path_list_list,frozenset({}))
@@ -266,7 +267,8 @@ def minimal_startnodes_for_node(
         # the product of the graphs leading to the subsets.
         # If the subsets are not one element sets we need fewer
         # multiplications.
-        prod_g=product_graph(*[target_subgraph(spg,frozenset({v})) for v in targetNode])
+        #prod_g=product_graph(*[target_subgraph(spg,frozenset({v})) for v in targetNode])
+        prod_g=product_graph(*[minimal_target_subgraph_for_single_var(spg,v) for v in targetNode])
         prod_path_dict=nx.shortest_path(prod_g,target=targetNode)
         possible_startnodes=frozenset(prod_path_dict.keys())
         
