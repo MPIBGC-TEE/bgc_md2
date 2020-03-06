@@ -9,7 +9,7 @@ def computable_mvars(
     )->Set[type]:
     # fixme mm: 
     # if possible replace by the new graph based method
-    # We can already compute the graph. We only have to do it once and can easyly inver the union
+    # We can already compute the graph. We only have to do it once and can easyly infer the union
     # of all nodes reachable from the startset.
     #
     # this is the old bottom up approach: repeatedly compute all
