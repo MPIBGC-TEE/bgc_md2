@@ -213,13 +213,51 @@ def minimal_startnodes_for_single_var(
     minimal_startnodes=[n for n in filter(lambda n: not(n.issuperset(targetSet)),possible_startnodes)]
     return frozenset(minimal_startnodes)
     
-def target_subgraph(
-         spg:nx.Graph
-        ,targetNode:Set[type]
-    ):
-    paths=nx.shortest_path(spg,target=targetNode).values()
-    connected_nodes=reduce(lambda acc, p : acc.union(p),paths,frozenset({}))
-    return spg.subgraph(connected_nodes)
+#def target_subgraph(
+#         spg:nx.MultiDiGraph
+#        ,targetNode:Set[type]
+#    )->nx.MultiDiGraph:
+#    def filter_func(n):
+#        # remove every set that contains one of the variables we are looking for ...
+#        return not(any([ (v in n) for v in targetNode]))
+#    
+#    if spg.has_node(targetNode):
+#        # The targetNode is already part of the spg. 
+#        # (because it has been added in one of the update 
+#        # steps as an argument set of a computer) 
+#        # in which case we can simply return the startnodes
+#        # of the paths leading to it.
+#        spg=spg.copy()
+#    else:
+#        # Although we do not find the node itself
+#        # we can find the nodes for the single element sets 
+#        # of the mvars in the node, since we have built the graph
+#        # starting wiht them. E.g if node {A,B,C} is not part of 
+#        # the graph we know at least that the nodes {A}, {B} amd {C}
+#        # are in the graph. 
+#        # For each of them we can compute the subgraph of 
+#        # spg that leads to it. If we compute the product of these
+#        # subgraphs it will contain the desired node.
+#
+#        # fixme: mm 02-26-2020
+#        # We could make this more efficient by looking for all the
+#        # disjoint unions of the targetNode Mvars and compute
+#        # the product of the graphs leading to the subsets.
+#        # If the subsets are not one element sets we need fewer
+#        # multiplications.
+#        #prod_g=product_graph(*[target_subgraph(spg,frozenset({v})) for v in targetNode])
+#        spg=product_graph(*[minimal_target_subgraph_for_single_var(spg,v) for v in targetNode])
+#    
+#    path_dict=nx.shortest_path(spg,target=targetNode)
+#    possible_startnodes=frozenset(path_dict.keys())
+#    minimal_startnodes=frozenset([n for n in filter(filter_func,possible_startnodes)])
+#    path_list_list=[
+#        nx.shortest_path(spg,target=targetNode, source=sn)
+#        for sn in minimal_startnodes
+#    ]
+#    connected_nodes=reduce(lambda acc, pl : acc.union(pl),path_list_list,frozenset({}))
+#    return spg.subgraph(connected_nodes).copy()
+    
 
 
 
@@ -235,7 +273,7 @@ def minimal_target_subgraph_for_single_var(
         for sn in start_nodes
     ]
     connected_nodes=reduce(lambda acc, pl : acc.union(pl),path_list_list,frozenset({}))
-    return spg.subgraph(connected_nodes)
+    return spg.subgraph(connected_nodes).copy()
 
 
 def minimal_startnodes_for_node(

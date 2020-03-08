@@ -20,8 +20,10 @@ from bgc_md2.resolve.mvars import (
 )
 import bgc_md2.resolve.computers as bgc_computers
 from bgc_md2.models.helpers import (
-        available_mvars
+        provided_mvars
         ,computable_mvars
+        ,path_dict_to_single_mvar
+        ,get_single_mvar_value
         )
 import sys
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -32,8 +34,8 @@ class TestModelFiles(unittest.TestCase):
     # compartmental Matrix 
     # Here we execute a python script in a special sandbox environment
     
-    def test_available_mvars(self):
-        mvts=available_mvars('testVectorFree')
+    def test_provided_mvars(self):
+        mvts=provided_mvars('testVectorFree')
         res=frozenset([
             InFluxesBySymbol
             ,OutFluxesBySymbol
@@ -55,8 +57,28 @@ class TestModelFiles(unittest.TestCase):
         mvts=computable_mvars('testVectorFree')
         self.assertSetEqual(mvts,res)
 
-    def test_get_mvar(self):
-        self.assertTrue(False)
+    def test_paths_to_single_mvar(self):
+        pd=path_dict_to_single_mvar(SmoothReservoirModel,'testVectorFree')
+        startNode=frozenset([
+            InFluxesBySymbol
+            ,OutFluxesBySymbol
+            ,InternalFluxesBySymbol
+            ,TimeSymbol
+            ,StateVariableTuple
+        ])
+        paths=pd[startNode]
+        res=paths[0]
+        ref=[startNode,frozenset({SmoothReservoirModel})]
+        self.assertEqual(res,ref)
+
+    def test_get_mvar_value(self):
+        # first get a provided value
+        res=get_single_mvar_value(TimeSymbol,'testVectorFree') 
+        self.assertEqual(res,TimeSymbol('t'))
+        # now get a variable that is computable but not provided directly
+        
+        res=get_single_mvar_value(SmoothReservoirModel,'testVectorFree') 
+        #self.assertTrue(False)
 
     @unittest.skip
     def test_many(self):
