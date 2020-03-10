@@ -101,22 +101,20 @@ def get_single_mvar_value(
         if not path in starting_here:
             raise(Exception("the given path is not possible"))
 
-    # create a resultgraph from the path replace the nodes with 
+    # create results step by step along the graph
     spsg=sparse_powerset_graph(bgc_md2_computers())
     rg=spsg.subgraph(path).copy()
     rg.nodes[path[0]]['values']=pvs
     for i in range(1,len(path)):
-        computers= rg.get_edge_data(path[i-1],path[i])[0]['computers']
-        for c in computers:
-            arg_classes=[p.annotation for p in signature(c).parameters.values()]
+        computers= rg.get_edge_data(path[i-1],path[i])[0]['computers'] # if we have more
+        
+        def apply(comp):
+            arg_classes=[p.annotation for p in signature(comp).parameters.values()]
             arg_values=[pv_dict[cl] for cl in arg_classes]
-            print(arg_classes)
-            print(arg_values)
-            res=c(*arg_values)
-            print(res)
-    # Attach the values of the pvs as node data to the startnode
-    return rg
-    # now we go through the edges of the path and apply the stored computers 
-    # to the compute instances
+            return comp(*arg_values)
+            
+        pv_dict = frozendict({ngh.output_mvar(c):apply(c) for c in computers})
+
+    return pv_dict[mvar]
     
 

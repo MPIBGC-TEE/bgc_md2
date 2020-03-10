@@ -78,7 +78,8 @@ class TestModelFiles(unittest.TestCase):
         # now get a variable that is computable but not provided directly
         
         res=get_single_mvar_value(SmoothReservoirModel,'testVectorFree') 
-        #self.assertTrue(False)
+        
+        self.assertTrue(False) # make a real check here
 
     @unittest.skip
     def test_many(self):

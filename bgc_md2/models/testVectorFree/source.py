@@ -6,7 +6,7 @@ from bgc_md2.resolve.mvars import (
         ,TimeSymbol
         ,StateVariableTuple
         )
-from sympy.vector import CoordSysND,express
+#from sympy.vector import CoordSysND,express
 # fixme mm:
 # add this boilerplatecode automatically
 # from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel 
