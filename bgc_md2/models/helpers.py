@@ -1,7 +1,8 @@
 import importlib,inspect
-from typing import Dict,List,Set
+from typing import Dict,List,Set,TypeVar
 from frozendict import frozendict
 from copy import deepcopy
+from inspect import signature
 import bgc_md2.resolve.non_graph_helpers as ngh
 import networkx as nx
 from bgc_md2.resolve.graph_helpers import ( 
@@ -43,7 +44,7 @@ def computable_mvars(model_id:str)->Set[type]:
     )
 
 # fixme: mm 03-07-2020
-# generalizing from single mvar to node should be easy
+# - generalizing from single mvar to node should be easy
 def path_dict_to_single_mvar(
         mvar:type
         ,model_id:str
@@ -69,7 +70,6 @@ def path_dict_to_single_mvar(
     )
     return path_dict
 
-
 def get_single_mvar_value(
         mvar        :type
         ,model_id   :str
@@ -87,13 +87,36 @@ def get_single_mvar_value(
         return pv_dict[mvar]
     
     path_dict= path_dict_to_single_mvar(mvar,model_id)
-    startnodes=path_dict.keys()
+    start_nodes=path_dict.keys()
 
     if path==[]:
-        default_start_node=sorted(startnodes,key=lambda node:len(node))[0]
-        default_path=path_dict[default_start_node][0]
-        print(default_path)
-    # create a resultgraph and replace the nodes with 
-    # results for the instances
-    #return frozenset
+        default_start_node=sorted(start_nodes,key=lambda node:len(node))[0]
+        path=path_dict[default_start_node][0]
+    else:
+        #check if the given path is among the possible paths
+        start_node=path[0]
+        if start_node not in path_dict.keys():
+            raise(Exception("There are no path to the target with this startnode"))
+        starting_here=path_dict[start_node]
+        if not path in starting_here:
+            raise(Exception("the given path is not possible"))
+
+    # create a resultgraph from the path replace the nodes with 
+    spsg=sparse_powerset_graph(bgc_md2_computers())
+    rg=spsg.subgraph(path).copy()
+    rg.nodes[path[0]]['values']=pvs
+    for i in range(1,len(path)):
+        computers= rg.get_edge_data(path[i-1],path[i])[0]['computers']
+        for c in computers:
+            arg_classes=[p.annotation for p in signature(c).parameters.values()]
+            arg_values=[pv_dict[cl] for cl in arg_classes]
+            print(arg_classes)
+            print(arg_values)
+            res=c(*arg_values)
+            print(res)
+    # Attach the values of the pvs as node data to the startnode
+    return rg
+    # now we go through the edges of the path and apply the stored computers 
+    # to the compute instances
+    
 
