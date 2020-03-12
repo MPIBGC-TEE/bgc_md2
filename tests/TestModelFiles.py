@@ -75,11 +75,13 @@ class TestModelFiles(unittest.TestCase):
         # first get a provided value
         res=get_single_mvar_value(TimeSymbol,'testVectorFree') 
         self.assertEqual(res,TimeSymbol('t'))
-        # now get a variable that is computable but not provided directly
         
+        # now get a variable that is not provided directly but computable in one step
         res=get_single_mvar_value(SmoothReservoirModel,'testVectorFree') 
+        #self.assertTrue(False)
         
-        self.assertTrue(False) # make a real check here
+        # now get a variable that is not provided directly but computable in two steps
+        res=get_single_mvar_value(CompartmentalMatrix,'testVectorFree') 
 
     @unittest.skip
     def test_many(self):
