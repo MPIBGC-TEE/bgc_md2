@@ -12,19 +12,20 @@ from sympy import Symbol,Number
 from typing import List
 #from CompartmentalSystems import smooth_reservoir_model 
 from bgc_md2.resolve.mvars import (
-        InFluxesBySymbol
-        ,OutFluxesBySymbol
-        ,InternalFluxesBySymbol
-        ,TimeSymbol
-        ,StateVariableTuple
+    InFluxesBySymbol
+    ,OutFluxesBySymbol
+    ,InternalFluxesBySymbol
+    ,TimeSymbol
+    ,StateVariableTuple
+    ,CompartmentalMatrix
 )
 import bgc_md2.resolve.computers as bgc_computers
 from bgc_md2.models.helpers import (
-        provided_mvars
-        ,computable_mvars
-        ,path_dict_to_single_mvar
-        ,get_single_mvar_value
-        )
+    provided_mvars
+    ,computable_mvars
+    ,path_dict_to_single_mvar
+    ,get_single_mvar_value
+)
 import sys
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 sys.setrecursionlimit(2500)
@@ -53,6 +54,7 @@ class TestModelFiles(unittest.TestCase):
             ,TimeSymbol
             ,StateVariableTuple
             ,SmoothReservoirModel
+            ,CompartmentalMatrix
         ])
         mvts=computable_mvars('testVectorFree')
         self.assertSetEqual(mvts,res)
@@ -75,13 +77,13 @@ class TestModelFiles(unittest.TestCase):
         # first get a provided value
         res=get_single_mvar_value(TimeSymbol,'testVectorFree') 
         self.assertEqual(res,TimeSymbol('t'))
+        # now get a variable that is not provided directly but computable in one step 
         
-        # now get a variable that is not provided directly but computable in one step
         res=get_single_mvar_value(SmoothReservoirModel,'testVectorFree') 
-        #self.assertTrue(False)
-        
         # now get a variable that is not provided directly but computable in two steps
         res=get_single_mvar_value(CompartmentalMatrix,'testVectorFree') 
+        print(res)
+        #self.assertTrue(False)
 
     @unittest.skip
     def test_many(self):

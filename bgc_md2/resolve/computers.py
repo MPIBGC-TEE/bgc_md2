@@ -1,7 +1,14 @@
 from sympy import Symbol,Matrix
 import numpy as np
 from typing import Tuple
-from .mvars import InFluxesBySymbol,OutFluxesBySymbol,InternalFluxesBySymbol,TimeSymbol,StateVariableTuple
+from .mvars import (
+    InFluxesBySymbol
+	,OutFluxesBySymbol
+	,InternalFluxesBySymbol
+	,TimeSymbol
+	,StateVariableTuple
+	,CompartmentalMatrix
+)
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 def smooth_reservoir_model_from_fluxes(
@@ -18,5 +25,10 @@ def smooth_reservoir_model_from_fluxes(
         ,input_fluxes=in_fluxes
         ,output_fluxes=out_fluxes
         ,internal_fluxes=internal_fluxes
-        )
+   )
+
+def compartmental_matrix_from_smooth_reservoir_model(
+        smr:SmoothReservoirModel
+   )->CompartmentalMatrix:
+   return CompartmentalMatrix(smr.compartmental_matrix)
 
