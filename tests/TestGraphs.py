@@ -15,20 +15,21 @@ from bgc_md2.resolve.graph_helpers import (
     ,minimal_startnodes_for_node
     ,update_step
     ,toDiGraph
-    ,graphs_equal
+    ,equivalent_singlegraphs
+    ,equivalent_multigraphs
     ,node_2_string
     ,nodes_2_string
     ,edge_2_string
     ,product_graph
     ,sparse_powerset_graph
     ,update_generator
-    ,draw_update_sequence
-    ,draw_multigraph_graphviz
-    ,draw_multigraph_matplotlib
     #,draw_multigraph_plotly
-    ,draw_SetMultiDiGraph
     #,draw_Graph_svg
-    ,draw_Graph_with_computers_svg
+)
+from bgc_md2.resolve.graph_plotting import ( 
+    draw_update_sequence
+    ,draw_ComputerSetDiGraph_matplotlib
+    ,draw_ComputerSetMultiDiGraph_matplotlib
 )
 from bgc_md2.resolve.non_graph_helpers import  arg_set_set,all_mvars
 
@@ -275,7 +276,7 @@ class TestGraphs(InDirTest):
         g_single=toDiGraph(g_multi)
         print(g_single.get_edge_data(src,dest))
 
-    def test_graphs_equal(self):
+    def test_equivalent_multigraphs(self):
         g1=nx.MultiDiGraph()
         g1.add_edge(
             frozenset({X,Y})
@@ -301,8 +302,38 @@ class TestGraphs(InDirTest):
             ,computers=frozenset({ a_from_x,b_from_y})
         )
         
-        self.assertTrue(graphs_equal(g1,g2))
+        self.assertTrue(equivalent_multigraphs(g1,g2))
 
+    def test_arg_set_graph(self):
+        asg=arg_set_graph(D,self.computers)
+        # For compatibility arg_set_graph returns a multigraph 
+        # although we do not have more than one edge between a pair
+        # of nodes.
+        
+        ref=nx.MultiDiGraph()
+        ref.add_edge(
+            frozenset({B})
+            ,frozenset({D})
+            ,computers=frozenset({d_from_b})
+        )
+        ref.add_edge(
+            frozenset({G, H})
+            ,frozenset({D})
+            ,computers=frozenset({d_from_g_h})
+        )
+
+        #picture for manual check
+        fig=plt.figure(figsize=(20,20))
+        ax1=fig.add_subplot(1,2,1)
+        ax2=fig.add_subplot(1,2,2)
+        draw_ComputerSetMultiDiGraph_matplotlib(ref,ax1)
+        draw_ComputerSetMultiDiGraph_matplotlib(asg,ax2)
+        fig.savefig("arg_set_graph.pdf")
+        
+        self.assertTrue(equivalent_multigraphs(
+            asg , ref
+        ))
+        
     def test_product_graph(self):
         #computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
 
@@ -316,9 +347,9 @@ class TestGraphs(InDirTest):
         #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
         #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
         ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        #draw_SetMultiDiGraph(     asg_A,ax=ax1)
-        #draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        #draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        #draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
         #fig1.savefig('AB_Z.pdf')
     
         #computers=frozenset({a_from_y,b_from_y,b_from_z})
@@ -331,9 +362,9 @@ class TestGraphs(InDirTest):
         #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
         #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
         ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        #draw_SetMultiDiGraph(     asg_A,ax=ax1)
-        #draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        #draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        #draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
         #fig1.savefig('A_y_B_Y_B_Z.pdf')
         ##    {a(z)}          {b(z)}          {a(z),b(z)}
 
@@ -349,9 +380,9 @@ class TestGraphs(InDirTest):
         #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
         #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
         ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        #draw_SetMultiDiGraph(     asg_A,ax=ax1)
-        #draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        #draw_SetMultiDiGraph(    pg_A_B,ax=ax3)
+        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        #draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
         #fig1.savefig('A_Z_B_Y.pdf')
 
         computers=frozenset({ a_from_z,b_from_z,c_from_b})
@@ -367,62 +398,13 @@ class TestGraphs(InDirTest):
         ax3=fig1.add_subplot(513,frame_on=True,title="arg_set_graph(C)")
         ax4=fig1.add_subplot(514,frame_on=True,title="product_graph(A,B,C)")
         #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        draw_SetMultiDiGraph(     asg_A,ax=ax1)
-        draw_SetMultiDiGraph(     asg_B,ax=ax2)
-        draw_SetMultiDiGraph(     asg_C,ax=ax3)
-        draw_SetMultiDiGraph(     prod ,ax=ax4)
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_C,ax=ax3)
+        draw_ComputerSetMultiDiGraph_matplotlib(     prod ,ax=ax4)
         fig1.savefig('ABC.pdf')
 
 
-    def test_update_generator(self):
-        # we implement the graph building algorithm manually for a 
-        # simple example
-        
-        #computers=frozenset({a_from_b_c,a_from_b_d,b_from_e_f})
-        computers=self.computers
-        #spsg_0=initial_sparse_powerset_graph(computers)
-
-        #spsg_1=update_step(spsg_0,computers) 
-        #print(graphs_equal(spsg_1,spsg_0))
-
-        #spsg_2=update_step(spsg_1,computers) 
-        #print(graphs_equal(spsg_2,spsg_1))
-
-        #spsg_3=update_step(spsg_2,computers) 
-        #print(graphs_equal(spsg_3,spsg_2))
-        #
-        #spsg_4=update_step(spsg_3,computers) 
-        #print(graphs_equal(spsg_4,spsg_3))
-
-
-        #draw_SetMultiDiGraph(spsg_0,ax=ax1)
-        #draw_SetMultiDiGraph(spsg_1,ax=ax2)
-        #draw_SetMultiDiGraph(spsg_2,ax=ax3)
-        #draw_SetMultiDiGraph(spsg_3,ax=ax4)
-        
-        #res=sparse_powerset_graph(computers)
-        #print(len([ g for g in update_generator(computers,max_it=7)]))
-        draw_update_sequence(computers,max_it=8,file_name='c1.pdf')
-        #draw_update_sequence(computers,max_it=2)
-        
-        #fig=plt.figure(figsize=(25,100))
-        #ax1=fig.add_subplot(711,title="1. draw asgs")
-        #ax2=fig.add_subplot(712,title="2 find startnodes and compute their predecessors")
-        #ax3=fig.add_subplot(713,title="3 find startnodes and compute their predecessors")
-        #ax4=fig.add_subplot(714,title="3 find startnodes and compute their predecessors")
-        #fig.savefig('alg.pdf')
-
-        
-    def test_draw_multigraph_graphviz(self):
-        draw_multigraph_graphviz(self.mvars,self.computers)
-    
-    def test_draw_multigraph_matplotlib(self):
-        draw_multigraph_matplotlib(self.mvars,self.computers)
-    
-    @skip("very immature and nearly manual, but maybe neccessary to make the connections clickable") 
-    def test_draw_multigraph_plotly(self):
-        draw_multigraph_plotly(self.mvars,self.computers)
-        
    
 
 

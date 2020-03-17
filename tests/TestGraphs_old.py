@@ -272,69 +272,69 @@ class TestGraphsOld(InDirTest):
         # special file
         self.computers = computers
     
-    def test_Thomas_graph_creation(self):
-        g = graph_Thomas(self.mvars, self.computers)
-
-        self.assertEqual({
-            frozenset({E}),
-            frozenset({D}),
-            frozenset({C}),
-            frozenset({B}),
-            frozenset({A}),
-            frozenset({G}),
-            frozenset({I}),
-            frozenset({F}),
-            frozenset({H}),
-            frozenset({H, G}),
-            frozenset({C, D}),
-            frozenset({E, F}),
-        }, set(g.nodes()))
-
-        self.assertEqual({
-            (frozenset({B}), frozenset({D})),
-            (frozenset({B}), frozenset({E})),
-            (frozenset({B}), frozenset({F})),
-            (frozenset({B}), frozenset({C})),
-            (frozenset({I}), frozenset({A})),
-            (frozenset({H, G}), frozenset({D})),
-            (frozenset({C, D}), frozenset({B})),
-            (frozenset({E, F}), frozenset({B})),
-        }, g.edges())
-    
-
-    def test_direct_prerequisites_Thomas(self):
-        g = graph_Thomas(self.mvars, self.computers)
-        
-        self.assertSetEqual(
-            direct_prerequisites_Thomas(g, A), {(frozenset({I}), a_from_i)}
-        )
-        
-        self.assertSetEqual(
-            direct_prerequisites_Thomas(g, B),
-            {
-                (frozenset({C, D}), b_from_c_d),
-                (frozenset({E, F}), b_from_e_f)
-            }
-        )
-
-    def test_assertGraphEqual(self):
-        # this should be a test for a derived testClass
-        g1=nx.DiGraph()
-        g1.add_nodes_from([A,B,Z])
-        g1.add_edge(Z,A,computer=frozenset({a_from_z}))
-        g1.add_edge(Z,B,computer=frozenset({b_from_z}))
-
-        g2=nx.DiGraph()
-        g2.add_nodes_from([A,B,Z])
-        g2.add_edge(Z,A,computer=frozenset({a_from_z}))
-        g2.add_edge(Z,B,computer=frozenset({b_from_z}))
-        
-        self.assertGraphEqual(g1,g2)
-        g2_1=deepcopy(g2)
-        self.assertGraphEqual(g1,g2_1)
-        g2_1.add_node(D)
-        with self.assertRaises(Exception):
-            self.assertGraphEqual(g1,g2_1)
+#    def test_Thomas_graph_creation(self):
+#        g = graph_Thomas(self.mvars, self.computers)
+#
+#        self.assertEqual({
+#            frozenset({E}),
+#            frozenset({D}),
+#            frozenset({C}),
+#            frozenset({B}),
+#            frozenset({A}),
+#            frozenset({G}),
+#            frozenset({I}),
+#            frozenset({F}),
+#            frozenset({H}),
+#            frozenset({H, G}),
+#            frozenset({C, D}),
+#            frozenset({E, F}),
+#        }, set(g.nodes()))
+#
+#        self.assertEqual({
+#            (frozenset({B}), frozenset({D})),
+#            (frozenset({B}), frozenset({E})),
+#            (frozenset({B}), frozenset({F})),
+#            (frozenset({B}), frozenset({C})),
+#            (frozenset({I}), frozenset({A})),
+#            (frozenset({H, G}), frozenset({D})),
+#            (frozenset({C, D}), frozenset({B})),
+#            (frozenset({E, F}), frozenset({B})),
+#        }, g.edges())
+#    
+#
+#    def test_direct_prerequisites_Thomas(self):
+#        g = graph_Thomas(self.mvars, self.computers)
+#        
+#        self.assertSetEqual(
+#            direct_prerequisites_Thomas(g, A), {(frozenset({I}), a_from_i)}
+#        )
+#        
+#        self.assertSetEqual(
+#            direct_prerequisites_Thomas(g, B),
+#            {
+#                (frozenset({C, D}), b_from_c_d),
+#                (frozenset({E, F}), b_from_e_f)
+#            }
+#        )
+#
+#    def test_assertGraphEqual(self):
+#        # this should be a test for a derived testClass
+#        g1=nx.DiGraph()
+#        g1.add_nodes_from([A,B,Z])
+#        g1.add_edge(Z,A,computer=frozenset({a_from_z}))
+#        g1.add_edge(Z,B,computer=frozenset({b_from_z}))
+#
+#        g2=nx.DiGraph()
+#        g2.add_nodes_from([A,B,Z])
+#        g2.add_edge(Z,A,computer=frozenset({a_from_z}))
+#        g2.add_edge(Z,B,computer=frozenset({b_from_z}))
+#        
+#        self.assertGraphEqual(g1,g2)
+#        g2_1=deepcopy(g2)
+#        self.assertGraphEqual(g1,g2_1)
+#        g2_1.add_node(D)
+#        with self.assertRaises(Exception):
+#            self.assertGraphEqual(g1,g2_1)
 
     def test_arg_set_graph(self):
         asg=arg_set_graph(D,self.computers)
