@@ -335,55 +335,56 @@ class TestGraphs(InDirTest):
         ))
         
     def test_product_graph(self):
-        #computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
+        computers=frozenset({a_from_y,a_from_z,b_from_y,b_from_z})
 
-        #asg_A=arg_set_graph(A,computers)
-        #asg_B=arg_set_graph(B,computers)
-        #pg_A_B=product_graph(asg_A,asg_B)
-        #
-        #fig1=plt.figure(figsize=(5,20))
-        #
-        #ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
-        #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
-        #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
-        ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
-        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
-        #draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
-        #fig1.savefig('AB_Z.pdf')
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        pg_A_B=product_graph(asg_A,asg_B)
+        
+        fig1=plt.figure(figsize=(20,100))
+        
+        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
+        fig1.savefig('AB_Z.pdf')
     
-        #computers=frozenset({a_from_y,b_from_y,b_from_z})
-        #asg_A=arg_set_graph(A,computers)
-        #asg_B=arg_set_graph(B,computers)
-        #pg_A_B=product_graph(asg_A,asg_B)
-        #
-        #fig1=plt.figure(figsize=(10,30))
-        #ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
-        #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
-        #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
-        ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
-        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
-        #draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
-        #fig1.savefig('A_y_B_Y_B_Z.pdf')
-        ##    {a(z)}          {b(z)}          {a(z),b(z)}
+        computers=frozenset({a_from_y,b_from_y,b_from_z})
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        pg_A_B=product_graph(asg_A,asg_B)
+        
+        fig1=plt.figure(figsize=(10,30))
+        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
+        fig1.savefig('A_y_B_Y_B_Z.pdf')
 
-        ## {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+        #    {a(z)}          {b(z)}          {a(z),b(z)}
 
-        #computers=frozenset({ a_from_z,b_from_z})
-        #asg_A=arg_set_graph(A,computers)
-        #asg_B=arg_set_graph(B,computers)
-        #pg_A_B=product_graph(asg_A,asg_B)
-        #
-        #fig1=plt.figure(figsize=(10,30))
-        #ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
-        #ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
-        #ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
-        ##ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
-        #draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
-        #draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
-        #fig1.savefig('A_Z_B_Y.pdf')
+        # {z}  ->  {a} x {z}  ->   {b}   = {z} -> {a,b}
+
+        computers=frozenset({ a_from_z,b_from_z})
+        asg_A=arg_set_graph(A,computers)
+        asg_B=arg_set_graph(B,computers)
+        pg_A_B=product_graph(asg_A,asg_B)
+        
+        fig1=plt.figure(figsize=(10,30))
+        ax1=fig1.add_subplot(411,frame_on=True,title="arg_set_graph(A)")
+        ax2=fig1.add_subplot(412,frame_on=True,title="arg_set_graph(B)")
+        ax3=fig1.add_subplot(413,frame_on=True,title="product_graph(A,B)")
+        #ax4=fig1.add_subplot(414,frame_on=True,title="ref")
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_A,ax=ax1)
+        draw_ComputerSetMultiDiGraph_matplotlib(     asg_B,ax=ax2)
+        draw_ComputerSetMultiDiGraph_matplotlib(    pg_A_B,ax=ax3)
+        fig1.savefig('A_Z_B_Y.pdf')
 
         computers=frozenset({ a_from_z,b_from_z,c_from_b})
         asg_A=arg_set_graph(A,computers)

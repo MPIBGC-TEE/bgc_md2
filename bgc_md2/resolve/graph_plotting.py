@@ -49,8 +49,8 @@ def draw_ComputerSetDiGraph_matplotlib(
         pos=None,
         **kwargs):
     if pos is None:
-        #pos=nx.spring_layout(spsg)
-        pos = nx.circular_layout(spsg)
+        pos=nx.spring_layout(spsg)
+        #pos = nx.circular_layout(spsg)
     
     nx.draw(
         spsg
@@ -74,8 +74,8 @@ def draw_ComputerSetDiGraph_matplotlib(
 
 def draw_ComputerSetMultiDiGraph_matplotlib(spsg,ax,pos=None,**kwargs):
     if pos is None:
-        #pos=nx.spring_layout(spsg)
-        pos = nx.circular_layout(spsg)
+        pos=nx.spring_layout(spsg)
+        #pos = nx.circular_layout(spsg)
     
     nx.draw(
         spsg
