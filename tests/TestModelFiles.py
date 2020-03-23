@@ -60,6 +60,7 @@ class TestModelFiles(unittest.TestCase):
         self.assertSetEqual(mvts,res)
 
     def test_paths_to_single_mvar(self):
+        # this is a metaphor for some code in 
         pd=path_dict_to_single_mvar(SmoothReservoirModel,'testVectorFree')
         startNode=frozenset([
             InFluxesBySymbol
@@ -87,12 +88,23 @@ class TestModelFiles(unittest.TestCase):
 
     @unittest.skip
     def test_many(self):
+        # is a metaphor for a notebook that compares models
         #https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests
         #for md in ['miniCable','Sujan']:
         for md in ['Sujan']:
             with self.subTest(md=md):
                 #assertions would be possible too
                 srm=get3(var_name="smooth_reservoir_model",allMvars=myMvars,allComputers=myComputers,model_id=md)
+
+# to do till next time.
+# 1.) unskip the last test
+#  create a second model ...
+#
+# 2.) create a jupyter notebook that implements something like the last three tests
+# and recognizes an interactively changed model file. (Supports working on the notebook and the model file 
+# in parallel
+# 
+# 3.) Create a table of models with columns:name,compartmental matrix
                 
 
 
