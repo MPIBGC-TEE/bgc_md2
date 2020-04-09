@@ -93,3 +93,16 @@ class ModelStructure(object):
         return nr_pools
 
 
+    def get_flux_var_names(self):
+        flux_list = []
+        for d in [
+            self.external_input_structure,
+            self.horizontal_structure,
+            self.vertical_structure,
+            self.external_output_structure
+        ]:
+            for key, flux_sublist in d.items():
+                flux_list.extend(flux_sublist)
+
+        return flux_list
+

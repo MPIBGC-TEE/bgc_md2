@@ -176,7 +176,6 @@ class TestModelStructure(unittest.TestCase):
             )
 
 
-
     def test_get_functions(self):
         ms = self.ms
 
@@ -237,6 +236,13 @@ class TestModelStructure(unittest.TestCase):
         ## get_nr_pools
         res = ms.get_nr_pools()
         self.assertEqual(res, ms.nr_pools)
+
+
+    def test_get_flux_var_names(self):
+        self.assertEqual(
+            self.ms.get_flux_var_names()[7],
+            'gap_mortality_c_to_litr_cel_c_col'
+        )
 
 
 ################################################################################

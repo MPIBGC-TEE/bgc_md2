@@ -31,11 +31,11 @@ def readVariable(**keywords):
     try:
         if ReturnClass == StockVariable:
             if var.cell_methods != 'time: instantaneous':
-                raise(ModelDataException('Stock data is not instantaneous'))
+                raise(ModelDataObectException('Stock data is not instantaneous'))
 
         if ReturnClass == FluxVariable:
             if var.cell_methods != 'time: mean':
-                raise(ModelDataException('Flux data is not as a mean'))
+                raise(ModelDataObjectException('Flux data is not as a mean'))
     except AttributeError:
         s = "'cell_methods' not specified'"
         raise(ModelDataObjectException(s))
