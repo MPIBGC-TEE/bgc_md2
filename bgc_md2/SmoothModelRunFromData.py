@@ -31,7 +31,7 @@ class SmoothModelRunFromData():
             k_start_values = np.asarray(start_values)
             print('creating pwc ModelRun')
             for k in tqdm(range(len(data_times)-1)):
-                print(k, flush=True)
+#                print(k, flush=True)
                 k_t0 = data_times[k]
                 k_t1 = data_times[k+1]
 #               k_times = times[(times >= k_t0) & (times <= k_t1)]
@@ -339,7 +339,7 @@ class SmoothModelRunFromData():
 #        print(B)
 #        print(np.where(np.diag(B)==0))
 
-        print(VAL, VAL/x1.sum(), flush=True)
+#        print(VAL, VAL/x1.sum(), flush=True)
 #        input()
         
         tr_times = np.linspace(0, dt, 11)

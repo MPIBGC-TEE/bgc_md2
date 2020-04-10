@@ -11,43 +11,29 @@ from bgc_md2.ModelDataObject import ModelDataObjectException,\
                                     getFluxVariable_from_DensityRate,\
                                     getFluxVariable_from_Rate
 from bgc_md2.Variable import Variable, StockVariable, FluxVariable
-from example_MDOs import MDO_3pools_3layers_2x2,\
+from example_MDOs import MDO_3pools_3layers,\
                          MDO_3pools_nolayers_nogrid,\
-                         MDO_3pools_nolayers_2x2,\
                          MDO_3pools_3layers_nogrid,\
-                         MDO_3pools_3layers_2x2_discretizable
+                         MDO_3pools_3layers_discretizable
 
 
 class TestModelDataObject(unittest.TestCase):
 
     def setUp(self):
-        self.mdo = MDO_3pools_3layers_2x2()
-        self.lat_arr = np.arange(len(self.mdo.dataset['lat'][:]))
-        self.lon_arr = np.arange(len(self.mdo.dataset['lon'][:]))
-
+        self.mdo = MDO_3pools_3layers()
         ## incomplete models
         mdos_inc = [
             MDO_3pools_nolayers_nogrid(),
-            MDO_3pools_nolayers_2x2(),
             MDO_3pools_3layers_nogrid()
         ]
 
         mdos_inc[0].nr_layers = None
-        mdos_inc[0].lat_arr   = None
-        mdos_inc[0].lon_arr   = None
-        
-        mdos_inc[1].nr_layers = None
-        mdos_inc[1].lat_arr   = np.arange(2)
-        mdos_inc[1].lon_arr   = np.arange(2)
-     
-        mdos_inc[2].nr_layers = 3
-        mdos_inc[2].lat_arr   = None
-        mdos_inc[2].lon_arr   = None
+        mdos_inc[1].nr_layers = 3
 
         self.mdos_inc = mdos_inc
 
         ## discretizable MDOs
-        self.mdo_discretizable = MDO_3pools_3layers_2x2_discretizable()
+        self.mdo_discretizable = MDO_3pools_3layers_discretizable()
 
 
     def tearDown(self):
@@ -63,40 +49,29 @@ class TestModelDataObject(unittest.TestCase):
         var = readVariable(
             dataset       = ds,
             variable_name = 'CWDC',
-            min_time      = 0,
-            max_time      = 3,
             nr_layers     = 2,
-            lat_arr       = self.lat_arr,
-            lon_arr       = [1],
             data_shift    = 1
         )
-        
-        res2 = [[[[13.],
-                  [15.]],
-
-                 [[17.],
-                  [19.]]],
-
-
-                [[[25.],
-                  [27.]],
-
-                 [[29.],
-                  [31.]]]]
-      
+        res2 = np.array(
+            [[3.0 , 4.0],
+             [6.0 , 7.0],
+             [9.0 , 10.0],
+             [12.0, 13.0],
+             [15.0, 16.0],
+             [18.0, 19.0],
+             [21.0, 22.0],
+             [24.0, 25.0],
+             [27.0, 28.0]]
+        ) 
         self.assertTrue(isinstance(var, Variable)) 
-        self.assertTrue(np.all(var.data == res2))
+        self.assertTrue(np.allclose(var.data,res2))
         self.assertEqual(var.unit, 'g/m^3')
  
         sv = readVariable(
             ReturnClass   = StockVariable,
             dataset       = ds,
             variable_name = 'CWDC',
-            min_time      = 0,
-            max_time      = 3,
             nr_layers     = 2,
-            lat_arr       = self.lat_arr,
-            lon_arr       = [1],
             data_shift    = 1
         )
         
@@ -113,15 +88,13 @@ class TestModelDataObject(unittest.TestCase):
             dataset       = ds,
             variable_name = 'CWDC',
             nr_layers     = ms.get_nr_layers('CWD'),
-            min_time      = 0,
-            max_time      = 3,
             data_shift    = 1
         )
         self.assertTrue(isinstance(sv, StockVariable))
         self.assertEqual(sv.unit, 'g/m^2')
-        self.assertTrue(np.all(sv.data.shape == np.array([2,1,1,1])))
+        self.assertTrue(np.all(sv.data.shape == np.array([9,1])))
 
-        ##### no layers, 2x2 #####
+        ##### 3 layers, no grid #####
 
         mdo = self.mdos_inc[1]
         ds = mdo.dataset
@@ -132,34 +105,11 @@ class TestModelDataObject(unittest.TestCase):
             dataset       = ds,
             variable_name = 'CWDC',
             nr_layers     = ms.get_nr_layers('CWD'),
-            lat_arr       = mdo.lat_arr,
-            lon_arr       = mdo.lon_arr,
-            min_time      = 0,
-            max_time      = 3,
-            data_shift    = 1
-        )
-        self.assertTrue(isinstance(sv, StockVariable))
-        self.assertEqual(sv.unit, 'g/m^2')
-        self.assertTrue(np.all(sv.data.shape == np.array([2,1,2,2])))
-
-        ##### 3 layers, no grid #####
-
-        mdo = self.mdos_inc[2]
-        ds = mdo.dataset
-        ms = mdo.model_structure
-
-        sv = readVariable(
-            ReturnClass   = StockVariable,
-            dataset       = ds,
-            variable_name = 'CWDC',
-            nr_layers     = ms.get_nr_layers('CWD'),
-            min_time      = 0,
-            max_time      = 3,
             data_shift    = 1
         )
         self.assertTrue(isinstance(sv, StockVariable))
         self.assertEqual(sv.unit, 'g/m^3')
-        self.assertTrue(np.all(sv.data.shape == np.array([2,3,1,1])))
+        self.assertTrue(np.all(sv.data.shape == np.array([9,3])))
 
 
     def test_StockDensityVariable2StockVariable(self):
@@ -170,11 +120,7 @@ class TestModelDataObject(unittest.TestCase):
             ReturnClass   = StockVariable,
             dataset       = ds,
             variable_name = 'CWDC',
-            min_time      = 0,
-            max_time      = 100,
             nr_layers     = nr_layers,
-            lat_arr       = self.lat_arr,
-            lon_arr       = self.lon_arr,
             data_shift    = 0
         )
         dz = Variable(
@@ -186,14 +132,7 @@ class TestModelDataObject(unittest.TestCase):
         self.assertTrue(isinstance(sv, StockVariable))
         self.assertEqual(sv.unit, 'm-2.kg')
         res = sv.data[4,...] * 1000
-        res2 = [[[ 48.,  49.],
-                 [ 50.,  51.]],
-
-                [[104., 106.],
-                 [108., 110.]],
-
-                [[168., 171.],
-                 [174., 177.]]]
+        res2 = np.array([12, 26, 42])
         self.assertTrue(np.allclose(res, res2))
 
 
@@ -204,11 +143,7 @@ class TestModelDataObject(unittest.TestCase):
         sv = getStockVariable_from_Density(
             mdo = mdo,
             variable_name = 'CWDC',
-            min_time      = 0,
-            max_time      = mdo.max_time,
             nr_layers     = nr_layers,
-            lat_arr       = self.lat_arr,
-            lon_arr       = self.lon_arr,
             dz            = mdo.get_dz('CWD'),
             data_shift    = 0
         )
@@ -217,14 +152,7 @@ class TestModelDataObject(unittest.TestCase):
         self.assertEqual(sv.unit, mdo.stock_unit)
 
         res = sv.data[2,...]
-        res2 = [[[ 48.,   49.],
-                 [ 50.,   51.]],
-
-                [[104.,  106.],
-                 [108.,  110.]],
-
-                [[168., 171.],
-                 [174., 177.]]]
+        res2 = np.array([12, 13*2, 14*3])
         self.assertTrue(np.allclose(res, res2))
 
 
@@ -236,33 +164,19 @@ class TestModelDataObject(unittest.TestCase):
             ReturnClass   = FluxVariable,
             dataset       = ds,
             variable_name = 'fire_CWD',
-            min_time      = 0,
-            max_time      = 100,
             nr_layers     = nr_layers,
-            lat_arr       = self.lat_arr,
-            lon_arr       = self.lon_arr,
             data_shift    = 1
         )
         dz = Variable(
             data = ds['dz'][:],
             unit = ds['dz'].units
         )
-
         frv = FluxRateDensityVariable2FluxRateVariable(frdv, dz)
 
         self.assertTrue(isinstance(frv, FluxVariable))
         self.assertEqual(frv.unit, 'm-2.kg.s-1')
         res = frv.data[3,...] * 1000
-        res2 = np.array(
-               [[[ 48.,  49.],
-                 [ 50.,  51.]],
-
-                [[104., 106.],
-                 [108., 110.]],
-
-                [[168., 171.],
-                 [174., 177.]]]
-        )
+        res2 = np.array([12, 26, 42])
         self.assertTrue(np.allclose(res, res2*1e-03))
 
 
@@ -274,11 +188,7 @@ class TestModelDataObject(unittest.TestCase):
             ReturnClass   = FluxVariable,
             dataset       = ds,
             variable_name = 'fire_CWD',
-            min_time      = 0,
-            max_time      = 100,
             nr_layers     = nr_layers,
-            lat_arr       = self.lat_arr,
-            lon_arr       = self.lon_arr,
             data_shift    = 1
         )
         dz = Variable(
@@ -295,17 +205,8 @@ class TestModelDataObject(unittest.TestCase):
     
         self.assertTrue(isinstance(fv, FluxVariable))
         self.assertEqual(fv.unit, 'm-2.kg')
-        res = fv.data[3,...]  
-        res2 = 86.4 * np.array(
-               [[[ 48.,  49.],
-                 [ 50.,  51.]],
-
-                [[104., 106.],
-                 [108., 110.]],
-
-                [[168., 171.],
-                 [174., 177.]]]
-        )
+        res = fv.data[3,...]
+        res2 = 86.4 * np.array([12, 26, 42])
         self.assertTrue(np.allclose(res, res2*1e-03))
 
 
@@ -317,11 +218,7 @@ class TestModelDataObject(unittest.TestCase):
             mdo = mdo,
             variable_name = 'fire_CWD',
             nr_layers     = nr_layers,
-            lat_arr       = self.lat_arr,
-            lon_arr       = self.lon_arr,
             dz            = mdo.get_dz('CWD'),
-            min_time      = 0,
-            max_time      = mdo.max_time,
             data_shift    = 1
         )
 
@@ -329,16 +226,7 @@ class TestModelDataObject(unittest.TestCase):
         self.assertEqual(fv.unit, mdo.stock_unit)
 
         res = fv.data[1,...]
-        res2 = 86.4 * np.array(
-               [[[ 84.,  86.],
-                 [ 88.,  90.]],
-
-                [[184., 188.],
-                 [192., 196.]],
-
-                [[300., 306.],
-                 [312., 318.]]]
-        )
+        res2 = 86.4 * np.array([21, 23*2, 25*3])
         self.assertTrue(np.allclose(res, res2))
 
 
@@ -349,11 +237,7 @@ class TestModelDataObject(unittest.TestCase):
         fv = getFluxVariable_from_Rate(
             mdo = mdo,
             variable_name = 'LITR_flux_down_tb',
-            min_time      = 0,
-            max_time      = mdo.max_time,
             nr_layers     = nr_layers,
-            lat_arr       = self.lat_arr,
-            lon_arr       = self.lon_arr,
             data_shift    = 1
         )
 
@@ -361,16 +245,7 @@ class TestModelDataObject(unittest.TestCase):
         self.assertEqual(fv.unit, mdo.stock_unit)
 
         res = fv.data[1,...]
-        res2 = 86.4 * np.array(
-               [[[ 84.,  86.],
-                 [ 88.,  90.]],
-
-                [[ 92.,  94.],
-                 [ 96.,  98.]],
-
-                [[100., 102.],
-                 [104,  106.]]]
-        )
+        res2 = 86.4 * np.array([9+12, 10+13, 11+14])
         self.assertTrue(np.allclose(res, res2))
 
 
@@ -381,116 +256,50 @@ class TestModelDataObject(unittest.TestCase):
     def test_init(self):
         mdo = self.mdo
         self.assertEqual(mdo.stock_unit, 'g/m^2')
-        self.assertTrue(np.all(mdo.time.data == 365+5+np.arange(8)))
+        self.assertTrue(np.all(mdo.time.data == np.arange(10)))
         self.assertTrue(
-            np.all(mdo.time_agg.data == 365+5+np.array([0,2,4,6,7]))
-        )
- 
-        ## test time conversion
-        mdo_time = ModelDataObject(
-            model_structure = mdo.model_structure, 
-            dataset         = mdo.dataset,
-            nstep           = mdo.nstep,
-            stock_unit      = mdo.stock_unit,
-            cftime_unit_src = 'days since 1850-01-01 00:00:00',
-            cftime_unit_tar = 'hours since 1850-01-01 00:00:00',
-            calendar_src    = 'noleap',
-            udtime_unit     = 'hr',
-            calendar        = 'noleap',
-            max_time        = mdo.max_time
+            np.all(mdo.time_agg.data == np.array([0,2,4,6,8,9]))
         )
  
         xs = mdo.load_stocks(
             func       = getStockVariable_from_Density,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 0
         )
  
         self.assertTrue(isinstance(xs, StockVariable))
         self.assertEqual(xs.unit, mdo.stock_unit)
-        self.assertTrue(np.all(xs.data.shape == (5,2,2,9)))
+        self.assertTrue(np.all(xs.data.shape == (6,9)))
  
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
         CWD_stocks = xs.data[...,CWD_pools]
         res2 = np.array(
-            [[[[  0.,   8.,  24.],
-               [  1.,  10.,  27.]],
- 
-              [[  2.,  12.,  30.],
-               [  3.,  14.,  33.]]],
-            
-            
-             [[[ 24.,  56.,  96.],
-               [ 25.,  58.,  99.]],
-            
-              [[ 26.,  60., 102.],
-               [ 27.,  62., 105.]]],
-            
-            
-             [[[ 48., 104., 168.],
-               [ 49., 106., 171.]],
-            
-              [[ 50., 108., 174.],
-               [ 51., 110., 177.]]],
-            
-            
-             [[[ 72., 152., 240.],
-               [ 73., 154., 243.]],
-            
-              [[ 74., 156., 246.],
-               [ 75., 158., 249.]]],
-            
-            
-             [[[ 84., 176., 276.],
-               [ 85., 178., 279.]],
-            
-              [[ 86., 180., 282.],
-               [ 87., 182., 285.]]]]
+            [[ 0.0,  2.0,  6.0],
+             [ 6.0, 14.0, 24.0],
+             [12.0, 26.0, 42.0],
+             [18.0, 38.0, 60.0],
+             [24.0, 50.0, 78.0],
+             [27.0, 56.0, 87.0]]
         )
         self.assertTrue(np.allclose(CWD_stocks, res2))
         
  
         us = mdo.load_external_input_fluxes(
             func       = getFluxVariable_from_DensityRate,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 1
         )
  
         self.assertTrue(isinstance(us, FluxVariable))
         self.assertEqual(us.unit, mdo.stock_unit)
-        self.assertTrue(np.all(us.data.shape == (4,2,2,9)))
+        self.assertTrue(np.all(us.data.shape == (5,9)))
  
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
         CWD_inputs = us.data[...,CWD_pools]
         res2 = np.array(
-            [[[[  9336.384,  22819.968,  40450.752],
-               [  9854.784,  23856.768,  42005.952]],
-            
-              [[ 10373.184,  24893.568,  43561.152],
-               [ 10891.584,  25930.368,  45116.352]]],
-            
-            
-             [[[ 21777.984,  47703.168,  77775.552],
-               [ 22296.384,  48739.968,  79330.752]],
-            
-              [[ 22814.784,  49776.768,  80885.952],
-               [ 23333.184,  50813.568,  82441.152]]],
-            
-            
-             [[[ 34219.584,  72586.368, 115100.352],
-               [ 34737.984,  73623.168, 116655.552]],
-            
-              [[ 35256.384,  74659.968, 118210.752],
-               [ 35774.784,  75696.768, 119765.952]]],
-            
-            
-             [[[ 21775.392,  45624.384,  71546.976],
-               [ 22034.592,  46142.784,  72324.576]],
-            
-              [[ 22293.792,  46661.184,  73102.176],
-               [ 22552.992,  47179.584,  73879.776]]]]
+            [[ 2337.984,  5712.768, 10124.352],
+             [ 5448.384, 11933.568, 19455.552],
+             [ 8558.784, 18154.368, 28786.752],
+             [11669.184, 24375.168, 38117.952],
+             [ 7000.992, 14520.384, 22558.176]]
         )
         self.assertTrue(np.allclose(CWD_inputs, res2))
 
@@ -518,15 +327,17 @@ class TestModelDataObject(unittest.TestCase):
             data = np.cumsum(np.arange(10)),
             unit = 'km'
         )
+        time = Variable(
+            data = np.arange(10),
+            unit = 'd'
+        )
         mdo_dz = ModelDataObject(
             model_structure = mdo.model_structure, 
             dataset         = mdo.dataset,
             dz_var_names    = {'dz': dz},
             nstep           = mdo.nstep,
             stock_unit      = mdo.stock_unit,
-            cftime_unit_src = 'days since 1850-01-01 00:00:00',
-            calendar_src    = 'noleap',
-            max_time        = mdo.max_time
+            time            = time
         )
         
         dz = mdo_dz.get_dz('CWD')
@@ -541,81 +352,42 @@ class TestModelDataObject(unittest.TestCase):
 
         xs = mdo.load_stocks(
             func       = getStockVariable_from_Density,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 0
         )
 
         self.assertTrue(isinstance(xs, StockVariable))
         self.assertEqual(xs.unit, mdo.stock_unit)
-        self.assertTrue(np.all(xs.data.shape == (5,2,2,9)))
+        self.assertTrue(np.all(xs.data.shape == (6,9)))
 
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
-        CWD_stocks = xs.data[...,CWD_pools]
+        CWD_stocks = xs.data[:,CWD_pools]
         res2 = np.array(
-            [[[[  0.,   8.,  24.],
-               [  1.,  10.,  27.]],
-
-              [[  2.,  12.,  30.],
-               [  3.,  14.,  33.]]],
-            
-            
-             [[[ 24.,  56.,  96.],
-               [ 25.,  58.,  99.]],
-            
-              [[ 26.,  60., 102.],
-               [ 27.,  62., 105.]]],
-            
-            
-             [[[ 48., 104., 168.],
-               [ 49., 106., 171.]],
-            
-              [[ 50., 108., 174.],
-               [ 51., 110., 177.]]],
-            
-            
-             [[[ 72., 152., 240.],
-               [ 73., 154., 243.]],
-            
-              [[ 74., 156., 246.],
-               [ 75., 158., 249.]]],
-            
-            
-             [[[ 84., 176., 276.],
-               [ 85., 178., 279.]],
-            
-              [[ 86., 180., 282.],
-               [ 87., 182., 285.]]]]
+            [[0.0 ,  2.0,  6.0],
+             [6.0 , 14.0, 24.0],
+             [12.0, 26.0, 42.0],
+             [18.0, 38.0, 60.0],
+             [24.0, 50.0, 78.0],
+             [27.0, 56.0, 87.0]]
         )
         self.assertTrue(np.allclose(CWD_stocks, res2))
 
         pool_nr = mdo.model_structure.get_pool_nr('Soil', 2)
-        res = xs.data[...,pool_nr]
-        res2 = np.array(
-            [[[ 24.6,  27.6],
-              [ 30.6,  33.6]],
-
-             [[ 96.6,  99.6],
-              [102.6, 105.6]],
-            
-             [[168.6, 171.6],
-              [174.6, 177.6]],
-            
-             [[240.6, 243.6],
-              [246.6, 249.6]],
-            
-             [[276.6, 279.6],
-              [282.6, 285.6]]]
+        res = xs.data[:,pool_nr]
+        res2 = 3* np.array(
+            [ 2.2,
+              8.2,
+             14.2,
+             20.2,
+             26.2,
+             29.2]  
         )
         self.assertTrue(np.allclose(res, res2))
 
         ## incomplete MDOs
-        data_shapes = [(5,1,1,3), (5,2,2,3), (5,1,1,9)]
+        data_shapes = [(6,3), (6,9)]
         for nr, mdo in enumerate(self.mdos_inc):
             xs = mdo.load_stocks(
                 func       = getStockVariable_from_Density,
-                lat_arr    = mdo.lat_arr,
-                lon_arr    = mdo.lon_arr,
                 data_shift = 0
             )
     
@@ -629,54 +401,29 @@ class TestModelDataObject(unittest.TestCase):
 
         us = mdo.load_external_input_fluxes(
             func       = getFluxVariable_from_DensityRate,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 1
         )
 
         self.assertTrue(isinstance(us, FluxVariable))
         self.assertEqual(us.unit, mdo.stock_unit)
-        self.assertTrue(np.all(us.data.shape == (4,2,2,9)))
+        self.assertTrue(np.all(us.data.shape == (5,9)))
 
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
         CWD_inputs = us.data[...,CWD_pools]
         res2 = np.array(
-            [[[[  9336.384,  22819.968,  40450.752],
-               [  9854.784,  23856.768,  42005.952]],
-            
-              [[ 10373.184,  24893.568,  43561.152],
-               [ 10891.584,  25930.368,  45116.352]]],
-            
-            
-             [[[ 21777.984,  47703.168,  77775.552],
-               [ 22296.384,  48739.968,  79330.752]],
-            
-              [[ 22814.784,  49776.768,  80885.952],
-               [ 23333.184,  50813.568,  82441.152]]],
-            
-            
-             [[[ 34219.584,  72586.368, 115100.352],
-               [ 34737.984,  73623.168, 116655.552]],
-            
-              [[ 35256.384,  74659.968, 118210.752],
-               [ 35774.784,  75696.768, 119765.952]]],
-            
-            
-             [[[ 21775.392,  45624.384,  71546.976],
-               [ 22034.592,  46142.784,  72324.576]],
-            
-              [[ 22293.792,  46661.184,  73102.176],
-               [ 22552.992,  47179.584,  73879.776]]]]
+            [[ 2337.984,  5712.768, 10124.352],
+             [ 5448.384, 11933.568, 19455.552],
+             [ 8558.784, 18154.368, 28786.752],
+             [11669.184, 24375.168, 38117.952],
+             [ 7000.992, 14520.384, 22558.176]]
         )
         self.assertTrue(np.allclose(CWD_inputs, res2))
 
         ## incomplete MDOs
-        data_shapes = [(4,1,1,3), (4,2,2,3), (4,1,1,9)]
+        data_shapes = [(5,3), (5,9)]
         for nr, mdo in enumerate(self.mdos_inc):
             us = mdo.load_external_input_fluxes(
                 func       = getFluxVariable_from_DensityRate,
-                lat_arr    = mdo.lat_arr,
-                lon_arr    = mdo.lon_arr,
                 data_shift = 1
             )
     
@@ -690,54 +437,29 @@ class TestModelDataObject(unittest.TestCase):
 
         rs = mdo.load_external_output_fluxes(
             func       = getFluxVariable_from_DensityRate,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 1
         )
 
         self.assertTrue(isinstance(rs, FluxVariable))
         self.assertEqual(rs.unit, mdo.stock_unit)
-        self.assertTrue(np.all(rs.data.shape == (4,2,2,9)))
+        self.assertTrue(np.all(rs.data.shape == (5,9)))
 
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
         CWD_outputs = rs.data[...,CWD_pools]
         res2 = np.array(
-            [[[[ 6222.528, 15209.856, 26961.984],
-               [ 6568.128, 15901.056, 27998.784]],
-            
-              [[ 6913.728, 16592.256, 29035.584],
-               [ 7259.328, 17283.456, 30072.384]]],
-            
-            
-             [[[14516.928, 31798.656, 51845.184],
-               [14862.528, 32489.856, 52881.984]],
-            
-              [[15208.128, 33181.056, 53918.784],
-               [15553.728, 33872.256, 54955.584]]],
-            
-            
-             [[[22811.328, 48387.456, 76728.384],
-               [23156.928, 49078.656, 77765.184]],
-            
-              [[23502.528, 49769.856, 78801.984],
-               [23848.128, 50461.056, 79838.784]]],
-            
-            
-             [[[14516.064, 30414.528, 47695.392],
-               [14688.864, 30760.128, 48213.792]],
-            
-              [[14861.664, 31105.728, 48732.192],
-               [15034.464, 31451.328, 49250.592]]]]
+            [[1556.928,  3805.056,  6744.384],
+             [3630.528,  7952.256, 12965.184],
+             [5704.128, 12099.456, 19185.984],
+             [7777.728, 16246.656, 25406.784],
+             [4666.464,  9678.528, 15036.192]]
         )
         self.assertTrue(np.allclose(CWD_outputs, res2))
 
         ## incomplete MDOs
-        data_shapes = [(4,1,1,3), (4,2,2,3), (4,1,1,9)]
+        data_shapes = [(5,3), (5,9)]
         for nr, mdo in enumerate(self.mdos_inc):
             rs = mdo.load_external_output_fluxes(
                 func       = getFluxVariable_from_DensityRate,
-                lat_arr    = mdo.lat_arr,
-                lon_arr    = mdo.lon_arr,
                 data_shift = 1
             )
     
@@ -751,59 +473,48 @@ class TestModelDataObject(unittest.TestCase):
 
         HFs = mdo.load_horizontal_fluxes(
             func       = getFluxVariable_from_DensityRate,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 1
         )
     
         self.assertTrue(isinstance(HFs, FluxVariable))
         self.assertEqual(HFs.unit, mdo.stock_unit)
-        self.assertTrue(np.all(HFs.data.shape == (4,2,2,9,9)))
+        self.assertTrue(np.all(HFs.data.shape == (5,9,9)))
 
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
         LITR_pools = mdo.model_structure.get_pool_nrs('Litter')
 
-        CWD_TO_LITR = HFs.data[...,LITR_pools,CWD_pools]
+        CWD_TO_LITR = HFs.data[:,LITR_pools,:][:,:,CWD_pools]
         res2 = np.array(
-            [[[[ 3110.4,  7603.2, 13478.4],
-               [ 3283.2,  7948.8, 13996.8]],
+            [[[777.6,    0.0,    0.0],
+              [  0.0, 1900.8,    0.0],
+              [  0.0,    0.0, 3369.6]],
             
-              [[ 3456. ,  8294.4, 14515.2],
-               [ 3628.8,  8640. , 15033.6]]],
+             [[1814.4,    0.0,    0.0],
+              [   0.0, 3974.4,    0.0],
+              [   0.0,    0.0, 6480.0]],
             
+             [[2851.2,    0.0,    0.0],
+              [   0.0, 6048.0,    0.0],
+              [   0.0,    0.0, 9590.4]],
             
-             [[[ 7257.6, 15897.6, 25920. ],
-               [ 7430.4, 16243.2, 26438.4]],
+             [[3888.0,    0.0,     0.0],
+              [   0.0, 8121.6,     0.0],
+              [   0.0,    0.0, 12700.8]],
             
-              [[ 7603.2, 16588.8, 26956.8],
-               [ 7776. , 16934.4, 27475.2]]],
-            
-            
-             [[[11404.8, 24192. , 38361.6],
-               [11577.6, 24537.6, 38880. ]],
-            
-              [[11750.4, 24883.2, 39398.4],
-               [11923.2, 25228.8, 39916.8]]],
-            
-            
-             [[[ 7257.6, 15206.4, 23846.4],
-               [ 7344. , 15379.2, 24105.6]],
-            
-              [[ 7430.4, 15552. , 24364.8],
-               [ 7516.8, 15724.8, 24624. ]]]]
+             [[2332.8,    0.0,    0.0],
+              [   0.0, 4838.4,    0.0],
+              [   0.0,    0.0, 7516.8]]]
         )
         self.assertTrue(np.allclose(CWD_TO_LITR, res2))
 
-        LITR_TO_CWD = HFs.data[...,CWD_pools,LITR_pools]
+        LITR_TO_CWD = HFs.data[:,CWD_pools,:][:,:,LITR_pools]
         self.assertFalse(np.any(LITR_TO_CWD))
 
         ## incomplete MDOs
-        data_shapes = [(4,1,1,3,3), (4,2,2,3,3), (4,1,1,9,9)]
+        data_shapes = [(5,3,3), (5,9,9)]
         for nr, mdo in enumerate(self.mdos_inc):
             Fs = mdo.load_horizontal_fluxes(
                 func       = getFluxVariable_from_DensityRate,
-                lat_arr    = mdo.lat_arr,
-                lon_arr    = mdo.lon_arr,
                 data_shift = 1
             )
     
@@ -817,135 +528,65 @@ class TestModelDataObject(unittest.TestCase):
 
         VFs, runoffs_up, runoffs_down = mdo.load_vertical_fluxes(
             func       = getFluxVariable_from_Rate,
-            lat_arr    = self.lat_arr,
-            lon_arr    = self.lon_arr,
             data_shift = 1
         )
     
         self.assertTrue(isinstance(VFs, FluxVariable))
         self.assertEqual(VFs.unit, mdo.stock_unit)
-        self.assertTrue(np.all(VFs.data.shape == (4,2,2,9,9)))
+        self.assertTrue(np.all(VFs.data.shape == (5,9,9)))
         
         self.assertTrue(isinstance(runoffs_up, FluxVariable))
         self.assertEqual(runoffs_up.unit, mdo.stock_unit)
-        self.assertTrue(np.all(runoffs_up.data.shape == (4,2,2,9)))
+        self.assertTrue(np.all(runoffs_up.data.shape == (5,9)))
 
         self.assertTrue(isinstance(runoffs_down, FluxVariable))
         self.assertEqual(runoffs_down.unit, mdo.stock_unit)
-        self.assertTrue(np.all(runoffs_down.data.shape == (4,2,2,9)))
+        self.assertTrue(np.all(runoffs_down.data.shape == (5,9)))
 
         CWD_pools = mdo.model_structure.get_pool_nrs('CWD')
         LITR_pools = mdo.model_structure.get_pool_nrs('Litter')
         SOIL_pools = mdo.model_structure.get_pool_nrs('Soil')
 
-        VFs_CWD = VFs.data[...,CWD_pools,CWD_pools]
+        VFs_CWD = VFs.data[CWD_pools,CWD_pools]
         self.assertFalse(np.any(VFs_CWD))
         runoffs_up_CWD = runoffs_up.data[...,CWD_pools]
         self.assertFalse(np.any(runoffs_up_CWD))
         runoffs_down_CWD = runoffs_down.data[...,CWD_pools]
         self.assertFalse(np.any(runoffs_down_CWD))
-        
-        VFs_LITR = VFs.data[...,LITR_pools,:][...,LITR_pools]
+
+        VFs_LITR = VFs.data[:,LITR_pools,:][...,LITR_pools]
         res2 = np.array(
-            [[[[    0.  ,  1140.48 ,    0.  ],
-                [11404.8,      0.  ,  1209.6 ],
-                [    0. ,  12096.  ,     0.  ]],
-            
-               [[    0. ,   1157.76,     0.  ],
-                [11577.6,      0.  ,  1226.88],
-                [    0. ,  12268.8 ,     0.  ]]],
-            
-            
-              [[[    0. ,   1175.04,     0.  ],
-                [11750.4,      0.  ,  1244.16],
-                [    0. ,  12441.6 ,     0.  ]],
-            
-               [[    0. ,   1192.32,     0.  ],
-                [11923.2,      0.  ,  1261.44],
-                [    0. ,  12614.4 ,     0.  ]]]]
+            [[   0.0,  285.12,   0.0],
+             [2851.2,    0.0 , 302.4],
+             [   0.0, 3024.0 ,   0.0]]
         )
         self.assertTrue(np.allclose(VFs_LITR[2,...], res2))
 
-        runoffs_up_SOIL = runoffs_up.data[...,SOIL_pools]
+        runoffs_up_SOIL = runoffs_up.data[:,SOIL_pools]
         res2 = np.array(
-            [[[[ 311.04,    0.,      0.  ],
-               [ 328.32,    0.,      0.  ]],
-            
-              [[ 345.6 ,    0.,      0.  ],
-               [ 362.88,    0.,      0.  ]]],
-            
-            
-             [[[ 725.76,    0.,      0.  ],
-               [ 743.04,    0.,      0.  ]],
-            
-              [[ 760.32,    0.,      0.  ],
-               [ 777.6 ,    0.,      0.  ]]],
-            
-            
-             [[[1140.48,    0.,      0.  ],
-               [1157.76,    0.,      0.  ]],
-            
-              [[1175.04,    0.,      0.  ],
-               [1192.32,    0.,      0.  ]]],
-            
-            
-             [[[ 725.76,    0.,      0.  ],
-               [ 734.4 ,    0.,      0.  ]],
-            
-              [[ 743.04,    0.,      0.  ],
-               [ 751.68,    0.,      0.  ]]]]
+           [[ 77.76, 0.0, 0.0],
+            [181.44, 0.0, 0.0],
+            [285.12, 0.0, 0.0],
+            [388.80, 0.0, 0.0],
+            [233.28, 0.0, 0.0]]
         )
         self.assertTrue(np.allclose(runoffs_up_SOIL, res2))
 
-        runoffs_down_LITR = runoffs_down.data[...,LITR_pools]
+        runoffs_down_LITR = runoffs_down.data[:,LITR_pools]
         res2 = np.array(
-            [[[[    0.,      0.,   4492.8],
-               [    0.,      0.,   4665.6]],
-            
-              [[    0.,      0.,   4838.4],
-               [    0.,      0.,   5011.2]]],
-            
-            
-             [[[    0.,      0.,   8640. ],
-               [    0.,      0.,   8812.8]],
-            
-              [[    0.,      0.,   8985.6],
-               [    0.,      0.,   9158.4]]],
-            
-            
-             [[[    0.,      0.,  12787.2],
-               [    0.,      0.,  12960. ]],
-            
-              [[    0.,      0.,  13132.8],
-               [    0.,      0.,  13305.6]]],
-            
-            
-             [[[    0.,      0.,   7948.8],
-               [    0.,      0.,   8035.2]],
-            
-              [[    0.,      0.,   8121.6],
-               [    0.,      0.,   8208. ]]]]
+            [[0.0, 0.0, 1123.2],
+             [0.0, 0.0, 2160.0],
+             [0.0, 0.0, 3196.8],
+             [0.0, 0.0, 4233.6],
+             [0.0, 0.0, 2505.6]]
         )
         self.assertTrue(np.allclose(runoffs_down_LITR, res2))
 
-        VFs_SOIL = VFs.data[...,SOIL_pools,:][...,SOIL_pools]
+        VFs_SOIL = VFs.data[:,SOIL_pools,:][...,SOIL_pools]
         res2 = np.array(
-             [[[[    0. ,   1209.6 ,     0.  ],
-                [12096. ,      0.  ,  1278.72],
-                [    0. ,  12787.2 ,     0.  ]],
-            
-               [[    0. ,   1226.88,     0.  ],
-                [12268.8,      0.  ,  1296.  ],
-                [    0. ,  12960.  ,     0.  ]]],
-            
-            
-              [[[    0. ,   1244.16,     0.  ],
-                [12441.6,      0.  ,  1313.28],
-                [    0. ,  13132.8 ,     0.  ]],
-            
-               [[    0. ,   1261.44,     0.  ],
-                [12614.4,      0.  ,  1330.56],
-                [    0. ,  13305.6 ,     0.  ]]]]
+            [[   0.0,  302.4,   0.0 ],
+             [3024.0,    0.0, 319.68],
+             [   0.0, 3196.8,   0.0]]
         )
         self.assertTrue(np.allclose(VFs_SOIL[2,...], res2))
 
@@ -956,13 +597,11 @@ class TestModelDataObject(unittest.TestCase):
 
 
         ## incomplete MDOs
-        data_shapes    = [(4,1,1,3,3), (4,2,2,3,3), (4,1,1,9,9)]
-        runoffs_shapes = [(4,1,1,3),   (4,2,2,3)  , (4,1,1,9)]
+        data_shapes    = [(5,3,3), (5,9,9)]
+        runoffs_shapes = [(5,3),   (5,9)]
         for nr, mdo in enumerate(self.mdos_inc):
             VFs, runoffs_up, runoffs_down = mdo.load_vertical_fluxes(
                 func       = getFluxVariable_from_Rate,
-                lat_arr    = mdo.lat_arr,
-                lon_arr    = mdo.lon_arr,
                 data_shift = 1
             )
     
@@ -978,59 +617,49 @@ class TestModelDataObject(unittest.TestCase):
     def test_load_xs_us_Fs_rs(self):
         mdo = self.mdo_discretizable
         xs, us, Fs, rs = mdo.load_xs_us_Fs_rs(
-            lat_index = 0,
-            lon_index = 0
         )
         self.assertTrue(isinstance(xs, StockVariable))
         self.assertEqual(xs.unit, 'g/m^2')
-        self.assertEqual(xs.data.shape, (5,1,1,9))
+        self.assertEqual(xs.data.shape, (6,9))
         res2 = np.ones((3,3))
         dz = (np.arange(3)+1).reshape((1,3))
         res2 = (res2*dz).reshape((9,))
-        self.assertTrue(np.allclose(xs.data[0,0,0,:], res2*1e5))
+        self.assertTrue(np.allclose(xs.data[0,:], res2*1e5))
  
         self.assertTrue(isinstance(us, FluxVariable))
         self.assertEqual(us.unit, 'g/m^2')
-        self.assertEqual(us.data.shape, (4,1,1,9))
+        self.assertEqual(us.data.shape, (5,9))
         res2 = np.ones((3,3))*1e-02 * 86400
         dz = (np.arange(3)+1).reshape((1,3))
         res2 = (res2*dz).reshape((9,))
         res2[-3:] = 0
-        self.assertTrue(np.allclose(us.data[2,0,0,:], res2*2))
+        self.assertTrue(np.allclose(us.data[2,:], res2*2))
         
         self.assertTrue(isinstance(Fs, FluxVariable))
         self.assertEqual(Fs.unit, 'g/m^2')
-        self.assertEqual(Fs.data.shape, (4,1,1,9,9))
+        self.assertEqual(Fs.data.shape, (5,9,9))
         res2 = np.array([0,1,0]) *1e-03 * 86400 * 2 * 2
-        self.assertTrue(np.allclose(Fs.data[2,0,0,4,:3], res2))
+        self.assertTrue(np.allclose(Fs.data[2,4,:3], res2))
 
         self.assertTrue(isinstance(rs, FluxVariable))
         self.assertEqual(rs.unit, 'g/m^2')
-        self.assertEqual(rs.data.shape, (4,1,1,9))
+        self.assertEqual(rs.data.shape, (5,9))
         res2 = np.ones((3,3))*1e-03 *2 * 86400
         dz = (np.arange(3)+1).reshape((1,3))
-        res2 = (res2*dz).reshape((9,))
-        self.assertTrue(np.allclose(rs.data[3,0,0,:], res2))
+        res2 = (res2*dz).reshape((9,)) * 2 # nstep=2
+        self.assertTrue(np.allclose(rs.data[3,:], res2))
    
  
     def test_create_discrete_model_run(self):
         mdo = self.mdo_discretizable
         
-        with self.assertRaises(ModelDataObjectException) as context:
-            dmr = mdo.create_discrete_model_run()
-        msg = 'Data structure not understood'
-        self.assertEqual(str(context.exception), msg)
-        
-        dmr = mdo.create_discrete_model_run(
-            lat_index = 0,
-            lon_index = 0
-        )
+        dmr = mdo.create_discrete_model_run()
         self.assertEqual(dmr.nr_pools, 9)
         soln = dmr.solve()
-        self.assertTrue(np.allclose(dmr.times, [0,2,4,6,7]))
+        self.assertTrue(np.allclose(dmr.times, [0,2,4,6,8,9]))
 
         ## check missing data
-        mdo = self.mdos_inc[2]
+        mdo = self.mdos_inc[1]
         dmr = mdo.create_discrete_model_run()
         self.assertTrue(dmr is None)
 
@@ -1038,21 +667,13 @@ class TestModelDataObject(unittest.TestCase):
     def test_create_model_run(self):
         mdo = self.mdo_discretizable
         
-        with self.assertRaises(ModelDataObjectException) as context:
-            mr_pwc = mdo.create_model_run()
-        msg = 'Data structure not understood'
-        self.assertEqual(str(context.exception), msg)
-        
-        mr_pwc = mdo.create_model_run(
-            lat_index = 0,
-            lon_index = 0
-        )
+        mr_pwc = mdo.create_model_run()
         self.assertEqual(mr_pwc.model.nr_pools, 9)
         soln = mr_pwc.solve()
-        self.assertTrue(np.allclose(mr_pwc.data_times, [0,2,4,6,7]))
+        self.assertTrue(np.allclose(mr_pwc.data_times, [0,2,4,6,8,9]))
 
         ## check missing data
-        mdo = self.mdos_inc[2]
+        mdo = self.mdos_inc[1]
         mr_pwc = mdo.create_discrete_model_run()
         self.assertTrue(mr_pwc is None)
 
