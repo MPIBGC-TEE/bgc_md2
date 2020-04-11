@@ -90,8 +90,7 @@ def load_dmr_14C(dmr):
 
     # compute 14C external input
     atm_delta_14C = np.loadtxt(
-        #'~/Desktop/CARDAMOM/C14Atm_NH.csv',
-        'C14Atm_NH.csv',
+        '/home/hmetzler/Desktop/CARDAMOM/C14Atm_NH.csv',
         skiprows  = 1,
         delimiter = ','
     )
