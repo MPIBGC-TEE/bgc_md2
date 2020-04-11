@@ -59,6 +59,15 @@ class Variable(object):
             self.data.mask = np.ones_like(self.data.data) * self.data.mask 
 
 
+    def __str__(self):
+        s = str(type(self))
+        s += '-' * len(str(type(self))) + '\n'
+        s +='data: {}\n'.format(self.data)
+        s += 'unit: {}\n'.format(self.unit)
+
+        return s
+
+
     def data_mult(self, dim_var, given_axes):
         given_axes = np.array(given_axes).ravel().astype(int)
 
@@ -126,6 +135,27 @@ class Variable(object):
             return self
         else:
             return self.__add__(other)
+
+    #fixme: test
+    def absolute_error(self, v_right):
+        assert(self.data.shape==v_right.data.shape)
+        abs_err = self.__class__(
+            data = np.abs(self.convert(v_right.unit).data-v_right.data),
+            unit = v_right.unit
+        )
+
+        return abs_err
+
+
+    #fixme: test
+    def relative_error(self, v_right):
+        assert(self.data.shape==v_right.data.shape)
+        rel_err = self.__class__(
+            data = 100 * self.absolute_error(v_right).data / v_right.data,
+            unit = '%'
+        )
+
+        return rel_err
 
 
 class StockVariable(Variable):

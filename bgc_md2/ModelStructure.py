@@ -106,3 +106,15 @@ class ModelStructure(object):
 
         return flux_list
 
+    #fixme: test
+    @property
+    def pool_names(self):
+        return [entry['pool_name'] for entry in self.pool_structure]
+
+
+    #fixme: test
+    @property
+    def stock_vars(self):
+        return [entry['stock_var'] for entry in self.pool_structure]
+
+

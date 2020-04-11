@@ -501,7 +501,7 @@ class ModelDataObject(object):
         return xs, us, Fs, rs
 
 
-    def create_discrete_model_run(self):
+    def create_discrete_model_run(self, errors=False):
         out = self.load_xs_us_Fs_rs()
         xs, us, Fs, rs = out
         start_values = xs.data[0,:]
@@ -519,7 +519,17 @@ class ModelDataObject(object):
         else:
             dmr = None
 
-        return dmr
+        if errors:
+            soln_dmr = Variable(
+                data = dmr.solve(),
+                unit = self.stock_unit
+            )
+            abs_err = soln_dmr.absolute_error(xs)
+            rel_err = soln_dmr.relative_error(xs)
+
+            return dmr, abs_err, rel_err
+        else:
+            return dmr
 
 
     def create_model_run(self):
