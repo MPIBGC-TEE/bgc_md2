@@ -245,6 +245,26 @@ class TestModelStructure(unittest.TestCase):
         )
 
 
+    def test_pool_names(self):
+        ms = self.ms
+        res = [
+            'Vegetation 1', 'CWD',
+            'Litter 1', 'Litter 2', 'Litter 3',
+            'Soil 1', 'Soil 2', 'Soil 3'
+        ]
+        self.assertEqual(ms.pool_names, res)
+
+
+    def test_stock_vars(self):
+        ms = self.ms
+        res = [
+            'Veg1C', 'CWDC_vr',
+            'LITR1C_vr', 'LITR2C_vr', 'LITR3C_vr',
+            'SOIL1C_vr', 'SOIL2C_vr', 'SOIL3C_vr'
+        ]
+        self.assertEqual(ms.stock_vars, res)
+
+
 ################################################################################
 
 

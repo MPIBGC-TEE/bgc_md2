@@ -136,7 +136,7 @@ class Variable(object):
         else:
             return self.__add__(other)
 
-    #fixme: test
+    
     def absolute_error(self, v_right):
         assert(self.data.shape==v_right.data.shape)
         abs_err = self.__class__(
@@ -147,7 +147,6 @@ class Variable(object):
         return abs_err
 
 
-    #fixme: test
     def relative_error(self, v_right):
         assert(self.data.shape==v_right.data.shape)
         rel_err = self.__class__(

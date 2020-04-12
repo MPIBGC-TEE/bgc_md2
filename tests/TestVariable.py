@@ -301,5 +301,72 @@ class TestFluxVariable(unittest.TestCase):
         self.assertTrue(np.all(fv_agg.data.filled()==res2))
 
 
+    def test_absolute_and_relative_error(self):
+        v_right = Variable(
+            data = np.arange(10).reshape(2,5),
+            unit = 'm'
+        )
+        v_wrong = Variable(
+            data = np.arange(10).reshape(2,5)+1,
+            unit = 'm'
+        )
+        abs_err = v_wrong.absolute_error(v_right)
+        self.assertTrue(np.all(abs_err.data==np.ones(10).reshape(2,5)))
+        self.assertEqual(abs_err.unit, 'm')
+        rel_err = v_wrong.relative_error(v_right)
+        res = 100 / np.ma.arange(10).reshape(2,5)
+        self.assertTrue(np.all(rel_err.data==res.data))
+        self.assertEqual(rel_err.unit, '%')
+
+        ## convertible units
+        v_right = Variable(
+            data = np.arange(10).reshape(2,5) * 1000,
+            unit = 'm'
+        )
+        v_wrong = Variable(
+            data = np.arange(10).reshape(2,5)+1,
+            unit = 'km'
+        )
+        abs_err = v_wrong.absolute_error(v_right)
+        self.assertTrue(np.all(abs_err.data==np.ones(10).reshape(2,5)*1000))
+        self.assertEqual(abs_err.unit, 'm')
+        rel_err = v_wrong.relative_error(v_right)
+        res = 100 / np.ma.arange(10).reshape(2,5)
+        self.assertTrue(np.all(rel_err.data==res.data))
+        self.assertEqual(rel_err.unit, '%')
+
+        ## unconvertible units
+        v_right = Variable(
+            data = np.arange(10).reshape(2,5) * 1000,
+            unit = 'm'
+        )
+        v_wrong = Variable(
+            data = np.arange(10).reshape(2,5)+1,
+            unit = 'km/s'
+        )
+        with self.assertRaises(ValueError):
+            abs_err = v_wrong.absolute_error(v_right)
+        with self.assertRaises(ValueError):
+            rel_err = v_wrong.relative_error(v_right)
+
+
+        ## incompatible shapes
+        v_right = Variable(
+            data = np.arange(10) * 1000,
+            unit = 'm'
+        )
+        v_wrong = Variable(
+            data = np.arange(10).reshape(2,5)+1,
+            unit = 'km/s'
+        )
+        with self.assertRaises(AssertionError):
+            abs_err = v_wrong.absolute_error(v_right)
+        with self.assertRaises(AssertionError):
+            rel_err = v_wrong.relative_error(v_right)
+
+
+################################################################################
+
+
 if __name__ == '__main__':
     unittest.main()
