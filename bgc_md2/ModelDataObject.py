@@ -212,7 +212,7 @@ class ModelDataObject(object):
         for item in ms.pool_structure:
             pool_name     = item['pool_name']
             variable_name = item['stock_var']
-            print(pool_name, variable_name, flush=True)
+            #print(pool_name, variable_name, flush=True)
             nr_layers     = ms.get_nr_layers(pool_name)
             dz = self.get_dz(pool_name)
 
@@ -258,7 +258,7 @@ class ModelDataObject(object):
 
             fvs_agg = []
             for variable_name in variable_names:
-                print(pool_name, variable_name, flush=True)
+                #print(pool_name, variable_name, flush=True)
                 fv_agg = func(
                     mdo           = self,
                     variable_name = variable_name,
@@ -313,7 +313,7 @@ class ModelDataObject(object):
         for pools, variable_names in ms.horizontal_structure.items():
             src_pool_name = pools[0]
             tar_pool_name = pools[1]
-            print(src_pool_name, tar_pool_name, flush=True)
+            #print(src_pool_name, tar_pool_name, flush=True)
 
             src_nr_layers = ms.get_nr_layers(src_pool_name)
             tar_nr_layers = ms.get_nr_layers(tar_pool_name)

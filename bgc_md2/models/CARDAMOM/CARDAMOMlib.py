@@ -13,6 +13,7 @@ from bgc_md2.ModelDataObject import (
 )
 from bgc_md2.Variable import Variable
 
+from CompartmentalSystems.discrete_model_run import DMRError
 
 def load_model_structure():
     # labile, leaf, root, wood, litter, and soil
@@ -90,7 +91,8 @@ def load_dmr_14C(dmr):
 
     # compute 14C external input
     atm_delta_14C = np.loadtxt(
-        '/home/hmetzler/Desktop/CARDAMOM/C14Atm_NH.csv',
+#        '/home/hmetzler/Desktop/CARDAMOM/C14Atm_NH.csv',
+        'C14Atm_NH.csv',
         skiprows  = 1,
         delimiter = ','
     )
@@ -184,11 +186,13 @@ def create_dmr_14C_dataset(ms, ds, dmr_14C):
     def add_variable(data_vars, var_name_ds, data):   
         if var_name_ds in ds.variables.keys():
             var_ds = ds[var_name_ds] 
+            attrs  = var_ds.attrs
+            attrs['units'] = 'per mille'
             var = xr.DataArray(
                 data   = data,
                 coords = var_ds.coords,
                 dims   = var_ds.dims,
-                attrs  = var_ds.attrs
+                attrs  = attrs
             )
             data_vars[var_name_ds] = var
 
@@ -278,37 +282,67 @@ def create_dmr_14C_dataset(ms, ds, dmr_14C):
     return ds_dmr_14C
 
 
-def load_dmr_14C_dataset(dataset):
-    ds = dataset.isel(ens=0, lat=0, lon=0)
-    mdo = load_mdo(ds)
+def load_dmr_14C_dataset(ds):
+#    return ds 
+    # fake return data struicture on first call (with empty data)
+    if ds.ens.values.shape == (0,):
+        empty_var = xr.DataArray(
+            data   = np.ndarray(dtype=float, shape=(0,0,0)),
+            dims   = ('ens', 'lat' , 'lon')
+        )
+        ds['max_abs_err'] = empty_var
+        ds['max_rel_err'] = empty_var
+        ds['log'] = xr.DataArray(
+            data = np.ndarray(dtype='<U50', shape=(0,0,0)),
+            dims = ('ens', 'lat', 'lon')
+        )    
+        return ds
+    
 
-    dmr, abs_err, rel_err = mdo.create_discrete_model_run(errors=True)
-    dmr_14C = load_dmr_14C(dmr)
+    log = ''
+    try:
+        mdo = load_mdo(ds)
+    
+        dmr, abs_err, rel_err = mdo.create_discrete_model_run(errors=True)
+        dmr_14C = load_dmr_14C(dmr)
+    
+    
+        ms = mdo.model_structure
+    #    plot_Delta_14C_in_time(ms, dmr, dmr_14C)
+        ds_dmr_14C = create_dmr_14C_dataset(ms, ds, dmr_14C)
+    
+        ## add reconstruction error
+        var_abs_err = xr.DataArray(
+            data  = np.max(abs_err.data),
+            attrs = {
+                'units':     abs_err.unit,
+                'long_name': 'max. abs. error on reconstructed stock sizes'
+            }
+        )
+        ds_dmr_14C['max_abs_err'] = var_abs_err
 
+        var_rel_err = xr.DataArray(
+            data  = np.max(rel_err.data),
+            attrs = {
+                'units':     rel_err.unit,
+                'long_name': 'max. rel. error on reconstructed stock sizes'
+            }
+        )
+        ds_dmr_14C['max_rel_err'] = var_rel_err
+    
+    except DMRError as e:
+        log = str(e)
+        
+        data_vars = {}
+        for key, val in ds.data_vars.items():
+            if key != 'time':
+                data_vars[key] = np.nan * val
+        ds_dmr_14C = ds.copy(data=data_vars)
+        
+        ds_dmr_14C['max_abs_err'] = np.nan
+        ds_dmr_14C['max_rel_err'] = np.nan
 
-    ms = mdo.model_structure
-    plot_Delta_14C_in_time(ms, dmr, dmr_14C)
-    ds_dmr_14C = create_dmr_14C_dataset(ms, ds, dmr_14C)
-
-    ## add reconstruction error
-    var_abs_err = xr.DataArray(
-        data  = np.max(abs_err.data),
-        attrs = {
-            'units':     abs_err.unit,
-            'long_name': 'max. abs. error on reconstructed stock sizes'
-        }
-    )
-    ds_dmr_14C['max_abs_err'] = var_abs_err
-    var_rel_err = xr.DataArray(
-        data  = np.max(rel_err.data),
-        attrs = {
-            'units':     rel_err.unit,
-            'long_name': 'max. rel. error on reconstructed stock sizes'
-        }
-    )
-    ds_dmr_14C['max_rel_err'] = var_rel_err
-
-    ds.close()
+    ds_dmr_14C['log'] = log
     ds_dmr_14C.close()    
 
     return ds_dmr_14C
@@ -318,7 +352,12 @@ def load_dmr_14C_dataset(dataset):
 
 
 if __name__ == '__main__':
-    dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
-    ds_dmr_14C = load_dmr_14C_dataset(dataset)
+    pass
+#    dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
+#    ds = dataset.isel(ens=0, lat=0, lon=0)
+#    ds_dmr_14C = load_dmr_14C_dataset(ds)
+#
+#    ds.close()
+#    dataset.close()
 
 
