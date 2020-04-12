@@ -1,7 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py
+#     formats: ipynb,py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -27,13 +27,13 @@ import CARDAMOMlib
 importlib.reload(CARDAMOMlib)
 
 
-client = Client(n_workers=2, threads_per_worker=2, memory_limit='1GB')
+client = Client(n_workers=10, threads_per_worker=2, memory_limit='1GB')
 client
 
 
 #data_folder = '/home/hmetzler/Desktop/CARDAMOM/' # local
 data_folder = '/home/data/CARDAMOM/' # matagorda
-ds = xr.open_dataset(data_folder + 'cardamom_for_holger.nc').chunk({'ens': 100})#, 'lat': 1, 'lon' :1})
+ds = xr.open_dataset(data_folder + 'cardamom_for_holger.nc').chunk({'ens': 20})#, 'lat': 1, 'lon' :1})
 ds
 
 

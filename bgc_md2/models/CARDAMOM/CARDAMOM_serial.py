@@ -1,7 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py
+#     formats: ipynb,py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -22,7 +22,8 @@ import CARDAMOMlib
 
 importlib.reload(CARDAMOMlib)
 
-data_folder = '/home/hmetzler/Desktop/CARDAMOM/'
+#data_folder = '/home/hmetzler/Desktop/CARDAMOM/' # local
+data_folder = '/home/data/CARDAMOM/'
 ds = xr.open_dataset(data_folder + 'cardamom_for_holger.nc')
 ds
 
