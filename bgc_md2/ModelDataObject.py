@@ -6,7 +6,7 @@ from sympy import symbols
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 
-from bgc_md2.SmoothModelRunFromData import SmoothModelRunFromData as SMRFD
+from bgc_md2.SmoothModelRunFromData2 import SmoothModelRunFromData as SMRFD
 from bgc_md2.Variable import FixDumbUnits, Variable, StockVariable, FluxVariable
 
 
@@ -532,7 +532,7 @@ class ModelDataObject(object):
             return dmr
 
 
-    def create_model_run(self):
+    def create_model_run(self, errors=False):
         out = self.load_xs_us_Fs_rs()
         xs, us, Fs, rs = out
 
@@ -562,5 +562,18 @@ class ModelDataObject(object):
         else:
             smrfd = None
 
-        return smrfd
+        if errors:
+            soln, _ = smrfd.solve()
+
+            soln_smrfd = Variable(
+                data = soln,
+                unit = self.stock_unit
+            )
+            abs_err = soln_smrfd.absolute_error(xs)
+            rel_err = soln_smrfd.relative_error(xs)
+
+            return smrfd, abs_err, rel_err
+        else:
+            return smrfd
+
 

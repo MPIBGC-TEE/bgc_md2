@@ -150,7 +150,8 @@ class Variable(object):
     def relative_error(self, v_right):
         assert(self.data.shape==v_right.data.shape)
         rel_err = self.__class__(
-            data = 100 * self.absolute_error(v_right).data / v_right.data,
+            data = 100 * self.absolute_error(v_right).data\
+                     / np.abs(v_right.data),
             unit = '%'
         )
 
