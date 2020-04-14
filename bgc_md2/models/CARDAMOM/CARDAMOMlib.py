@@ -15,7 +15,7 @@ from bgc_md2.Variable import Variable
 
 from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
-from CompartmentalSystems.pwc_model_run import PWCModelRun as SMR
+from CompartmentalSystems.pwc_model_run_fd import PWCModelRun as PWCMRFD
 
 from compute_start_values_14C import compute_start_values_14C
 
@@ -145,7 +145,7 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
     ## save stocks
     for pool_nr, pool_name  in enumerate(ms.pool_names):
         var_name_ds = pool_name
-        if isinstance(mr, SMR):
+        if isinstance(mr, PWCMRFD):
             soln,_ = mr.solve()
             soln_14C,_ = mr_14C.solve()
         elif isinstance(mr, DMR):
@@ -332,8 +332,8 @@ def load_dmr_14C(dmr):
     return dmr_14C
 
  
-def load_pwc_mr_14C(pwc_mr):
-    ## create 14C pwc_mr
+def load_pwc_mr_fd_14C(pwc_mr_fd):
+    ## create 14C pwc_mr_fd
 
     # compute 14C external input
     atm_delta_14C = np.loadtxt(
@@ -353,24 +353,24 @@ def load_pwc_mr_14C(pwc_mr):
     Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
 
     ## compute 14C start_values
-    B_func = pwc_mr.B_func()
-    Bs_12C = np.array([B_func(t) for t in pwc_mr.times[:-1]]) 
-    u_func = pwc_mr.external_input_vector_func()
-    us_12C = np.array([u_func(t) for t in pwc_mr.times[:-1]])
+    B_func = pwc_mr_fd.B_func()
+    Bs_12C = np.array([B_func(t) for t in pwc_mr_fd.times[:-1]]) 
+    u_func = pwc_mr_fd.external_input_vector_func()
+    us_12C = np.array([u_func(t) for t in pwc_mr_fd.times[:-1]])
     start_values_14C = compute_start_values_14C(
-        pwc_mr.times,
+        pwc_mr_fd.times,
         Bs_12C,
         us_12C,
         Fa_func,
         method = 'C3'
     )
 
-    pwc_mr_14C = pwc_mr.to_14C_only(
+    pwc_mr_fd_14C = pwc_mr_fd.to_14C_only(
         start_values_14C,
         Fa_func
     )   
 
-    return pwc_mr_14C
+    return pwc_mr_fd_14C
 
  
 def load_Delta_14C_dataset(ds, method):
@@ -410,7 +410,7 @@ def load_Delta_14C_dataset(ds, method):
         if method == 'continuous':
             mr, abs_err, rel_err =\
                  mdo.create_model_run(errors=True)
-            mr_14C = load_pwc_mr_14C(mr)
+            mr_14C = load_pwc_mr_fd_14C(mr)
             soln,_ = mr.solve()
             soln_14C,_ = mr_14C.solve()
     
@@ -464,27 +464,27 @@ if __name__ == '__main__':
     dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
     ds = dataset.isel(ens=0, lat=0, lon=0)
     ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, 'discrete')
-    ds_Delta_14C_pwc_mr = load_Delta_14C_dataset(ds, 'continuous')
+    ds_Delta_14C_pwc_mr_fd = load_Delta_14C_dataset(ds, 'continuous')
 
 #    # check for similarity
 #    for name, var_dmr in ds_Delta_14C_dmr.data_vars.items():
 #        if name not in ['log', 'max_abs_err', 'max_rel_err']:
 #            val_dmr = var_dmr.data
-#            val_pwc_mr = ds_Delta_14C_pwc_mr[name].data
+#            val_pwc_mr_fd = ds_Delta_14C_pwc_mr_fd[name].data
 #            print(name)
 #            print(val_dmr)
-#            print(val_pwc_mr)
+#            print(val_pwc_mr_fd)
 #
 #
-#            abs_err = np.abs(val_dmr-val_pwc_mr)
+#            abs_err = np.abs(val_dmr-val_pwc_mr_fd)
 #            print(np.nanmax(abs_err))
 #            rel_err = abs_err/np.abs(val_dmr)
 #            print(np.nanmax(rel_err)*100)
-#            rel_err = abs_err/np.abs(val_pwc_mr)
+#            rel_err = abs_err/np.abs(val_pwc_mr_fd)
 #            print(np.nanmax(rel_err))
 
     ds_Delta_14C_dmr.close()
-    ds_Delta_14C_pwc_mr.close()
+    ds_Delta_14C_pwc_mr_fd.close()
     ds.close()
     dataset.close()
 

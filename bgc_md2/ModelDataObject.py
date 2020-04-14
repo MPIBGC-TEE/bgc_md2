@@ -6,7 +6,7 @@ from sympy import symbols
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 
-from bgc_md2.SmoothModelRunFromData2 import SmoothModelRunFromData as SMRFD
+from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD as PWCMRFD
 from bgc_md2.Variable import FixDumbUnits, Variable, StockVariable, FluxVariable
 
 
@@ -550,7 +550,7 @@ class ModelDataObject(object):
 #        times = np.arange(len(self.time_agg.data))
         if xs.data.mask.sum() + Fs.data.mask.sum()\
                 + us.data.mask.sum() + rs.data.mask.sum() == 0:
-            smrfd = SMRFD.reconstruct_from_data(
+            pwc_mr_fd = PWCMRFD.reconstruct_from_data(
                 symbols('t'),
                 times,
                 start_values.filled(),
@@ -560,20 +560,20 @@ class ModelDataObject(object):
                 us.data.filled()
             )
         else:
-            smrfd = None
+            pwc_mr_fd = None
 
         if errors:
-            soln, _ = smrfd.solve()
+            soln, _ = pwc_mr_fd.solve()
 
-            soln_smrfd = Variable(
+            soln_pwc_mr_fd = Variable(
                 data = soln,
                 unit = self.stock_unit
             )
-            abs_err = soln_smrfd.absolute_error(xs)
-            rel_err = soln_smrfd.relative_error(xs)
+            abs_err = soln_pwc_mr_fd.absolute_error(xs)
+            rel_err = soln_pwc_mr_fd.relative_error(xs)
 
-            return smrfd, abs_err, rel_err
+            return pwc_mr_fd, abs_err, rel_err
         else:
-            return smrfd
+            return pwc_mr_fd
 
 
