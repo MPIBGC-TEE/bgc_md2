@@ -670,7 +670,7 @@ class TestModelDataObject(unittest.TestCase):
         mr_pwc = mdo.create_model_run()
         self.assertEqual(mr_pwc.model.nr_pools, 9)
         soln = mr_pwc.solve()
-        self.assertTrue(np.allclose(mr_pwc.data_times, [0,2,4,6,8,9]))
+        self.assertTrue(np.allclose(mr_pwc.times, [0,2,4,6,8,9]))
 
         ## check missing data
         mdo = self.mdos_inc[1]

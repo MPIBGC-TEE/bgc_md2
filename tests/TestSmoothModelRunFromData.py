@@ -6,7 +6,7 @@ from scipy.linalg import inv
 from sympy import Function, Matrix, sin, symbols
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.pwc_model_run import PWCModelRun
 
 from bgc_md2.SmoothModelRunFromData import SmoothModelRunFromData as SMRFD
 
@@ -38,13 +38,13 @@ class TestModelRun(unittest.TestCase):
         start_values = np.array([40, 0])
         times = np.linspace(0, 10, 101)
         
-        smr = SmoothModelRun(srm, par_set, start_values, times, func_set)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times, func_set)
 
         ## create fake discrete data
         nr_data_points = 3
         data_times = np.round(np.linspace(times[0], times[-1], nr_data_points),5)
         delta_t = (times[-1]-times[0]) / (nr_data_points-1)
-        xs, Fs, rs, data_us = smr._fake_discretized_output(data_times)
+        xs, Fs, rs, data_us = pwc_mr._fake_discretized_output(data_times)
     
         smrfd = SMRFD.reconstruct_from_data(
             t,
@@ -55,7 +55,7 @@ class TestModelRun(unittest.TestCase):
             rs, 
             data_us)
 
-        xss = smr.solve()[0][-1,...]
+        xss = pwc_mr.solve()[0][-1,...]
         B0 = smrfd.Bs[-1]
         u0 = smrfd.us[-1]
 

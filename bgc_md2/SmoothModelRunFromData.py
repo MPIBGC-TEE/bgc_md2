@@ -7,7 +7,7 @@ from sympy import Function, Matrix, Symbol, symbols, zeros
 from tqdm import tqdm
 
 from CompartmentalSystems import picklegzip
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.pwc_model_run import PWCModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
@@ -26,7 +26,7 @@ class SmoothModelRunFromData():
     def __init__(self, model, parameter_set, 
                         start_values, data_times, func_set=None, soln=None):
 
-        smrs = []
+        pwc_mrs = []
         if soln is None:
             k_start_values = np.asarray(start_values)
             print('creating pwc ModelRun')
@@ -36,7 +36,7 @@ class SmoothModelRunFromData():
                 k_t1 = data_times[k+1]
 #               k_times = times[(times >= k_t0) & (times <= k_t1)]
                 k_times = np.array([k_t0, k_t1])
-                k_smr = SmoothModelRun(
+                k_pwc_mr = PWCModelRun(
                     model, 
                     parameter_set, 
                     k_start_values, 
@@ -44,26 +44,26 @@ class SmoothModelRunFromData():
                     func_set
                 )
 
-                k_soln = k_smr.solve()[0][-1]
+                k_soln = k_pwc_mr.solve()[0][-1]
                 k_start_values = k_soln
-                smrs.append(k_smr)
+                pwc_mrs.append(k_pwc_mr)
         else:
             for k in range(len(data_times)-1):
                 k_t0 = data_times[k]
                 k_t1 = data_times[k+1]
 #               k_times = times[(times >= k_t0) & (times <= k_t1)]
                 k_times = np.array([k_t0, k_t1])
-                k_smr = SmoothModelRun(
+                k_pwc_mr = PWCModelRun(
                     model, 
                     parameter_set, 
                     soln[k], 
                     k_times, 
                     func_set
                 )
-                smrs.append(k_smr)
+                pwc_mrs.append(k_pwc_mr)
             self.soln = soln
 
-        self.smrs = smrs
+        self.pwc_mrs = pwc_mrs
 
         self.model = model
         #self.nr_pools = model.nr_pools
@@ -175,10 +175,10 @@ class SmoothModelRunFromData():
     def save_to_file(self, filename):
         soln,_ = self.solve()
         self.soln = soln
-#        smr = self.to_smooth_model_run()
-#        soln1 = smr.solve()
+#        pwc_mr = self.to_smooth_model_run()
+#        soln1 = pwc_mr.solve()
 #        self.soln1 = soln1
-#        soln2, soln2_func = smr.solve_2()
+#        soln2, soln2_func = pwc_mr.solve_2()
 #        self.soln2 = soln2
         smrfd_dict = {
             'start_values': self.start_values,
@@ -197,7 +197,7 @@ class SmoothModelRunFromData():
 
 
     def to_smooth_model_run(self):
-        smr = SmoothModelRun(
+        pwc_mr = PWCModelRun(
             self.model, 
             self.parameter_set, 
             self.start_values, 
@@ -205,7 +205,7 @@ class SmoothModelRunFromData():
             self.func_set
         )
 
-        return smr
+        return pwc_mr
 
 
     @classmethod
@@ -514,10 +514,10 @@ class SmoothModelRunFromData():
 
     def solve(self):
         if not hasattr(self, 'soln'):
-            soln,_ = self.smrs[0].solve()
+            soln,_ = self.pwc_mrs[0].solve()
             for k in range(1, len(self.data_times)-1):
                 soln = soln[:-1]
-                k_soln,_ = self.smrs[k].solve()
+                k_soln,_ = self.pwc_mrs[k].solve()
                 soln = np.concatenate((soln, k_soln), axis=0)
 
             self.soln = soln
