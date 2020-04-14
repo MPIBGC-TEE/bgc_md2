@@ -17,6 +17,8 @@ from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.smooth_model_run import SmoothModelRun as SMR
 
+from compute_start_values_14C import compute_start_values_14C
+
 
 def load_model_structure():
     # labile, leaf, root, wood, litter, and soil
@@ -301,48 +303,27 @@ def load_dmr_14C(dmr):
         fill_value = 'extrapolate'
     )
     t_conv = lambda t: 2001 + (15+t)/365.25
-    F_atm_delta_14C = lambda t: _F_atm_delta_14C(t_conv(t))
 
+    F_atm_delta_14C = lambda t: _F_atm_delta_14C(t_conv(t))
     alpha = 1.18e-12
+    Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
     us_12C = dmr.external_input_vector
     with np.errstate(divide='ignore'):
-        us_14C = alpha * us_12C * (
-            1 + 1/1000 * F_atm_delta_14C(dmr.times[:-1]).reshape(-1,1)
-        )
-    np.nan_to_num(us_14C, posinf=0, copy=False)
+        us_14C = us_12C * Fa_func(dmr.times[:-1]).reshape(-1,1)
+        #us_14C = alpha * us_12C * (
+        #    1 + 1/1000 * F_atm_delta_14C(dmr.times[:-1]).reshape(-1,1)
+        #)
+    us_14C = np.nan_to_num(us_14C, posinf=0)
     
-
     # compute 14C start_values
-    lamda = 0.0001209681 
-
-
-#    # V1: assume system at t0 in eq.
-#    B0_14C = np.matmul(
-#        dmr.Bs[0],
-#        np.exp(-lamda*365.25/12)*np.identity(dmr.nr_pools)
-#    )
-#    start_values_14C = np.linalg.solve(
-#        (np.eye(dmr.nr_pools)-B0_14C),
-#        us_14C[0]
-#    )
-#
-#    start_values_14C = 30 * alpha * np.ones(6)
-
-
-#    # V2: problem for pools with no external input
-#    ks = np.diag(np.mean(dmr.Bs, axis=0))
-#    start_values_14C = np.mean(us_14C, axis=0)/(1-ks*np.exp(-lamda*365.25/12))
-
-    # V3: mean of 14C Bs and mean of 14C us
-    B0_14C = np.mean([np.matmul(
-        dmr.Bs[k],
-        np.exp(-lamda*365.25/12)*np.identity(dmr.nr_pools)
-    ) for k in range(len(dmr.Bs))], axis=0)
-    start_values_14C = np.linalg.solve(
-        (np.eye(dmr.nr_pools)-B0_14C),
-        np.mean(us_14C, axis=0)
+    start_values_14C = compute_start_values_14C(
+        dmr.times,
+        dmr.Bs,
+        dmr.us,
+        Fa_func,
+        method = 'D3'
     )
-
+    
     dmr_14C = dmr.to_14C_only(
         start_values_14C,
         us_14C
@@ -372,25 +353,18 @@ def load_smr_14C(smr):
     Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
 
     ## compute 14C start_values
-    lamda = 0.0001209681 
-
-    # V3: mean of 14C Bs and mean of 14C us
     B_func = smr.B_func()
-    B0_14C = np.mean(
-        [        
-            B_func(t) + (-lamda*365.25/12) * np.identity(smr.nr_pools)
-                for t in smr.times[:-1]
-        ], 
-        axis=0
-    )
+    Bs_12C = np.array([B_func(t) for t in smr.times[:-1]]) 
     u_func = smr.external_input_vector_func()
-    u0_14C = np.mean(
-        [u_func(t) * Fa_func(t) for t in smr.times[:-1]], 
-        axis=0
+    us_12C = np.array([u_func(t) for t in smr.times[:-1]])
+    start_values_14C = compute_start_values_14C(
+        smr.times,
+        Bs_12C,
+        us_12C,
+        Fa_func,
+        method = 'C3'
     )
 
-    start_values_14C = np.linalg.solve(-B0_14C, u0_14C)
-    
     smr_14C = smr.to_14C_only(
         start_values_14C,
         Fa_func
@@ -492,22 +466,22 @@ if __name__ == '__main__':
     ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, 'discrete')
     ds_Delta_14C_smr = load_Delta_14C_dataset(ds, 'continuous')
 
-    # check for similarity
-    for name, var_dmr in ds_Delta_14C_dmr.data_vars.items():
-        if name not in ['log', 'max_abs_err', 'max_rel_err']:
-            val_dmr = var_dmr.data
-            val_smr = ds_Delta_14C_smr[name].data
-            print(name)
-            print(val_dmr)
-            print(val_smr)
-
-
-            abs_err = np.abs(val_dmr-val_smr)
-            print(np.nanmax(abs_err))
-            rel_err = abs_err/np.abs(val_dmr)
-            print(np.nanmax(rel_err)*100)
-            rel_err = abs_err/np.abs(val_smr)
-            print(np.nanmax(rel_err))
+#    # check for similarity
+#    for name, var_dmr in ds_Delta_14C_dmr.data_vars.items():
+#        if name not in ['log', 'max_abs_err', 'max_rel_err']:
+#            val_dmr = var_dmr.data
+#            val_smr = ds_Delta_14C_smr[name].data
+#            print(name)
+#            print(val_dmr)
+#            print(val_smr)
+#
+#
+#            abs_err = np.abs(val_dmr-val_smr)
+#            print(np.nanmax(abs_err))
+#            rel_err = abs_err/np.abs(val_dmr)
+#            print(np.nanmax(rel_err)*100)
+#            rel_err = abs_err/np.abs(val_smr)
+#            print(np.nanmax(rel_err))
 
     ds_Delta_14C_dmr.close()
     ds_Delta_14C_smr.close()
