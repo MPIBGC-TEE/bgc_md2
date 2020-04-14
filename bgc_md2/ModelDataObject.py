@@ -563,7 +563,7 @@ class ModelDataObject(object):
             pwc_mr_fd = None
 
         if errors:
-            soln, _ = pwc_mr_fd.solve()
+            soln = pwc_mr_fd.solve()
 
             soln_pwc_mr_fd = Variable(
                 data = soln,

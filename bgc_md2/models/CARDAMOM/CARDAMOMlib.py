@@ -14,8 +14,6 @@ from bgc_md2.ModelDataObject import (
 from bgc_md2.Variable import Variable
 
 from CompartmentalSystems.discrete_model_run import DMRError
-from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
-from CompartmentalSystems.pwc_model_run_fd import PWCModelRun as PWCMRFD
 
 from compute_start_values_14C import compute_start_values_14C
 
@@ -145,14 +143,8 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
     ## save stocks
     for pool_nr, pool_name  in enumerate(ms.pool_names):
         var_name_ds = pool_name
-        if isinstance(mr, PWCMRFD):
-            soln,_ = mr.solve()
-            soln_14C,_ = mr_14C.solve()
-        elif isinstance(mr, DMR):
-            soln = mr.solve()
-            soln_14C = mr_14C.solve()
-        else:
-            raise()
+        soln = mr.solve()
+        soln_14C = mr_14C.solve()
 
         new_var = Variable(
             data = F_Delta_14C(soln[:, pool_nr], soln_14C[:, pool_nr]),
@@ -405,18 +397,13 @@ def load_Delta_14C_dataset(ds, method):
             mr, abs_err, rel_err =\
                  mdo.create_discrete_model_run(errors=True)
             mr_14C = load_dmr_14C(mr)
-            soln = mr.solve()
-            soln_14C = mr_14C.solve()
         if method == 'continuous':
             mr, abs_err, rel_err =\
                  mdo.create_model_run(errors=True)
             mr_14C = load_pwc_mr_fd_14C(mr)
-            soln,_ = mr.solve()
-            soln_14C,_ = mr_14C.solve()
-    
     
         ms = mdo.model_structure
-        #plot_Delta_14C_in_time(ms, soln, soln_14C)
+        #plot_Delta_14C_in_time(ms, mr.solve(), mr_14C.solve())
         ds_Delta_14C = create_Delta_14C_dataset(mdo, ds, mr, mr_14C)
     
         ## add reconstruction error
