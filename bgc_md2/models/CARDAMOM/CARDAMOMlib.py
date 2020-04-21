@@ -14,7 +14,7 @@ from bgc_md2.ModelDataObject import (
 from bgc_md2.Variable import Variable
 
 from CompartmentalSystems.discrete_model_run import DMRError
-
+from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from compute_start_values_14C import compute_start_values_14C
 
 
@@ -156,21 +156,23 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
     ## save external input fluxes
 
     # insert np.nan at time t0
-    us_monthly = Variable(
+#    raise(Exception('check units and values, use acc variants'))
+    Us_monthly = Variable(
         data = np.concatenate(
             [
                 np.nan * np.ones((1,len(ms.pool_names))),
-                mr.external_input_vector[:(len(mr.times)-1)]
+                mr.acc_gross_external_input_vector()
             ],
             axis = 0
         ),
         unit = 'g/(365.25/12 d)'
     )
-    us_monthly_14C = Variable(
+    print(mr, Us_monthly)
+    Us_monthly_14C = Variable(
         data = np.concatenate(
             [
                 np.nan * np.ones((1,len(ms.pool_names))),
-                mr_14C.external_input_vector[:(len(mr.times)-1)]
+                mr_14C.acc_gross_external_input_vector()
             ],
             axis = 0
         ),
@@ -178,8 +180,8 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
     )
 
     # convert to daily flux rates
-    us = us_monthly.convert('g/d')
-    us_14C = us_monthly_14C.convert('g/d')
+    us = Us_monthly.convert('g/d')
+    us_14C = Us_monthly_14C.convert('g/d')
     for pool_nr, pool_name  in enumerate(ms.pool_names):        
         var_name_ds = 'NPP_to_' + pool_name
         new_var = Variable(
@@ -198,7 +200,7 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
                 np.nan * np.ones(
                     (1, len(ms.pool_names), len(ms.pool_names))
                 ),
-                mr.internal_flux_matrix[:(len(mr.times)-1)]
+                mr.acc_gross_internal_flux_matrix()
             ],
             axis = 0
         ),
@@ -210,7 +212,7 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
                 np.nan * np.ones(
                     (1, len(ms.pool_names), len(ms.pool_names))
                 ),
-                mr_14C.internal_flux_matrix[:(len(mr.times)-1)]
+                mr_14C.gross_internal_flux_matrix()
             ],
             axis = 0
         ),
@@ -218,15 +220,15 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
     )
 
     # convert to daily flux rates
-    Fs = Fs_monthly.convert('g/d')
-    Fs_14C = Fs_monthly_14C.convert('g/d')
+    fs = Fs_monthly.convert('g/d')
+    fs_14C = Fs_monthly_14C.convert('g/d')
     for pnr_from, pn_from in enumerate(ms.pool_names):        
         for pnr_to, pn_to in enumerate(ms.pool_names):        
             var_name_ds = pn_from +'_to_' + pn_to
             new_var = Variable(
                 data = F_Delta_14C(
-                    Fs.data[:, pnr_to, pnr_from],
-                    Fs_14C.data[:, pnr_to, pnr_from]
+                    fs.data[:, pnr_to, pnr_from],
+                    fs_14C.data[:, pnr_to, pnr_from]
                 ),
                 unit = Fs.unit
             )
@@ -236,21 +238,21 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
     ## save external output fluxes
 
     # insert np.nan at time t0
-    rs_monthly = Variable(
+    Rs_monthly = Variable(
         data = np.concatenate(
             [
                 np.nan * np.ones((1,len(ms.pool_names))),
-                mr.external_output_vector[:(len(mr.times)-1)]
+                mr.acc_gross_external_output_vector()
             ],
             axis = 0
         ),
         unit = 'g/(365.25/12 d)'
     )
-    rs_monthly_14C = Variable(
+    Rs_monthly_14C = Variable(
         data = np.concatenate(
             [
                 np.nan * np.ones((1,len(ms.pool_names))),
-                mr_14C.external_output_vector[:(len(mr.times)-1)]
+                mr_14C.acc_gross_external_output_vector()
             ],
             axis = 0
         ),
@@ -259,8 +261,8 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
 
 
     # convert to daily flux rates
-    rs = rs_monthly.convert('g/d')
-    rs_14C = rs_monthly_14C.convert('g/d')
+    rs = Rs_monthly.convert('g/d')
+    rs_14C = Rs_monthly_14C.convert('g/d')
     for pool_nr, pool_name  in enumerate(ms.pool_names):        
         var_name_ds = pool_name + '_to_RH'
         new_var = Variable(
@@ -299,26 +301,27 @@ def load_dmr_14C(dmr):
     F_atm_delta_14C = lambda t: _F_atm_delta_14C(t_conv(t))
     alpha = 1.18e-12
     Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
-    us_12C = dmr.external_input_vector
+    net_Us_12C = dmr.acc_net_external_input_vector()
     with np.errstate(divide='ignore'):
-        us_14C = us_12C * Fa_func(dmr.times[:-1]).reshape(-1,1)
-        #us_14C = alpha * us_12C * (
+        net_Us_14C = net_Us_12C * Fa_func(dmr.times[:-1]).reshape(-1,1)
+        #acc_net_us_14C = alpha * net_Us_12C * (
         #    1 + 1/1000 * F_atm_delta_14C(dmr.times[:-1]).reshape(-1,1)
         #)
-    us_14C = np.nan_to_num(us_14C, posinf=0)
+    net_Us_14C = np.nan_to_num(net_Us_14C, posinf=0)
     
     # compute 14C start_values
     start_values_14C = compute_start_values_14C(
         dmr.times,
         dmr.Bs,
-        dmr.us,
+        dmr.net_Us,
         Fa_func,
         method = 'D3'
     )
     
-    dmr_14C = dmr.to_14C_only(
+    dmr_14C = DMR_14C.from_DiscreteModelRun(
+        dmr,
         start_values_14C,
-        us_14C
+        net_Us_14C
     )   
 
     return dmr_14C

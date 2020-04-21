@@ -614,10 +614,10 @@ class TestModelDataObject(unittest.TestCase):
             )
 
 
-    def test_load_xs_us_Fs_rs(self):
+    def test_load_xs_Us_Fs_Rs(self):
         mdo = self.mdo_discretizable
-        xs, us, Fs, rs = mdo.load_xs_us_Fs_rs(
-        )
+        xs, Us, Fs, Rs = mdo.load_xs_Us_Fs_Rs()
+
         self.assertTrue(isinstance(xs, StockVariable))
         self.assertEqual(xs.unit, 'g/m^2')
         self.assertEqual(xs.data.shape, (6,9))
@@ -626,14 +626,14 @@ class TestModelDataObject(unittest.TestCase):
         res2 = (res2*dz).reshape((9,))
         self.assertTrue(np.allclose(xs.data[0,:], res2*1e5))
  
-        self.assertTrue(isinstance(us, FluxVariable))
-        self.assertEqual(us.unit, 'g/m^2')
-        self.assertEqual(us.data.shape, (5,9))
+        self.assertTrue(isinstance(Us, FluxVariable))
+        self.assertEqual(Us.unit, 'g/m^2')
+        self.assertEqual(Us.data.shape, (5,9))
         res2 = np.ones((3,3))*1e-02 * 86400
         dz = (np.arange(3)+1).reshape((1,3))
         res2 = (res2*dz).reshape((9,))
         res2[-3:] = 0
-        self.assertTrue(np.allclose(us.data[2,:], res2*2))
+        self.assertTrue(np.allclose(Us.data[2,:], res2*2))
         
         self.assertTrue(isinstance(Fs, FluxVariable))
         self.assertEqual(Fs.unit, 'g/m^2')
@@ -641,13 +641,13 @@ class TestModelDataObject(unittest.TestCase):
         res2 = np.array([0,1,0]) *1e-03 * 86400 * 2 * 2
         self.assertTrue(np.allclose(Fs.data[2,4,:3], res2))
 
-        self.assertTrue(isinstance(rs, FluxVariable))
-        self.assertEqual(rs.unit, 'g/m^2')
-        self.assertEqual(rs.data.shape, (5,9))
+        self.assertTrue(isinstance(Rs, FluxVariable))
+        self.assertEqual(Rs.unit, 'g/m^2')
+        self.assertEqual(Rs.data.shape, (5,9))
         res2 = np.ones((3,3))*1e-03 *2 * 86400
         dz = (np.arange(3)+1).reshape((1,3))
         res2 = (res2*dz).reshape((9,)) * 2 # nstep=2
-        self.assertTrue(np.allclose(rs.data[3,:], res2))
+        self.assertTrue(np.allclose(Rs.data[3,:], res2))
    
  
     def test_create_discrete_model_run(self):

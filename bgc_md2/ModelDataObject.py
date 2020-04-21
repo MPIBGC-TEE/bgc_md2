@@ -464,13 +464,13 @@ class ModelDataObject(object):
         return VFs, runoffs_up, runoffs_down
 
 
-    def load_xs_us_Fs_rs(self):
+    def load_xs_Us_Fs_Rs(self):
         xs = self.load_stocks(
             func       = getStockVariable_from_Density,
             data_shift = 0
         )
     
-        us = self.load_external_input_fluxes(
+        Us = self.load_external_input_fluxes(
             func       = getFluxVariable_from_DensityRate,
             data_shift = 1 
         )
@@ -483,7 +483,7 @@ class ModelDataObject(object):
         ## we ignore runoffs until we might experience existing ones 
         ## for a model at some point
         ## then we have to decide what to do with them
-        VFs, runoffs_up, runoffs_down = self.load_vertical_fluxes(
+        VFs, Runoffs_up, Runoffs_down = self.load_vertical_fluxes(
             func       = getFluxVariable_from_Rate,
             data_shift = 1 
         )
@@ -493,28 +493,31 @@ class ModelDataObject(object):
    
         Fs = HFs + VFs
     
-        rs = self.load_external_output_fluxes(
+        Rs = self.load_external_output_fluxes(
             func       = getFluxVariable_from_DensityRate,
             data_shift = 1 
         )
 
-        return xs, us, Fs, rs
+        return xs, Us, Fs, Rs
 
 
     def create_discrete_model_run(self, errors=False):
-        out = self.load_xs_us_Fs_rs()
-        xs, us, Fs, rs = out
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
         start_values = xs.data[0,:]
 
         if xs.data.mask.sum() + Fs.data.mask.sum()\
-                + us.data.mask.sum() + rs.data.mask.sum() == 0:
+                + Us.data.mask.sum() + Rs.data.mask.sum() == 0:
+
+            #fixme hm 2020-04-21:
+            # which reconstruction version is the right choice?
             dmr = DMR.reconstruct_from_data(
                 self.time_agg.data.filled(),
                 start_values.filled(),
                 xs.data.filled(),
                 Fs.data.filled(),
-                rs.data.filled(),
-                us.data.filled()
+                Rs.data.filled(),
+                Us.data.filled()
             )
         else:
             dmr = None
@@ -533,31 +536,28 @@ class ModelDataObject(object):
 
 
     def create_model_run(self, errors=False):
-        out = self.load_xs_us_Fs_rs()
-        xs, us, Fs, rs = out
-
-        start_values = xs.data[0,:]
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
 
 #        print(self.time_agg.data)
-#        print(start_values.data)
 #        print(xs.data)
 #        print(Fs.data)
-#        print(rs.data)
-#        print(us.data)
+#        print(Rs.data)
+#        print(Us.data)
 #        input()
 
         times = self.time_agg.data.filled()
 #        times = np.arange(len(self.time_agg.data))
         if xs.data.mask.sum() + Fs.data.mask.sum()\
-                + us.data.mask.sum() + rs.data.mask.sum() == 0:
-            pwc_mr_fd = PWCMRFD.reconstruct_from_data(
+                + Us.data.mask.sum() + Rs.data.mask.sum() == 0:
+            pwc_mr_fd = PWCMRFD(
                 symbols('t'),
                 times,
-                start_values.filled(),
+                xs.data.filled()[0],
                 xs.data.filled(),
+                Us.data.filled(),
                 Fs.data.filled(),
-                rs.data.filled(),
-                us.data.filled()
+                Rs.data.filled()
             )
         else:
             pwc_mr_fd = None
