@@ -47,10 +47,12 @@ legend("bottomleft", c("Mean system age", "Median system age"), lty=1, col=c(2,4
 dev.off()
 
 ages=seq(0,nrow(ftt)-1, by=1)
-years=c(1850, 1900,1950,2000)
+years=seq(1851,2000)
 
-matplot(ages, log(ftt), type="l",lty=1, col=1:4, xlim=c(0,100), xlab="Transit time (yr)", ylab="Carbon stock (log PgC)", bty="n")
-legend("topright", legend=years, lty=1, col=1:4, bty="n")
+pdf("Figures/forwardTransitTime3d.pdf")
+wireframe(t(as.matrix(ftt)), shade=TRUE, ylim=c(0,50), xlab="Calendar year", ylab="Age (yr)", zlab="C stock \n (PgC)", aspect = c(61/87, 0.4),
+          main="Forward transit time")
+dev.off()
 
 pdf("Figures/poolAgesEq.pdf")
 par(mar=c(4,4,1,0))
@@ -95,4 +97,4 @@ wireframe(value~time*age, data=sysAge, shade=TRUE, xlab="Calendar year", ylab="A
           scales = list(arrows = FALSE), main="System Age")
 dev.off()
 
-          
+longftt=as.vector(ftt)          
