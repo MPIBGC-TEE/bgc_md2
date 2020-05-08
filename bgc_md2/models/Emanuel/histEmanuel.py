@@ -33,6 +33,7 @@ G_eq = symbols('G_eq')
 
 
 ########## model structure: equilibrium values and fluxes ##########
+pool_names=['Non-woody tree parts', 'Woody tree parts', 'Ground vegetation', 'Detritus/Decomposers', 'Soil']
 
 # equilibrium values
 x_1e, x_2e, x_3e, x_4e, x_5e = (37.0, 452.0, 69.0, 81.0, 1121.0)
@@ -96,6 +97,9 @@ smrs.append(smr)
 
 
 soln, _= smr.solve()
+cstocks=pd.DataFrame(soln, columns=pool_names)
+stocks=cstocks.join(pd.DataFrame({'Time': times}))
+stocks.to_csv('stocks.csv', index=False)
 
 
 ##### load linear autonomous pool model in steady state #####
@@ -120,6 +124,11 @@ def start_age_densities(a):
 start_mean_ages = np.array(LM.a_expected_value).astype(np.float64).reshape((5,))
 start_age_moments = start_mean_ages.reshape((1,5))
 
+# Equilibrium age distribution
+y = np.array([start_age_densities(a) for a in ages])
+
+start_age_dens=pd.DataFrame(y, columns=pool_names)
+start_age_dens.to_csv('start_age_dens.csv', index=False)
 
 
 age_densitiess       = []
@@ -128,26 +137,22 @@ system_age_densities = []
 
 p = smr.pool_age_densities_func(start_age_densities)
 pool_age_densities = p(ages)
-pool_age_densitiess.append(pool_age_densities)
-        
-
 
 system_age_density = smr.system_age_density(pool_age_densities)
-system_age_densities.append(system_age_density)
 
 print('Saving age densities', flush = True)
 smr.save_pools_and_system_density_csv(
-            'Emmanuel_age_dens.csv.gz',
+            'Emmanuel_age_dens.csv',
             pool_age_densities,
             system_age_density,
             ages
         )
     
 # combine pool and system age densities to one numpy array
-age_densities = smr.age_densities(pool_age_densities, system_age_density)
-age_densitiess.append(age_densities)
-        
-print('done', flush = True)
+#age_densities = smr.age_densities(pool_age_densities, system_age_density)
+#age_densitiess.append(age_densities)
+#        
+#print('done', flush = True)
 
 
 ##### mean ages #####
@@ -158,9 +163,9 @@ system_age_means = []
 pool_age_mean   = smr.age_moment_vector(1, start_age_moments)
 system_age_mean = smr.system_age_moment(1, start_age_moments)
     
-pool_age_means.append(pool_age_mean)
-system_age_means.append(system_age_mean)
-
+mean_pool_ages=pd.DataFrame(pool_age_mean, columns=pool_names)
+mean_ages=mean_pool_ages.join(pd.DataFrame({'System Age': system_age_mean}))
+mean_ages.to_csv('mean_ages.csv', index=False)
 
 ##### age medians #####
 
@@ -187,8 +192,9 @@ system_age_median = smr.system_age_distribution_quantiles_by_ode(
             max_step = 0.5
         )
 
-pool_age_medians.append(pool_age_median)
-system_age_medians.append(system_age_median)
+median_pool_age=pd.DataFrame(pool_age_median, columns=pool_names)
+median_ages=median_pool_age.join(pd.DataFrame({'SystemA Age': system_age_median}))
+median_ages.to_csv('median_ages.csv', index=False)
 
 
 ####### forward transit time #####
@@ -200,4 +206,6 @@ ftt_densities = []
 ftt_density_func = smr.forward_transit_time_density_func(times=years)
 ftt_density = ftt_density_func(ages)
 
+ftt=pd.DataFrame(ftt_density, columns=years)
+ftt.to_csv('forward_transit_time.csv', index=False)
 
