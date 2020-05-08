@@ -199,7 +199,8 @@ median_ages.to_csv('median_ages.csv', index=False)
 
 ####### forward transit time #####
 
-years = np.array([1850, 1900, 1950, 2000])
+#years = np.array([1850, 1900, 1950, 2000])
+years = np.arange(1851, 2001, 1)
 inds  = np.array([i for i, t in enumerate(times) if t in years])
 
 ftt_densities = []
