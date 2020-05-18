@@ -48,6 +48,7 @@ setup(name='bgc_md2',
             #,'pypandoc'
             ,"networkx"
             ,"pygraphviz"
+            ,'cfunits'
         ],
         include_package_data=True,
         #zip_safe=False
