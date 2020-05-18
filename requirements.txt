@@ -5,6 +5,6 @@ bibtexparser>=1.0.1
 -e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 -e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
 -e git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
--e git+https://git@github.com/MPIBGC-TEE/pytexit.git#egg=pytexit
- 
- 
+networkx 
+pygraphviz 
+netCDF4
