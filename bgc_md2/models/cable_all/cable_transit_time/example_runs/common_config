@@ -1,0 +1,1251 @@
+#!/bin/bash
+#export cableDataDir="/home/data/cable-data/example_runs"
+#export np=32 #seems fastest
+#export cable_exe="cable-mpi"
+#export np=33 #segfaults 
+#export np=16 #segfault at year 2005 in parallel
+#export np=25 #segfault at year 2005 in parallel
+#export np=8
+#export np=9 #original in China
+
+odir="output/new4"
+cable_aux_dir="${cableDataDir}/CABLE-AUX"
+cable_run_test_lqy_dir="${cableDataDir}/CABLE-run-test-lqy"
+ncar_dir="${cableDataDir}/NCAR"
+nml_dir="${cableDataDir}/nml"
+spinnupSuccessIndicatorFile="spinup_success"
+filename_out='out_cable.nc'
+filename_log='log_cable.txt'
+filename_restart_in='restart_in.nc'
+filename_restart_out='restart_out.nc'
+fcnspinLstFileName='fcnpspin.lst'
+
+runSpinupYears() {
+  echo "got value i=$1"
+  i_max=$1
+  echo "#####################################################################"
+	echo "i=${i} of ${i_max}"
+  i=1
+  while [ $i -le $i_max ]
+  do
+  yr=$spinStart
+    while [ $yr -le ${spinEnd} ]
+    do
+      echo "################################################################"
+      echo "yr=${yr}"
+      cp -p cable_CN_spindump_${yr}.nml cable.nml #for the paper only CN
+      mpirun -np ${np} --oversubscribe ${cable_exe}
+      mv ${filename_out}      ${odir}/out_ncar_${i}_${yr}_ndep.nc
+      mv ${filename_log}     ${odir}/log_ncar_${yr}_ndep.txt
+      cp -p ${filename_restart_out} ${filename_restart_in}
+      cp -p poolcnp_out.csv poolcnp_in.csv
+      #mv cnpflux${yr}.csv  ${odir}/cnpfluxndep_${yr}_ndep.csv 
+      mv cnpflux${yr}.csv  ${odir}/cnpfluxndep_${i}_${yr}_ndep.csv # added the i dep
+      mv ${filename_restart_out}    ${odir}/restart_ncar_${i}_${yr}_ndep.nc
+      mv poolcnp_out.csv   ${odir}/poolcnp_out_${i}_${yr}_ndep.csv
+      if [ $i -eq $i_max ];then
+        cp -p ${spindumptrunk}${yr}.nc ${odir}/
+      fi
+      yr=`expr $yr + 1`
+    done
+    i=`expr $i + 1`
+  done
+}
+
+spinup_step1(){
+  echo "#####################################################################"
+  echo "enter step 1"
+  cp ${nml_dir}/rcp85_conc_kf.txt .
+  # To be able to do run the spinup we have to produce the nml files 
+  # for each year
+  # the original in in My Passport/cable_chris_transit_time/nml/mknml.bash
+  # I changed the paths to the AUX dir 
+  # this will produce a bunch of *.nml files
+  mknml_files $spinStart $spinEnd
+
+  echo copy pool file
+  cp -p ${cable_run_test_lqy_dir}/spinup/poolcnp_in.csv ./poolcnp_in.csv
+
+  echo copy restart file
+  cp -p  ${cable_run_test_lqy_dir}/spinup/${filename_restart_in} ./${filename_restart_in}
+
+  #prepare directory
+  mkdir -p ${odir}
+
+  runSpinupYears $1
+  echo "end step 1"
+
+}
+spinup_step2(){
+  echo "#####################################################################"
+  echo "enter step 2"
+  echo $(( spinEnd - spinStart + 1)) > $fcnspinLstFileName
+  for i in $(seq $spinStart ${spinEnd})
+  do
+    echo "${odir}/${spindumptrunk}${i}.nc" >> $fcnspinLstFileName
+  done
+  cp -p cable_CN_spincasa_${spinEnd}.nml cable.nml
+  mpirun -np ${np} --oversubscribe ${cable_exe}
+  mv ${filename_out}     	${odir}/out_ncar_${i}_0_ndep.nc
+  cp -p ${filename_restart_out} 	${filename_restart_in}
+  cp -p poolcnp_out.csv poolcnp_in.csv
+  mv ${filename_restart_out} 	${odir}/restart_ncar_${spinEnd}_ndep.nc
+  mv poolcnp_out.csv 	${odir}/poolcnp_out_${spinEnd}_ndep.csv
+  echo "end step2"
+}
+
+spinup_step3(){
+  echo "#####################################################################"
+  echo "enter step 3"
+  runSpinupYears $1
+  echo "end step3"
+}
+cable_step(){
+	local yr=$1
+  	#mm the files are now produced here
+  	#cp -p /home/599/czl599/nml/cable_C_spinup_${yr}.nml cable.nml
+  	cp -p cable_CN_VCO2VMet_${yr}.nml cable.nml #for the paper only CN S1
+  	# cp -p cable_CN_CCO2VMet_${yr}.nml cable.nml #for the paper only CN S2 #this line gives a segfault while reading the Met file 
+  	# cp -p cable_CN_VCO2CMet_${yr}.nml cable.nml #for the paper only CN S3 #this line gives a segfault while reading the Met file 
+  	mpirun -np ${np} --oversubscribe ${cable_exe}
+  	mv ${filename_out}      	${odir}/out_ncar_${yr}_ndep.nc
+  	mv ${filename_log}     	${odir}/log_ncar_${yr}_ndep.txt
+  	cp -p ${filename_restart_out} 	${filename_restart_in}
+  	cp -p poolcnp_out.csv poolcnp_in.csv
+  	mv cnpflux${yr}.csv  	${odir}/cnpfluxndep_${yr}_ndep.csv
+  	mv ${filename_restart_out}    	${odir}/restart_ncar_${yr}_ndep.nc
+  	mv poolcnp_out.csv   	${odir}/poolcnp_out_${yr}_ndep.csv
+}
+
+spinup_dir () {
+	local spinStart=$1
+	local spinEnd=$2
+	local rep1=$3
+	local rep2=$4
+	local spinupDir="spinup_${spinStart}_${spinEnd}_${rep1}_${rep2}"
+	echo $spinupDir
+}
+
+run_spinup () {
+	local spinStart=$1
+	local spinEnd=$2
+	local rep1=$3
+	local rep2=$4
+	spindumptrunk="cnpspindump"
+
+	if [ -f $spinnupSuccessIndicatorFile ]; then
+	  echo "
+	  Found file: $spinnupSuccessIndicatorFile.
+	  The spinup seems to have run successfully.
+	  To force rerun remove it.
+	  "
+	  stop 
+	fi
+	spinup_step1 $rep1
+	spinup_step2
+	spinup_step3 $rep2
+	#spinup_step1 1
+	#spinup_step2
+	#spinup_step3 1
+	touch $spinnupSuccessIndicatorFile
+}
+
+after_spinup_run(){
+    # normal cable run after the spinup
+    # The function needs to know the spinup dir to
+    # read the spun up results from there
+    local relSninupDirPaht startyr endyr
+    relSpinupDirPath=$1
+    startyr=$2
+    endyr=$3
+    cp ${relSpinupDirPath}/rcp85_conc_kf.txt .
+    cp ${relSpinupDirPath}/${filename_restart_in} .
+    cp ${relSpinupDirPath}/poolcnp_in.csv .
+    #prepare output directory
+    mkdir -p ${odir}
+
+    mknml_files $startyr $endyr
+    yr=$startyr
+    while [ $yr -le $endyr ]
+    do
+      cable_step $yr
+      yr=`expr $yr + 1`
+    done
+}
+mknml_files () {
+	startyr=$1
+	endyr=$2
+	yr=$startyr
+	while [ $yr -le $endyr ]
+	do
+	cat>./cable_C_spindump_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .TRUE.  ! input met data
+   output%flux = .TRUE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .TRUE.  ! vegetation states
+   output%params    = .TRUE.  ! input parameters used to produce run
+   output%balances  = .FALSE.  ! energy and water balances
+   output%casacnp   = .TRUE.
+   output%averaging = 'monthly' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .TRUE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .FALSE. ! using prognostic Vcmax
+   icycle = 1   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}//core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_C_spincasa_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .TRUE.  ! input met data
+   output%flux = .TRUE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .TRUE.  ! vegetation states
+   output%params    = .TRUE.  ! input parameters used to produce run
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'monthly' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .TRUE.    ! input required to spin casacnp offline
+   spincasa      = .TRUE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .FALSE. ! using prognostic Vcmax
+   icycle = 1   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}//core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_C_spinup_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .TRUE.  ! input met data
+   output%flux = .TRUE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .TRUE.  ! vegetation states
+   output%params    = .TRUE.  ! input parameters used to produce run
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'monthly' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .FALSE. ! using prognostic Vcmax
+   icycle = 1   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}//core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_CN_spindump_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .TRUE.  ! input met data
+   output%flux = .TRUE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .TRUE.  ! vegetation states
+   output%params    = .TRUE.  ! input parameters used to produce run
+   output%balances  = .FALSE.  ! energy and water balances
+   output%casacnp   = .TRUE.
+   output%averaging = 'monthly' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .TRUE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .TRUE. ! using prognostic Vcmax
+   icycle = 2   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_CN_spincasa_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .TRUE.  ! input met data
+   output%flux = .TRUE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .TRUE.  ! vegetation states
+   output%params    = .TRUE.  ! input parameters used to produce run
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'monthly' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .TRUE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .TRUE. ! using prognostic Vcmax
+   icycle = 2   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_CN_spinup_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .TRUE.  ! input met data
+   output%flux = .TRUE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .TRUE.  ! vegetation states
+   output%params    = .TRUE.  ! input parameters used to produce run
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'monthly' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .TRUE. ! using prognostic Vcmax
+   icycle = 2   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_C_CCO2VMet_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}' 
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%grid    = 'land'
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .FALSE.  ! input met data
+   output%flux = .FALSE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .FALSE.  ! NEE, GPP, NPP, stores
+   output%GPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%NPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%HeteroResp= .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .FALSE.  ! vegetation states
+   output%LAI       = .TRUE.
+   output%params    = .FALSE.  ! input parameters used to produce run
+   output%casacnp   = .TRUE.
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'daily' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE 
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .FALSE. ! using prognostic Vcmax
+   icycle = 1   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       ! 
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp   
+   casafile%dump_cnpspin ='output/cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are: 
+                                                 ! 1. standard 
+                                                 ! 2. non-linear extrapolation 
+                                                 ! 3. Lai and Ktaul 2000 
+   cable_user%DIAG_SOIL_RESP = 'ON ' 
+   cable_user%LEAF_RESPIRATION = 'ON ' 
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are: 
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run 
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+lev=$(echo `awk -v x=$yr '{if($1==x) print $2;}' rcp85_conc_kf.txt`)
+
+cat>./cable_C_VCO2CMet_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%grid    = 'land'
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .FALSE.  ! input met data
+   output%flux = .FALSE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .FALSE.  ! NEE, GPP, NPP, stores
+   output%GPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%NPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%HeteroResp= .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .FALSE.  ! vegetation states
+   output%LAI       = .TRUE.
+   output%params    = .FALSE.  ! input parameters used to produce run
+   output%casacnp   = .TRUE.
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'daily' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = $lev ! if not found in met file, in ppmv;
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.    ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .FALSE.  ! using prognostic Vcmax
+   icycle = 1   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='output/${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='output/cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = 1901 ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+lev=$(echo `awk -v x=$yr '{if($1==x) print $2;}' rcp85_conc_kf.txt`)
+
+cat>./cable_C_VCO2VMet_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%grid    = 'land'
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .FALSE.  ! input met data
+   output%flux = .FALSE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .FALSE.  ! NEE, GPP, NPP, stores
+   output%GPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%NPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%HeteroResp= .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .FALSE.  ! vegetation states
+   output%LAI       = .TRUE.
+   output%params    = .FALSE.  ! input parameters used to produce run
+   output%casacnp   = .TRUE.
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'daily' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = $lev ! if not found in met file, in ppmv;
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.    ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .FALSE.  ! using prognostic Vcmax
+   icycle = 1   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='output/${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='output/cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+cat>./cable_CN_CCO2VMet_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}' 
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%grid    = 'land'
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .FALSE.  ! input met data
+   output%flux = .FALSE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .FALSE.  ! NEE, GPP, NPP, stores
+   output%GPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%NPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%HeteroResp= .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .FALSE.  ! vegetation states
+   output%LAI       = .TRUE.
+   output%params    = .FALSE.  ! input parameters used to produce run
+   output%casacnp   = .TRUE.
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'daily' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = 295.8   ! if not found in met file, in ppmv
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.   ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE 
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .TRUE.  ! using prognostic Vcmax
+   icycle = 2   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       ! 
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp   
+   casafile%dump_cnpspin ='output/cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are: 
+                                                 ! 1. standard 
+                                                 ! 2. non-linear extrapolation 
+                                                 ! 3. Lai and Ktaul 2000 
+   cable_user%DIAG_SOIL_RESP = 'ON ' 
+   cable_user%LEAF_RESPIRATION = 'ON ' 
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are: 
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run 
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+lev=$(echo `awk -v x=$yr '{if($1==x) print $2;}' rcp85_conc_kf.txt`)
+
+cat>./cable_CN_VCO2CMet_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%grid    = 'land'
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%iveg = .TRUE.
+   output%met = .FALSE.  ! input met data
+   output%flux = .FALSE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .FALSE.  ! NEE, GPP, NPP, stores
+   output%GPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%NPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%HeteroResp= .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .FALSE.  ! vegetation states
+   output%LAI       = .TRUE.
+   output%params    = .FALSE.  ! input parameters used to produce run
+   output%casacnp   = .TRUE.
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'daily' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = $lev ! if not found in met file, in ppmv;
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.    ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .TRUE.  ! using prognostic Vcmax
+   icycle = 2   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='output/${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='output/cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = 1901  ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.mean-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+lev=$(echo `awk -v x=$yr '{if($1==x) print $2;}' rcp85_conc_kf.txt`)
+
+cat>./cable_CN_VCO2VMet_${yr}.nml<<EOF
+&cable
+   filename%met = ''
+   filename%out = '${filename_out}'
+   filename%log = './${filename_log}'
+   filename%restart_in  = './${filename_restart_in}'
+   filename%restart_out = './${filename_restart_out}'
+   filename%type    = '${cable_aux_dir}/offline/gridinfo_NCAR_1.9x2.5_landfrac_revised.nc'
+   filename%veg     = '${cable_aux_dir}/core/biogeophys/veg_params_cable_MK3L_v2_kf.txt'
+   filename%soil    = '${cable_aux_dir}/core/biogeophys/def_soil_params.txt'
+   vegparmnew = .TRUE.  ! using new format when true
+   soilparmnew = .TRUE.  ! using new format when true
+   spinup = .FALSE.  ! do we spin up the model?
+   delsoilM = 0.001   ! allowed variation in soil moisture for spin up
+   delsoilT = 0.01    ! allowed variation in soil temperature for spin up
+   output%restart = .TRUE.  ! should a restart file be created?
+   output%patch = .TRUE.
+   output%patchfrac = .TRUE.
+   output%grid = 'land'
+   output%iveg = .TRUE.
+   output%met = .FALSE.  ! input met data
+   output%flux = .FALSE.  ! convective, runoff, NEE
+   output%soil = .FALSE.  ! soil states
+   output%snow = .FALSE.  ! snow states
+   output%radiation = .FALSE.  ! net rad, albedo
+   output%carbon    = .FALSE.  ! NEE, GPP, NPP, stores
+   output%GPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%NPP       = .TRUE.  ! NEE, GPP, NPP, stores
+   output%HeteroResp= .TRUE.  ! NEE, GPP, NPP, stores
+   output%veg       = .FALSE.  ! vegetation states
+   output%LAI       = .TRUE.
+   output%params    = .FALSE.  ! input parameters used to produce run
+   output%casacnp   = .TRUE.
+   output%balances  = .FALSE.  ! energy and water balances
+   output%averaging = 'daily' ! choices: all, daily, monthly, userNNN where NNN is the number of hours
+   check%ranges     = .FALSE.  ! variable ranges, input and output
+   check%energy_bal = .FALSE.  ! energy balance
+   check%mass_bal   = .FALSE.  ! water/mass balance
+   verbose = .FALSE. ! write details of every grid cell init and params to log?
+   leaps = .FALSE. ! calculate timing with leap years?
+   logn = 88      ! log file number - declared in input module
+   fixedCO2 = $lev ! if not found in met file, in ppmv;
+   spincasainput = .FALSE.    ! input required to spin casacnp offline
+   spincasa      = .FALSE.    ! spin casa before running the model if TRUE, and should be set to FALSE if spincasainput = .TRUE.
+   l_casacnp     = .TRUE.  ! using casaCNP with CABLE
+   l_laiFeedbk   = .TRUE.  ! using prognostic LAI
+   l_vcmaxFeedbk = .TRUE.  ! using prognostic Vcmax
+   icycle = 2   ! BP pull it out from casadimension and put here; 0 for not using casaCNP, 1 for C, 2 for C+N, 3 for C+N+P
+   casafile%cnpipool     ='./poolcnp_in.csv'       !
+   casafile%cnpbiome     ='${cable_aux_dir}/core/biogeochem/pftlookup_csiro_v16_17tiles_K1.csv'  ! biome specific BGC parameters
+   casafile%cnpepool     ='./poolcnp_out.csv'       ! end of run pool size
+   casafile%cnpmetout    ='output/casamet.nc'            ! output daily met forcing for spinning casacnp
+   casafile%cnpmetin     ='output/fcasamet.lst'          ! list of daily met files for spinning casacnp
+   casafile%cnpspin      ='output/${fcnspinLstFileName}'          ! list of cnp dump file for spinning up casacnp
+   casafile%dump_cnpspin ='output/cnpspindump${yr}.nc'          ! list of daily met files for spinning casacnp
+   casafile%phen         ='${cable_aux_dir}/core/biogeochem/modis_phenology_csiro.txt'        ! modis phenology
+   casafile%cnpflux      ='cnpflux${yr}.csv'
+   casafile%ndep         ='${cable_aux_dir}/ndep/ndep_${yr}_1.9x2.5_KF.nc'
+   casafile%l_ndep       =.TRUE.
+   ncciy = ${yr} ! 0 for not using gswp; 4-digit year input for year of gswp met
+   gswpfile%l_gpcc =.FALSE.
+   gswpfile%l_gswp =.FALSE.
+   gswpfile%l_ncar =.TRUE.
+   gswpfile%rainf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%snowf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%LWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%SWdown= '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%PSurf = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Qair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%Tair  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   gswpfile%wind  = '${ncar_dir}/CLM45sp_2deg45r086_hist.clm2.h1.${yr}-01-01-00000.nc'
+   redistrb = .FALSE.  ! Turn on/off the hydraulic redistribution
+   wiltParam = 0.5
+   satuParam = 0.8
+   cable_user%FWSOIL_SWITCH = 'standard'        ! choices are:
+                                                 ! 1. standard
+                                                 ! 2. non-linear extrapolation
+                                                 ! 3. Lai and Ktaul 2000
+   cable_user%DIAG_SOIL_RESP = 'ON '
+   cable_user%LEAF_RESPIRATION = 'ON '
+   cable_user%RUN_DIAG_LEVEL= 'BASIC'        ! choices are:
+                                                 ! 1. BASIC
+                                                 ! 1. NONE
+   cable_user%CONSISTENCY_CHECK= .TRUE.      ! TRUE outputs combined fluxes at each timestep for comparisson to A control run
+   cable_user%CASA_DUMP_READ = .FALSE.      ! TRUE reads CASA forcing from netcdf format
+   cable_user%CASA_DUMP_WRITE = .FALSE.      ! TRUE outputs CASA forcing in netcdf format
+   cable_user%SSNOW_POTEV= 'P-M'      ! Humidity Deficit Method
+&end
+
+EOF
+
+yr=`expr $yr + 1`
+done
+
+}
+

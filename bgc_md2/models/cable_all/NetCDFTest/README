@@ -1,0 +1,30 @@
+This is a directory for testing with nix-shell
+
+type: 	nix-shell or:	nix-shell shell.nix 
+
+Which is the expression to provide all the libs we need
+
+We build the fortran (netcdffortran) and python (nectdf4_python) bindings with
+mpi enabled.  This allows parallel IO which allows us to write to a single file
+from all processors simultaneously which helps us to avoid the very complicated
+IO of cable (which sends all results to a master who writes the files) without
+the need to create a single file for every node in the cluster.  This is the
+recommended IO for clusters anyway ...  On the python side we can also read
+simultaniously from the same file. The number of processes can be different
+(since also the python code is embarresingly parallel (no communication between
+the processors))
+
+Since we use one netcdf file we can distribute the work independently from how
+cable did it.  This avoids a lot of bookkeeping about which processor has to
+read which file.  Netcdf also gives us the compatibility and self describing
+meta information.  We can later use the same data written by cable or python on
+machines which have very different integer or real representation. This is the
+main advantage over MPI which already requires knowledge of the assumed number
+of bytes for a given datatype on the SAME machine (here between Fortran and
+NUMPY).
+
+In this directory we provide the same nix expression to create the environment
+in which to compile our stuff. We do not build any "package" but create the
+precondition to say "make" and subsequently "mpirun" for every example in the
+subfolders.
+
