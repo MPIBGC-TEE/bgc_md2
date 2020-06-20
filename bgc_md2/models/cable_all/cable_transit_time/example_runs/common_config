@@ -134,44 +134,91 @@ run_spinup () {
 	spindumptrunk="cnpspindump"
 
 	if [ -f $spinnupSuccessIndicatorFile ]; then
-	  echo "
+	  echo "##################################################
 	  Found file: $spinnupSuccessIndicatorFile.
 	  The spinup seems to have run successfully.
-	  To force rerun remove it.
+	  To force a rerun remove it.
 	  "
-	  stop 
+	  return 0 
 	fi
 	spinup_step1 $rep1
 	spinup_step2
 	spinup_step3 $rep2
-	#spinup_step1 1
-	#spinup_step2
-	#spinup_step3 1
 	touch $spinnupSuccessIndicatorFile
 }
 
-after_spinup_run(){
-    # normal cable run after the spinup
-    # The function needs to know the spinup dir to
-    # read the spun up results from there
-    local relSninupDirPaht startyr endyr
-    relSpinupDirPath=$1
-    startyr=$2
-    endyr=$3
-    cp ${relSpinupDirPath}/rcp85_conc_kf.txt .
-    cp ${relSpinupDirPath}/${filename_restart_in} .
-    cp ${relSpinupDirPath}/poolcnp_in.csv .
-    #prepare output directory
-    mkdir -p ${odir}
+cable_run_with_spinup(){
+  local runDirName spinEnd rep1 rep2 endyr
+  runDirName=$1
+  spinStart=$2
+  spinEnd=$3
+  rep1=$4
+  rep2=$5
+  endyr=$6
+  # see ../README about how to run cable in general for several years
+  # Here we try to reproduce exactly the conditions that produced
+  # the data of the paper.
+  spinupDir=$(spinup_dir $spinStart $spinEnd $rep1 $rep2)
+  echo $spinupDir
 
-    mknml_files $startyr $endyr
-    yr=$startyr
-    while [ $yr -le $endyr ]
-    do
-      cable_step $yr
-      yr=`expr $yr + 1`
-    done
+  if [ ! -d ${spinupDir} ]; then
+    mkdir $spinupDir;
+  fi
+  # sometimes the spinup has to be increased.
+  # Use Jianyang Xia 's method to compute.
+  run_and_log_in_target_dir \
+    "${spinupDir}" \
+    "run_spinup $spinStart $spinEnd $rep1 $rep2" \
+    "log_stdout_and_stderr"
+
+  if [ ! -d ${runDirName} ]; then
+    mkdir $runDirName;
+  fi
+  cp ${spinupDir}/rcp85_conc_kf.txt ${runDirName}
+  cp ${spinupDir}/${filename_restart_in} ${runDirName}
+  cp ${spinupDir}/poolcnp_in.csv ${runDirName}
+  run_and_log_in_target_dir \
+    "${runDirName}" \
+    "after_spinup_run $spinStart $spinEnd "\
+    "log_stdout_and_stderr"
 }
+
+run_and_log_in_target_dir(){
+  local targetDir comm logFileName
+  targetDir=$1
+  comm=$2
+  logFileName=$3
+  #echo "##################### running and logging in $targetDir"
+  #echo "logfile = $targetDir/$logFileName"
+  local oldDir=$(pwd)
+  mkdir -p $targetDir
+  cd $targetDir 
+  cwd=$(pwd)
+  echo "##################### running and logging in $(pwd)"
+  echo "logfile = $cwd/$logFileName"
+  eval ${comm}|tee $logFileName 2>&1
+  cd $oldDir
+}
+
+after_spinup_run(){
+   	# normal cable run (usually after the spinup)
+   	local startyr endyr
+   	startyr=$1
+   	endyr=$2
+   	#prepare output directory
+   	echo "##################################################"
+   	echo "odir = ${odir}"
+   	mkdir -p ${odir}
+
+   	mknml_files $startyr $endyr
+   	yr=$startyr
+   	while [ $yr -le $endyr ]
+   	do
+   	  cable_step $yr
+   	  yr=`expr $yr + 1`
+   	done
+}
+
 mknml_files () {
 	startyr=$1
 	endyr=$2
