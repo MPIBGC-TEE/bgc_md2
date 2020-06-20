@@ -1,0 +1,65 @@
+fin=addfile("out_ncar_????_ndep.nc","r")  ;daily output from cable
+fAC=addfile("outAC.nc","r")                      ;parameter file
+
+1. Input to leaf:
+fin->NPP*fin->fracCalloc(:,0,:,:)
+
+2. Input to root
+fin->NPP*fin->fracCalloc(:,2,:,:)
+
+3. Input to wood
+fin->NPP*fin->fracCalloc(:,1,:,:)
+
+4. Leaf to Metoblic litter
+fin->fromLeaftoL(:,0,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:)
+
+5. Leaf to Structural litter
+fin->fromLeaftoL(:,1,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:)
+
+6. Root to Metoblic litter
+fin->fromRoottoL(0,0,:,:)*fin->Cplant(:,2,:,:)*fin->kplant(:,2,:,:)
+
+7. Root to Structural litter
+fin->fromRoottoL(0,1,:,:)*fin->Cplant(:,2,:,:)*fin->kplant(:,2,:,:)
+
+8. Wood to CWD
+fin->fromWoodtoL(:,2,:,:)*fin->Cplant(:,1,:,:)*fin->kplant(:,1,:,:)
+
+9. Metabolic litter to Fast soil
+fAC->A(6,3,:,:)*fAC->C(3,:,:)*fin->Clitter(:,0,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+10. Metabolic litter to atmosphere
+(1-fAC->A(6,3,:,:))*fAC->C(3,:,:)*fin->Clitter(:,0,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+11. Structural Litter to Fast soil
+fAC->A(6,4,:,:)*fAC->C(4,:,:)*fin->Clitter(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+12. Structural Litter to Slow soil
+fAC->A(7,4,:,:)*fAC->C(4,:,:)*fin->Clitter(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+13. structural Litter to atmosphere
+(1-fAC->A(6,4,:,:)-fAC->A(7,4,:,:))*fAC->C(4,:,:)*fin->Clitter(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+14. CWD to fast soil
+fAC->A(6,5,:,:)*fAC->C(5,:,:)*fin->Clitter(:,2,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+15. CWD to slow soil
+fAC->A(7,5,:,:)*fAC->C(5,:,:)*fin->Clitter(:,2,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+16. CWD to atmosphere
+(1-fAC->A(6,5,:,:)-fAC->A(7,5,:,:))*fAC->C(5,:,:)*fin->Clitter(:,2,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+17. fast soil to slow soil
+fAC->A(7,6,:,:)*fAC->C(6,:,:)*fin->Csoil(:,0,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+18. fast soil to passive soil
+fAC->A(8,6,:,:)*fAC->C(6,:,:)*fin->Csoil(:,0,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+19. fast soil to atmosphere
+(1-fAC->A(7,6,:,:)-fAC->A(8,6,:,:))*fAC->C(6,:,:)*fin->Csoil(:,0,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+20. slow soil to passive soil
+fAC->A(8,7,:,:)*fAC->C(7,:,:)*fin->Csoil(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+21. slow soil to atmosphere
+(1-fAC->A(8,7,:,:))*fAC->C(7,:,:)*fin->Csoil(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
