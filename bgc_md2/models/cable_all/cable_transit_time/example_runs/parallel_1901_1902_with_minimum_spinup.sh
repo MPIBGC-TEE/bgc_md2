@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 source ./common_config
-#source functions.sh
-
 
 bN=$(basename $0) #this scripts name
 runDirName="${bN%.sh}"

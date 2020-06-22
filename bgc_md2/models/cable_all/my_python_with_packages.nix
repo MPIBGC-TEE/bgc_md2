@@ -29,6 +29,8 @@
       ps.sympy
       ps.bootstrapped-pip
       ps.jupyterlab
+      ps.xarray
+      ps.dask
       ps.ipyparallel # jupyter serverextension enable --py ipyparallel
       #ps.netcdf4
     ]
