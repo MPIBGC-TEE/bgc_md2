@@ -74,8 +74,8 @@ spinup_step1(){
 
   runSpinupYears $1
   echo "end step 1"
-
 }
+
 spinup_step2(){
   echo "#####################################################################"
   echo "enter step 2"
@@ -100,6 +100,7 @@ spinup_step3(){
   runSpinupYears $1
   echo "end step3"
 }
+
 cable_step(){
 	local yr=$1
   	#mm the files are now produced here
@@ -179,7 +180,7 @@ cable_run_with_spinup(){
   cp ${spinupDir}/poolcnp_in.csv ${runDirName}
   run_and_log_in_target_dir \
     "${runDirName}" \
-    "after_spinup_run $spinStart $spinEnd "\
+    "after_spinup_run $spinStart $endyr"\
     "log_stdout_and_stderr"
 }
 
