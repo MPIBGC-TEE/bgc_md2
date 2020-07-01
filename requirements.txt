@@ -3,6 +3,7 @@
 # pip to resolve dependencies
 #pygraphviz 
 #bibtexparser>=1.0.1
+nbformat
 networkx 
 netCDF4
 -e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
