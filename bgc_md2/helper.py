@@ -80,7 +80,7 @@ def modelListGridBox():
     for i in range(nrows):
         mn=names[i]
         grid[i, 0] = widgets.Text(
-                layout=widgets.Layout(width='auto', height='auto'),
+                #layout=widgets.Layout(width='auto', height='auto'),
                 value = names[i]
         )
         res=get_single_mvar_value(CompartmentalMatrix,mn)

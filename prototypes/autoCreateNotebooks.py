@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.2
+#       jupytext_version: 1.5.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -23,16 +23,18 @@ import bgc_md2.helper as h
 # # use a layout widget to build the interactive overview table
 #
 
-# +
 outerGridBox=widgets.GridspecLayout(4,2)
+
 outerGridBox[0,0:2]=h.modelListGridBox()
+
 dd = widgets.Dropdown(
-            options=list_models(),
+            options=h.list_models(),
             #value='2',
             #description='Inspect (Thsi could also be achieved by a button close to the entry in the list above..):',
             #style={'description_widt':'70%'},
             disabled=False,
 )
+
 outerGridBox[1,0:2]=widgets.HBox(
     [
         widgets.Label(
@@ -42,12 +44,14 @@ outerGridBox[1,0:2]=widgets.HBox(
     ]
 )
 outerGridBox[2,0:2]=h.modelGridBox(dd.value)
+
+
+# +
 def updateModelView(x):
     outerGridBox[2,0:2]=h.modelGridBox(dd.value)
     
 dd.observe(updateModelView)
 display(outerGridBox)
-
 # -
 
 # # Some alternatives to create html an markdown programmatically
@@ -58,7 +62,7 @@ from IPython.display import display, Markdown, Latex,HTML
 display(Markdown('*some markdown* $\phi$'))
 
 
-from bgc_md2.helper import list_models_md,list_models,modelTableHtmlWidget,modelTableHtml,modelListGridBox
+from bgc_md2.helper import list_models_md,list_models,modelListGridBox
 
 
 h.list_models()
@@ -66,11 +70,7 @@ h.list_models()
 
 display(Markdown(h.list_models_md()))
 
-display(HTML(h.modelTableHtml()))
-
 display(Markdown('[testVectorFree]("../../../../tmp/test.ipynb")'))
-
-display(h.modelTableHtmlWidget(),output)
 
 # +
 outerGridBox=widgets.GridspecLayout(4,2)
@@ -100,5 +100,7 @@ display(outerGridBox)
 # -
 
 dd.observe
+
+
 
 

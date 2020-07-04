@@ -1,3 +1,8 @@
+
+## Installation
+```bash 
+source installation_developer_conda.sh
+```
 ## Structure
 This prototype represents models as subfolders of folder 
 ```bash
@@ -54,22 +59,13 @@ It seems more reasonable to create a test matrix (as the tensor product set of t
 * The 'Computers' and 'MVars' represent a set of types and strictly typed
   functions (including the return values) This could be (re)implemented with
   the new python type annotations.  An advantage is that we can express our
-  idea in a well defined and well documented and avoid extra effort for the
-  user..  The challenge would be to perform the computebility inference
-  (including the assembly of defined Mvars=types) at runtime (from inside a
-  jupyter notebook). At the moment it is unclear which tools or libraries we
-  can use for this purpose.  
+  idea in a well defined and well documented way and avoid extra effort for the
+  user..  
 * The computibility graph is expensive to create and only changes if new
   `Computers` and `MVars` are created.  It should be cached, which encurages
   the use of immutable data structures. (since we can use functools )
 
 
-
-## current problems 
-* At the moment the tests can not be run in one suite (we have to find the
-  reason)a, since the source of the problem most likely lies in the
-  (prototypically implemented) way the package handles more than one model and
-  could affect model comparisons.
 
 ## to do:
 * With a growing set of computers it is possible that some of the MVars
@@ -92,12 +88,47 @@ It seems more reasonable to create a test matrix (as the tensor product set of t
 	In this sense it comprises a framework into which different models can be
 	plugged.  
   This raises practical questions.
-  (Sympolic) Models and data can (preferably) be seen as orthogonal to each other, 
+  (Symbolic) Models and data can (preferably) be seen as orthogonal to each other, 
   but are also connected. 
-  ( for a model with more pools and connections we will
+  (for a model with more pools and connections we will
   need more data...) 
   Since the aim is to compare models across different datasets the model specific part of 
   data representation should be minimized.
   How much (links to the) data should be part of the database?
+
+ * translation of yaml files to the new format.
+
+  * example: 
+    ``` bgc_md2/bgc_md2/models/Williams2005GCB/source.py ``` 
+
+  * In the yaml file find all variables that do not have an "expr" (are not defined as expressions with respect to other variables)
+    create ```DescribedQuantaty``` Instances for them 
+    These are basically ```symbols``` with a dimension and a description.
+    intstead of units found in the yaml file it is better to use dimensions (instead of ```meter``` we use ```length``` 
+    The dimensions have to be imported from ```sympy.physics.units``` before they can be used.
+    units are actually used for the values of those variables so they belong to the can be used parameter sets.
+    Units like ```kilogramm```,```meter``` and so on also have to be imported 
+
+  * move the remaining variables which are defined by expression into a section after this and copy the decription as a comment.
+    The dimension  does not have to be set for these because it can be inferred from the dimensions of the variables
+    constituting the expression.
+
+  * In the model file look out for common variables (present in more than one model) that are already defined as
+    Classes in ```bgc_md2/resolve/mvars.py```
+    * Import the appropriate constructors in the ```source.py``` file and use them directly for the variables that go into
+      the ```specialVars``` set. These are the things we can compare between models that define them (or other specialVars
+      from which they can be derived)
+    * If you want a variable be comparable across models and you do not find it in ```bgc_md2/resolve/mvars.py``` yet, then
+      note it down in this document in the following bullet list, like the first point and give an example of a succesfull comparison.
+	* mvars to be implemented:
+	  * Implement a notebook wich compares vegetation cycling matrices vegetation pools across models.
+  	    steps:
+	    * This could internally be done via the dyadic representation (but should also be possible if the model is given in matrix form) 
+  	    * Actually the stateVariableTuple should be given externally (independent from the one in the mode) so that
+	      the same order can be used to be able to compare the blockstructure.
+	    * find models described by the old yaml files that have a similar or identical structure for the vegetation sub matrix if similar coordinates are used.
+	      probably a unified nomenclature for Leaf Root and Labile pools has to be used to make them comparable.
+	    * How much of this can be (at first) implemented outside tme mvars and computers modules just in the notebook or python file where the comparison is made?
+	    * build a test.
 
 

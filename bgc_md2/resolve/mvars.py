@@ -7,6 +7,9 @@ from sympy import Symbol,ImmutableMatrix
 # Ultimately the classes should have sensible constructors
 # that check their arguments thoroughly to expose
 # inadequate imput early in the process 
+# part of this should be a dimensional analysis
+# which requires that the model authors provide dimensions
+# for there variables
 
 class InFluxesBySymbol(frozendict):
     pass
@@ -18,10 +21,18 @@ class InternalFluxesBySymbol(frozendict):
     pass
 
 class TimeSymbol(Symbol):
+    # should become a quantity with dimension time
     pass
 
 class StateVariableTuple(tuple):
     pass
 
+class InputTuple(tuple):
+    pass
+
+class InputPartitioningTuple(tuple):
+    pass
+
 class CompartmentalMatrix(ImmutableMatrix):
     pass
+
