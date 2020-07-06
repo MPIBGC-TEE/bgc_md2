@@ -19,14 +19,14 @@ class TestWilliams(unittest.TestCase):
         self.mn='Williams2005GCB'
 
     def test_provided_mvars(self):
-        mvts=provided_mvars(self.mn)
+        mvs=provided_mvars(self.mn)
         res=frozenset([
             CompartmentalMatrix
             ,TimeSymbol
             ,StateVariableTuple
             ,InputPartitioningTuple
         ])
-        self.assertSetEqual(mvts,res)
+        self.assertSetEqual(mvs,res)
 
     def test_computable_mvars(self):
         res=frozenset([
@@ -38,8 +38,13 @@ class TestWilliams(unittest.TestCase):
             ,CompartmentalMatrix
             ,InputPartitioningTuple
         ])
-        mvts=computable_mvars(self.mn)
-        self.assertSetEqual(mvts,res)
+        mvs=computable_mvars(self.mn)
+        
+        self.assertSetEqual(mvs,res)
+        list_str="\n".join(["<li> "+str(var.__name__)+" </li>" for var in mvs])
+        print(list_str)
+        for var in mvs:
+            print(get_single_mvar_value(var,self.mn))
 
     def test_get_mvar_value(self):
         # first get a provided value

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.2
+#       jupytext_version: 1.5.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -26,6 +26,7 @@ widgets.HTML(
 # -
 
 
+a_f=Symbol('a_f')
 widgets.HTMLMath(
     value=r"Some math and <i>HTML</i>: \(x^2\) and $$\frac{x+1}{x-1}$$",
     placeholder='Some HTML',
@@ -33,7 +34,15 @@ widgets.HTMLMath(
 )
 
 # +
-from IPython.display import display
+
+widgets.HTMLMath(
+    value=latex(a_f),
+    placeholder='Some HTML',
+    description='Some HTML',
+)
+
+# +
+
 button = widgets.Button(description="Click Me!")
 output = widgets.Output()
 
@@ -67,10 +76,21 @@ A=Matrix([[1,2],[2,Symbol("x")]])
 
 out = widgets.Output()
 out
-from IPython.display import YouTubeVideo
+from IPython.display import display
 for i in range(10):
         display(A)
 #with out:
 #    display(YouTubeVideo('eWzY2nGfkXk'))
+
+import ipywidgets as widgets
+items = [widgets.Label(str(i)) for i in range(4)]
+left_box = widgets.VBox([items[0], items[1]])
+right_box = widgets.VBox([items[2], items[3]])
+widgets.HBox([left_box, right_box])
+
+from IPython.display import Math
+Math(latex(a_f))
+
+
 
 

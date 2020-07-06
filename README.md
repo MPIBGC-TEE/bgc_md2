@@ -131,4 +131,6 @@ It seems more reasonable to create a test matrix (as the tensor product set of t
 	    * How much of this can be (at first) implemented outside tme mvars and computers modules just in the notebook or python file where the comparison is made?
 	    * build a test.
 
+* the dependency list for conda is probably to full (just copied from the widget tutorial)
+  After the UI is more or less stable the relavant packages have to be isolated and should also be moved into setup.py if no version pinning is required)
 
