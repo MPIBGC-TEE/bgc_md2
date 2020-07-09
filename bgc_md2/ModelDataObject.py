@@ -5,6 +5,7 @@ from netCDF4 import Dataset
 from sympy import symbols
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run_with_gross_fluxes import DiscreteModelRunWithGrossFluxes as DMRWGF
 
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD as PWCMRFD
 from bgc_md2.Variable import FixDumbUnits, Variable, StockVariable, FluxVariable
@@ -511,13 +512,24 @@ class ModelDataObject(object):
 
             #fixme hm 2020-04-21:
             # which reconstruction version is the right choice?
-            dmr = DMR.reconstruct_from_data(
+#            dmr = DMR.reconstruct_from_data(
+#                self.time_agg.data.filled(),
+#                start_values.filled(),
+#                xs.data.filled(),
+#                Fs.data.filled(),
+#                Rs.data.filled(),
+#                Us.data.filled()
+#            )
+
+#            dmr = DMR.reconstruct_from_fluxes_and_solution(
+            dmr = DMRWGF.reconstruct_from_fluxes_and_solution(
                 self.time_agg.data.filled(),
-                start_values.filled(),
                 xs.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled(),
-                Us.data.filled()
+                Us.data.filled(),
+                Fs.data.filled(),
+                Rs.data.filled()
             )
         else:
             dmr = None
@@ -554,7 +566,7 @@ class ModelDataObject(object):
                 symbols('t'),
                 times,
                 xs.data.filled()[0],
-                xs.data.filled(),
+#                xs.data.filled(),
                 Us.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled()
