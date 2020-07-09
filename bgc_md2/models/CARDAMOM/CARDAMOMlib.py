@@ -15,6 +15,7 @@ from bgc_md2.Variable import Variable
 
 from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
+from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
 from compute_start_values_14C import compute_start_values_14C
 
 
@@ -212,7 +213,7 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
                 np.nan * np.ones(
                     (1, len(ms.pool_names), len(ms.pool_names))
                 ),
-                mr_14C.gross_internal_flux_matrix()
+                mr_14C.acc_gross_internal_flux_matrix()
             ],
             axis = 0
         ),
@@ -230,7 +231,7 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
                     fs.data[:, pnr_to, pnr_from],
                     fs_14C.data[:, pnr_to, pnr_from]
                 ),
-                unit = Fs.unit
+                unit = fs.unit
             )
             add_variable(ds,data_vars, var_name_ds, new_var)
 
@@ -258,7 +259,6 @@ def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
         ),
         unit = 'g/(365.25/12 d)'
     )
-
 
     # convert to daily flux rates
     rs = Rs_monthly.convert('g/d')
@@ -318,7 +318,7 @@ def load_dmr_14C(dmr):
         method = 'D3'
     )
     
-    dmr_14C = DMR_14C.from_DiscreteModelRun(
+    dmr_14C = DMR_14C(
         dmr,
         start_values_14C,
         net_Us_14C
@@ -360,7 +360,8 @@ def load_pwc_mr_fd_14C(pwc_mr_fd):
         method = 'C3'
     )
 
-    pwc_mr_fd_14C = pwc_mr_fd.to_14C_only(
+    pwc_mr_fd_14C = PWCMR_14C(
+        pwc_mr_fd.pwc_mr,
         start_values_14C,
         Fa_func
     )   
@@ -375,13 +376,23 @@ def load_Delta_14C_dataset(ds, method):
                 "method must be either 'discrete' or 'continuous'"
             )
         ) 
+    if method == 'discrete':
+        raise(
+            ValueError(
+                """
+                discrete Delta 14C computation is impossible because
+                we cannot compute the necessary net Delta 14C Us without
+                knowledge of the state transition operator
+                """
+            )
+        )
 
 #    return ds 
-    # fake return data struicture on first call (with empty data)
+    # fake return data structure on first call (with empty data)
     if ds.ens.values.shape == (0,):
         empty_var = xr.DataArray(
-            data   = np.ndarray(dtype=float, shape=(0,0,0)),
-            dims   = ('ens', 'lat' , 'lon')
+            data = np.ndarray(dtype=float, shape=(0,0,0)),
+            dims = ('ens', 'lat' , 'lon')
         )
         ds['max_abs_err'] = empty_var
         ds['max_rel_err'] = empty_var
@@ -391,15 +402,14 @@ def load_Delta_14C_dataset(ds, method):
         )    
         return ds
     
-
     log = ''
     try:
         mdo = load_mdo(ds)
     
-        if method == 'discrete':
-            mr, abs_err, rel_err =\
-                 mdo.create_discrete_model_run(errors=True)
-            mr_14C = load_dmr_14C(mr)
+ #       if method == 'discrete':
+ #           mr, abs_err, rel_err =\
+ #                mdo.create_discrete_model_run(errors=True)
+ #           mr_14C = load_dmr_14C(mr)
         if method == 'continuous':
             mr, abs_err, rel_err =\
                  mdo.create_model_run(errors=True)
@@ -453,7 +463,7 @@ if __name__ == '__main__':
     pass
     dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
     ds = dataset.isel(ens=0, lat=0, lon=0)
-    ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, 'discrete')
+#    ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, 'discrete')
     ds_Delta_14C_pwc_mr_fd = load_Delta_14C_dataset(ds, 'continuous')
 
 #    # check for similarity
@@ -474,7 +484,7 @@ if __name__ == '__main__':
 #            print(np.nanmax(rel_err))
 
     ds_Delta_14C_dmr.close()
-    ds_Delta_14C_pwc_mr_fd.close()
+#    ds_Delta_14C_pwc_mr_fd.close()
     ds.close()
     dataset.close()
 
