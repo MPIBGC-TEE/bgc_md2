@@ -413,31 +413,33 @@ def load_Delta_14C_dataset(ds, method):
         if method == 'continuous':
             mr, abs_err, rel_err =\
                  mdo.create_model_run(errors=True)
-            mr_14C = load_pwc_mr_fd_14C(mr)
+            var_abs_err = xr.DataArray(
+                data  = np.max(abs_err.data),
+                attrs = {
+                    'units':     abs_err.unit,
+                    'long_name': 'max. abs. error on reconstructed stock sizes'
+                }
+            )
     
+            var_rel_err = xr.DataArray(
+                data  = np.max(rel_err.data),
+                attrs = {
+                    'units':     rel_err.unit,
+                    'long_name': 'max. rel. error on reconstructed stock sizes'
+                }
+            )
+            print('abs', var_abs_err) 
+            print('rel', var_rel_err) 
+    
+            mr_14C = load_pwc_mr_fd_14C(mr)
+
         ms = mdo.model_structure
         #plot_Delta_14C_in_time(ms, mr.solve(), mr_14C.solve())
         ds_Delta_14C = create_Delta_14C_dataset(mdo, ds, mr, mr_14C)
     
         ## add reconstruction error
-        var_abs_err = xr.DataArray(
-            data  = np.max(abs_err.data),
-            attrs = {
-                'units':     abs_err.unit,
-                'long_name': 'max. abs. error on reconstructed stock sizes'
-            }
-        )
         ds_Delta_14C['max_abs_err'] = var_abs_err
-
-        var_rel_err = xr.DataArray(
-            data  = np.max(rel_err.data),
-            attrs = {
-                'units':     rel_err.unit,
-                'long_name': 'max. rel. error on reconstructed stock sizes'
-            }
-        )
         ds_Delta_14C['max_rel_err'] = var_rel_err
-    
     except DMRError as e:
         log = str(e)
         

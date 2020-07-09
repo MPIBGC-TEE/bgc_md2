@@ -1,14 +1,18 @@
 import numpy as np
-from cf_units import Unit
-from cftime import utime
 from netCDF4 import Dataset
 from sympy import symbols
 
-from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
-from CompartmentalSystems.discrete_model_run_with_gross_fluxes import DiscreteModelRunWithGrossFluxes as DMRWGF
+# from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run_with_gross_fluxes import\
+    DiscreteModelRunWithGrossFluxes as DMRWGF
 
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD as PWCMRFD
-from bgc_md2.Variable import FixDumbUnits, Variable, StockVariable, FluxVariable
+from bgc_md2.Variable import (
+    FixDumbUnits,
+    Variable,
+    StockVariable,
+    FluxVariable
+)
 
 
 class ModelDataObjectException(Exception):
@@ -584,8 +588,17 @@ class ModelDataObject(object):
             abs_err = soln_pwc_mr_fd.absolute_error(xs)
             rel_err = soln_pwc_mr_fd.relative_error(xs)
 
+            print(soln[:, 0]-self.get_stock(pwc_mr_fd, 'Labile'))
+
             return pwc_mr_fd, abs_err, rel_err
         else:
             return pwc_mr_fd
 
-
+    def get_stock(self, mr, pool_name, nr_layer=0):
+        pool_nr = self.model_structure.get_pool_nr(pool_name, nr_layer)
+        soln = mr.solve()
+        # make it a Variable
+        return soln[:, pool_nr]#Variable(
+        #    data=soln[:, pool_nr],
+            #unit=self.stock_unit
+        #)
