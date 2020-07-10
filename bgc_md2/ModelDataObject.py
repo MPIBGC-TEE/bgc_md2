@@ -598,7 +598,7 @@ class ModelDataObject(object):
         pool_nr = self.model_structure.get_pool_nr(pool_name, nr_layer)
         soln = mr.solve()
         # make it a Variable
-        return soln[:, pool_nr]#Variable(
-        #    data=soln[:, pool_nr],
-            #unit=self.stock_unit
-        #)
+        return Variable(
+            data=soln[:, pool_nr],
+            unit=self.stock_unit
+        )
