@@ -16,7 +16,7 @@ from bgc_md2.Variable import Variable
 from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
-from compute_start_values_14C import compute_start_values_14C
+from .compute_start_values_14C import compute_start_values_14C
 
 
 def load_model_structure():
