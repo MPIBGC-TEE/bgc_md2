@@ -5,9 +5,12 @@ from sympy.physics.units.systems.si import dimsys_SI
 
 from bgc_md2.resolve.mvars import (
         CompartmentalMatrix
+        ,InputTuple
         ,TimeSymbol
         ,StateVariableTuple
-        ,InputPartitioningTuple
+        ,VegetationCarbonInputScalar
+        ,VegetationCarbonInputPartitioningTuple
+        ,VegetationCarbonStateVariableTuple
         )
 
 
@@ -67,10 +70,8 @@ x = StateVariableTuple((C_f, C_lab, C_w, C_r))
 #scalar function of photosynthetic inputs
 u = NPP
 
-# vector of partitioning coefficients of photosynthetically fixed carbon
-b = InputPartitioningTuple(
-        ((p_3*multtl), 0, (1-p_4), p_4)
-    )
+# tuple of partitioning coefficients of photosynthetically fixed carbon
+b = ((p_3*multtl), 0, (1-p_4), p_4) 
 
 #f_v = u*b+A*x
 
@@ -83,12 +84,8 @@ A=CompartmentalMatrix(
             [0,                                                                                                     0,                                                              0,   -p_7]
         ]
 )
-specialVars={
-    A,
-    b,
-    t,
-    x
-}
+I = InputTuple(u*ImmutableMatrix(b))
+
 #model_run_data:
 #    parameter_sets:
 #        - "param_vals":
@@ -112,4 +109,22 @@ specialVars={
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
+specialVars={
+    A, # the overall compartmental matrix
+    I, # the overall imput
+    t, # time for the complete system
+    x, # state vector of the the complete system
+    # 
+    ## the following variables give a more detailed view with respect to 
+    ## carbon and vegetation variables
+    ## This imformation can be used to extract the part
+    ## of a model that is concerned with carbon and vegetation
+    ## in the case of this model all of the state variables 
+    ## are vegetation and carbon related but for an ecosystem model
+    ## for different elements there could be different subsystems 
+    ## e.g. consisting of  Nitrogen Soil state variables 
+    VegetationCarbonInputScalar(u),   # vegetation carbon 
+    VegetationCarbonInputPartitioningTuple(b), # vegetation carbon partitioning.
+    VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
+}
 
