@@ -1,5 +1,6 @@
 from frozendict import frozendict
-from sympy import Symbol,Quantity,ImmutableMatrix
+from sympy import Symbol,ImmutableMatrix
+from sympy.physics.units import Quantity
 # fixme: mm 03-12-2020
 # At the moment the classes are just defined to provide
 # the vocabulary for the computer signatures and model 
