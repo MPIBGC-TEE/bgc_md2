@@ -46,6 +46,8 @@ setup(name='bgc_md2',
             #,'sqlalchemy'
             #,'oslash'
             #,'pypandoc'
+            ,"sympy"
+            ,"xarray"
             ,"networkx"
             ,"pygraphviz"
             ,'cf-units'
