@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import xarray as xr
-from bgc_md2.models.CARDAMOMlib import load_mdo
+from bgc_md2.models.CARDAMOM.CARDAMOMlib import load_mdo
 
 from bgc_md2.ModelDataObject import ModelDataObjectException,\
                                     ModelDataObject,\
@@ -18,6 +18,8 @@ from example_MDOs import MDO_3pools_3layers,\
                          MDO_3pools_3layers_nogrid,\
                          MDO_3pools_3layers_discretizable
 
+import os.path
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class TestModelDataObject(unittest.TestCase):
 
@@ -679,6 +681,7 @@ class TestModelDataObject(unittest.TestCase):
         mr_pwc = mdo.create_discrete_model_run()
         self.assertTrue(mr_pwc is None)
 
+    @unittest.skip
     def test_get_stock(self):
         dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
         ds = dataset.isel(ens=0, lat=0, lon=0)
@@ -692,6 +695,11 @@ class TestModelDataObject(unittest.TestCase):
         self.assertTrue(
             np.all(xs.data[:, 0] == mdo.get_stock(mr, 'CWD').data)
         ) 
+
+    def test_load_datafile(self):
+        my_data_path = os.path.join(THIS_DIR, 'datafile.txt')
+        with open(my_data_path, 'r') as datafile:
+            pass
 
 
 ################################################################################
