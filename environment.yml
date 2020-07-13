@@ -34,8 +34,8 @@ dependencies:
   - ipyleaflet
   - pythreejs
   - pip
-  - pip:
-      - git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
-      - git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
-      - git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
+    #  - pip:
+    #      - git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
+    #      - git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
+    #      - git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
     

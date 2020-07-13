@@ -15,29 +15,29 @@ def FixDumbUnits(unit):
         the fixed unit
     """
     # Various synonyms for 1
-    if unit.lower().strip() in ["unitless",
-                                "n/a",
-                                "none"]: unit = "1"
-    # Remove the C which so often is used to mean carbon but actually means coulomb
+    if unit.lower().strip() in ["unitless", "n/a", "none"]:
+        unit = "1"
+    # Remove the C which so often is used to mean carbon
+    # but actually means coulomb
     # also remove C14 which is even more ridiculous
     tokens = re.findall(r"[\w']+", unit)
-    for i,token in enumerate(tokens):
+    for i, token in enumerate(tokens):
         if token.endswith("C"):
             try:
                 if Unit(token[:-1]).is_convertible(Unit("g")):
-                    unit = unit.replace(token,token[:-1])
+                    unit = unit.replace(token, token[:-1])
                 elif (i > 0) and Unit(tokens[i-1]).is_convertible(Unit("g")):
-                    unit = unit.replace(" C","")
-            except:
+                    unit = unit.replace(" C", "")
+            except:  # noqa: E722
                 pass
 
         if token.endswith("C14"):
             try:
                 if Unit(token[:-3]).is_convertible(Unit("g")):
-                    unit = unit.replace(token,token[:-3])
+                    unit = unit.replace(token, token[:-3])
                 elif (i > 0) and Unit(tokens[i-1]).is_convertible(Unit("g")):
-                    unit = unit.replace(" C14","")
-            except:
+                    unit = unit.replace(" C14", "")
+            except:  # noqa: E722
                 pass
     return unit
 
@@ -51,22 +51,20 @@ class Variable(object):
 
         if not isinstance(self.data, np.ma.MaskedArray):
             self.data = np.ma.masked_array(
-                data = self.data,
-                mask = np.zeros_like(self.data)
+                data=self.data,
+                mask=np.zeros_like(self.data)
             )
 
         if isinstance(self.data.mask, np.bool_):
-            self.data.mask = np.ones_like(self.data.data) * self.data.mask 
-
+            self.data.mask = np.ones_like(self.data.data) * self.data.mask
 
     def __str__(self):
         s = str(type(self))
         s += '-' * len(str(type(self))) + '\n'
-        s +='data: {}\n'.format(self.data)
+        s += 'data: {}\n'.format(self.data)
         s += 'unit: {}\n'.format(self.unit)
 
         return s
-
 
     def data_mult(self, dim_var, given_axes):
         given_axes = np.array(given_axes).ravel().astype(int)
@@ -75,7 +73,7 @@ class Variable(object):
         dim_array[given_axes] = [self.data.shape[ax] for ax in given_axes]
         dim_var_reshaped = dim_var.data.reshape(dim_array)
         data_res = self.data*dim_var_reshaped
-    
+
         unit_self = Unit(self.unit)
         unit_dim_var = Unit(dim_var.unit)
         unit0 = unit_self*unit_dim_var
@@ -84,39 +82,35 @@ class Variable(object):
 
         data_res.set_fill_value(self.data.get_fill_value())
         return self.__class__(
-            data = data_res,
-            unit = '%s' % unit_res
+            data=data_res,
+            unit='%s' % unit_res
         )
 
-
     def aggregateInTime(self, nstep):
-        data = self.data.data[::nstep,...]
-        mask = self.data.mask[::nstep,...]
+        data = self.data.data[::nstep, ...]
+        mask = self.data.mask[::nstep, ...]
         if (self.data.shape[0]-1) % nstep != 0:
-            data = np.append(data, [self.data[-1,...]],axis=0)
-            mask = np.append(mask, [self.data.mask[-1,...]],axis=0)
+            data = np.append(data, [self.data[-1, ...]], axis=0)
+            mask = np.append(mask, [self.data.mask[-1, ...]], axis=0)
 
         return self.__class__(
-            name = self.name,
-            data = np.ma.masked_array(
-                data       = data,
-                mask       = mask,
-                fill_value = self.data.get_fill_value()
+            name=self.name,
+            data=np.ma.masked_array(
+                data=data,
+                mask=mask,
+                fill_value=self.data.get_fill_value()
             ),
-            unit = self.unit
+            unit=self.unit
         )
 
     def convert(self, tar_unit):
         unit0 = Unit(self.unit)
         unit1 = Unit(tar_unit)
-        #assert(unit0.is_convertible(unit1))
-        #assert(unit0.is_convertible(unit1), "Units not compatible: %s and %s" % (unit0, unit1))
         data = self.data
         self.data = unit0.convert(data, unit1)
         self.unit = tar_unit
 
         return self
-
 
     def __add__(self, other):
         assert(self.unit == other.unit)
@@ -125,10 +119,9 @@ class Variable(object):
         unit_res = self.unit
 
         return self.__class__(
-            data = data_res,
-            unit = unit_res
+            data=data_res,
+            unit=unit_res
         )
-
 
     def __radd__(self, other):
         if other == 0:
@@ -136,23 +129,20 @@ class Variable(object):
         else:
             return self.__add__(other)
 
-    
     def absolute_error(self, v_right):
-        assert(self.data.shape==v_right.data.shape)
+        assert(self.data.shape == v_right.data.shape)
         abs_err = self.__class__(
-            data = np.abs(self.convert(v_right.unit).data-v_right.data),
-            unit = v_right.unit
+            data=np.abs(self.convert(v_right.unit).data-v_right.data),
+            unit=v_right.unit
         )
 
         return abs_err
 
-
     def relative_error(self, v_right):
-        assert(self.data.shape==v_right.data.shape)
+        assert(self.data.shape == v_right.data.shape)
         rel_err = self.__class__(
-            data = 100 * self.absolute_error(v_right).data\
-                     / np.abs(v_right.data),
-            unit = '%'
+            data=100 * self.absolute_error(v_right).data/np.abs(v_right.data),
+            unit='%'
         )
 
         return rel_err
@@ -170,14 +160,12 @@ class FluxVariable(Variable):
         mask = np.maximum.reduceat(self.data.mask, data_ind)
 
         masked_data = np.ma.masked_array(
-            data       = data,
-            mask       = mask,
-            fill_value = self.data.get_fill_value()
+            data=data,
+            mask=mask,
+            fill_value=self.data.get_fill_value()
         )
         return self.__class__(
-            name = self.name,
-            data = masked_data,
-            unit = self.unit
+            name=self.name,
+            data=masked_data,
+            unit=self.unit
         )
-
-

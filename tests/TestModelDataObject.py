@@ -663,7 +663,7 @@ class TestModelDataObject(unittest.TestCase):
         dmr = mdo.create_discrete_model_run()
         self.assertTrue(dmr is None)
 
-    @unittest.skip #mm just to test the github workflow which had other issues
+#    @unittest.skip #mm just to test the github workflow which had other issues
     def test_create_model_run(self):
         mdo = self.mdo_discretizable
         
@@ -677,6 +677,16 @@ class TestModelDataObject(unittest.TestCase):
         mr_pwc = mdo.create_discrete_model_run()
         self.assertTrue(mr_pwc is None)
 
+    def test_get_stock(self):
+        mdo = self.mdo#_discretizable
+        xs, Us, Fs, Rs = mdo.load_xs_Us_Fs_Rs()
+
+        mr = mdo.create_model_run()
+#        print(xs.data[:, :])
+#        print(mdo.get_stock(mr, 'CWD'))
+#        self.assertTrue(
+#            np.all(xs.data[:, 0] == mdo.get_stock(mr, 'CWD').data)
+#        ) 
 
 
 ################################################################################
