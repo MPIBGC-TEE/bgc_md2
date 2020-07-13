@@ -369,7 +369,7 @@ def load_pwc_mr_fd_14C(pwc_mr_fd):
     return pwc_mr_fd_14C
 
  
-def load_Delta_14C_dataset(ds, method):
+def load_Delta_14C_dataset(ds, method='continuous'):
     if method not in ['discrete', 'continuous']:
         raise(
             ValueError(
