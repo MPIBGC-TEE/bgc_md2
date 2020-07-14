@@ -16,7 +16,7 @@ from bgc_md2.Variable import Variable
 from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
-from .compute_start_values_14C import compute_start_values_14C
+from bgc_md2.models.CARDAMOM.compute_start_values_14C import compute_start_values_14C
 
 
 def load_model_structure():
@@ -76,6 +76,7 @@ def load_mdo(ds):
     days_per_month = 365.25/12.0
 
     time = Variable(
+        name = 'time',
         data = np.arange(len(ds.time)) * days_per_month,
         unit = 'd'
     )
@@ -87,6 +88,11 @@ def load_mdo(ds):
         time = time
     )
 
+    from bgc_md2.ModelDataObject import getFluxVariable_from_DensityRate
+    mdo.load_external_output_fluxes(
+        func = getFluxVariable_from_DensityRate,
+        data_shift=1
+    )
     return mdo
 
 
@@ -411,25 +417,27 @@ def load_Delta_14C_dataset(ds, method='continuous'):
  #                mdo.create_discrete_model_run(errors=True)
  #           mr_14C = load_dmr_14C(mr)
         if method == 'continuous':
-            mr, abs_err, rel_err =\
-                 mdo.create_model_run(errors=True)
-            var_abs_err = xr.DataArray(
-                data  = np.max(abs_err.data),
-                attrs = {
-                    'units':     abs_err.unit,
-                    'long_name': 'max. abs. error on reconstructed stock sizes'
-                }
-            )
+            mr, err_dict = mdo.create_model_run(errors=True)
+            for key, value in err_dict.items():
+                abs_err = value['abs_err']
+                var_abs_err = xr.DataArray(
+                    data  = np.max(abs_err.data),
+                    attrs = {
+                        'units':     abs_err.unit,
+                        'long_name': 'max. abs. error on reconstructed stock sizes'
+                    }
+                )
+                print(key, var_abs_err)
     
-            var_rel_err = xr.DataArray(
+                rel_err = value['rel_err']
+                var_rel_err = xr.DataArray(
                 data  = np.max(rel_err.data),
-                attrs = {
-                    'units':     rel_err.unit,
-                    'long_name': 'max. rel. error on reconstructed stock sizes'
-                }
-            )
-            print('abs', var_abs_err) 
-            print('rel', var_rel_err) 
+                    attrs = {
+                        'units':     rel_err.unit,
+                        'long_name': 'max. rel. error on reconstructed stock sizes'
+                    }
+                )
+                print(key, var_rel_err)
     
             mr_14C = load_pwc_mr_fd_14C(mr)
 
@@ -458,6 +466,34 @@ def load_Delta_14C_dataset(ds, method='continuous'):
     return ds_Delta_14C
 
 
+def load_pwc_mr_fd(ds):
+    mdo = load_mdo(ds)
+
+    mr, err_dict = mdo.create_model_run(errors=True)
+    for key, value in err_dict.items():
+        abs_err = value['abs_err']
+        var_abs_err = xr.DataArray(
+            data  = np.max(abs_err.data),
+            attrs = {
+                'units':     abs_err.unit,
+                'long_name': 'max. abs. error on reconstructed stock sizes'
+            }
+        )
+        print(key, var_abs_err)
+
+        rel_err = value['rel_err']
+        var_rel_err = xr.DataArray(
+        data  = np.max(rel_err.data),
+            attrs = {
+                'units':     rel_err.unit,
+                'long_name': 'max. rel. error on reconstructed stock sizes'
+            }
+        )
+        print(key, var_rel_err)
+
+    return mr
+
+
 ################################################################################
 
 
@@ -466,7 +502,10 @@ if __name__ == '__main__':
     dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
     ds = dataset.isel(ens=0, lat=0, lon=0)
 #    ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, 'discrete')
-    ds_Delta_14C_pwc_mr_fd = load_Delta_14C_dataset(ds, 'continuous')
+#    ds_Delta_14C_pwc_mr_fd = load_Delta_14C_dataset(ds, 'continuous')
+
+    pwc_mr_fd = load_pwc_mr_fd(ds)
+
 
 #    # check for similarity
 #    for name, var_dmr in ds_Delta_14C_dmr.data_vars.items():
@@ -485,7 +524,7 @@ if __name__ == '__main__':
 #            rel_err = abs_err/np.abs(val_pwc_mr_fd)
 #            print(np.nanmax(rel_err))
 
-    ds_Delta_14C_dmr.close()
+#    ds_Delta_14C_dmr.close()
 #    ds_Delta_14C_pwc_mr_fd.close()
     ds.close()
     dataset.close()

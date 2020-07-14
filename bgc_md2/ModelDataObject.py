@@ -407,7 +407,7 @@ class ModelDataObject(object):
                 fvs_agg = []
                 variable_names = flux_structure.get(flux_type, None)
                 for variable_name in variable_names:
-                    print(pool_name, variable_name, flush=True)
+#                    print(pool_name, variable_name, flush=True)
                     fv_agg = func(
                         mdo           = self,
                         variable_name = variable_name,
@@ -581,26 +581,98 @@ class ModelDataObject(object):
             pwc_mr_fd = None
 
         if errors:
-            soln = pwc_mr_fd.solve()
+            err_dict = {}
 
+            soln = pwc_mr_fd.solve()
             soln_pwc_mr_fd = Variable(
                 data = soln,
                 unit = self.stock_unit
             )
             abs_err = soln_pwc_mr_fd.absolute_error(xs)
             rel_err = soln_pwc_mr_fd.relative_error(xs)
+            err_dict['stocks'] = {'abs_err': abs_err, 'rel_err': rel_err}
 
-            print(soln[:, 0]-self.get_stock(pwc_mr_fd, 'Labile'))
+            Us_pwc_mr_fd = Variable(
+                name = 'acc_gross_external_input_vector',
+                data = pwc_mr_fd.acc_gross_external_input_vector(),
+                unit = self.stock_unit
+            )
+            abs_err = Us_pwc_mr_fd.absolute_error(Us)
+            rel_err = Us_pwc_mr_fd.relative_error(Us)
+            err_dict['acc_gross_external_inputs'] = {
+                'abs_err': abs_err,
+                'rel_err': rel_err
+            }
 
-            return pwc_mr_fd, abs_err, rel_err
+            Rs_pwc_mr_fd = Variable(
+                name = 'acc_gross_external_output_vector',
+                data = pwc_mr_fd.acc_gross_external_output_vector(),
+                unit = self.stock_unit
+            )
+            abs_err = Rs_pwc_mr_fd.absolute_error(Rs)
+            rel_err = Rs_pwc_mr_fd.relative_error(Rs)
+            err_dict['acc_gross_external_outputs'] = {
+                'abs_err': abs_err,
+                'rel_err': rel_err
+            }
+
+            Fs_pwc_mr_fd = Variable(
+                name = 'acc_gross_internal_flux_matrix',
+                data = pwc_mr_fd.acc_gross_internal_flux_matrix(),
+                unit = self.stock_unit
+            )
+            abs_err = Fs_pwc_mr_fd.absolute_error(Fs)
+            rel_err = Fs_pwc_mr_fd.relative_error(Fs)
+            err_dict['acc_gross_internal_fluxes'] = {
+                'abs_err': abs_err,
+                'rel_err': rel_err
+            }
+
+            return pwc_mr_fd, err_dict
         else:
             return pwc_mr_fd
 
     def get_stock(self, mr, pool_name, nr_layer=0):
         pool_nr = self.model_structure.get_pool_nr(pool_name, nr_layer)
         soln = mr.solve()
-        # make it a Variable
+
         return Variable(
             data=soln[:, pool_nr],
+            unit=self.stock_unit
+        )
+
+    def get_acc_gross_external_input_flux(self, mr, pool_name, nr_layer=0):
+        pool_nr = self.model_structure.get_pool_nr(pool_name, nr_layer)
+        return Variable(
+            data=mr.acc_gross_external_input_vector()[:, pool_nr],
+            unit=self.stock_unit
+        )
+    
+    def get_acc_gross_external_output_flux(self, mr, pool_name, nr_layer=0):
+        pool_nr = self.model_structure.get_pool_nr(pool_name, nr_layer)
+        return Variable(
+            data=mr.acc_gross_external_output_vector()[:, pool_nr],
+            unit=self.stock_unit
+        )
+    
+    def get_acc_gross_internal_flux(
+        self,
+        mr,
+        pool_name_from,
+        pool_name_to,
+        nr_layer_from=0,
+        nr_layer_to=0
+    ):
+        pool_nr_from = self.model_structure.get_pool_nr(
+            pool_name_from,
+            nr_layer_from
+        )
+        pool_nr_to = self.model_structure.get_pool_nr(
+            pool_name_to,
+            nr_layer_to
+        )
+        Fs = mr.acc_gross_internal_flux_matrix()
+        return Variable(
+            data=Fs[:, pool_nr_to, pool_nr_from],
             unit=self.stock_unit
         )
