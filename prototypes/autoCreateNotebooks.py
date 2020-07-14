@@ -23,36 +23,17 @@ import bgc_md2.helper as h
 # # use a layout widget to build the interactive overview table
 #
 
-outerGridBox=widgets.GridspecLayout(4,1)
-model_view_pos=2
+outerGridBox = widgets.GridspecLayout(3, 1)
+model_view_pos = 1
 
 def update_model_view(name):
     outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
 
-outerGridBox[0,0:2]=h.modelListGridBox()
+outerGridBox[0, 0:2] = h.modelListGridBox(
+    callback_inspect_model=update_model_view)
 
-dd = widgets.Dropdown(
-            options=h.list_models(),
-            #value='2',
-            #description='Inspect (Thsi could also be achieved by a button close to the entry in the list above..):',
-            #style={'description_widt':'70%'},
-            disabled=False,
-)
+update_model_view(h.list_models()[0])
 
-# +
-outerGridBox[1,0:2]=widgets.HBox(
-    [
-        widgets.Label(
-            value=
-            'Inspect (The selection of the model to inspect should also be achievable by a button \n close to the entry in the list above..):'
-        ),
-        dd
-    ]
-)
-
-update_model_view(dd.value)
-    
-dd.observe(lambda x: update_model_view(dd.value))
 # make sure that the next cell is not in scroll mode
 display(outerGridBox)
 # -

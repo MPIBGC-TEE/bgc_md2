@@ -152,7 +152,7 @@ def callback_factory_create_notebook(grid, i, name):
     return callback_create_notebook
 
 
-def modelListGridBox():
+def modelListGridBox(callback_inspect_model):
     names = list_models()
     grid = widgets.GridspecLayout(len(names), 10)
 
@@ -168,11 +168,21 @@ def modelListGridBox():
             display(res)
         grid[i, 1:7] = out
 
-        b = widgets.Button(
-            layout=widgets.Layout(width='auto', height='auto'),
+        button_create_notebook = widgets.Button(
             description='Create notebook from template',
         )
-        b.on_click(callback_factory_create_notebook(grid, i, name))
-        grid[i, 8] = b
+        button_create_notebook.on_click(
+            callback_factory_create_notebook(grid, i, name))
+
+        button_inspect_model = widgets.Button(
+            description='Inspect model',
+        )
+        button_inspect_model.on_click(
+            (lambda name: lambda button: callback_inspect_model(name))(name))
+
+        grid[i, 8] = widgets.VBox([
+            button_create_notebook,
+            button_inspect_model,
+        ])
 
     return grid
