@@ -35,7 +35,7 @@ def smooth_reservoir_model_from_fluxes(
 def smooth_reservoir_model_from_input_tuple_and_matrix(
         u:              InputTuple,
         B:              CompartmentalMatrix,
-        time_symbol:    TimeSymbol,  
+        time_symbol:    TimeSymbol,
         state_variable_tuple: StateVariableTuple
     ) -> SmoothReservoirModel:
     return SmoothReservoirModel.from_B_u(
@@ -58,8 +58,8 @@ def vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tupl
     return VegetationCarbonInputTuple(ImmutableMatrix(b)*u)
 
 #def vegetation_carbon_compartmental_matrix_from_compartmental_matrix_and_vegetation_carbon_state_variable_tuple(
-#       B:       CompartmentalMatrix,  
-#       svt:     StateVariableTuple,  
+#       B:       CompartmentalMatrix,
+#       svt:     StateVariableTuple,
 #       vcsvt:   VegetationCarbonStateVariableTuple
-#    ) -> 
+#    ) ->
 #    return CompartmentalMatrix(smr.compartmental_matrix)
