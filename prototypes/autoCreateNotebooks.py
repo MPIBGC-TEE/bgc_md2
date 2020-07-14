@@ -26,13 +26,12 @@ import bgc_md2.helper as h
 outerGridBox = widgets.GridspecLayout(3, 1)
 model_view_pos = 1
 
-def update_model_view(name):
+def inspect_model(name):
     outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
 
-outerGridBox[0, 0:2] = h.modelListGridBox(
-    callback_inspect_model=update_model_view)
+outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
 
-update_model_view(h.list_models()[0])
+inspect_model(h.list_models()[0])
 
 # make sure that the next cell is not in scroll mode
 display(outerGridBox)
