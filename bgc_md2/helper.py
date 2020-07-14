@@ -129,23 +129,23 @@ def modelVBox(model_name):
 
 #################################################################################
 
-def callback_factory_create_notebook(grid, names, i):
+def callback_factory_create_notebook(grid, i, name):
 
     def callback_create_notebook(button):
         # called for side effect on g
         tmp_dir_path = Path('./tmp') # has to be relative for jupyter to open the file
         tmp_dir_path.mkdir(exist_ok=True)
         suffix = '.ipynb'
-        nbPath = tmp_dir_path.joinpath(names[i] + suffix)
+        nbPath = tmp_dir_path.joinpath(name + suffix)
 
-        createSingleModelNb(names[i], nbPath)
+        createSingleModelNb(name, nbPath)
 
         grid[i, 9] = widgets.HTML(
             value="""
             <a href="{path}" target="_blank">{text}</a>
             """.format(
                 path = nbPath.as_posix(),
-                text = names[i]+suffix
+                text = name + suffix
             )
         )
 
@@ -154,12 +154,9 @@ def callback_factory_create_notebook(grid, names, i):
 
 def modelListGridBox():
     names = list_models()
-    nrows = len(names)
-    grid = widgets.GridspecLayout(nrows, 10)
+    grid = widgets.GridspecLayout(len(names), 10)
 
-    for i in range(nrows):
-        name = names[i]
-
+    for i, name in enumerate(names):
         grid[i, 0] = widgets.Text(
             layout=widgets.Layout(width='auto', height='auto'),
             value=name,
@@ -175,7 +172,7 @@ def modelListGridBox():
             layout=widgets.Layout(width='auto', height='auto'),
             description='Create notebook from template',
         )
-        b.on_click(callback_factory_create_notebook(grid, names, i))
+        b.on_click(callback_factory_create_notebook(grid, i, name))
         grid[i, 8] = b
 
     return grid
