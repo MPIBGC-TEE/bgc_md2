@@ -157,9 +157,23 @@ def modelVBox(modelName):
 
 #################################################################################
 
-def callback_factory_create_notebook(grid, i, name):
+def button_callback(function, *args):
 
-    def callback_create_notebook(button):
+    def callback(button):
+        function(*args)
+
+    return callback
+
+
+class ModelListGridBox(widgets.GridspecLayout):
+
+    def __init__(self, inspect_model):
+        self.inspect_model = inspect_model
+        self.names = list_models()
+        super().__init__(len(self.names), 10)
+        self.populate()
+        
+    def create_notebook(self, i, name):
         # called for side effect on g
         tmp_dir_path = Path('./tmp') # has to be relative for jupyter to open the file
         tmp_dir_path.mkdir(exist_ok=True)
@@ -168,7 +182,7 @@ def callback_factory_create_notebook(grid, i, name):
 
         createSingleModelNb(name, nbPath)
 
-        grid[i, 9] = widgets.HTML(
+        self[i, 9] = widgets.HTML(
             value="""
             <a href="{path}" target="_blank">{text}</a>
             """.format(
@@ -177,40 +191,32 @@ def callback_factory_create_notebook(grid, i, name):
             )
         )
 
-    return callback_create_notebook
+    def populate(self):
+        for i, name in enumerate(self.names):
+            self[i, 0] = widgets.Text(
+                layout=widgets.Layout(width='auto', height='auto'),
+                value=name,
+            )
 
+            res = get_single_mvar_value(CompartmentalMatrix, name)
+            out = widgets.Output()
+            with out:
+                display(res)
+            self[i, 1:7] = out
 
-def modelListGridBox(callback_inspect_model):
-    names = list_models()
-    grid = widgets.GridspecLayout(len(names), 10)
+            button_inspect_model = widgets.Button(
+                description='Inspect model',
+            )
+            button_inspect_model.on_click(
+                button_callback(self.inspect_model, name))
 
-    for i, name in enumerate(names):
-        grid[i, 0] = widgets.Text(
-            layout=widgets.Layout(width='auto', height='auto'),
-            value=name,
-        )
+            button_create_notebook = widgets.Button(
+                description='Create notebook from template',
+            )
+            button_create_notebook.on_click(
+                button_callback(self.create_notebook, i, name))
 
-        res = get_single_mvar_value(CompartmentalMatrix, name)
-        out = widgets.Output()
-        with out:
-            display(res)
-        grid[i, 1:7] = out
-
-        button_inspect_model = widgets.Button(
-            description='Inspect model',
-        )
-        button_inspect_model.on_click(
-            (lambda name: lambda button: callback_inspect_model(name))(name))
-
-        button_create_notebook = widgets.Button(
-            description='Create notebook from template',
-        )
-        button_create_notebook.on_click(
-            callback_factory_create_notebook(grid, i, name))
-
-        grid[i, 8] = widgets.VBox([
-            button_inspect_model,
-            button_create_notebook,
-        ])
-
-    return grid
+            self[i, 8] = widgets.VBox([
+                button_inspect_model,
+                button_create_notebook,
+            ])
