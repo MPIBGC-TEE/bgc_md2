@@ -24,6 +24,10 @@ import bgc_md2.helper as h
 #
 
 outerGridBox=widgets.GridspecLayout(4,1)
+model_view_pos=2
+
+def update_model_view(name):
+    outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
 
 outerGridBox[0,0:2]=h.modelListGridBox()
 
@@ -45,15 +49,10 @@ outerGridBox[1,0:2]=widgets.HBox(
         dd
     ]
 )
-modelViewPos=2
-#outerGridBox[modelViewPos,0:2]=h.modelGridBox(dd.value)
-outerGridBox[modelViewPos,0:2]=h.modelVBox(dd.value)
 
-def updateModelView(x):
-    #outerGridBox[modelVielPos,0:2]=h.modelGridBox(dd.value)
-    outerGridBox[modelViewPos,0:2]=h.modelVBox(dd.value)
+update_model_view(dd.value)
     
-dd.observe(updateModelView)
+dd.observe(lambda x: update_model_view(dd.value))
 # make sure that the next cell is not in scroll mode
 display(outerGridBox)
 # -
