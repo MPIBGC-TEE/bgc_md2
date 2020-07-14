@@ -1,4 +1,4 @@
-from sympy import Symbol,ImmutableMatrix
+from sympy import Symbol,ImmutableMatrix, Matrix
 import numpy as np
 from typing import Tuple
 from .mvars import (
@@ -35,14 +35,14 @@ def smooth_reservoir_model_from_fluxes(
 def smooth_reservoir_model_from_input_tuple_and_matrix(
         u:              InputTuple,
         B:              CompartmentalMatrix,
-        time_symbol:    TimeSymbol,  
+        time_symbol:    TimeSymbol,
         state_variable_tuple: StateVariableTuple
     ) -> SmoothReservoirModel:
     return SmoothReservoirModel.from_B_u(
-        state_vector=ImmutableMatrix(state_variable_tuple),
+        state_vector=Matrix(state_variable_tuple),
         time_symbol=time_symbol,
         B=B,
-        u=ImmutableMatrix(u)
+        u=Matrix(u)
     )
 
 def compartmental_matrix_from_smooth_reservoir_model(
@@ -55,11 +55,11 @@ def vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tupl
         u:          VegetationCarbonInputScalar,
         b:          VegetationCarbonInputPartitioningTuple
     ) -> VegetationCarbonInputTuple:
-    return VegetationCarbonInputTuple(ImmutableMatrix(b)*u)
+    return VegetationCarbonInputTuple(Matrix(b)*u)
 
 #def vegetation_carbon_compartmental_matrix_from_compartmental_matrix_and_vegetation_carbon_state_variable_tuple(
-#       B:       CompartmentalMatrix,  
-#       svt:     StateVariableTuple,  
+#       B:       CompartmentalMatrix,
+#       svt:     StateVariableTuple,
 #       vcsvt:   VegetationCarbonStateVariableTuple
-#    ) -> 
+#    ) ->
 #    return CompartmentalMatrix(smr.compartmental_matrix)
