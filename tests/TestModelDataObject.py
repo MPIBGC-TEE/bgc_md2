@@ -1,7 +1,6 @@
 import unittest
 import numpy as np
 import xarray as xr
-from bgc_md2.models.CARDAMOM.CARDAMOMlib import load_mdo
 
 from bgc_md2.ModelDataObject import ModelDataObjectException,\
                                     ModelDataObject,\
@@ -681,101 +680,6 @@ class TestModelDataObject(unittest.TestCase):
         mr_pwc = mdo.create_discrete_model_run()
         self.assertTrue(mr_pwc is None)
 
-    def test_get_stock(self):
-        filename = 'cardamom_for_holger_10_ensembles.nc'
-        my_data_path = os.path.join(THIS_DIR, filename)
-        dataset = xr.open_dataset(my_data_path)
-        ds = dataset.isel(ens=0, lat=0, lon=0)
-        mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
-
-        soln = mr.solve()
-        for nr, pool_dict in enumerate(mdo.model_structure.pool_structure):
-            with self.subTest():
-                pool_name = pool_dict['pool_name']
-                self.assertTrue(
-                    np.all(soln[:, nr] == mdo.get_stock(mr, pool_name).data)
-                ) 
-
-    def test_get_acc_gross_external_input_flux(self):
-        filename = 'cardamom_for_holger_10_ensembles.nc'
-        my_data_path = os.path.join(THIS_DIR, filename)
-        dataset = xr.open_dataset(my_data_path)
-        ds = dataset.isel(ens=0, lat=0, lon=0)
-        mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
-
-        ms = mdo.model_structure
-        Us = mr.acc_gross_external_input_vector()
-        for nr, pool_dict in enumerate(ms.pool_structure):
-            with self.subTest():
-                pool_name = pool_dict['pool_name']
-                if pool_name in ms.external_input_structure.keys():
-                    self.assertTrue(
-                        np.all(Us[:, nr] ==\
-                               mdo.get_acc_gross_external_input_flux(
-                                   mr, 
-                                   pool_name
-                               ).data
-                        )
-                    )
-                else:
-                    self.assertTrue(np.all(Us[:, nr] == 0))
-                
-    def test_get_acc_gross_external_output_flux(self):
-        filename = 'cardamom_for_holger_10_ensembles.nc'
-        my_data_path = os.path.join(THIS_DIR, filename)
-        dataset = xr.open_dataset(my_data_path)
-        ds = dataset.isel(ens=0, lat=0, lon=0)
-        mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
-
-        ms = mdo.model_structure
-        Rs = mr.acc_gross_external_output_vector()
-        for nr, pool_dict in enumerate(ms.pool_structure):
-            with self.subTest():
-                pool_name = pool_dict['pool_name']
-                if pool_name in ms.external_output_structure.keys():
-                    self.assertTrue(
-                        np.all(Rs[:, nr] ==\
-                               mdo.get_acc_gross_external_output_flux(
-                                   mr, 
-                                   pool_name
-                               ).data
-                        )
-                    )
-                else:
-                    self.assertTrue(np.all(Rs[:, nr] == 0))
-                
-    def test_get_acc_gross_internal_flux(self):
-        filename = 'cardamom_for_holger_10_ensembles.nc'
-        my_data_path = os.path.join(THIS_DIR, filename)
-        dataset = xr.open_dataset(my_data_path)
-        ds = dataset.isel(ens=0, lat=0, lon=0)
-        mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
-
-        ms = mdo.model_structure
-        Fs = mr.acc_gross_internal_flux_matrix()
-        for nr_from, pool_dict_from in enumerate(ms.pool_structure):
-            pool_name_from = pool_dict_from['pool_name']
-            for nr_to, pool_dict_to in enumerate(ms.pool_structure):
-                pool_name_to = pool_dict_to['pool_name']
-                with self.subTest():
-                    if (pool_name_from, pool_name_to) in\
-                        ms.horizontal_structure.keys():
-                        self.assertTrue(
-                            np.all(Fs[:, nr_to, nr_from] ==\
-                                   mdo.get_acc_gross_internal_flux(
-                                       mr, 
-                                       pool_name_from,
-                                       pool_name_to
-                                   ).data
-                            )
-                        )
-                    else:
-                        self.assertTrue(np.all(Fs[:, nr_to, nr_from] == 0))
-                
     def test_load_datafile(self):
         my_data_path = os.path.join(THIS_DIR, 'datafile.txt')
         with open(my_data_path, 'r') as datafile:
