@@ -19,7 +19,15 @@ from bgc_md2.resolve.mvars import (
     ,CompartmentalMatrix
 )
 def list_models():
-    sub_mod_pkgs= [tup[1] for tup in pkgutil.iter_modules(models.__path__) if tup[2]]
+    exclude_path = Path('./exclude-models.txt')
+    if exclude_path.exists():
+        exclude_lines = set(line.strip() for line in open(exclude_path))
+        exclude_models = set(name for name in exclude_lines
+                             if name and not name.startswith('#'))
+    else:
+        exclude_models = set()
+    sub_mod_pkgs= [tup[1] for tup in pkgutil.iter_modules(models.__path__)
+                   if tup[2] and tup[1] not in exclude_models]
     return sub_mod_pkgs
 
 def list_models_md():
