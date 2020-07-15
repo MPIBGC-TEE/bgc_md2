@@ -14,62 +14,68 @@ from bgc_md2.resolve.mvars import (
         )
 
 
-class DescribedQuantity(Quantity):
-    def __new__(cls,name,dimension,description,**kwargs):
-        # build a normal sympy Quantity (works like Symbol)
-        obj=super().__new__(cls,name=name)
+#class DescribedQuantity(Quantity):
+#    def __new__(cls,name,dimension,description,**kwargs):
+#        # build a normal sympy Quantity (works like Symbol)
+#        obj=super().__new__(cls,name=name)
+#
+#
+#        # add the additional text field
+#        SI.set_quantity_dimension(obj,dimension)
+#
+#        # add the additional text field
+#        obj.description = description
+#        return obj
 
-
-        # add the additional text field
-        SI.set_quantity_dimension(obj,dimension)
-
-        # add the additional text field
-        obj.description = description
-        return obj
+def describedQuantity(name, dimension, description):
+    obj=Quantity(name=name)
+    SI.set_quantity_dimension(obj,dimension)
+    obj.description = description
+    return obj
 
 
 # define Quantities (as you would symbols, but with an additional description)
 t=TimeSymbol('t')
 
-#C_f     =  DescribedQuantity("C_f"      , mass/length**2                ,"Foliar C mass")
-#C_lab	=  DescribedQuantity("C_lab"	, mass/length**2                ,"Labile C mass")
-#C_w		=  DescribedQuantity("C_w"		, mass/length**2                ,"Wood C mass")
-#C_r		=  DescribedQuantity("C_r"		, mass/length**2                ,"Fine root C mass")
-#p_10	=  DescribedQuantity("p_10"	    , 1/temperature                 ,"Parameter in exponential term of temperature dependent rate parameter ")
-#mint	=  DescribedQuantity("mint"	    , temperature                   ,"Dayly minimum temperature")
-#maxt	=  DescribedQuantity("maxt"	    , temperature                   ,"Dayly maximum temperature")
-#multtl	=  DescribedQuantity("multtl"	, 1/time                        ,"Turnover of labile C (0 = off, 1 = On)")
-#multtf	=  DescribedQuantity("multtf"	, 1/time                        ,"Turnover of foliage C (0 = off, 1 = On)")
-#LAI		=  DescribedQuantity("LAI"		, 1                             ,"LeafAreaIndex")
-#p_3		=  DescribedQuantity("p_3"		, 1	                            ,"Fraction of NPP partitioned to foliage")
-#p_4		=  DescribedQuantity("p_4"		, 1	                            ,"Fraction of NPP partitioned to roots")
-#p_5		=  DescribedQuantity("p_5"		, 1/time                        ,"Turnover rate of foliage")
-#p_6		=  DescribedQuantity("p_6"		, 1/time           	            ,"Turnover rate of wood")
-#p_7		=  DescribedQuantity("p_7"		, 1/time           	            ,"Turnover rate of roots")
-#p_14	=  DescribedQuantity("p_14"	    , 1	                            ,"Fraction of leaf loss transferred to litter")
-#p_15	=  DescribedQuantity("p_15"	    , 1/time                        ,"Turnover rate of labile carbon")
-#p_16	=  DescribedQuantity("p_16"	    , 1	                            ,"Fraction of labile transfers respired ")
-#NPP		=  DescribedQuantity("NPP"		, mass*length**(-2)*time**(-1)  ,"Net Primary Production per area")
+C_f     =  describedQuantity("C_f"      , mass/length**2                ,"Foliar C mass")
+C_lab	=  describedQuantity("C_lab"	, mass/length**2                ,"Labile C mass")
+C_w		=  describedQuantity("C_w"		, mass/length**2                ,"Wood C mass")
+C_r		=  describedQuantity("C_r"		, mass/length**2                ,"Fine root C mass")
+p_10	=  describedQuantity("p_10"	    , 1/temperature                 ,"Parameter in exponential term of temperature dependent rate parameter ")
+mint	=  describedQuantity("mint"	    , temperature                   ,"Dayly minimum temperature")
+maxt	=  describedQuantity("maxt"	    , temperature                   ,"Dayly maximum temperature")
+multtl	=  describedQuantity("multtl"	, 1/time                        ,"Turnover of labile C (0 = off, 1 = On)")
+multtf	=  describedQuantity("multtf"	, 1/time                        ,"Turnover of foliage C (0 = off, 1 = On)")
+LAI		=  describedQuantity("LAI"		, 1                             ,"LeafAreaIndex")
+p_3		=  describedQuantity("p_3"		, 1	                            ,"Fraction of NPP partitioned to foliage")
+p_4		=  describedQuantity("p_4"		, 1	                            ,"Fraction of NPP partitioned to roots")
+p_5		=  describedQuantity("p_5"		, 1/time                        ,"Turnover rate of foliage")
+p_6		=  describedQuantity("p_6"		, 1/time           	            ,"Turnover rate of wood")
+p_7		=  describedQuantity("p_7"		, 1/time           	            ,"Turnover rate of roots")
+p_14	=  describedQuantity("p_14"	    , 1	                            ,"Fraction of leaf loss transferred to litter")
+p_15	=  describedQuantity("p_15"	    , 1/time                        ,"Turnover rate of labile carbon")
+p_16	=  describedQuantity("p_16"	    , 1	                            ,"Fraction of labile transfers respired ")
+NPP		=  describedQuantity("NPP"		, mass*length**(-2)*time**(-1)  ,"Net Primary Production per area")
 
-C_f     =  Quantity("C_f"       , mass/length**2                )   #"Foliar C mass")
-C_lab	=  Quantity("C_lab"	    , mass/length**2                )   #"Labile C mass")
-C_w		=  Quantity("C_w"		, mass/length**2                )   #"Wood C mass")
-C_r		=  Quantity("C_r"		, mass/length**2                )   #"Fine root C mass")
-p_10	=  Quantity("p_10"	    , 1/temperature                 )   #"Parameter in exponential term of temperature dependent rate parameter ")
-mint	=  Quantity("mint"	    , temperature                   )   #"Dayly minimum temperature")
-maxt	=  Quantity("maxt"	    , temperature                   )   #"Dayly maximum temperature")
-multtl	=  Quantity("multtl"	, 1/time                        )   #"Turnover of labile C (0 = off, 1 = On)")
-multtf	=  Quantity("multtf"	, 1/time                        )   #"Turnover of foliage C (0 = off, 1 = On)")
-LAI		=  Quantity("LAI"		, 1                             )   #"LeafAreaIndex")
-p_3		=  Quantity("p_3"		, 1	                            )   #"Fraction of NPP partitioned to foliage")
-p_4		=  Quantity("p_4"		, 1	                            )   #"Fraction of NPP partitioned to roots")
-p_5		=  Quantity("p_5"		, 1/time                        )   #"Turnover rate of foliage")
-p_6		=  Quantity("p_6"		, 1/time           	            )   #"Turnover rate of wood")
-p_7		=  Quantity("p_7"		, 1/time           	            )   #"Turnover rate of roots")
-p_14	=  Quantity("p_14"	    , 1	                            )   #"Fraction of leaf loss transferred to litter")
-p_15	=  Quantity("p_15"	    , 1/time                        )   #"Turnover rate of labile carbon")
-p_16	=  Quantity("p_16"	    , 1	                            )   #"Fraction of labile transfers respired ")
-NPP		=  Quantity("NPP"		, mass*length**(-2)*time**(-1)  )   #"Net Primary Production per area")
+#C_f     =  Quantity("C_f"       , mass/length**2                )   #"Foliar C mass")
+#C_lab	=  Quantity("C_lab"	    , mass/length**2                )   #"Labile C mass")
+#C_w		=  Quantity("C_w"		, mass/length**2                )   #"Wood C mass")
+#C_r		=  Quantity("C_r"		, mass/length**2                )   #"Fine root C mass")
+#p_10	=  Quantity("p_10"	    , 1/temperature                 )   #"Parameter in exponential term of temperature dependent rate parameter ")
+#mint	=  Quantity("mint"	    , temperature                   )   #"Dayly minimum temperature")
+#maxt	=  Quantity("maxt"	    , temperature                   )   #"Dayly maximum temperature")
+#multtl	=  Quantity("multtl"	, 1/time                        )   #"Turnover of labile C (0 = off, 1 = On)")
+#multtf	=  Quantity("multtf"	, 1/time                        )   #"Turnover of foliage C (0 = off, 1 = On)")
+#LAI		=  Quantity("LAI"		, 1                             )   #"LeafAreaIndex")
+#p_3		=  Quantity("p_3"		, 1	                            )   #"Fraction of NPP partitioned to foliage")
+#p_4		=  Quantity("p_4"		, 1	                            )   #"Fraction of NPP partitioned to roots")
+#p_5		=  Quantity("p_5"		, 1/time                        )   #"Turnover rate of foliage")
+#p_6		=  Quantity("p_6"		, 1/time           	            )   #"Turnover rate of wood")
+#p_7		=  Quantity("p_7"		, 1/time           	            )   #"Turnover rate of roots")
+#p_14	=  Quantity("p_14"	    , 1	                            )   #"Fraction of leaf loss transferred to litter")
+#p_15	=  Quantity("p_15"	    , 1/time                        )   #"Turnover rate of labile carbon")
+#p_16	=  Quantity("p_16"	    , 1	                            )   #"Fraction of labile transfers respired ")
+#NPP		=  Quantity("NPP"		, mass*length**(-2)*time**(-1)  )   #"Net Primary Production per area")
 
 
 # The following parameters would be needed to compute NPP from GPP  since they are not given
