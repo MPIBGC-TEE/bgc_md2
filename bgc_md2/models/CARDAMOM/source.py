@@ -10,5 +10,6 @@ def create_pwc_model_run_fd(ens, lat, lon):
     pwc_mr_fd = mdo.create_model_run()
     return pwc_mr_fd
 
-# example
+# examples
 # create_pwc_model_run_fd(ens=0, lat=0, lon=0)
+# create_pwc_model_run_fd(ens=(0, 10, 1))

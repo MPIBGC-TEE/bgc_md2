@@ -154,9 +154,8 @@ class TestModelStructure(unittest.TestCase):
 
         self.ms = ms
 
-
     def test_init(self):
-        ## test invalid vertical structure
+        # test invalid vertical structure
         invalid_vertical_structure = {
          'CWD': 
             {'to_below'  : 'CWD_diffus_down',
@@ -175,11 +174,10 @@ class TestModelStructure(unittest.TestCase):
                 external_output_structure = ms.external_output_structure
             )
 
-
     def test_get_functions(self):
         ms = self.ms
 
-        ## get_nr_layers
+        # get_nr_layers
         res = ms.get_nr_layers('Soil 2')
         self.assertEqual(res, ms.nr_layers)
 
@@ -189,7 +187,7 @@ class TestModelStructure(unittest.TestCase):
         with self.assertRaises(KeyError) as context:
             res = ms.get_nr_layers('Inexistent Pool')
         
-        ## get_pool_nr
+        # get_pool_nr
         res = ms.get_pool_nr('Soil 3', 9)
         self.assertEqual(res, 70)
 
@@ -199,7 +197,7 @@ class TestModelStructure(unittest.TestCase):
         with self.assertRaises(KeyError) as context:
             res = ms.get_pool_nr('Inexistent Pool', 3)
         
-        ## get_pool_name_and_layer_nr
+        # get_pool_name_and_layer_nr
         res = ms.get_pool_name_and_layer_nr(0)
         res2 = {'pool_name': 'Vegetation 1', 'layer_nr': 0}
         self.assertEqual(res, res2)
@@ -211,7 +209,7 @@ class TestModelStructure(unittest.TestCase):
         with self.assertRaises(KeyError):
             res = ms.get_pool_name_and_layer_nr(71)
 
-        ## get_pool_nrs
+        # get_pool_nrs
         res = ms.get_pool_nrs('Vegetation 1')
         self.assertTrue(np.all(res == [0]))
 
@@ -221,7 +219,7 @@ class TestModelStructure(unittest.TestCase):
         with self.assertRaises(KeyError):
             res = ms.get_pool_nrs('Inexistent pool')
 
-        ## get_pool_nrs_set
+        # get_pool_nrs_set
         pool_names = ['CWD', 'Soil 1']
         layers = np.arange(5)+2
         res = ms.get_pool_nrs_set(pool_names, layers)
@@ -233,17 +231,15 @@ class TestModelStructure(unittest.TestCase):
         with self.assertRaises(KeyError):
             res = ms.get_pool_nrs_set(pool_names, layers)
 
-        ## get_nr_pools
+        # get_nr_pools
         res = ms.get_nr_pools()
         self.assertEqual(res, ms.nr_pools)
-
 
     def test_get_flux_var_names(self):
         self.assertEqual(
             self.ms.get_flux_var_names()[7],
             'gap_mortality_c_to_litr_cel_c_col'
         )
-
 
     def test_pool_names(self):
         ms = self.ms
@@ -254,7 +250,6 @@ class TestModelStructure(unittest.TestCase):
         ]
         self.assertEqual(ms.pool_names, res)
 
-
     def test_stock_vars(self):
         ms = self.ms
         res = [
@@ -264,7 +259,39 @@ class TestModelStructure(unittest.TestCase):
         ]
         self.assertEqual(ms.stock_vars, res)
 
+    def test_get_stock_var(self):
+        self.assertEqual(
+            self.ms.get_stock_var('CWD'),
+            'CWDC_vr'
+        )
 
+        with self.assertRaises(KeyError):
+            self.ms.get_stock_var('unknown_stock_name')
+
+    def test_get_external_input_flux_var(self):
+        ref =  [
+            'fire_mortality_c_to_cwdc_col',
+            'gap_mortality_c_to_cwdc_col',
+            'harvest_c_to_cwdc_col'
+        ]
+        self.assertEqual(
+            self.ms.get_external_input_flux_var('CWD'),
+            ref
+        )
+ 
+    def test_get_external_output_flux_var(self):
+        ref = ['CWD_HR_L2_vr', 'CWD_HR_L3_vr']
+        self.assertEqual(
+            self.ms.get_external_output_flux_var('CWD'),
+            ref
+        )
+ 
+    def test_get_horizontal_flux_var(self):
+        self.assertEqual(
+            self.ms.get_horizontal_flux_var('CWD', 'Litter 2'),
+            'CWDC_TO_LITR2C_vr'
+        )
+    
 ################################################################################
 
 

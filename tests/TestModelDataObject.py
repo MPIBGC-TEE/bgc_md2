@@ -1,7 +1,6 @@
 import unittest
 import numpy as np
 import xarray as xr
-from bgc_md2.models.CARDAMOM.CARDAMOMlib import load_mdo
 
 from bgc_md2.ModelDataObject import ModelDataObjectException,\
                                     ModelDataObject,\
@@ -680,21 +679,6 @@ class TestModelDataObject(unittest.TestCase):
         mdo = self.mdos_inc[1]
         mr_pwc = mdo.create_discrete_model_run()
         self.assertTrue(mr_pwc is None)
-
-    @unittest.skip
-    def test_get_stock(self):
-        dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
-        ds = dataset.isel(ens=0, lat=0, lon=0)
-        mdo = load_mdo(ds)
-        xs, Us, Fs, Rs = mdo.load_xs_Us_Fs_Rs()
-
-        mr = mdo.create_model_run()
-#         print(soln[:, 0]-self.get_stock(pwc_mr_fd, 'Labile'))
-#        print(xs.data[:, :])
-#        print(mdo.get_stock(mr, 'CWD'))
-        self.assertTrue(
-            np.all(xs.data[:, 0] == mdo.get_stock(mr, 'CWD').data)
-        ) 
 
     def test_load_datafile(self):
         my_data_path = os.path.join(THIS_DIR, 'datafile.txt')
