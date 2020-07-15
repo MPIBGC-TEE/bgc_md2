@@ -1,23 +1,16 @@
-import pkgutil
 from . import models
-import ipywidgets as widgets
-from IPython.display import  display,HTML,Markdown,Latex,Math
+from IPython.display import Math
+from IPython.display import display
+from bgc_md2.models.helpers import computable_mvars
+from bgc_md2.models.helpers import get_single_mvar_value
+from bgc_md2.resolve.mvars import CompartmentalMatrix
 from pathlib import Path
-from sympy import Matrix,Symbol,latex
+from sympy import latex
+import ipywidgets as widgets
 import nbformat as nbf
+import pkgutil
 
-from bgc_md2.models.helpers import (
-    provided_mvars
-    ,computable_mvars
-    ,path_dict_to_single_mvar
-    ,get_single_mvar_value
-)
 
-from bgc_md2.resolve.mvars import (
-    TimeSymbol
-    ,StateVariableTuple
-    ,CompartmentalMatrix
-)
 def list_models():
     exclude_path = Path('./exclude-models.txt')
     if exclude_path.exists():
@@ -30,11 +23,11 @@ def list_models():
                    if tup[2] and tup[1] not in exclude_models]
     return sub_mod_pkgs
 
+
 def list_models_md():
     names = list_models()
     links = ["[{name}](/tmp/{name})".format(name=name) for name in names]
     return "".join(links)
-
 
 
 def funcmakerInsertLink(grid,i,j,name):
