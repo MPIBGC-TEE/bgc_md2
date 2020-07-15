@@ -128,45 +128,67 @@ def modelVBox(model_name):
 
 
 #################################################################################
-def funcmakerInsertLinkInRow(grid,names,i):
-    def insert_link(b):
+
+def button_callback(function, *args):
+
+    def callback(button):
+        function(*args)
+
+    return callback
+
+
+class ModelListGridBox(widgets.GridspecLayout):
+
+    def __init__(self, inspect_model):
+        self.inspect_model = inspect_model
+        self.names = list_models()
+        super().__init__(len(self.names), 10)
+        self.populate()
+        
+    def create_notebook(self, i, name):
         # called for side effect on g
-        tmpDirPath= Path("./tmp") #has to be relative for jupyter to open the file
-        tmpDirPath.mkdir(exist_ok=True)   
-        suffix=".ipynb"
-        nbPath=tmpDirPath.joinpath(names[i]+suffix)
-        createSingleModelNb(names[i],nbPath)
-        grid[i,9]=widgets.HTML(
+        tmp_dir_path = Path('./tmp') # has to be relative for jupyter to open the file
+        tmp_dir_path.mkdir(exist_ok=True)
+        suffix = '.ipynb'
+        nbPath = tmp_dir_path.joinpath(name + suffix)
+
+        createSingleModelNb(name, nbPath)
+
+        self[i, 9] = widgets.HTML(
             value="""
             <a href="{path}" target="_blank">{text}</a>
             """.format(
-                    path = nbPath.as_posix(),
-                    text = names[i]+suffix
-                )
+                path = nbPath.as_posix(),
+                text = name + suffix
+            )
         )
 
-    return insert_link
-def modelListGridBox():
-    names = list_models()
-    buttons=list()
-    nrows = len(names)
-    grid = widgets.GridspecLayout(nrows, 10)
-    for i in range(nrows):
-        mn=names[i]
-        grid[i, 0] = widgets.Text(
+    def populate(self):
+        for i, name in enumerate(self.names):
+            self[i, 0] = widgets.Text(
                 layout=widgets.Layout(width='auto', height='auto'),
-                value = names[i]
-        )
-        res=get_single_mvar_value(CompartmentalMatrix,mn)
-        out = widgets.Output()
-        with out:
-            display(res)
-        grid[i,1:7] =out
+                value=name,
+            )
 
-        b =  widgets.Button(
-                        layout=widgets.Layout(width='auto', height='auto'),
-                        description="Create notebook \n from template"
-                    )
-        b.on_click(funcmakerInsertLinkInRow(grid,names,i))
-        grid[i, 8] = b
-    return grid
+            res = get_single_mvar_value(CompartmentalMatrix, name)
+            out = widgets.Output()
+            with out:
+                display(res)
+            self[i, 1:7] = out
+
+            button_inspect_model = widgets.Button(
+                description='Inspect model',
+            )
+            button_inspect_model.on_click(
+                button_callback(self.inspect_model, name))
+
+            button_create_notebook = widgets.Button(
+                description='Create notebook from template',
+            )
+            button_create_notebook.on_click(
+                button_callback(self.create_notebook, i, name))
+
+            self[i, 8] = widgets.VBox([
+                button_inspect_model,
+                button_create_notebook,
+            ])
