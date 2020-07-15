@@ -49,8 +49,9 @@ def funcmakerInsertLink(grid,i,j,name):
 
     return insert_link
 
-def createSingleModelNb(modelName,ReportFilePath):
-    model = Model(modelName)
+
+def createSingleModelNb(model_name, report_file_path):
+    model = Model(model_name)
     nb = nbf.v4.new_notebook()
 
     text = '# {}'.format(model.name)
@@ -60,13 +61,14 @@ def createSingleModelNb(modelName,ReportFilePath):
     c_model = 'model = h.Model({})'.format(repr(model.name))
     c_render = 'for var in model.mvars:\n    model.render(var)'
 
-    nb['cells'] = [nbf.v4.new_markdown_cell(text),
-                   nbf.v4.new_markdown_cell(t_mvars),
-                   nbf.v4.new_code_cell(c_imports),
-                   nbf.v4.new_code_cell(c_model),
-                   nbf.v4.new_code_cell(c_render),
+    nb['cells'] = [
+        nbf.v4.new_markdown_cell(text),
+        nbf.v4.new_markdown_cell(t_mvars),
+        nbf.v4.new_code_cell(c_imports),
+        nbf.v4.new_code_cell(c_model),
+        nbf.v4.new_code_cell(c_render),
     ]
-    nbf.write(nb,ReportFilePath)
+    nbf.write(nb, report_file_path)
 
 
 #################################################################################
@@ -116,34 +118,34 @@ class Model:
             display(out)
 
 
-def modelVBox(modelName):
-    model = Model(modelName)
-    box= widgets.VBox(
+def modelVBox(model_name):
+    model = Model(model_name)
+    box = widgets.VBox(
         [
             widgets.HTML(value="""
                 <h1>{name}</h1>
                 This model specific overview page depends on the available 
                 properties
-                """.format(name=modelName)
-            )
-            ,
+                """.format(name=model_name)
+            ),
             widgets.HTML(
                 "computable_mvars( perhaps as links to the docs or some graph ui ...)"
                 +"<ol>\n"
                 +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
                 +"</ol>\n"
-            )
+            ),
         ]
         +
-        [ model.render(var, capture=True) for var in model.mvars ]
+        [model.render(var, capture=True) for var in model.mvars]
     )
     b =  widgets.Button(
-                    layout=widgets.Layout(width='auto', height='auto'),
-                    description="Create notebook \n from template"
-                    )
-    b.on_click(funcmakerInsertLinkInToBox(box,modelName))
-    box.children=box.children+(b,)
+        layout=widgets.Layout(width='auto', height='auto'),
+        description="Create notebook from template"
+    )
+    b.on_click(funcmakerInsertLinkInToBox(box, model_name))
+    box.children += (b,)
     return box 
+
 
 #################################################################################
 def funcmakerInsertLinkInRow(grid,names,i):
