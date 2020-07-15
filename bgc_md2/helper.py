@@ -64,31 +64,6 @@ def createSingleModelNb(modelName,ReportFilePath):
                nbf.v4.new_code_cell(code) ]
     nbf.write(nb,ReportFilePath)
 
-def modelGridBox(modelName):
-    # this could probably become a vertical box where line numbers do not have to be given explicitly
-    max_row=4 
-    max_col=2
-    grid = widgets.GridspecLayout(max_row+1, max_col+1)
-    grid[0,0:max_col]=widgets.HTML(value="""
-        <h1>{name}</h1>
-        This model specific overview page should be depend on the available 
-        properties
-        """.format(name=modelName))
-    
-    grid[1,0]=widgets.HTML(value=""" CompartmentalMatrix:(add maybe a link to the docs """)
-    res=get_single_mvar_value(CompartmentalMatrix,modelName)
-    out = widgets.Output()
-    with out:
-        display(res)
-    grid[2,0:max_col-1] =out
-
-    b =  widgets.Button(
-                    layout=widgets.Layout(width='auto', height='auto'),
-                    description="Create notebook \n from template"
-                    )
-    b.on_click(funcmakerInsertLink(grid,3,0,modelName))
-    grid[0, max_col] = b
-    return grid
 
 #################################################################################
 def funcmakerInsertLinkInToBox(grid,name):
