@@ -30,26 +30,6 @@ def list_models_md():
     return "".join(links)
 
 
-def funcmakerInsertLink(grid,i,j,name):
-    def insert_link(b):
-        # called for side effect on grid object
-        tmpDirPath= Path("./tmp") # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
-        tmpDirPath.mkdir(exist_ok=True)   
-        suffix=".ipynb"
-        nbPath=tmpDirPath.joinpath(name+suffix)
-        createSingleModelNb(name,nbPath)
-        grid[i,j]=widgets.HTML(
-            value="""
-            <a href="{path}" target="_blank">{text}</a>
-            """.format(
-                    path = nbPath.as_posix(),
-                    text = name+suffix
-                )
-        )
-
-    return insert_link
-
-
 def createSingleModelNb(model_name, report_file_path):
     model = Model(model_name)
     nb = nbf.v4.new_notebook()
