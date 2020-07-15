@@ -50,18 +50,22 @@ def funcmakerInsertLink(grid,i,j,name):
     return insert_link
 
 def createSingleModelNb(modelName,ReportFilePath):
-    # this will be specific to the model and depend on the 
-    # available information
+    model = Model(modelName)
     nb = nbf.v4.new_notebook()
-    text = """\
-    # My first automatic Jupyter Notebook
-    This is an auto-generated notebook."""
-    code = """\
-    %pylab inline
-    hist(normal(size=2000), bins=50);"""
+
+    text = '# {}'.format(model.name)
+    t_mvars = 'Computable mvars:\n' + '\n'.join(
+        '1. {}'.format(var) for var in model.mvar_names)
+    c_imports = 'import bgc_md2.helper as h'
+    c_model = 'model = h.Model({})'.format(repr(model.name))
+    c_render = 'for var in model.mvars:\n    model.render(var)'
 
     nb['cells'] = [nbf.v4.new_markdown_cell(text),
-               nbf.v4.new_code_cell(code) ]
+                   nbf.v4.new_markdown_cell(t_mvars),
+                   nbf.v4.new_code_cell(c_imports),
+                   nbf.v4.new_code_cell(c_model),
+                   nbf.v4.new_code_cell(c_render),
+    ]
     nbf.write(nb,ReportFilePath)
 
 
@@ -90,20 +94,30 @@ def funcmakerInsertLinkInToBox(grid,name):
 
     return insert_link
 
-def modelVBox(modelName):
-    
-    mvs=computable_mvars(modelName)
-    res=get_single_mvar_value(CompartmentalMatrix,modelName)
-    def output(var):
-        res=get_single_mvar_value(var,modelName)
+
+class Model:
+
+    def __init__(self, name):
+        self.name = name
+        self.mvars = computable_mvars(name)
+        self.mvar_names = [var.__name__ for var in self.mvars]
+        
+    def render(self, var, capture=False):
+        res = get_single_mvar_value(var, self.name)
         out = widgets.Output()
         with out:
-            display(var.__name__+"=")
+            display(var.__name__ + '=')
             display(Math(latex(res)))
             # The latex could be filtered to display subscripts better
             #display(res)
-        return out
+        if capture:
+            return out
+        else:
+            display(out)
 
+
+def modelVBox(modelName):
+    model = Model(modelName)
     box= widgets.VBox(
         [
             widgets.HTML(value="""
@@ -116,12 +130,12 @@ def modelVBox(modelName):
             widgets.HTML(
                 "computable_mvars( perhaps as links to the docs or some graph ui ...)"
                 +"<ol>\n"
-                +"\n".join(["<li> "+var.__name__+" </li>" for var in mvs])
+                +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
                 +"</ol>\n"
             )
         ]
         +
-        [ output(var) for var in mvs ]
+        [ model.render(var, capture=True) for var in model.mvars ]
     )
     b =  widgets.Button(
                     layout=widgets.Layout(width='auto', height='auto'),
