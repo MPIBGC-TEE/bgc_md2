@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.5.0
+#       jupytext_version: 1.4.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -45,7 +45,7 @@ from IPython.display import display, Markdown, Latex,HTML,Math
 display(Markdown('*some markdown* $\phi$'))
 
 
-from bgc_md2.helper import list_models_md,list_models,modelListGridBox
+from bgc_md2.helper import list_models_md,list_models
 
 
 h.list_models()

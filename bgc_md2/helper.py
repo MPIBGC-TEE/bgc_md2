@@ -9,6 +9,8 @@ from sympy import latex
 import ipywidgets as widgets
 import nbformat as nbf
 import pkgutil
+import matplotlib.pyplot as plt
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
 def list_models():
@@ -56,12 +58,12 @@ def funcmakerInsertLinkInToBox(grid,name):
     def insert_link(b):
         # called for side effect on grid object
         tmpDirPath= Path("./tmp") # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
-        tmpDirPath.mkdir(exist_ok=True)   
+        tmpDirPath.mkdir(exist_ok=True)
         suffix=".ipynb"
         nbPath=tmpDirPath.joinpath(name+suffix)
         createSingleModelNb(name,nbPath)
         old_chs=grid.children
-        new_chs=( 
+        new_chs=(
             widgets.HTML(
                 value="""
                 <a href="{path}" target="_blank">{text}</a>
@@ -70,7 +72,7 @@ def funcmakerInsertLinkInToBox(grid,name):
                         text = name+suffix
                     )
              )
-        ,) 
+        ,)
         # we change the children tuple
         grid.children=old_chs + new_chs
 
@@ -78,12 +80,39 @@ def funcmakerInsertLinkInToBox(grid,name):
 
 
 class Model:
+    # mm @Thomas:
+    #
+    # 1.
+    # in the current implementation the Model has to be reinstanciated
+    # when the source.py of a model changes on disk 
+    # (For the dot tab completion even the whole class would have to be
+    # regenerated.) As a consequence it should be regarded as an ultra
+    # light weight shortlived (made on demand) 
+    # interface to ipython (which makes working with classes convinient
+    # (e.g. by tab completion)
+    # see comments on __init__
+    #
+    # 2.
+    # Model as class name is used in the backend packages and 
+    # therefore aquired a special connotation.
+    # We might have to look for a more specific name
 
     def __init__(self, name):
         self.name = name
-        self.mvars = computable_mvars(name)
+        # mm @Thomas:
+        # the next two properties will get stale when the underlying model source.py changes on disk
+        # maybe they do not have to be stored ...
+        # which would not be a problem it this Model instance is always ready to die
+        # and regenerated. 
+
+        # I have no final opinion just a reminder to keep on the lookout
+        # for alternative approaches  (see above...)
+        # that might be a bit cheaper computationaly by not bundling things into an instance that
+        # has to be discarded completely 
+
+        self.mvars = computable_mvars(name) # could be a @property decorated methods
         self.mvar_names = [var.__name__ for var in self.mvars]
-        
+
     def render(self, var, capture=False):
         res = get_single_mvar_value(var, self.name)
         out = widgets.Output()
@@ -100,21 +129,39 @@ class Model:
 
 def modelVBox(model_name):
     model = Model(model_name)
+    # on demand computation is used
+    # I am aware of the possibility of model.computable_mvars
+    cmvs = computable_mvars(model_name) 
+    target_var = SmoothReservoirModel 
+    pictlist = []
+    if target_var in cmvs:
+        srm = get_single_mvar_value(target_var, model_name)
+        graph_out = widgets.Output()
+        fig = plt.figure()
+        rect = 0,0,0.8,1.2 #l, b, w, h
+        ax=fig.add_axes(rect)
+        with graph_out:
+            ax.clear()
+            srm.plot_pools_and_fluxes(ax)
+            display(ax.figure)
+        pictlist = [graph_out]     
+    
     box = widgets.VBox(
         [
             widgets.HTML(value="""
                 <h1>{name}</h1>
-                This model specific overview page depends on the available 
-                properties
+                Overview 
                 """.format(name=model_name)
             ),
             widgets.HTML(
-                "computable_mvars( perhaps as links to the docs or some graph ui ...)"
+                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
                 +"<ol>\n"
                 +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
                 +"</ol>\n"
             ),
         ]
+        +
+        pictlist
         +
         [model.render(var, capture=True) for var in model.mvars]
     )
@@ -124,7 +171,7 @@ def modelVBox(model_name):
     )
     b.on_click(funcmakerInsertLinkInToBox(box, model_name))
     box.children += (b,)
-    return box 
+    return box
 
 
 #################################################################################
@@ -144,7 +191,7 @@ class ModelListGridBox(widgets.GridspecLayout):
         self.names = list_models()
         super().__init__(len(self.names), 10)
         self.populate()
-        
+
     def create_notebook(self, i, name):
         # called for side effect on g
         tmp_dir_path = Path('./tmp') # has to be relative for jupyter to open the file
