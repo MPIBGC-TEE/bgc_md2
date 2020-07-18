@@ -48,5 +48,6 @@ class VegetationCarbonStateVariableTuple(tuple):
 
 class VegetationCarbonCompartmentalMatrix(ImmutableMatrix): #cycling matrix
     pass
-
+class ParameterDict(frozendict):
+    pass
 

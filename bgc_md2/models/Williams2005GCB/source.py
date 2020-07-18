@@ -1,6 +1,8 @@
-from sympy import symbols ,Symbol,ImmutableMatrix,exp
+from sympy import symbols ,Symbol,ImmutableMatrix,exp,Rational
 from sympy.physics.units.systems import SI
-from sympy.physics.units import Quantity, length, mass,time,temperature
+from sympy.physics.units import (
+        Quantity, length, mass,time,temperature,
+        gram,meter,day,kelvin)
 from sympy.physics.units.systems.si import dimsys_SI
 
 from bgc_md2.resolve.mvars import (
@@ -13,15 +15,7 @@ from bgc_md2.resolve.mvars import (
         ,VegetationCarbonStateVariableTuple
         )
 
-
-
-def describedQuantity(name, dimension, description):
-    obj=Quantity(name=name)
-    SI.set_quantity_dimension(obj,dimension)
-    obj.description = description
-    #obj = Symbol(name)
-    return obj
-
+from bgc_md2.described_quantities import describedQuantity
 
 # define Quantities (as you would symbols, but with an additional description)
 t=TimeSymbol('t')
@@ -45,6 +39,7 @@ p_14	=  describedQuantity("p_14"	    , 1	                            ,"Fraction 
 p_15	=  describedQuantity("p_15"	    , 1/time                        ,"Turnover rate of labile carbon")
 p_16	=  describedQuantity("p_16"	    , 1	                            ,"Fraction of labile transfers respired ")
 NPP		=  describedQuantity("NPP"		, mass*length**(-2)*time**(-1)  ,"Net Primary Production per area")
+tp      =  describedQuantity("tp"       ,1/temperature                  ,"triple point of water in "
 
 
 
@@ -54,7 +49,13 @@ NPP		=  describedQuantity("NPP"		, mass*length**(-2)*time**(-1)  ,"Net Primary P
 #    ("G"		, "mass*length**(-2)*time**(-1)"	                            ,),
 
 # Temperature sensitive rate parameter
-T_rate = 0.5*exp(p_10*0.5*(maxt+mint))
+# originaly defined for maxt_c,mint_c in deg Celsius
+# T_rate = 0.5*exp(p_10*0.5*(maxt_c+mint_c))
+# which translates to 
+# T_rate =0.5.exp(p_10*0.5*(maxt-tp + mint-tp))
+#        =0.5.exp(p_10*((maxt + mint)/2- tp))
+# where [p_10] = 1/kelvin (instead of 1/deg_celsius)
+T_rate =0.5.exp(p_10*((maxt + mint)/2-tp))
 
 # state vector
 x = StateVariableTuple((C_f, C_lab, C_w, C_r))
@@ -68,7 +69,7 @@ x = StateVariableTuple((C_f, C_lab, C_w, C_r))
 u = NPP
 
 # tuple of partitioning coefficients of photosynthetically fixed carbon
-b = ((p_3*multtl), 0, (1-p_4), p_4) 
+b = ((p_3*multtl), 0, (1-p_4), p_4)
 
 #f_v = u*b+A*x
 
@@ -103,6 +104,28 @@ I = InputTuple(u*ImmutableMatrix(b))
 #    possible_combinations:
 #        - ["param_vals", "init_vals", RT1]
 #
+deg_k=cf_units
+p1= ParameterDict({
+    NPP		    :Rational(409, 365)*gram*meter**(-2)/day,
+    tp          :-273.15*kelvin
+	mint		:(-4+tp)*kelvin,
+	maxt		:(5+tp)*kelvin,
+	multtf		:0,
+	multtl		:1,
+	#p_2		    :0.47,
+	p_3		    :0.31,
+	p_4		    :0.43,
+	p_5		    :0.0027/day,
+	p_6		    :0.00000206/day,
+	p_7		    :0.00248/day,
+    #
+    # to interpret p10 as 1/kelvin the T_rate expression
+	p_10		:0.0693/kelvin, 
+	p_14		:0.45*1,
+	p_15		:0.001/day,
+	p_16        :0.25*1
+})
+print(A.subs(p1))
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
@@ -111,17 +134,20 @@ specialVars={
     I, # the overall imput
     t, # time for the complete system
     x, # state vector of the the complete system
-    # 
-    ## the following variables give a more detailed view with respect to 
-    ## carbon and vegetation variables
-    ## This imformation can be used to extract the part
-    ## of a model that is concerned with carbon and vegetation
-    ## in the case of this model all of the state variables 
-    ## are vegetation and carbon related but for an ecosystem model
-    ## for different elements there could be different subsystems 
-    ## e.g. consisting of  Nitrogen Soil state variables 
-    VegetationCarbonInputScalar(u),   # vegetation carbon 
-    VegetationCarbonInputPartitioningTuple(b), # vegetation carbon partitioning.
+    #
+    # the following variables give a more detailed view with respect to
+    # carbon and vegetation variables
+    # This imformation can be used to extract the part
+    # of a model that is concerned with carbon and vegetation
+    # in the case of this model all of the state variables
+    # are vegetation and carbon related but for an ecosystem model
+    # for different elements there could be different subsystems
+    # e.g. consisting of  Nitrogen Soil state variables
+    #
+    # vegetation carbon
+    VegetationCarbonInputScalar(u),
+    # vegetation carbon partitioning.
+    VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
 }
 
