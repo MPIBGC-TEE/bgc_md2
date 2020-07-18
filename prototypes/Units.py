@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from sympy import Symbol,latex,prod
+from sympy import Symbol,Function,latex,prod,sin,pi
 from sympy.physics.units import (
         convert_to,
         Quantity,
@@ -8,8 +8,10 @@ from sympy.physics.units import (
         day,
         second,
         minute,
+        kelvin,
         meter,
-        kilometer)
+        kilometer,
+        kilogram)
 from sympy.physics.units.systems import SI
 from sympy.physics.units.systems.si import dimsys_SI
 # only fixed qunatities (numbers times unit like in a parameter set)
@@ -70,5 +72,49 @@ fig = plt.figure()
 #ax = fig.add_axes((0,0,1,1))
 ax = fig.add_subplot(1,1,1)
 #plot_with_units(ax,(xs,second),(ys,meter/second))
-auto_plot_with_units(ax,xs,ys)
-plt.show()
+#auto_plot_with_units(ax,xs,ys)
+#plt.show()
+
+
+
+v=Function('v')
+m=Quantity('m')
+# create an expression containing a function
+E=m/2*v(t)**2
+
+
+
+# a function with uits
+def v_unit(t):
+    assert(
+        dimsys_SI.equivalent_dims(
+            SI.get_dimensional_expr(t),
+            time
+        )
+    )
+    omega=2*pi/second
+    V_0=20*meter/second
+    V_range=5*meter/second
+    return V_0+V_range*sin(omega*t)
+
+def v_num(t):
+    omega=2*pi
+    V_0=20
+    V_range=5
+    return V_0+V_range*sin(omega*t)
+
+
+#print(v_unit(3*day))
+
+#create a funcdict
+funcDictUnit={v(t):v_unit}
+funcDictNum={v(t):v_num}
+
+parDictUnit={m:5*kilogram}
+parDictNum ={m:5}
+
+E_unit=E.subs(funcDictUnit).subs(parDictUnit)
+E_num=E.subs(funcDictNum).subs(parDictNum)
+
+E_num 
+

@@ -24,7 +24,7 @@ C_f     =  describedQuantity("C_f"      , mass/length**2                ,"Foliar
 C_lab	=  describedQuantity("C_lab"	, mass/length**2                ,"Labile C mass")
 C_w		=  describedQuantity("C_w"		, mass/length**2                ,"Wood C mass")
 C_r		=  describedQuantity("C_r"		, mass/length**2                ,"Fine root C mass")
-p_10	=  describedQuantity("p_10"	    , 1/temperature                 ,"Parameter in exponential term of temperature dependent rate parameter ")
+p_10	=  describedQuantity("p_10"	    , 1/temperature                 ,"Parameter in exponential term of temperature dependent rate parameter")
 mint	=  describedQuantity("mint"	    , temperature                   ,"Dayly minimum temperature")
 maxt	=  describedQuantity("maxt"	    , temperature                   ,"Dayly maximum temperature")
 multtl	=  describedQuantity("multtl"	, 1/time                        ,"Turnover of labile C (0 = off, 1 = On)")
@@ -39,7 +39,6 @@ p_14	=  describedQuantity("p_14"	    , 1	                            ,"Fraction 
 p_15	=  describedQuantity("p_15"	    , 1/time                        ,"Turnover rate of labile carbon")
 p_16	=  describedQuantity("p_16"	    , 1	                            ,"Fraction of labile transfers respired ")
 NPP		=  describedQuantity("NPP"		, mass*length**(-2)*time**(-1)  ,"Net Primary Production per area")
-tp      =  describedQuantity("tp"       ,1/temperature                  ,"triple point of water in "
 
 
 
@@ -48,14 +47,8 @@ tp      =  describedQuantity("tp"       ,1/temperature                  ,"triple
 #    ("GPP"		, "mass*length**(-2)*time**(-1)"	,"Gross Primary Production per area"),
 #    ("G"		, "mass*length**(-2)*time**(-1)"	                            ,),
 
-# Temperature sensitive rate parameter
-# originaly defined for maxt_c,mint_c in deg Celsius
-# T_rate = 0.5*exp(p_10*0.5*(maxt_c+mint_c))
-# which translates to 
-# T_rate =0.5.exp(p_10*0.5*(maxt-tp + mint-tp))
-#        =0.5.exp(p_10*((maxt + mint)/2- tp))
-# where [p_10] = 1/kelvin (instead of 1/deg_celsius)
-T_rate =0.5.exp(p_10*((maxt + mint)/2-tp))
+# Temperature sensitive rate parameterd
+T_rate =0.5.exp(p_10*((maxt + mint)/2))
 
 # state vector
 x = StateVariableTuple((C_f, C_lab, C_w, C_r))
@@ -107,9 +100,18 @@ I = InputTuple(u*ImmutableMatrix(b))
 deg_k=cf_units
 p1= ParameterDict({
     NPP		    :Rational(409, 365)*gram*meter**(-2)/day,
-    tp          :-273.15*kelvin
-	mint		:(-4+tp)*kelvin,
-	maxt		:(5+tp)*kelvin,
+    # Note:
+    # The (negative ) parameter value for mint (see below) suggests that
+    # maxt and mint are given in the celsius scale.
+    # The sympy unit system does not destinguish between absolute
+    # temperature and celsius scale.
+    # Conceptually 5 deg Celsius describe a temperature DIFFERENCE of 5 Kelvin
+    # to the triple point of water.
+    # Differences are always mesured in Kelvin 
+    # So although mint and maxt are given in kelvin they are not understood
+    # as absolute temperatures but as differences to the triple point.
+	mint		:-4*kelvin,
+	maxt		:5*kelvin,
 	multtf		:0,
 	multtl		:1,
 	#p_2		    :0.47,
@@ -119,13 +121,14 @@ p1= ParameterDict({
 	p_6		    :0.00000206/day,
 	p_7		    :0.00248/day,
     #
-    # to interpret p10 as 1/kelvin the T_rate expression
+    # Althouhg p10 is considered to have unit 1/kelvin 
+    # inspection of the T_rate expression connects it 
+    # to Temperature DIFFERENCE from  the triple point
 	p_10		:0.0693/kelvin, 
 	p_14		:0.45*1,
 	p_15		:0.001/day,
 	p_16        :0.25*1
 })
-print(A.subs(p1))
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
