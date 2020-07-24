@@ -17,29 +17,52 @@ from sympy import (
 from sympy.physics.units import (
     day,
     year,
-    kilogram
+    kilogram,
+    gram
 )
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
-class ModelRunWithUnits(SmoothModelRun):
+
+def to_number(q, targetUnit):
+    q_s = simplify(q)
+    return 0 if q_s == 0 else float(simplify((q/targetUnit)))
+
+
+class QuantityParameterizedModel():
     def __init__(
         self,
         srm,
         par_dict,
-        start_values,
-        times,
         func_dict,
         state_var_unit,
         time_unit,
     ):
-        super().__init__(
-            srm,
-            par_dict,
-            start_values,
-            times,
-            func_dict
+        self.srm =  srm,
+        self.par_dict = par_dict,
+        self.func_dict = func_dict
+        self.state_var_unit = state_var_unit
+        self.time_unit = time_unit
+
+
+
+class QuantityModelRun():
+    @classmethod
+    def __init__(
+        self,
+        qpm,
+        start_values_quant,
+        times_quant,
+    ):
+        times_num=np.array([to_number(tv,qpm.time_unit) for tv in times_quant])
+        start_values_num=np.array([to_number(sv,qpm.state_var_unit) for sv in start_values_quant])
+        self.mr=SmoothModelRun(
+            qpm.srm,
+            qpm.par_dict,
+            start_values_num,
+            times_num,
+            qpm.func_dict
         )
         self.state_var_unit = state_var_unit
         self.time_unit = time_unit
@@ -80,20 +103,11 @@ class TestModelRunWithUnits(unittest.TestCase):
             internal_fluxes
         )
 
-        # the solution of a modelrun that received quatities as parameters
-        # should be a quantity and have a unit
-        # The quantities of the results could be infered from parameters and functions as quanteties but this is very
-        # expensive computationally. 
-        # To minimize computational cost we require the user to provide all expressions, parameters, functions, start values and times 
-        # with respect to consistent units for time and statevariables.
-        # From these tow units all computable quanteties can be inferred
         par_dict = {
             k_01: 1/100,  # 1/year
             k_10: 1/100,  # 1/year
             k_0o: 1/2     # 1/year  
         }
-        times = np.linspace(0, 20, 16)  # year
-        start_values= np.array([1, 2])  # kg
 
         def k_1o_func(t):
             omega = 2*pi    # 1/year
@@ -103,13 +117,24 @@ class TestModelRunWithUnits(unittest.TestCase):
             u_res = V_0+V_range*sin(omega*t+phi)
             return u_res
 
-        smrwu = ModelRunWithUnits(
+        qpm = QuantityParameterizedModel(
             srm,
             par_dict,
-            start_values,
-            times,
             {k_1o: k_1o_func},
-            kilogram,
+            kilogram, #fixme could become a vector
             year
         )
-        print(smrwu.solve())
+        # The parameterdict and the functions, possibly even the matrix/flux expressions
+        # have implicit unit assumption, which the user is required to maintain consistently.
+        # To make modelruns comparable it is important to remember the units for which this 
+        # consistency can be guaranteed.
+
+        # A model run can then adapt the units of times and masses since it 
+        times = np.linspace(0, 20, 16)*day 
+        start_values = [1*kilogram, 2*gram]  # kg
+        qmr = QuantityModelRun(
+            qpm,
+            start_values,
+            times
+        )
+        print(qmr.solve())
