@@ -20,56 +20,16 @@ from sympy.physics.units import (
     kilogram,
     gram
 )
+from bgc_md2.resolve.mvars import (
+    QuantityParameterizedModel,
+    NumericParameterization,
+    QuantityParameterization,
+    QuantityModelRun
+)
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
-
-def to_number(q, targetUnit):
-    q_s = simplify(q)
-    return 0 if q_s == 0 else float(simplify((q/targetUnit)))
-
-
-class QuantityParameterizedModel():
-    def __init__(
-        self,
-        srm,
-        par_dict,
-        func_dict,
-        state_var_unit,
-        time_unit,
-    ):
-        self.srm =  srm,
-        self.par_dict = par_dict,
-        self.func_dict = func_dict
-        self.state_var_unit = state_var_unit
-        self.time_unit = time_unit
-
-
-
-class QuantityModelRun():
-    @classmethod
-    def __init__(
-        self,
-        qpm,
-        start_values_quant,
-        times_quant,
-    ):
-        times_num=np.array([to_number(tv,qpm.time_unit) for tv in times_quant])
-        start_values_num=np.array([to_number(sv,qpm.state_var_unit) for sv in start_values_quant])
-        self.mr=SmoothModelRun(
-            qpm.srm,
-            qpm.par_dict,
-            start_values_num,
-            times_num,
-            qpm.func_dict
-        )
-        self.state_var_unit = state_var_unit
-        self.time_unit = time_unit
-
-    def solve(self):
-        sol_num = super().solve()
-        return sol_num*self.state_var_unit
 
 
 class TestModelRunWithUnits(unittest.TestCase):
@@ -103,7 +63,7 @@ class TestModelRunWithUnits(unittest.TestCase):
             internal_fluxes
         )
 
-        par_dict = {
+        par_dict= {
             k_01: 1/100,  # 1/year
             k_10: 1/100,  # 1/year
             k_0o: 1/2     # 1/year  
@@ -117,12 +77,15 @@ class TestModelRunWithUnits(unittest.TestCase):
             u_res = V_0+V_range*sin(omega*t+phi)
             return u_res
 
+        para = QuantityParameterization(
+            par_dict=par_dict,
+            func_dict={k_1o: k_1o_func},
+            state_var_unit=kilogram, #fixme could become a vector
+            time_unit=year
+        )
         qpm = QuantityParameterizedModel(
-            srm,
-            par_dict,
-            {k_1o: k_1o_func},
-            kilogram, #fixme could become a vector
-            year
+            srm=srm,
+            parameterization=para
         )
         # The parameterdict and the functions, possibly even the matrix/flux expressions
         # have implicit unit assumption, which the user is required to maintain consistently.
@@ -130,11 +93,29 @@ class TestModelRunWithUnits(unittest.TestCase):
         # consistency can be guaranteed.
 
         # A model run can then adapt the units of times and masses since it 
-        times = np.linspace(0, 20, 16)*day 
-        start_values = [1*kilogram, 2*gram]  # kg
+        times_quant = np.linspace(0, 20, 16)*day 
+        start_values_quant = [1*kilogram, 2*gram]  # kg
+
+
+        #fake model run
+        #times_num=np.array([to_number(tv,qpm.time_unit) for tv in times_quant])
+        #start_values_num=np.array([to_number(sv,qpm.state_var_unit) for sv in start_values_quant])
+        #mr=SmoothModelRun(
+        #    qpm.srm,
+        #    qpm.par_dict,
+        #    start_values_num,
+        #    times_num,
+        #    {k_1o: k_1o_func}
+        #)
         qmr = QuantityModelRun(
             qpm,
-            start_values,
-            times
+            start_values_quant,
+            times_quant
         )
         print(qmr.solve())
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+
