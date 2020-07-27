@@ -122,11 +122,14 @@ def button_callback(function, *args):
 
 class ModelListGridBox(widgets.GridspecLayout):
 
-    def __init__(self, inspect_model):
-        self.inspect_model = inspect_model
+    def __init__(self, inspection_box):
+        self.inspection_box = inspection_box
         self.names = list_models()
         super().__init__(len(self.names), 10)
         self.populate()
+
+    def inspect_model(self, name):
+        self.inspection_box.update(name)
 
     def populate(self):
         for i, name in enumerate(self.names):

@@ -31,12 +31,10 @@ outerGridBox = widgets.GridspecLayout(3, 1)
 model_inspection = h.ModelInspectionBox()
 outerGridBox[1, 0:2] = model_inspection
 
-def inspect_model(name):
-    model_inspection.update(name)
+model_list = h.ModelListGridBox(inspection_box=model_inspection)
+outerGridBox[0, 0:2] = model_list
 
-outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
-
-inspect_model(h.list_models()[0])
+model_list.inspect_model(model_list.names[0])
 
 # make sure that the next cell is not in scroll mode
 display(outerGridBox)
