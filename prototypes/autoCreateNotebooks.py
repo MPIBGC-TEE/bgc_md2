@@ -18,27 +18,16 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # %load_ext autoreload
 # %autoreload 2
-import ipywidgets as widgets
-from IPython.display import display
 import bgc_md2.helper as h
 
-
-# # use a layout widget to build the interactive overview table
-#
-
-outerGridBox = widgets.GridspecLayout(3, 1)
-
 model_inspection = h.ModelInspectionBox()
-outerGridBox[1, 0:2] = model_inspection
 
 model_list = h.ModelListGridBox(inspection_box=model_inspection)
-outerGridBox[0, 0:2] = model_list
+model_list
+
+model_inspection
 
 model_list.inspect_model(model_list.names[0])
-
-# make sure that the next cell is not in scroll mode
-display(outerGridBox)
-# -
 
 # # Some alternatives to create html an markdown programmatically
 #
