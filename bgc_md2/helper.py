@@ -53,30 +53,13 @@ def createSingleModelNb(model_name, report_file_path):
     nbf.write(nb, report_file_path)
 
 
-#################################################################################
-def funcmakerInsertLinkInToBox(grid,name):
-    def insert_link(b):
-        # called for side effect on grid object
-        tmpDirPath= Path("./tmp") # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
-        tmpDirPath.mkdir(exist_ok=True)
-        suffix=".ipynb"
-        nbPath=tmpDirPath.joinpath(name+suffix)
-        createSingleModelNb(name,nbPath)
-        old_chs=grid.children
-        new_chs=(
-            widgets.HTML(
-                value="""
-                <a href="{path}" target="_blank">{text}</a>
-                """.format(
-                        path = nbPath.as_posix(),
-                        text = name+suffix
-                    )
-             )
-        ,)
-        # we change the children tuple
-        grid.children=old_chs + new_chs
-
-    return insert_link
+def createSingleModelNbFile(model_name):
+    tmp_dir = Path('./tmp') # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
+    tmp_dir.mkdir(exist_ok=True)
+    file_name = model_name + '.ipynb'
+    nb_path = tmp_dir.joinpath(file_name)
+    createSingleModelNb(model_name, nb_path)
+    return file_name, nb_path
 
 
 class Model:
@@ -127,53 +110,6 @@ class Model:
             display(out)
 
 
-def modelVBox(model_name):
-    model = Model(model_name)
-    # on demand computation is used
-    # I am aware of the possibility of model.computable_mvars
-    cmvs = computable_mvars(model_name) 
-    target_var = SmoothReservoirModel 
-    pictlist = []
-    if target_var in cmvs:
-        srm = get_single_mvar_value(target_var, model_name)
-        graph_out = widgets.Output()
-        fig = plt.figure()
-        rect = 0,0,0.8,1.2 #l, b, w, h
-        ax=fig.add_axes(rect)
-        with graph_out:
-            ax.clear()
-            srm.plot_pools_and_fluxes(ax)
-            display(ax.figure)
-        pictlist = [graph_out]     
-    
-    box = widgets.VBox(
-        [
-            widgets.HTML(value="""
-                <h1>{name}</h1>
-                Overview 
-                """.format(name=model_name)
-            ),
-            widgets.HTML(
-                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-                +"<ol>\n"
-                +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
-                +"</ol>\n"
-            ),
-        ]
-        +
-        pictlist
-        +
-        [model.render(var, capture=True) for var in model.mvars]
-    )
-    b =  widgets.Button(
-        layout=widgets.Layout(width='auto', height='auto'),
-        description="Create notebook from template"
-    )
-    b.on_click(funcmakerInsertLinkInToBox(box, model_name))
-    box.children += (b,)
-    return box
-
-
 #################################################################################
 
 def button_callback(function, *args):
@@ -206,3 +142,64 @@ class ModelListGridBox(widgets.GridspecLayout):
             with out:
                 display(res)
             self[i, 1:9] = out
+
+
+class ModelInspectionBox(widgets.VBox):
+
+    def create_notebook(self, model_name):
+        file_name, nb_path = createSingleModelNbFile(model_name)
+        self.children += (
+            widgets.HTML(
+                value = """
+                <a href="{path}" target="_blank">{text}</a>
+                """.format(
+                    path = nb_path.as_posix(),
+                    text = file_name,
+                )
+            ),
+        )
+
+    def update(self, model_name):
+        model = Model(model_name)
+        # on demand computation is used
+        # I am aware of the possibility of model.computable_mvars
+        cmvs = computable_mvars(model_name)
+        target_var = SmoothReservoirModel
+        pictlist = []
+        if target_var in cmvs:
+            srm = get_single_mvar_value(target_var, model_name)
+            graph_out = widgets.Output()
+            fig = plt.figure()
+            rect = 0,0,0.8,1.2 #l, b, w, h
+            ax=fig.add_axes(rect)
+            with graph_out:
+                ax.clear()
+                srm.plot_pools_and_fluxes(ax)
+                display(ax.figure)
+            pictlist = [graph_out]
+
+        self.children = (
+            [
+                widgets.HTML(value="""
+                    <h1>{name}</h1>
+                    Overview
+                    """.format(name=model_name)
+                ),
+                widgets.HTML(
+                    "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
+                    +"<ol>\n"
+                    +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
+                    +"</ol>\n"
+                ),
+            ]
+            +
+            pictlist
+            +
+            [model.render(var, capture=True) for var in model.mvars]
+        )
+        b =  widgets.Button(
+            layout=widgets.Layout(width='auto', height='auto'),
+            description="Create notebook from template"
+        )
+        b.on_click(button_callback(self.create_notebook, model_name))
+        self.children += (b,)

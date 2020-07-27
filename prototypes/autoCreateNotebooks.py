@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.2
+#       jupytext_version: 1.5.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -27,10 +27,12 @@ import bgc_md2.helper as h
 #
 
 outerGridBox = widgets.GridspecLayout(3, 1)
-model_view_pos = 1
+
+model_inspection = h.ModelInspectionBox()
+outerGridBox[1, 0:2] = model_inspection
 
 def inspect_model(name):
-    outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
+    model_inspection.update(name)
 
 outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
 
