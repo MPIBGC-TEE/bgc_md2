@@ -192,50 +192,17 @@ class ModelListGridBox(widgets.GridspecLayout):
         super().__init__(len(self.names), 10)
         self.populate()
 
-    def create_notebook(self, i, name):
-        # called for side effect on g
-        tmp_dir_path = Path('./tmp') # has to be relative for jupyter to open the file
-        tmp_dir_path.mkdir(exist_ok=True)
-        suffix = '.ipynb'
-        nbPath = tmp_dir_path.joinpath(name + suffix)
-
-        createSingleModelNb(name, nbPath)
-
-        self[i, 9] = widgets.HTML(
-            value="""
-            <a href="{path}" target="_blank">{text}</a>
-            """.format(
-                path = nbPath.as_posix(),
-                text = name + suffix
-            )
-        )
-
     def populate(self):
         for i, name in enumerate(self.names):
-            self[i, 0] = widgets.Text(
-                layout=widgets.Layout(width='auto', height='auto'),
-                value=name,
+            button_inspect_model = widgets.Button(
+                description=name,
             )
+            button_inspect_model.on_click(
+                button_callback(self.inspect_model, name))
+            self[i, 0] = button_inspect_model
 
             res = get_single_mvar_value(CompartmentalMatrix, name)
             out = widgets.Output()
             with out:
                 display(res)
-            self[i, 1:7] = out
-
-            button_inspect_model = widgets.Button(
-                description='Inspect model',
-            )
-            button_inspect_model.on_click(
-                button_callback(self.inspect_model, name))
-
-            button_create_notebook = widgets.Button(
-                description='Create notebook from template',
-            )
-            button_create_notebook.on_click(
-                button_callback(self.create_notebook, i, name))
-
-            self[i, 8] = widgets.VBox([
-                button_inspect_model,
-                button_create_notebook,
-            ])
+            self[i, 1:9] = out
