@@ -142,9 +142,11 @@ class ModelListGridBox(widgets.GridspecLayout):
 
 class ModelInspectionBox(widgets.VBox):
 
+    nb_link_box = None
+
     def create_notebook(self, model_name):
         file_name, nb_path = createSingleModelNbFile(model_name)
-        self.children += (
+        self.nb_link_box.children = (
             widgets.HTML(
                 value = """
                 <a href="{path}" target="_blank">{text}</a>
@@ -204,3 +206,6 @@ class ModelInspectionBox(widgets.VBox):
         )
         b.on_click(button_callback(self.create_notebook, model_name))
         self.children += (b,)
+
+        self.nb_link_box = widgets.VBox()
+        self.children += (self.nb_link_box,)
