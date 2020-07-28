@@ -13,6 +13,9 @@
 #     name: python3
 # ---
 
+from IPython.display import HTML
+_ = HTML("<style>.container { width:100% !important; }</style>")
+
 # %load_ext autoreload
 # %autoreload 2
 import ipywidgets as widgets
