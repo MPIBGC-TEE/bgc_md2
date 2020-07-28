@@ -96,18 +96,11 @@ class Model:
         self.mvars = computable_mvars(name) # could be a @property decorated methods
         self.mvar_names = [var.__name__ for var in self.mvars]
 
-    def render(self, var, capture=False):
+    def render(self, var):
         res = get_single_mvar_value(var, self.name)
-        out = widgets.Output()
-        with out:
-            display(var.__name__ + '=')
-            display(Math(latex(res)))
+        display(Math('\\text{' + var.__name__ + '} =' + latex(res)))
             # The latex could be filtered to display subscripts better
             #display(res)
-        if capture:
-            return out
-        else:
-            display(out)
 
 
 #################################################################################
@@ -197,9 +190,14 @@ class ModelInspectionBox(widgets.VBox):
             ]
             +
             pictlist
-            +
-            [model.render(var, capture=True) for var in model.mvars]
         )
+
+        rendered_vars = widgets.Output()
+        with rendered_vars:
+            for var in model.mvars:
+                model.render(var)
+        self.children += (rendered_vars,)
+
         b =  widgets.Button(
             layout=widgets.Layout(width='auto', height='auto'),
             description="Create notebook from template"
