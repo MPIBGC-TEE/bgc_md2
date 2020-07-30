@@ -67,16 +67,6 @@ def createSingleModelNbFile(model_name):
 class Model:
     # mm @Thomas:
     #
-    # 1.
-    # in the current implementation the Model has to be reinstanciated
-    # when the source.py of a model changes on disk 
-    # (For the dot tab completion even the whole class would have to be
-    # regenerated.) As a consequence it should be regarded as an ultra
-    # light weight shortlived (made on demand) 
-    # interface to ipython (which makes working with classes convinient
-    # (e.g. by tab completion)
-    # see comments on __init__
-    #
     # 2.
     # Model as class name is used in the backend packages and 
     # therefore aquired a special connotation.
@@ -84,19 +74,14 @@ class Model:
 
     def __init__(self, name):
         self.name = name
-        # mm @Thomas:
-        # the next two properties will get stale when the underlying model source.py changes on disk
-        # maybe they do not have to be stored ...
-        # which would not be a problem it this Model instance is always ready to die
-        # and regenerated. 
 
-        # I have no final opinion just a reminder to keep on the lookout
-        # for alternative approaches  (see above...)
-        # that might be a bit cheaper computationaly by not bundling things into an instance that
-        # has to be discarded completely 
+    @property
+    def mvars(self):
+        return computable_mvars(self.name)
 
-        self.mvars = computable_mvars(name) # could be a @property decorated methods
-        self.mvar_names = [var.__name__ for var in self.mvars]
+    @property
+    def mvar_names(self):
+        return [var.__name__ for var in self.mvars]
 
     def render(self, var):
         res = get_single_mvar_value(var, self.name)
@@ -105,11 +90,8 @@ class Model:
             #display(res)
 
     def graph(self):
-        # on demand computation is used
-        # I am aware of the possibility of model.computable_mvars
-        cmvs = computable_mvars(self.name)
         target_var = SmoothReservoirModel
-        if target_var not in cmvs:
+        if target_var not in self.mvars:
             return
 
         srm = get_single_mvar_value(target_var, self.name)
