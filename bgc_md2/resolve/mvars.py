@@ -17,10 +17,7 @@ from sympy import (
 from sympy.physics.units import Quantity
 from sympy.physics.units.systems import SI
 from sympy.physics.units import (
-    day,
-    year,
-    kilogram,
-    gram
+   time 
 )
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
@@ -30,27 +27,112 @@ from bgc_md2.described_quantities import (
     to_number
 )
 
-class NumericStartValues(frozendict):
+# fixme: mm 03-12-2020
+# At the moment the classes are just defined to provide
+# the vocabulary for the computer signatures and model 
+# descriptions.
+# Ultimately the classes should have sensible constructors
+# that check their arguments thoroughly to expose
+# inadequate imput early in the process 
+# part of this should be a dimensional analysis
+# which requires that the model authors provide dimensions
+# for there variables
+
+class InFluxesBySymbol(frozendict):
     pass
+
+
+class OutFluxesBySymbol(frozendict):
+    pass
+
+
+class InternalFluxesBySymbol(frozendict):
+    pass
+
+
+class TimeSymbol(Symbol):
+    # should become a quantity with dimension time
+    pass
+
+
+class StateVariableTuple(tuple):
+    pass
+
+
+class InputTuple(tuple):
+    pass
+
+
+class CompartmentalMatrix(ImmutableMatrix):
+    pass
+
+
+# vegetation specific variables
+class VegetationCarbonInputTuple(tuple):
+    pass
+
+
+class VegetationCarbonInputScalar(Expr):
+    pass
+
+
+class VegetationCarbonInputPartitioningTuple(tuple):
+    pass
+
+
+class VegetationCarbonStateVariableTuple(tuple):
+    pass
+
+
+class VegetationCarbonCompartmentalMatrix(ImmutableMatrix): #cycling matrix
+    pass
+
+
+class NumericStartValueDict(frozendict):
+    pass
+
+
+class QuantityStartValueDict(frozendict):
+    pass
+
 
 
 # extending ndarray is special
 # https://numpy.org/doc/stable/user/basics.subclassing.html
 class NumericSimulationTimes(np.ndarray):
-    def __new__(cls, input_array, info=None):
+    def __new__(cls, input_array ):
         # Input array is an already formed ndarray instance
-        # We first cast to be our class type
+        # We cast to be our class type
         obj = np.asarray(input_array).view(cls)
-        # add the new attribute to the created instance
-        # obj.info = info
-        # Finally, we must return the newly created object:
+        obj.flags.writeable = False
         return obj
 
-    def __array_finalize__(self, obj):
-        # see InfoArray.__array_finalize__ for comments
-        if obj is None: return
-        #self.info = getattr(obj, 'info', None)
-    
+    def __hash__(self):
+        return hash(tuple(self))
+
+class NumericStartValueArray(np.ndarray):
+    def __new__(cls, input_array ):
+        # Input array is an already formed ndarray instance
+        # We cast to be our class type
+        obj = np.asarray(input_array).view(cls)
+        obj.flags.writeable = False
+        return obj
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+
+
+class QuantitySimulationTimes(np.ndarray):
+    def __new__(cls, input_array):
+        # Input array is an already formed ndarray instance
+        # with units attached
+        assert(SI.get_dimensional_expr(input_array[0])==time)
+        obj = np.asarray(input_array).view(cls)
+        return obj
+
+    def __hash__(self):
+        return hash(tuple(self))
 
 
 class NumericParameterization():
@@ -73,8 +155,19 @@ class NumericParameterization():
         par_dict,
         func_dict
     ):
-        self.par_dict = par_dict
-        self.func_dict = func_dict
+        self.par_dict = frozendict(par_dict)
+        self.func_dict = frozendict(func_dict)
+
+
+class NumericParameterizedSmoothReservoirModel():
+    def __init__(
+        self,
+        srm,
+        parameterization
+    ):
+        self.srm                = srm
+        self.parameterization   = parameterization
+
 
 
 class QuantityParameterization(NumericParameterization):
@@ -154,55 +247,4 @@ class QuantityModelRun():
 
         return sol_quant
         
-
-# fixme: mm 03-12-2020
-# At the moment the classes are just defined to provide
-# the vocabulary for the computer signatures and model 
-# descriptions.
-# Ultimately the classes should have sensible constructors
-# that check their arguments thoroughly to expose
-# inadequate imput early in the process 
-# part of this should be a dimensional analysis
-# which requires that the model authors provide dimensions
-# for there variables
-
-class InFluxesBySymbol(frozendict):
-    pass
-
-class OutFluxesBySymbol(frozendict):
-    pass
-
-class InternalFluxesBySymbol(frozendict):
-    pass
-
-class TimeSymbol(Symbol):
-    # should become a quantity with dimension time
-    pass
-
-class StateVariableTuple(tuple):
-    pass
-
-class InputTuple(tuple):
-    pass
-
-class CompartmentalMatrix(ImmutableMatrix):
-    pass
-
-# vegetation specific variables
-class VegetationCarbonInputTuple(tuple):
-    pass
-
-class VegetationCarbonInputScalar(Expr):
-    pass
-
-class VegetationCarbonInputPartitioningTuple(tuple):
-    pass
-
-class VegetationCarbonStateVariableTuple(tuple):
-    pass
-
-class VegetationCarbonCompartmentalMatrix(ImmutableMatrix): #cycling matrix
-    pass
-class ParameterDict(frozendict):
-    pass
 

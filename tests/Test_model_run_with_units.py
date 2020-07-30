@@ -21,10 +21,17 @@ from sympy.physics.units import (
     gram
 )
 from bgc_md2.resolve.mvars import (
-    QuantityParameterizedModel,
     NumericParameterization,
-    QuantityParameterization,
+    NumericStartValueDict,
+    NumericStartValueArray,
+    NumericSimulationTimes,
+    NumericParameterizedSmoothReservoirModel,
+    QuantityParameterizedModel,
     QuantityModelRun
+)
+
+from bgc_md2.resolve.computers import (
+    numeric_model_run_1
 )
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -34,7 +41,7 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 class TestModelRunWithUnits(unittest.TestCase):
 
-    def test_solve(self):
+    def setUp(self):
         C_0,  C_1, t, k_01, k_10, k_0o = (
                 Symbol(s) for s in ("C_0", "C_1", "t", "k_01", "k_10", "k_0o")
         )
@@ -55,7 +62,7 @@ class TestModelRunWithUnits(unittest.TestCase):
             (1, 0): k_10*C_0*C_1  # flux from pool 1 to pool 0
             }
         time_symbol = t
-        srm = SmoothReservoirModel(
+        self.srm = SmoothReservoirModel(
             state_variables,
             time_symbol,
             inputs,
@@ -63,10 +70,18 @@ class TestModelRunWithUnits(unittest.TestCase):
             internal_fluxes
         )
 
+
+    def test_solve_num(self):
+        C_0,  C_1, t, k_01, k_10, k_0o = (
+                Symbol(s) for s in ("C_0", "C_1", "t", "k_01", "k_10", "k_0o")
+        )
+
+        k_1o = Function('k_1o')
+
         par_dict= {
             k_01: 1/100,  # 1/year
             k_10: 1/100,  # 1/year
-            k_0o: 1/2     # 1/year  
+            k_0o: 1/2     # 1/year
         }
 
         def k_1o_func(t):
@@ -77,14 +92,66 @@ class TestModelRunWithUnits(unittest.TestCase):
             u_res = V_0+V_range*sin(omega*t+phi)
             return u_res
 
-        para = QuantityParameterization(
+        para = NumericParameterization(
+            par_dict=par_dict,
+            func_dict={k_1o: k_1o_func},
+        )
+        npsrm = NumericParameterizedSmoothReservoirModel(
+            srm=self.srm,
+            parameterization=para
+        )
+        # The parameterdict and the functions, possibly even the matrix/flux expressions
+        # have implicit unit assumption, which the user is required to maintain consistently.
+        # To make modelruns comparable it is important to remember the units for which this 
+        # consistency can be guaranteed.
+
+        # A model run can then adapt the units of times and masses since it 
+        times_num= np.linspace(0, 20, 16)
+        start_values_num= NumericStartValueArray([1, 2]) 
+
+
+        #fake model run
+        #times_num=np.array([to_number(tv,qpm.time_unit) for tv in times_quant])
+        #start_values_num=np.array([to_number(sv,qpm.state_var_unit) for sv in start_values_quant])
+        #mr=SmoothModelRun(
+        #    qpm.srm,
+        #    qpm.par_dict,
+        #    start_values_num,
+        #    times_num,
+        #    {k_1o: k_1o_func}
+        #)
+        nmr = numeric_model_run_1(
+            npsrm,
+            start_values_num,
+            times_num
+        )
+        print(nmr.solve())
+
+    @unittest.skip
+    def test_solve(self):
+
+        par_dict= {
+            k_01: 1/100,  # 1/year
+            k_10: 1/100,  # 1/year
+            k_0o: 1/2     # 1/year
+        }
+
+        def k_1o_func(t):
+            omega = 2*pi    # 1/year
+            phi = pi/8
+            V_0 = 20        # kilogram/year
+            V_range = 5     # kilogram/year
+            u_res = V_0+V_range*sin(omega*t+phi)
+            return u_res
+
+        para = NumericParameterizedSmoothReservoirModel(
             par_dict=par_dict,
             func_dict={k_1o: k_1o_func},
             state_var_unit=kilogram, #fixme could become a vector
             time_unit=year
         )
         qpm = QuantityParameterizedModel(
-            srm=srm,
+            srm=self.srm,
             parameterization=para
         )
         # The parameterdict and the functions, possibly even the matrix/flux expressions
@@ -118,4 +185,6 @@ if __name__ == '__main__':
     unittest.main()
 
 
+
+    unittest.main()
 

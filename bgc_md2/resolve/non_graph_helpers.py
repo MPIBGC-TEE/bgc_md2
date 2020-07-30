@@ -1,6 +1,7 @@
 from typing import Set,Callable
 from inspect import signature 
 from functools import lru_cache,reduce
+from frozendict import frozendict
 
 @lru_cache(maxsize=None) 
 def computable_mvars(
@@ -71,9 +72,15 @@ def all_mvars(all_computers: Set[Callable])->Set[type]:
         frozenset({})
     )
 
-def pretty_name(mvar:type):
-    s=mvar.__name__
-    #return ((s.split('<')[1]).split('>')[0]).split('.')[-1]
+def pretty_name(
+            mvar:type,
+            aliases: frozendict = frozendict({})
+    )->str:
+    if len(aliases) == 0:
+        s=mvar.__name__
+        #return ((s.split('<')[1]).split('>')[0]).split('.')[-1]
+    else:
+        s=aliases[mvar.__name__]
     return s
 
 # synonym for arg_set

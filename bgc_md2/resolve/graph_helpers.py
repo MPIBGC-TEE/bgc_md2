@@ -43,11 +43,11 @@ def equivalent_singlegraphs(
     )->bool:
     return all(
             [g1_single.get_edge_data(*e)
-                ==g2_single.get_edge_data(*e) 
+                ==g2_single.get_edge_data(*e)
                 for e in g1_single.edges()
             ]
             + [g1_single.get_edge_data(*e)
-                ==g2_single.get_edge_data(*e) 
+                ==g2_single.get_edge_data(*e)
                 for e in g2_single.edges()]
             ) & (g1_single.nodes()==g2_single.nodes())
 
@@ -61,32 +61,32 @@ def equivalent_multigraphs(
     # The method get_edge_data returns a dictionary
     # with the numbers of these edges as keys.
     # But we want to consider two graphs equivalent if the resulting
-    # SET is equal, in other words: 
-    # If a graph has two edges EACH from : A->B  
+    # SET is equal, in other words:
+    # If a graph has two edges EACH from : A->B
     # we do not care which of the edges has which computerset
     # Therefore we compare the set of computersets belonging
 
 
-    g1_single=toDiGraph(g1_multi) 
+    g1_single=toDiGraph(g1_multi)
     g2_single=toDiGraph(g2_multi)
     return all(
             [g1_single.get_edge_data(*e)
-                ==g2_single.get_edge_data(*e) 
+                ==g2_single.get_edge_data(*e)
                 for e in g1_single.edges()
             ]
             + [g1_single.get_edge_data(*e)
-                ==g2_single.get_edge_data(*e) 
+                ==g2_single.get_edge_data(*e)
                 for e in g2_single.edges()]
             ) & (g1_single.nodes()==g2_single.nodes())
 
-@lru_cache(maxsize=None) 
-def arg_set_graph( 
+@lru_cache(maxsize=None)
+def arg_set_graph(
         mvar :type,
         allComputers:Set[Callable]
     )->nx.MultiDiGraph:
     # return the subgraph of arg_name_sets for all computers that
     # return this mvar
-    # For compatibility we return a multigraph 
+    # For compatibility we return a multigraph
     # although we do not have more than one edge between a pair
     # of nodes
     target=frozenset({mvar})
@@ -108,19 +108,25 @@ def product_graph_2(
     cp=nx.cartesian_product(g1,g2)
     prod=nx.MultiDiGraph()
 
-
     for edge in cp.edges(data=True):
         s_tup,d_tup,data=edge
         prod.add_edge(
             reduce(lambda acc,n :acc.union(n), s_tup)
             ,reduce(lambda acc,n :acc.union(n), d_tup)
             ,computers=data['computers'])
-        
+
+    # the cartesian product can also contain nodes that
+    # are not connected.
+    for cart_node in cp.nodes:
+        prod_node=reduce(lambda acc,n :acc.union(n), cart_node)
+
+        prod.add_node(prod_node)
+
     return prod
 
 def initial_sparse_powerset_graph(computers:Set[Callable])->nx.MultiDiGraph:
     spsg=nx.MultiDiGraph()
-    allMvars = all_mvars(computers) 
+    allMvars = all_mvars(computers)
     for v in allMvars:
         spsg.add_edges_from(arg_set_graph(v,computers).edges(data=True))
     return spsg
@@ -131,13 +137,13 @@ def update_step(
     )->nx.MultiDiGraph:
     new=deepcopy(spsg)
     start_nodes= [n for n in new.nodes() if len(new.in_edges(n))==0]
-    #print(nodes_2_string(start_nodes)) 
+    # fixme: the startnode choice is too exclusive
     for node in start_nodes:
         #print(tuple(v for v in node))
         pg=product_graph(*[arg_set_graph(v,computers) for v in node])
         #new.add_edges_from(pg.edges(data=True))
         new=nx.compose(new,pg)
-    
+
     return new
 
 def sparse_powerset_graph(
@@ -146,8 +152,8 @@ def sparse_powerset_graph(
     old=initial_sparse_powerset_graph(computers)
     new=update_step(old,computers)
     while not(equivalent_multigraphs(old,new)):
+        old=deepcopy(new)
         new=update_step(old,computers)
-        old=new
         print(equivalent_multigraphs(old,new))
     return new
 
@@ -158,7 +164,7 @@ def update_generator(
 
     if max_it<0:
         raise IndexError("update sequence indices have to be larger than 0")
-    
+
     val=initial_sparse_powerset_graph(computers)
     yield val
     old=deepcopy(val)
@@ -172,7 +178,7 @@ def update_generator(
         old=deepcopy(val)
         val=update_step(val,computers)
         counter +=1
-        print(counter,equivalent_multigraphs(old,val))
+        print("counter",counter,"equivalent?",equivalent_multigraphs(old,val))
 
 
 
@@ -193,7 +199,7 @@ def toDiGraph(
         edgeDict=g_multi.get_edge_data(s,t)
         comp_set_set=edgeDict_to_set(edgeDict)
         if (g_single.has_edge(s,t)):
-            comp_set_set=comp_set_set.union( 
+            comp_set_set=comp_set_set.union(
                 g_single.get_edge_data(s,t)['computers']
             )
         g_single.add_edge(s,t,computers=comp_set_set)
@@ -206,13 +212,21 @@ def minimal_startnodes_for_single_var(
         ,targetVar:type
     ):
     ''' spg is a sparse powerset Graph, which means that it only contains all one element sets as targets.'''
+    # nx.shortes_path wiht the  mvar set as target does not find all the
+    # starting points. So
     # We first create a graph with the direction of the edges reversed
+    rev_spg = spg.reverse(copy=True)
     targetSet=frozenset({targetVar})
-    res=nx.shortest_path(spg,target=targetSet) 
+    res=nx.single_source_shortest_path(rev_spg,source=targetSet)
+    #res=nx.shortest_path(spg,target=targetSet)
+    for startnode,path in res.items():
+        print("#####################################################")
+        print("startnode",node_2_string(startnode))
+        print("path",nodes_2_string(path))
     possible_startnodes=frozenset(res.keys())
     minimal_startnodes=[n for n in filter(lambda n: not(n.issuperset(targetSet)),possible_startnodes)]
     return frozenset(minimal_startnodes)
-    
+
 #def target_subgraph(
 #         spg:nx.MultiDiGraph
 #        ,targetNode:Set[type]
@@ -220,22 +234,22 @@ def minimal_startnodes_for_single_var(
 #    def filter_func(n):
 #        # remove every set that contains one of the variables we are looking for ...
 #        return not(any([ (v in n) for v in targetNode]))
-#    
+#
 #    if spg.has_node(targetNode):
-#        # The targetNode is already part of the spg. 
-#        # (because it has been added in one of the update 
-#        # steps as an argument set of a computer) 
+#        # The targetNode is already part of the spg.
+#        # (because it has been added in one of the update
+#        # steps as an argument set of a computer)
 #        # in which case we can simply return the startnodes
 #        # of the paths leading to it.
 #        spg=spg.copy()
 #    else:
 #        # Although we do not find the node itself
-#        # we can find the nodes for the single element sets 
+#        # we can find the nodes for the single element sets
 #        # of the mvars in the node, since we have built the graph
-#        # starting wiht them. E.g if node {A,B,C} is not part of 
+#        # starting wiht them. E.g if node {A,B,C} is not part of
 #        # the graph we know at least that the nodes {A}, {B} amd {C}
-#        # are in the graph. 
-#        # For each of them we can compute the subgraph of 
+#        # are in the graph.
+#        # For each of them we can compute the subgraph of
 #        # spg that leads to it. If we compute the product of these
 #        # subgraphs it will contain the desired node.
 #
@@ -247,7 +261,7 @@ def minimal_startnodes_for_single_var(
 #        # multiplications.
 #        #prod_g=product_graph(*[target_subgraph(spg,frozenset({v})) for v in targetNode])
 #        spg=product_graph(*[minimal_target_subgraph_for_single_var(spg,v) for v in targetNode])
-#    
+#
 #    path_dict=nx.shortest_path(spg,target=targetNode)
 #    possible_startnodes=frozenset(path_dict.keys())
 #    minimal_startnodes=frozenset([n for n in filter(filter_func,possible_startnodes)])
@@ -257,7 +271,7 @@ def minimal_startnodes_for_single_var(
 #    ]
 #    connected_nodes=reduce(lambda acc, pl : acc.union(pl),path_list_list,frozenset({}))
 #    return spg.subgraph(connected_nodes).copy()
-    
+
 
 
 
@@ -281,21 +295,21 @@ def minimal_startnodes_for_node(
         ,targetNode:Set[type]
     )->Set[Set]:
     if spg.has_node(targetNode):
-        # The targetNode is already part of the spg. 
-        # (because it has been added in one of the update 
-        # steps as an argument set of a computer) 
+        # The targetNode is already part of the spg.
+        # (because it has been added in one of the update
+        # steps as an argument set of a computer)
         # in which case we can simply return the startnodes
         # of the paths leading to it.
         path_dict=nx.shortest_path(spg,target=targetNode)
         possible_startnodes=frozenset(path_dict.keys())
     else:
         # Although we do not find the node itself
-        # we can find the nodes for the single element sets 
+        # we can find the nodes for the single element sets
         # of the mvars in the node, since we have built the graph
-        # starting wiht them. E.g if node {A,B,C} is not part of 
+        # starting wiht them. E.g if node {A,B,C} is not part of
         # the graph we know at least that the nodes {A}, {B} amd {C}
-        # are in the graph. 
-        # For each of them we can compute the subgraph of 
+        # are in the graph.
+        # For each of them we can compute the subgraph of
         # spg that leads to it. If we compute the product of these
         # subgraphs it will contain the desired node.
 
@@ -309,8 +323,8 @@ def minimal_startnodes_for_node(
         prod_g=product_graph(*[minimal_target_subgraph_for_single_var(spg,v) for v in targetNode])
         prod_path_dict=nx.shortest_path(prod_g,target=targetNode)
         possible_startnodes=frozenset(prod_path_dict.keys())
-        
-    
+
+
     def filter_func(n):
         # remove every set that contains one of the variables we are looking for ...
         return not(any([ (v in n) for v in targetNode]))

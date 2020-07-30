@@ -6,6 +6,8 @@ from sympy.physics.units import (
         gram,meter,day,kelvin)
 from sympy.physics.units.systems.si import dimsys_SI
 
+from frozendict import frozendict
+
 from bgc_md2.resolve.mvars import (
         CompartmentalMatrix,
         InputTuple,
@@ -14,12 +16,12 @@ from bgc_md2.resolve.mvars import (
         VegetationCarbonInputScalar,
         VegetationCarbonInputPartitioningTuple,
         VegetationCarbonStateVariableTuple,
-        QuantityParameterizedModel,
         NumericParameterization,
-        NumericStartValues,
+        NumericStartValueDict,
         NumericSimulationTimes,
         QuantityParameterization,
-        QuantityModelRun
+        QuantityModelRun,
+        QuantityParameterizedModel,
 )
 from bgc_md2.resolve.computers import (
         smooth_reservoir_model_from_input_tuple_and_matrix
@@ -116,7 +118,7 @@ I = InputTuple(u*ImmutableMatrix(b))
 #    possible_combinations:
 #        - ["param_vals", "init_vals", RT1]
 #
-p1 = NumericParameterization(
+np1 = NumericParameterization(
     par_dict={
         NPP		    :Rational(409, 365), #*gram*/(meter**2*day)
         # Note:
@@ -148,12 +150,12 @@ p1 = NumericParameterization(
 	    p_15		:0.001,          #1/day
 	    p_16        :0.251,
     },
-    func_dict={}
+    func_dict=frozendict({})
     #state_var_units=kilogram/meter**2,
     #time_unit=day
 )
-sv1 =   NumericStartValues({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
-times = NumericSimulationTimes(np.arange(0,1096,1))
+nsv1 =   NumericStartValueDict({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
+ntimes = NumericSimulationTimes(np.arange(0,1096,1))
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
@@ -162,6 +164,9 @@ specialVars={
     I, # the overall imput
     t, # time for the complete system
     x, # state vector of the the complete system
+    np1,
+    nsv1,
+    ntimes,    
     #
     # the following variables give a more detailed view with respect to
     # carbon and vegetation variables
