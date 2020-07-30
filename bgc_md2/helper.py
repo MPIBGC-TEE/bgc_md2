@@ -41,13 +41,15 @@ def createSingleModelNb(model_name, report_file_path):
         '1. {}'.format(var) for var in model.mvar_names)
     c_imports = 'import bgc_md2.helper as h'
     c_model = 'model = h.Model({})'.format(repr(model.name))
+    c_graph = 'model.graph()'
     c_render = 'for var in model.mvars:\n    model.render(var)'
-
+    
     nb['cells'] = [
         nbf.v4.new_markdown_cell(text),
         nbf.v4.new_markdown_cell(t_mvars),
         nbf.v4.new_code_cell(c_imports),
         nbf.v4.new_code_cell(c_model),
+        nbf.v4.new_code_cell(c_graph),
         nbf.v4.new_code_cell(c_render),
     ]
     nbf.write(nb, report_file_path)
@@ -101,6 +103,22 @@ class Model:
         display(Math('\\text{' + var.__name__ + '} =' + latex(res)))
             # The latex could be filtered to display subscripts better
             #display(res)
+
+    def graph(self):
+        # on demand computation is used
+        # I am aware of the possibility of model.computable_mvars
+        cmvs = computable_mvars(self.name)
+        target_var = SmoothReservoirModel
+        if target_var not in cmvs:
+            return
+
+        srm = get_single_mvar_value(target_var, self.name)
+        fig = plt.figure()
+        rect = (0, 0, 0.8, 1.2)  # l, b, w, h
+        ax = fig.add_axes(rect)
+        ax.clear()
+        srm.plot_pools_and_fluxes(ax)
+        return ax.figure
 
 
 #################################################################################
@@ -159,41 +177,28 @@ class ModelInspectionBox(widgets.VBox):
 
     def update(self, model_name):
         model = Model(model_name)
-        # on demand computation is used
-        # I am aware of the possibility of model.computable_mvars
-        cmvs = computable_mvars(model_name)
-        target_var = SmoothReservoirModel
-        pictlist = []
-        if target_var in cmvs:
-            srm = get_single_mvar_value(target_var, model_name)
-            graph_out = widgets.Output()
-            fig = plt.figure()
-            rect = 0,0,0.8,1.2 #l, b, w, h
-            ax=fig.add_axes(rect)
-            with graph_out:
-                ax.clear()
-                srm.plot_pools_and_fluxes(ax)
-                display(ax.figure)
-            pictlist = [graph_out]
 
         self.children = (
-            [
-                widgets.HTML(value="""
-                    <h1>{name}</h1>
-                    Overview
-                    """.format(name=model_name)
-                ),
-                widgets.HTML(
-                    "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-                    +"<ol>\n"
-                    +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
-                    +"</ol>\n"
-                ),
-            ]
-            +
-            pictlist
+            widgets.HTML(value="""
+                <h1>{name}</h1>
+                Overview
+                """.format(name=model_name)
+            ),
+            widgets.HTML(
+                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
+                +"<ol>\n"
+                +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
+                +"</ol>\n"
+            ),
         )
 
+        graph = model.graph()
+        if graph:
+            graph_out = widgets.Output()
+            with graph_out:
+                display(graph)
+            self.children += (graph_out,)
+            
         rendered_vars = widgets.Output()
         with rendered_vars:
             for var in model.mvars:
