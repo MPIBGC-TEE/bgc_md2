@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.2
+#       jupytext_version: 1.5.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -18,27 +18,16 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # %load_ext autoreload
 # %autoreload 2
-import ipywidgets as widgets
-from IPython.display import display
 import bgc_md2.helper as h
 
+model_inspection = h.ModelInspectionBox()
 
-# # use a layout widget to build the interactive overview table
-#
+model_list = h.ModelListGridBox(inspection_box=model_inspection)
+model_list
 
-outerGridBox = widgets.GridspecLayout(3, 1)
-model_view_pos = 1
+model_inspection
 
-def inspect_model(name):
-    outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
-
-outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
-
-inspect_model(h.list_models()[0])
-
-# make sure that the next cell is not in scroll mode
-display(outerGridBox)
-# -
+model_list.inspect_model(model_list.names[0])
 
 # # Some alternatives to create html an markdown programmatically
 #
