@@ -83,6 +83,18 @@ class Model:
     def mvar_names(self):
         return [var.__name__ for var in self.mvars]
 
+    def __dir__(self):
+        return (super().__dir__() +
+                ['get_{}'.format(name) for name in self.mvar_names])
+
+    def __getattr__(self, name):
+        if name.startswith('get_'):
+            var_name = name[4:]
+            for var in self.mvars:
+                if var.__name__ == var_name:
+                    return lambda: get_single_mvar_value(var, self.name)
+        return super().__getattr__(name)
+
     def render(self, var):
         res = get_single_mvar_value(var, self.name)
         display(Math('\\text{' + var.__name__ + '} =' + latex(res)))
