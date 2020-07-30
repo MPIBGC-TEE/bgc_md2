@@ -118,6 +118,7 @@ class Model:
         ax = fig.add_axes(rect)
         ax.clear()
         srm.plot_pools_and_fluxes(ax)
+        plt.close(fig)
         return ax.figure
 
 
