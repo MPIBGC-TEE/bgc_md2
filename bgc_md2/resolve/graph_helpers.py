@@ -154,7 +154,7 @@ def sparse_powerset_graph(computers: Set[Callable]) -> nx.MultiDiGraph:
     while not (equivalent_multigraphs(old, new)):
         old = deepcopy(new)
         new = update_step(old, computers)
-        print(equivalent_multigraphs(old, new))
+        # print(equivalent_multigraphs(old, new))
     return new
 
 
@@ -168,7 +168,7 @@ def update_generator(computers: Set[Callable], max_it: int) -> List[nx.MultiDiGr
     old = deepcopy(val)
     val = update_step(val, computers)
 
-    print(equivalent_multigraphs(old, val))
+    # print(equivalent_multigraphs(old, val))
 
     counter = 1
     while max_it > counter and not (equivalent_multigraphs(old, val)):
@@ -176,13 +176,16 @@ def update_generator(computers: Set[Callable], max_it: int) -> List[nx.MultiDiGr
         old = deepcopy(val)
         val = update_step(val, computers)
         counter += 1
-        print("counter", counter, "equivalent?", equivalent_multigraphs(old, val))
+        # print("counter", counter, "equivalent?", equivalent_multigraphs(old, val))
 
 
 def toDiGraph(g_multi: nx.MultiDiGraph) -> nx.DiGraph:
     def edgeDict_to_set(ed):
         target = "computers"
-        comp_set_set = frozenset([v[target] for v in ed.values() if target in v.keys()])
+        comp_set_set = frozenset([
+            v[target]
+            for v in ed.values() if target in v.keys()
+        ])
         return comp_set_set
 
     g_single = nx.DiGraph()
@@ -191,7 +194,9 @@ def toDiGraph(g_multi: nx.MultiDiGraph) -> nx.DiGraph:
         edgeDict = g_multi.get_edge_data(s, t)
         comp_set_set = edgeDict_to_set(edgeDict)
         if g_single.has_edge(s, t):
-            comp_set_set = comp_set_set.union(g_single.get_edge_data(s, t)["computers"])
+            comp_set_set = comp_set_set.union(
+                g_single.get_edge_data(s, t)["computers"]
+            )
         g_single.add_edge(s, t, computers=comp_set_set)
     return g_single
 
@@ -205,10 +210,6 @@ def minimal_startnodes_for_single_var(spg: nx.Graph, targetVar: type):
     targetSet = frozenset({targetVar})
     res = nx.single_source_shortest_path(rev_spg, source=targetSet)
     # res=nx.shortest_path(spg,target=targetSet)
-    for startnode, path in res.items():
-        print("#####################################################")
-        print("startnode", node_2_string(startnode))
-        print("path", nodes_2_string(path))
     possible_startnodes = frozenset(res.keys())
     minimal_startnodes = [
         n for n in filter(lambda n: not (n.issuperset(targetSet)), possible_startnodes)

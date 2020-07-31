@@ -344,9 +344,15 @@ class TestGraphs(InDirTest):
         # of nodes.
 
         ref = nx.MultiDiGraph()
-        ref.add_edge(frozenset({B}), frozenset({D}), computers=frozenset({d_from_b}))
         ref.add_edge(
-            frozenset({G, H}), frozenset({D}), computers=frozenset({d_from_g_h})
+            frozenset({B}),
+            frozenset({D}),
+            computers=frozenset({d_from_b})
+        )
+        ref.add_edge(
+            frozenset({G, H}),
+            frozenset({D}),
+            computers=frozenset({d_from_g_h})
         )
 
         # picture for manual check
@@ -512,29 +518,73 @@ class TestGraphs(InDirTest):
 
     def test_minimal_startnodes_for_single_var(self):
         spsg = sparse_powerset_graph(self.computers)
-        fig1 = plt.figure()
+        fig1 = plt.figure(figsize=(15, 15))
         axs = fig1.subplots(1, 1)
-        draw_ComputerSetMultiDiGraph_matplotlib(axs, spsg)
-        fig1.savefig("spsg.pdf")
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs,
+            spsg,
+            targetNode=frozenset({B})
+        )
+        fig1.savefig("spsg_B.pdf")
         plt.close(fig1)
         # After the graph has been computed we can use it
         # to infer computability of all Mvars
-        res = minimal_startnodes_for_single_var(spsg, B)
-        # print(nodes_2_string(res))
+        res_B = minimal_startnodes_for_single_var(spsg, B)
         self.assertSetEqual(
-            res, frozenset({frozenset({E, F}), frozenset({C, D}), frozenset({H, C, G})})
+            res_B,
+            frozenset({
+                frozenset({E, F}),
+                frozenset({C, D}),
+                frozenset({H, C, G}),
+                frozenset({H, C, D, G}),
+                frozenset({E, H, F, G})
+            })
+        )
+        fig1 = plt.figure(figsize=(15, 15))
+        axs = fig1.subplots(1, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs,
+            spsg,
+            targetNode=frozenset({A})
+        )
+        fig1.savefig("spsg_A.pdf")
+        plt.close(fig1)
+        res_A = minimal_startnodes_for_single_var(spsg, A)
+        self.assertSetEqual(
+            res_A,
+            frozenset({
+                frozenset({I})
+            })
         )
 
     def test_minimal_startnodes_for_node(self):
         spsg = sparse_powerset_graph(self.computers)
         targetVars = frozenset({A, B})
+        fig1 = plt.figure(figsize=(15, 30))
+        axs = fig1.subplots(2, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs[1],
+            spsg,
+            targetNode=frozenset({B})
+        )
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs[0],
+            spsg,
+            targetNode=frozenset({A})
+        )
+        fig1.savefig("spsg.pdf")
+        plt.close(fig1)
         res = minimal_startnodes_for_node(spsg, targetVars)
         # print('###############################') print('miminal startsets
         # for: ', node_2_string(targetVars),nodes_2_string(res))
         # print('###############################')
         self.assertSetEqual(
             res,
-            frozenset(
-                {frozenset({E, F, I}), frozenset({C, D, I}), frozenset({H, C, G, I})}
-            ),
+            frozenset({
+                frozenset({I, E, F}),
+                frozenset({I, C, D}),
+                frozenset({I, H, C, G}),
+                frozenset({I, H, C, D, G}),
+                frozenset({I, E, H, F, G})
+            })
         )

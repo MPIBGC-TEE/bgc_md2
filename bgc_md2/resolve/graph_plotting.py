@@ -5,7 +5,10 @@ from frozendict import frozendict
 import networkx as nx
 import numpy as np
 
-from bgc_md2.resolve.graph_helpers import update_generator
+from bgc_md2.resolve.graph_helpers import (
+    update_generator,
+    minimal_startnodes_for_node,
+)
 from .non_graph_helpers import (
     # ,
     pretty_name,
@@ -39,7 +42,11 @@ def draw_sequence(fig, tups):
 
 
 def draw_update_sequence(
-    computers, max_it, fig, mvar_aliases=frozendict({}), computer_aliases=frozendict({})
+    computers,
+    max_it,
+    fig,
+    mvar_aliases=frozendict({}),
+    computer_aliases=frozendict({})
 ):
     lg = [g for g in update_generator(computers, max_it=max_it)]
     nr = len(lg)
@@ -61,7 +68,12 @@ def draw_update_sequence(
         )
 
 
-def draw_ComputerSetDiGraph_matplotlib(spsg: nx.DiGraph, ax, pos=None, **kwargs):
+def draw_ComputerSetDiGraph_matplotlib(
+    spsg: nx.DiGraph,
+    ax,
+    pos=None,
+    **kwargs
+):
     if pos is None:
         pos = nx.spring_layout(spsg)
         # pos = nx.circular_layout(spsg)
@@ -89,22 +101,48 @@ def draw_ComputerSetMultiDiGraph_matplotlib(
     spsg,
     mvar_aliases=frozendict({}),
     computer_aliases=frozendict({}),
+    targetNode=None,
     pos=None,
     **kwargs
 ):
     if pos is None:
-        pos = nx.spring_layout(spsg)
+        # layout alternatives
+        # pos = nx.spring_layout(spsg)
         # pos = nx.circular_layout(spsg)
+        # pos = nx.spring_layout(spsg, iterations=20)
+        # pos = nx.circular_layout(spsg )
+        pos = nx.kamada_kawai_layout(spsg)
+        # pos = nx.planar_layout(spsg)
+        # pos = nx.random_layout(spsg)
+        # pos = nx.shell_layout(spsg)
+        # pos = nx.spectral_layout(spsg)
+        # pos = nx.spiral_layout(spsg)
     nx.draw(
         spsg,
         labels={n: node_2_string(n, mvar_aliases) for n in spsg.nodes()},
-        ax=ax
-        # ,node_size=1000
-        # ,node_shape='s'
-        ,
+        ax=ax,
+        node_size=1000,
+        # node_shape='s',
         pos=pos,
         **kwargs
     )
+    if targetNode is not None:
+        res = minimal_startnodes_for_node(spsg, targetNode)
+        nx.draw_networkx_nodes(
+            spsg,
+            pos,
+            nodelist=[targetNode],
+            node_color='r',
+            alpha =0.8
+        )
+        nx.draw_networkx_nodes(
+            spsg,
+            pos,
+            nodelist=list(res),
+            node_color='r',
+            alpha =0.4
+        )
+    
     ax.axis("On")
     # at the moment it is not possible to draw
     # more than one edge (egde_lables) between nodes
