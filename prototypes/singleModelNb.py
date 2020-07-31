@@ -27,11 +27,10 @@ code = """\
 %pylab inline
 hist(normal(size=2000), bins=50);"""
 
-nb['cells'] = [nbf.v4.new_markdown_cell(text),
-               nbf.v4.new_code_cell(code) ]
+nb["cells"] = [nbf.v4.new_markdown_cell(text), nbf.v4.new_code_cell(code)]
 
 
-fp=Path("/tmp/test.ipynb")  
-nbf.write(nb ,fp)
+fp = Path("/tmp/test.ipynb")
+nbf.write(nb, fp)
 
-nb2=nbf.read(fp,as_version=4)
+nb2 = nbf.read(fp, as_version=4)

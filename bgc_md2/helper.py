@@ -14,15 +14,19 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
 def list_models():
-    exclude_path = Path('./exclude-models.txt')
+    exclude_path = Path("./exclude-models.txt")
     if exclude_path.exists():
         exclude_lines = set(line.strip() for line in open(exclude_path))
-        exclude_models = set(name for name in exclude_lines
-                             if name and not name.startswith('#'))
+        exclude_models = set(
+            name for name in exclude_lines if name and not name.startswith("#")
+        )
     else:
         exclude_models = set()
-    sub_mod_pkgs= [tup[1] for tup in pkgutil.iter_modules(models.__path__)
-                   if tup[2] and tup[1] not in exclude_models]
+    sub_mod_pkgs = [
+        tup[1]
+        for tup in pkgutil.iter_modules(models.__path__)
+        if tup[2] and tup[1] not in exclude_models
+    ]
     return sub_mod_pkgs
 
 
@@ -36,15 +40,16 @@ def createSingleModelNb(model_name, report_file_path):
     model = Model(model_name)
     nb = nbf.v4.new_notebook()
 
-    text = '# {}'.format(model.name)
-    t_mvars = 'Computable mvars:\n' + '\n'.join(
-        '1. {}'.format(var) for var in model.mvar_names)
-    c_imports = 'import bgc_md2.helper as h'
-    c_model = 'model = h.Model({})'.format(repr(model.name))
-    c_graph = 'model.graph()'
-    c_render = 'for var in model.mvars:\n    model.render(var)'
-    
-    nb['cells'] = [
+    text = "# {}".format(model.name)
+    t_mvars = "Computable mvars:\n" + "\n".join(
+        "1. {}".format(var) for var in model.mvar_names
+    )
+    c_imports = "import bgc_md2.helper as h"
+    c_model = "model = h.Model({})".format(repr(model.name))
+    c_graph = "model.graph()"
+    c_render = "for var in model.mvars:\n    model.render(var)"
+
+    nb["cells"] = [
         nbf.v4.new_markdown_cell(text),
         nbf.v4.new_markdown_cell(t_mvars),
         nbf.v4.new_code_cell(c_imports),
@@ -56,9 +61,11 @@ def createSingleModelNb(model_name, report_file_path):
 
 
 def createSingleModelNbFile(model_name):
-    tmp_dir = Path('./tmp') # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
+    tmp_dir = Path(
+        "./tmp"
+    )  # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
     tmp_dir.mkdir(exist_ok=True)
-    file_name = model_name + '.ipynb'
+    file_name = model_name + ".ipynb"
     nb_path = tmp_dir.joinpath(file_name)
     createSingleModelNb(model_name, nb_path)
     return file_name, nb_path
@@ -68,7 +75,7 @@ class Model:
     # mm @Thomas:
     #
     # 2.
-    # Model as class name is used in the backend packages and 
+    # Model as class name is used in the backend packages and
     # therefore aquired a special connotation.
     # We might have to look for a more specific name
 
@@ -84,11 +91,10 @@ class Model:
         return [var.__name__ for var in self.mvars]
 
     def __dir__(self):
-        return (super().__dir__() +
-                ['get_{}'.format(name) for name in self.mvar_names])
+        return super().__dir__() + ["get_{}".format(name) for name in self.mvar_names]
 
     def __getattr__(self, name):
-        if name.startswith('get_'):
+        if name.startswith("get_"):
             var_name = name[4:]
             for var in self.mvars:
                 if var.__name__ == var_name:
@@ -97,9 +103,9 @@ class Model:
 
     def render(self, var):
         res = get_single_mvar_value(var, self.name)
-        display(Math('\\text{' + var.__name__ + '} =' + latex(res)))
-            # The latex could be filtered to display subscripts better
-            #display(res)
+        display(Math("\\text{" + var.__name__ + "} =" + latex(res)))
+        # The latex could be filtered to display subscripts better
+        # display(res)
 
     def graph(self):
         target_var = SmoothReservoirModel
@@ -118,8 +124,8 @@ class Model:
 
 #################################################################################
 
-def button_callback(function, *args):
 
+def button_callback(function, *args):
     def callback(button):
         function(*args)
 
@@ -127,7 +133,6 @@ def button_callback(function, *args):
 
 
 class ModelListGridBox(widgets.GridspecLayout):
-
     def __init__(self, inspection_box):
         self.inspection_box = inspection_box
         self.names = list_models()
@@ -139,11 +144,8 @@ class ModelListGridBox(widgets.GridspecLayout):
 
     def populate(self):
         for i, name in enumerate(self.names):
-            button_inspect_model = widgets.Button(
-                description=name,
-            )
-            button_inspect_model.on_click(
-                button_callback(self.inspect_model, name))
+            button_inspect_model = widgets.Button(description=name,)
+            button_inspect_model.on_click(button_callback(self.inspect_model, name))
             self[i, 0] = button_inspect_model
 
             res = get_single_mvar_value(CompartmentalMatrix, name)
@@ -161,11 +163,10 @@ class ModelInspectionBox(widgets.VBox):
         file_name, nb_path = createSingleModelNbFile(model_name)
         self.nb_link_box.children = (
             widgets.HTML(
-                value = """
+                value="""
                 <a href="{path}" target="_blank">{text}</a>
                 """.format(
-                    path = nb_path.as_posix(),
-                    text = file_name,
+                    path=nb_path.as_posix(), text=file_name,
                 )
             ),
         )
@@ -174,16 +175,19 @@ class ModelInspectionBox(widgets.VBox):
         model = Model(model_name)
 
         self.children = (
-            widgets.HTML(value="""
+            widgets.HTML(
+                value="""
                 <h1>{name}</h1>
                 Overview
-                """.format(name=model_name)
+                """.format(
+                    name=model_name
+                )
             ),
             widgets.HTML(
                 "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-                +"<ol>\n"
-                +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
-                +"</ol>\n"
+                + "<ol>\n"
+                + "\n".join("<li>{}</li>".format(var) for var in model.mvar_names)
+                + "</ol>\n"
             ),
         )
 
@@ -193,16 +197,16 @@ class ModelInspectionBox(widgets.VBox):
             with graph_out:
                 display(graph)
             self.children += (graph_out,)
-            
+
         rendered_vars = widgets.Output()
         with rendered_vars:
             for var in model.mvars:
                 model.render(var)
         self.children += (rendered_vars,)
 
-        b =  widgets.Button(
-            layout=widgets.Layout(width='auto', height='auto'),
-            description="Create notebook from template"
+        b = widgets.Button(
+            layout=widgets.Layout(width="auto", height="auto"),
+            description="Create notebook from template",
         )
         b.on_click(button_callback(self.create_notebook, model_name))
         self.children += (b,)
