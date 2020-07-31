@@ -12,31 +12,28 @@ from sympy import (
     simplify,
     factor,
     ImmutableMatrix,
-    Expr
+    Expr,
 )
 from sympy.physics.units import Quantity
 from sympy.physics.units.systems import SI
-from sympy.physics.units import (
-   time 
-)
+from sympy.physics.units import time
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 
-from bgc_md2.described_quantities import (
-    to_number
-)
+from bgc_md2.described_quantities import to_number
 
 # fixme: mm 03-12-2020
 # At the moment the classes are just defined to provide
-# the vocabulary for the computer signatures and model 
+# the vocabulary for the computer signatures and model
 # descriptions.
 # Ultimately the classes should have sensible constructors
 # that check their arguments thoroughly to expose
-# inadequate imput early in the process 
+# inadequate imput early in the process
 # part of this should be a dimensional analysis
 # which requires that the model authors provide dimensions
 # for there variables
+
 
 class InFluxesBySymbol(frozendict):
     pass
@@ -84,7 +81,7 @@ class VegetationCarbonStateVariableTuple(tuple):
     pass
 
 
-class VegetationCarbonCompartmentalMatrix(ImmutableMatrix): #cycling matrix
+class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
     pass
 
 
@@ -96,11 +93,10 @@ class QuantityStartValueDict(frozendict):
     pass
 
 
-
 # extending ndarray is special
 # https://numpy.org/doc/stable/user/basics.subclassing.html
 class NumericSimulationTimes(np.ndarray):
-    def __new__(cls, input_array ):
+    def __new__(cls, input_array):
         # Input array is an already formed ndarray instance
         # We cast to be our class type
         obj = np.asarray(input_array).view(cls)
@@ -109,9 +105,10 @@ class NumericSimulationTimes(np.ndarray):
 
     def __hash__(self):
         return hash(tuple(self))
+
 
 class NumericStartValueArray(np.ndarray):
-    def __new__(cls, input_array ):
+    def __new__(cls, input_array):
         # Input array is an already formed ndarray instance
         # We cast to be our class type
         obj = np.asarray(input_array).view(cls)
@@ -120,14 +117,13 @@ class NumericStartValueArray(np.ndarray):
 
     def __hash__(self):
         return hash(tuple(self))
-
 
 
 class QuantitySimulationTimes(np.ndarray):
     def __new__(cls, input_array):
         # Input array is an already formed ndarray instance
         # with units attached
-        assert(SI.get_dimensional_expr(input_array[0])==time)
+        assert SI.get_dimensional_expr(input_array[0]) == time
         obj = np.asarray(input_array).view(cls)
         return obj
 
@@ -135,10 +131,10 @@ class QuantitySimulationTimes(np.ndarray):
         return hash(tuple(self))
 
 
-class NumericParameterization():
+class NumericParameterization:
     # Note:
     # A parameterization implicitly refers to a unique specific
-    # symbolic model: 
+    # symbolic model:
     #
     # 1.)   Obviously the keys of the par_dict and func_dict can
     #       only be substituted in a model with these symbols present
@@ -150,24 +146,15 @@ class NumericParameterization():
     # An instance would naturally contain a referece to the model (self.model=).
     # This reference is omitted on purpose since the model might be given
     # only implicitly by variables defined in a model describing source.py
-    def __init__(
-        self,
-        par_dict,
-        func_dict
-    ):
+    def __init__(self, par_dict, func_dict):
         self.par_dict = frozendict(par_dict)
         self.func_dict = frozendict(func_dict)
 
 
-class NumericParameterizedSmoothReservoirModel():
-    def __init__(
-        self,
-        srm,
-        parameterization
-    ):
-        self.srm                = srm
-        self.parameterization   = parameterization
-
+class NumericParameterizedSmoothReservoirModel:
+    def __init__(self, srm, parameterization):
+        self.srm = srm
+        self.parameterization = parameterization
 
 
 class QuantityParameterization(NumericParameterization):
@@ -191,60 +178,39 @@ class QuantityParameterization(NumericParameterization):
     # than fully automatic unit derivation in sympy and can be seen as a kind
     # of cached unit computation.
 
-    def __init__(
-        self,
-        par_dict,
-        func_dict,
-        state_var_unit,
-        time_unit
-    ):
-        super().__init__(
-            par_dict,
-            func_dict
-        )
+    def __init__(self, par_dict, func_dict, state_var_unit, time_unit):
+        super().__init__(par_dict, func_dict)
         self.state_var_unit = state_var_unit
         self.time_unit = time_unit
 
 
-class QuantityParameterizedModel():
-    def __init__(
-        self,
-        srm,
-        parameterization
-    ):
-        self.srm                = srm
-        self.parameterization   = parameterization
+class QuantityParameterizedModel:
+    def __init__(self, srm, parameterization):
+        self.srm = srm
+        self.parameterization = parameterization
 
 
-class QuantityModelRun():
+class QuantityModelRun:
     def __init__(
-        self,
-        qpm,
-        start_values_quant,
-        times_quant,
+        self, qpm, start_values_quant, times_quant,
     ):
         self.qpm = qpm
         p = qpm.parameterization
-        times_num=np.array([to_number(tv,p.time_unit) for tv in times_quant])
-        start_values_num=np.array([to_number(sv,p.state_var_unit) for sv in start_values_quant])
-        self.smr=SmoothModelRun(
-            qpm.srm,
-            p.par_dict,
-            start_values_num,
-            times_num,
-            p.func_dict
+        times_num = np.array([to_number(tv, p.time_unit) for tv in times_quant])
+        start_values_num = np.array(
+            [to_number(sv, p.state_var_unit) for sv in start_values_quant]
+        )
+        self.smr = SmoothModelRun(
+            qpm.srm, p.par_dict, start_values_num, times_num, p.func_dict
         )
 
-
     def solve(self):
-        # compute the solution with respect to the state_var_units given in 
+        # compute the solution with respect to the state_var_units given in
         # the model parameterization
         sol_num = self.smr.solve()
-       
-        # the result is correct since it comes with unit 
+
+        # the result is correct since it comes with unit
         # and can be converted in any other unit.
-        sol_quant=sol_num*self.qpm.parameterization.state_var_unit
+        sol_quant = sol_num * self.qpm.parameterization.state_var_unit
 
         return sol_quant
-        
-

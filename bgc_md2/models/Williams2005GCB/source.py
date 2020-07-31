@@ -2,65 +2,72 @@ import numpy as np
 from sympy import var, symbols, Symbol, ImmutableMatrix, exp, Rational
 from sympy.physics.units.systems import SI
 from sympy.physics.units import (
-        Quantity, length, mass,time,temperature,
-        gram,meter,day,kelvin)
+    Quantity,
+    length,
+    mass,
+    time,
+    temperature,
+    gram,
+    meter,
+    day,
+    kelvin,
+)
 from sympy.physics.units.systems.si import dimsys_SI
 
 from frozendict import frozendict
 
 from bgc_md2.resolve.mvars import (
-        CompartmentalMatrix,
-        InputTuple,
-        TimeSymbol,
-        StateVariableTuple,
-        VegetationCarbonInputScalar,
-        VegetationCarbonInputPartitioningTuple,
-        VegetationCarbonStateVariableTuple,
-        NumericParameterization,
-        NumericStartValueDict,
-        NumericSimulationTimes,
-        QuantityParameterization,
-        QuantityModelRun,
-        QuantityParameterizedModel,
+    CompartmentalMatrix,
+    InputTuple,
+    TimeSymbol,
+    StateVariableTuple,
+    VegetationCarbonInputScalar,
+    VegetationCarbonInputPartitioningTuple,
+    VegetationCarbonStateVariableTuple,
+    NumericParameterization,
+    NumericStartValueDict,
+    NumericSimulationTimes,
+    QuantityParameterization,
+    QuantityModelRun,
+    QuantityParameterizedModel,
 )
-from bgc_md2.resolve.computers import (
-        smooth_reservoir_model_from_input_tuple_and_matrix
-)
+from bgc_md2.resolve.computers import smooth_reservoir_model_from_input_tuple_and_matrix
 
 from bgc_md2.described_quantities import describedQuantity
 
 # define Quantities (as you would symbols, but with an additional description)
-t=TimeSymbol('t')
+t = TimeSymbol("t")
 # We keep the dimensions and descriptions as comments refering to the original
-# publications. 
+# publications.
 # It is better to store the purely symbolical description (without units or
-# even dimensions) 
+# even dimensions)
 # since it is more versatile. For purposes of comparison we might want to reinterprete
 # something that was given originally as mass/aread as mass or vice versa
 # The responsibility of the user is to provide consisten parameterisations
 # for which the comments about dimensions are helpful and must be correct
 # but will not be checked automatically by the system.
 
-var("C_f")		#  mass/length**2)		    "Foliar C mass"
-var("C_lab")	#  mass/length**2)		    "Labile C mass"
-var("C_w")		#  mass/length**2)		    "Wood C mass"
-var("C_r")		#  mass/length**2)		    "Fine root C mass"
-var("p_10")		#  1/temperature)		    "Parameter in exponential term of temperature dependent rate parameter"
-var("mint")		#  temperature)		        "Dayly minimum temperature"
-var("maxt")		#  temperature)		        "Dayly maximum temperature"
-var("multtl")	#  1/time)		            "Turnover of labile C (0 = off)		 1 = On)			"
-var("multtf")	#  1/time)		            "Turnover of foliage C (0 = off)		 1 = On)			"
-var("LAI")		#  1)		                "LeafAreaIndex"
-var("p_3")		#  1)		                "Fraction of NPP partitioned to foliage"
-var("p_4")		#  1)		                "Fraction of NPP partitioned to roots"
-var("p_5")		#  1/time)	                "Turnover rate of foliage"
-var("p_6")		#  1/time)	                "Turnover rate of wood"
-var("p_7")		#  1/time)	                "Turnover rate of roots"
-var("p_14")		#  1)		                "Fraction of leaf loss transferred to litter"
-var("p_15")		#  1/time)	                "Turnover rate of labile carbon"
-var("p_16")		#  1)		                "Fraction of labile transfers respired "
-var("NPP")		#  mass/(length**2*time))   "Net Primary Production per area"
-
+var("C_f")  #  mass/length**2)		    "Foliar C mass"
+var("C_lab")  #  mass/length**2)		    "Labile C mass"
+var("C_w")  #  mass/length**2)		    "Wood C mass"
+var("C_r")  #  mass/length**2)		    "Fine root C mass"
+var(
+    "p_10"
+)  #  1/temperature)		    "Parameter in exponential term of temperature dependent rate parameter"
+var("mint")  #  temperature)		        "Dayly minimum temperature"
+var("maxt")  #  temperature)		        "Dayly maximum temperature"
+var("multtl")  #  1/time)		            "Turnover of labile C (0 = off)		 1 = On)			"
+var("multtf")  #  1/time)		            "Turnover of foliage C (0 = off)		 1 = On)			"
+var("LAI")  #  1)		                "LeafAreaIndex"
+var("p_3")  #  1)		                "Fraction of NPP partitioned to foliage"
+var("p_4")  #  1)		                "Fraction of NPP partitioned to roots"
+var("p_5")  #  1/time)	                "Turnover rate of foliage"
+var("p_6")  #  1/time)	                "Turnover rate of wood"
+var("p_7")  #  1/time)	                "Turnover rate of roots"
+var("p_14")  #  1)		                "Fraction of leaf loss transferred to litter"
+var("p_15")  #  1/time)	                "Turnover rate of labile carbon"
+var("p_16")  #  1)		                "Fraction of labile transfers respired "
+var("NPP")  #  mass/(length**2*time))   "Net Primary Production per area"
 
 
 # The following parameters would be needed to compute NPP from GPP  since they are not given
@@ -69,7 +76,7 @@ var("NPP")		#  mass/(length**2*time))   "Net Primary Production per area"
 #    ("G"		, "mass*length**(-2)*time**(-1)"	                            ,),
 
 # Temperature sensitive rate parameterd
-T_rate =0.5*exp(p_10*((maxt + mint)/2))
+T_rate = 0.5 * exp(p_10 * ((maxt + mint) / 2))
 
 # state vector
 x = StateVariableTuple((C_f, C_lab, C_w, C_r))
@@ -79,26 +86,43 @@ x = StateVariableTuple((C_f, C_lab, C_w, C_r))
 # correct according to ACM model so NPP has been made a parameter instead of an
 # expression
 
-#scalar function of photosynthetic inputs
+# scalar function of photosynthetic inputs
 u = NPP
 
 # tuple of partitioning coefficients of photosynthetically fixed carbon
-b = ((p_3*multtl), 0, (1-p_4), p_4)
+b = ((p_3 * multtl), 0, (1 - p_4), p_4)
 
-#f_v = u*b+A*x
+# f_v = u*b+A*x
 
 # matrix of cycling rates
-A=CompartmentalMatrix(
+A = CompartmentalMatrix(
+    [
         [
-            [((-1)*(((1-p_14)*p_5*(1-p_16)*multtf*T_rate)+((1-p_14)*p_5*p_16*multtf*T_rate)+(p_5*p_14*multtf))),    (p_15*(1-p_16)*multtl*T_rate),                                  0,      0],
-            [((1-p_14)*p_5*(1-p_16)*multtf*T_rate),                                                                 ((-p_15*(1-p_16)*multtl*T_rate)-(p_15*p_16*multtl*T_rate)),     0,      0],
-            [0,                                                                                                     0,                                                           -p_6,      0],
-            [0,                                                                                                     0,                                                              0,   -p_7]
-        ]
+            (
+                (-1)
+                * (
+                    ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate)
+                    + ((1 - p_14) * p_5 * p_16 * multtf * T_rate)
+                    + (p_5 * p_14 * multtf)
+                )
+            ),
+            (p_15 * (1 - p_16) * multtl * T_rate),
+            0,
+            0,
+        ],
+        [
+            ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate),
+            ((-p_15 * (1 - p_16) * multtl * T_rate) - (p_15 * p_16 * multtl * T_rate)),
+            0,
+            0,
+        ],
+        [0, 0, -p_6, 0],
+        [0, 0, 0, -p_7],
+    ]
 )
-I = InputTuple(u*ImmutableMatrix(b))
+I = InputTuple(u * ImmutableMatrix(b))
 
-#model_run_data:
+# model_run_data:
 #    parameter_sets:
 #        - "param_vals":
 #            desc: "NPP value was given per year. p~14~, p~15~ and p~16~ values not given in publication"
@@ -120,7 +144,7 @@ I = InputTuple(u*ImmutableMatrix(b))
 #
 np1 = NumericParameterization(
     par_dict={
-        NPP		    :Rational(409, 365), #*gram*/(meter**2*day)
+        NPP: Rational(409, 365),  # *gram*/(meter**2*day)
         # Note:
         # The (negative ) parameter value for mint (see below) suggests that
         # maxt and mint are given in the celsius scale.
@@ -128,45 +152,45 @@ np1 = NumericParameterization(
         # temperature and celsius scale.
         # Conceptually 5 deg Celsius describe a temperature DIFFERENCE of 5 Kelvin
         # to the triple point of water.
-        # Differences are always mesured in Kelvin 
+        # Differences are always mesured in Kelvin
         # So although mint and maxt are given in Kelvin they are not understood
         # as absolute temperatures but as differences to the triple point.
-	    mint		:-4,             #Kelvin (deg Celsius)
-	    maxt		:5,              #Kelvin (de Celsius)
-	    multtf		:0,
-	    multtl		:1,
-	    #p_2		    :0.47,
-	    p_3		    :0.31,
-	    p_4		    :0.43,
-	    p_5		    :0.0027,         #1/day
-	    p_6		    :0.00000206,     #1/day
-	    p_7		    :0.00248,        #1/day
+        mint: -4,  # Kelvin (deg Celsius)
+        maxt: 5,  # Kelvin (de Celsius)
+        multtf: 0,
+        multtl: 1,
+        # p_2		    :0.47,
+        p_3: 0.31,
+        p_4: 0.43,
+        p_5: 0.0027,  # 1/day
+        p_6: 0.00000206,  # 1/day
+        p_7: 0.00248,  # 1/day
         #
-        # Althouhg p10 is considered to have unit 1/Kelvin 
-        # inspection of the T_rate expression connects it 
+        # Althouhg p10 is considered to have unit 1/Kelvin
+        # inspection of the T_rate expression connects it
         # to Temperature DIFFERENCE from  the triple point
-	    p_10		:0.0693,         #/kelvin 
-	    p_14		:0.45,
-	    p_15		:0.001,          #1/day
-	    p_16        :0.251,
+        p_10: 0.0693,  # /kelvin
+        p_14: 0.45,
+        p_15: 0.001,  # 1/day
+        p_16: 0.251,
     },
     func_dict=frozendict({})
-    #state_var_units=kilogram/meter**2,
-    #time_unit=day
+    # state_var_units=kilogram/meter**2,
+    # time_unit=day
 )
-nsv1 =   NumericStartValueDict({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
-ntimes = NumericSimulationTimes(np.arange(0,1096,1))
+nsv1 = NumericStartValueDict({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
+ntimes = NumericSimulationTimes(np.arange(0, 1096, 1))
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
-specialVars={
-    A, # the overall compartmental matrix
-    I, # the overall imput
-    t, # time for the complete system
-    x, # state vector of the the complete system
+specialVars = {
+    A,  # the overall compartmental matrix
+    I,  # the overall imput
+    t,  # time for the complete system
+    x,  # state vector of the the complete system
     np1,
     nsv1,
-    ntimes,    
+    ntimes,
     #
     # the following variables give a more detailed view with respect to
     # carbon and vegetation variables
@@ -181,6 +205,5 @@ specialVars={
     VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
     VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
+    VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r)),
 }
-

@@ -26,8 +26,10 @@ import bgc_md2.helper as h
 outerGridBox = widgets.GridspecLayout(3, 1)
 model_view_pos = 1
 
+
 def inspect_model(name):
     outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
+
 
 outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
 
@@ -40,12 +42,12 @@ display(outerGridBox)
 # # Some alternatives to create html an markdown programmatically
 #
 
-from IPython.display import display, Markdown, Latex,HTML,Math
+from IPython.display import display, Markdown, Latex, HTML, Math
 
-display(Markdown('*some markdown* $\phi$'))
+display(Markdown("*some markdown* $\phi$"))
 
 
-from bgc_md2.helper import list_models_md,list_models
+from bgc_md2.helper import list_models_md, list_models
 
 
 h.list_models()
@@ -58,7 +60,7 @@ display(HTML("val=4"))
 
 
 # +
-from sympy import symbols,var,latex
+from sympy import symbols, var, latex
 
 var("A_f A_b")
 
@@ -68,5 +70,3 @@ var("A_f A_b")
 Math(latex(A_f))
 
 display(Math(latex(A_f)))
-
-
