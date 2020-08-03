@@ -13,8 +13,17 @@ from .mvars import (
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonInputTuple,
     VegetationCarbonCompartmentalMatrix,
+    NumericSimulationTimes,
+    NumericParameterization,
+    NumericStartValueDict,
+    NumericStartValueArray,
+    QuantityParameterizedModel,
+    QuantitySimulationTimes,
+    NumericParameterizedSmoothReservoirModel,
+    QuantityStartValueDict,
 )
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 
 def smooth_reservoir_model_from_fluxes(
@@ -65,3 +74,44 @@ def vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tupl
 #       vcsvt:   VegetationCarbonStateVariableTuple
 #    ) ->
 #    return CompartmentalMatrix(smr.compartmental_matrix)
+
+
+def numeric_model_run_1(
+    npsrm: NumericParameterizedSmoothReservoirModel,
+    start_values_num: NumericStartValueArray,
+    times_num: NumericSimulationTimes,
+) -> SmoothModelRun:
+    return SmoothModelRun(
+        npsrm.srm,
+        npsrm.parameterization.par_dict,
+        start_values_num,
+        times_num,
+        npsrm.parameterization.func_dict,
+    )
+
+
+# def numeric_model_run_2(
+#        srm:        SmoothReservoirModel,
+#        para_num:   NumericParameterization,
+#        start_values_num: NumericStartValueDict,
+#        times_num: NumericSimulationTimes
+#    ) -> SmoothModelRun:
+#    return SmoothModelRun(
+#        srm,
+#        para_num.par_dict,
+#        start_values_num,
+#        times_num,
+#        para_num.func_dict
+#    )
+#
+def numeric_parameterized_smooth_reservoir_model_1(
+    srm: SmoothReservoirModel, para_num: NumericParameterization,
+) -> NumericParameterizedSmoothReservoirModel:
+    return NumericParameterizedSmoothReservoirModel(srm, para_num)
+
+
+def numeric_start_value_aray_1(
+    nsvd: NumericStartValueDict, svt: StateVariableTuple
+) -> NumericStartValueArray:
+    tup = tuple(nsvd[k] for k in svt)
+    return NumericStartValueArray(tup)

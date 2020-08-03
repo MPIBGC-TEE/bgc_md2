@@ -33,6 +33,7 @@ dependencies:
   - sidecar
   - ipyleaflet
   - pythreejs
+  - frozendict
   - pip
     #  - pip:
     #      - git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 

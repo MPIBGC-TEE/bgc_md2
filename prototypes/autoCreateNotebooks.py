@@ -23,10 +23,25 @@ import bgc_md2.helper as h
 
 model_inspection = h.ModelInspectionBox()
 
+<<<<<<< HEAD
 model_list = h.ModelListGridBox(inspection_box=model_inspection)
 model_list
 
 model_inspection
+=======
+# # use a layout widget to build the interactive overview table
+#
+
+outerGridBox = widgets.GridspecLayout(3, 1)
+model_view_pos = 1
+
+
+def inspect_model(name):
+    outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
+
+
+outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
+>>>>>>> model_runs_in_models
 
 model_list.inspect_model(model_list.names[0])
 

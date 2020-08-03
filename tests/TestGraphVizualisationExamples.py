@@ -1,5 +1,5 @@
-""" 
-The purpose is of this module is to collect different vizualisations that at least work. 
+"""
+The purpose is of this module is to collect different vizualisations that at least work.
 Some are very unlikely to be used later on but are interesting as prototypes.
 The tests meryly ensure that these prototypes work.
 """
@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import CSS4_COLORS, BASE_COLORS, TABLEAU_COLORS
 import networkx as nx
 from unittest import skip
+from string import ascii_lowercase, ascii_uppercase
 from testinfrastructure.InDirTest import InDirTest
 from computers_and_mvars_for_testing import (
     # classes
@@ -38,6 +39,13 @@ from bgc_md2.resolve.graph_plotting import (
     # ,draw_Graph_with_computers_svg
 )
 from bgc_md2.resolve.graph_helpers import sparse_powerset_graph
+from bgc_md2.models.helpers import (
+    # provided_mvars,
+    # computable_mvars,
+    # path_dict_to_single_mvar,
+    # get_single_mvar_value,
+    bgc_md2_computers,
+)
 
 from bgc_md2.resolve.non_graph_helpers import (
     all_mvars,
@@ -104,7 +112,15 @@ class TestGraphVizualization(InDirTest):
         # assemble this set from a file of annotated functions in
         # special file
         self.computers = computers
-        self.g = computers_between_mvars(self.computers)
+        self.bgc_computers = bgc_md2_computers()
+        self.computer_aliases = {
+            v.__name__: ascii_lowercase[i] for i, v in enumerate(self.bgc_computers)
+        }
+        allVars = all_mvars(self.bgc_computers)
+        self.mvar_aliases = {
+            name: ascii_uppercase[i]
+            for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
+        }
         self.spsg = sparse_powerset_graph(self.computers)
         self.cf = computer_color_func(self.computers)
 
@@ -121,7 +137,7 @@ class TestGraphVizualization(InDirTest):
         # is very rudimentary.
         fig = plt.figure(figsize=(20, 20))
         ax = fig.add_subplot(1, 1, 1)
-        draw_ComputerSetMultiDiGraph_matplotlib(self.spsg, ax)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax, self.spsg)
         fig.savefig("SetMultiGraph.pdf")
 
     def test_update_generator(self):
@@ -129,8 +145,31 @@ class TestGraphVizualization(InDirTest):
         draw_update_sequence(self.computers, max_it=8, fig=fig)
         fig.savefig("c1.pdf")
 
+    def test_ComputerSetMultiGraph_matplotlib_bgc_md2(self):
+        # The direct visualization of networkx (using matplotlib)
+        # is very rudimentary.
+        spsg = sparse_powerset_graph(self.bgc_computers)
+        fig = plt.figure(figsize=(20, 20))
+        ax = fig.add_subplot(1, 1, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            ax, spsg, self.mvar_aliases, self.computer_aliases
+        )
+        fig.savefig("SetMultiGraph.pdf")
+
+    def test_update_generator_bgc_md2(self):
+        fig = plt.figure()
+        draw_update_sequence(
+            self.bgc_computers,
+            8,
+            fig,
+            self.mvar_aliases,
+            self.computer_aliases
+        )
+        fig.savefig("c1.pdf")
+
     @skip(
-        "very immature and nearly manual, but maybe one of the possibilities to make the connections clickable?"
+        """ very immature and nearly manual, but maybe one of the possibilities
+        to make the connections clickable?"""
     )
     def test_draw_multigraph_plotly(self):
         draw_multigraph_plotly(self.mvars, self.computers)

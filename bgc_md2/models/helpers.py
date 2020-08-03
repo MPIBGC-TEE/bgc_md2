@@ -57,16 +57,16 @@ def path_dict_to_single_mvar(mvar: type, model_id: str) -> Dict[type, List[Set[t
     node = frozenset({mvar})
     spsg = sparse_powerset_graph(bgc_md2_computers())
     graph_min_nodes = minimal_startnodes_for_single_var(spsg, mvar)
-    model_min_nodes = list(
-        filter(lambda n: n.issubset(provided_mvars(model_id)), graph_min_nodes)
-    )
+    pmvs = provided_mvars(model_id)
+
+    model_min_nodes = list(filter(lambda n: n.issubset(pmvs), graph_min_nodes))
     if len(model_min_nodes) < 1:
         raise (
             Exception(
                 "The desired mvar can not be computed from the provided mvars:"
-                + node_2_string(pms)
+                + node_2_string(pmvs)
                 + "Minimal sets to compute it are"
-                + nodes_2_string(min_nodes)
+                + nodes_2_string(graph_min_nodes)
             )
         )
 
@@ -89,7 +89,7 @@ def get_single_mvar_value(
     # (Obviously the return type  is a function of the input types)
 
     pvs = provided_mvar_values(model_id)
-    pv_dict = frozendict({type(v): v for v in pvs})
+    pv_dict = {type(v): v for v in pvs}
     if mvar in [type(v) for v in pvs]:
         return pv_dict[mvar]
 
@@ -120,8 +120,9 @@ def get_single_mvar_value(
         def apply(comp):
             arg_classes = [p.annotation for p in signature(comp).parameters.values()]
             arg_values = [pv_dict[cl] for cl in arg_classes]
-            return comp(*arg_values)
+            res = comp(*arg_values)
+            return res
 
-        pv_dict = frozendict({ngh.output_mvar(c): apply(c) for c in computers})
+        pv_dict.update({ngh.output_mvar(c): apply(c) for c in computers})
 
     return pv_dict[mvar]

@@ -1,7 +1,20 @@
-from sympy import symbols, Symbol, ImmutableMatrix, exp
+import numpy as np
+from sympy import var, symbols, Symbol, ImmutableMatrix, exp, Rational
 from sympy.physics.units.systems import SI
-from sympy.physics.units import Quantity, length, mass, time, temperature
+from sympy.physics.units import (
+    Quantity,
+    length,
+    mass,
+    time,
+    temperature,
+    gram,
+    meter,
+    day,
+    kelvin,
+)
 from sympy.physics.units.systems.si import dimsys_SI
+
+from frozendict import frozendict
 
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -11,47 +24,50 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
+    NumericParameterization,
+    NumericStartValueDict,
+    NumericSimulationTimes,
+    QuantityParameterization,
+    QuantityModelRun,
+    QuantityParameterizedModel,
 )
+from bgc_md2.resolve.computers import smooth_reservoir_model_from_input_tuple_and_matrix
 
-
-def describedQuantity(name, dimension, description):
-    obj = Quantity(name=name)
-    SI.set_quantity_dimension(obj, dimension)
-    obj.description = description
-    # obj = Symbol(name)
-    return obj
-
+from bgc_md2.described_quantities import describedQuantity
 
 # define Quantities (as you would symbols, but with an additional description)
 t = TimeSymbol("t")
+# We keep the dimensions and descriptions as comments refering to the original
+# publications.
+# It is better to store the purely symbolical description (without units or
+# even dimensions)
+# since it is more versatile. For purposes of comparison we might want to reinterprete
+# something that was given originally as mass/aread as mass or vice versa
+# The responsibility of the user is to provide consisten parameterisations
+# for which the comments about dimensions are helpful and must be correct
+# but will not be checked automatically by the system.
 
-C_f = describedQuantity("C_f", mass / length ** 2, "Foliar C mass")
-C_lab = describedQuantity("C_lab", mass / length ** 2, "Labile C mass")
-C_w = describedQuantity("C_w", mass / length ** 2, "Wood C mass")
-C_r = describedQuantity("C_r", mass / length ** 2, "Fine root C mass")
-p_10 = describedQuantity(
-    "p_10",
-    1 / temperature,
-    "Parameter in exponential term of temperature dependent rate parameter ",
-)
-mint = describedQuantity("mint", temperature, "Dayly minimum temperature")
-maxt = describedQuantity("maxt", temperature, "Dayly maximum temperature")
-multtl = describedQuantity("multtl", 1 / time, "Turnover of labile C (0 = off, 1 = On)")
-multtf = describedQuantity(
-    "multtf", 1 / time, "Turnover of foliage C (0 = off, 1 = On)"
-)
-LAI = describedQuantity("LAI", 1, "LeafAreaIndex")
-p_3 = describedQuantity("p_3", 1, "Fraction of NPP partitioned to foliage")
-p_4 = describedQuantity("p_4", 1, "Fraction of NPP partitioned to roots")
-p_5 = describedQuantity("p_5", 1 / time, "Turnover rate of foliage")
-p_6 = describedQuantity("p_6", 1 / time, "Turnover rate of wood")
-p_7 = describedQuantity("p_7", 1 / time, "Turnover rate of roots")
-p_14 = describedQuantity("p_14", 1, "Fraction of leaf loss transferred to litter")
-p_15 = describedQuantity("p_15", 1 / time, "Turnover rate of labile carbon")
-p_16 = describedQuantity("p_16", 1, "Fraction of labile transfers respired ")
-NPP = describedQuantity(
-    "NPP", mass * length ** (-2) * time ** (-1), "Net Primary Production per area"
-)
+var("C_f")  #  mass/length**2)		    "Foliar C mass"
+var("C_lab")  #  mass/length**2)		    "Labile C mass"
+var("C_w")  #  mass/length**2)		    "Wood C mass"
+var("C_r")  #  mass/length**2)		    "Fine root C mass"
+var(
+    "p_10"
+)  #  1/temperature)		    "Parameter in exponential term of temperature dependent rate parameter"
+var("mint")  #  temperature)		        "Dayly minimum temperature"
+var("maxt")  #  temperature)		        "Dayly maximum temperature"
+var("multtl")  #  1/time)		            "Turnover of labile C (0 = off)		 1 = On)			"
+var("multtf")  #  1/time)		            "Turnover of foliage C (0 = off)		 1 = On)			"
+var("LAI")  #  1)		                "LeafAreaIndex"
+var("p_3")  #  1)		                "Fraction of NPP partitioned to foliage"
+var("p_4")  #  1)		                "Fraction of NPP partitioned to roots"
+var("p_5")  #  1/time)	                "Turnover rate of foliage"
+var("p_6")  #  1/time)	                "Turnover rate of wood"
+var("p_7")  #  1/time)	                "Turnover rate of roots"
+var("p_14")  #  1)		                "Fraction of leaf loss transferred to litter"
+var("p_15")  #  1/time)	                "Turnover rate of labile carbon"
+var("p_16")  #  1)		                "Fraction of labile transfers respired "
+var("NPP")  #  mass/(length**2*time))   "Net Primary Production per area"
 
 
 # The following parameters would be needed to compute NPP from GPP  since they are not given
@@ -59,8 +75,8 @@ NPP = describedQuantity(
 #    ("GPP"		, "mass*length**(-2)*time**(-1)"	,"Gross Primary Production per area"),
 #    ("G"		, "mass*length**(-2)*time**(-1)"	                            ,),
 
-# Temperature sensitive rate parameter
-T_rate = 0.5 * exp(p_10 * 0.5 * (maxt + mint))
+# Temperature sensitive rate parameterd
+T_rate = 0.5 * exp(p_10 * ((maxt + mint) / 2))
 
 # state vector
 x = StateVariableTuple((C_f, C_lab, C_w, C_r))
@@ -96,7 +112,10 @@ A = CompartmentalMatrix(
         ],
         [
             ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate),
-            ((-p_15 * (1 - p_16) * multtl * T_rate) - (p_15 * p_16 * multtl * T_rate)),
+            (
+                (-p_15 * (1 - p_16) * multtl * T_rate)
+                - (p_15 * p_16 * multtl * T_rate)
+            ),
             0,
             0,
         ],
@@ -126,6 +145,44 @@ I = InputTuple(u * ImmutableMatrix(b))
 #    possible_combinations:
 #        - ["param_vals", "init_vals", RT1]
 #
+np1 = NumericParameterization(
+    par_dict={
+        NPP: Rational(409, 365),  # *gram*/(meter**2*day)
+        # Note:
+        # The (negative ) parameter value for mint (see below) suggests that
+        # maxt and mint are given in the celsius scale.
+        # The sympy unit system does not destinguish between absolute
+        # temperature and celsius scale.
+        # Conceptually 5 deg Celsius describe a temperature DIFFERENCE of 5 Kelvin
+        # to the triple point of water.
+        # Differences are always mesured in Kelvin
+        # So although mint and maxt are given in Kelvin they are not understood
+        # as absolute temperatures but as differences to the triple point.
+        mint: -4,  # Kelvin (deg Celsius)
+        maxt: 5,  # Kelvin (de Celsius)
+        multtf: 0,
+        multtl: 1,
+        # p_2		    :0.47,
+        p_3: 0.31,
+        p_4: 0.43,
+        p_5: 0.0027,  # 1/day
+        p_6: 0.00000206,  # 1/day
+        p_7: 0.00248,  # 1/day
+        #
+        # Althouhg p10 is considered to have unit 1/Kelvin
+        # inspection of the T_rate expression connects it
+        # to Temperature DIFFERENCE from  the triple point
+        p_10: 0.0693,  # /kelvin
+        p_14: 0.45,
+        p_15: 0.001,  # 1/day
+        p_16: 0.251,
+    },
+    func_dict=frozendict({})
+    # state_var_units=kilogram/meter**2,
+    # time_unit=day
+)
+nsv1 = NumericStartValueDict({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
+ntimes = NumericSimulationTimes(np.arange(0, 1096, 1))
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
@@ -134,16 +191,22 @@ specialVars = {
     I,  # the overall imput
     t,  # time for the complete system
     x,  # state vector of the the complete system
+    np1,
+    nsv1,
+    ntimes,
     #
-    ## the following variables give a more detailed view with respect to
-    ## carbon and vegetation variables
-    ## This imformation can be used to extract the part
-    ## of a model that is concerned with carbon and vegetation
-    ## in the case of this model all of the state variables
-    ## are vegetation and carbon related but for an ecosystem model
-    ## for different elements there could be different subsystems
-    ## e.g. consisting of  Nitrogen Soil state variables
-    VegetationCarbonInputScalar(u),  # vegetation carbon
-    VegetationCarbonInputPartitioningTuple(b),  # vegetation carbon partitioning.
+    # the following variables give a more detailed view with respect to
+    # carbon and vegetation variables
+    # This imformation can be used to extract the part
+    # of a model that is concerned with carbon and vegetation
+    # in the case of this model all of the state variables
+    # are vegetation and carbon related but for an ecosystem model
+    # for different elements there could be different subsystems
+    # e.g. consisting of  Nitrogen Soil state variables
+    #
+    # vegetation carbon
+    VegetationCarbonInputScalar(u),
+    # vegetation carbon partitioning.
+    VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r)),
 }

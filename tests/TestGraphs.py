@@ -23,8 +23,8 @@ from bgc_md2.resolve.graph_helpers import (
     product_graph,
     sparse_powerset_graph,
     update_generator,
-    # ,draw_multigraph_plotly
-    # ,draw_Graph_svg
+    # draw_multigraph_plotly,
+    # draw_Graph_svg,
 )
 from bgc_md2.resolve.graph_plotting import (
     draw_update_sequence,
@@ -49,14 +49,6 @@ class A:
 
 
 class B:
-    pass
-
-
-class A_minus_2:
-    pass
-
-
-class A_minus_1:
     pass
 
 
@@ -311,7 +303,10 @@ class TestGraphs(InDirTest):
         g_multi.add_edge(src, dest, computers=computers_1)
         g_multi.add_edge(src, dest, computers=computers_2)
         g_single = toDiGraph(g_multi)
-        print(g_single.get_edge_data(src, dest))
+        self.assertSetEqual(
+            g_single.get_edge_data(src, dest)["computers"],
+            frozenset({computers_1, computers_2}),
+        )
 
     def test_equivalent_multigraphs(self):
         g1 = nx.MultiDiGraph()
@@ -348,17 +343,23 @@ class TestGraphs(InDirTest):
         # of nodes.
 
         ref = nx.MultiDiGraph()
-        ref.add_edge(frozenset({B}), frozenset({D}), computers=frozenset({d_from_b}))
         ref.add_edge(
-            frozenset({G, H}), frozenset({D}), computers=frozenset({d_from_g_h})
+            frozenset({B}),
+            frozenset({D}),
+            computers=frozenset({d_from_b})
+        )
+        ref.add_edge(
+            frozenset({G, H}),
+            frozenset({D}),
+            computers=frozenset({d_from_g_h})
         )
 
         # picture for manual check
         fig = plt.figure(figsize=(20, 20))
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
-        draw_ComputerSetMultiDiGraph_matplotlib(ref, ax1)
-        draw_ComputerSetMultiDiGraph_matplotlib(asg, ax2)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax1, ref)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax2, asg)
         fig.savefig("arg_set_graph.pdf")
 
         self.assertTrue(equivalent_multigraphs(asg, ref))
@@ -376,9 +377,9 @@ class TestGraphs(InDirTest):
         ax2 = fig1.add_subplot(412, frame_on=True, title="arg_set_graph(B)")
         ax3 = fig1.add_subplot(413, frame_on=True, title="product_graph(A,B)")
         # ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_A, ax=ax1)
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_B, ax=ax2)
-        draw_ComputerSetMultiDiGraph_matplotlib(pg_A_B, ax=ax3)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax1, asg_A)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax2, asg_B)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax3, pg_A_B)
         fig1.savefig("AB_Z.pdf")
 
         computers = frozenset({a_from_y, b_from_y, b_from_z})
@@ -391,9 +392,9 @@ class TestGraphs(InDirTest):
         ax2 = fig1.add_subplot(412, frame_on=True, title="arg_set_graph(B)")
         ax3 = fig1.add_subplot(413, frame_on=True, title="product_graph(A,B)")
         # ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_A, ax=ax1)
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_B, ax=ax2)
-        draw_ComputerSetMultiDiGraph_matplotlib(pg_A_B, ax=ax3)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax1, asg_A)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax2, asg_B)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax3, pg_A_B)
         fig1.savefig("A_y_B_Y_B_Z.pdf")
 
         #    {a(z)}          {b(z)}          {a(z),b(z)}
@@ -410,9 +411,9 @@ class TestGraphs(InDirTest):
         ax2 = fig1.add_subplot(412, frame_on=True, title="arg_set_graph(B)")
         ax3 = fig1.add_subplot(413, frame_on=True, title="product_graph(A,B)")
         # ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_A, ax=ax1)
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_B, ax=ax2)
-        draw_ComputerSetMultiDiGraph_matplotlib(pg_A_B, ax=ax3)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax1, asg_A)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax2, asg_B)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax3, pg_A_B)
         fig1.savefig("A_Z_B_Y.pdf")
 
         computers = frozenset({a_from_z, b_from_z, c_from_b})
@@ -428,10 +429,10 @@ class TestGraphs(InDirTest):
         ax3 = fig1.add_subplot(513, frame_on=True, title="arg_set_graph(C)")
         ax4 = fig1.add_subplot(514, frame_on=True, title="product_graph(A,B,C)")
         # ax4=fig1.add_subplot(414,frame_on=True,title="ref")
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_A, ax=ax1)
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_B, ax=ax2)
-        draw_ComputerSetMultiDiGraph_matplotlib(asg_C, ax=ax3)
-        draw_ComputerSetMultiDiGraph_matplotlib(prod, ax=ax4)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax1, asg_A)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax2, asg_B)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax3, asg_C)
+        draw_ComputerSetMultiDiGraph_matplotlib(ax4, prod)
         fig1.savefig("ABC.pdf")
 
     def test_Markus_graph_creation(self):
@@ -466,12 +467,10 @@ class TestGraphs(InDirTest):
                     b0_from_b_minus_1,
                     b1_from_b0,
                     b2_from_b1,
-                    b3_from_b2
+                    b3_from_b2,
                     #
-                    ,
-                    a0_from_b0
+                    a0_from_b0,
                     #
-                    ,
                     a_minus_1_from_a_minus_2,
                     a0_from_a_minus_1,
                     a1_from_a0,
@@ -504,12 +503,10 @@ class TestGraphs(InDirTest):
                 (frozenset({B_minus_1}), frozenset({B0})),
                 (frozenset({B0}), frozenset({B1})),
                 (frozenset({B1}), frozenset({B2})),
-                (frozenset({B2}), frozenset({B3}))
+                (frozenset({B2}), frozenset({B3})),
                 #
-                ,
-                (frozenset({B0}), frozenset({A0}))
+                (frozenset({B0}), frozenset({A0})),
                 #
-                ,
                 (frozenset({A_minus_2}), frozenset({A_minus_1})),
                 (frozenset({A_minus_1}), frozenset({A0})),
                 (frozenset({A0}), frozenset({A1})),
@@ -520,24 +517,73 @@ class TestGraphs(InDirTest):
 
     def test_minimal_startnodes_for_single_var(self):
         spsg = sparse_powerset_graph(self.computers)
-        ## After the graph has been computed we can use it
-        ## to infer computability of all Mvars
-        res = minimal_startnodes_for_single_var(spsg, B)
-        ##print(nodes_2_string(res))
+        fig1 = plt.figure(figsize=(15, 15))
+        axs = fig1.subplots(1, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs,
+            spsg,
+            targetNode=frozenset({B})
+        )
+        fig1.savefig("spsg_B.pdf")
+        plt.close(fig1)
+        # After the graph has been computed we can use it
+        # to infer computability of all Mvars
+        res_B = minimal_startnodes_for_single_var(spsg, B)
         self.assertSetEqual(
-            res, frozenset({frozenset({E, F}), frozenset({C, D}), frozenset({H, C, G})})
+            res_B,
+            frozenset({
+                frozenset({E, F}),
+                frozenset({C, D}),
+                frozenset({H, C, G}),
+                frozenset({H, C, D, G}),
+                frozenset({E, H, F, G})
+            })
+        )
+        fig1 = plt.figure(figsize=(15, 15))
+        axs = fig1.subplots(1, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs,
+            spsg,
+            targetNode=frozenset({A})
+        )
+        fig1.savefig("spsg_A.pdf")
+        plt.close(fig1)
+        res_A = minimal_startnodes_for_single_var(spsg, A)
+        self.assertSetEqual(
+            res_A,
+            frozenset({
+                frozenset({I})
+            })
         )
 
     def test_minimal_startnodes_for_node(self):
         spsg = sparse_powerset_graph(self.computers)
         targetVars = frozenset({A, B})
+        fig1 = plt.figure(figsize=(15, 30))
+        axs = fig1.subplots(2, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs[1],
+            spsg,
+            targetNode=frozenset({B})
+        )
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            axs[0],
+            spsg,
+            targetNode=frozenset({A})
+        )
+        fig1.savefig("spsg.pdf")
+        plt.close(fig1)
         res = minimal_startnodes_for_node(spsg, targetVars)
-        # print('###############################')
-        # print('miminal startsets for: ', node_2_string(targetVars),nodes_2_string(res))
+        # print('###############################') print('miminal startsets
+        # for: ', node_2_string(targetVars),nodes_2_string(res))
         # print('###############################')
         self.assertSetEqual(
             res,
-            frozenset(
-                {frozenset({E, F, I}), frozenset({C, D, I}), frozenset({H, C, G, I})}
-            ),
+            frozenset({
+                frozenset({I, E, F}),
+                frozenset({I, C, D}),
+                frozenset({I, H, C, G}),
+                frozenset({I, H, C, D, G}),
+                frozenset({I, E, H, F, G})
+            })
         )

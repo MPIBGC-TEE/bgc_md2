@@ -105,6 +105,13 @@ def product_graph(*graphs: Tuple[nx.MultiDiGraph]) -> nx.MultiDiGraph:
     return reduce(lambda u, v: product_graph_2(u, v), graphs)
 
 
+def product_graph_2(
+            g1: nx.MultiDiGraph,
+            g2: nx.MultiDiGraph
+        ) -> nx.MultiDiGraph:
+    cp = nx.cartesian_product(g1, g2)
+    prod = nx.MultiDiGraph()
+
 def product_graph_2(g1: nx.MultiDiGraph, g2: nx.MultiDiGraph) -> nx.MultiDiGraph:
     cp = nx.cartesian_product(g1, g2)
     prod = nx.MultiDiGraph()
@@ -116,6 +123,13 @@ def product_graph_2(g1: nx.MultiDiGraph, g2: nx.MultiDiGraph) -> nx.MultiDiGraph
             reduce(lambda acc, n: acc.union(n), d_tup),
             computers=data["computers"],
         )
+
+    # the cartesian product can also contain nodes that
+    # are not connected.
+    for cart_node in cp.nodes:
+        prod_node = reduce(lambda acc, n: acc.union(n), cart_node)
+
+        prod.add_node(prod_node)
 
     return prod
 
@@ -131,7 +145,7 @@ def initial_sparse_powerset_graph(computers: Set[Callable]) -> nx.MultiDiGraph:
 def update_step(spsg: nx.MultiDiGraph, computers: Set[Callable]) -> nx.MultiDiGraph:
     new = deepcopy(spsg)
     start_nodes = [n for n in new.nodes() if len(new.in_edges(n)) == 0]
-    # print(nodes_2_string(start_nodes))
+    # fixme: the startnode choice is too exclusive
     for node in start_nodes:
         # print(tuple(v for v in node))
         pg = product_graph(*[arg_set_graph(v, computers) for v in node])
@@ -145,9 +159,9 @@ def sparse_powerset_graph(computers: Set[Callable]) -> nx.MultiDiGraph:
     old = initial_sparse_powerset_graph(computers)
     new = update_step(old, computers)
     while not (equivalent_multigraphs(old, new)):
+        old = deepcopy(new)
         new = update_step(old, computers)
-        old = new
-        print(equivalent_multigraphs(old, new))
+        # print(equivalent_multigraphs(old, new))
     return new
 
 
@@ -161,7 +175,7 @@ def update_generator(computers: Set[Callable], max_it: int) -> List[nx.MultiDiGr
     old = deepcopy(val)
     val = update_step(val, computers)
 
-    print(equivalent_multigraphs(old, val))
+    # print(equivalent_multigraphs(old, val))
 
     counter = 1
     while max_it > counter and not (equivalent_multigraphs(old, val)):
@@ -169,13 +183,16 @@ def update_generator(computers: Set[Callable], max_it: int) -> List[nx.MultiDiGr
         old = deepcopy(val)
         val = update_step(val, computers)
         counter += 1
-        print(counter, equivalent_multigraphs(old, val))
+        # print("counter", counter, "equivalent?", equivalent_multigraphs(old, val))
 
 
 def toDiGraph(g_multi: nx.MultiDiGraph) -> nx.DiGraph:
     def edgeDict_to_set(ed):
         target = "computers"
-        comp_set_set = frozenset([v[target] for v in ed.values() if target in v.keys()])
+        comp_set_set = frozenset([
+            v[target]
+            for v in ed.values() if target in v.keys()
+        ])
         return comp_set_set
 
     g_single = nx.DiGraph()
@@ -184,7 +201,9 @@ def toDiGraph(g_multi: nx.MultiDiGraph) -> nx.DiGraph:
         edgeDict = g_multi.get_edge_data(s, t)
         comp_set_set = edgeDict_to_set(edgeDict)
         if g_single.has_edge(s, t):
-            comp_set_set = comp_set_set.union(g_single.get_edge_data(s, t)["computers"])
+            comp_set_set = comp_set_set.union(
+                g_single.get_edge_data(s, t)["computers"]
+            )
         g_single.add_edge(s, t, computers=comp_set_set)
     return g_single
 
@@ -192,8 +211,10 @@ def toDiGraph(g_multi: nx.MultiDiGraph) -> nx.DiGraph:
 def minimal_startnodes_for_single_var(spg: nx.Graph, targetVar: type):
     """ spg is a sparse powerset Graph, which means that it only contains all one element sets as targets."""
     # We first create a graph with the direction of the edges reversed
+    rev_spg = spg.reverse(copy=True)
     targetSet = frozenset({targetVar})
-    res = nx.shortest_path(spg, target=targetSet)
+    res = nx.single_source_shortest_path(rev_spg, source=targetSet)
+    # res=nx.shortest_path(spg,target=targetSet)
     possible_startnodes = frozenset(res.keys())
     minimal_startnodes = [
         n for n in filter(lambda n: not (n.issuperset(targetSet)), possible_startnodes)
