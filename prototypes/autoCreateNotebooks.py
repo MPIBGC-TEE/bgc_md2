@@ -6,46 +6,39 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.2
+#       jupytext_version: 1.5.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
 #     name: python3
 # ---
 
+from IPython.display import HTML
+
+display(HTML("<style>.container { width:100% !important; }</style>"))
+
 # %load_ext autoreload
 # %autoreload 2
-import ipywidgets as widgets
-from IPython.display import display
 import bgc_md2.helper as h
 
+model_inspection = h.ModelInspectionBox()
 
-# # use a layout widget to build the interactive overview table
-#
+model_list = h.ModelListGridBox(inspection_box=model_inspection)
+model_list
 
-outerGridBox = widgets.GridspecLayout(3, 1)
-model_view_pos = 1
+model_inspection
 
-def inspect_model(name):
-    outerGridBox[model_view_pos, 0:2] = h.modelVBox(name)
-
-outerGridBox[0, 0:2] = h.ModelListGridBox(inspect_model=inspect_model)
-
-inspect_model(h.list_models()[0])
-
-# make sure that the next cell is not in scroll mode
-display(outerGridBox)
-# -
+model_list.inspect_model(model_list.names[0])
 
 # # Some alternatives to create html an markdown programmatically
 #
 
-from IPython.display import display, Markdown, Latex,HTML,Math
+from IPython.display import display, Markdown, Latex, HTML, Math
 
-display(Markdown('*some markdown* $\phi$'))
+display(Markdown("*some markdown* $\phi$"))
 
 
-from bgc_md2.helper import list_models_md,list_models
+from bgc_md2.helper import list_models_md, list_models
 
 
 h.list_models()
@@ -58,7 +51,7 @@ display(HTML("val=4"))
 
 
 # +
-from sympy import symbols,var,latex
+from sympy import symbols, var, latex
 
 var("A_f A_b")
 
@@ -68,5 +61,3 @@ var("A_f A_b")
 Math(latex(A_f))
 
 display(Math(latex(A_f)))
-
-

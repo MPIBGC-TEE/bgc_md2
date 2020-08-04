@@ -14,15 +14,19 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
 def list_models():
-    exclude_path = Path('./exclude-models.txt')
+    exclude_path = Path("./exclude-models.txt")
     if exclude_path.exists():
         exclude_lines = set(line.strip() for line in open(exclude_path))
-        exclude_models = set(name for name in exclude_lines
-                             if name and not name.startswith('#'))
+        exclude_models = set(
+            name for name in exclude_lines if name and not name.startswith("#")
+        )
     else:
         exclude_models = set()
-    sub_mod_pkgs= [tup[1] for tup in pkgutil.iter_modules(models.__path__)
-                   if tup[2] and tup[1] not in exclude_models]
+    sub_mod_pkgs = [
+        tup[1]
+        for tup in pkgutil.iter_modules(models.__path__)
+        if tup[2] and tup[1] not in exclude_models
+    ]
     return sub_mod_pkgs
 
 
@@ -36,45 +40,59 @@ def createSingleModelNb(model_name, report_file_path):
     model = Model(model_name)
     nb = nbf.v4.new_notebook()
 
-    text = '# {}'.format(model.name)
-    t_mvars = 'Computable mvars:\n' + '\n'.join(
-        '1. {}'.format(var) for var in model.mvar_names)
-    c_imports = 'import bgc_md2.helper as h'
-    c_model = 'model = h.Model({})'.format(repr(model.name))
-    c_render = 'for var in model.mvars:\n    model.render(var)'
+    text = "# {}".format(model.name)
+    t_mvars = "Computable mvars:\n" + "\n".join(
+        "1. {}".format(var) for var in model.mvar_names
+    )
+    c_imports = "import bgc_md2.helper as h"
+    c_model = "model = h.Model({})".format(repr(model.name))
+    c_graph = "model.graph()"
+    c_render = "for var in model.mvars:\n    model.render(var)"
 
-    nb['cells'] = [
+    nb["cells"] = [
         nbf.v4.new_markdown_cell(text),
         nbf.v4.new_markdown_cell(t_mvars),
         nbf.v4.new_code_cell(c_imports),
         nbf.v4.new_code_cell(c_model),
+        nbf.v4.new_code_cell(c_graph),
         nbf.v4.new_code_cell(c_render),
     ]
     nbf.write(nb, report_file_path)
 
 
+def createSingleModelNbFile(model_name):
+    tmp_dir = Path(
+        "./tmp"
+    )  # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
+    tmp_dir.mkdir(exist_ok=True)
+    file_name = model_name + ".ipynb"
+    nb_path = tmp_dir.joinpath(file_name)
+    createSingleModelNb(model_name, nb_path)
+    return file_name, nb_path
+
 #################################################################################
-def funcmakerInsertLinkInToBox(grid,name):
+def funcmakerInsertLinkInToBox(grid, name):
     def insert_link(b):
         # called for side effect on grid object
-        tmpDirPath= Path("./tmp") # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
+        tmpDirPath = Path(
+            "./tmp"
+        )  # has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)
         tmpDirPath.mkdir(exist_ok=True)
-        suffix=".ipynb"
-        nbPath=tmpDirPath.joinpath(name+suffix)
-        createSingleModelNb(name,nbPath)
-        old_chs=grid.children
-        new_chs=(
+        suffix = ".ipynb"
+        nbPath = tmpDirPath.joinpath(name + suffix)
+        createSingleModelNb(name, nbPath)
+        old_chs = grid.children
+        new_chs = (
             widgets.HTML(
                 value="""
                 <a href="{path}" target="_blank">{text}</a>
                 """.format(
-                        path = nbPath.as_posix(),
-                        text = name+suffix
-                    )
-             )
-        ,)
+                    path=nbPath.as_posix(), text=name + suffix
+                )
+            ),
+        )
         # we change the children tuple
-        grid.children=old_chs + new_chs
+        grid.children = old_chs + new_chs
 
     return insert_link
 
@@ -84,43 +102,79 @@ class Model:
     #
     # 1.
     # in the current implementation the Model has to be reinstanciated
-    # when the source.py of a model changes on disk 
+    # when the source.py of a model changes on disk
     # (For the dot tab completion even the whole class would have to be
     # regenerated.) As a consequence it should be regarded as an ultra
-    # light weight shortlived (made on demand) 
+    # light weight shortlived (made on demand)
     # interface to ipython (which makes working with classes convinient
     # (e.g. by tab completion)
     # see comments on __init__
     #
     # 2.
-    # Model as class name is used in the backend packages and 
+    # Model as class name is used in the backend packages and
     # therefore aquired a special connotation.
     # We might have to look for a more specific name
 
     def __init__(self, name):
         self.name = name
+
+    @property
+    def mvars(self):
+        return computable_mvars(self.name)
+
+    @property
+    def mvar_names(self):
+        return [var.__name__ for var in self.mvars]
         # mm @Thomas:
         # the next two properties will get stale when the underlying model source.py changes on disk
         # maybe they do not have to be stored ...
         # which would not be a problem it this Model instance is always ready to die
-        # and regenerated. 
+        # and regenerated.
 
         # I have no final opinion just a reminder to keep on the lookout
         # for alternative approaches  (see above...)
         # that might be a bit cheaper computationaly by not bundling things into an instance that
-        # has to be discarded completely 
+        # has to be discarded completely
 
-        self.mvars = computable_mvars(name) # could be a @property decorated methods
+        self.mvars = computable_mvars(name)  # could be a @property decorated methods
         self.mvar_names = [var.__name__ for var in self.mvars]
 
-    def render(self, var, capture=False):
+    def __dir__(self):
+        return super().__dir__() + ["get_{}".format(name) for name in self.mvar_names]
+
+    def __getattr__(self, name):
+        if name.startswith("get_"):
+            var_name = name[4:]
+            for var in self.mvars:
+                if var.__name__ == var_name:
+                    return lambda: get_single_mvar_value(var, self.name)
+        return super().__getattr__(name)
+
+    def render(self, var):
         res = get_single_mvar_value(var, self.name)
+        display(Math("\\text{" + var.__name__ + "} =" + latex(res)))
+        # The latex could be filtered to display subscripts better
+        # display(res)
+
+    def graph(self):
+        target_var = SmoothReservoirModel
+        if target_var not in self.mvars:
+            return
+
+        srm = get_single_mvar_value(target_var, self.name)
+        fig = plt.figure()
+        rect = (0, 0, 0.8, 1.2)  # l, b, w, h
+        ax = fig.add_axes(rect)
+        ax.clear()
+        srm.plot_pools_and_fluxes(ax)
+        plt.close(fig)
+        return ax.figure
         out = widgets.Output()
         with out:
-            display(var.__name__ + '=')
+            display(var.__name__ + "=")
             display(Math(latex(res)))
             # The latex could be filtered to display subscripts better
-            #display(res)
+            # display(res)
         if capture:
             return out
         else:
@@ -131,43 +185,44 @@ def modelVBox(model_name):
     model = Model(model_name)
     # on demand computation is used
     # I am aware of the possibility of model.computable_mvars
-    cmvs = computable_mvars(model_name) 
-    target_var = SmoothReservoirModel 
+    cmvs = computable_mvars(model_name)
+    target_var = SmoothReservoirModel
     pictlist = []
     if target_var in cmvs:
         srm = get_single_mvar_value(target_var, model_name)
         graph_out = widgets.Output()
         fig = plt.figure()
-        rect = 0,0,0.8,1.2 #l, b, w, h
-        ax=fig.add_axes(rect)
+        rect = 0, 0, 0.8, 1.2  # l, b, w, h
+        ax = fig.add_axes(rect)
         with graph_out:
             ax.clear()
             srm.plot_pools_and_fluxes(ax)
             display(ax.figure)
-        pictlist = [graph_out]     
-    
+        pictlist = [graph_out]
+
     box = widgets.VBox(
         [
-            widgets.HTML(value="""
+            widgets.HTML(
+                value="""
                 <h1>{name}</h1>
                 Overview 
-                """.format(name=model_name)
+                """.format(
+                    name=model_name
+                )
             ),
             widgets.HTML(
                 "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-                +"<ol>\n"
-                +"\n".join('<li>{}</li>'.format(var) for var in model.mvar_names)
-                +"</ol>\n"
+                + "<ol>\n"
+                + "\n".join("<li>{}</li>".format(var) for var in model.mvar_names)
+                + "</ol>\n"
             ),
         ]
-        +
-        pictlist
-        +
-        [model.render(var, capture=True) for var in model.mvars]
+        + pictlist
+        + [model.render(var, capture=True) for var in model.mvars]
     )
-    b =  widgets.Button(
-        layout=widgets.Layout(width='auto', height='auto'),
-        description="Create notebook from template"
+    b = widgets.Button(
+        layout=widgets.Layout(width="auto", height="auto"),
+        description="Create notebook from template",
     )
     b.on_click(funcmakerInsertLinkInToBox(box, model_name))
     box.children += (b,)
@@ -176,8 +231,8 @@ def modelVBox(model_name):
 
 #################################################################################
 
-def button_callback(function, *args):
 
+def button_callback(function, *args):
     def callback(button):
         function(*args)
 
@@ -185,57 +240,83 @@ def button_callback(function, *args):
 
 
 class ModelListGridBox(widgets.GridspecLayout):
-
-    def __init__(self, inspect_model):
-        self.inspect_model = inspect_model
+    def __init__(self, inspection_box):
+        self.inspection_box = inspection_box
         self.names = list_models()
         super().__init__(len(self.names), 10)
         self.populate()
 
-    def create_notebook(self, i, name):
-        # called for side effect on g
-        tmp_dir_path = Path('./tmp') # has to be relative for jupyter to open the file
-        tmp_dir_path.mkdir(exist_ok=True)
-        suffix = '.ipynb'
-        nbPath = tmp_dir_path.joinpath(name + suffix)
-
-        createSingleModelNb(name, nbPath)
-
-        self[i, 9] = widgets.HTML(
-            value="""
-            <a href="{path}" target="_blank">{text}</a>
-            """.format(
-                path = nbPath.as_posix(),
-                text = name + suffix
-            )
-        )
+    def inspect_model(self, name):
+        self.inspection_box.update(name)
 
     def populate(self):
         for i, name in enumerate(self.names):
-            self[i, 0] = widgets.Text(
-                layout=widgets.Layout(width='auto', height='auto'),
-                value=name,
-            )
+            button_inspect_model = widgets.Button(description=name,)
+            button_inspect_model.on_click(button_callback(self.inspect_model, name))
+            self[i, 0] = button_inspect_model
 
             res = get_single_mvar_value(CompartmentalMatrix, name)
             out = widgets.Output()
             with out:
                 display(res)
-            self[i, 1:7] = out
+            self[i, 1:9] = out
 
-            button_inspect_model = widgets.Button(
-                description='Inspect model',
-            )
-            button_inspect_model.on_click(
-                button_callback(self.inspect_model, name))
 
-            button_create_notebook = widgets.Button(
-                description='Create notebook from template',
-            )
-            button_create_notebook.on_click(
-                button_callback(self.create_notebook, i, name))
+class ModelInspectionBox(widgets.VBox):
 
-            self[i, 8] = widgets.VBox([
-                button_inspect_model,
-                button_create_notebook,
-            ])
+    nb_link_box = None
+
+    def create_notebook(self, model_name):
+        file_name, nb_path = createSingleModelNbFile(model_name)
+        self.nb_link_box.children = (
+            widgets.HTML(
+                value="""
+                <a href="{path}" target="_blank">{text}</a>
+                """.format(
+                    path=nb_path.as_posix(), text=file_name,
+                )
+            ),
+        )
+
+    def update(self, model_name):
+        model = Model(model_name)
+
+        self.children = (
+            widgets.HTML(
+                value="""
+                <h1>{name}</h1>
+                Overview
+                """.format(
+                    name=model_name
+                )
+            ),
+            widgets.HTML(
+                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
+                + "<ol>\n"
+                + "\n".join("<li>{}</li>".format(var) for var in model.mvar_names)
+                + "</ol>\n"
+            ),
+        )
+
+        graph = model.graph()
+        if graph:
+            graph_out = widgets.Output()
+            with graph_out:
+                display(graph)
+            self.children += (graph_out,)
+
+        rendered_vars = widgets.Output()
+        with rendered_vars:
+            for var in model.mvars:
+                model.render(var)
+        self.children += (rendered_vars,)
+
+        b = widgets.Button(
+            layout=widgets.Layout(width="auto", height="auto"),
+            description="Create notebook from template",
+        )
+        b.on_click(button_callback(self.create_notebook, model_name))
+        self.children += (b,)
+
+        self.nb_link_box = widgets.VBox()
+        self.children += (self.nb_link_box,)
