@@ -527,3 +527,72 @@ class ModelDataObject(object):
             return pwc_mr_fd, err_dict
         else:
             return pwc_mr_fd
+
+    def get_stock(self, mr, pool_name, nr_layer=0, name=''):
+        ms = self.model_structure
+        pool_nr = ms.get_pool_nr(pool_name, nr_layer)
+        soln = mr.solve()
+        
+        if name == '':
+            name = ms.get_stock_var(pool_name)
+            
+        return Variable(
+            name=name,
+            data=soln[:, pool_nr],
+            unit=self.stock_unit
+        )
+
+    def get_acc_gross_external_input_flux(self, mr, pool_name, nr_layer=0, name=''):
+        ms = self.model_structure
+        pool_nr = ms.get_pool_nr(pool_name, nr_layer)
+        
+        if name == '':
+            name = ms.get_external_input_flux_var(pool_name)
+
+        return Variable(
+            name=name,
+            data=mr.acc_gross_external_input_vector()[:, pool_nr],
+            unit=self.stock_unit
+        )
+    
+    def get_acc_gross_external_output_flux(self, mr, pool_name, nr_layer=0, name=''):
+        ms = self.model_structure
+        pool_nr = ms.get_pool_nr(pool_name, nr_layer)
+        
+        if name == '':
+            name = ms.get_external_output_flux_var(pool_name)
+
+        return Variable(
+            name=name,
+            data=mr.acc_gross_external_output_vector()[:, pool_nr],
+            unit=self.stock_unit
+        )
+    
+    def get_acc_gross_internal_flux(
+        self,
+        mr,
+        pool_name_from,
+        pool_name_to,
+        nr_layer_from=0,
+        nr_layer_to=0,
+        name=''
+    ):
+        ms = self.model_structure
+        pool_nr_from = ms.get_pool_nr(
+            pool_name_from,
+            nr_layer_from
+        )
+        pool_nr_to = ms.get_pool_nr(
+            pool_name_to,
+            nr_layer_to
+        )
+        Fs = mr.acc_gross_internal_flux_matrix()
+
+        if name == '':
+            name = ms.get_horizontal_flux_var(pool_name_from, pool_name_to)
+
+        return Variable(
+            name=name,
+            data=Fs[:, pool_nr_to, pool_nr_from],
+            unit=self.stock_unit
+        )
