@@ -467,7 +467,7 @@ class ModelDataObject(object):
             + Rs.data.mask.sum()
             == 0
         ):
-            pwc_mr_fd = PWCMRFD.from_gross_data(
+            pwc_mr_fd = PWCMRFD.from_gross_fluxes(
                 symbols("t"),
                 times,
                 xs.data.filled()[0],
