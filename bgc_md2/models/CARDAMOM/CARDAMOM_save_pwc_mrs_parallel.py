@@ -15,32 +15,32 @@
 
 # +
 from dask.distributed import Client
+
 import xarray as xr
 import numpy as np
 
 import importlib
 import CARDAMOMlib
 
-# xr.set_options(display_style='html')
+xr.set_options(display_style='html')
 # -
 
 
 importlib.reload(CARDAMOMlib)
 
 
-client = Client(n_workers=4, threads_per_worker=2, memory_limit="200MB")
+client = Client(n_workers=2, threads_per_worker=2, memory_limit="3GB")
 client
 
 
 # +
-#method = "discrete"
-#method = 'continuous'
-
 data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
 #data_folder = "/home/data/CARDAMOM/"  # matagorda
 
 filestem = "cardamom_for_holger_10_ensembles"
-chunk_dict = {"ens": 2}
+chunk_dict = {"ens": 5}
+#filestem = "cardamom_for_holger"
+#chunk_dict = {"ens": 100}
 ds = xr.open_dataset(data_folder + filestem + ".nc")#.isel(
 #    ens=slice(None, 6),
 #    time=slice(None, 5)
@@ -138,55 +138,22 @@ def func_chunk(chunk_ds):
 
 ds_mrs = xr.map_blocks(func_chunk, ds, template=ds_mr_template).compute()
 #ds_mrs = xr.map_blocks(func_chunk, ds, template=ds).compute()
+ds_mrs
 
-print(ds_mrs)
-comp_dict = {'zlib':True, 'complevel':9}
+
+# +
+## save dataset and clean up
+
+comp_dict = {'zlib': True, 'complevel': 9}
 encoding = {var: comp_dict for var in ds_mrs.data_vars}
 ds_mrs.to_netcdf(filestem + "_pwc_mrs_fd" + ".nc", encoding=encoding)
 ds_mrs.close()
 
+ds.close()
 
-# +
-# %%time
-
-# compute Delta 14C values on entire grid (ens x lat x lon) (400 x 2 x 2)
-
-
-def func(sub_ds):
-    res = CARDAMOMlib.load_Delta_14C_dataset(sub_ds, method=method)
-    return res
-
-
-def func_chunk(chunk_ds):
-    if sum(chunk_ds.ens) == 0:
-        res = func(chunk_ds)
-        return res
-
-    res = nested_groupby_apply(chunk_ds, ["ens", "lat", "lon"], func)
-    return res
-
-
-ds_Delta_14C = xr.map_blocks(func_chunk, ds).compute()
-ds_Delta_14C
 # -
 
 
-## the ensemble numbers, latitude and longitude where the discrete reconstruction failed
-df_fail = (
-    ds_Delta_14C.where(ds_Delta_14C.log != "", drop=True)
-    .isel(time=0)
-    .to_dataframe()["log"]
-)
-df_fail
 
 
-## keep locations with successful reconstruction
-ds_Delta_14C = ds_Delta_14C.where(ds_Delta_14C.log == "", drop=True)
-ds_Delta_14C
-
-
-## save dataset and clean up
-ds_Delta_14C.to_netcdf(data_folder + "Delta_14C_" + method + ".nc")
-ds_Delta_14C.close()
-ds.close()
 

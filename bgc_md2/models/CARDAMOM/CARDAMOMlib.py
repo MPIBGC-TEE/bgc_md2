@@ -14,6 +14,10 @@ from bgc_md2.ModelDataObject import (
 from bgc_md2.Variable import Variable
 
 from CompartmentalSystems.discrete_model_run import DMRError
+from CompartmentalSystems.pwc_model_run_fd import (
+    PWCModelRunFD,
+    PWCModelRunFDError
+)
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
 from bgc_md2.models.CARDAMOM.compute_start_values_14C import compute_start_values_14C
@@ -48,7 +52,10 @@ def load_model_structure():
 
     vertical_structure = {}
 
-    external_output_structure = {"Litter": ["Litter_to_RH"], "Soil": ["Soil_to_RH"]}
+    external_output_structure = {
+        "Litter": ["Litter_to_RH"],
+        "Soil": ["Soil_to_RH"]
+    }
 
     model_structure = ModelStructure(
         pool_structure=pool_structure,
@@ -76,8 +83,6 @@ def load_mdo(ds):
     )
 
     mdo = ModelDataObject(model_structure=ms, dataset=ds, stock_unit="gC/m2", time=time)
-
-    from bgc_md2.ModelDataObject import getFluxVariable_from_DensityRate
 
     mdo.load_external_output_fluxes(func=getFluxVariable_from_DensityRate, data_shift=1)
     return mdo
@@ -118,7 +123,7 @@ def add_variable(ds, data_vars, var_name_ds, new_var):
         data_vars[var_name_ds] = var
 
 
-def create_Delta_14C_dataset(mdo, ds, mr, mr_14C):
+def create_Daelta_14C_dataset(mdo, ds, mr, mr_14C):
     alpha = 1.18e-12
     t_conv = lambda t: 2001 + (15 + t) / 365.25
     F_Delta_14C = lambda C12, C14: (C14 / C12 / alpha - 1) * 1000
@@ -432,18 +437,183 @@ def load_pwc_mr_fd(ds):
 
     return mr
 
+def compute_pwc_mr_fd_ds(ds):
+#    if ds.ens.values.shape == (0,):
+
+    mdo = load_mdo(ds)
+    nr_pools = mdo.model_structure.nr_pools
+    error = ''
+    try:
+        #pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
+        pwc_mr_fd = mdo.create_model_run()
+    except PWCModelRunFDError as e:
+        error = str(e)
+
+    if not error:
+        ds_pwc_mr_fd = mdo.get_netcdf(pwc_mr_fd)
+    data_vars = dict()
+
+    if not error:
+        data = ds_pwc_mr_fd['start_values'].data
+    else:
+        data = np.nan * np.ones((nr_pools,))
+    data_vars['start_values'] = xr.DataArray(
+        data=data,
+        dims='pool'
+    )
+
+    data = np.nan * np.ones((len(ds.time), nr_pools))
+    if not error:
+        data[:-1, ...] = ds_pwc_mr_fd['us'].data
+    data_vars['us'] = xr.DataArray(
+        data=data,
+        dims=['time', 'pool']
+    )
+
+    data = np.nan * np.ones((len(ds.time), nr_pools, nr_pools))
+    if not error:
+        data[:-1, ...] = ds_pwc_mr_fd['Bs'].data
+    data_vars['Bs'] = xr.DataArray(
+        data=data,
+        dims=['time', 'pool_to', 'pool_from']
+    )
+
+    data_vars['log'] = xr.DataArray(data=error)
+
+    pools = range(nr_pools)
+    sub_coords = {
+        'time': ds.time,
+        'pool': pools,
+        'pool_to': pools,
+        'pool_from': pools
+    }
+    sub_ds = xr.Dataset(
+        coords=sub_coords,
+        data_vars=data_vars
+    )
+
+    if not error:
+        ds_pwc_mr_fd.close()
+    sub_ds.close()
+    return sub_ds
+
 
 ################################################################################
 
 
 if __name__ == "__main__":
     pass
-    dataset = xr.open_dataset("~/Desktop/CARDAMOM/cardamom_for_holger.nc")
-    ds = dataset.isel(ens=0, lat=0, lon=0)
+#    dataset = xr.open_dataset("~/Desktop/CARDAMOM/cardamom_for_holger.nc")
+    dataset = xr.open_dataset("~/Desktop/CARDAMOM/cardamom_for_holger_10_ensembles.nc")
     #    ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, 'discrete')
     #    ds_Delta_14C_pwc_mr_fd = load_Delta_14C_dataset(ds, 'continuous')
 
-    pwc_mr_fd = load_pwc_mr_fd(ds)
+    #pwc_mr_fd = load_pwc_mr_fd(ds)
+
+#    coords = ds.coords
+    data_vars = dict()
+
+
+    enss = dataset['ens'][:1]
+    lats = dataset['lat'][:1]
+    lons = dataset['lon'][:1]
+    nr_times = 5
+    times = dataset.time[:5]
+    pools = range(6)
+    pools_to = pools
+    pools_from = pools
+
+    start_values = np.zeros((len(enss), len(lats), len(lons), len(pools)))
+    us = np.zeros((
+        len(enss),
+        len(lats),
+        len(lons),
+        len(times),
+        len(pools)
+    ))
+    Bs = np.zeros((
+        len(enss),
+        len(lats),
+        len(lons),
+        len(times),
+        len(pools),
+        len(pools)
+    ))
+
+    for ens_idx, ens in enumerate(enss):
+        for lat_idx, lat in enumerate(lats):
+            for lon_idx, lon in enumerate(lons):
+                ds = dataset.sel(ens=ens, lat=lat, lon=lon, time=times)
+                mdo = load_mdo(ds)
+                try:
+                    pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
+
+                    ds_pwc_mr_fd = mdo.get_netcdf(pwc_mr_fd)
+                    start_values[ens_idx, lat_idx, lon_idx, ...] = ds_pwc_mr_fd['start_values']
+                    us[ens_idx, lat_idx, lon_idx,  :-1, ...] = ds_pwc_mr_fd['us']
+                    us[ens_idx, lat_idx, lon_idx, -1, ...].fill(np.nan)
+                    Bs[ens_idx, lat_idx, lon_idx,  :-1, ...] = ds_pwc_mr_fd['Bs']
+                    Bs[ens_idx, lat_idx, lon_idx, -1, ...].fill(np.nan)
+
+                    ds_pwc_mr_fd.close()
+                    ds.close()
+                except PWCModelRunFDError as e:
+                    print(ens_idx, lat_idx, lon_idx, e)
+                    start_values[ens_idx, lat_idx, lon_idx, ...].fill(np.nan)
+                    us[ens_idx, lat_idx, lon_idx,  ...].fill(np.nan)
+                    Bs[ens_idx, lat_idx, lon_idx,  ...].fill(np.nan)
+                
+
+    data_vars['start_values'] = xr.DataArray(
+        data=start_values,
+        dims=['ens', 'lat', 'lon', 'pool'],
+        coords=[enss, lats, lons, pools],
+        attrs={'units': mdo.stock_unit}
+    )
+    data_vars['us'] = xr.DataArray(
+        data=us,
+        dims=['ens', 'lat', 'lon', 'time', 'pool'],
+        coords=[enss, lats, lons, times, pools],
+        attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit}
+    )
+    data_vars['Bs'] = xr.DataArray(
+        data=Bs,
+        dims=['ens', 'lat', 'lon', 'time', 'pool_to', 'pool_from'],
+        coords=[enss, lats, lons, times, pools_to, pools_from],
+        attrs={'units': '1/'+mdo.time_agg.unit}
+    )
+
+    coords = {
+        'ens': enss,
+        'lat': lats,
+        'lon': lons,
+        'time': times,
+        'pool': pools,
+        'pool_to': pools,
+        'pool_from': pools
+    }
+    ds = xr.Dataset(
+        coords=coords,
+        data_vars=data_vars,
+        attrs={'time_unit': mdo.time_agg.unit}
+    )
+    
+    ds.to_netcdf('pwc_model_runs_from_data.nc')
+    ds.close()
+
+    # code example for loading model run from netcdf file
+    ds = xr.open_dataset('pwc_model_runs_from_data.nc')
+    ds1 = ds.isel(ens=0, lat=0, lon=0)
+    times = np.array([i * 365.25/12 for i in range(len(ds1.time))])
+    start_values = ds1.start_values.data
+    Bs = ds1.Bs.data[:-1]
+    us = ds1.us.data[:-1]
+    mr = PWCModelRunFD.from_Bs_and_us('t', times, start_values, Bs, us)
+    ds1.close()
+    ds.close()
+
+    dataset.close()
+
 
     #    # check for similarity
     #    for name, var_dmr in ds_Delta_14C_dmr.data_vars.items():
@@ -464,5 +634,4 @@ if __name__ == "__main__":
 
     #    ds_Delta_14C_dmr.close()
     #    ds_Delta_14C_pwc_mr_fd.close()
-    ds.close()
-    dataset.close()
+    #ds.close()

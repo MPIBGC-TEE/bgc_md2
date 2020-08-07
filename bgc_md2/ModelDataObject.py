@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 from netCDF4 import Dataset
 from sympy import symbols
 
@@ -330,7 +331,7 @@ class ModelDataObject(object):
                 fvs_agg = []
                 variable_names = flux_structure.get(flux_type, None)
                 for variable_name in variable_names:
-                    #                    print(pool_name, variable_name, flush=True)
+                    # print(pool_name, variable_name, flush=True)
                     fv_agg = func(
                         mdo=self,
                         variable_name=variable_name,
@@ -389,9 +390,9 @@ class ModelDataObject(object):
         VFs, Runoffs_up, Runoffs_down = self.load_vertical_fluxes(
             func=getFluxVariable_from_Rate, data_shift=1
         )
-        #        print(np.where(runoffs_up.data !=0))
-        #        print(np.where(runoffs_down.data !=0))
-        #        print(runoffs_down.data[runoffs_down.data!=0])
+        # print(np.where(runoffs_up.data !=0))
+        # print(np.where(runoffs_down.data !=0))
+        # print(runoffs_down.data[runoffs_down.data!=0])
 
         Fs = HFs + VFs
 
@@ -450,16 +451,15 @@ class ModelDataObject(object):
     def create_model_run(self, errors=False):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
-
-        #        print(self.time_agg.data)
-        #        print(xs.data)
-        #        print(Fs.data)
-        #        print(Rs.data)
-        #        print(Us.data)
-        #        input()
+        # print(self.time_agg.data)
+        # print(xs.data)
+        # print(Fs.data)
+        # print(Rs.data)
+        # print(Us.data)
+        # input()
 
         times = self.time_agg.data.filled()
-        #        times = np.arange(len(self.time_agg.data))
+        # times = np.arange(len(self.time_agg.data))
         if (
             xs.data.mask.sum()
             + Fs.data.mask.sum()
@@ -467,11 +467,11 @@ class ModelDataObject(object):
             + Rs.data.mask.sum()
             == 0
         ):
-            pwc_mr_fd = PWCMRFD(
+            pwc_mr_fd = PWCMRFD.from_gross_data(
                 symbols("t"),
                 times,
                 xs.data.filled()[0],
-                #                xs.data.filled(),
+                # xs.data.filled(),
                 Us.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled(),
@@ -596,3 +596,44 @@ class ModelDataObject(object):
             data=Fs[:, pool_nr_to, pool_nr_from],
             unit=self.stock_unit
         )
+
+    def get_netcdf(self, mr):
+        ds_attrs = {'time_unit': self.time_agg.unit}
+
+        coords_time = mr.times[:-1]
+        coords_pool = range(mr.nr_pools)
+        coords = {'time': coords_time, 'pool': coords_pool}
+        data_vars = dict()
+        
+        start_values = xr.DataArray(
+            data=mr.start_values,
+            dims=['pool'],
+            coords={'pool': coords_pool},
+            attrs={'units': self.stock_unit}
+        )
+        data_vars['start_values'] = start_values
+
+        us = xr.DataArray(
+            data=mr.us,
+            dims=['time', 'pool'],
+            coords=coords,
+            attrs={'units': self.stock_unit+'/'+self.time_agg.unit}
+        )
+        data_vars['us'] = us
+
+        Bs = xr.DataArray(
+            data=mr.Bs,
+            dims=['time', 'pool_to', 'pool_from'],
+            coords=[coords_time, coords_pool, coords_pool],
+            attrs={'units': '1/'+self.time_agg.unit}
+        )
+        data_vars['Bs'] = Bs
+
+        ds_mr = xr.Dataset(
+            coords=coords,
+            data_vars=data_vars,
+            attrs=ds_attrs
+        )
+#        ds_mr.to_netcdf(file_path)
+#        ds_mr.close()
+        return ds_mr

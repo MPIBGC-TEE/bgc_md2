@@ -718,6 +718,19 @@ class TestModelDataObject(unittest.TestCase):
         ds.close()
         dataset.close()
 
+    def test_get_netcdf(self):
+        filename = 'cardamom_for_holger_10_ensembles.nc'
+        my_data_path = os.path.join(THIS_DIR, filename)
+        dataset = xr.open_dataset(my_data_path)
+        ds = dataset.isel(ens=0, lat=0, lon=0, time=slice(None, 24))
+        mdo = load_mdo(ds)
+        mr = mdo.create_model_run()
+
+        ds_mr = mdo.get_netcdf(mr)
+        print(ds_mr.dims)
+        ds_mr.close()
+        ds.close()
+
 
 ################################################################################
 
