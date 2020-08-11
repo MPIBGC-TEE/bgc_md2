@@ -29,16 +29,18 @@ xr.set_options(display_style='html')
 importlib.reload(CARDAMOMlib)
 
 
-client = Client(n_workers=2, threads_per_worker=2, memory_limit="3GB")
+#client = Client(n_workers=20, threads_per_worker=2, memory_limit="4GB")
+client = Client(n_workers=20, threads_per_worker=2, memory_limit="4GB", silence_logs='error')
 client
 
 
 # +
-data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
-#data_folder = "/home/data/CARDAMOM/"  # matagorda
+#data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
+data_folder = "/home/data/CARDAMOM/"  # matagorda
 
-filestem = "cardamom_for_holger_10_ensembles"
-chunk_dict = {"ens": 5}
+#filestem = "cardamom_for_holger_10_ensembles"
+filestem = "cardamom_for_holger"
+chunk_dict = {"ens": 20}
 #filestem = "cardamom_for_holger"
 #chunk_dict = {"ens": 100}
 ds = xr.open_dataset(data_folder + filestem + ".nc")#.isel(
@@ -133,7 +135,9 @@ def func(single_site_ds):
     return res
 
 def func_chunk(chunk_ds):
+    print("\nens: {:03} - {:03}\n".format(chunk_ds.ens.data[0], chunk_ds.ens.data[-1]))
     res = nested_groupby_apply(chunk_ds, ['ens', 'lat', 'lon'], func)
+    print(res)
     return res
 
 ds_mrs = xr.map_blocks(func_chunk, ds, template=ds_mr_template).compute()

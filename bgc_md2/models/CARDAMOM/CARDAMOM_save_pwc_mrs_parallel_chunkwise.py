@@ -29,16 +29,17 @@ xr.set_options(display_style='html')
 importlib.reload(CARDAMOMlib)
 
 
-client = Client(n_workers=2, threads_per_worker=1, memory_limit="2GB")
+client = Client(n_workers=2, threads_per_worker=1, memory_limit="3GB")
 client
 
 
 # +
-data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
-#data_folder = "/home/data/CARDAMOM/"  # matagorda
+#data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
+data_folder = "/home/data/CARDAMOM/"  # matagorda
 
-filestem = "cardamom_for_holger_10_ensembles"
-chunk_dict = {"ens": 2}
+#filestem = "cardamom_for_holger_10_ensembles"
+filestem = "cardamom_for_holger"
+chunk_dict = {"ens": 20}
 #filestem = "cardamom_for_holger"
 #chunk_dict = {"ens": 100}
 ds = xr.open_dataset(data_folder + filestem + ".nc")#.isel(
@@ -86,7 +87,7 @@ def func_chunk(chunk_ds):
     print('\nChunk start:', chunk_ds.ens.data[0], '\n')
     res = nested_groupby_apply(chunk_ds, ['ens', 'lat', 'lon'], func)
     
-    filename = filestem + "_{:02d}-{:02d}.nc".format(res.ens.data[0], res.ens.data[-1])
+    filename = filestem + "_{:03d}-{:03d}.nc".format(res.ens.data[0], res.ens.data[-1])
     encoding = {var: comp_dict for var in res.data_vars}
     res.to_netcdf(filename, encoding=encoding)
     print(res)
