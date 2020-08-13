@@ -1,4 +1,4 @@
-# Copy this file to: prototypes/exclude-models.txt
+# Copy this file to: etc/jupyter/exclude-models.txt
 # Each line lists one name of a model to exclude.
 # Empty lines, lines starting with # and whitespace around lines are ignored.
 

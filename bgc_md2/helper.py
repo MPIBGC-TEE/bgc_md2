@@ -7,6 +7,7 @@ from bgc_md2.resolve.mvars import CompartmentalMatrix
 from pathlib import Path
 from sympy import latex
 import ipywidgets as widgets
+import jupyter_core.paths
 import nbformat as nbf
 import pkgutil
 import matplotlib.pyplot as plt
@@ -14,12 +15,14 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
 def list_models():
-    exclude_path = Path("./exclude-models.txt")
-    if exclude_path.exists():
-        exclude_lines = set(line.strip() for line in open(exclude_path))
-        exclude_models = set(
-            name for name in exclude_lines if name and not name.startswith("#")
-        )
+    for candidate in jupyter_core.paths.jupyter_config_path():
+        exclude_path = Path(candidate) / "./exclude-models.txt"
+        if exclude_path.exists():
+            exclude_lines = set(line.strip() for line in open(exclude_path))
+            exclude_models = set(
+                name for name in exclude_lines
+                if name and not name.startswith("#"))
+            break
     else:
         exclude_models = set()
     sub_mod_pkgs = [
