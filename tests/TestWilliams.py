@@ -1,5 +1,7 @@
 import unittest
 import matplotlib.pyplot as plt
+from string import ascii_lowercase, ascii_uppercase
+
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
@@ -13,6 +15,9 @@ from bgc_md2.models.helpers import (
     bgc_md2_computers,
 )
 from bgc_md2.resolve.graph_helpers import sparse_powerset_graph
+from bgc_md2.resolve.non_graph_helpers import (
+    all_mvars
+)
 from bgc_md2.resolve.mvars import (
     TimeSymbol,
     StateVariableTuple,
@@ -76,9 +81,28 @@ class TestWilliams(InDirTest):
         self.assertSetEqual(mvs, self.ref_provided_mvars)
 
     def test_computable_mvars(self):
-        # spsg=sparse_powerset_graph(bgc_md2_computers())
-        # A=AGraphComputerSetMultiDiGraph(spsg,computer_color_func)
-        # A.draw('MultiDiGraph.svg',prog="circo") # draw using circo
+        # fixme: the next lines want to move to resolve/computers 
+        self.bgc_computers = bgc_md2_computers()
+        self.computer_aliases = {
+            v.__name__: ascii_lowercase[i] for i, v in enumerate(self.bgc_computers)
+        }
+        allVars = all_mvars(self.bgc_computers)
+        self.mvar_aliases = {
+            name: ascii_uppercase[i]
+            for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
+        }
+        # end_fixme
+        spsg=sparse_powerset_graph(bgc_md2_computers())
+        f = plt.figure()
+        ax = f.add_subplot(1,1,1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+                ax,
+                spsg, 
+                self.mvar_aliases, 
+                self.computer_aliases,
+                targetNode=frozenset({SmoothModelRun})
+        )
+        f.savefig("spgs.pdf")
         fig = plt.figure()
         draw_update_sequence(bgc_md2_computers(), max_it=8, fig=fig)
         fig.savefig("c1.pdf")

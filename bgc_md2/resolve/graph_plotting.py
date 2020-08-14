@@ -30,10 +30,6 @@ def edge_2_string(e):
     return "(" + node_2_string(e[0]) + "," + node_2_string(e[1]) + ")"
 
 
-def edge_2_string(e):
-    return "(" + node_2_string(e[0]) + "," + node_2_string(e[1]) + ")"
-
-
 def draw_sequence(fig, tups):
     axs = fig.subplots(len(tups), 1, sharex=True, sharey=True)
     for i, tup in enumerate(tups):
@@ -136,16 +132,16 @@ def draw_ComputerSetMultiDiGraph_matplotlib(
             pos,
             nodelist=[targetNode],
             node_color='r',
-            alpha =0.8
+            alpha=0.8
         )
         nx.draw_networkx_nodes(
             spsg,
             pos,
             nodelist=list(res),
             node_color='r',
-            alpha =0.4
+            alpha=0.4
         )
-    
+
     ax.axis("On")
     # at the moment it is not possible to draw
     # more than one edge (egde_lables) between nodes
