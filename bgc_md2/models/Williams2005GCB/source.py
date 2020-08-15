@@ -33,12 +33,12 @@ from bgc_md2.resolve.mvars import (
 )
 from bgc_md2.resolve.computers import smooth_reservoir_model_from_input_tuple_and_matrix
 
-from bgc_md2.described_quantities import describedQuantity
+from ..BibInfo import BibInfo 
 
-# define Quantities (as you would symbols, but with an additional description)
+
+
 t = TimeSymbol("t")
-# We keep the dimensions and descriptions as comments refering to the original
-# publications.
+
 # It is better to store the purely symbolical description (without units or
 # even dimensions)
 # since it is more versatile. For purposes of comparison we might want to reinterprete
@@ -46,29 +46,57 @@ t = TimeSymbol("t")
 # The responsibility of the user is to provide consisten parameterisations
 # for which the comments about dimensions are helpful and must be correct
 # but will not be checked automatically by the system.
+# We could keep the dimensions and descriptions as comments refering to the original
+# publications.
+# var("C_f")  #  mass/length**2)		    "Foliar C mass"
+# var("C_lab")  #  mass/length**2)		    "Labile C mass"
+# var("C_w")  #  mass/length**2)		    "Wood C mass"
+# var("C_r")  #  mass/length**2)		    "Fine root C mass"
+# var(
+#     "p_10"
+# )  #  1/temperature)		    "Parameter in exponential term of temperature dependent rate parameter"
+# var("mint")  #  temperature)		        "Dayly minimum temperature"
+# var("maxt")  #  temperature)		        "Dayly maximum temperature"
+# var("multtl")  #  1/time)		            "Turnover of labile C (0 = off)		 1 = On)			"
+# var("multtf")  #  1/time)		            "Turnover of foliage C (0 = off)		 1 = On)			"
+# var("LAI")  #  1)		                "LeafAreaIndex"
+# var("p_3")  #  1)		                "Fraction of NPP partitioned to foliage"
+# var("p_4")  #  1)		                "Fraction of NPP partitioned to roots"
+# var("p_5")  #  1/time)	                "Turnover rate of foliage"
+# var("p_6")  #  1/time)	                "Turnover rate of wood"
+# var("p_7")  #  1/time)	                "Turnover rate of roots"
+# var("p_14")  #  1)		                "Fraction of leaf loss transferred to litter"
+# var("p_15")  #  1/time)	                "Turnover rate of labile carbon"
+# var("p_16")  #  1)		                "Fraction of labile transfers respired "
+# var("NPP")  #  mass/(length**2*time))   "Net Primary Production per area"
+# 
+# We could retain make the original description and dimensions available to the framework as 
+# part of the bibliographical information in a dictionary which could also be used to define
+# the symbols (to avoid duplication) as demonstrated here.
 
-var("C_f")  #  mass/length**2)		    "Foliar C mass"
-var("C_lab")  #  mass/length**2)		    "Labile C mass"
-var("C_w")  #  mass/length**2)		    "Wood C mass"
-var("C_r")  #  mass/length**2)		    "Fine root C mass"
-var(
-    "p_10"
-)  #  1/temperature)		    "Parameter in exponential term of temperature dependent rate parameter"
-var("mint")  #  temperature)		        "Dayly minimum temperature"
-var("maxt")  #  temperature)		        "Dayly maximum temperature"
-var("multtl")  #  1/time)		            "Turnover of labile C (0 = off)		 1 = On)			"
-var("multtf")  #  1/time)		            "Turnover of foliage C (0 = off)		 1 = On)			"
-var("LAI")  #  1)		                "LeafAreaIndex"
-var("p_3")  #  1)		                "Fraction of NPP partitioned to foliage"
-var("p_4")  #  1)		                "Fraction of NPP partitioned to roots"
-var("p_5")  #  1/time)	                "Turnover rate of foliage"
-var("p_6")  #  1/time)	                "Turnover rate of wood"
-var("p_7")  #  1/time)	                "Turnover rate of roots"
-var("p_14")  #  1)		                "Fraction of leaf loss transferred to litter"
-var("p_15")  #  1/time)	                "Turnover rate of labile carbon"
-var("p_16")  #  1)		                "Fraction of labile transfers respired "
-var("NPP")  #  mass/(length**2*time))   "Net Primary Production per area"
-
+sym_dict={
+    "C_f":      (mass/length**2 		    , "Foliar C mass"),
+    "C_lab":    (mass/length**2 		    , "Labile C mass"),
+    "C_w":	    (mass/length**2 		    , "Wood C mass"),
+    "C_r":	    (mass/length**2 		    , "Fine root C mass"),
+    "p_10":     (1/temperature		        , "Parameter in exponential term of temperature dependent rate parameter"),
+    "mint":	    (temperature		        , "Dayly minimum temperature"),
+    "maxt":	    (temperature		        , "Dayly maximum temperature"),
+    "multtl":	(1/time		                , "Turnover of labile C (0 = off)		 1 = On)			"),
+    "multtf":	(1/time		                , "Turnover of foliage C (0 = off)		 1 = On)			"),
+    "LAI":	    (1		                    , "LeafAreaIndex"),
+    "p_3":	    (1		                    , "Fraction of NPP partitioned to foliage"),
+    "p_4":	    (1		                    , "Fraction of NPP partitioned to roots"),
+    "p_5":	    (1/time	                    , "Turnover rate of foliage"),
+    "p_6":	    (1/time	                    , "Turnover rate of wood"),
+    "p_7":	    (1/time	                    , "Turnover rate of roots"),
+    "p_14":	    (1		                    , "Fraction of leaf loss transferred to litter"),
+    "p_15":	    (1/time	                    , "Turnover rate of labile carbon"),
+    "p_16":	    (1		                    , "Fraction of labile transfers respired "),
+    "NPP":	    ( mass/(length**2*time)     , "Net Primary Production per area"),
+}
+for name in sym_dict.keys():
+    var(name)
 
 # The following parameters would be needed to compute NPP from GPP  since they are not given
 #    ("p_2"		, "1"	                            ,"Fraction of GPP respired "), # no parameter values in publication
@@ -123,28 +151,67 @@ A = CompartmentalMatrix(
         [0, 0, 0, -p_7],
     ]
 )
-I = InputTuple(u * ImmutableMatrix(b))
+Input = InputTuple(u * ImmutableMatrix(b))
 
-# model_run_data:
-#    parameter_sets:
-#        - "param_vals":
-#            desc: "NPP value was given per year. p~14~, p~15~ and p~16~ values not given in publication"
-#            values: {NPP: 'Rational(409,365)', mint: -4, maxt: 5, multtf: 0, multtl: 1, p_2: 0.47, p_3: 0.31, p_4: 0.43, p_5: 0.0027, p_6: 0.00000206, p_7: 0.00248, p_10: 0.0693, p_14: 0.45, p_15: 0.001, p_16: 0.25}
-#            doi: 10.1111/j.1365-2486.2004.00891.x
-#    initial_values:
-#        - "init_vals":
-#            desc: C_lab values not provided in publication
-#            values: {C_f: 58, C_lab: 60, C_w: 770, C_r: 102}
-#            doi: 10.1111/j.1365-2486.2004.00891.x
-#    run_times:
-#        - RT1:
-#            start: 0
-#            end: 1096 # See drivers data set
-#            step_size: 1
-#
-#    possible_combinations:
-#        - ["param_vals", "init_vals", RT1]
-#
+# alternatively we could retain the information about how the derived expressions had been defined
+# also making the original description available as bibliographic information
+# expr_dict={
+#     "T_rate": (
+#         "0.5 * exp(p_10 * ((maxt + mint) / 2))",
+#         "Temperature sensitive rate parameter"
+#     ),
+#     "x": (
+#         "StateVariableTuple((C_f, C_lab, C_w, C_r))",
+#         "statevector"
+#     ),
+#     "u": (
+#         "NPP",
+#         "scalar function of photosynthetic inputs"
+#     ),
+#     "b": (
+#         "((p_3 * multtl), 0, (1 - p_4), p_4)", 
+#         "partitioning coefficients of photosynthetically fixed carbon"
+#     ),
+#     "A": (
+#         """CompartmentalMatrix(
+#             [
+#                 [
+#                     (
+#                         (-1)
+#                         * (
+#                             ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate)
+#                             + ((1 - p_14) * p_5 * p_16 * multtf * T_rate)
+#                             + (p_5 * p_14 * multtf)
+#                         )
+#                     ),
+#                     (p_15 * (1 - p_16) * multtl * T_rate),
+#                     0,
+#                     0,
+#                 ],
+#                 [
+#                     ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate),
+#                     (
+#                         (-p_15 * (1 - p_16) * multtl * T_rate)
+#                         - (p_15 * p_16 * multtl * T_rate)
+#                     ),
+#                     0,
+#                     0,
+#                 ],
+#                 [0, 0, -p_6, 0],
+#                 [0, 0, 0, -p_7],
+#             ]
+#         )""",
+#         " matrix of cycling rates"
+#     ),
+#     "I": (
+#             "InputTuple(u * ImmutableMatrix(b))",
+#     )
+# }
+#for k,v in expr_dict.items():
+#    code=k+"="+v[0]
+#    exec(code)
+
+
 np1 = NumericParameterization(
     par_dict={
         NPP: Rational(409, 365),  # *gram*/(meter**2*day)
@@ -187,8 +254,21 @@ ntimes = NumericSimulationTimes(np.arange(0, 1096, 1))
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
 specialVars = {
+    BibInfo(# Bibliographical Information
+        name="DALEC",
+        longName="Data Assimilation Linked Ecosystem model", 
+        version="1",
+        entryAuthor="Verónika Ceballos-Núñez",
+        entryAuthorOrcid="0000-0002-0046-1160",
+        entryCreationDate="16/9/2016",
+        doi="10.1111/j.1365-2486.2004.00891.x",
+        further_references=BibInfo(doi="10.1016/j.agrformet.2009.05.002"),
+        #  Also from PDF in Reflex experiment
+        sym_dict=sym_dict
+        
+    ),
     A,  # the overall compartmental matrix
-    I,  # the overall imput
+    Input,  # the overall imput
     t,  # time for the complete system
     x,  # state vector of the the complete system
     np1,

@@ -33,6 +33,7 @@ from bgc_md2.resolve.mvars import (
     QuantityModelRun,
     QuantityParameterizedModel,
 )
+from bgc_md2.models.BibInfo import BibInfo 
 
 from bgc_md2.resolve.computers import numeric_parameterized_smooth_reservoir_model_1
 from bgc_md2.resolve.graph_plotting import (
@@ -71,6 +72,7 @@ class TestWilliams(InDirTest):
                 NumericStartValueDict,
                 NumericSimulationTimes,
                 NumericParameterization,
+                BibInfo,
                 # QuantityModelRun,
                 # QuantityParameterizedModel
             ]
