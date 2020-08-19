@@ -22,6 +22,8 @@ import numpy as np
 import importlib
 import CARDAMOMlib
 
+import gc
+
 xr.set_options(display_style='html')
 # -
 
@@ -92,6 +94,7 @@ def func_chunk(chunk_ds):
     res.to_netcdf(filename, encoding=encoding)
     print(res)
     del res
+    gc.collect()
 
     return xr.Dataset(
         data_vars={
@@ -108,6 +111,7 @@ _ = xr.map_blocks(func_chunk, ds, template=small_template).compute()
 
 ds.close()
 del ds
+
 
 
 

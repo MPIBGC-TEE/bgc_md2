@@ -22,6 +22,8 @@ import numpy as np
 import importlib
 import CARDAMOMlib
 
+import gc
+
 xr.set_options(display_style='html')
 # -
 
@@ -30,17 +32,17 @@ importlib.reload(CARDAMOMlib)
 
 
 #client = Client(n_workers=20, threads_per_worker=2, memory_limit="4GB")
-client = Client(n_workers=20, threads_per_worker=2, memory_limit="4GB", silence_logs='error')
+client = Client(n_workers=2, threads_per_worker=1, memory_limit="4GB")#, silence_logs='error')
 client
 
 
 # +
-#data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
-data_folder = "/home/data/CARDAMOM/"  # matagorda
+data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
+#data_folder = "/home/data/CARDAMOM/"  # matagorda
 
-#filestem = "cardamom_for_holger_10_ensembles"
-filestem = "cardamom_for_holger"
-chunk_dict = {"ens": 20}
+filestem = "cardamom_for_holger_10_ensembles"
+#filestem = "cardamom_for_holger"
+chunk_dict = {"ens": 2}
 #filestem = "cardamom_for_holger"
 #chunk_dict = {"ens": 100}
 ds = xr.open_dataset(data_folder + filestem + ".nc")#.isel(
@@ -140,9 +142,10 @@ def func_chunk(chunk_ds):
     print(res)
     return res
 
-ds_mrs = xr.map_blocks(func_chunk, ds, template=ds_mr_template).compute()
+#ds_mrs = xr.map_blocks(func_chunk, ds, template=ds_mr_template).compute()
+ds_mrs = xr.map_blocks(func_chunk, ds, template=ds_mr_template)
 #ds_mrs = xr.map_blocks(func_chunk, ds, template=ds).compute()
-ds_mrs
+#ds_mrs
 
 
 # +
@@ -150,14 +153,27 @@ ds_mrs
 
 comp_dict = {'zlib': True, 'complevel': 9}
 encoding = {var: comp_dict for var in ds_mrs.data_vars}
-ds_mrs.to_netcdf(filestem + "_pwc_mrs_fd" + ".nc", encoding=encoding)
+ds_mrs.to_netcdf(
+    filestem + "_pwc_mrs_fd" + ".nc",
+    encoding=encoding,
+    compute=True
+)
+
+
+# +
 ds_mrs.close()
 
 ds.close()
-
 # -
 
 
+del ds_mrs
+del ds
 
+gc.collect()
+
+# +
+# gc.collect?
+# -
 
 
