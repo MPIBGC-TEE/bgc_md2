@@ -2,9 +2,10 @@ import unittest
 
 import matplotlib.pyplot as plt
 import numpy as np
+from frozendict import frozendict
 from sympy import (
     Symbol,
-    # symbols,
+    symbols,
     Function,
     prod,
     sin,
@@ -14,13 +15,14 @@ from sympy import (
     simplify,
     factor,
 )
-from sympy.physics.units import day, year, kilogram, gram
+from sympy.physics.units import days, day, year, kilogram, gram, hour
 from bgc_md2.resolve.mvars import (
     NumericParameterization,
     NumericStartValueDict,
     NumericStartValueArray,
     NumericSimulationTimes,
     NumericParameterizedSmoothReservoirModel,
+    QuantityParameterization,
     QuantityParameterizedModel,
     QuantityModelRun,
 )
@@ -40,7 +42,8 @@ class TestModelRunWithUnits(unittest.TestCase):
         k_1o = Function("k_1o")
 
         state_variables = [C_0, C_1]  # order is important
-        inputs = {0: sin(t) + 2, 1: cos(t) + 2}  # input to pool 0  # input to pool 1
+        # input to pool 0  # input to pool 1
+        inputs = {0: sin(t) + 2, 1: cos(t) + 2}
         outputs = {
             0: k_0o * C_0 ** 3,  # output from pool 0
             1: k_1o(t) * C_1 ** 3,  # output from pool 0
@@ -75,35 +78,35 @@ class TestModelRunWithUnits(unittest.TestCase):
             u_res = V_0 + V_range * sin(omega * t + phi)
             return u_res
 
-        para = NumericParameterization(par_dict=par_dict, func_dict={k_1o: k_1o_func},)
+        para = NumericParameterization(
+                par_dict=par_dict,
+                func_dict={k_1o: k_1o_func}
+        )
         npsrm = NumericParameterizedSmoothReservoirModel(
             srm=self.srm, parameterization=para
         )
-        # The parameterdict and the functions, possibly even the matrix/flux expressions
-        # have implicit unit assumption, which the user is required to maintain consistently.
-        # To make modelruns comparable it is important to remember the units for which this
-        # consistency can be guaranteed.
+        # The parameterdict and the functions, possibly even the matrix/flux
+        # expressions have implicit unit assumption, which the user is required
+        # to maintain consistently.  To make modelruns comparable it is
+        # important to remember the units for which this consistency can be
+        # guaranteed.
 
         # A model run can then adapt the units of times and masses since it
         times_num = np.linspace(0, 20, 16)
         start_values_num = NumericStartValueArray([1, 2])
+        # start_values_dict = frozendict({C_0: 1,C_1: 2}) 
+        # would be a bit more intuitive but both formulations 
+        # rely on the information stored in the model
 
-        # fake model run
-        # times_num=np.array([to_number(tv,qpm.time_unit) for tv in times_quant])
-        # start_values_num=np.array([to_number(sv,qpm.state_var_unit) for sv in start_values_quant])
-        # mr=SmoothModelRun(
-        #    qpm.srm,
-        #    qpm.par_dict,
-        #    start_values_num,
-        #    times_num,
-        #    {k_1o: k_1o_func}
-        # )
         nmr = numeric_model_run_1(npsrm, start_values_num, times_num)
         print(nmr.solve())
 
-    @unittest.skip
     def test_solve(self):
-
+        C_0, C_1, t, k_01, k_10, k_0o = (
+            Symbol(s) for s in ("C_0", "C_1", "t", "k_01", "k_10", "k_0o")
+        )
+        k_1o = Function("k_1o")
+        
         par_dict = {
             k_01: 1 / 100,  # 1/year
             k_10: 1 / 100,  # 1/year
@@ -118,11 +121,11 @@ class TestModelRunWithUnits(unittest.TestCase):
             u_res = V_0 + V_range * sin(omega * t + phi)
             return u_res
 
-        para = NumericParameterizedSmoothReservoirModel(
-            par_dict=par_dict,
-            func_dict={k_1o: k_1o_func},
-            state_var_unit=kilogram,  # fixme could become a vector
-            time_unit=year,
+        para = QuantityParameterization(
+                par_dict=par_dict,
+                func_dict={k_1o: k_1o_func},
+                state_var_units=(kilogram,kilogram),
+                time_unit=days
         )
         qpm = QuantityParameterizedModel(srm=self.srm, parameterization=para)
         # The parameterdict and the functions, possibly even the matrix/flux expressions
@@ -134,16 +137,6 @@ class TestModelRunWithUnits(unittest.TestCase):
         times_quant = np.linspace(0, 20, 16) * day
         start_values_quant = [1 * kilogram, 2 * gram]  # kg
 
-        # fake model run
-        # times_num=np.array([to_number(tv,qpm.time_unit) for tv in times_quant])
-        # start_values_num=np.array([to_number(sv,qpm.state_var_unit) for sv in start_values_quant])
-        # mr=SmoothModelRun(
-        #    qpm.srm,
-        #    qpm.par_dict,
-        #    start_values_num,
-        #    times_num,
-        #    {k_1o: k_1o_func}
-        # )
         qmr = QuantityModelRun(qpm, start_values_quant, times_quant)
         print(qmr.solve())
 

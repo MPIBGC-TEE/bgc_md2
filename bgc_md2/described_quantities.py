@@ -13,7 +13,7 @@ from sympy import (
 )
 from sympy.physics.units import Quantity
 from sympy.physics.units.systems import SI
-from sympy.physics.units import day, year, kilogram, gram
+from sympy.physics.units import day, year, kilogram
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 

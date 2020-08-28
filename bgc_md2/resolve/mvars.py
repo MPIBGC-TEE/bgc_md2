@@ -1,3 +1,4 @@
+from typing import Tuple
 from frozendict import frozendict
 import numpy as np
 from sympy import (
@@ -89,9 +90,6 @@ class NumericStartValueDict(frozendict):
     pass
 
 
-class QuantityStartValueDict(frozendict):
-    pass
-
 
 # extending ndarray is special
 # https://numpy.org/doc/stable/user/basics.subclassing.html
@@ -113,18 +111,6 @@ class NumericStartValueArray(np.ndarray):
         # We cast to be our class type
         obj = np.asarray(input_array).view(cls)
         obj.flags.writeable = False
-        return obj
-
-    def __hash__(self):
-        return hash(tuple(self))
-
-
-class QuantitySimulationTimes(np.ndarray):
-    def __new__(cls, input_array):
-        # Input array is an already formed ndarray instance
-        # with units attached
-        assert SI.get_dimensional_expr(input_array[0]) == time
-        obj = np.asarray(input_array).view(cls)
         return obj
 
     def __hash__(self):
@@ -156,6 +142,23 @@ class NumericParameterizedSmoothReservoirModel:
         self.srm = srm
         self.parameterization = parameterization
 
+class QuantityStartValueDict(frozendict):
+    pass
+
+
+class QuantitySimulationTimes(np.ndarray):
+    def __new__(cls, input_array):
+        # Input array is an already formed ndarray instance
+        # with units attached
+        assert SI.get_dimensional_expr(input_array[0]) == time
+        obj = np.asarray(input_array).view(cls)
+        return obj
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+
+
 
 class QuantityParameterization(NumericParameterization):
     # If a numeric parameterization has some physical meanimg.
@@ -178,11 +181,27 @@ class QuantityParameterization(NumericParameterization):
     # than fully automatic unit derivation in sympy and can be seen as a kind
     # of cached unit computation.
 
-    def __init__(self, par_dict, func_dict, state_var_unit, time_unit):
+    def __init__(self, par_dict, func_dict, state_var_units, time_unit):
         super().__init__(par_dict, func_dict)
-        self.state_var_unit = state_var_unit
+        self.state_var_units = state_var_units
         self.time_unit = time_unit
 
+    @classmethod
+    def from_NumericParameterization(
+            cls,
+            np: NumericParameterization,
+            state_var_units: Tuple[Quantity],
+            time_unit: Quantity
+        ) -> 'QuantityParameterization':
+        return QuantityParameterization(
+            np.par_dict, 
+            np.func_dict,
+            state_var_units,
+            time_unit
+        )
+
+
+        
 
 class QuantityParameterizedModel:
     def __init__(self, srm, parameterization):
@@ -198,7 +217,7 @@ class QuantityModelRun:
         p = qpm.parameterization
         times_num = np.array([to_number(tv, p.time_unit) for tv in times_quant])
         start_values_num = np.array(
-            [to_number(sv, p.state_var_unit) for sv in start_values_quant]
+            [to_number(sv, p.state_var_units[i]) for i, sv in enumerate(start_values_quant)]
         )
         self.smr = SmoothModelRun(
             qpm.srm, p.par_dict, start_values_num, times_num, p.func_dict
@@ -211,6 +230,6 @@ class QuantityModelRun:
 
         # the result is correct since it comes with unit
         # and can be converted in any other unit.
-        sol_quant = sol_num * self.qpm.parameterization.state_var_unit
+        sol_quant = sol_num * self.qpm.parameterization.state_var_units
 
         return sol_quant
