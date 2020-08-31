@@ -7,7 +7,7 @@ from sympy.physics.units import (
     mass,
     time,
     temperature,
-    gram,
+    kilogram,
     meter,
     day,
     kelvin,
@@ -31,8 +31,10 @@ from bgc_md2.resolve.mvars import (
     QuantityModelRun,
     QuantityParameterizedModel,
 )
-from bgc_md2.resolve.computers import smooth_reservoir_model_from_input_tuple_and_matrix
-
+from bgc_md2.resolve.computers import (
+    smooth_reservoir_model_from_input_tuple_and_matrix,
+    quantity_parameterization_1,
+)
 from ..BibInfo import BibInfo 
 
 
@@ -46,31 +48,8 @@ t = TimeSymbol("t")
 # The responsibility of the user is to provide consisten parameterisations
 # for which the comments about dimensions are helpful and must be correct
 # but will not be checked automatically by the system.
-# We could keep the dimensions and descriptions as comments refering to the original
-# publications.
-# var("C_f")  #  mass/length**2)		    "Foliar C mass"
-# var("C_lab")  #  mass/length**2)		    "Labile C mass"
-# var("C_w")  #  mass/length**2)		    "Wood C mass"
-# var("C_r")  #  mass/length**2)		    "Fine root C mass"
-# var(
-#     "p_10"
-# )  #  1/temperature)		    "Parameter in exponential term of temperature dependent rate parameter"
-# var("mint")  #  temperature)		        "Dayly minimum temperature"
-# var("maxt")  #  temperature)		        "Dayly maximum temperature"
-# var("multtl")  #  1/time)		            "Turnover of labile C (0 = off)		 1 = On)			"
-# var("multtf")  #  1/time)		            "Turnover of foliage C (0 = off)		 1 = On)			"
-# var("LAI")  #  1)		                "LeafAreaIndex"
-# var("p_3")  #  1)		                "Fraction of NPP partitioned to foliage"
-# var("p_4")  #  1)		                "Fraction of NPP partitioned to roots"
-# var("p_5")  #  1/time)	                "Turnover rate of foliage"
-# var("p_6")  #  1/time)	                "Turnover rate of wood"
-# var("p_7")  #  1/time)	                "Turnover rate of roots"
-# var("p_14")  #  1)		                "Fraction of leaf loss transferred to litter"
-# var("p_15")  #  1/time)	                "Turnover rate of labile carbon"
-# var("p_16")  #  1)		                "Fraction of labile transfers respired "
-# var("NPP")  #  mass/(length**2*time))   "Net Primary Production per area"
 # 
-# We could retain make the original description and dimensions available to the framework as 
+# We can retain make the original description and dimensions available to the framework as 
 # part of the bibliographical information in a dictionary which could also be used to define
 # the symbols (to avoid duplication) as demonstrated here.
 
@@ -95,6 +74,7 @@ sym_dict={
     "p_16":	    (1		                    , "Fraction of labile transfers respired "),
     "NPP":	    ( mass/(length**2*time)     , "Net Primary Production per area"),
 }
+# For the conde we only use the first column
 for name in sym_dict.keys():
     var(name)
 
@@ -153,64 +133,6 @@ A = CompartmentalMatrix(
 )
 Input = InputTuple(u * ImmutableMatrix(b))
 
-# alternatively we could retain the information about how the derived expressions had been defined
-# also making the original description available as bibliographic information
-# expr_dict={
-#     "T_rate": (
-#         "0.5 * exp(p_10 * ((maxt + mint) / 2))",
-#         "Temperature sensitive rate parameter"
-#     ),
-#     "x": (
-#         "StateVariableTuple((C_f, C_lab, C_w, C_r))",
-#         "statevector"
-#     ),
-#     "u": (
-#         "NPP",
-#         "scalar function of photosynthetic inputs"
-#     ),
-#     "b": (
-#         "((p_3 * multtl), 0, (1 - p_4), p_4)", 
-#         "partitioning coefficients of photosynthetically fixed carbon"
-#     ),
-#     "A": (
-#         """CompartmentalMatrix(
-#             [
-#                 [
-#                     (
-#                         (-1)
-#                         * (
-#                             ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate)
-#                             + ((1 - p_14) * p_5 * p_16 * multtf * T_rate)
-#                             + (p_5 * p_14 * multtf)
-#                         )
-#                     ),
-#                     (p_15 * (1 - p_16) * multtl * T_rate),
-#                     0,
-#                     0,
-#                 ],
-#                 [
-#                     ((1 - p_14) * p_5 * (1 - p_16) * multtf * T_rate),
-#                     (
-#                         (-p_15 * (1 - p_16) * multtl * T_rate)
-#                         - (p_15 * p_16 * multtl * T_rate)
-#                     ),
-#                     0,
-#                     0,
-#                 ],
-#                 [0, 0, -p_6, 0],
-#                 [0, 0, 0, -p_7],
-#             ]
-#         )""",
-#         " matrix of cycling rates"
-#     ),
-#     "I": (
-#             "InputTuple(u * ImmutableMatrix(b))",
-#     )
-# }
-#for k,v in expr_dict.items():
-#    code=k+"="+v[0]
-#    exec(code)
-
 
 np1 = NumericParameterization(
     par_dict={
@@ -247,6 +169,11 @@ np1 = NumericParameterization(
     func_dict=frozendict({})
     # state_var_units=kilogram/meter**2,
     # time_unit=day
+)
+qp1 = quantity_parameterization_1(
+    np1,
+    state_var_units=(kilogram/meter**2,kilogram/meter**2),
+    time_unit=day
 )
 nsv1 = NumericStartValueDict({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
 ntimes = NumericSimulationTimes(np.arange(0, 1096, 1))

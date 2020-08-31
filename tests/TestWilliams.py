@@ -43,7 +43,7 @@ from bgc_md2.resolve.graph_plotting import (
     draw_ComputerSetMultiDiGraph_matplotlib,
     # ,draw_Graph_with_computers_svg
 )
-
+from testinfrastructure.helpers import pp
 
 
 def computer_color_func(allComputers):
@@ -83,13 +83,15 @@ class TestWilliams(InDirTest):
         self.assertSetEqual(mvs, self.ref_provided_mvars)
 
     def test_computable_mvars(self):
-        # fixme: the next lines want to move to resolve/computers 
+        # fixme: the next lines want to move to resolve/computers
         self.bgc_computers = bgc_md2_computers()
-        self.computer_aliases = {
-            v.__name__: ascii_lowercase[i] for i, v in enumerate(self.bgc_computers)
+        computer_aliases = {
+            v.__name__: ascii_lowercase[i]
+            for i, v in enumerate(self.bgc_computers)
         }
         allVars = all_mvars(self.bgc_computers)
-        self.mvar_aliases = {
+        pp('allVars',locals())
+        mvar_aliases = {
             name: ascii_uppercase[i]
             for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
         }
@@ -100,8 +102,8 @@ class TestWilliams(InDirTest):
         draw_ComputerSetMultiDiGraph_matplotlib(
                 ax,
                 spsg, 
-                self.mvar_aliases, 
-                self.computer_aliases,
+                mvar_aliases, 
+                computer_aliases,
                 targetNode=frozenset({SmoothModelRun})
         )
         f.savefig("spgs.pdf")

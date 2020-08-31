@@ -90,6 +90,9 @@ class NumericStartValueDict(frozendict):
     pass
 
 
+class StateVarUnitTuple(tuple):
+    pass
+
 
 # extending ndarray is special
 # https://numpy.org/doc/stable/user/basics.subclassing.html
@@ -185,20 +188,6 @@ class QuantityParameterization(NumericParameterization):
         super().__init__(par_dict, func_dict)
         self.state_var_units = state_var_units
         self.time_unit = time_unit
-
-    @classmethod
-    def from_NumericParameterization(
-            cls,
-            np: NumericParameterization,
-            state_var_units: Tuple[Quantity],
-            time_unit: Quantity
-        ) -> 'QuantityParameterization':
-        return QuantityParameterization(
-            np.par_dict, 
-            np.func_dict,
-            state_var_units,
-            time_unit
-        )
 
 
         

@@ -1,6 +1,7 @@
 from sympy import Symbol, ImmutableMatrix
 import numpy as np
 from typing import Tuple
+from sympy.physics.units import Quantity
 from .mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -15,12 +16,14 @@ from .mvars import (
     VegetationCarbonCompartmentalMatrix,
     NumericSimulationTimes,
     NumericParameterization,
-    NumericStartValueDict,
     NumericStartValueArray,
+    NumericStartValueDict,
+    QuantityParameterization,
     QuantityParameterizedModel,
     QuantitySimulationTimes,
     NumericParameterizedSmoothReservoirModel,
     QuantityStartValueDict,
+    StateVarUnitTuple,
 )
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
@@ -111,7 +114,20 @@ def numeric_parameterized_smooth_reservoir_model_1(
 
 
 def numeric_start_value_aray_1(
-    nsvd: NumericStartValueDict, svt: StateVariableTuple
+    nsvd: NumericStartValueDict,
+    svt: StateVariableTuple
 ) -> NumericStartValueArray:
     tup = tuple(nsvd[k] for k in svt)
     return NumericStartValueArray(tup)
+
+def quantity_parameterization_1(
+        np: NumericParameterization,
+        state_var_units: StateVarUnitTuple,
+        time_unit: Quantity
+    ) -> QuantityParameterization:
+    return QuantityParameterization(
+        np.par_dict, 
+        np.func_dict,
+        state_var_units,
+        time_unit
+    )
