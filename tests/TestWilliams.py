@@ -13,6 +13,8 @@ from bgc_md2.models.helpers import (
     path_dict_to_single_mvar,
     get_single_mvar_value,
     bgc_md2_computers,
+    bgc_md2_computer_aliases,
+    bgc_md2_mvar_aliases,
 )
 from bgc_md2.resolve.graph_helpers import sparse_powerset_graph
 from bgc_md2.resolve.non_graph_helpers import (
@@ -30,8 +32,11 @@ from bgc_md2.resolve.mvars import (
     NumericStartValueDict,
     NumericSimulationTimes,
     NumericParameterizedSmoothReservoirModel,
+    QuantityParameterization,
+    QuantityStartValueDict,
+    QuantitySimulationTimes,
+    QuantityParameterizedSmoothReservoirModel,
     QuantityModelRun,
-    QuantityParameterizedModel,
 )
 from bgc_md2.models.BibInfo import BibInfo 
 
@@ -45,6 +50,19 @@ from bgc_md2.resolve.graph_plotting import (
 )
 from testinfrastructure.helpers import pp
 
+def list_mult(ll):
+    # tensor product of list....
+    if len(ll)==0:
+        return []
+    if  len(ll)==1:
+        return ll[0]
+    if len(ll)==2:
+        l1=ll[-1]
+        l2=ll[-2]
+        new_last=[t2+t1 for t1 in l1 for t2 in l2]
+        return new_last
+
+    return list_mult(ll[0:-2]+[new_last])
 
 def computer_color_func(allComputers):
     colordict = TABLEAU_COLORS
@@ -72,6 +90,9 @@ class TestWilliams(InDirTest):
                 NumericStartValueDict,
                 NumericSimulationTimes,
                 NumericParameterization,
+                QuantityStartValueDict,
+                QuantitySimulationTimes,
+                QuantityParameterization,
                 BibInfo,
                 # QuantityModelRun,
                 # QuantityParameterizedModel
@@ -84,26 +105,14 @@ class TestWilliams(InDirTest):
 
     def test_computable_mvars(self):
         # fixme: the next lines want to move to resolve/computers
-        self.bgc_computers = bgc_md2_computers()
-        computer_aliases = {
-            v.__name__: ascii_lowercase[i]
-            for i, v in enumerate(self.bgc_computers)
-        }
-        allVars = all_mvars(self.bgc_computers)
-        pp('allVars',locals())
-        mvar_aliases = {
-            name: ascii_uppercase[i]
-            for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
-        }
-        # end_fixme
         spsg=sparse_powerset_graph(bgc_md2_computers())
         f = plt.figure()
         ax = f.add_subplot(1,1,1)
         draw_ComputerSetMultiDiGraph_matplotlib(
                 ax,
                 spsg, 
-                mvar_aliases, 
-                computer_aliases,
+                bgc_md2_mvar_aliases(), 
+                bgc_md2_computer_aliases(),
                 targetNode=frozenset({SmoothModelRun})
         )
         f.savefig("spgs.pdf")

@@ -3,8 +3,9 @@ from typing import Dict, List, Set, TypeVar
 from frozendict import frozendict
 from copy import deepcopy
 from inspect import signature
-import bgc_md2.resolve.non_graph_helpers as ngh
+from string import ascii_lowercase, ascii_uppercase
 import networkx as nx
+import bgc_md2.resolve.non_graph_helpers as ngh
 from bgc_md2.resolve.graph_helpers import (
     sparse_powerset_graph,
     minimal_target_subgraph_for_single_var,
@@ -12,6 +13,20 @@ from bgc_md2.resolve.graph_helpers import (
     node_2_string,
     nodes_2_string,
 )
+
+def list_mult(ll):
+    # tensor product of list....
+    if len(ll)==0:
+        return []
+    if  len(ll)==1:
+        return ll[0]
+    if len(ll)==2:
+        l1=ll[-1]
+        l2=ll[-2]
+        new_last=[t2+t1 for t1 in l1 for t2 in l2]
+        return new_last
+
+    return list_mult(ll[0:-2]+[new_last])
 
 
 def bgc_md2_computers():
@@ -25,6 +40,23 @@ def bgc_md2_computers():
             if inspect.isfunction(getattr(cmod, c))
         ]
     )
+
+
+def bgc_md2_computer_aliases():
+    comp_abbreviations=list_mult([ascii_lowercase for i in range(2) ])
+    return frozendict({
+        v.__name__: comp_abbreviations[i]
+        for i, v in enumerate(bgc_md2_computers())
+    })
+
+
+def bgc_md2_mvar_aliases():
+    var_abbreviations=list_mult([ascii_uppercase for i in range(2) ])
+    allVars = ngh.all_mvars(bgc_md2_computers())
+    return frozendict({
+        name: var_abbreviations[i]
+        for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
+    })
 
 
 def provided_mvar_values(model_id):

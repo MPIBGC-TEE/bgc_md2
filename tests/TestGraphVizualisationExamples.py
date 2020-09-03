@@ -45,6 +45,8 @@ from bgc_md2.models.helpers import (
     # path_dict_to_single_mvar,
     # get_single_mvar_value,
     bgc_md2_computers,
+    bgc_md2_computer_aliases,
+    bgc_md2_mvar_aliases,
 )
 
 from bgc_md2.resolve.non_graph_helpers import (
@@ -112,15 +114,6 @@ class TestGraphVizualization(InDirTest):
         # assemble this set from a file of annotated functions in
         # special file
         self.computers = computers
-        self.bgc_computers = bgc_md2_computers()
-        self.computer_aliases = {
-            v.__name__: ascii_lowercase[i] for i, v in enumerate(self.bgc_computers)
-        }
-        allVars = all_mvars(self.bgc_computers)
-        self.mvar_aliases = {
-            name: ascii_uppercase[i]
-            for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
-        }
         self.spsg = sparse_powerset_graph(self.computers)
         self.cf = computer_color_func(self.computers)
 
@@ -148,22 +141,25 @@ class TestGraphVizualization(InDirTest):
     def test_ComputerSetMultiGraph_matplotlib_bgc_md2(self):
         # The direct visualization of networkx (using matplotlib)
         # is very rudimentary.
-        spsg = sparse_powerset_graph(self.bgc_computers)
+        spsg = sparse_powerset_graph(bgc_md2_computers())
         fig = plt.figure(figsize=(20, 20))
         ax = fig.add_subplot(1, 1, 1)
         draw_ComputerSetMultiDiGraph_matplotlib(
-            ax, spsg, self.mvar_aliases, self.computer_aliases
+            ax,
+            spsg,
+            bgc_md2_mvar_aliases(), 
+            bgc_md2_computer_aliases(),
         )
         fig.savefig("SetMultiGraph.pdf")
 
     def test_update_generator_bgc_md2(self):
         fig = plt.figure()
         draw_update_sequence(
-            self.bgc_computers,
+            bgc_md2_computers(),
             8,
             fig,
-            self.mvar_aliases,
-            self.computer_aliases
+            bgc_md2_mvar_aliases(), 
+            bgc_md2_computer_aliases(),
         )
         fig.savefig("c1.pdf")
 

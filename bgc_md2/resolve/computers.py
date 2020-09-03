@@ -18,11 +18,15 @@ from .mvars import (
     NumericParameterization,
     NumericStartValueArray,
     NumericStartValueDict,
-    QuantityParameterization,
-    QuantityParameterizedModel,
-    QuantitySimulationTimes,
     NumericParameterizedSmoothReservoirModel,
+    NumericSolutionArray,
+    QuantityParameterization,
+    QuantitySimulationTimes,
+    QuantityParameterizedSmoothReservoirModel,
     QuantityStartValueDict,
+    QuantityStartValueArray,
+    QuantityModelRun,
+    QuantitySolutionArray,
     StateVarUnitTuple,
 )
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -93,32 +97,34 @@ def numeric_model_run_1(
     )
 
 
-# def numeric_model_run_2(
-#        srm:        SmoothReservoirModel,
-#        para_num:   NumericParameterization,
-#        start_values_num: NumericStartValueDict,
-#        times_num: NumericSimulationTimes
-#    ) -> SmoothModelRun:
-#    return SmoothModelRun(
-#        srm,
-#        para_num.par_dict,
-#        start_values_num,
-#        times_num,
-#        para_num.func_dict
-#    )
-#
 def numeric_parameterized_smooth_reservoir_model_1(
     srm: SmoothReservoirModel, para_num: NumericParameterization,
 ) -> NumericParameterizedSmoothReservoirModel:
     return NumericParameterizedSmoothReservoirModel(srm, para_num)
 
-
-def numeric_start_value_aray_1(
+def numeric_start_value_array_1(
     nsvd: NumericStartValueDict,
     svt: StateVariableTuple
 ) -> NumericStartValueArray:
     tup = tuple(nsvd[k] for k in svt)
     return NumericStartValueArray(tup)
+
+def numeric_start_value_array_2(
+    smr: SmoothModelRun
+) -> NumericStartValueArray:
+    tup = tuple(nsvd[k] for k in svt)
+    return NumericStartValueArray(smr.start_values)
+
+def numeric_start_value_dict(
+    nsva: NumericStartValueArray,
+    svt: StateVariableTuple
+) -> NumericStartValueDict:
+    return NumericStartValueDict({sv:nsva[i]  for i,sv in enumerate(svt)})
+
+def numeric_solution_array_1(
+    smr: SmoothModelRun
+    )->NumericSolutionArray:
+    return NumericSolutionArray(smr.solve())
 
 def quantity_parameterization_1(
         np: NumericParameterization,
@@ -131,3 +137,33 @@ def quantity_parameterization_1(
         state_var_units,
         time_unit
     )
+
+def quantity_parameterized_smooth_reservoir_model_1(
+    srm: SmoothReservoirModel,
+    para_q: QuantityParameterization
+) -> QuantityParameterizedSmoothReservoirModel:
+    return QuantityParameterizedSmoothReservoirModel(srm, para_q)
+
+def quantity_start_value_array_1(
+    qsvd: QuantityStartValueDict,
+    svt: StateVariableTuple
+) -> QuantityStartValueArray:
+    tup = tuple(qsvd[k] for k in svt)
+    return QuantityStartValueArray(tup)
+
+def quantity_model_run_1(
+    qpsrm: QuantityParameterizedSmoothReservoirModel,
+    start_values_q: QuantityStartValueArray,
+    times_q: QuantitySimulationTimes,
+) -> QuantityModelRun:
+    return QuantityModelRun(
+        qpsrm.srm,
+        qpsrm.parameterization.par_dict,
+        start_values_num,
+        times_q,
+        qpsrm.parameterization.func_dict,
+    )
+def quantity_solution_array_1(
+    qmr: QuantityModelRun
+    )->QuantitySolutionArray:
+    return QuantitySolutionArray(qmr.solve())

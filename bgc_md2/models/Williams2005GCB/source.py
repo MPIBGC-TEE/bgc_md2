@@ -26,14 +26,21 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonStateVariableTuple,
     NumericParameterization,
     NumericStartValueDict,
+    NumericParameterizedSmoothReservoirModel,
     NumericSimulationTimes,
+    QuantityStartValueDict,
+    QuantitySimulationTimes,
     QuantityParameterization,
     QuantityModelRun,
-    QuantityParameterizedModel,
+    QuantityParameterizedSmoothReservoirModel,
 )
 from bgc_md2.resolve.computers import (
     smooth_reservoir_model_from_input_tuple_and_matrix,
     quantity_parameterization_1,
+    numeric_model_run_1,
+    numeric_start_value_array_1,
+    quantity_model_run_1,
+    quantity_start_value_array_1,
 )
 from ..BibInfo import BibInfo 
 
@@ -133,6 +140,12 @@ A = CompartmentalMatrix(
 )
 Input = InputTuple(u * ImmutableMatrix(b))
 
+# Here create the instance explicitly by calling a function from the computers
+# sub module that is also available to the framework to compute srm 
+# automatically.
+# It is not necessarry to create the model instance explicitly, since the framework recognizes the ingredients. 
+# But since the models serve as examples for 
+srm = smooth_reservoir_model_from_input_tuple_and_matrix(Input, A, t, x)
 
 np1 = NumericParameterization(
     par_dict={
@@ -170,13 +183,48 @@ np1 = NumericParameterization(
     # state_var_units=kilogram/meter**2,
     # time_unit=day
 )
+nsv1 = NumericStartValueDict({
+    C_f: 58,
+    C_lab: 60,
+    C_w: 770,
+    C_r: 102
+})
+
+## We create the parameterized model explicitly , although the framework would find the ingredients
+nsrm = NumericParameterizedSmoothReservoirModel(srm,np1)
+
+
+
+ntimes = NumericSimulationTimes(np.arange(0, 1096, 1))
+
+## We create the model run explicitly again, although the framework would find the ingredients
+nsmr= numeric_model_run_1(
+    nsrm, 
+    numeric_start_value_array_1(nsv1,x),
+    ntimes
+)
+
+
+
 qp1 = quantity_parameterization_1(
     np1,
     state_var_units=(kilogram/meter**2,kilogram/meter**2),
     time_unit=day
 )
-nsv1 = NumericStartValueDict({C_f: 58, C_lab: 60, C_w: 770, C_r: 102})
-ntimes = NumericSimulationTimes(np.arange(0, 1096, 1))
+qsv1 = QuantityStartValueDict({
+    C_f: 58*kilogram/meter**2,
+    C_lab: 60*kilogram/meter**2,
+    C_w: 770*kilogram/meter**2,
+    C_r: 102*kilogram/meter**2
+})
+qsrm = QuantityParameterizedSmoothReservoirModel(srm,qp1)
+qtimes = QuantitySimulationTimes(np.arange(0, 1096, 1)*day)
+## We create the model run explicitly again, although the framework would find the ingredients
+qsmr= numeric_model_run_1(
+    qsrm, 
+    quantity_start_value_array_1(qsv1,x),
+    qtimes
+)
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
@@ -194,13 +242,27 @@ specialVars = {
         sym_dict=sym_dict
         
     ),
+    #
+    # the following variables constitute the compartmental system:
+    #
     A,  # the overall compartmental matrix
     Input,  # the overall imput
     t,  # time for the complete system
     x,  # state vector of the the complete system
+    #
+    # the following variables constitute a numerical model run :
+    #
     np1,
     nsv1,
     ntimes,
+    # Again the model run could be created explicitly (in several ways)
+    #
+    # the following variables constitute a quantiy model run :
+    #
+    qp1,
+    qsv1,
+    qtimes,
+    # Again the model run could be created explicitly (in several ways)
     #
     # the following variables give a more detailed view with respect to
     # carbon and vegetation variables

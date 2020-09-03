@@ -23,7 +23,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
     NumericParameterizedSmoothReservoirModel,
     QuantityParameterization,
-    QuantityParameterizedModel,
+    QuantityParameterizedSmoothReservoirModel,
+    QuantitySimulationTimes,
     QuantityModelRun,
 )
 
@@ -127,14 +128,14 @@ class TestModelRunWithUnits(unittest.TestCase):
                 state_var_units=(kilogram,kilogram),
                 time_unit=days
         )
-        qpm = QuantityParameterizedModel(srm=self.srm, parameterization=para)
+        qpm = QuantityParameterizedSmoothReservoirModel(srm=self.srm, parameterization=para)
         # The parameterdict and the functions, possibly even the matrix/flux expressions
         # have implicit unit assumption, which the user is required to maintain consistently.
         # To make modelruns comparable it is important to remember the units for which this
         # consistency can be guaranteed.
 
         # A model run can then adapt the units of times and masses since it
-        times_quant = np.linspace(0, 20, 16) * day
+        times_quant = QuantitySimulationTimes(np.linspace(0, 20, 16) * day)
         start_values_quant = [1 * kilogram, 2 * gram]  # kg
 
         qmr = QuantityModelRun(qpm, start_values_quant, times_quant)

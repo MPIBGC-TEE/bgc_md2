@@ -145,21 +145,56 @@ class NumericParameterizedSmoothReservoirModel:
         self.srm = srm
         self.parameterization = parameterization
 
-class QuantityStartValueDict(frozendict):
-    pass
 
-
-class QuantitySimulationTimes(np.ndarray):
+class QuantityStartValueArray(np.ndarray):
     def __new__(cls, input_array):
         # Input array is an already formed ndarray instance
-        # with units attached
-        assert SI.get_dimensional_expr(input_array[0]) == time
+        # We cast to be our class type
         obj = np.asarray(input_array).view(cls)
+        obj.flags.writeable = False
         return obj
 
     def __hash__(self):
         return hash(tuple(self))
 
+class QuantityStartValueDict(frozendict):
+    pass
+
+class QuantitySimulationTimes(np.ndarray):
+    def __new__(cls, input_array):
+        # Input array is an already formed ndarray instance
+        # We cast to be our class type
+        obj = np.asarray(input_array).view(cls)
+        obj.flags.writeable = False
+        return obj
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+
+class NumericSolutionArray(np.ndarray):
+    # just a wrapper class to distinguish the array as a solution
+    def __new__(cls, input_array):
+        # Input array is an already formed ndarray instance
+        # We cast to be our class type
+        obj = np.asarray(input_array).view(cls)
+        obj.flags.writeable = False
+        return obj
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+class QuantitySolutionArray(np.ndarray):
+    # just a wrapper class to distinguish the array as a solution (with units) via the type
+    def __new__(cls, input_array):
+        # Input array is an already formed ndarray instance
+        # We cast to be our class type
+        obj = np.asarray(input_array).view(cls)
+        obj.flags.writeable = False
+        return obj
+
+    def __hash__(self):
+        return hash(tuple(self))
 
 
 
@@ -192,7 +227,7 @@ class QuantityParameterization(NumericParameterization):
 
         
 
-class QuantityParameterizedModel:
+class QuantityParameterizedSmoothReservoirModel:
     def __init__(self, srm, parameterization):
         self.srm = srm
         self.parameterization = parameterization
