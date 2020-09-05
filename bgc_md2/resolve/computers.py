@@ -157,11 +157,9 @@ def quantity_model_run_1(
     times_q: QuantitySimulationTimes,
 ) -> QuantityModelRun:
     return QuantityModelRun(
-        qpsrm.srm,
-        qpsrm.parameterization.par_dict,
-        start_values_num,
+        qpsrm,
+        start_values_q,
         times_q,
-        qpsrm.parameterization.func_dict,
     )
 def quantity_solution_array_1(
     qmr: QuantityModelRun

@@ -56,32 +56,32 @@ t = TimeSymbol("t")
 # for which the comments about dimensions are helpful and must be correct
 # but will not be checked automatically by the system.
 # 
-# We can retain make the original description and dimensions available to the framework as 
+# We can retain make the original description available to the framework as 
 # part of the bibliographical information in a dictionary which could also be used to define
 # the symbols (to avoid duplication) as demonstrated here.
 
 sym_dict={
-    "C_f":      (mass/length**2 		    , "Foliar C mass"),
-    "C_lab":    (mass/length**2 		    , "Labile C mass"),
-    "C_w":	    (mass/length**2 		    , "Wood C mass"),
-    "C_r":	    (mass/length**2 		    , "Fine root C mass"),
-    "p_10":     (1/temperature		        , "Parameter in exponential term of temperature dependent rate parameter"),
-    "mint":	    (temperature		        , "Dayly minimum temperature"),
-    "maxt":	    (temperature		        , "Dayly maximum temperature"),
-    "multtl":	(1/time		                , "Turnover of labile C (0 = off)		 1 = On)			"),
-    "multtf":	(1/time		                , "Turnover of foliage C (0 = off)		 1 = On)			"),
-    "LAI":	    (1		                    , "LeafAreaIndex"),
-    "p_3":	    (1		                    , "Fraction of NPP partitioned to foliage"),
-    "p_4":	    (1		                    , "Fraction of NPP partitioned to roots"),
-    "p_5":	    (1/time	                    , "Turnover rate of foliage"),
-    "p_6":	    (1/time	                    , "Turnover rate of wood"),
-    "p_7":	    (1/time	                    , "Turnover rate of roots"),
-    "p_14":	    (1		                    , "Fraction of leaf loss transferred to litter"),
-    "p_15":	    (1/time	                    , "Turnover rate of labile carbon"),
-    "p_16":	    (1		                    , "Fraction of labile transfers respired "),
-    "NPP":	    ( mass/(length**2*time)     , "Net Primary Production per area"),
+    "C_f":      "Foliar C mass",
+    "C_lab":    "Labile C mass",
+    "C_w":	    "Wood C mass",
+    "C_r":	    "Fine root C mass",
+    "p_10":     "Parameter in exponential term of temperature dependent rate parameter",
+    "mint":	    "Dayly minimum temperature",
+    "maxt":	    "Dayly maximum temperature",
+    "multtl":	"Turnover of labile C (0 = off)		 1 = On)			",
+    "multtf":	"Turnover of foliage C (0 = off)		 1 = On)			",
+    "LAI":	    "LeafAreaIndex",
+    "p_3":	    "Fraction of NPP partitioned to foliage",
+    "p_4":	    "Fraction of NPP partitioned to roots",
+    "p_5":	    "Turnover rate of foliage",
+    "p_6":	    "Turnover rate of wood",
+    "p_7":	    "Turnover rate of roots",
+    "p_14":	    "Fraction of leaf loss transferred to litter",
+    "p_15":	    "Turnover rate of labile carbon",
+    "p_16":	    "Fraction of labile transfers respired ",
+    "NPP":	    "Net Primary Production per area",
 }
-# For the conde we only use the first column
+# For the code we only use the first column
 for name in sym_dict.keys():
     var(name)
 
@@ -208,7 +208,12 @@ nsmr= numeric_model_run_1(
 
 qp1 = quantity_parameterization_1(
     np1,
-    state_var_units=(kilogram/meter**2,kilogram/meter**2),
+    state_var_units=(
+        kilogram/meter**2,
+        kilogram/meter**2,
+        kilogram/meter**2,
+        kilogram/meter**2
+    ),
     time_unit=day
 )
 qsv1 = QuantityStartValueDict({
@@ -277,5 +282,5 @@ specialVars = {
     VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
     VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r)),
+    VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
 }

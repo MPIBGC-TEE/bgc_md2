@@ -23,6 +23,8 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 
 from bgc_md2.described_quantities import to_number
+ 
+from testinfrastructure.helpers import pp, pe
 
 # fixme: mm 03-12-2020
 # At the moment the classes are just defined to provide
@@ -239,6 +241,8 @@ class QuantityModelRun:
     ):
         self.qpm = qpm
         p = qpm.parameterization
+        if len(start_values_quant) != len(p.state_var_units):
+            raise Exception('size inconsistency')
         times_num = np.array([to_number(tv, p.time_unit) for tv in times_quant])
         start_values_num = np.array(
             [to_number(sv, p.state_var_units[i]) for i, sv in enumerate(start_values_quant)]

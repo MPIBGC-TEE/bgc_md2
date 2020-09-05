@@ -27,16 +27,12 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonInputTuple,
     VegetationCarbonInputScalar,
+    VegetationCarbonStateVariableTuple,
     InputTuple,
     NumericParameterization,
     NumericStartValueDict,
     NumericSimulationTimes,
     NumericParameterizedSmoothReservoirModel,
-    QuantityParameterization,
-    QuantityStartValueDict,
-    QuantitySimulationTimes,
-    QuantityParameterizedSmoothReservoirModel,
-    QuantityModelRun,
 )
 from bgc_md2.models.BibInfo import BibInfo 
 
@@ -50,24 +46,10 @@ from bgc_md2.resolve.graph_plotting import (
 )
 from testinfrastructure.helpers import pp
 
-def list_mult(ll):
-    # tensor product of list....
-    if len(ll)==0:
-        return []
-    if  len(ll)==1:
-        return ll[0]
-    if len(ll)==2:
-        l1=ll[-1]
-        l2=ll[-2]
-        new_last=[t2+t1 for t1 in l1 for t2 in l2]
-        return new_last
 
-    return list_mult(ll[0:-2]+[new_last])
-
-
-class TestWilliams(InDirTest):
+class TestPotter(InDirTest):
     def setUp(self):
-        self.mn = "Williams2005GCB"
+        self.mn = "Potter1993GlobalBiogeochemicalCycles"
         self.ref_provided_mvars = frozenset(
             [
                 CompartmentalMatrix,
@@ -75,13 +57,14 @@ class TestWilliams(InDirTest):
                 StateVariableTuple,
                 VegetationCarbonInputPartitioningTuple,
                 VegetationCarbonInputScalar,
+                VegetationCarbonStateVariableTuple,
                 InputTuple,
-                NumericStartValueDict,
-                NumericSimulationTimes,
-                NumericParameterization,
-                QuantityStartValueDict,
-                QuantitySimulationTimes,
-                QuantityParameterization,
+                # NumericStartValueDict,
+                # NumericSimulationTimes,
+                 NumericParameterization,
+                # QuantityStartValueDict,
+                # QuantitySimulationTimes,
+                # QuantityParameterization,
                 BibInfo,
                 # QuantityModelRun,
                 # QuantityParameterizedModel

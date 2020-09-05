@@ -96,18 +96,17 @@ It seems more reasonable to create a test matrix (as the tensor product set of t
   data representation should be minimized.
   How much (links to the) data should be part of the database?
 
- * translation of yaml files to the new format.
-
+ * Translation of yaml files to the new format.
   * example: 
     ``` bgc_md2/bgc_md2/models/Williams2005GCB/source.py ``` 
 
   * In the yaml file find all variables that do not have an "expr" (are not defined as expressions with respect to other variables)
-    create ```DescribedQuantaty``` Instances for them 
-    These are basically ```symbols``` with a dimension and a description.
-    intstead of units found in the yaml file it is better to use dimensions (instead of ```meter``` we use ```length``` 
-    The dimensions have to be imported from ```sympy.physics.units``` before they can be used.
-    units are actually used for the values of those variables so they belong to the can be used parameter sets.
-    Units like ```kilogramm```,```meter``` and so on also have to be imported 
+    create ```Symbol``` Instances for them.
+    (This can be done at the same time as providing a bibliographic variable dictionary which is only used for presentation)
+    If no parametrisations are provided the dimensions can be kept as comments.
+    If quantitative model runs are desired the units are actually used for the values of those variables so they 
+    belong to the parameter sets.
+    The units like ```kilogramm```,```meter``` have to be imported from sympy.physics.units 
 
   * move the remaining variables which are defined by expression into a section after this and copy the decription as a comment.
     The dimension  does not have to be set for these because it can be inferred from the dimensions of the variables
@@ -116,8 +115,8 @@ It seems more reasonable to create a test matrix (as the tensor product set of t
   * In the model file look out for common variables (present in more than one model) that are already defined as
     Classes in ```bgc_md2/resolve/mvars.py```
     * Import the appropriate constructors in the ```source.py``` file and use them directly for the variables that go into
-      the ```specialVars``` set. These are the things we can compare between models that define them (or other specialVars
-      from which they can be derived)
+      the ```specialVars``` set. These are the things that we can compare between models that define them 
+      (or other specialVars from which they can be derived)
     * If you want a variable be comparable across models and you do not find it in ```bgc_md2/resolve/mvars.py``` yet, then
       note it down in this document in the following bullet list, like the first point and give an example of a succesfull comparison.
 	* mvars to be implemented:

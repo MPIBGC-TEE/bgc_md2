@@ -14,16 +14,17 @@ from bgc_md2.resolve.graph_helpers import (
     nodes_2_string,
 )
 
+
 def list_mult(ll):
     # tensor product of list....
-    if len(ll)==0:
+    if len(ll) == 0:
         return []
-    if  len(ll)==1:
+    if len(ll) == 1:
         return ll[0]
-    if len(ll)==2:
-        l1=ll[-1]
-        l2=ll[-2]
-        new_last=[t2+t1 for t1 in l1 for t2 in l2]
+    if len(ll) == 2:
+        l1 = ll[-1]
+        l2 = ll[-2]
+        new_last = [t2+t1 for t1 in l1 for t2 in l2]
         return new_last
 
     return list_mult(ll[0:-2]+[new_last])
