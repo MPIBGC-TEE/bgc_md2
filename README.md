@@ -97,29 +97,27 @@ It seems more reasonable to create a test matrix (as the tensor product set of t
   How much (links to the) data should be part of the database?
 
  * Translation of yaml files to the new format.
-  * example: 
-    ``` bgc_md2/bgc_md2/models/Williams2005GCB/source.py ``` 
-
-  * In the yaml file find all variables that do not have an "expr" (are not defined as expressions with respect to other variables)
-    create ```Symbol``` Instances for them.
-    (This can be done at the same time as providing a bibliographic variable dictionary which is only used for presentation)
-    If no parametrisations are provided the dimensions can be kept as comments.
-    If quantitative model runs are desired the units are actually used for the values of those variables so they 
-    belong to the parameter sets.
-    The units like ```kilogramm```,```meter``` have to be imported from sympy.physics.units 
-
-  * move the remaining variables which are defined by expression into a section after this and copy the decription as a comment.
-    The dimension  does not have to be set for these because it can be inferred from the dimensions of the variables
-    constituting the expression.
-
-  * In the model file look out for common variables (present in more than one model) that are already defined as
-    Classes in ```bgc_md2/resolve/mvars.py```
-    * Import the appropriate constructors in the ```source.py``` file and use them directly for the variables that go into
-      the ```specialVars``` set. These are the things that we can compare between models that define them 
-      (or other specialVars from which they can be derived)
-    * If you want a variable be comparable across models and you do not find it in ```bgc_md2/resolve/mvars.py``` yet, then
-      note it down in this document in the following bullet list, like the first point and give an example of a succesfull comparison.
-	* mvars to be implemented:
+   * examples: 
+     * ``` bgc_md2/bgc_md2/models/Williams2005GCB/source.py ``` 
+     * ``` bgc_md2/bgc_md2/models/Potter1993GlobalBiogeochemicalCycles/source.py```
+   * In the yaml file find all variables that do not have an "expr" (are not defined as expressions with respect to other variables)
+     create ```Symbol``` Instances for them.
+     (This can be done at the same time as providing a bibliographic variable dictionary which is only used for presentation)
+     If no parametrisations are provided the dimensions can be kept as comments.
+     If quantitative model runs are desired the units are actually used for the values of those variables so they 
+     belong to the parameter sets.
+     The units like ```kilogramm```,```meter``` have to be imported from sympy.physics.units 
+   * Move the remaining variables which are defined by expression into a section after this and copy the decription as a comment.
+     The dimension  does not have to be set for these because it can be inferred from the dimensions of the variables
+     constituting the expression.
+   * In the model file look out for common variables (present in more than one model) that are already defined as
+     Classes in ```bgc_md2/resolve/mvars.py```
+     * Import the appropriate constructors in the ```source.py``` file and use them directly for the variables that go into
+       the ```specialVars``` set. These are the things that we can compare between models that define them 
+       (or other specialVars from which they can be derived)
+     * If you want a variable be comparable across models and you do not find it in ```bgc_md2/resolve/mvars.py``` yet, then
+       note it down in this document in the following bullet list, like the first point and give an example of a succesfull comparison.
+	 *  mvars to be implemented:
 	  * Implement a notebook wich compares vegetation cycling matrices vegetation pools across models.
   	    steps:
 	    * This could internally be done via the dyadic representation (but should also be possible if the model is given in matrix form) 
