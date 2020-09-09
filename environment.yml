@@ -1,7 +1,9 @@
-name: bgc_md2_env
+name: bgc_md2
 channels: 
   - conda-forge
 dependencies:
+  - concurrencytest
+  - sympy
   - python=3.8
   - jupyterlab=2
   - nodejs=13
@@ -11,11 +13,10 @@ dependencies:
   - ipython
   - networkx
   - netCDF4
-  - cfunits
+  - cf-units
   - numpy
   - scikit-image
   - scipy
-  - sympy
   - pandas
   - bqplot
   - notebook
@@ -34,6 +35,10 @@ dependencies:
   - ipyleaflet
   - pythreejs
   - frozendict
+  - dask
+  - xarray
+  - pygraphviz
+  - sphinx
   - pip
     #  - pip:
     #      - git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 

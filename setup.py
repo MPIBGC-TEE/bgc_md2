@@ -22,8 +22,11 @@ setup(
     author="Markus, Thomas, Holger, Veronika ",
     author_email="markus.mueller.1.g@gmail.com",
     url="https://github.com/MPIBGC-TEE/bgc_md2",
-    packages=find_packages(),  # find all packages (multifile modules) recursively
+    packages=find_packages('src'),  # find all packages (multifile modules) recursively
+    package_dir={'': 'src'},
     # py_modules=['external_module'], # external_module.py is a module living outside this dir as an example how to iclude something not
+    include_package_data=True,
+    zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Development Status :: 4 - Beta",
@@ -58,6 +61,4 @@ setup(
         "pygraphviz",
         "cf-units",
     ],
-    include_package_data=True,
-    # zip_safe=False
 )

@@ -1,3 +1,6 @@
+"""
+Module for defining variable types for the description of compartmental models and model runs
+"""
 from typing import Tuple
 from frozendict import frozendict
 import numpy as np
