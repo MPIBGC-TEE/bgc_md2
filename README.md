@@ -8,6 +8,8 @@ This prototype represents models as subfolders of folder
 ```bash
 models
 ```
+## Documentation
+* The latest build of the package documentation can be found [here:](https://mpibgc-tee.github.io/bgc_md2/).
 Every model folder contains at least one file 
 ```bash
 source.py
