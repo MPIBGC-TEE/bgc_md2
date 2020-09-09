@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve.non_graph_helpers &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.resolve.non_graph_helpers</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span><span class="p">,</span> <span class="n">reduce</span>
+<span class="kn">from</span> <span class="nn">frozendict</span> <span class="kn">import</span> <span class="n">frozendict</span>
+
+
+<div class="viewcode-block" id="computable_mvars"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.computable_mvars">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">computable_mvars</span><span class="p">(</span>
+    <span class="n">allComputers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">available_mvars</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+    <span class="c1"># fixme mm:</span>
+    <span class="c1"># if possible replace by the new graph based method</span>
+    <span class="c1"># We can already compute the graph. We only have to do it once and can easyly infer the union</span>
+    <span class="c1"># of all nodes reachable from the startset.</span>
+    <span class="c1">#</span>
+    <span class="c1"># this is the old bottom up approach: repeatedly compute all</span>
+    <span class="c1"># directly (in the next step) reachable Mvars and use the enriched set for</span>
+    <span class="c1"># the next iteration until the set stays constant</span>
+    <span class="n">dcmvs</span> <span class="o">=</span> <span class="n">directly_computable_mvars</span><span class="p">(</span><span class="n">allComputers</span><span class="p">,</span> <span class="n">available_mvars</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dcmvs</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">available_mvars</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">available_mvars</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">computable_mvars</span><span class="p">(</span><span class="n">allComputers</span><span class="p">,</span> <span class="n">available_mvars</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">dcmvs</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="directly_computable_mvars"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.directly_computable_mvars">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">directly_computable_mvars</span><span class="p">(</span>
+    <span class="n">allComputers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">available_mvars</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+    <span class="c1"># find the computers that have a source_set contained in the available_set</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">output_mvar</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">applicable_computers</span><span class="p">(</span><span class="n">allComputers</span><span class="p">,</span> <span class="n">available_mvars</span><span class="p">)]</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="applicable_computers"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.applicable_computers">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">applicable_computers</span><span class="p">(</span>
+    <span class="n">allComputers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">available_mvars</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">allComputers</span> <span class="k">if</span> <span class="n">input_mvars</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">available_mvars</span><span class="p">)]</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="all_computers_for_mvar"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.all_computers_for_mvar">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">all_computers_for_mvar</span><span class="p">(</span><span class="n">mvar</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">allComputers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">([</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">allComputers</span> <span class="k">if</span> <span class="n">output_mvar</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">==</span> <span class="n">mvar</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="arg_set"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.arg_set">[docs]</a><span class="k">def</span> <span class="nf">arg_set</span><span class="p">(</span><span class="n">computer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">signature</span><span class="p">(</span><span class="n">computer</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">param</span><span class="o">.</span><span class="n">annotation</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="arg_set_set"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.arg_set_set">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">arg_set_set</span><span class="p">(</span><span class="n">mvar</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">allComputers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]]:</span>
+    <span class="c1"># return the set of arg_name_sets for all computers that</span>
+    <span class="c1"># return this mvar</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">([</span><span class="n">arg_set</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">all_computers_for_mvar</span><span class="p">(</span><span class="n">mvar</span><span class="p">,</span> <span class="n">allComputers</span><span class="p">)])</span></div>
+
+
+<div class="viewcode-block" id="all_mvars"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.all_mvars">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">all_mvars</span><span class="p">(</span><span class="n">all_computers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+    <span class="c1"># the set of all mvars is implicitly defined by the</span>
+    <span class="c1"># parameterlists and return values of the computers</span>
+    <span class="k">return</span> <span class="n">reduce</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">acc</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">acc</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">input_mvars</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="p">{</span><span class="n">output_mvar</span><span class="p">(</span><span class="n">c</span><span class="p">)}),</span>
+        <span class="n">all_computers</span><span class="p">,</span>
+        <span class="nb">frozenset</span><span class="p">({}),</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="pretty_name"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.pretty_name">[docs]</a><span class="k">def</span> <span class="nf">pretty_name</span><span class="p">(</span><span class="n">mvar</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">aliases</span><span class="p">:</span> <span class="n">frozendict</span> <span class="o">=</span> <span class="n">frozendict</span><span class="p">({}))</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aliases</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">mvar</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="c1"># return ((s.split(&#39;&lt;&#39;)[1]).split(&#39;&gt;&#39;)[0]).split(&#39;.&#39;)[-1]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">aliases</span><span class="p">[</span><span class="n">mvar</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">s</span></div>
+
+
+<span class="c1"># synonym for arg_set</span>
+<div class="viewcode-block" id="input_mvars"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.input_mvars">[docs]</a><span class="k">def</span> <span class="nf">input_mvars</span><span class="p">(</span><span class="n">computer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">signature</span><span class="p">(</span><span class="n">computer</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">param</span><span class="o">.</span><span class="n">annotation</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="output_mvar"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.non_graph_helpers.output_mvar">[docs]</a><span class="k">def</span> <span class="nf">output_mvar</span><span class="p">(</span><span class="n">computer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">signature</span><span class="p">(</span><span class="n">computer</span><span class="p">)</span><span class="o">.</span><span class="n">return_annotation</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usecases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../structure.html">Structure</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

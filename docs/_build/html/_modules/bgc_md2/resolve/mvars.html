@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve.mvars &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.resolve.mvars</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for defining variable types for the description of compartmental models and model runs</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">frozendict</span> <span class="kn">import</span> <span class="n">frozendict</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Symbol</span><span class="p">,</span>
+    <span class="c1"># symbols,</span>
+    <span class="n">Function</span><span class="p">,</span>
+    <span class="n">prod</span><span class="p">,</span>
+    <span class="n">sin</span><span class="p">,</span>
+    <span class="n">cos</span><span class="p">,</span>
+    <span class="n">pi</span><span class="p">,</span>
+    <span class="n">lambdify</span><span class="p">,</span>
+    <span class="n">simplify</span><span class="p">,</span>
+    <span class="n">factor</span><span class="p">,</span>
+    <span class="n">ImmutableMatrix</span><span class="p">,</span>
+    <span class="n">Expr</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units</span> <span class="kn">import</span> <span class="n">Quantity</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units.systems</span> <span class="kn">import</span> <span class="n">SI</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_model_run</span> <span class="kn">import</span> <span class="n">SmoothModelRun</span>
+
+
+<span class="kn">from</span> <span class="nn">bgc_md2.described_quantities</span> <span class="kn">import</span> <span class="n">to_number</span>
+ 
+<span class="kn">from</span> <span class="nn">testinfrastructure.helpers</span> <span class="kn">import</span> <span class="n">pp</span><span class="p">,</span> <span class="n">pe</span>
+
+<span class="c1"># fixme: mm 03-12-2020</span>
+<span class="c1"># At the moment the classes are just defined to provide</span>
+<span class="c1"># the vocabulary for the computer signatures and model</span>
+<span class="c1"># descriptions.</span>
+<span class="c1"># Ultimately the classes should have sensible constructors</span>
+<span class="c1"># that check their arguments thoroughly to expose</span>
+<span class="c1"># inadequate imput early in the process</span>
+<span class="c1"># part of this should be a dimensional analysis</span>
+<span class="c1"># which requires that the model authors provide dimensions</span>
+<span class="c1"># for there variables</span>
+
+
+<div class="viewcode-block" id="InFluxesBySymbol"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.InFluxesBySymbol">[docs]</a><span class="k">class</span> <span class="nc">InFluxesBySymbol</span><span class="p">(</span><span class="n">frozendict</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="OutFluxesBySymbol"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.OutFluxesBySymbol">[docs]</a><span class="k">class</span> <span class="nc">OutFluxesBySymbol</span><span class="p">(</span><span class="n">frozendict</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="InternalFluxesBySymbol"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.InternalFluxesBySymbol">[docs]</a><span class="k">class</span> <span class="nc">InternalFluxesBySymbol</span><span class="p">(</span><span class="n">frozendict</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="TimeSymbol"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.TimeSymbol">[docs]</a><span class="k">class</span> <span class="nc">TimeSymbol</span><span class="p">(</span><span class="n">Symbol</span><span class="p">):</span>
+    <span class="c1"># should become a quantity with dimension time</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="StateVariableTuple"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.StateVariableTuple">[docs]</a><span class="k">class</span> <span class="nc">StateVariableTuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="InputTuple"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.InputTuple">[docs]</a><span class="k">class</span> <span class="nc">InputTuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="CompartmentalMatrix"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.CompartmentalMatrix">[docs]</a><span class="k">class</span> <span class="nc">CompartmentalMatrix</span><span class="p">(</span><span class="n">ImmutableMatrix</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># vegetation specific variables</span>
+<div class="viewcode-block" id="VegetationCarbonInputTuple"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.VegetationCarbonInputTuple">[docs]</a><span class="k">class</span> <span class="nc">VegetationCarbonInputTuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="VegetationCarbonInputScalar"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.VegetationCarbonInputScalar">[docs]</a><span class="k">class</span> <span class="nc">VegetationCarbonInputScalar</span><span class="p">(</span><span class="n">Expr</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="VegetationCarbonInputPartitioningTuple"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.VegetationCarbonInputPartitioningTuple">[docs]</a><span class="k">class</span> <span class="nc">VegetationCarbonInputPartitioningTuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="VegetationCarbonStateVariableTuple"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.VegetationCarbonStateVariableTuple">[docs]</a><span class="k">class</span> <span class="nc">VegetationCarbonStateVariableTuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="VegetationCarbonCompartmentalMatrix"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix">[docs]</a><span class="k">class</span> <span class="nc">VegetationCarbonCompartmentalMatrix</span><span class="p">(</span><span class="n">ImmutableMatrix</span><span class="p">):</span>  <span class="c1"># cycling matrix</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="NumericStartValueDict"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.NumericStartValueDict">[docs]</a><span class="k">class</span> <span class="nc">NumericStartValueDict</span><span class="p">(</span><span class="n">frozendict</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="StateVarUnitTuple"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.StateVarUnitTuple">[docs]</a><span class="k">class</span> <span class="nc">StateVarUnitTuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># extending ndarray is special</span>
+<span class="c1"># https://numpy.org/doc/stable/user/basics.subclassing.html</span>
+<div class="viewcode-block" id="NumericSimulationTimes"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.NumericSimulationTimes">[docs]</a><span class="k">class</span> <span class="nc">NumericSimulationTimes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_array</span><span class="p">):</span>
+        <span class="c1"># Input array is an already formed ndarray instance</span>
+        <span class="c1"># We cast to be our class type</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">input_array</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="NumericStartValueArray"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.NumericStartValueArray">[docs]</a><span class="k">class</span> <span class="nc">NumericStartValueArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_array</span><span class="p">):</span>
+        <span class="c1"># Input array is an already formed ndarray instance</span>
+        <span class="c1"># We cast to be our class type</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">input_array</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="NumericParameterization"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.NumericParameterization">[docs]</a><span class="k">class</span> <span class="nc">NumericParameterization</span><span class="p">:</span>
+    <span class="c1"># Note:</span>
+    <span class="c1"># A parameterization implicitly refers to a unique specific</span>
+    <span class="c1"># symbolic model:</span>
+    <span class="c1">#</span>
+    <span class="c1"># 1.)   Obviously the keys of the par_dict and func_dict can</span>
+    <span class="c1">#       only be substituted in a model with these symbols present</span>
+    <span class="c1"># 2.)   Even if a symbolic model had the same free symbols</span>
+    <span class="c1">#       these symbols aquire meaning from their use in the symbolic</span>
+    <span class="c1">#       expressions.</span>
+    <span class="c1">#</span>
+    <span class="c1">#</span>
+    <span class="c1"># An instance would naturally contain a referece to the model (self.model=).</span>
+    <span class="c1"># This reference is omitted on purpose since the model might be given</span>
+    <span class="c1"># only implicitly by variables defined in a model describing source.py</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">par_dict</span><span class="p">,</span> <span class="n">func_dict</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">par_dict</span> <span class="o">=</span> <span class="n">frozendict</span><span class="p">(</span><span class="n">par_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func_dict</span> <span class="o">=</span> <span class="n">frozendict</span><span class="p">(</span><span class="n">func_dict</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NumericParameterizedSmoothReservoirModel"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel">[docs]</a><span class="k">class</span> <span class="nc">NumericParameterizedSmoothReservoirModel</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">srm</span><span class="p">,</span> <span class="n">parameterization</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">srm</span> <span class="o">=</span> <span class="n">srm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameterization</span> <span class="o">=</span> <span class="n">parameterization</span></div>
+
+
+<div class="viewcode-block" id="QuantityStartValueArray"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantityStartValueArray">[docs]</a><span class="k">class</span> <span class="nc">QuantityStartValueArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_array</span><span class="p">):</span>
+        <span class="c1"># Input array is an already formed ndarray instance</span>
+        <span class="c1"># We cast to be our class type</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">input_array</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="QuantityStartValueDict"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantityStartValueDict">[docs]</a><span class="k">class</span> <span class="nc">QuantityStartValueDict</span><span class="p">(</span><span class="n">frozendict</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="QuantitySimulationTimes"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantitySimulationTimes">[docs]</a><span class="k">class</span> <span class="nc">QuantitySimulationTimes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_array</span><span class="p">):</span>
+        <span class="c1"># Input array is an already formed ndarray instance</span>
+        <span class="c1"># We cast to be our class type</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">input_array</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="NumericSolutionArray"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.NumericSolutionArray">[docs]</a><span class="k">class</span> <span class="nc">NumericSolutionArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="c1"># just a wrapper class to distinguish the array as a solution</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_array</span><span class="p">):</span>
+        <span class="c1"># Input array is an already formed ndarray instance</span>
+        <span class="c1"># We cast to be our class type</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">input_array</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="QuantitySolutionArray"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantitySolutionArray">[docs]</a><span class="k">class</span> <span class="nc">QuantitySolutionArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="c1"># just a wrapper class to distinguish the array as a solution (with units) via the type</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_array</span><span class="p">):</span>
+        <span class="c1"># Input array is an already formed ndarray instance</span>
+        <span class="c1"># We cast to be our class type</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">input_array</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="QuantityParameterization"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantityParameterization">[docs]</a><span class="k">class</span> <span class="nc">QuantityParameterization</span><span class="p">(</span><span class="n">NumericParameterization</span><span class="p">):</span>
+    <span class="c1"># If a numeric parameterization has some physical meanimg.</span>
+    <span class="c1"># the purely numerical parameter values have implicit units.</span>
+    <span class="c1"># Also purely numerical functions have to be interpreted in the</span>
+    <span class="c1"># context of the units of their arguments and return value.</span>
+    <span class="c1">#</span>
+    <span class="c1"># Instead of seperately attaching units to</span>
+    <span class="c1"># ALL parameters, function arguments and  return values and expressions</span>
+    <span class="c1"># and letting sympy take care of the conversions,</span>
+    <span class="c1"># we require the user to choose the units of</span>
+    <span class="c1"># - start values and</span>
+    <span class="c1"># - times</span>
+    <span class="c1"># in a simulation using the paramterization.</span>
+    <span class="c1"># Thus the user has to provide a numerical parameterization for the</span>
+    <span class="c1"># WHOLE compartmental model to be consistent with these units.</span>
+    <span class="c1"># Possibly parameters have to be converted manually by the user to work</span>
+    <span class="c1"># for the units specified.</span>
+    <span class="c1"># This  keeps the numerical computations several orders of magnitude faster</span>
+    <span class="c1"># than fully automatic unit derivation in sympy and can be seen as a kind</span>
+    <span class="c1"># of cached unit computation.</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">par_dict</span><span class="p">,</span> <span class="n">func_dict</span><span class="p">,</span> <span class="n">state_var_units</span><span class="p">,</span> <span class="n">time_unit</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">par_dict</span><span class="p">,</span> <span class="n">func_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_var_units</span> <span class="o">=</span> <span class="n">state_var_units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_unit</span> <span class="o">=</span> <span class="n">time_unit</span></div>
+
+
+        
+
+<div class="viewcode-block" id="QuantityParameterizedSmoothReservoirModel"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel">[docs]</a><span class="k">class</span> <span class="nc">QuantityParameterizedSmoothReservoirModel</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">srm</span><span class="p">,</span> <span class="n">parameterization</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">srm</span> <span class="o">=</span> <span class="n">srm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameterization</span> <span class="o">=</span> <span class="n">parameterization</span></div>
+
+
+<div class="viewcode-block" id="QuantityModelRun"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantityModelRun">[docs]</a><span class="k">class</span> <span class="nc">QuantityModelRun</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">qpm</span><span class="p">,</span> <span class="n">start_values_quant</span><span class="p">,</span> <span class="n">times_quant</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qpm</span> <span class="o">=</span> <span class="n">qpm</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">qpm</span><span class="o">.</span><span class="n">parameterization</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">start_values_quant</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">state_var_units</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;size inconsistency&#39;</span><span class="p">)</span>
+        <span class="n">times_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">to_number</span><span class="p">(</span><span class="n">tv</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">time_unit</span><span class="p">)</span> <span class="k">for</span> <span class="n">tv</span> <span class="ow">in</span> <span class="n">times_quant</span><span class="p">])</span>
+        <span class="n">start_values_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">to_number</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">state_var_units</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">start_values_quant</span><span class="p">)]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smr</span> <span class="o">=</span> <span class="n">SmoothModelRun</span><span class="p">(</span>
+            <span class="n">qpm</span><span class="o">.</span><span class="n">srm</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">par_dict</span><span class="p">,</span> <span class="n">start_values_num</span><span class="p">,</span> <span class="n">times_num</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">func_dict</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="QuantityModelRun.solve"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.mvars.QuantityModelRun.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># compute the solution with respect to the state_var_units given in</span>
+        <span class="c1"># the model parameterization</span>
+        <span class="n">sol_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smr</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+
+        <span class="c1"># the result is correct since it comes with unit</span>
+        <span class="c1"># and can be converted in any other unit.</span>
+        <span class="n">sol_quant</span> <span class="o">=</span> <span class="n">sol_num</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">qpm</span><span class="o">.</span><span class="n">parameterization</span><span class="o">.</span><span class="n">state_var_units</span>
+
+        <span class="k">return</span> <span class="n">sol_quant</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usecases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../structure.html">Structure</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

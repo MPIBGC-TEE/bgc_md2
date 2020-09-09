@@ -1,0 +1,271 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve.computers &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.resolve.computers</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">ImmutableMatrix</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units</span> <span class="kn">import</span> <span class="n">Quantity</span>
+<span class="kn">from</span> <span class="nn">.mvars</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">InFluxesBySymbol</span><span class="p">,</span>
+    <span class="n">OutFluxesBySymbol</span><span class="p">,</span>
+    <span class="n">InternalFluxesBySymbol</span><span class="p">,</span>
+    <span class="n">TimeSymbol</span><span class="p">,</span>
+    <span class="n">StateVariableTuple</span><span class="p">,</span>
+    <span class="n">CompartmentalMatrix</span><span class="p">,</span>
+    <span class="n">InputTuple</span><span class="p">,</span>
+    <span class="n">VegetationCarbonInputScalar</span><span class="p">,</span>
+    <span class="n">VegetationCarbonInputPartitioningTuple</span><span class="p">,</span>
+    <span class="n">VegetationCarbonInputTuple</span><span class="p">,</span>
+    <span class="n">VegetationCarbonCompartmentalMatrix</span><span class="p">,</span>
+    <span class="n">NumericSimulationTimes</span><span class="p">,</span>
+    <span class="n">NumericParameterization</span><span class="p">,</span>
+    <span class="n">NumericStartValueArray</span><span class="p">,</span>
+    <span class="n">NumericStartValueDict</span><span class="p">,</span>
+    <span class="n">NumericParameterizedSmoothReservoirModel</span><span class="p">,</span>
+    <span class="n">NumericSolutionArray</span><span class="p">,</span>
+    <span class="n">QuantityParameterization</span><span class="p">,</span>
+    <span class="n">QuantitySimulationTimes</span><span class="p">,</span>
+    <span class="n">QuantityParameterizedSmoothReservoirModel</span><span class="p">,</span>
+    <span class="n">QuantityStartValueDict</span><span class="p">,</span>
+    <span class="n">QuantityStartValueArray</span><span class="p">,</span>
+    <span class="n">QuantityModelRun</span><span class="p">,</span>
+    <span class="n">QuantitySolutionArray</span><span class="p">,</span>
+    <span class="n">StateVarUnitTuple</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_model_run</span> <span class="kn">import</span> <span class="n">SmoothModelRun</span>
+
+
+<div class="viewcode-block" id="smooth_reservoir_model_from_fluxes"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.smooth_reservoir_model_from_fluxes">[docs]</a><span class="k">def</span> <span class="nf">smooth_reservoir_model_from_fluxes</span><span class="p">(</span>
+    <span class="n">in_fluxes</span><span class="p">:</span> <span class="n">InFluxesBySymbol</span><span class="p">,</span>
+    <span class="n">out_fluxes</span><span class="p">:</span> <span class="n">OutFluxesBySymbol</span><span class="p">,</span>
+    <span class="n">internal_fluxes</span><span class="p">:</span> <span class="n">InternalFluxesBySymbol</span><span class="p">,</span>
+    <span class="n">time_symbol</span><span class="p">:</span> <span class="n">TimeSymbol</span><span class="p">,</span>
+    <span class="n">state_variable_tuple</span><span class="p">:</span> <span class="n">StateVariableTuple</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SmoothReservoirModel</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">SmoothReservoirModel</span><span class="o">.</span><span class="n">from_state_variable_indexed_fluxes</span><span class="p">(</span>
+        <span class="n">state_vector</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">state_variable_tuple</span><span class="p">),</span>
+        <span class="n">time_symbol</span><span class="o">=</span><span class="n">time_symbol</span><span class="p">,</span>
+        <span class="n">input_fluxes</span><span class="o">=</span><span class="n">in_fluxes</span><span class="p">,</span>
+        <span class="n">output_fluxes</span><span class="o">=</span><span class="n">out_fluxes</span><span class="p">,</span>
+        <span class="n">internal_fluxes</span><span class="o">=</span><span class="n">internal_fluxes</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="smooth_reservoir_model_from_input_tuple_and_matrix"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.smooth_reservoir_model_from_input_tuple_and_matrix">[docs]</a><span class="k">def</span> <span class="nf">smooth_reservoir_model_from_input_tuple_and_matrix</span><span class="p">(</span>
+    <span class="n">u</span><span class="p">:</span> <span class="n">InputTuple</span><span class="p">,</span>
+    <span class="n">B</span><span class="p">:</span> <span class="n">CompartmentalMatrix</span><span class="p">,</span>
+    <span class="n">time_symbol</span><span class="p">:</span> <span class="n">TimeSymbol</span><span class="p">,</span>
+    <span class="n">state_variable_tuple</span><span class="p">:</span> <span class="n">StateVariableTuple</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SmoothReservoirModel</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">SmoothReservoirModel</span><span class="o">.</span><span class="n">from_B_u</span><span class="p">(</span>
+        <span class="n">state_vector</span><span class="o">=</span><span class="n">ImmutableMatrix</span><span class="p">(</span><span class="n">state_variable_tuple</span><span class="p">),</span>
+        <span class="n">time_symbol</span><span class="o">=</span><span class="n">time_symbol</span><span class="p">,</span>
+        <span class="n">B</span><span class="o">=</span><span class="n">B</span><span class="p">,</span>
+        <span class="n">u</span><span class="o">=</span><span class="n">ImmutableMatrix</span><span class="p">(</span><span class="n">u</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="compartmental_matrix_from_smooth_reservoir_model"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.compartmental_matrix_from_smooth_reservoir_model">[docs]</a><span class="k">def</span> <span class="nf">compartmental_matrix_from_smooth_reservoir_model</span><span class="p">(</span>
+    <span class="n">smr</span><span class="p">:</span> <span class="n">SmoothReservoirModel</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompartmentalMatrix</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">CompartmentalMatrix</span><span class="p">(</span><span class="n">smr</span><span class="o">.</span><span class="n">compartmental_matrix</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar">[docs]</a><span class="k">def</span> <span class="nf">vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar</span><span class="p">(</span>
+    <span class="n">u</span><span class="p">:</span> <span class="n">VegetationCarbonInputScalar</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">VegetationCarbonInputPartitioningTuple</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VegetationCarbonInputTuple</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">VegetationCarbonInputTuple</span><span class="p">(</span><span class="n">ImmutableMatrix</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span><span class="p">)</span></div>
+
+
+<span class="c1"># def vegetation_carbon_compartmental_matrix_from_compartmental_matrix_and_vegetation_carbon_state_variable_tuple(</span>
+<span class="c1">#       B:       CompartmentalMatrix,</span>
+<span class="c1">#       svt:     StateVariableTuple,</span>
+<span class="c1">#       vcsvt:   VegetationCarbonStateVariableTuple</span>
+<span class="c1">#    ) -&gt;</span>
+<span class="c1">#    return CompartmentalMatrix(smr.compartmental_matrix)</span>
+
+
+<div class="viewcode-block" id="numeric_model_run_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.numeric_model_run_1">[docs]</a><span class="k">def</span> <span class="nf">numeric_model_run_1</span><span class="p">(</span>
+    <span class="n">npsrm</span><span class="p">:</span> <span class="n">NumericParameterizedSmoothReservoirModel</span><span class="p">,</span>
+    <span class="n">start_values_num</span><span class="p">:</span> <span class="n">NumericStartValueArray</span><span class="p">,</span>
+    <span class="n">times_num</span><span class="p">:</span> <span class="n">NumericSimulationTimes</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SmoothModelRun</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">SmoothModelRun</span><span class="p">(</span>
+        <span class="n">npsrm</span><span class="o">.</span><span class="n">srm</span><span class="p">,</span>
+        <span class="n">npsrm</span><span class="o">.</span><span class="n">parameterization</span><span class="o">.</span><span class="n">par_dict</span><span class="p">,</span>
+        <span class="n">start_values_num</span><span class="p">,</span>
+        <span class="n">times_num</span><span class="p">,</span>
+        <span class="n">npsrm</span><span class="o">.</span><span class="n">parameterization</span><span class="o">.</span><span class="n">func_dict</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="numeric_parameterized_smooth_reservoir_model_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.numeric_parameterized_smooth_reservoir_model_1">[docs]</a><span class="k">def</span> <span class="nf">numeric_parameterized_smooth_reservoir_model_1</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">:</span> <span class="n">SmoothReservoirModel</span><span class="p">,</span> <span class="n">para_num</span><span class="p">:</span> <span class="n">NumericParameterization</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NumericParameterizedSmoothReservoirModel</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">NumericParameterizedSmoothReservoirModel</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">para_num</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="numeric_start_value_array_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.numeric_start_value_array_1">[docs]</a><span class="k">def</span> <span class="nf">numeric_start_value_array_1</span><span class="p">(</span>
+    <span class="n">nsvd</span><span class="p">:</span> <span class="n">NumericStartValueDict</span><span class="p">,</span>
+    <span class="n">svt</span><span class="p">:</span> <span class="n">StateVariableTuple</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NumericStartValueArray</span><span class="p">:</span>
+    <span class="n">tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">nsvd</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">svt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">NumericStartValueArray</span><span class="p">(</span><span class="n">tup</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="numeric_start_value_array_2"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.numeric_start_value_array_2">[docs]</a><span class="k">def</span> <span class="nf">numeric_start_value_array_2</span><span class="p">(</span>
+    <span class="n">smr</span><span class="p">:</span> <span class="n">SmoothModelRun</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NumericStartValueArray</span><span class="p">:</span>
+    <span class="n">tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">nsvd</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">svt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">NumericStartValueArray</span><span class="p">(</span><span class="n">smr</span><span class="o">.</span><span class="n">start_values</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="numeric_start_value_dict"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.numeric_start_value_dict">[docs]</a><span class="k">def</span> <span class="nf">numeric_start_value_dict</span><span class="p">(</span>
+    <span class="n">nsva</span><span class="p">:</span> <span class="n">NumericStartValueArray</span><span class="p">,</span>
+    <span class="n">svt</span><span class="p">:</span> <span class="n">StateVariableTuple</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NumericStartValueDict</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">NumericStartValueDict</span><span class="p">({</span><span class="n">sv</span><span class="p">:</span><span class="n">nsva</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">sv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">svt</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="numeric_solution_array_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.numeric_solution_array_1">[docs]</a><span class="k">def</span> <span class="nf">numeric_solution_array_1</span><span class="p">(</span>
+    <span class="n">smr</span><span class="p">:</span> <span class="n">SmoothModelRun</span>
+    <span class="p">)</span><span class="o">-&gt;</span><span class="n">NumericSolutionArray</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">NumericSolutionArray</span><span class="p">(</span><span class="n">smr</span><span class="o">.</span><span class="n">solve</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="quantity_parameterization_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.quantity_parameterization_1">[docs]</a><span class="k">def</span> <span class="nf">quantity_parameterization_1</span><span class="p">(</span>
+        <span class="n">np</span><span class="p">:</span> <span class="n">NumericParameterization</span><span class="p">,</span>
+        <span class="n">state_var_units</span><span class="p">:</span> <span class="n">StateVarUnitTuple</span><span class="p">,</span>
+        <span class="n">time_unit</span><span class="p">:</span> <span class="n">Quantity</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QuantityParameterization</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">QuantityParameterization</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">par_dict</span><span class="p">,</span> 
+        <span class="n">np</span><span class="o">.</span><span class="n">func_dict</span><span class="p">,</span>
+        <span class="n">state_var_units</span><span class="p">,</span>
+        <span class="n">time_unit</span>
+    <span class="p">)</span></div>
+
+<div class="viewcode-block" id="quantity_parameterized_smooth_reservoir_model_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.quantity_parameterized_smooth_reservoir_model_1">[docs]</a><span class="k">def</span> <span class="nf">quantity_parameterized_smooth_reservoir_model_1</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">:</span> <span class="n">SmoothReservoirModel</span><span class="p">,</span>
+    <span class="n">para_q</span><span class="p">:</span> <span class="n">QuantityParameterization</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QuantityParameterizedSmoothReservoirModel</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">QuantityParameterizedSmoothReservoirModel</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">para_q</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="quantity_start_value_array_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.quantity_start_value_array_1">[docs]</a><span class="k">def</span> <span class="nf">quantity_start_value_array_1</span><span class="p">(</span>
+    <span class="n">qsvd</span><span class="p">:</span> <span class="n">QuantityStartValueDict</span><span class="p">,</span>
+    <span class="n">svt</span><span class="p">:</span> <span class="n">StateVariableTuple</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QuantityStartValueArray</span><span class="p">:</span>
+    <span class="n">tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">qsvd</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">svt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">QuantityStartValueArray</span><span class="p">(</span><span class="n">tup</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="quantity_model_run_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.quantity_model_run_1">[docs]</a><span class="k">def</span> <span class="nf">quantity_model_run_1</span><span class="p">(</span>
+    <span class="n">qpsrm</span><span class="p">:</span> <span class="n">QuantityParameterizedSmoothReservoirModel</span><span class="p">,</span>
+    <span class="n">start_values_q</span><span class="p">:</span> <span class="n">QuantityStartValueArray</span><span class="p">,</span>
+    <span class="n">times_q</span><span class="p">:</span> <span class="n">QuantitySimulationTimes</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QuantityModelRun</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">QuantityModelRun</span><span class="p">(</span>
+        <span class="n">qpsrm</span><span class="p">,</span>
+        <span class="n">start_values_q</span><span class="p">,</span>
+        <span class="n">times_q</span><span class="p">,</span>
+    <span class="p">)</span></div>
+<div class="viewcode-block" id="quantity_solution_array_1"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.computers.quantity_solution_array_1">[docs]</a><span class="k">def</span> <span class="nf">quantity_solution_array_1</span><span class="p">(</span>
+    <span class="n">qmr</span><span class="p">:</span> <span class="n">QuantityModelRun</span>
+    <span class="p">)</span><span class="o">-&gt;</span><span class="n">QuantitySolutionArray</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">QuantitySolutionArray</span><span class="p">(</span><span class="n">qmr</span><span class="o">.</span><span class="n">solve</span><span class="p">())</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usecases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../structure.html">Structure</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

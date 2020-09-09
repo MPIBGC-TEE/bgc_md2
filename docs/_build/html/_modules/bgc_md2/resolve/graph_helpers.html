@@ -1,0 +1,428 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve.graph_helpers &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.resolve.graph_helpers</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span><span class="p">,</span> <span class="n">reduce</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">CSS4_COLORS</span><span class="p">,</span> <span class="n">BASE_COLORS</span><span class="p">,</span> <span class="n">TABLEAU_COLORS</span>
+<span class="kn">from</span> <span class="nn">pygraphviz.agraph</span> <span class="kn">import</span> <span class="n">AGraph</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">frozendict</span> <span class="kn">import</span> <span class="n">frozendict</span>
+<span class="kn">from</span> <span class="nn">testinfrastructure.helpers</span> <span class="kn">import</span> <span class="n">pp</span><span class="p">,</span> <span class="n">pe</span>
+
+<span class="kn">from</span> <span class="nn">.non_graph_helpers</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="c1"># computable_mvars</span>
+    <span class="c1"># ,directly_computable_mvars</span>
+    <span class="n">input_mvars</span>
+    <span class="c1"># ,output_mvar</span>
+    <span class="p">,</span>
+    <span class="n">arg_set</span>
+    <span class="c1"># ,arg_set_set</span>
+    <span class="p">,</span>
+    <span class="n">all_mvars</span>
+    <span class="c1"># ,applicable_computers</span>
+    <span class="p">,</span>
+    <span class="n">all_computers_for_mvar</span><span class="p">,</span>
+    <span class="n">pretty_name</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="compset_2_string"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.compset_2_string">[docs]</a><span class="k">def</span> <span class="nf">compset_2_string</span><span class="p">(</span><span class="n">compset</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;{&quot;</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pretty_name</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">compset</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span></div>
+
+
+<div class="viewcode-block" id="node_2_string"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.node_2_string">[docs]</a><span class="k">def</span> <span class="nf">node_2_string</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;{&quot;</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pretty_name</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span></div>
+
+
+<div class="viewcode-block" id="nodes_2_string"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.nodes_2_string">[docs]</a><span class="k">def</span> <span class="nf">nodes_2_string</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;[ &quot;</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">node_2_string</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot; ]&quot;</span></div>
+
+
+<div class="viewcode-block" id="edge_2_string"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.edge_2_string">[docs]</a><span class="k">def</span> <span class="nf">edge_2_string</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;(&quot;</span> <span class="o">+</span> <span class="n">node_2_string</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span> <span class="o">+</span> <span class="n">node_2_string</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span></div>
+
+
+<div class="viewcode-block" id="immutable_edge"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.immutable_edge">[docs]</a><span class="k">def</span> <span class="nf">immutable_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">):</span>
+    <span class="n">s</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">dat</span> <span class="o">=</span> <span class="n">edge</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">frozendict</span><span class="p">(</span><span class="n">dat</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="equivalent_singlegraphs"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.equivalent_singlegraphs">[docs]</a><span class="k">def</span> <span class="nf">equivalent_singlegraphs</span><span class="p">(</span><span class="n">g1_single</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="n">g2_single</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">g1_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">g1_single</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span>
+        <span class="p">]</span>
+        <span class="o">+</span> <span class="p">[</span>
+            <span class="n">g1_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span>
+        <span class="p">]</span>
+    <span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">g1_single</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">==</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="equivalent_multigraphs"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.equivalent_multigraphs">[docs]</a><span class="k">def</span> <span class="nf">equivalent_multigraphs</span><span class="p">(</span>
+    <span class="n">g1_multi</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">,</span> <span class="n">g2_multi</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="c1"># since we deal with a multigraph</span>
+    <span class="c1"># it is possible to get several edges between two nodes.</span>
+    <span class="c1"># The method get_edge_data returns a dictionary</span>
+    <span class="c1"># with the numbers of these edges as keys.</span>
+    <span class="c1"># But we want to consider two graphs equivalent if the resulting</span>
+    <span class="c1"># SET is equal, in other words:</span>
+    <span class="c1"># If a graph has two edges EACH from : A-&gt;B</span>
+    <span class="c1"># we do not care which of the edges has which computerset</span>
+    <span class="c1"># Therefore we compare the set of computersets belonging</span>
+
+    <span class="n">g1_single</span> <span class="o">=</span> <span class="n">toDiGraph</span><span class="p">(</span><span class="n">g1_multi</span><span class="p">)</span>
+    <span class="n">g2_single</span> <span class="o">=</span> <span class="n">toDiGraph</span><span class="p">(</span><span class="n">g2_multi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">g1_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">g1_single</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span>
+        <span class="p">]</span>
+        <span class="o">+</span> <span class="p">[</span>
+            <span class="n">g1_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span>
+        <span class="p">]</span>
+    <span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">g1_single</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">==</span> <span class="n">g2_single</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="arg_set_graph"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.arg_set_graph">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">arg_set_graph</span><span class="p">(</span><span class="n">mvar</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">allComputers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="c1"># return the subgraph of arg_name_sets for all computers that</span>
+    <span class="c1"># return this mvar</span>
+    <span class="c1"># For compatibility we return a multigraph</span>
+    <span class="c1"># although we do not have more than one edge between a pair</span>
+    <span class="c1"># of nodes</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">mvar</span><span class="p">})</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">all_computers_for_mvar</span><span class="p">(</span><span class="n">mvar</span><span class="p">,</span> <span class="n">allComputers</span><span class="p">):</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">arg_set</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="n">target</span><span class="p">,</span> <span class="n">computers</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="n">c</span><span class="p">}))</span>
+    <span class="k">return</span> <span class="n">g</span></div>
+
+
+<div class="viewcode-block" id="product_graph"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.product_graph">[docs]</a><span class="k">def</span> <span class="nf">product_graph</span><span class="p">(</span><span class="o">*</span><span class="n">graphs</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">product_graph_2</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="n">graphs</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">product_graph_2</span><span class="p">(</span>
+            <span class="n">g1</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">,</span>
+            <span class="n">g2</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="n">cp</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">cartesian_product</span><span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+    <span class="n">prod</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+<div class="viewcode-block" id="product_graph_2"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.product_graph_2">[docs]</a><span class="k">def</span> <span class="nf">product_graph_2</span><span class="p">(</span><span class="n">g1</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">,</span> <span class="n">g2</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="n">cp</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">cartesian_product</span><span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+    <span class="n">prod</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">cp</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">s_tup</span><span class="p">,</span> <span class="n">d_tup</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">edge</span>
+        <span class="n">prod</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+            <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">acc</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">acc</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">s_tup</span><span class="p">),</span>
+            <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">acc</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">acc</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">d_tup</span><span class="p">),</span>
+            <span class="n">computers</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;computers&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="c1"># the cartesian product can also contain nodes that</span>
+    <span class="c1"># are not connected.</span>
+    <span class="k">for</span> <span class="n">cart_node</span> <span class="ow">in</span> <span class="n">cp</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+        <span class="n">prod_node</span> <span class="o">=</span> <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">acc</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">acc</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">cart_node</span><span class="p">)</span>
+
+        <span class="n">prod</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">prod_node</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">prod</span></div>
+
+
+<div class="viewcode-block" id="initial_sparse_powerset_graph"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.initial_sparse_powerset_graph">[docs]</a><span class="k">def</span> <span class="nf">initial_sparse_powerset_graph</span><span class="p">(</span><span class="n">computers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="n">spsg</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+    <span class="n">allMvars</span> <span class="o">=</span> <span class="n">all_mvars</span><span class="p">(</span><span class="n">computers</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">allMvars</span><span class="p">:</span>
+        <span class="n">spsg</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">arg_set_graph</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">computers</span><span class="p">)</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">spsg</span></div>
+
+
+<div class="viewcode-block" id="update_step"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.update_step">[docs]</a><span class="k">def</span> <span class="nf">update_step</span><span class="p">(</span><span class="n">spsg</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">,</span> <span class="n">computers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">spsg</span><span class="p">)</span>
+    <span class="n">start_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">new</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># fixme: the startnode choice is too exclusive</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">start_nodes</span><span class="p">:</span>
+        <span class="c1"># print(tuple(v for v in node))</span>
+        <span class="n">pg</span> <span class="o">=</span> <span class="n">product_graph</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">arg_set_graph</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">computers</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node</span><span class="p">])</span>
+        <span class="c1"># new.add_edges_from(pg.edges(data=True))</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">pg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new</span></div>
+
+
+<div class="viewcode-block" id="sparse_powerset_graph"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.sparse_powerset_graph">[docs]</a><span class="k">def</span> <span class="nf">sparse_powerset_graph</span><span class="p">(</span><span class="n">computers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">:</span>
+    <span class="n">old</span> <span class="o">=</span> <span class="n">initial_sparse_powerset_graph</span><span class="p">(</span><span class="n">computers</span><span class="p">)</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">update_step</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">computers</span><span class="p">)</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="p">(</span><span class="n">equivalent_multigraphs</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)):</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">update_step</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">computers</span><span class="p">)</span>
+        <span class="c1"># print(equivalent_multigraphs(old, new))</span>
+    <span class="k">return</span> <span class="n">new</span></div>
+
+
+<div class="viewcode-block" id="update_generator"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.update_generator">[docs]</a><span class="k">def</span> <span class="nf">update_generator</span><span class="p">(</span><span class="n">computers</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">max_it</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">]:</span>
+
+    <span class="k">if</span> <span class="n">max_it</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;update sequence indices have to be larger than 0&quot;</span><span class="p">)</span>
+
+    <span class="n">val</span> <span class="o">=</span> <span class="n">initial_sparse_powerset_graph</span><span class="p">(</span><span class="n">computers</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">val</span>
+    <span class="n">old</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">update_step</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">computers</span><span class="p">)</span>
+
+    <span class="c1"># print(equivalent_multigraphs(old, val))</span>
+
+    <span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">max_it</span> <span class="o">&gt;</span> <span class="n">counter</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">equivalent_multigraphs</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">val</span><span class="p">)):</span>
+        <span class="k">yield</span> <span class="n">val</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">update_step</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">computers</span><span class="p">)</span>
+        <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span></div>
+        <span class="c1"># print(&quot;counter&quot;, counter, &quot;equivalent?&quot;, equivalent_multigraphs(old, val))</span>
+
+
+<div class="viewcode-block" id="toDiGraph"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.toDiGraph">[docs]</a><span class="k">def</span> <span class="nf">toDiGraph</span><span class="p">(</span><span class="n">g_multi</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">edgeDict_to_set</span><span class="p">(</span><span class="n">ed</span><span class="p">):</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="s2">&quot;computers&quot;</span>
+        <span class="n">comp_set_set</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span>
+            <span class="n">v</span><span class="p">[</span><span class="n">target</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ed</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="p">])</span>
+        <span class="k">return</span> <span class="n">comp_set_set</span>
+
+    <span class="n">g_single</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">g_multi</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+        <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="n">e</span>
+        <span class="n">edgeDict</span> <span class="o">=</span> <span class="n">g_multi</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+        <span class="n">comp_set_set</span> <span class="o">=</span> <span class="n">edgeDict_to_set</span><span class="p">(</span><span class="n">edgeDict</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">g_single</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="n">comp_set_set</span> <span class="o">=</span> <span class="n">comp_set_set</span><span class="o">.</span><span class="n">union</span><span class="p">(</span>
+                <span class="n">g_single</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)[</span><span class="s2">&quot;computers&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="n">g_single</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">computers</span><span class="o">=</span><span class="n">comp_set_set</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">g_single</span></div>
+
+
+<div class="viewcode-block" id="minimal_startnodes_for_single_var"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.minimal_startnodes_for_single_var">[docs]</a><span class="k">def</span> <span class="nf">minimal_startnodes_for_single_var</span><span class="p">(</span><span class="n">spg</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span> <span class="n">targetVar</span><span class="p">:</span> <span class="nb">type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; spg is a sparse powerset Graph, which means that it only contains all one element sets as targets.&quot;&quot;&quot;</span>
+    <span class="c1"># We first create a graph with the direction of the edges reversed</span>
+    <span class="n">rev_spg</span> <span class="o">=</span> <span class="n">spg</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">targetSet</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">targetVar</span><span class="p">})</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">single_source_shortest_path</span><span class="p">(</span><span class="n">rev_spg</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">targetSet</span><span class="p">)</span>
+    <span class="c1"># res=nx.shortest_path(spg,target=targetSet)</span>
+    <span class="n">possible_startnodes</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">minimal_startnodes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="ow">not</span> <span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">issuperset</span><span class="p">(</span><span class="n">targetSet</span><span class="p">)),</span> <span class="n">possible_startnodes</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">minimal_startnodes</span><span class="p">)</span></div>
+
+
+<span class="c1"># def target_subgraph(</span>
+<span class="c1">#         spg:nx.MultiDiGraph</span>
+<span class="c1">#        ,targetNode:Set[type]</span>
+<span class="c1">#    )-&gt;nx.MultiDiGraph:</span>
+<span class="c1">#    def filter_func(n):</span>
+<span class="c1">#        # remove every set that contains one of the variables we are looking for ...</span>
+<span class="c1">#        return not(any([ (v in n) for v in targetNode]))</span>
+<span class="c1">#</span>
+<span class="c1">#    if spg.has_node(targetNode):</span>
+<span class="c1">#        # The targetNode is already part of the spg.</span>
+<span class="c1">#        # (because it has been added in one of the update</span>
+<span class="c1">#        # steps as an argument set of a computer)</span>
+<span class="c1">#        # in which case we can simply return the startnodes</span>
+<span class="c1">#        # of the paths leading to it.</span>
+<span class="c1">#        spg=spg.copy()</span>
+<span class="c1">#    else:</span>
+<span class="c1">#        # Although we do not find the node itself</span>
+<span class="c1">#        # we can find the nodes for the single element sets</span>
+<span class="c1">#        # of the mvars in the node, since we have built the graph</span>
+<span class="c1">#        # starting wiht them. E.g if node {A,B,C} is not part of</span>
+<span class="c1">#        # the graph we know at least that the nodes {A}, {B} amd {C}</span>
+<span class="c1">#        # are in the graph.</span>
+<span class="c1">#        # For each of them we can compute the subgraph of</span>
+<span class="c1">#        # spg that leads to it. If we compute the product of these</span>
+<span class="c1">#        # subgraphs it will contain the desired node.</span>
+<span class="c1">#</span>
+<span class="c1">#        # fixme: mm 02-26-2020</span>
+<span class="c1">#        # We could make this more efficient by looking for all the</span>
+<span class="c1">#        # disjoint unions of the targetNode Mvars and compute</span>
+<span class="c1">#        # the product of the graphs leading to the subsets.</span>
+<span class="c1">#        # If the subsets are not one element sets we need fewer</span>
+<span class="c1">#        # multiplications.</span>
+<span class="c1">#        #prod_g=product_graph(*[target_subgraph(spg,frozenset({v})) for v in targetNode])</span>
+<span class="c1">#        spg=product_graph(*[minimal_target_subgraph_for_single_var(spg,v) for v in targetNode])</span>
+<span class="c1">#</span>
+<span class="c1">#    path_dict=nx.shortest_path(spg,target=targetNode)</span>
+<span class="c1">#    possible_startnodes=frozenset(path_dict.keys())</span>
+<span class="c1">#    minimal_startnodes=frozenset([n for n in filter(filter_func,possible_startnodes)])</span>
+<span class="c1">#    path_list_list=[</span>
+<span class="c1">#        nx.shortest_path(spg,target=targetNode, source=sn)</span>
+<span class="c1">#        for sn in minimal_startnodes</span>
+<span class="c1">#    ]</span>
+<span class="c1">#    connected_nodes=reduce(lambda acc, pl : acc.union(pl),path_list_list,frozenset({}))</span>
+<span class="c1">#    return spg.subgraph(connected_nodes).copy()</span>
+
+
+<div class="viewcode-block" id="minimal_target_subgraph_for_single_var"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.minimal_target_subgraph_for_single_var">[docs]</a><span class="k">def</span> <span class="nf">minimal_target_subgraph_for_single_var</span><span class="p">(</span><span class="n">spg</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span> <span class="n">targetVar</span><span class="p">:</span> <span class="nb">type</span><span class="p">):</span>
+    <span class="c1"># all minimal starting points</span>
+    <span class="n">targetNode</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">targetVar</span><span class="p">})</span>
+    <span class="n">start_nodes</span> <span class="o">=</span> <span class="n">minimal_startnodes_for_single_var</span><span class="p">(</span><span class="n">spg</span><span class="p">,</span> <span class="n">targetVar</span><span class="p">)</span>
+    <span class="n">path_list_list</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span><span class="n">spg</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">targetNode</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">sn</span><span class="p">)</span> <span class="k">for</span> <span class="n">sn</span> <span class="ow">in</span> <span class="n">start_nodes</span>
+    <span class="p">]</span>
+    <span class="n">connected_nodes</span> <span class="o">=</span> <span class="n">reduce</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">acc</span><span class="p">,</span> <span class="n">pl</span><span class="p">:</span> <span class="n">acc</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">pl</span><span class="p">),</span> <span class="n">path_list_list</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">({})</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">spg</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">connected_nodes</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="minimal_startnodes_for_node"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.graph_helpers.minimal_startnodes_for_node">[docs]</a><span class="k">def</span> <span class="nf">minimal_startnodes_for_node</span><span class="p">(</span><span class="n">spg</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span> <span class="n">targetNode</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="n">Set</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">spg</span><span class="o">.</span><span class="n">has_node</span><span class="p">(</span><span class="n">targetNode</span><span class="p">):</span>
+        <span class="c1"># The targetNode is already part of the spg.</span>
+        <span class="c1"># (because it has been added in one of the update</span>
+        <span class="c1"># steps as an argument set of a computer)</span>
+        <span class="c1"># in which case we can simply return the startnodes</span>
+        <span class="c1"># of the paths leading to it.</span>
+        <span class="n">path_dict</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span><span class="n">spg</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">targetNode</span><span class="p">)</span>
+        <span class="n">possible_startnodes</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">path_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Although we do not find the node itself</span>
+        <span class="c1"># we can find the nodes for the single element sets</span>
+        <span class="c1"># of the mvars in the node, since we have built the graph</span>
+        <span class="c1"># starting wiht them. E.g if node {A,B,C} is not part of</span>
+        <span class="c1"># the graph we know at least that the nodes {A}, {B} amd {C}</span>
+        <span class="c1"># are in the graph.</span>
+        <span class="c1"># For each of them we can compute the subgraph of</span>
+        <span class="c1"># spg that leads to it. If we compute the product of these</span>
+        <span class="c1"># subgraphs it will contain the desired node.</span>
+
+        <span class="c1"># fixme: mm 02-26-2020</span>
+        <span class="c1"># We could make this more efficient by looking for all the</span>
+        <span class="c1"># disjoint unions of the targetNode Mvars and compute</span>
+        <span class="c1"># the product of the graphs leading to the subsets.</span>
+        <span class="c1"># If the subsets are not one element sets we need fewer</span>
+        <span class="c1"># multiplications.</span>
+        <span class="c1"># prod_g=product_graph(*[target_subgraph(spg,frozenset({v})) for v in targetNode])</span>
+        <span class="n">prod_g</span> <span class="o">=</span> <span class="n">product_graph</span><span class="p">(</span>
+            <span class="o">*</span><span class="p">[</span><span class="n">minimal_target_subgraph_for_single_var</span><span class="p">(</span><span class="n">spg</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">targetNode</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">prod_path_dict</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span><span class="n">prod_g</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">targetNode</span><span class="p">)</span>
+        <span class="n">possible_startnodes</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">prod_path_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">filter_func</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c1"># remove every set that contains one of the variables we are looking for ...</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">any</span><span class="p">([(</span><span class="n">v</span> <span class="ow">in</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">targetNode</span><span class="p">]))</span>
+
+    <span class="n">minimal_startnodes</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="n">filter_func</span><span class="p">,</span> <span class="n">possible_startnodes</span><span class="p">)]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">minimal_startnodes</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usecases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../structure.html">Structure</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
