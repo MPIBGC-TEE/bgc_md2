@@ -1,0 +1,9 @@
+[submodule "src/testinfrastructure"]
+	path = src/testinfrastructure
+	url = https://github.com/MPIBGC-TEE/testinfrastructure.git
+[submodule "src/LAPM"]
+	path = src/LAPM
+	url = https://github.com/MPIBGC-TEE/LAPM.git
+[submodule "src/CompartmentalSystems"]
+	path = src/CompartmentalSystems
+	url = https://github.com/MPIBGC-TEE/CompartmentalSystems.git
