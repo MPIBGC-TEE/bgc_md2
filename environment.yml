@@ -2,7 +2,6 @@ name: bgc_md2
 channels: 
   - conda-forge
 dependencies:
-  - concurrencytest
   - sympy
   - python=3.8
   - jupyterlab=2

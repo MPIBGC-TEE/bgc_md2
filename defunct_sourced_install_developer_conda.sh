@@ -1,11 +1,9 @@
-#!/bin/bash
 set -e
-# The script is supposed to run in an activated conda environment.
-# e.g. after 
-# conda create -y --name bgc_md2 
-# conda activate bgc_md2
-# and in this directory
+# 1.) source this file instead of executing it
+#     source install_developer_conda.sh
 #
+# This script is just setting up a development environment
+# (in the sense of setup.py develop)
 # It is NOT trying to replace a proper conda package.
 # Since we frequently will have to work on bgc_md2 and
 # CompartmentalSystems, LAPM, testinfrastructure simultaneuously we also
@@ -13,12 +11,13 @@ set -e
 # To make that easy we assume that there repositories have been checked
 # out under src/ComartmentalSystems src/LAPM and src/testinfrastructure 
 
-conda install -c conda-forge --file requirements.conda
+envname="bgc_md2"
+conda remove --name $envname --all
+conda env create  -f environment.yml
+conda activate $envname
 
-for dir in testinfrastructure LAPM CompartmentalSystems
+for dir in CompartmentalSystems LAPM testinfrastructure
 do 
-  echo '#################'
-  echo $dir
   cd src/${dir}
   source install_developer_conda.sh
   cd -
