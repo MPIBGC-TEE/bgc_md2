@@ -1,5 +1,5 @@
 import xarray as xr
-from CARDAMOMlib import load_mdo
+from .CARDAMOMlib import load_mdo
 
 # dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
 #dataset = xr.open_dataset("/home/data/CARDAMOM/cardamom_for_holger.nc")

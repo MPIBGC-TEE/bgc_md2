@@ -130,3 +130,6 @@ dmypy.json
 
 # Project-specific
 prototypes/exclude-models.txt
+
+# Jupyter notebooks
+*.ipynb
