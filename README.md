@@ -4,7 +4,7 @@
 ```bash 
    conda create -y --name bgc_md2
    conda activate bgc_md2
-   ./installation_developer_conda.sh 
+   ./install_developer_conda.sh 
 ```
 ## Structure
 This prototype represents models as subfolders of folder 
