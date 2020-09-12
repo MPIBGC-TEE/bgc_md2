@@ -1,0 +1,7 @@
+# This file is used for version pinning only 
+# The required libraries are  listed in setup.py which will be consulted by
+# pip to resolve dependencies
+-e src/testinfrastructure 
+-e src/LAPM.git
+-e src/CompartmentalSystems
+-e .
