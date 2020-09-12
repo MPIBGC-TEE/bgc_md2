@@ -2,7 +2,9 @@
 ## Installation
 * for developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
 ```bash 
-source installation_developer_conda.sh
+   conda create -y --name bgc_md2
+   conda activate bgc_md2
+   ./installation_developer_conda.sh 
 ```
 ## Structure
 This prototype represents models as subfolders of folder 
