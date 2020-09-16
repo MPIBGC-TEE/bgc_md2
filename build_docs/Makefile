@@ -9,6 +9,7 @@ SOURCEDIR     = source
 BUILDDIR      = _build
 AUTOSUMMARYDIR= _autosummary
 PUBDIR        = ../docs
+MODULESDIR    = ../src/bgc_md2
 
 # Internal variables.
 ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(SPHINXOPTS)
@@ -23,13 +24,15 @@ clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf $(SOURCEDIR)/$(AUTOSUMMARYDIR)/*
 
+.PHONY: api-doc
+api-doc:
+	sphinx-apidoc -o $(SOURCEDIR)/ --ext-autodoc $(MODULESDIR)
+
 .PHONY: html
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(SOURCEDIR) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
-
-
 
 .PHONY: publish 
 publish:

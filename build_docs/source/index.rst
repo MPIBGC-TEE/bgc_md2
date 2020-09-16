@@ -15,9 +15,9 @@ Available models
 ----------------
 
 .. autosummary::
-   :template: autosummary/module.rst
+   :template: autosummary/base.rst
    :toctree: _autosummary
-   
+
     ~bgc_md2.models.Williams2005GCB
     ~bgc_md2.models.ELM
     ~bgc_md2.models.CARDAMOM 
