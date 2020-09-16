@@ -718,6 +718,7 @@ class TestModelDataObject(unittest.TestCase):
         ds.close()
         dataset.close()
 
+    @unittest.skip('code currently commented out, might return')
     def test_get_netcdf(self):
         filename = 'cardamom_for_holger_10_ensembles.nc'
         my_data_path = os.path.join(THIS_DIR, filename)
