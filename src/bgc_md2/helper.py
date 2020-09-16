@@ -1,9 +1,6 @@
-from . import models
 from IPython.display import Math
 from IPython.display import display
-from bgc_md2.models.helpers import computable_mvars
-from bgc_md2.models.helpers import get_single_mvar_value
-from bgc_md2.resolve.mvars import CompartmentalMatrix
+from typing import Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
 import ipywidgets as widgets
@@ -12,6 +9,72 @@ import pkgutil
 import matplotlib.pyplot as plt
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
+from . import models
+# from .models.helpers import computable_mvars, get_single_mvar_value
+from .resolve.mvars import CompartmentalMatrix
+from .resolve.MVarSet import MVarSet
+from .resolve.graph_helpers import (
+    sparse_powerset_graph,
+    minimal_target_subgraph_for_single_var,
+    minimal_startnodes_for_single_var,
+    node_2_string,
+    nodes_2_string,
+)
+
+
+# fixme mm:
+# As an intermediate solution I created the following subclass to account for model specific stuff.
+# I abandoned this because it complicated the user interface. (The MVarsSets are now explicitly created in the 
+# source.py files and ONE MVarSet class is enough to worry the user about...
+# @Thomas
+# If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense) 
+# feel free to add it. It is probably not the commented one below anyway...
+#
+# class ModelMVarSet(MVarSet):
+#     '''This class adds some methods for displaying MVarSets that are specific
+#     to MVarSets that describe compartmental systems. 
+#     It is used in the notebooks to display summaries of models or collections of models.
+#     It also contains some convenient ways to collect the models in the package.
+#     '''
+#     @classmethod
+#     def from_model_name(cls,name):
+#         """
+#         convenience method to get the instance from a submodule of bgc.models
+#         by just giving the name of the submodule
+#         """
+#         s=provided_mvar_values(name)
+#         return cls(s)
+# 
+#     def render(self, var):
+#         res = self._get_single_mvar_value(var)
+#         display(Math("\\text{" + var.__name__ + "} =" + latex(res)))
+#         # The latex could be filtered to display subscripts better
+#         # display(res)
+# 
+#     def graph(self):
+#         target_var = SmoothReservoirModel
+#         if target_var not in self.computable_mvar_types():
+#             return
+# 
+#         srm = self._get_single_mvar_value(target_var)
+#         fig = plt.figure()
+#         rect = (0, 0, 0.8, 1.2)  # l, b, w, h
+#         ax = fig.add_axes(rect)
+#         ax.clear()
+#         srm.plot_pools_and_fluxes(ax)
+#         plt.close(fig)
+#         return ax.figure
+#         out = widgets.Output()
+#         with out:
+#             display(var.__name__ + "=")
+#             display(Math(latex(res)))
+#             # The latex could be filtered to display subscripts better
+#             # display(res)
+#         if capture:
+#             return out
+#         else:
+#             display(out)
+    
 
 def list_models():
     exclude_path = Path("./exclude-models.txt")
@@ -37,24 +100,31 @@ def list_models_md():
 
 
 def createSingleModelNb(model_name, report_file_path):
-    model = Model(model_name)
+    mvs = MVarSet.from_model_name(model_name)
     nb = nbf.v4.new_notebook()
 
-    text = "# {}".format(model.name)
-    t_mvars = "Computable mvars:\n" + "\n".join(
-        "1. {}".format(var) for var in model.mvar_names
-    )
-    c_imports = "import bgc_md2.helper as h"
-    c_model = "model = h.Model({})".format(repr(model.name))
-    c_graph = "model.graph()"
-    c_render = "for var in model.mvars:\n    model.render(var)"
+    text = "# {}".format(model_name)
+    # rather let the user do it programmatically
+    # t_mvars = "Computable mvars:\n" + "\n".join(
+    #     "1. {}".format(var) for var in mvs.computable_mvar_names
+    # )
+    c_imports = """import bgc_md2.helper as h
+import importlib """
+    # c_mvs = "mvs = h.MVarSet.from_model_name({})".format(repr(model_name))
+    c_mvs = """importlib.invalidate_caches()
+mod = importlib.import_module('bgc_md2.models.{}.source')
+mvs = mod.mvs""".format(model_name)
+    c_graph = "mvs.graph()"
+    c_mvars = "mvs.computable_mvar_names"
+    c_render = "for var in mvs.computable_mvar_types():\n    mvs.render(var)"
 
     nb["cells"] = [
         nbf.v4.new_markdown_cell(text),
-        nbf.v4.new_markdown_cell(t_mvars),
+        #nbf.v4.new_markdown_cell(t_mvars),
         nbf.v4.new_code_cell(c_imports),
-        nbf.v4.new_code_cell(c_model),
+        nbf.v4.new_code_cell(c_mvs),
         nbf.v4.new_code_cell(c_graph),
+        nbf.v4.new_code_cell(c_mvars),
         nbf.v4.new_code_cell(c_render),
     ]
     nbf.write(nb, report_file_path)
@@ -97,99 +167,15 @@ def funcmakerInsertLinkInToBox(grid, name):
     return insert_link
 
 
-class Model:
-    # mm @Thomas:
-    #
-    # 1.
-    # in the current implementation the Model has to be reinstanciated
-    # when the source.py of a model changes on disk
-    # (For the dot tab completion even the whole class would have to be
-    # regenerated.) As a consequence it should be regarded as an ultra
-    # light weight shortlived (made on demand)
-    # interface to ipython (which makes working with classes convinient
-    # (e.g. by tab completion)
-    # see comments on __init__
-    #
-    # 2.
-    # Model as class name is used in the backend packages and
-    # therefore aquired a special connotation.
-    # We might have to look for a more specific name
-
-    def __init__(self, name):
-        self.name = name
-
-    @property
-    def mvars(self):
-        return computable_mvars(self.name)
-
-    @property
-    def mvar_names(self):
-        return [var.__name__ for var in self.mvars]
-        # mm @Thomas:
-        # the next two properties will get stale when the underlying model source.py changes on disk
-        # maybe they do not have to be stored ...
-        # which would not be a problem it this Model instance is always ready to die
-        # and regenerated.
-
-        # I have no final opinion just a reminder to keep on the lookout
-        # for alternative approaches  (see above...)
-        # that might be a bit cheaper computationaly by not bundling things into an instance that
-        # has to be discarded completely
-
-        self.mvars = computable_mvars(name)  # could be a @property decorated methods
-        self.mvar_names = [var.__name__ for var in self.mvars]
-
-    def __dir__(self):
-        return super().__dir__() + ["get_{}".format(name) for name in self.mvar_names]
-
-    def __getattr__(self, name):
-        if name.startswith("get_"):
-            var_name = name[4:]
-            for var in self.mvars:
-                if var.__name__ == var_name:
-                    return lambda: get_single_mvar_value(var, self.name)
-        return super().__getattr__(name)
-
-    def render(self, var):
-        res = get_single_mvar_value(var, self.name)
-        display(Math("\\text{" + var.__name__ + "} =" + latex(res)))
-        # The latex could be filtered to display subscripts better
-        # display(res)
-
-    def graph(self):
-        target_var = SmoothReservoirModel
-        if target_var not in self.mvars:
-            return
-
-        srm = get_single_mvar_value(target_var, self.name)
-        fig = plt.figure()
-        rect = (0, 0, 0.8, 1.2)  # l, b, w, h
-        ax = fig.add_axes(rect)
-        ax.clear()
-        srm.plot_pools_and_fluxes(ax)
-        plt.close(fig)
-        return ax.figure
-        out = widgets.Output()
-        with out:
-            display(var.__name__ + "=")
-            display(Math(latex(res)))
-            # The latex could be filtered to display subscripts better
-            # display(res)
-        if capture:
-            return out
-        else:
-            display(out)
-
-
 def modelVBox(model_name):
-    model = Model(model_name)
+    mvs = MVarSet.from_model_name(model_name)
     # on demand computation is used
-    # I am aware of the possibility of model.computable_mvars
+    # I am aware of the possibility of mvs.computable_mvars
     cmvs = computable_mvars(model_name)
     target_var = SmoothReservoirModel
     pictlist = []
     if target_var in cmvs:
-        srm = get_single_mvar_value(target_var, model_name)
+        srm = mvs._get_single_mvar_value(target_var)
         graph_out = widgets.Output()
         fig = plt.figure()
         rect = 0, 0, 0.8, 1.2  # l, b, w, h
@@ -213,12 +199,12 @@ def modelVBox(model_name):
             widgets.HTML(
                 "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
                 + "<ol>\n"
-                + "\n".join("<li>{}</li>".format(var) for var in model.mvar_names)
+                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
                 + "</ol>\n"
             ),
         ]
         + pictlist
-        + [model.render(var, capture=True) for var in model.mvars]
+        + [mvs.render(var, capture=True) for var in mvs.computable_mvar_types()]
     )
     b = widgets.Button(
         layout=widgets.Layout(width="auto", height="auto"),
@@ -239,30 +225,30 @@ def button_callback(function, *args):
     return callback
 
 
-class ModelListGridBox(widgets.GridspecLayout):
+class MvarSetListGridBox(widgets.GridspecLayout):
     def __init__(self, inspection_box):
         self.inspection_box = inspection_box
         self.names = list_models()
         super().__init__(len(self.names), 10)
         self.populate()
 
-    def inspect_model(self, name):
+    def inspect_mvs(self, name):
         self.inspection_box.update(name)
 
     def populate(self):
         for i, name in enumerate(self.names):
-            button_inspect_model = widgets.Button(description=name,)
-            button_inspect_model.on_click(button_callback(self.inspect_model, name))
-            self[i, 0] = button_inspect_model
-
-            res = get_single_mvar_value(CompartmentalMatrix, name)
+            button_inspect_mvs = widgets.Button(description=name,)
+            button_inspect_mvs.on_click(button_callback(self.inspect_mvs, name))
+            self[i, 0] = button_inspect_mvs
+            mvs = MVarSet.from_model_name(name)
+            res = mvs._get_single_mvar_value(CompartmentalMatrix)
             out = widgets.Output()
             with out:
                 display(res)
             self[i, 1:9] = out
 
 
-class ModelInspectionBox(widgets.VBox):
+class MvarSetInspectionBox(widgets.VBox):
 
     nb_link_box = None
 
@@ -279,7 +265,7 @@ class ModelInspectionBox(widgets.VBox):
         )
 
     def update(self, model_name):
-        model = Model(model_name)
+        mvs = MVarSet.from_model_name(model_name)
 
         self.children = (
             widgets.HTML(
@@ -293,12 +279,12 @@ class ModelInspectionBox(widgets.VBox):
             widgets.HTML(
                 "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
                 + "<ol>\n"
-                + "\n".join("<li>{}</li>".format(var) for var in model.mvar_names)
+                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
                 + "</ol>\n"
             ),
         )
 
-        graph = model.graph()
+        graph = mvs.graph()
         if graph:
             graph_out = widgets.Output()
             with graph_out:
@@ -307,8 +293,9 @@ class ModelInspectionBox(widgets.VBox):
 
         rendered_vars = widgets.Output()
         with rendered_vars:
-            for var in model.mvars:
-                model.render(var)
+            #for var in mvs.mvars:
+            for var in mvs.computable_mvar_types():
+                mvs.render(var)
         self.children += (rendered_vars,)
 
         b = widgets.Button(

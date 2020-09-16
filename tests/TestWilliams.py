@@ -7,11 +7,7 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 from testinfrastructure.InDirTest import InDirTest
 
-from bgc_md2.models.helpers import (
-    provided_mvars,
-    computable_mvars,
-    path_dict_to_single_mvar,
-    get_single_mvar_value,
+from bgc_md2.resolve.helpers import (
     bgc_md2_computers,
     bgc_md2_computer_aliases,
     bgc_md2_mvar_aliases,
@@ -49,25 +45,13 @@ from bgc_md2.resolve.graph_plotting import (
     # ,draw_Graph_with_computers_svg
 )
 from testinfrastructure.helpers import pp
-
-def list_mult(ll):
-    # tensor product of list....
-    if len(ll)==0:
-        return []
-    if  len(ll)==1:
-        return ll[0]
-    if len(ll)==2:
-        l1=ll[-1]
-        l2=ll[-2]
-        new_last=[t2+t1 for t1 in l1 for t2 in l2]
-        return new_last
-
-    return list_mult(ll[0:-2]+[new_last])
+from bgc_md2.resolve.MVarSet import MVarSet
 
 
 class TestWilliams(InDirTest):
     def setUp(self):
         self.mn = "Williams2005GCB"
+        self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
                 CompartmentalMatrix,
@@ -89,37 +73,6 @@ class TestWilliams(InDirTest):
         )
 
     def test_provided_mvars(self):
-        mvs = provided_mvars(self.mn)
-        self.assertSetEqual(mvs, self.ref_provided_mvars)
+        mvs = self.mvs 
+        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
 
-    def test_computable_mvars(self):
-        spsg=sparse_powerset_graph(bgc_md2_computers())
-        f = plt.figure()
-        ax = f.add_subplot(1,1,1)
-        draw_ComputerSetMultiDiGraph_matplotlib(
-                ax,
-                spsg, 
-                bgc_md2_mvar_aliases(), 
-                bgc_md2_computer_aliases(),
-                targetNode=frozenset({SmoothModelRun})
-        )
-        f.savefig("spgs.pdf")
-        fig = plt.figure()
-        draw_update_sequence(bgc_md2_computers(), max_it=8, fig=fig)
-        fig.savefig("c1.pdf")
-        res = frozenset(
-            [
-                VegetationCarbonInputTuple,
-                SmoothReservoirModel,
-                SmoothModelRun,
-                NumericParameterizedSmoothReservoirModel,
-            ]
-        ).union(self.ref_provided_mvars)
-        mvs = computable_mvars(self.mn)
-        # self.assertSetEqual(mvs,res)
-        list_str = "\n".join(["<li> " + str(var.__name__) + " </li>" for var in mvs])
-        print(list_str)
-        for var in mvs:
-            print("########################################")
-            print(str(var.__name__))
-            print(get_single_mvar_value(var,self.mn))

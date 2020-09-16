@@ -42,8 +42,8 @@ from bgc_md2.resolve.computers import (
     quantity_model_run_1,
     quantity_start_value_array_1,
 )
-from ..BibInfo import BibInfo 
-
+from bgc_md2.models.BibInfo import BibInfo 
+from bgc_md2.resolve.MVarSet import MVarSet
 
 
 t = TimeSymbol("t")
@@ -233,7 +233,8 @@ qsmr= numeric_model_run_1(
 
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
-specialVars = {
+#specialVars = {
+mvs = MVarSet({
     BibInfo(# Bibliographical Information
         name="DALEC",
         longName="Data Assimilation Linked Ecosystem model", 
@@ -283,4 +284,4 @@ specialVars = {
     # vegetation carbon partitioning.
     VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
-}
+})
