@@ -1,0 +1,741 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.models.CARDAMOM.CARDAMOMlib &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.models.CARDAMOM.CARDAMOMlib</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numpy.linalg</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+
+<span class="kn">from</span> <span class="nn">bgc_md2.ModelStructure</span> <span class="kn">import</span> <span class="n">ModelStructure</span>
+<span class="kn">from</span> <span class="nn">bgc_md2.ModelDataObject</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ModelDataObject</span><span class="p">,</span>
+    <span class="n">getStockVariable_from_Density</span><span class="p">,</span>
+    <span class="n">getFluxVariable_from_DensityRate</span><span class="p">,</span>
+    <span class="n">getFluxVariable_from_Rate</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">bgc_md2.Variable</span> <span class="kn">import</span> <span class="n">Variable</span>
+
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.discrete_model_run</span> <span class="kn">import</span> <span class="n">DMRError</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.pwc_model_run_fd</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PWCModelRunFD</span><span class="p">,</span>
+    <span class="n">PWCModelRunFDError</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.discrete_model_run_14C</span> <span class="kn">import</span> <span class="n">DiscreteModelRun_14C</span> <span class="k">as</span> <span class="n">DMR_14C</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.pwc_model_run_14C</span> <span class="kn">import</span> <span class="n">PWCModelRun_14C</span> <span class="k">as</span> <span class="n">PWCMR_14C</span>
+<span class="kn">from</span> <span class="nn">bgc_md2.models.CARDAMOM.compute_start_values_14C</span> <span class="kn">import</span> <span class="n">compute_start_values_14C</span>
+
+
+<div class="viewcode-block" id="load_model_structure"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.load_model_structure">[docs]</a><span class="k">def</span> <span class="nf">load_model_structure</span><span class="p">():</span>
+    <span class="c1"># labile, leaf, root, wood, litter, and soil</span>
+
+    <span class="n">pool_structure</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Labile&quot;</span><span class="p">,</span> <span class="s2">&quot;stock_var&quot;</span><span class="p">:</span> <span class="s2">&quot;Labile&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Leaf&quot;</span><span class="p">,</span> <span class="s2">&quot;stock_var&quot;</span><span class="p">:</span> <span class="s2">&quot;Leaf&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Root&quot;</span><span class="p">,</span> <span class="s2">&quot;stock_var&quot;</span><span class="p">:</span> <span class="s2">&quot;Root&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Wood&quot;</span><span class="p">,</span> <span class="s2">&quot;stock_var&quot;</span><span class="p">:</span> <span class="s2">&quot;Wood&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Litter&quot;</span><span class="p">,</span> <span class="s2">&quot;stock_var&quot;</span><span class="p">:</span> <span class="s2">&quot;Litter&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Soil&quot;</span><span class="p">,</span> <span class="s2">&quot;stock_var&quot;</span><span class="p">:</span> <span class="s2">&quot;Soil&quot;</span><span class="p">},</span>
+    <span class="p">]</span>
+
+    <span class="n">external_input_structure</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;Labile&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;NPP_to_Labile&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;Leaf&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;NPP_to_Leaf&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;Root&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;NPP_to_Root&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;Wood&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;NPP_to_Wood&quot;</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="n">horizontal_structure</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">(</span><span class="s2">&quot;Labile&quot;</span><span class="p">,</span> <span class="s2">&quot;Leaf&quot;</span><span class="p">):</span> <span class="p">[</span><span class="s2">&quot;Labile_to_Leaf&quot;</span><span class="p">],</span>
+        <span class="p">(</span><span class="s2">&quot;Leaf&quot;</span><span class="p">,</span> <span class="s2">&quot;Litter&quot;</span><span class="p">):</span> <span class="p">[</span><span class="s2">&quot;Leaf_to_Litter&quot;</span><span class="p">],</span>
+        <span class="p">(</span><span class="s2">&quot;Wood&quot;</span><span class="p">,</span> <span class="s2">&quot;Soil&quot;</span><span class="p">):</span> <span class="p">[</span><span class="s2">&quot;Wood_to_Soil&quot;</span><span class="p">],</span>
+        <span class="p">(</span><span class="s2">&quot;Root&quot;</span><span class="p">,</span> <span class="s2">&quot;Litter&quot;</span><span class="p">):</span> <span class="p">[</span><span class="s2">&quot;Root_to_Litter&quot;</span><span class="p">],</span>
+        <span class="p">(</span><span class="s2">&quot;Litter&quot;</span><span class="p">,</span> <span class="s2">&quot;Soil&quot;</span><span class="p">):</span> <span class="p">[</span><span class="s2">&quot;Litter_to_Soil&quot;</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="n">vertical_structure</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">external_output_structure</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;Litter&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Litter_to_RH&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;Soil&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Soil_to_RH&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+
+    <span class="n">model_structure</span> <span class="o">=</span> <span class="n">ModelStructure</span><span class="p">(</span>
+        <span class="n">pool_structure</span><span class="o">=</span><span class="n">pool_structure</span><span class="p">,</span>
+        <span class="n">external_input_structure</span><span class="o">=</span><span class="n">external_input_structure</span><span class="p">,</span>
+        <span class="n">horizontal_structure</span><span class="o">=</span><span class="n">horizontal_structure</span><span class="p">,</span>
+        <span class="n">vertical_structure</span><span class="o">=</span><span class="n">vertical_structure</span><span class="p">,</span>
+        <span class="n">external_output_structure</span><span class="o">=</span><span class="n">external_output_structure</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">model_structure</span></div>
+
+
+<div class="viewcode-block" id="load_mdo"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.load_mdo">[docs]</a><span class="k">def</span> <span class="nf">load_mdo</span><span class="p">(</span><span class="n">ds</span><span class="p">):</span>
+    <span class="c1">#    days_per_month = np.array(np.diff(ds.time), dtype=&#39;timedelta64[D]&#39;).astype(float)</span>
+
+    <span class="n">ms</span> <span class="o">=</span> <span class="n">load_model_structure</span><span class="p">()</span>
+
+    <span class="c1">#    ## bring fluxes from gC/m2/day to gC/m2/month</span>
+
+    <span class="c1">## all months are supposed to comprise 365.25/12 days</span>
+    <span class="n">days_per_month</span> <span class="o">=</span> <span class="mf">365.25</span> <span class="o">/</span> <span class="mf">12.0</span>
+
+    <span class="n">time</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">))</span> <span class="o">*</span> <span class="n">days_per_month</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;d&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">mdo</span> <span class="o">=</span> <span class="n">ModelDataObject</span><span class="p">(</span><span class="n">model_structure</span><span class="o">=</span><span class="n">ms</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="n">ds</span><span class="p">,</span> <span class="n">stock_unit</span><span class="o">=</span><span class="s2">&quot;gC/m2&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+
+    <span class="n">mdo</span><span class="o">.</span><span class="n">load_external_output_fluxes</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">getFluxVariable_from_DensityRate</span><span class="p">,</span> <span class="n">data_shift</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mdo</span></div>
+
+
+<div class="viewcode-block" id="plot_Delta_14C_in_time"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.plot_Delta_14C_in_time">[docs]</a><span class="k">def</span> <span class="nf">plot_Delta_14C_in_time</span><span class="p">(</span><span class="n">ms</span><span class="p">,</span> <span class="n">soln</span><span class="p">,</span> <span class="n">soln_14C</span><span class="p">):</span>
+    <span class="c1">## plot Delta 14C profiles</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">soln</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.18e-12</span>
+    <span class="n">t_conv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="mi">2001</span> <span class="o">+</span> <span class="p">(</span><span class="mi">15</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span>
+    <span class="n">F_Delta_14C</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">C12</span><span class="p">,</span> <span class="n">C14</span><span class="p">:</span> <span class="p">(</span><span class="n">C14</span> <span class="o">/</span> <span class="n">C12</span> <span class="o">/</span> <span class="n">alpha</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span>
+        <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">nr</span><span class="p">,</span> <span class="n">pool_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">):</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[</span><span class="n">nr</span><span class="p">]</span>
+        <span class="n">Delta_14C</span> <span class="o">=</span> <span class="n">F_Delta_14C</span><span class="p">(</span><span class="n">soln</span><span class="p">[:,</span> <span class="n">nr</span><span class="p">],</span> <span class="n">soln_14C</span><span class="p">[:,</span> <span class="n">nr</span><span class="p">])</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t_conv</span><span class="p">(</span><span class="n">times</span><span class="p">),</span> <span class="n">Delta_14C</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">[</span><span class="n">nr</span><span class="p">])</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="add_variable"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.add_variable">[docs]</a><span class="k">def</span> <span class="nf">add_variable</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">data_vars</span><span class="p">,</span> <span class="n">var_name_ds</span><span class="p">,</span> <span class="n">new_var</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">var_name_ds</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="c1"># avoid side-effects on ds</span>
+        <span class="n">var_ds</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">var_name_ds</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">attrs</span> <span class="o">=</span> <span class="n">var_ds</span><span class="o">.</span><span class="n">attrs</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_var</span><span class="o">.</span><span class="n">unit</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">new_var</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">var_ds</span><span class="o">.</span><span class="n">coords</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="n">var_ds</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span>
+        <span class="p">)</span>
+        <span class="n">data_vars</span><span class="p">[</span><span class="n">var_name_ds</span><span class="p">]</span> <span class="o">=</span> <span class="n">var</span></div>
+
+
+<div class="viewcode-block" id="create_Daelta_14C_dataset"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.create_Daelta_14C_dataset">[docs]</a><span class="k">def</span> <span class="nf">create_Daelta_14C_dataset</span><span class="p">(</span><span class="n">mdo</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">mr</span><span class="p">,</span> <span class="n">mr_14C</span><span class="p">):</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.18e-12</span>
+    <span class="n">t_conv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="mi">2001</span> <span class="o">+</span> <span class="p">(</span><span class="mi">15</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span>
+    <span class="n">F_Delta_14C</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">C12</span><span class="p">,</span> <span class="n">C14</span><span class="p">:</span> <span class="p">(</span><span class="n">C14</span> <span class="o">/</span> <span class="n">C12</span> <span class="o">/</span> <span class="n">alpha</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+    <span class="n">ms</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">model_structure</span>
+
+    <span class="c1">## create 14C dataset</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1">## save stocks</span>
+    <span class="k">for</span> <span class="n">pool_nr</span><span class="p">,</span> <span class="n">pool_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">):</span>
+        <span class="n">var_name_ds</span> <span class="o">=</span> <span class="n">pool_name</span>
+        <span class="n">soln</span> <span class="o">=</span> <span class="n">mr</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+        <span class="n">soln_14C</span> <span class="o">=</span> <span class="n">mr_14C</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+
+        <span class="n">new_var</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">F_Delta_14C</span><span class="p">(</span><span class="n">soln</span><span class="p">[:,</span> <span class="n">pool_nr</span><span class="p">],</span> <span class="n">soln_14C</span><span class="p">[:,</span> <span class="n">pool_nr</span><span class="p">]),</span>
+            <span class="n">unit</span><span class="o">=</span><span class="n">mdo</span><span class="o">.</span><span class="n">stock_unit</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">add_variable</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">data_vars</span><span class="p">,</span> <span class="n">var_name_ds</span><span class="p">,</span> <span class="n">new_var</span><span class="p">)</span>
+
+    <span class="c1">## save external input fluxes</span>
+
+    <span class="c1"># insert np.nan at time t0</span>
+    <span class="c1">#    raise(Exception(&#39;check units and values, use acc variants&#39;))</span>
+    <span class="n">Us_monthly</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">))),</span>
+                <span class="n">mr</span><span class="o">.</span><span class="n">acc_gross_external_input_vector</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;g/(365.25/12 d)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">mr</span><span class="p">,</span> <span class="n">Us_monthly</span><span class="p">)</span>
+    <span class="n">Us_monthly_14C</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">))),</span>
+                <span class="n">mr_14C</span><span class="o">.</span><span class="n">acc_gross_external_input_vector</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;g/(365.25/12 d)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># convert to daily flux rates</span>
+    <span class="n">us</span> <span class="o">=</span> <span class="n">Us_monthly</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;g/d&quot;</span><span class="p">)</span>
+    <span class="n">us_14C</span> <span class="o">=</span> <span class="n">Us_monthly_14C</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;g/d&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">pool_nr</span><span class="p">,</span> <span class="n">pool_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">):</span>
+        <span class="n">var_name_ds</span> <span class="o">=</span> <span class="s2">&quot;NPP_to_&quot;</span> <span class="o">+</span> <span class="n">pool_name</span>
+        <span class="n">new_var</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">F_Delta_14C</span><span class="p">(</span><span class="n">us</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">pool_nr</span><span class="p">],</span> <span class="n">us_14C</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">pool_nr</span><span class="p">]),</span> <span class="n">unit</span><span class="o">=</span><span class="n">us</span><span class="o">.</span><span class="n">unit</span>
+        <span class="p">)</span>
+        <span class="n">add_variable</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">data_vars</span><span class="p">,</span> <span class="n">var_name_ds</span><span class="p">,</span> <span class="n">new_var</span><span class="p">)</span>
+
+    <span class="c1">## save internal fluxes</span>
+
+    <span class="c1"># insert np.nan at time t0</span>
+    <span class="n">Fs_monthly</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">))),</span>
+                <span class="n">mr</span><span class="o">.</span><span class="n">acc_gross_internal_flux_matrix</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;g/(365.25/12 d)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">Fs_monthly_14C</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">))),</span>
+                <span class="n">mr_14C</span><span class="o">.</span><span class="n">acc_gross_internal_flux_matrix</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;g/(365.25/12 d)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># convert to daily flux rates</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">Fs_monthly</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;g/d&quot;</span><span class="p">)</span>
+    <span class="n">fs_14C</span> <span class="o">=</span> <span class="n">Fs_monthly_14C</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;g/d&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">pnr_from</span><span class="p">,</span> <span class="n">pn_from</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">pnr_to</span><span class="p">,</span> <span class="n">pn_to</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">):</span>
+            <span class="n">var_name_ds</span> <span class="o">=</span> <span class="n">pn_from</span> <span class="o">+</span> <span class="s2">&quot;_to_&quot;</span> <span class="o">+</span> <span class="n">pn_to</span>
+            <span class="n">new_var</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">F_Delta_14C</span><span class="p">(</span>
+                    <span class="n">fs</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">pnr_to</span><span class="p">,</span> <span class="n">pnr_from</span><span class="p">],</span> <span class="n">fs_14C</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">pnr_to</span><span class="p">,</span> <span class="n">pnr_from</span><span class="p">]</span>
+                <span class="p">),</span>
+                <span class="n">unit</span><span class="o">=</span><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">add_variable</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">data_vars</span><span class="p">,</span> <span class="n">var_name_ds</span><span class="p">,</span> <span class="n">new_var</span><span class="p">)</span>
+
+    <span class="c1">## save external output fluxes</span>
+
+    <span class="c1"># insert np.nan at time t0</span>
+    <span class="n">Rs_monthly</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">))),</span>
+                <span class="n">mr</span><span class="o">.</span><span class="n">acc_gross_external_output_vector</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;g/(365.25/12 d)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">Rs_monthly_14C</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">))),</span>
+                <span class="n">mr_14C</span><span class="o">.</span><span class="n">acc_gross_external_output_vector</span><span class="p">(),</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;g/(365.25/12 d)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># convert to daily flux rates</span>
+    <span class="n">rs</span> <span class="o">=</span> <span class="n">Rs_monthly</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;g/d&quot;</span><span class="p">)</span>
+    <span class="n">rs_14C</span> <span class="o">=</span> <span class="n">Rs_monthly_14C</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;g/d&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">pool_nr</span><span class="p">,</span> <span class="n">pool_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">pool_names</span><span class="p">):</span>
+        <span class="n">var_name_ds</span> <span class="o">=</span> <span class="n">pool_name</span> <span class="o">+</span> <span class="s2">&quot;_to_RH&quot;</span>
+        <span class="n">new_var</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">F_Delta_14C</span><span class="p">(</span><span class="n">rs</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">pool_nr</span><span class="p">],</span> <span class="n">rs_14C</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">pool_nr</span><span class="p">]),</span> <span class="n">unit</span><span class="o">=</span><span class="n">rs</span><span class="o">.</span><span class="n">unit</span>
+        <span class="p">)</span>
+        <span class="n">add_variable</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">data_vars</span><span class="p">,</span> <span class="n">var_name_ds</span><span class="p">,</span> <span class="n">new_var</span><span class="p">)</span>
+
+    <span class="n">ds_Delta_14C</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">data_vars</span><span class="o">=</span><span class="n">data_vars</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">coords</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds_Delta_14C</span></div>
+
+
+<div class="viewcode-block" id="load_dmr_14C"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.load_dmr_14C">[docs]</a><span class="k">def</span> <span class="nf">load_dmr_14C</span><span class="p">(</span><span class="n">dmr</span><span class="p">):</span>
+    <span class="c1">## create 14C dmr</span>
+
+    <span class="c1"># compute 14C external input</span>
+    <span class="n">atm_delta_14C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span>
+        <span class="c1">#        &#39;/home/hmetzler/Desktop/CARDAMOM/C14Atm_NH.csv&#39;,</span>
+        <span class="s2">&quot;C14Atm_NH.csv&quot;</span><span class="p">,</span>
+        <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_F_atm_delta_14C</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span>
+        <span class="n">atm_delta_14C</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">atm_delta_14C</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span>
+    <span class="p">)</span>
+    <span class="n">t_conv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="mi">2001</span> <span class="o">+</span> <span class="p">(</span><span class="mi">15</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span>
+
+    <span class="n">F_atm_delta_14C</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">_F_atm_delta_14C</span><span class="p">(</span><span class="n">t_conv</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.18e-12</span>
+    <span class="n">Fa_func</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">F_atm_delta_14C</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">net_Us_12C</span> <span class="o">=</span> <span class="n">dmr</span><span class="o">.</span><span class="n">acc_net_external_input_vector</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">):</span>
+        <span class="n">net_Us_14C</span> <span class="o">=</span> <span class="n">net_Us_12C</span> <span class="o">*</span> <span class="n">Fa_func</span><span class="p">(</span><span class="n">dmr</span><span class="o">.</span><span class="n">times</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># acc_net_us_14C = alpha * net_Us_12C * (</span>
+        <span class="c1">#    1 + 1/1000 * F_atm_delta_14C(dmr.times[:-1]).reshape(-1,1)</span>
+        <span class="c1"># )</span>
+    <span class="n">net_Us_14C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">net_Us_14C</span><span class="p">,</span> <span class="n">posinf</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># compute 14C start_values</span>
+    <span class="n">start_values_14C</span> <span class="o">=</span> <span class="n">compute_start_values_14C</span><span class="p">(</span>
+        <span class="n">dmr</span><span class="o">.</span><span class="n">times</span><span class="p">,</span> <span class="n">dmr</span><span class="o">.</span><span class="n">Bs</span><span class="p">,</span> <span class="n">dmr</span><span class="o">.</span><span class="n">net_Us</span><span class="p">,</span> <span class="n">Fa_func</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;D3&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">dmr_14C</span> <span class="o">=</span> <span class="n">DMR_14C</span><span class="p">(</span><span class="n">dmr</span><span class="p">,</span> <span class="n">start_values_14C</span><span class="p">,</span> <span class="n">net_Us_14C</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dmr_14C</span></div>
+
+
+<div class="viewcode-block" id="load_pwc_mr_fd_14C"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.load_pwc_mr_fd_14C">[docs]</a><span class="k">def</span> <span class="nf">load_pwc_mr_fd_14C</span><span class="p">(</span><span class="n">pwc_mr_fd</span><span class="p">):</span>
+    <span class="c1">## create 14C pwc_mr_fd</span>
+
+    <span class="c1"># compute 14C external input</span>
+    <span class="n">atm_delta_14C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span>
+        <span class="c1">#        &#39;/home/hmetzler/Desktop/CARDAMOM/C14Atm_NH.csv&#39;,</span>
+        <span class="s2">&quot;C14Atm_NH.csv&quot;</span><span class="p">,</span>
+        <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_F_atm_delta_14C</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span>
+        <span class="n">atm_delta_14C</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">atm_delta_14C</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span>
+    <span class="p">)</span>
+    <span class="n">t_conv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="mi">2001</span> <span class="o">+</span> <span class="p">(</span><span class="mi">15</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span>
+    <span class="n">F_atm_delta_14C</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">_F_atm_delta_14C</span><span class="p">(</span><span class="n">t_conv</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.18e-12</span>
+    <span class="n">Fa_func</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">F_atm_delta_14C</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1">## compute 14C start_values</span>
+    <span class="n">B_func</span> <span class="o">=</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">B_func</span><span class="p">()</span>
+    <span class="n">Bs_12C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">B_func</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">times</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">u_func</span> <span class="o">=</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">external_input_vector_func</span><span class="p">()</span>
+    <span class="n">us_12C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">u_func</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">times</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">start_values_14C</span> <span class="o">=</span> <span class="n">compute_start_values_14C</span><span class="p">(</span>
+        <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">times</span><span class="p">,</span> <span class="n">Bs_12C</span><span class="p">,</span> <span class="n">us_12C</span><span class="p">,</span> <span class="n">Fa_func</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;C3&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">pwc_mr_fd_14C</span> <span class="o">=</span> <span class="n">PWCMR_14C</span><span class="p">(</span><span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">pwc_mr</span><span class="p">,</span> <span class="n">start_values_14C</span><span class="p">,</span> <span class="n">Fa_func</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pwc_mr_fd_14C</span></div>
+
+
+<div class="viewcode-block" id="load_Delta_14C_dataset"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.load_Delta_14C_dataset">[docs]</a><span class="k">def</span> <span class="nf">load_Delta_14C_dataset</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;continuous&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;discrete&quot;</span><span class="p">,</span> <span class="s2">&quot;continuous&quot;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;method must be either &#39;discrete&#39; or &#39;continuous&#39;&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;discrete&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="p">(</span>
+            <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                discrete Delta 14C computation is impossible because</span>
+<span class="sd">                we cannot compute the necessary net Delta 14C Us without</span>
+<span class="sd">                knowledge of the state transition operator</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="c1">#    return ds</span>
+    <span class="c1"># fake return data structure on first call (with empty data)</span>
+    <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">ens</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,):</span>
+        <span class="n">empty_var</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;ens&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;max_abs_err&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">empty_var</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;max_rel_err&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">empty_var</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;log&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;&lt;U50&quot;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;ens&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">ds</span>
+
+    <span class="n">log</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mdo</span> <span class="o">=</span> <span class="n">load_mdo</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
+
+        <span class="c1">#       if method == &#39;discrete&#39;:</span>
+        <span class="c1">#           mr, abs_err, rel_err =\</span>
+        <span class="c1">#                mdo.create_discrete_model_run(errors=True)</span>
+        <span class="c1">#           mr_14C = load_dmr_14C(mr)</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;continuous&quot;</span><span class="p">:</span>
+            <span class="n">mr</span><span class="p">,</span> <span class="n">err_dict</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">create_model_run</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">err_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">abs_err</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s2">&quot;abs_err&quot;</span><span class="p">]</span>
+                <span class="n">var_abs_err</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">abs_err</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+                    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="n">abs_err</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+                        <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;max. abs. error on reconstructed stock sizes&quot;</span><span class="p">,</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">var_abs_err</span><span class="p">)</span>
+
+                <span class="n">rel_err</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s2">&quot;rel_err&quot;</span><span class="p">]</span>
+                <span class="n">var_rel_err</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">rel_err</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+                    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="n">rel_err</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+                        <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;max. rel. error on reconstructed stock sizes&quot;</span><span class="p">,</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">var_rel_err</span><span class="p">)</span>
+
+            <span class="n">mr_14C</span> <span class="o">=</span> <span class="n">load_pwc_mr_fd_14C</span><span class="p">(</span><span class="n">mr</span><span class="p">)</span>
+
+        <span class="n">ms</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">model_structure</span>
+        <span class="c1"># plot_Delta_14C_in_time(ms, mr.solve(), mr_14C.solve())</span>
+        <span class="n">ds_Delta_14C</span> <span class="o">=</span> <span class="n">create_Delta_14C_dataset</span><span class="p">(</span><span class="n">mdo</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">mr</span><span class="p">,</span> <span class="n">mr_14C</span><span class="p">)</span>
+
+        <span class="c1">## add reconstruction error</span>
+        <span class="n">ds_Delta_14C</span><span class="p">[</span><span class="s2">&quot;max_abs_err&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_abs_err</span>
+        <span class="n">ds_Delta_14C</span><span class="p">[</span><span class="s2">&quot;max_rel_err&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_rel_err</span>
+    <span class="k">except</span> <span class="n">DMRError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">log</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="n">data_vars</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span>
+                <span class="n">data_vars</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">val</span>
+        <span class="n">ds_Delta_14C</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data_vars</span><span class="p">)</span>
+
+        <span class="n">ds_Delta_14C</span><span class="p">[</span><span class="s2">&quot;max_abs_err&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">ds_Delta_14C</span><span class="p">[</span><span class="s2">&quot;max_rel_err&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">ds_Delta_14C</span><span class="p">[</span><span class="s2">&quot;log&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">log</span>
+    <span class="n">ds_Delta_14C</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ds_Delta_14C</span></div>
+
+
+<div class="viewcode-block" id="load_pwc_mr_fd"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.load_pwc_mr_fd">[docs]</a><span class="k">def</span> <span class="nf">load_pwc_mr_fd</span><span class="p">(</span><span class="n">ds</span><span class="p">):</span>
+    <span class="n">mdo</span> <span class="o">=</span> <span class="n">load_mdo</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
+
+    <span class="n">mr</span><span class="p">,</span> <span class="n">err_dict</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">create_model_run</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">err_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">abs_err</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s2">&quot;abs_err&quot;</span><span class="p">]</span>
+        <span class="n">var_abs_err</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">abs_err</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="n">abs_err</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+                <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;max. abs. error on reconstructed stock sizes&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">var_abs_err</span><span class="p">)</span>
+
+        <span class="n">rel_err</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s2">&quot;rel_err&quot;</span><span class="p">]</span>
+        <span class="n">var_rel_err</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">rel_err</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="n">rel_err</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+                <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;max. rel. error on reconstructed stock sizes&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">var_rel_err</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">mr</span></div>
+
+<div class="viewcode-block" id="compute_pwc_mr_fd_ds"><a class="viewcode-back" href="../../../../bgc_md2.models.CARDAMOM.html#bgc_md2.models.CARDAMOM.CARDAMOMlib.compute_pwc_mr_fd_ds">[docs]</a><span class="k">def</span> <span class="nf">compute_pwc_mr_fd_ds</span><span class="p">(</span><span class="n">ds</span><span class="p">):</span>
+<span class="c1">#    if ds.ens.values.shape == (0,):</span>
+
+    <span class="n">mdo</span> <span class="o">=</span> <span class="n">load_mdo</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">model_structure</span><span class="o">.</span><span class="n">nr_pools</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1">#pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)</span>
+        <span class="n">pwc_mr_fd</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">create_model_run</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">PWCModelRunFDError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">ds_pwc_mr_fd</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">get_netcdf</span><span class="p">(</span><span class="n">pwc_mr_fd</span><span class="p">)</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nr_pools</span><span class="p">,))</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="s1">&#39;pool&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="n">nr_pools</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="n">nr_pools</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_to&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_from&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;log&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
+
+    <span class="n">pools</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
+    <span class="n">sub_coords</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+        <span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">pools</span><span class="p">,</span>
+        <span class="s1">&#39;pool_to&#39;</span><span class="p">:</span> <span class="n">pools</span><span class="p">,</span>
+        <span class="s1">&#39;pool_from&#39;</span><span class="p">:</span> <span class="n">pools</span>
+    <span class="p">}</span>
+    <span class="n">sub_ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">coords</span><span class="o">=</span><span class="n">sub_coords</span><span class="p">,</span>
+        <span class="n">data_vars</span><span class="o">=</span><span class="n">data_vars</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">ds_pwc_mr_fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">sub_ds</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">sub_ds</span></div>
+
+
+<span class="c1">################################################################################</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="c1">#    dataset = xr.open_dataset(&quot;~/Desktop/CARDAMOM/cardamom_for_holger.nc&quot;)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">&quot;~/Desktop/CARDAMOM/cardamom_for_holger_10_ensembles.nc&quot;</span><span class="p">)</span>
+    <span class="c1">#    ds_Delta_14C_dmr = load_Delta_14C_dataset(ds, &#39;discrete&#39;)</span>
+    <span class="c1">#    ds_Delta_14C_pwc_mr_fd = load_Delta_14C_dataset(ds, &#39;continuous&#39;)</span>
+
+    <span class="c1">#pwc_mr_fd = load_pwc_mr_fd(ds)</span>
+
+<span class="c1">#    coords = ds.coords</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+
+    <span class="n">enss</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;ens&#39;</span><span class="p">][:</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">lats</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">][:</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">lons</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">][:</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">nr_times</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
+    <span class="n">pools</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+    <span class="n">pools_to</span> <span class="o">=</span> <span class="n">pools</span>
+    <span class="n">pools_from</span> <span class="o">=</span> <span class="n">pools</span>
+
+    <span class="n">start_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">enss</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">lats</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">lons</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">pools</span><span class="p">)))</span>
+    <span class="n">us</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">enss</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">lats</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">lons</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">pools</span><span class="p">)</span>
+    <span class="p">))</span>
+    <span class="n">Bs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">enss</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">lats</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">lons</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">pools</span><span class="p">),</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">pools</span><span class="p">)</span>
+    <span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">ens_idx</span><span class="p">,</span> <span class="n">ens</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">enss</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lat</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lats</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">lon_idx</span><span class="p">,</span> <span class="n">lon</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lons</span><span class="p">):</span>
+                <span class="n">ds</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">ens</span><span class="o">=</span><span class="n">ens</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">lon</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="n">times</span><span class="p">)</span>
+                <span class="n">mdo</span> <span class="o">=</span> <span class="n">load_mdo</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">pwc_mr_fd</span><span class="p">,</span> <span class="n">err_dict</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">create_model_run</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                    <span class="n">ds_pwc_mr_fd</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">get_netcdf</span><span class="p">(</span><span class="n">pwc_mr_fd</span><span class="p">)</span>
+                    <span class="n">start_values</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span>
+                    <span class="n">us</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span>  <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span>
+                    <span class="n">us</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                    <span class="n">Bs</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span>  <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span>
+                    <span class="n">Bs</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+                    <span class="n">ds_pwc_mr_fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="n">ds</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">PWCModelRunFDError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+                    <span class="n">start_values</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                    <span class="n">us</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span>  <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                    <span class="n">Bs</span><span class="p">[</span><span class="n">ens_idx</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">,</span> <span class="n">lon_idx</span><span class="p">,</span>  <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                
+
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">start_values</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ens&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">],</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">enss</span><span class="p">,</span> <span class="n">lats</span><span class="p">,</span> <span class="n">lons</span><span class="p">,</span> <span class="n">pools</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="n">mdo</span><span class="o">.</span><span class="n">stock_unit</span><span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">us</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ens&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">],</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">enss</span><span class="p">,</span> <span class="n">lats</span><span class="p">,</span> <span class="n">lons</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">pools</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="n">mdo</span><span class="o">.</span><span class="n">stock_unit</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">mdo</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">Bs</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ens&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_to&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_from&#39;</span><span class="p">],</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">enss</span><span class="p">,</span> <span class="n">lats</span><span class="p">,</span> <span class="n">lons</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">pools_to</span><span class="p">,</span> <span class="n">pools_from</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;1/&#39;</span><span class="o">+</span><span class="n">mdo</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="n">coords</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;ens&#39;</span><span class="p">:</span> <span class="n">enss</span><span class="p">,</span>
+        <span class="s1">&#39;lat&#39;</span><span class="p">:</span> <span class="n">lats</span><span class="p">,</span>
+        <span class="s1">&#39;lon&#39;</span><span class="p">:</span> <span class="n">lons</span><span class="p">,</span>
+        <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">times</span><span class="p">,</span>
+        <span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">pools</span><span class="p">,</span>
+        <span class="s1">&#39;pool_to&#39;</span><span class="p">:</span> <span class="n">pools</span><span class="p">,</span>
+        <span class="s1">&#39;pool_from&#39;</span><span class="p">:</span> <span class="n">pools</span>
+    <span class="p">}</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
+        <span class="n">data_vars</span><span class="o">=</span><span class="n">data_vars</span><span class="p">,</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;time_unit&#39;</span><span class="p">:</span> <span class="n">mdo</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
+    <span class="p">)</span>
+    
+    <span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s1">&#39;pwc_model_runs_from_data.nc&#39;</span><span class="p">)</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># code example for loading model run from netcdf file</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s1">&#39;pwc_model_runs_from_data.nc&#39;</span><span class="p">)</span>
+    <span class="n">ds1</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">ens</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="o">*</span> <span class="mf">365.25</span><span class="o">/</span><span class="mi">12</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds1</span><span class="o">.</span><span class="n">time</span><span class="p">))])</span>
+    <span class="n">start_values</span> <span class="o">=</span> <span class="n">ds1</span><span class="o">.</span><span class="n">start_values</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">Bs</span> <span class="o">=</span> <span class="n">ds1</span><span class="o">.</span><span class="n">Bs</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">us</span> <span class="o">=</span> <span class="n">ds1</span><span class="o">.</span><span class="n">us</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">mr</span> <span class="o">=</span> <span class="n">PWCModelRunFD</span><span class="o">.</span><span class="n">from_Bs_and_us</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">us</span><span class="p">)</span>
+    <span class="n">ds1</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">dataset</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+    <span class="c1">#    # check for similarity</span>
+    <span class="c1">#    for name, var_dmr in ds_Delta_14C_dmr.data_vars.items():</span>
+    <span class="c1">#        if name not in [&#39;log&#39;, &#39;max_abs_err&#39;, &#39;max_rel_err&#39;]:</span>
+    <span class="c1">#            val_dmr = var_dmr.data</span>
+    <span class="c1">#            val_pwc_mr_fd = ds_Delta_14C_pwc_mr_fd[name].data</span>
+    <span class="c1">#            print(name)</span>
+    <span class="c1">#            print(val_dmr)</span>
+    <span class="c1">#            print(val_pwc_mr_fd)</span>
+    <span class="c1">#</span>
+    <span class="c1">#</span>
+    <span class="c1">#            abs_err = np.abs(val_dmr-val_pwc_mr_fd)</span>
+    <span class="c1">#            print(np.nanmax(abs_err))</span>
+    <span class="c1">#            rel_err = abs_err/np.abs(val_dmr)</span>
+    <span class="c1">#            print(np.nanmax(rel_err)*100)</span>
+    <span class="c1">#            rel_err = abs_err/np.abs(val_pwc_mr_fd)</span>
+    <span class="c1">#            print(np.nanmax(rel_err))</span>
+
+    <span class="c1">#    ds_Delta_14C_dmr.close()</span>
+    <span class="c1">#    ds_Delta_14C_pwc_mr_fd.close()</span>
+    <span class="c1">#ds.close()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

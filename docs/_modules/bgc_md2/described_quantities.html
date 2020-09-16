@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.described_quantities &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.described_quantities</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Symbol</span><span class="p">,</span>
+    <span class="c1"># symbols,</span>
+    <span class="n">Function</span><span class="p">,</span>
+    <span class="n">prod</span><span class="p">,</span>
+    <span class="n">sin</span><span class="p">,</span>
+    <span class="n">cos</span><span class="p">,</span>
+    <span class="n">pi</span><span class="p">,</span>
+    <span class="n">lambdify</span><span class="p">,</span>
+    <span class="n">simplify</span><span class="p">,</span>
+    <span class="n">factor</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units</span> <span class="kn">import</span> <span class="n">Quantity</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units.systems</span> <span class="kn">import</span> <span class="n">SI</span>
+<span class="kn">from</span> <span class="nn">sympy.physics.units</span> <span class="kn">import</span> <span class="n">day</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">kilogram</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_model_run</span> <span class="kn">import</span> <span class="n">SmoothModelRun</span>
+
+
+<div class="viewcode-block" id="describedQuantity"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.described_quantities.describedQuantity">[docs]</a><span class="k">def</span> <span class="nf">describedQuantity</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">Quantity</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">SI</span><span class="o">.</span><span class="n">set_quantity_dimension</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">dimension</span><span class="p">)</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
+    <span class="c1"># obj = Symbol(name)</span>
+    <span class="k">return</span> <span class="n">obj</span></div>
+
+
+<div class="viewcode-block" id="to_number"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.described_quantities.to_number">[docs]</a><span class="k">def</span> <span class="nf">to_number</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">targetUnit</span><span class="p">):</span>
+    <span class="n">q_s</span> <span class="o">=</span> <span class="n">simplify</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">q_s</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">simplify</span><span class="p">((</span><span class="n">q</span> <span class="o">/</span> <span class="n">targetUnit</span><span class="p">)))</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

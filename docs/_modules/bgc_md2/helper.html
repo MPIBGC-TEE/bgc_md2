@@ -1,0 +1,426 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.helper &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.helper</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">models</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">Math</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+<span class="kn">from</span> <span class="nn">bgc_md2.models.helpers</span> <span class="kn">import</span> <span class="n">computable_mvars</span>
+<span class="kn">from</span> <span class="nn">bgc_md2.models.helpers</span> <span class="kn">import</span> <span class="n">get_single_mvar_value</span>
+<span class="kn">from</span> <span class="nn">bgc_md2.resolve.mvars</span> <span class="kn">import</span> <span class="n">CompartmentalMatrix</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">latex</span>
+<span class="kn">import</span> <span class="nn">ipywidgets</span> <span class="k">as</span> <span class="nn">widgets</span>
+<span class="kn">import</span> <span class="nn">nbformat</span> <span class="k">as</span> <span class="nn">nbf</span>
+<span class="kn">import</span> <span class="nn">pkgutil</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+
+
+<div class="viewcode-block" id="list_models"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.list_models">[docs]</a><span class="k">def</span> <span class="nf">list_models</span><span class="p">():</span>
+    <span class="n">exclude_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./exclude-models.txt&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">exclude_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">exclude_lines</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">exclude_path</span><span class="p">))</span>
+        <span class="n">exclude_models</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">exclude_lines</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">exclude_models</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">sub_mod_pkgs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tup</span> <span class="ow">in</span> <span class="n">pkgutil</span><span class="o">.</span><span class="n">iter_modules</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">__path__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tup</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">and</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">exclude_models</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">sub_mod_pkgs</span></div>
+
+
+<div class="viewcode-block" id="list_models_md"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.list_models_md">[docs]</a><span class="k">def</span> <span class="nf">list_models_md</span><span class="p">():</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">list_models</span><span class="p">()</span>
+    <span class="n">links</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;[</span><span class="si">{name}</span><span class="s2">](/tmp/</span><span class="si">{name}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">links</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="createSingleModelNb"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.createSingleModelNb">[docs]</a><span class="k">def</span> <span class="nf">createSingleModelNb</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">report_file_path</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+    <span class="n">nb</span> <span class="o">=</span> <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_notebook</span><span class="p">()</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;# </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">t_mvars</span> <span class="o">=</span> <span class="s2">&quot;Computable mvars:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="s2">&quot;1. </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">mvar_names</span>
+    <span class="p">)</span>
+    <span class="n">c_imports</span> <span class="o">=</span> <span class="s2">&quot;import bgc_md2.helper as h&quot;</span>
+    <span class="n">c_model</span> <span class="o">=</span> <span class="s2">&quot;model = h.Model(</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+    <span class="n">c_graph</span> <span class="o">=</span> <span class="s2">&quot;model.graph()&quot;</span>
+    <span class="n">c_render</span> <span class="o">=</span> <span class="s2">&quot;for var in model.mvars:</span><span class="se">\n</span><span class="s2">    model.render(var)&quot;</span>
+
+    <span class="n">nb</span><span class="p">[</span><span class="s2">&quot;cells&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_markdown_cell</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+        <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_markdown_cell</span><span class="p">(</span><span class="n">t_mvars</span><span class="p">),</span>
+        <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_code_cell</span><span class="p">(</span><span class="n">c_imports</span><span class="p">),</span>
+        <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_code_cell</span><span class="p">(</span><span class="n">c_model</span><span class="p">),</span>
+        <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_code_cell</span><span class="p">(</span><span class="n">c_graph</span><span class="p">),</span>
+        <span class="n">nbf</span><span class="o">.</span><span class="n">v4</span><span class="o">.</span><span class="n">new_code_cell</span><span class="p">(</span><span class="n">c_render</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="n">nbf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">nb</span><span class="p">,</span> <span class="n">report_file_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="createSingleModelNbFile"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.createSingleModelNbFile">[docs]</a><span class="k">def</span> <span class="nf">createSingleModelNbFile</span><span class="p">(</span><span class="n">model_name</span><span class="p">):</span>
+    <span class="n">tmp_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span>
+        <span class="s2">&quot;./tmp&quot;</span>
+    <span class="p">)</span>  <span class="c1"># has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)</span>
+    <span class="n">tmp_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">file_name</span> <span class="o">=</span> <span class="n">model_name</span> <span class="o">+</span> <span class="s2">&quot;.ipynb&quot;</span>
+    <span class="n">nb_path</span> <span class="o">=</span> <span class="n">tmp_dir</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+    <span class="n">createSingleModelNb</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">nb_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">nb_path</span></div>
+
+<span class="c1">#################################################################################</span>
+<div class="viewcode-block" id="funcmakerInsertLinkInToBox"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.funcmakerInsertLinkInToBox">[docs]</a><span class="k">def</span> <span class="nf">funcmakerInsertLinkInToBox</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">insert_link</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+        <span class="c1"># called for side effect on grid object</span>
+        <span class="n">tmpDirPath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span>
+            <span class="s2">&quot;./tmp&quot;</span>
+        <span class="p">)</span>  <span class="c1"># has to be relative for jupyter to open the file on click (so the exact location depends on where the notebook server was started)</span>
+        <span class="n">tmpDirPath</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;.ipynb&quot;</span>
+        <span class="n">nbPath</span> <span class="o">=</span> <span class="n">tmpDirPath</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="n">suffix</span><span class="p">)</span>
+        <span class="n">createSingleModelNb</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">nbPath</span><span class="p">)</span>
+        <span class="n">old_chs</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">children</span>
+        <span class="n">new_chs</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span>
+                <span class="n">value</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                &lt;a href=&quot;</span><span class="si">{path}</span><span class="s2">&quot; target=&quot;_blank&quot;&gt;</span><span class="si">{text}</span><span class="s2">&lt;/a&gt;</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">path</span><span class="o">=</span><span class="n">nbPath</span><span class="o">.</span><span class="n">as_posix</span><span class="p">(),</span> <span class="n">text</span><span class="o">=</span><span class="n">name</span> <span class="o">+</span> <span class="n">suffix</span>
+                <span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="c1"># we change the children tuple</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="n">old_chs</span> <span class="o">+</span> <span class="n">new_chs</span>
+
+    <span class="k">return</span> <span class="n">insert_link</span></div>
+
+
+<div class="viewcode-block" id="Model"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.Model">[docs]</a><span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="c1"># mm @Thomas:</span>
+    <span class="c1">#</span>
+    <span class="c1"># 1.</span>
+    <span class="c1"># in the current implementation the Model has to be reinstanciated</span>
+    <span class="c1"># when the source.py of a model changes on disk</span>
+    <span class="c1"># (For the dot tab completion even the whole class would have to be</span>
+    <span class="c1"># regenerated.) As a consequence it should be regarded as an ultra</span>
+    <span class="c1"># light weight shortlived (made on demand)</span>
+    <span class="c1"># interface to ipython (which makes working with classes convinient</span>
+    <span class="c1"># (e.g. by tab completion)</span>
+    <span class="c1"># see comments on __init__</span>
+    <span class="c1">#</span>
+    <span class="c1"># 2.</span>
+    <span class="c1"># Model as class name is used in the backend packages and</span>
+    <span class="c1"># therefore aquired a special connotation.</span>
+    <span class="c1"># We might have to look for a more specific name</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mvars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">computable_mvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mvar_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mvars</span><span class="p">]</span>
+        <span class="c1"># mm @Thomas:</span>
+        <span class="c1"># the next two properties will get stale when the underlying model source.py changes on disk</span>
+        <span class="c1"># maybe they do not have to be stored ...</span>
+        <span class="c1"># which would not be a problem it this Model instance is always ready to die</span>
+        <span class="c1"># and regenerated.</span>
+
+        <span class="c1"># I have no final opinion just a reminder to keep on the lookout</span>
+        <span class="c1"># for alternative approaches  (see above...)</span>
+        <span class="c1"># that might be a bit cheaper computationaly by not bundling things into an instance that</span>
+        <span class="c1"># has to be discarded completely</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mvars</span> <span class="o">=</span> <span class="n">computable_mvars</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>  <span class="c1"># could be a @property decorated methods</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mvar_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mvars</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__dir__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__dir__</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;get_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mvar_names</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;get_&quot;</span><span class="p">):</span>
+            <span class="n">var_name</span> <span class="o">=</span> <span class="n">name</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mvars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="n">var_name</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">get_single_mvar_value</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Model.render"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.Model.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">get_single_mvar_value</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">display</span><span class="p">(</span><span class="n">Math</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">text{&quot;</span> <span class="o">+</span> <span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;} =&quot;</span> <span class="o">+</span> <span class="n">latex</span><span class="p">(</span><span class="n">res</span><span class="p">)))</span></div>
+        <span class="c1"># The latex could be filtered to display subscripts better</span>
+        <span class="c1"># display(res)</span>
+
+<div class="viewcode-block" id="Model.graph"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.Model.graph">[docs]</a>    <span class="k">def</span> <span class="nf">graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">target_var</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span>
+        <span class="k">if</span> <span class="n">target_var</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mvars</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">srm</span> <span class="o">=</span> <span class="n">get_single_mvar_value</span><span class="p">(</span><span class="n">target_var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">rect</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">)</span>  <span class="c1"># l, b, w, h</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">srm</span><span class="o">.</span><span class="n">plot_pools_and_fluxes</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ax</span><span class="o">.</span><span class="n">figure</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Output</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">out</span><span class="p">:</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="p">)</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">Math</span><span class="p">(</span><span class="n">latex</span><span class="p">(</span><span class="n">res</span><span class="p">)))</span>
+            <span class="c1"># The latex could be filtered to display subscripts better</span>
+            <span class="c1"># display(res)</span>
+        <span class="k">if</span> <span class="n">capture</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="modelVBox"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.modelVBox">[docs]</a><span class="k">def</span> <span class="nf">modelVBox</span><span class="p">(</span><span class="n">model_name</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+    <span class="c1"># on demand computation is used</span>
+    <span class="c1"># I am aware of the possibility of model.computable_mvars</span>
+    <span class="n">cmvs</span> <span class="o">=</span> <span class="n">computable_mvars</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+    <span class="n">target_var</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span>
+    <span class="n">pictlist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">target_var</span> <span class="ow">in</span> <span class="n">cmvs</span><span class="p">:</span>
+        <span class="n">srm</span> <span class="o">=</span> <span class="n">get_single_mvar_value</span><span class="p">(</span><span class="n">target_var</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span>
+        <span class="n">graph_out</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Output</span><span class="p">()</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">rect</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.2</span>  <span class="c1"># l, b, w, h</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">graph_out</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="n">srm</span><span class="o">.</span><span class="n">plot_pools_and_fluxes</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">figure</span><span class="p">)</span>
+        <span class="n">pictlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">graph_out</span><span class="p">]</span>
+
+    <span class="n">box</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">VBox</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span>
+                <span class="n">value</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                &lt;h1&gt;</span><span class="si">{name}</span><span class="s2">&lt;/h1&gt;</span>
+<span class="s2">                Overview </span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">model_name</span>
+                <span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span>
+                <span class="s2">&quot;computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)&quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;&lt;ol&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;&lt;li&gt;</span><span class="si">{}</span><span class="s2">&lt;/li&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">mvar_names</span><span class="p">)</span>
+                <span class="o">+</span> <span class="s2">&quot;&lt;/ol&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="p">),</span>
+        <span class="p">]</span>
+        <span class="o">+</span> <span class="n">pictlist</span>
+        <span class="o">+</span> <span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">capture</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">mvars</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span>
+        <span class="n">layout</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">),</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Create notebook from template&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">on_click</span><span class="p">(</span><span class="n">funcmakerInsertLinkInToBox</span><span class="p">(</span><span class="n">box</span><span class="p">,</span> <span class="n">model_name</span><span class="p">))</span>
+    <span class="n">box</span><span class="o">.</span><span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="n">b</span><span class="p">,)</span>
+    <span class="k">return</span> <span class="n">box</span></div>
+
+
+<span class="c1">#################################################################################</span>
+
+
+<div class="viewcode-block" id="button_callback"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.button_callback">[docs]</a><span class="k">def</span> <span class="nf">button_callback</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">button</span><span class="p">):</span>
+        <span class="n">function</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">callback</span></div>
+
+
+<div class="viewcode-block" id="ModelListGridBox"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.ModelListGridBox">[docs]</a><span class="k">class</span> <span class="nc">ModelListGridBox</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">GridspecLayout</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inspection_box</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inspection_box</span> <span class="o">=</span> <span class="n">inspection_box</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="n">list_models</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">),</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">populate</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ModelListGridBox.inspect_model"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.ModelListGridBox.inspect_model">[docs]</a>    <span class="k">def</span> <span class="nf">inspect_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inspection_box</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelListGridBox.populate"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.ModelListGridBox.populate">[docs]</a>    <span class="k">def</span> <span class="nf">populate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">):</span>
+            <span class="n">button_inspect_model</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">name</span><span class="p">,)</span>
+            <span class="n">button_inspect_model</span><span class="o">.</span><span class="n">on_click</span><span class="p">(</span><span class="n">button_callback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inspect_model</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">button_inspect_model</span>
+
+            <span class="n">res</span> <span class="o">=</span> <span class="n">get_single_mvar_value</span><span class="p">(</span><span class="n">CompartmentalMatrix</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Output</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">out</span><span class="p">:</span>
+                <span class="n">display</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">9</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span></div></div>
+
+
+<div class="viewcode-block" id="ModelInspectionBox"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.ModelInspectionBox">[docs]</a><span class="k">class</span> <span class="nc">ModelInspectionBox</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">VBox</span><span class="p">):</span>
+
+    <span class="n">nb_link_box</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="ModelInspectionBox.create_notebook"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.ModelInspectionBox.create_notebook">[docs]</a>    <span class="k">def</span> <span class="nf">create_notebook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_name</span><span class="p">):</span>
+        <span class="n">file_name</span><span class="p">,</span> <span class="n">nb_path</span> <span class="o">=</span> <span class="n">createSingleModelNbFile</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_link_box</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span>
+                <span class="n">value</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                &lt;a href=&quot;</span><span class="si">{path}</span><span class="s2">&quot; target=&quot;_blank&quot;&gt;</span><span class="si">{text}</span><span class="s2">&lt;/a&gt;</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">path</span><span class="o">=</span><span class="n">nb_path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">(),</span> <span class="n">text</span><span class="o">=</span><span class="n">file_name</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelInspectionBox.update"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.helper.ModelInspectionBox.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_name</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span>
+                <span class="n">value</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                &lt;h1&gt;</span><span class="si">{name}</span><span class="s2">&lt;/h1&gt;</span>
+<span class="s2">                Overview</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">model_name</span>
+                <span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">HTML</span><span class="p">(</span>
+                <span class="s2">&quot;computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)&quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;&lt;ol&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;&lt;li&gt;</span><span class="si">{}</span><span class="s2">&lt;/li&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">mvar_names</span><span class="p">)</span>
+                <span class="o">+</span> <span class="s2">&quot;&lt;/ol&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">graph</span><span class="p">:</span>
+            <span class="n">graph_out</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Output</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">graph_out</span><span class="p">:</span>
+                <span class="n">display</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="n">graph_out</span><span class="p">,)</span>
+
+        <span class="n">rendered_vars</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Output</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">rendered_vars</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">mvars</span><span class="p">:</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="n">rendered_vars</span><span class="p">,)</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span>
+            <span class="n">layout</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Create notebook from template&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">b</span><span class="o">.</span><span class="n">on_click</span><span class="p">(</span><span class="n">button_callback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_notebook</span><span class="p">,</span> <span class="n">model_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="n">b</span><span class="p">,)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_link_box</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">VBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_link_box</span><span class="p">,)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

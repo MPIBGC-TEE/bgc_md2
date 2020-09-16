@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.ModelStructure &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.ModelStructure</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">Matrix</span><span class="p">,</span> <span class="n">symbols</span>
+
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+
+
+<div class="viewcode-block" id="ModelStructureException"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructureException">[docs]</a><span class="k">class</span> <span class="nc">ModelStructureException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;ModelStructureException&quot;</span></div>
+
+
+<div class="viewcode-block" id="ModelStructure"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure">[docs]</a><span class="k">class</span> <span class="nc">ModelStructure</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">keywords</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pool_structure</span> <span class="o">=</span> <span class="n">keywords</span><span class="p">[</span><span class="s2">&quot;pool_structure&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_input_structure</span> <span class="o">=</span> <span class="n">keywords</span><span class="p">[</span><span class="s2">&quot;external_input_structure&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">horizontal_structure</span> <span class="o">=</span> <span class="n">keywords</span><span class="p">[</span><span class="s2">&quot;horizontal_structure&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vertical_structure</span> <span class="o">=</span> <span class="n">keywords</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vertical_structure&quot;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_output_structure</span> <span class="o">=</span> <span class="n">keywords</span><span class="p">[</span><span class="s2">&quot;external_output_structure&quot;</span><span class="p">]</span>
+
+        <span class="c1"># check that pools do not take mass from below/above and</span>
+        <span class="c1"># additionally get mass send from above/below</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertical_structure</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">pool_name</span><span class="p">,</span> <span class="n">flux_structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertical_structure</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">to_below</span> <span class="o">=</span> <span class="n">flux_structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_below&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">from_below</span> <span class="o">=</span> <span class="n">flux_structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;from_below&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">to_above</span> <span class="o">=</span> <span class="n">flux_structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_above&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">from_above</span> <span class="o">=</span> <span class="n">flux_structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;from_above&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="n">to_below</span> <span class="ow">and</span> <span class="n">to_above</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">from_below</span> <span class="ow">and</span> <span class="n">from_above</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="p">(</span><span class="n">ModelStructureException</span><span class="p">(</span><span class="s2">&quot;Vertical fluxes overlap&quot;</span><span class="p">))</span>
+
+        <span class="n">name2nr</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">nr2name</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">name2nr_lys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">pool_nr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_structure</span><span class="p">:</span>
+            <span class="n">pn</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;pool_name&quot;</span><span class="p">]</span>
+            <span class="n">nr_lys</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nr_layers&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">name2nr_lys</span><span class="p">[</span><span class="n">pn</span><span class="p">]</span> <span class="o">=</span> <span class="n">nr_lys</span>
+            <span class="k">for</span> <span class="n">ly</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_lys</span><span class="p">):</span>
+                <span class="n">name2nr</span><span class="p">[(</span><span class="n">pn</span><span class="p">,</span> <span class="n">ly</span><span class="p">)]</span> <span class="o">=</span> <span class="n">pool_nr</span>
+                <span class="n">nr2name</span><span class="p">[</span><span class="n">pool_nr</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pool_name&quot;</span><span class="p">:</span> <span class="n">pn</span><span class="p">,</span> <span class="s2">&quot;layer_nr&quot;</span><span class="p">:</span> <span class="n">ly</span><span class="p">}</span>
+                <span class="n">pool_nr</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name2nr</span> <span class="o">=</span> <span class="n">name2nr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nr2name</span> <span class="o">=</span> <span class="n">nr2name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name2nr_lys</span> <span class="o">=</span> <span class="n">name2nr_lys</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span> <span class="o">=</span> <span class="n">pool_nr</span>
+
+<div class="viewcode-block" id="ModelStructure.get_nr_layers"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_nr_layers">[docs]</a>    <span class="k">def</span> <span class="nf">get_nr_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name2nr_lys</span><span class="p">[</span><span class="n">pool_name</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_pool_nr"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_pool_nr">[docs]</a>    <span class="k">def</span> <span class="nf">get_pool_nr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">,</span> <span class="n">layer_nr</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name2nr</span><span class="p">[(</span><span class="n">pool_name</span><span class="p">,</span> <span class="n">layer_nr</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_pool_name_and_layer_nr"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_pool_name_and_layer_nr">[docs]</a>    <span class="k">def</span> <span class="nf">get_pool_name_and_layer_nr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_nr</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nr2name</span><span class="p">[</span><span class="n">pool_nr</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_pool_nrs"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_pool_nrs">[docs]</a>    <span class="k">def</span> <span class="nf">get_pool_nrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">):</span>
+        <span class="n">pool_nrs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">nr_layers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_nr_layers</span><span class="p">(</span><span class="n">pool_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ly</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_layers</span><span class="p">):</span>
+            <span class="n">pool_nrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_pool_nr</span><span class="p">(</span><span class="n">pool_name</span><span class="p">,</span> <span class="n">ly</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pool_nrs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_pool_nrs_set"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_pool_nrs_set">[docs]</a>    <span class="k">def</span> <span class="nf">get_pool_nrs_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_names</span><span class="p">,</span> <span class="n">layers</span><span class="p">):</span>
+        <span class="n">pool_nrs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pool_name</span> <span class="ow">in</span> <span class="n">pool_names</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">ly</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">:</span>
+                <span class="n">pool_nrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_pool_nr</span><span class="p">(</span><span class="n">pool_name</span><span class="p">,</span> <span class="n">ly</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">pool_nrs</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_nr_pools"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_nr_pools">[docs]</a>    <span class="k">def</span> <span class="nf">get_nr_pools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nr_pools</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_structure</span><span class="p">:</span>
+            <span class="n">nr_layers</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nr_layers&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">nr_pools</span> <span class="o">+=</span> <span class="n">nr_layers</span>
+
+        <span class="k">return</span> <span class="n">nr_pools</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_flux_var_names"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_flux_var_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_flux_var_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">flux_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">external_input_structure</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">horizontal_structure</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vertical_structure</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">external_output_structure</span><span class="p">,</span>
+        <span class="p">]:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">flux_sublist</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">flux_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">flux_sublist</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">flux_list</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pool_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;pool_name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_structure</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">stock_vars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;stock_var&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_structure</span><span class="p">]</span>
+
+<div class="viewcode-block" id="ModelStructure.get_stock_var"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_stock_var">[docs]</a>    <span class="k">def</span> <span class="nf">get_stock_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_structure</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;pool_name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pool_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;stock_var&quot;</span><span class="p">]</span>
+
+        <span class="k">raise</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">(</span><span class="s2">&quot;pool_name &quot;</span> <span class="o">+</span> <span class="n">pool_name</span> <span class="o">+</span> <span class="s2">&quot; unknown&quot;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_external_input_flux_var"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_external_input_flux_var">[docs]</a>    <span class="k">def</span> <span class="nf">get_external_input_flux_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_input_structure</span><span class="p">[</span><span class="n">pool_name</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_external_output_flux_var"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_external_output_flux_var">[docs]</a>    <span class="k">def</span> <span class="nf">get_external_output_flux_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_output_structure</span><span class="p">[</span><span class="n">pool_name</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ModelStructure.get_horizontal_flux_var"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelStructure.ModelStructure.get_horizontal_flux_var">[docs]</a>    <span class="k">def</span> <span class="nf">get_horizontal_flux_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_from</span><span class="p">,</span> <span class="n">pool_to</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">horizontal_structure</span><span class="p">[(</span><span class="n">pool_from</span><span class="p">,</span> <span class="n">pool_to</span><span class="p">)]</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

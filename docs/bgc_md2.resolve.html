@@ -1,0 +1,1299 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve package &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="bgc-md2-resolve-package">
+<h1>bgc_md2.resolve package<a class="headerlink" href="#bgc-md2-resolve-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-bgc_md2.resolve.computers">
+<span id="bgc-md2-resolve-computers-module"></span><h2>bgc_md2.resolve.computers module<a class="headerlink" href="#module-bgc_md2.resolve.computers" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.compartmental_matrix_from_smooth_reservoir_model">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">compartmental_matrix_from_smooth_reservoir_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">smr</span><span class="p">:</span> <span class="n">CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.CompartmentalMatrix" title="bgc_md2.resolve.mvars.CompartmentalMatrix">bgc_md2.resolve.mvars.CompartmentalMatrix</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#compartmental_matrix_from_smooth_reservoir_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.compartmental_matrix_from_smooth_reservoir_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.numeric_model_run_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">numeric_model_run_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">npsrm</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel" title="bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel">bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel</a></span></em>, <em class="sig-param"><span class="n">start_values_num</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericStartValueArray" title="bgc_md2.resolve.mvars.NumericStartValueArray">bgc_md2.resolve.mvars.NumericStartValueArray</a></span></em>, <em class="sig-param"><span class="n">times_num</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericSimulationTimes" title="bgc_md2.resolve.mvars.NumericSimulationTimes">bgc_md2.resolve.mvars.NumericSimulationTimes</a></span></em><span class="sig-paren">)</span> &#x2192; CompartmentalSystems.smooth_model_run.SmoothModelRun<a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#numeric_model_run_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.numeric_model_run_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.numeric_parameterized_smooth_reservoir_model_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">numeric_parameterized_smooth_reservoir_model_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">srm</span><span class="p">:</span> <span class="n">CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel</span></em>, <em class="sig-param"><span class="n">para_num</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericParameterization" title="bgc_md2.resolve.mvars.NumericParameterization">bgc_md2.resolve.mvars.NumericParameterization</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel" title="bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel">bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#numeric_parameterized_smooth_reservoir_model_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.numeric_parameterized_smooth_reservoir_model_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.numeric_solution_array_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">numeric_solution_array_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">smr</span><span class="p">:</span> <span class="n">CompartmentalSystems.smooth_model_run.SmoothModelRun</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.NumericSolutionArray" title="bgc_md2.resolve.mvars.NumericSolutionArray">bgc_md2.resolve.mvars.NumericSolutionArray</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#numeric_solution_array_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.numeric_solution_array_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.numeric_start_value_array_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">numeric_start_value_array_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nsvd</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericStartValueDict" title="bgc_md2.resolve.mvars.NumericStartValueDict">bgc_md2.resolve.mvars.NumericStartValueDict</a></span></em>, <em class="sig-param"><span class="n">svt</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.StateVariableTuple" title="bgc_md2.resolve.mvars.StateVariableTuple">bgc_md2.resolve.mvars.StateVariableTuple</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.NumericStartValueArray" title="bgc_md2.resolve.mvars.NumericStartValueArray">bgc_md2.resolve.mvars.NumericStartValueArray</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#numeric_start_value_array_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.numeric_start_value_array_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.numeric_start_value_array_2">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">numeric_start_value_array_2</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">smr</span><span class="p">:</span> <span class="n">CompartmentalSystems.smooth_model_run.SmoothModelRun</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.NumericStartValueArray" title="bgc_md2.resolve.mvars.NumericStartValueArray">bgc_md2.resolve.mvars.NumericStartValueArray</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#numeric_start_value_array_2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.numeric_start_value_array_2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.numeric_start_value_dict">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">numeric_start_value_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nsva</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericStartValueArray" title="bgc_md2.resolve.mvars.NumericStartValueArray">bgc_md2.resolve.mvars.NumericStartValueArray</a></span></em>, <em class="sig-param"><span class="n">svt</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.StateVariableTuple" title="bgc_md2.resolve.mvars.StateVariableTuple">bgc_md2.resolve.mvars.StateVariableTuple</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.NumericStartValueDict" title="bgc_md2.resolve.mvars.NumericStartValueDict">bgc_md2.resolve.mvars.NumericStartValueDict</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#numeric_start_value_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.numeric_start_value_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.quantity_model_run_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">quantity_model_run_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">qpsrm</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel" title="bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel">bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel</a></span></em>, <em class="sig-param"><span class="n">start_values_q</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityStartValueArray" title="bgc_md2.resolve.mvars.QuantityStartValueArray">bgc_md2.resolve.mvars.QuantityStartValueArray</a></span></em>, <em class="sig-param"><span class="n">times_q</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.QuantitySimulationTimes" title="bgc_md2.resolve.mvars.QuantitySimulationTimes">bgc_md2.resolve.mvars.QuantitySimulationTimes</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityModelRun" title="bgc_md2.resolve.mvars.QuantityModelRun">bgc_md2.resolve.mvars.QuantityModelRun</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#quantity_model_run_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.quantity_model_run_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.quantity_parameterization_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">quantity_parameterization_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">np</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.NumericParameterization" title="bgc_md2.resolve.mvars.NumericParameterization">bgc_md2.resolve.mvars.NumericParameterization</a></span></em>, <em class="sig-param"><span class="n">state_var_units</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.StateVarUnitTuple" title="bgc_md2.resolve.mvars.StateVarUnitTuple">bgc_md2.resolve.mvars.StateVarUnitTuple</a></span></em>, <em class="sig-param"><span class="n">time_unit</span><span class="p">:</span> <span class="n">sympy.physics.units.quantities.Quantity</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityParameterization" title="bgc_md2.resolve.mvars.QuantityParameterization">bgc_md2.resolve.mvars.QuantityParameterization</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#quantity_parameterization_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.quantity_parameterization_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.quantity_parameterized_smooth_reservoir_model_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">quantity_parameterized_smooth_reservoir_model_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">srm</span><span class="p">:</span> <span class="n">CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel</span></em>, <em class="sig-param"><span class="n">para_q</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityParameterization" title="bgc_md2.resolve.mvars.QuantityParameterization">bgc_md2.resolve.mvars.QuantityParameterization</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel" title="bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel">bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#quantity_parameterized_smooth_reservoir_model_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.quantity_parameterized_smooth_reservoir_model_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.quantity_solution_array_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">quantity_solution_array_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">qmr</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityModelRun" title="bgc_md2.resolve.mvars.QuantityModelRun">bgc_md2.resolve.mvars.QuantityModelRun</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.QuantitySolutionArray" title="bgc_md2.resolve.mvars.QuantitySolutionArray">bgc_md2.resolve.mvars.QuantitySolutionArray</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#quantity_solution_array_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.quantity_solution_array_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.quantity_start_value_array_1">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">quantity_start_value_array_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">qsvd</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityStartValueDict" title="bgc_md2.resolve.mvars.QuantityStartValueDict">bgc_md2.resolve.mvars.QuantityStartValueDict</a></span></em>, <em class="sig-param"><span class="n">svt</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.StateVariableTuple" title="bgc_md2.resolve.mvars.StateVariableTuple">bgc_md2.resolve.mvars.StateVariableTuple</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.QuantityStartValueArray" title="bgc_md2.resolve.mvars.QuantityStartValueArray">bgc_md2.resolve.mvars.QuantityStartValueArray</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#quantity_start_value_array_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.quantity_start_value_array_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.smooth_reservoir_model_from_fluxes">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">smooth_reservoir_model_from_fluxes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">in_fluxes</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.InFluxesBySymbol" title="bgc_md2.resolve.mvars.InFluxesBySymbol">bgc_md2.resolve.mvars.InFluxesBySymbol</a></span></em>, <em class="sig-param"><span class="n">out_fluxes</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.OutFluxesBySymbol" title="bgc_md2.resolve.mvars.OutFluxesBySymbol">bgc_md2.resolve.mvars.OutFluxesBySymbol</a></span></em>, <em class="sig-param"><span class="n">internal_fluxes</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.InternalFluxesBySymbol" title="bgc_md2.resolve.mvars.InternalFluxesBySymbol">bgc_md2.resolve.mvars.InternalFluxesBySymbol</a></span></em>, <em class="sig-param"><span class="n">time_symbol</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.TimeSymbol" title="bgc_md2.resolve.mvars.TimeSymbol">bgc_md2.resolve.mvars.TimeSymbol</a></span></em>, <em class="sig-param"><span class="n">state_variable_tuple</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.StateVariableTuple" title="bgc_md2.resolve.mvars.StateVariableTuple">bgc_md2.resolve.mvars.StateVariableTuple</a></span></em><span class="sig-paren">)</span> &#x2192; CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel<a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#smooth_reservoir_model_from_fluxes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.smooth_reservoir_model_from_fluxes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.smooth_reservoir_model_from_input_tuple_and_matrix">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">smooth_reservoir_model_from_input_tuple_and_matrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">u</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.InputTuple" title="bgc_md2.resolve.mvars.InputTuple">bgc_md2.resolve.mvars.InputTuple</a></span></em>, <em class="sig-param"><span class="n">B</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.CompartmentalMatrix" title="bgc_md2.resolve.mvars.CompartmentalMatrix">bgc_md2.resolve.mvars.CompartmentalMatrix</a></span></em>, <em class="sig-param"><span class="n">time_symbol</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.TimeSymbol" title="bgc_md2.resolve.mvars.TimeSymbol">bgc_md2.resolve.mvars.TimeSymbol</a></span></em>, <em class="sig-param"><span class="n">state_variable_tuple</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.StateVariableTuple" title="bgc_md2.resolve.mvars.StateVariableTuple">bgc_md2.resolve.mvars.StateVariableTuple</a></span></em><span class="sig-paren">)</span> &#x2192; CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel<a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#smooth_reservoir_model_from_input_tuple_and_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.smooth_reservoir_model_from_input_tuple_and_matrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.computers.vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar">
+<code class="sig-prename descclassname">bgc_md2.resolve.computers.</code><code class="sig-name descname">vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">u</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.VegetationCarbonInputScalar" title="bgc_md2.resolve.mvars.VegetationCarbonInputScalar">bgc_md2.resolve.mvars.VegetationCarbonInputScalar</a></span></em>, <em class="sig-param"><span class="n">b</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.mvars.VegetationCarbonInputPartitioningTuple" title="bgc_md2.resolve.mvars.VegetationCarbonInputPartitioningTuple">bgc_md2.resolve.mvars.VegetationCarbonInputPartitioningTuple</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#bgc_md2.resolve.mvars.VegetationCarbonInputTuple" title="bgc_md2.resolve.mvars.VegetationCarbonInputTuple">bgc_md2.resolve.mvars.VegetationCarbonInputTuple</a><a class="reference internal" href="_modules/bgc_md2/resolve/computers.html#vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.computers.vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-bgc_md2.resolve.graph_helpers">
+<span id="bgc-md2-resolve-graph-helpers-module"></span><h2>bgc_md2.resolve.graph_helpers module<a class="headerlink" href="#module-bgc_md2.resolve.graph_helpers" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.arg_set_graph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">arg_set_graph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mvar</span><span class="p">:</span> <span class="n">type</span></em>, <em class="sig-param"><span class="n">allComputers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.multidigraph.MultiDiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#arg_set_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.arg_set_graph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.compset_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">compset_2_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">compset</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#compset_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.compset_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.edge_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">edge_2_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#edge_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.edge_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.equivalent_multigraphs">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">equivalent_multigraphs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g1_multi</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em>, <em class="sig-param"><span class="n">g2_multi</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#equivalent_multigraphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.equivalent_multigraphs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.equivalent_singlegraphs">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">equivalent_singlegraphs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g1_single</span><span class="p">:</span> <span class="n">networkx.classes.digraph.DiGraph</span></em>, <em class="sig-param"><span class="n">g2_single</span><span class="p">:</span> <span class="n">networkx.classes.digraph.DiGraph</span></em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#equivalent_singlegraphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.equivalent_singlegraphs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.immutable_edge">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">immutable_edge</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">edge</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#immutable_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.immutable_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.initial_sparse_powerset_graph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">initial_sparse_powerset_graph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.multidigraph.MultiDiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#initial_sparse_powerset_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.initial_sparse_powerset_graph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.minimal_startnodes_for_node">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">minimal_startnodes_for_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spg</span><span class="p">:</span> <span class="n">networkx.classes.graph.Graph</span></em>, <em class="sig-param"><span class="n">targetNode</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>type<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>Set<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#minimal_startnodes_for_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.minimal_startnodes_for_node" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.minimal_startnodes_for_single_var">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">minimal_startnodes_for_single_var</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spg</span><span class="p">:</span> <span class="n">networkx.classes.graph.Graph</span></em>, <em class="sig-param"><span class="n">targetVar</span><span class="p">:</span> <span class="n">type</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#minimal_startnodes_for_single_var"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.minimal_startnodes_for_single_var" title="Permalink to this definition">¶</a></dt>
+<dd><p>spg is a sparse powerset Graph, which means that it only contains all one element sets as targets.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.minimal_target_subgraph_for_single_var">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">minimal_target_subgraph_for_single_var</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spg</span><span class="p">:</span> <span class="n">networkx.classes.graph.Graph</span></em>, <em class="sig-param"><span class="n">targetVar</span><span class="p">:</span> <span class="n">type</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#minimal_target_subgraph_for_single_var"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.minimal_target_subgraph_for_single_var" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.node_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">node_2_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">node</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#node_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.node_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.nodes_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">nodes_2_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">node</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#nodes_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.nodes_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.product_graph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">product_graph</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">graphs</span><span class="p">:</span> <span class="n">Tuple<span class="p">[</span>networkx.classes.multidigraph.MultiDiGraph<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.multidigraph.MultiDiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#product_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.product_graph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.product_graph_2">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">product_graph_2</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g1</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em>, <em class="sig-param"><span class="n">g2</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.multidigraph.MultiDiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#product_graph_2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.product_graph_2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.sparse_powerset_graph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">sparse_powerset_graph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.multidigraph.MultiDiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#sparse_powerset_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.sparse_powerset_graph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.toDiGraph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">toDiGraph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g_multi</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.digraph.DiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#toDiGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.toDiGraph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.update_generator">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">update_generator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">max_it</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>networkx.classes.multidigraph.MultiDiGraph<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#update_generator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.update_generator" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_helpers.update_step">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_helpers.</code><code class="sig-name descname">update_step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spsg</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em>, <em class="sig-param"><span class="n">computers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; networkx.classes.multidigraph.MultiDiGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_helpers.html#update_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_helpers.update_step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-bgc_md2.resolve.graph_plotting">
+<span id="bgc-md2-resolve-graph-plotting-module"></span><h2>bgc_md2.resolve.graph_plotting module<a class="headerlink" href="#module-bgc_md2.resolve.graph_plotting" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.AGraphComputerMultiDiGraph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">AGraphComputerMultiDiGraph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spsg</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em>, <em class="sig-param"><span class="n">cf</span><span class="p">:</span> <span class="n">Callable</span></em><span class="sig-paren">)</span> &#x2192; pygraphviz.agraph.AGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#AGraphComputerMultiDiGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.AGraphComputerMultiDiGraph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.AGraphComputerSetMultiDiGraph">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">AGraphComputerSetMultiDiGraph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spsg</span><span class="p">:</span> <span class="n">networkx.classes.multidigraph.MultiDiGraph</span></em>, <em class="sig-param"><span class="n">cf</span><span class="p">:</span> <span class="n">Callable</span></em><span class="sig-paren">)</span> &#x2192; pygraphviz.agraph.AGraph<a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#AGraphComputerSetMultiDiGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.AGraphComputerSetMultiDiGraph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.compset_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">compset_2_string</code><span class="sig-paren">(</span><em class="sig-param">compset</em>, <em class="sig-param">aliases=&lt;frozendict {}&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#compset_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.compset_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.draw_ComputerSetDiGraph_matplotlib">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">draw_ComputerSetDiGraph_matplotlib</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spsg</span><span class="p">:</span> <span class="n">networkx.classes.digraph.DiGraph</span></em>, <em class="sig-param"><span class="n">ax</span></em>, <em class="sig-param"><span class="n">pos</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#draw_ComputerSetDiGraph_matplotlib"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.draw_ComputerSetDiGraph_matplotlib" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.draw_ComputerSetMultiDiGraph_matplotlib">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">draw_ComputerSetMultiDiGraph_matplotlib</code><span class="sig-paren">(</span><em class="sig-param">ax</em>, <em class="sig-param">spsg</em>, <em class="sig-param">mvar_aliases=&lt;frozendict {}&gt;</em>, <em class="sig-param">computer_aliases=&lt;frozendict {}&gt;</em>, <em class="sig-param">targetNode=None</em>, <em class="sig-param">pos=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#draw_ComputerSetMultiDiGraph_matplotlib"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.draw_ComputerSetMultiDiGraph_matplotlib" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.draw_sequence">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">draw_sequence</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fig</span></em>, <em class="sig-param"><span class="n">tups</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#draw_sequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.draw_sequence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.draw_update_sequence">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">draw_update_sequence</code><span class="sig-paren">(</span><em class="sig-param">computers</em>, <em class="sig-param">max_it</em>, <em class="sig-param">fig</em>, <em class="sig-param">mvar_aliases=&lt;frozendict {}&gt;</em>, <em class="sig-param">computer_aliases=&lt;frozendict {}&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#draw_update_sequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.draw_update_sequence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.edge_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">edge_2_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#edge_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.edge_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.node_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">node_2_string</code><span class="sig-paren">(</span><em class="sig-param">node</em>, <em class="sig-param">aliases=&lt;frozendict {}&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#node_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.node_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.graph_plotting.nodes_2_string">
+<code class="sig-prename descclassname">bgc_md2.resolve.graph_plotting.</code><code class="sig-name descname">nodes_2_string</code><span class="sig-paren">(</span><em class="sig-param">node</em>, <em class="sig-param">aliases=&lt;frozendict {}&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/graph_plotting.html#nodes_2_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.graph_plotting.nodes_2_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-bgc_md2.resolve.inspect_type_hints_old">
+<span id="bgc-md2-resolve-inspect-type-hints-old-module"></span><h2>bgc_md2.resolve.inspect_type_hints_old module<a class="headerlink" href="#module-bgc_md2.resolve.inspect_type_hints_old" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">CompartmentalMatrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#CompartmentalMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.matrices.immutable.ImmutableDenseMatrix</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {'algebraic': False, 'commutative': False, 'complex': False, 'composite': False, 'even': False, 'extended_negative': False, 'extended_nonnegative': False, 'extended_nonpositive': False, 'extended_nonzero': False, 'extended_positive': False, 'extended_real': False, 'imaginary': False, 'integer': False, 'irrational': False, 'negative': False, 'noninteger': False, 'nonnegative': False, 'nonpositive': False, 'nonzero': False, 'odd': False, 'positive': False, 'prime': False, 'rational': False, 'real': False, 'transcendental': False, 'zero': False}</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_algebraic">
+<code class="sig-name descname">is_algebraic</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_algebraic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_commutative">
+<code class="sig-name descname">is_commutative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_commutative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_complex">
+<code class="sig-name descname">is_complex</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_complex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_composite">
+<code class="sig-name descname">is_composite</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_composite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_even">
+<code class="sig-name descname">is_even</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_even" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_negative">
+<code class="sig-name descname">is_extended_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_nonnegative">
+<code class="sig-name descname">is_extended_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_nonpositive">
+<code class="sig-name descname">is_extended_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_nonzero">
+<code class="sig-name descname">is_extended_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_positive">
+<code class="sig-name descname">is_extended_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_real">
+<code class="sig-name descname">is_extended_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_extended_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_imaginary">
+<code class="sig-name descname">is_imaginary</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_imaginary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_integer">
+<code class="sig-name descname">is_integer</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_integer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_irrational">
+<code class="sig-name descname">is_irrational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_irrational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_negative">
+<code class="sig-name descname">is_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_noninteger">
+<code class="sig-name descname">is_noninteger</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_noninteger" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_nonnegative">
+<code class="sig-name descname">is_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_nonpositive">
+<code class="sig-name descname">is_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_nonzero">
+<code class="sig-name descname">is_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_odd">
+<code class="sig-name descname">is_odd</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_odd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_positive">
+<code class="sig-name descname">is_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_prime">
+<code class="sig-name descname">is_prime</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_prime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_rational">
+<code class="sig-name descname">is_rational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_rational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_real">
+<code class="sig-name descname">is_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_transcendental">
+<code class="sig-name descname">is_transcendental</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_transcendental" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_zero">
+<code class="sig-name descname">is_zero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix.is_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">InputTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#InputTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.matrices.immutable.ImmutableDenseMatrix</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {'algebraic': False, 'commutative': False, 'complex': False, 'composite': False, 'even': False, 'extended_negative': False, 'extended_nonnegative': False, 'extended_nonpositive': False, 'extended_nonzero': False, 'extended_positive': False, 'extended_real': False, 'imaginary': False, 'integer': False, 'irrational': False, 'negative': False, 'noninteger': False, 'nonnegative': False, 'nonpositive': False, 'nonzero': False, 'odd': False, 'positive': False, 'prime': False, 'rational': False, 'real': False, 'transcendental': False, 'zero': False}</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_algebraic">
+<code class="sig-name descname">is_algebraic</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_algebraic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_commutative">
+<code class="sig-name descname">is_commutative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_commutative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_complex">
+<code class="sig-name descname">is_complex</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_complex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_composite">
+<code class="sig-name descname">is_composite</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_composite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_even">
+<code class="sig-name descname">is_even</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_even" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_negative">
+<code class="sig-name descname">is_extended_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_nonnegative">
+<code class="sig-name descname">is_extended_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_nonpositive">
+<code class="sig-name descname">is_extended_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_nonzero">
+<code class="sig-name descname">is_extended_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_positive">
+<code class="sig-name descname">is_extended_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_real">
+<code class="sig-name descname">is_extended_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_extended_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_imaginary">
+<code class="sig-name descname">is_imaginary</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_imaginary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_integer">
+<code class="sig-name descname">is_integer</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_integer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_irrational">
+<code class="sig-name descname">is_irrational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_irrational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_negative">
+<code class="sig-name descname">is_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_noninteger">
+<code class="sig-name descname">is_noninteger</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_noninteger" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_nonnegative">
+<code class="sig-name descname">is_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_nonpositive">
+<code class="sig-name descname">is_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_nonzero">
+<code class="sig-name descname">is_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_odd">
+<code class="sig-name descname">is_odd</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_odd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_positive">
+<code class="sig-name descname">is_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_prime">
+<code class="sig-name descname">is_prime</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_prime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_rational">
+<code class="sig-name descname">is_rational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_rational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_real">
+<code class="sig-name descname">is_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_transcendental">
+<code class="sig-name descname">is_transcendental</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_transcendental" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_zero">
+<code class="sig-name descname">is_zero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple.is_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">StateTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#StateTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.matrices.immutable.ImmutableDenseMatrix</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {'algebraic': False, 'commutative': False, 'complex': False, 'composite': False, 'even': False, 'extended_negative': False, 'extended_nonnegative': False, 'extended_nonpositive': False, 'extended_nonzero': False, 'extended_positive': False, 'extended_real': False, 'imaginary': False, 'integer': False, 'irrational': False, 'negative': False, 'noninteger': False, 'nonnegative': False, 'nonpositive': False, 'nonzero': False, 'odd': False, 'positive': False, 'prime': False, 'rational': False, 'real': False, 'transcendental': False, 'zero': False}</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_algebraic">
+<code class="sig-name descname">is_algebraic</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_algebraic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_commutative">
+<code class="sig-name descname">is_commutative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_commutative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_complex">
+<code class="sig-name descname">is_complex</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_complex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_composite">
+<code class="sig-name descname">is_composite</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_composite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_even">
+<code class="sig-name descname">is_even</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_even" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_negative">
+<code class="sig-name descname">is_extended_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_nonnegative">
+<code class="sig-name descname">is_extended_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_nonpositive">
+<code class="sig-name descname">is_extended_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_nonzero">
+<code class="sig-name descname">is_extended_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_positive">
+<code class="sig-name descname">is_extended_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_real">
+<code class="sig-name descname">is_extended_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_extended_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_imaginary">
+<code class="sig-name descname">is_imaginary</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_imaginary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_integer">
+<code class="sig-name descname">is_integer</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_integer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_irrational">
+<code class="sig-name descname">is_irrational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_irrational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_negative">
+<code class="sig-name descname">is_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_noninteger">
+<code class="sig-name descname">is_noninteger</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_noninteger" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_nonnegative">
+<code class="sig-name descname">is_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_nonpositive">
+<code class="sig-name descname">is_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_nonzero">
+<code class="sig-name descname">is_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_odd">
+<code class="sig-name descname">is_odd</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_odd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_positive">
+<code class="sig-name descname">is_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_prime">
+<code class="sig-name descname">is_prime</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_prime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_rational">
+<code class="sig-name descname">is_rational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_rational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_real">
+<code class="sig-name descname">is_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_transcendental">
+<code class="sig-name descname">is_transcendental</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_transcendental" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_zero">
+<code class="sig-name descname">is_zero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple.is_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.TimeSymbol">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">TimeSymbol</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">assumptions</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#TimeSymbol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.TimeSymbol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.core.symbol.Symbol</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.TimeSymbol.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {}</em><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.TimeSymbol.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.TimeSymbol.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.TimeSymbol.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.input_mvars">
+<code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">input_mvars</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computer</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#input_mvars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.input_mvars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.output_mvar">
+<code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">output_mvar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computer</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#output_mvar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.output_mvar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.inspect_type_hints_old.reservoirModel">
+<code class="sig-prename descclassname">bgc_md2.resolve.inspect_type_hints_old.</code><code class="sig-name descname">reservoirModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sv</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.inspect_type_hints_old.StateTuple" title="bgc_md2.resolve.inspect_type_hints_old.StateTuple">bgc_md2.resolve.inspect_type_hints_old.StateTuple</a></span></em>, <em class="sig-param"><span class="n">t</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.inspect_type_hints_old.TimeSymbol" title="bgc_md2.resolve.inspect_type_hints_old.TimeSymbol">bgc_md2.resolve.inspect_type_hints_old.TimeSymbol</a></span></em>, <em class="sig-param"><span class="n">A</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix" title="bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix">bgc_md2.resolve.inspect_type_hints_old.CompartmentalMatrix</a></span></em>, <em class="sig-param"><span class="n">I</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#bgc_md2.resolve.inspect_type_hints_old.InputTuple" title="bgc_md2.resolve.inspect_type_hints_old.InputTuple">bgc_md2.resolve.inspect_type_hints_old.InputTuple</a></span></em><span class="sig-paren">)</span> &#x2192; CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel<a class="reference internal" href="_modules/bgc_md2/resolve/inspect_type_hints_old.html#reservoirModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.inspect_type_hints_old.reservoirModel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-bgc_md2.resolve.mvars">
+<span id="bgc-md2-resolve-mvars-module"></span><h2>bgc_md2.resolve.mvars module<a class="headerlink" href="#module-bgc_md2.resolve.mvars" title="Permalink to this headline">¶</a></h2>
+<p>Module for defining variable types for the description of compartmental models and model runs</p>
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">CompartmentalMatrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#CompartmentalMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.matrices.immutable.ImmutableDenseMatrix</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {'algebraic': False, 'commutative': False, 'complex': False, 'composite': False, 'even': False, 'extended_negative': False, 'extended_nonnegative': False, 'extended_nonpositive': False, 'extended_nonzero': False, 'extended_positive': False, 'extended_real': False, 'imaginary': False, 'integer': False, 'irrational': False, 'negative': False, 'noninteger': False, 'nonnegative': False, 'nonpositive': False, 'nonzero': False, 'odd': False, 'positive': False, 'prime': False, 'rational': False, 'real': False, 'transcendental': False, 'zero': False}</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_algebraic">
+<code class="sig-name descname">is_algebraic</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_algebraic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_commutative">
+<code class="sig-name descname">is_commutative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_commutative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_complex">
+<code class="sig-name descname">is_complex</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_complex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_composite">
+<code class="sig-name descname">is_composite</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_composite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_even">
+<code class="sig-name descname">is_even</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_even" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_negative">
+<code class="sig-name descname">is_extended_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_nonnegative">
+<code class="sig-name descname">is_extended_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_nonpositive">
+<code class="sig-name descname">is_extended_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_nonzero">
+<code class="sig-name descname">is_extended_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_positive">
+<code class="sig-name descname">is_extended_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_real">
+<code class="sig-name descname">is_extended_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_extended_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_imaginary">
+<code class="sig-name descname">is_imaginary</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_imaginary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_integer">
+<code class="sig-name descname">is_integer</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_integer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_irrational">
+<code class="sig-name descname">is_irrational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_irrational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_negative">
+<code class="sig-name descname">is_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_noninteger">
+<code class="sig-name descname">is_noninteger</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_noninteger" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_nonnegative">
+<code class="sig-name descname">is_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_nonpositive">
+<code class="sig-name descname">is_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_nonzero">
+<code class="sig-name descname">is_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_odd">
+<code class="sig-name descname">is_odd</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_odd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_positive">
+<code class="sig-name descname">is_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_prime">
+<code class="sig-name descname">is_prime</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_prime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_rational">
+<code class="sig-name descname">is_rational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_rational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_real">
+<code class="sig-name descname">is_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_transcendental">
+<code class="sig-name descname">is_transcendental</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_transcendental" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.CompartmentalMatrix.is_zero">
+<code class="sig-name descname">is_zero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.CompartmentalMatrix.is_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.InFluxesBySymbol">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">InFluxesBySymbol</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#InFluxesBySymbol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.InFluxesBySymbol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">frozendict.frozendict</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.InputTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">InputTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">iterable</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="o">/</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#InputTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.InputTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.InternalFluxesBySymbol">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">InternalFluxesBySymbol</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#InternalFluxesBySymbol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.InternalFluxesBySymbol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">frozendict.frozendict</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.NumericParameterization">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">NumericParameterization</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">par_dict</span></em>, <em class="sig-param"><span class="n">func_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#NumericParameterization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.NumericParameterization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">NumericParameterizedSmoothReservoirModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">srm</span></em>, <em class="sig-param"><span class="n">parameterization</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#NumericParameterizedSmoothReservoirModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.NumericParameterizedSmoothReservoirModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.NumericSimulationTimes">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">NumericSimulationTimes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_array</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#NumericSimulationTimes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.NumericSimulationTimes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.NumericSolutionArray">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">NumericSolutionArray</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_array</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#NumericSolutionArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.NumericSolutionArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.NumericStartValueArray">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">NumericStartValueArray</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_array</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#NumericStartValueArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.NumericStartValueArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.NumericStartValueDict">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">NumericStartValueDict</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#NumericStartValueDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.NumericStartValueDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">frozendict.frozendict</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.OutFluxesBySymbol">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">OutFluxesBySymbol</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#OutFluxesBySymbol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.OutFluxesBySymbol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">frozendict.frozendict</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantityModelRun">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantityModelRun</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">qpm</span></em>, <em class="sig-param"><span class="n">start_values_quant</span></em>, <em class="sig-param"><span class="n">times_quant</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantityModelRun"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantityModelRun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="bgc_md2.resolve.mvars.QuantityModelRun.solve">
+<code class="sig-name descname">solve</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantityModelRun.solve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantityModelRun.solve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantityParameterization">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantityParameterization</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">par_dict</span></em>, <em class="sig-param"><span class="n">func_dict</span></em>, <em class="sig-param"><span class="n">state_var_units</span></em>, <em class="sig-param"><span class="n">time_unit</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantityParameterization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantityParameterization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bgc_md2.resolve.mvars.NumericParameterization" title="bgc_md2.resolve.mvars.NumericParameterization"><code class="xref py py-class docutils literal notranslate"><span class="pre">bgc_md2.resolve.mvars.NumericParameterization</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantityParameterizedSmoothReservoirModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">srm</span></em>, <em class="sig-param"><span class="n">parameterization</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantityParameterizedSmoothReservoirModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantityParameterizedSmoothReservoirModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantitySimulationTimes">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantitySimulationTimes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_array</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantitySimulationTimes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantitySimulationTimes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantitySolutionArray">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantitySolutionArray</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_array</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantitySolutionArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantitySolutionArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantityStartValueArray">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantityStartValueArray</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_array</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantityStartValueArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantityStartValueArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.QuantityStartValueDict">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">QuantityStartValueDict</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#QuantityStartValueDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.QuantityStartValueDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">frozendict.frozendict</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.StateVarUnitTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">StateVarUnitTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">iterable</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="o">/</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#StateVarUnitTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.StateVarUnitTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.StateVariableTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">StateVariableTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">iterable</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="o">/</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#StateVariableTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.StateVariableTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.TimeSymbol">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">TimeSymbol</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">assumptions</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#TimeSymbol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.TimeSymbol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.core.symbol.Symbol</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.TimeSymbol.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {}</em><a class="headerlink" href="#bgc_md2.resolve.mvars.TimeSymbol.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.TimeSymbol.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#bgc_md2.resolve.mvars.TimeSymbol.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">VegetationCarbonCompartmentalMatrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#VegetationCarbonCompartmentalMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.matrices.immutable.ImmutableDenseMatrix</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {'algebraic': False, 'commutative': False, 'complex': False, 'composite': False, 'even': False, 'extended_negative': False, 'extended_nonnegative': False, 'extended_nonpositive': False, 'extended_nonzero': False, 'extended_positive': False, 'extended_real': False, 'imaginary': False, 'integer': False, 'irrational': False, 'negative': False, 'noninteger': False, 'nonnegative': False, 'nonpositive': False, 'nonzero': False, 'odd': False, 'positive': False, 'prime': False, 'rational': False, 'real': False, 'transcendental': False, 'zero': False}</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_algebraic">
+<code class="sig-name descname">is_algebraic</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_algebraic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_commutative">
+<code class="sig-name descname">is_commutative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_commutative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_complex">
+<code class="sig-name descname">is_complex</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_complex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_composite">
+<code class="sig-name descname">is_composite</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_composite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_even">
+<code class="sig-name descname">is_even</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_even" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_negative">
+<code class="sig-name descname">is_extended_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_nonnegative">
+<code class="sig-name descname">is_extended_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_nonpositive">
+<code class="sig-name descname">is_extended_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_nonzero">
+<code class="sig-name descname">is_extended_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_positive">
+<code class="sig-name descname">is_extended_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_real">
+<code class="sig-name descname">is_extended_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_extended_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_imaginary">
+<code class="sig-name descname">is_imaginary</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_imaginary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_integer">
+<code class="sig-name descname">is_integer</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_integer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_irrational">
+<code class="sig-name descname">is_irrational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_irrational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_negative">
+<code class="sig-name descname">is_negative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_negative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_noninteger">
+<code class="sig-name descname">is_noninteger</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_noninteger" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_nonnegative">
+<code class="sig-name descname">is_nonnegative</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_nonnegative" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_nonpositive">
+<code class="sig-name descname">is_nonpositive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_nonpositive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_nonzero">
+<code class="sig-name descname">is_nonzero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_nonzero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_odd">
+<code class="sig-name descname">is_odd</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_odd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_positive">
+<code class="sig-name descname">is_positive</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_positive" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_prime">
+<code class="sig-name descname">is_prime</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_prime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_rational">
+<code class="sig-name descname">is_rational</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_rational" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_real">
+<code class="sig-name descname">is_real</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_real" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_transcendental">
+<code class="sig-name descname">is_transcendental</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_transcendental" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_zero">
+<code class="sig-name descname">is_zero</code><em class="property"> = False</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix.is_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonInputPartitioningTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">VegetationCarbonInputPartitioningTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">iterable</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="o">/</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#VegetationCarbonInputPartitioningTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonInputPartitioningTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonInputScalar">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">VegetationCarbonInputScalar</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#VegetationCarbonInputScalar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonInputScalar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sympy.core.expr.Expr</span></code></p>
+<dl class="py attribute">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonInputScalar.default_assumptions">
+<code class="sig-name descname">default_assumptions</code><em class="property"> = {}</em><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonInputScalar.default_assumptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonInputTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">VegetationCarbonInputTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">iterable</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="o">/</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#VegetationCarbonInputTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonInputTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="bgc_md2.resolve.mvars.VegetationCarbonStateVariableTuple">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.resolve.mvars.</code><code class="sig-name descname">VegetationCarbonStateVariableTuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">iterable</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="o">/</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/resolve/mvars.html#VegetationCarbonStateVariableTuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.mvars.VegetationCarbonStateVariableTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-bgc_md2.resolve.non_graph_helpers">
+<span id="bgc-md2-resolve-non-graph-helpers-module"></span><h2>bgc_md2.resolve.non_graph_helpers module<a class="headerlink" href="#module-bgc_md2.resolve.non_graph_helpers" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.all_computers_for_mvar">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">all_computers_for_mvar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mvar</span><span class="p">:</span> <span class="n">type</span></em>, <em class="sig-param"><span class="n">allComputers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>Callable<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#all_computers_for_mvar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.all_computers_for_mvar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.all_mvars">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">all_mvars</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">all_computers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>type<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#all_mvars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.all_mvars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.applicable_computers">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">applicable_computers</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">allComputers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">available_mvars</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>type<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>Callable<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#applicable_computers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.applicable_computers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.arg_set">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">arg_set</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computer</span><span class="p">:</span> <span class="n">Callable</span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>type<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#arg_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.arg_set" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.arg_set_set">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">arg_set_set</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mvar</span><span class="p">:</span> <span class="n">type</span></em>, <em class="sig-param"><span class="n">allComputers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>Set<span class="p">[</span>type<span class="p">]</span><span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#arg_set_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.arg_set_set" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.computable_mvars">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">computable_mvars</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">allComputers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">available_mvars</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>type<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>type<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#computable_mvars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.computable_mvars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.directly_computable_mvars">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">directly_computable_mvars</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">allComputers</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>Callable<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">available_mvars</span><span class="p">:</span> <span class="n">Set<span class="p">[</span>type<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>type<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#directly_computable_mvars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.directly_computable_mvars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.input_mvars">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">input_mvars</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computer</span><span class="p">:</span> <span class="n">Callable</span></em><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>type<span class="p">]</span><a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#input_mvars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.input_mvars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.output_mvar">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">output_mvar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">computer</span><span class="p">:</span> <span class="n">Callable</span></em><span class="sig-paren">)</span> &#x2192; type<a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#output_mvar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.output_mvar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="bgc_md2.resolve.non_graph_helpers.pretty_name">
+<code class="sig-prename descclassname">bgc_md2.resolve.non_graph_helpers.</code><code class="sig-name descname">pretty_name</code><span class="sig-paren">(</span><em class="sig-param">mvar: type</em>, <em class="sig-param">aliases: frozendict.frozendict = &lt;frozendict {}&gt;</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/bgc_md2/resolve/non_graph_helpers.html#pretty_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.resolve.non_graph_helpers.pretty_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-bgc_md2.resolve">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-bgc_md2.resolve" title="Permalink to this headline">¶</a></h2>
+<p>The resolve module consists of a set of functions with type signature and the definition of those types.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/bgc_md2.resolve.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
