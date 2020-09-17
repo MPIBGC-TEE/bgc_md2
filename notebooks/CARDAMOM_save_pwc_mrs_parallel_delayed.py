@@ -39,7 +39,7 @@ client
 
 # +
 data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
-pwc_mr_fd_archive = 'pwc_mr_fd/'
+pwc_mr_fd_archive = 'pwc_mr_fd_archive/'
 #data_folder = "/home/data/CARDAMOM/"  # matagorda
 
 filestem = "cardamom_for_holger_10_ensembles"
@@ -47,10 +47,10 @@ filestem = "cardamom_for_holger_10_ensembles"
 chunk_dict = {"ens": 2}
 #filestem = "cardamom_for_holger"
 #chunk_dict = {"ens": 100}
-ds = xr.open_dataset(data_folder + filestem + ".nc").isel(
+ds = xr.open_dataset(data_folder + filestem + ".nc")#.isel(
 #    ens=slice(None, 6),
-    time=slice(None, 5)
-)
+#    time=slice(None, 5)
+#)
 #ds = ds.chunk(chunk_dict)
 #ds
 
