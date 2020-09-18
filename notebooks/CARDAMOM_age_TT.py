@@ -24,13 +24,14 @@ from dask import delayed, compute
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 # -
 
-client = Client(n_workers=2, threads_per_worker=2, memory_limit="3GB")
+client = Client(n_workers=10, threads_per_worker=1, memory_limit="3GB")
 client
 
 # +
-pwc_mr_fd_archive = 'pwc_mr_fd_archive/'
+#pwc_mr_fd_archive = 'pwc_mr_fd_archive/'
 age_output_dir = 'age_output/'
-filestem = "cardamom_for_holger_10_ensembles"
+#filestem = "cardamom_for_holger_10_ensembles"
+filestem = "cardamom_for_holger"
 
 comp_dict = {'zlib': True, 'complevel': 9}
 # -
@@ -138,7 +139,7 @@ def func_chunk(ds_chunk):
 
 
 # +
-chunk_dict = {"ens": 3}
+chunk_dict = {"ens": 10}
 results = []
 for index in range(0, len(ds_pwc_mr_global_clean.ens.data), chunk_dict['ens']):
     ds_chunk = ds_pwc_mr_global_clean.isel(ens=slice(index, index+chunk_dict['ens'], 1))
@@ -151,4 +152,4 @@ delayed_results = delayed(results)
 # +
 # %%time
 
-result = compute(delayed_results, scheduler='distributed', num_workers=2, memory_limit="3GB")
+result = compute(delayed_results, scheduler='distributed', num_workers=10, memory_limit="3GB")

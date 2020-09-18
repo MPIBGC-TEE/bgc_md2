@@ -33,20 +33,20 @@ xr.set_options(display_style='html')
 importlib.reload(bgc_md2.models.CARDAMOM.CARDAMOMlib)
 
 
-client = Client(n_workers=2, threads_per_worker=1, memory_limit="3GB")
+client = Client(n_workers=10, threads_per_worker=1, memory_limit="3GB")
 client
 
 
 # +
-data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
 pwc_mr_fd_archive = 'pwc_mr_fd_archive/'
-#data_folder = "/home/data/CARDAMOM/"  # matagorda
 
-filestem = "cardamom_for_holger_10_ensembles"
-#filestem = "cardamom_for_holger"
-chunk_dict = {"ens": 2}
-#filestem = "cardamom_for_holger"
-#chunk_dict = {"ens": 100}
+#data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
+data_folder = "/home/data/CARDAMOM/"  # matagorda
+
+#filestem = "cardamom_for_holger_10_ensembles"
+#chunk_dict = {"ens": 2}
+filestem = "cardamom_for_holger"
+chunk_dict = {"ens": 10}
 ds = xr.open_dataset(data_folder + filestem + ".nc")#.isel(
 #    ens=slice(None, 6),
 #    time=slice(None, 5)
@@ -129,32 +129,16 @@ delayed_results = delayed(results)
 # %%time
 
 #delayed_results.compute(scheduler='processes')#, num_workers=2)
-result = compute(delayed_results, scheduler='distributed', num_workers=2, memory_limit="3GB")
+result = compute(delayed_results, scheduler='distributed', num_workers=10, memory_limit="3GB")
 #result.visualize()
 # -
 
 prof.visualize()
 
-result.compute()
-
 ds.close()
-
-
 
 del result
 
-
-# +
-# client.restart()
-
-# +
-from dask import compute
-# compute?
-# -
-
-import dask
-
-dask.config.set(scheduler='distributed')
 
 dask.config.get('scheduler')
 
