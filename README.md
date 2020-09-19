@@ -1,11 +1,26 @@
 
 ## Installation
-* for developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
-```bash 
+* For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
+   * Clone the repository and its [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
+   ```
+   git clone --recurse-submodules https://github.com/MPIBGC-TEE/bgc_md2.git 
+   ```
+   * To pull the changes in bgc_md2 and the submodules simultaneuously use:
+   ```
+   git pull --recurse-submodules
+   ```
+   (Or configure an alias ```spull``` by)
+   ```
+   git config alias.spull 'pull --recurse-submodules'
+   ```
+   * create a conda environment and run the install script    
+   ```bash 
    conda create -y --name bgc_md2
    conda activate bgc_md2
    ./install_developer_conda.sh 
-```
+   ```
+   This will install the dependencies and run ```python setup.py develop``` for every subpackage so that your code changes  in one of these packages take immediate effect.
+   
 ## Structure
 This prototype represents models as subfolders of folder 
 ```bash
