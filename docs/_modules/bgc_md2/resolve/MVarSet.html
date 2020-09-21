@@ -1,0 +1,330 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve.MVarSet &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.resolve.MVarSet</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">TypeVar</span>
+<span class="kn">from</span> <span class="nn">frozendict</span> <span class="kn">import</span> <span class="n">frozendict</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">importlib</span>
+
+<span class="c1"># from ..models.helpers import provided_mvar_values</span>
+<span class="kn">from</span> <span class="nn">.helpers</span> <span class="kn">import</span> <span class="n">bgc_md2_computers</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">non_graph_helpers</span> <span class="k">as</span> <span class="n">ngh</span>
+<span class="kn">from</span> <span class="nn">.graph_helpers</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">sparse_powerset_graph</span><span class="p">,</span>
+    <span class="n">minimal_target_subgraph_for_single_var</span><span class="p">,</span>
+    <span class="n">minimal_startnodes_for_single_var</span><span class="p">,</span>
+    <span class="n">node_2_string</span><span class="p">,</span>
+    <span class="n">nodes_2_string</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># the next imports should not be necessary after the model specific part is factored out</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">Math</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">latex</span>
+
+<div class="viewcode-block" id="MVarSet"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.MVarSet.MVarSet">[docs]</a><span class="k">class</span> <span class="nc">MVarSet</span><span class="p">:</span>
+    <span class="c1"># This class is explicitly instantiated (even in the model source.py) from a set.</span>
+    <span class="c1"># The models source.py becomes A (as opposed to THE) way to create a MVarSet instance</span>
+    <span class="c1"># which can also be created arbitrarily (and programmatically) somewhere else.</span>
+    <span class="c1"># Not all MVarSets of interest are &quot;Models&quot; some are &quot;ModelRuns&quot; (=Simulations) </span>
+    <span class="c1"># The models submodule of bgc_md2 is just a convienience to assemble MVarSets that </span>
+    <span class="c1"># express models.</span>
+    <span class="c1"># Actually in the case of Williams the MvarSet expresses a ModelRun with </span>
+    <span class="c1"># units (which motivates a possible second submodule modelruns </span>
+    <span class="c1"># that will contain modelruns which will refer to a particular model and</span>
+    <span class="c1"># just add parameterizations and start values)</span>
+    
+    <span class="c1"># fixme: mm 9/15/2020 </span>
+    <span class="c1"># </span>
+    <span class="c1"># Along with the graph and non_graph helpers the bigger part of the class</span>
+    <span class="c1"># could be factored out into a more abstract class or meta class (possibly</span>
+    <span class="c1"># living in a different python package)  that does not depend on the </span>
+    <span class="c1"># specific mvars and computers in this package.  </span>
+    <span class="c1"># This more abstract version would also not</span>
+    <span class="c1"># include references to specific variables like SmoothReservoirModel in the</span>
+    <span class="c1"># graph method (and would not implement the graph_method)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">provided_mvar_values</span><span class="o">=</span><span class="n">s</span>
+
+
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">provided_mvar_types</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">provided_mvar_values</span><span class="p">)</span>
+
+    <span class="c1">#@property</span>
+<div class="viewcode-block" id="MVarSet.computable_mvar_types"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.MVarSet.MVarSet.computable_mvar_types">[docs]</a>    <span class="k">def</span> <span class="nf">computable_mvar_types</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">ngh</span><span class="o">.</span><span class="n">computable_mvars</span><span class="p">(</span>
+            <span class="n">allComputers</span><span class="o">=</span><span class="n">bgc_md2_computers</span><span class="p">(),</span>
+            <span class="n">available_mvars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">provided_mvar_types</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">computable_mvar_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">computable_mvar_types</span><span class="p">()]</span>
+
+
+    <span class="k">def</span> <span class="fm">__dir__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__dir__</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span>
+            <span class="s2">&quot;get_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">computable_mvar_names</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;get_&quot;</span><span class="p">):</span>
+            <span class="n">var_name</span> <span class="o">=</span> <span class="n">name</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+            <span class="c1">#for var in self.mvars:</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">computable_mvar_types</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="n">var_name</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_single_mvar_value</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MVarSet.path_dict_to_single_mvar"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.MVarSet.MVarSet.path_dict_to_single_mvar">[docs]</a>    <span class="k">def</span> <span class="nf">path_dict_to_single_mvar</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">mvar</span><span class="p">:</span> <span class="nb">type</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]]]:</span>
+        <span class="c1"># fixme mm 09-15-2020:</span>
+        <span class="c1"># should be deprecated since the class MVarSet implements a similar method now</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">mvar</span><span class="p">})</span>
+        <span class="n">spsg</span> <span class="o">=</span> <span class="n">sparse_powerset_graph</span><span class="p">(</span><span class="n">bgc_md2_computers</span><span class="p">())</span>
+        <span class="n">graph_min_nodes</span> <span class="o">=</span> <span class="n">minimal_startnodes_for_single_var</span><span class="p">(</span><span class="n">spsg</span><span class="p">,</span> <span class="n">mvar</span><span class="p">)</span>
+        <span class="n">pmvs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">provided_mvar_types</span>
+    
+        <span class="n">model_min_nodes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">pmvs</span><span class="p">),</span> <span class="n">graph_min_nodes</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_min_nodes</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="p">(</span>
+                <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="s2">&quot;The desired mvar can not be computed from the provided mvars:&quot;</span>
+                    <span class="o">+</span> <span class="n">node_2_string</span><span class="p">(</span><span class="n">pmvs</span><span class="p">)</span>
+                    <span class="o">+</span> <span class="s2">&quot;Minimal sets to compute it are&quot;</span>
+                    <span class="o">+</span> <span class="n">nodes_2_string</span><span class="p">(</span><span class="n">graph_min_nodes</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+    
+        <span class="n">path_dict</span> <span class="o">=</span> <span class="n">frozendict</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="n">n</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">all_shortest_paths</span><span class="p">(</span><span class="n">spsg</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">node</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">model_min_nodes</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">path_dict</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_single_mvar_value</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">mvar</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span>
+            <span class="n">path</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Set</span><span class="p">[</span><span class="nb">type</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="p">):</span>  <span class="c1"># -&gt;mvar:</span>
+        <span class="c1"># fixme mm 03-07-2020:</span>
+        <span class="c1"># This is interesting: The function actually returns</span>
+        <span class="c1"># an instance of class mvar, I do not know yet how to express that with</span>
+        <span class="c1"># the static type hint system.</span>
+        <span class="c1"># (Obviously the return type  is a function of the input types)</span>
+    
+        <span class="n">pvs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">provided_mvar_values</span>
+        <span class="n">pv_dict</span> <span class="o">=</span> <span class="p">{</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pvs</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">mvar</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pvs</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">pv_dict</span><span class="p">[</span><span class="n">mvar</span><span class="p">]</span>
+    
+        <span class="n">path_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_dict_to_single_mvar</span><span class="p">(</span><span class="n">mvar</span><span class="p">)</span>
+        <span class="n">start_nodes</span> <span class="o">=</span> <span class="n">path_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    
+        <span class="k">if</span> <span class="n">path</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">default_start_node</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">start_nodes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">path_dict</span><span class="p">[</span><span class="n">default_start_node</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># check if the given path is among the possible paths</span>
+            <span class="n">start_node</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">start_node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">path_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;There are no path to the target with this startnode&quot;</span><span class="p">))</span>
+            <span class="n">starting_here</span> <span class="o">=</span> <span class="n">path_dict</span><span class="p">[</span><span class="n">start_node</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">starting_here</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;the given path is not possible&quot;</span><span class="p">))</span>
+    
+        <span class="c1"># create results step by step along the graph</span>
+        <span class="n">spsg</span> <span class="o">=</span> <span class="n">sparse_powerset_graph</span><span class="p">(</span><span class="n">bgc_md2_computers</span><span class="p">())</span>
+        <span class="n">rg</span> <span class="o">=</span> <span class="n">spsg</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">rg</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="s2">&quot;values&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pvs</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)):</span>
+            <span class="n">computers</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="mi">0</span><span class="p">][</span>
+                <span class="s2">&quot;computers&quot;</span>
+            <span class="p">]</span>  <span class="c1"># if we have more</span>
+    
+            <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="n">comp</span><span class="p">):</span>
+                <span class="n">arg_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">annotation</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+                <span class="n">arg_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">pv_dict</span><span class="p">[</span><span class="n">cl</span><span class="p">]</span> <span class="k">for</span> <span class="n">cl</span> <span class="ow">in</span> <span class="n">arg_classes</span><span class="p">]</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">comp</span><span class="p">(</span><span class="o">*</span><span class="n">arg_values</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">res</span>
+    
+            <span class="n">pv_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">ngh</span><span class="o">.</span><span class="n">output_mvar</span><span class="p">(</span><span class="n">c</span><span class="p">):</span> <span class="n">apply</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">computers</span><span class="p">})</span>
+    
+        <span class="k">return</span> <span class="n">pv_dict</span><span class="p">[</span><span class="n">mvar</span><span class="p">]</span>
+
+
+    <span class="c1"># fixme mm 9/15/2020</span>
+    <span class="c1"># This method is bgc or even Model specific and would not be part of the more general package</span>
+<div class="viewcode-block" id="MVarSet.graph"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.MVarSet.MVarSet.graph">[docs]</a>    <span class="k">def</span> <span class="nf">graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">target_var</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span>
+        <span class="k">if</span> <span class="n">target_var</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">computable_mvar_types</span><span class="p">():</span>
+            <span class="k">return</span>
+
+        <span class="n">srm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_single_mvar_value</span><span class="p">(</span><span class="n">target_var</span><span class="p">)</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">rect</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">)</span>  <span class="c1"># l, b, w, h</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">srm</span><span class="o">.</span><span class="n">plot_pools_and_fluxes</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ax</span><span class="o">.</span><span class="n">figure</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">Output</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">out</span><span class="p">:</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="p">)</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">Math</span><span class="p">(</span><span class="n">latex</span><span class="p">(</span><span class="n">res</span><span class="p">)))</span>
+            <span class="c1"># The latex could be filtered to display subscripts better</span>
+            <span class="c1"># display(res)</span>
+        <span class="k">if</span> <span class="n">capture</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div>
+
+
+    <span class="c1"># fixme mm 9/15/2020</span>
+    <span class="c1"># This method is bgc or even Model specific and would not be part of the more general package</span>
+<div class="viewcode-block" id="MVarSet.render"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.MVarSet.MVarSet.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_single_mvar_value</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="n">display</span><span class="p">(</span><span class="n">Math</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">text{&quot;</span> <span class="o">+</span> <span class="n">var</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;} =&quot;</span> <span class="o">+</span> <span class="n">latex</span><span class="p">(</span><span class="n">res</span><span class="p">)))</span></div>
+        <span class="c1"># The latex could be filtered to display subscripts better</span>
+        <span class="c1"># display(res)</span>
+    
+
+    <span class="c1"># fixme mm 9/15/2020</span>
+    <span class="c1"># This method is bgc or even Model specific and would not be part of the more general package</span>
+<div class="viewcode-block" id="MVarSet.from_model_name"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.MVarSet.MVarSet.from_model_name">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_model_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span><span class="n">model_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        convenience method to get the instance from a submodule of bgc.models</span>
+<span class="sd">        by just giving the name of the submodule</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sep</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span>
+        <span class="c1">#model_mod_name = sep.join(__name__.split(sep)[:-1])</span>
+        <span class="n">models_mod_name</span> <span class="o">=</span> <span class="s1">&#39;bgc_md2.models&#39;</span>
+        <span class="c1"># in case the module has been created or changed</span>
+        <span class="c1"># after the current session started</span>
+        <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
+
+        <span class="n">mod</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span>
+            <span class="n">sep</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span> <span class="o">+</span> <span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="n">models_mod_name</span>
+        <span class="p">)</span>
+        <span class="n">retVal</span><span class="o">=</span> <span class="n">mod</span><span class="o">.</span><span class="n">mvs</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">retVal</span><span class="p">)</span><span class="o">==</span><span class="bp">cls</span><span class="p">:</span>
+            <span class="k">return</span>  <span class="n">retVal</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s2">&quot;The variable mvs in the target module is not of type </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>              <span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../manual/usage.html">Usecases / Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../manual/structure.html">Structure</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

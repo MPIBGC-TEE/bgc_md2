@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Overview: module code &#8212; Biogeochemical model database 2.0 documentation</title>
+    <title>Usecases / Objectives &#8212; Biogeochemical model database 2.0 documentation</title>
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
@@ -16,6 +16,8 @@
     <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Structure" href="structure.html" />
+    <link rel="prev" title="Biogeochemical model database’s documentation!" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -32,26 +34,34 @@
 
           <div class="body" role="main">
             
-  <h1>All modules for which code is available</h1>
-<ul><li><a href="bgc_md2/ModelDataObject.html">bgc_md2.ModelDataObject</a></li>
-<li><a href="bgc_md2/ModelStructure.html">bgc_md2.ModelStructure</a></li>
-<li><a href="bgc_md2/Variable.html">bgc_md2.Variable</a></li>
-<li><a href="bgc_md2/described_quantities.html">bgc_md2.described_quantities</a></li>
-<li><a href="bgc_md2/helper.html">bgc_md2.helper</a></li>
-<li><a href="bgc_md2/models/BibInfo.html">bgc_md2.models.BibInfo</a></li>
-<li><a href="bgc_md2/models/CARDAMOM/CARDAMOMlib.html">bgc_md2.models.CARDAMOM.CARDAMOMlib</a></li>
-<li><a href="bgc_md2/models/CARDAMOM/compute_start_values_14C.html">bgc_md2.models.CARDAMOM.compute_start_values_14C</a></li>
-<li><a href="bgc_md2/models/CARDAMOM/source.html">bgc_md2.models.CARDAMOM.source</a></li>
-<li><a href="bgc_md2/resolve/MVarSet.html">bgc_md2.resolve.MVarSet</a></li>
-<li><a href="bgc_md2/resolve/computers.html">bgc_md2.resolve.computers</a></li>
-<li><a href="bgc_md2/resolve/graph_helpers.html">bgc_md2.resolve.graph_helpers</a></li>
-<li><a href="bgc_md2/resolve/graph_plotting.html">bgc_md2.resolve.graph_plotting</a></li>
-<li><a href="bgc_md2/resolve/helpers.html">bgc_md2.resolve.helpers</a></li>
-<li><a href="bgc_md2/resolve/inspect_type_hints_old.html">bgc_md2.resolve.inspect_type_hints_old</a></li>
-<li><a href="bgc_md2/resolve/mvars.html">bgc_md2.resolve.mvars</a></li>
-<li><a href="bgc_md2/resolve/non_graph_helpers.html">bgc_md2.resolve.non_graph_helpers</a></li>
-<li><a href="sympy/core/assumptions.html">sympy.core.assumptions</a></li>
+  <div class="section" id="usecases-objectives">
+<h1>Usecases / Objectives<a class="headerlink" href="#usecases-objectives" title="Permalink to this headline">¶</a></h1>
+<ul>
+<li><p>Exploration of existing models:</p>
+<p>The package is supposed to assist in the creation of ‘reports’ in the form of jupyter notebooks. The notebooks will be of the following types:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Investigations of a single model (or modelrun).</p></li>
+<li><p>Comparisons between models (modelruns).</p></li>
 </ul>
+</div></blockquote>
+</li>
+<li><p>Assistence in the formulation of new models in a step by step process.</p>
+<p>To this end the framework implements some powerfull interactive tools.
+In this scenario the role of the <cite>bgc_md</cite> package is to guide the user (=
+author of a particular notebook concerned with a particular model, and
+simultaniously author of the <cite>source.py</cite> of that model) by using the
+computability graph (as represented by <cite>bgc_md/resolve/computers.py</cite>)
+to either</p>
+<ul class="simple">
+<li><p>show which addidional results can be computed, given the
+information already present in the models <cite>source.py</cite> or</p></li>
+<li><p>show which additional information has to be provided in the models <cite>source.py</cite> to be able to obtain a desired result.</p></li>
+</ul>
+</li>
+</ul>
+</div>
+
 
           </div>
           
@@ -69,9 +79,9 @@
 
 
 <h3>Navigation</h3>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../manual/usage.html">Usecases / Objectives</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../manual/structure.html">Structure</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usecases / Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="structure.html">Structure</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
@@ -83,6 +93,8 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">Biogeochemical model database’s documentation!</a></li>
+      <li>Next: <a href="structure.html" title="next chapter">Structure</a></li>
   </ul></li>
 </ul>
 </div>
@@ -115,6 +127,9 @@
       Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
+      |
+      <a href="../_sources/manual/usage.rst.txt"
+          rel="nofollow">Page source</a>
     </div>
 
     

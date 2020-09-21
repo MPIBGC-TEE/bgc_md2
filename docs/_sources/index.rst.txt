@@ -11,6 +11,14 @@ Python package to collect compartmental models of the form
 
 .. math:: \frac{d}{dt}\,x(t) = B(x(t),t)\,x(t) + u(t).
 
+Topics:
+-------
+.. toctree::
+   :maxdepth: 2
+
+   manual/usage
+   manual/structure
+
 Available models
 ----------------
 
