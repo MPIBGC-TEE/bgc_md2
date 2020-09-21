@@ -597,43 +597,43 @@ class ModelDataObject(object):
             unit=self.stock_unit
         )
 
-    def get_netcdf(self, mr):
-        ds_attrs = {'time_unit': self.time_agg.unit}
-
-        coords_time = mr.times[:-1]
-        coords_pool = range(mr.nr_pools)
-        coords = {'time': coords_time, 'pool': coords_pool}
-        data_vars = dict()
-        
-        start_values = xr.DataArray(
-            data=mr.start_values,
-            dims=['pool'],
-            coords={'pool': coords_pool},
-            attrs={'units': self.stock_unit}
-        )
-        data_vars['start_values'] = start_values
-
-        us = xr.DataArray(
-            data=mr.us,
-            dims=['time', 'pool'],
-            coords=coords,
-            attrs={'units': self.stock_unit+'/'+self.time_agg.unit}
-        )
-        data_vars['us'] = us
-
-        Bs = xr.DataArray(
-            data=mr.Bs,
-            dims=['time', 'pool_to', 'pool_from'],
-            coords=[coords_time, coords_pool, coords_pool],
-            attrs={'units': '1/'+self.time_agg.unit}
-        )
-        data_vars['Bs'] = Bs
-
-        ds_mr = xr.Dataset(
-            coords=coords,
-            data_vars=data_vars,
-            attrs=ds_attrs
-        )
-#        ds_mr.to_netcdf(file_path)
-#        ds_mr.close()
-        return ds_mr
+#    def get_netcdf(self, mr):
+##        ds_attrs = {'time_unit': self.time_agg.unit}
+#
+##        coords_pool = [d['pool_name'] for d in self.model_structure.pool_structure]
+#
+#        data_vars = dict()
+#        
+#        data = mr.start_values
+#        start_values = xr.DataArray(
+#            data=mr.start_values,
+#            dims=['pool'],
+##            coords={'pool': coords_pool},
+#            attrs={'units': self.stock_unit}
+#        )
+#        data_vars['start_values'] = start_values
+#
+#        us = xr.DataArray(
+#            data=mr.us,
+#            dims=['time', 'pool'],
+#            coords={'pool': coords_pool},
+#            attrs={'units': self.stock_unit+'/'+self.time_agg.unit}
+#        )
+#        data_vars['us'] = us
+#
+#        Bs = xr.DataArray(
+#            data=mr.Bs,
+#            dims=['time', 'pool_to', 'pool_from'],
+#            coords={'pool_to': coords_pool, 'pool_from': coords_pool],
+#            attrs={'units': '1/'+self.time_agg.unit}
+#        )
+#        data_vars['Bs'] = Bs
+#
+#        ds_mr = xr.Dataset(
+##            coords=coords,
+#            data_vars=data_vars,
+##            attrs=ds_attrs
+#        )
+##        ds_mr.to_netcdf(file_path)
+##        ds_mr.close()
+#        return ds_mr

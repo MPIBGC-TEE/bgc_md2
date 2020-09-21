@@ -441,7 +441,8 @@ def compute_pwc_mr_fd_ds(ds):
 #    if ds.ens.values.shape == (0,):
 
     mdo = load_mdo(ds)
-    nr_pools = mdo.model_structure.nr_pools
+    ms = mdo.model_structure
+    nr_pools = ms.nr_pools
     error = ''
     try:
         #pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
@@ -449,53 +450,70 @@ def compute_pwc_mr_fd_ds(ds):
     except PWCModelRunFDError as e:
         error = str(e)
 
-    if not error:
-        ds_pwc_mr_fd = mdo.get_netcdf(pwc_mr_fd)
-    data_vars = dict()
+    coords_time = ds.time
+    coords_pool = [d['pool_name'] for d in ms.pool_structure]
 
+    data_vars = dict()
+    data = np.nan * np.ones((nr_pools,))
     if not error:
-        data = ds_pwc_mr_fd['start_values'].data
-    else:
-        data = np.nan * np.ones((nr_pools,))
+        data = pwc_mr_fd.start_values
     data_vars['start_values'] = xr.DataArray(
         data=data,
-        dims='pool'
+        coords={'pool': coords_pool},
+        dims=['pool'],
+        attrs={'units': mdo.stock_unit}
+    )
+
+    data = np.nan * np.ones((len(ds.time),))
+    if not error:
+        data = pwc_mr_fd.times
+    data_vars['times'] = xr.DataArray(
+        data=data,
+        coords={'time': coords_time},
+        dims=['time'],
+        attrs={'units': mdo.time_agg.unit}
     )
 
     data = np.nan * np.ones((len(ds.time), nr_pools))
     if not error:
-        data[:-1, ...] = ds_pwc_mr_fd['us'].data
+        data[:-1, ...] = pwc_mr_fd.us
     data_vars['us'] = xr.DataArray(
         data=data,
-        dims=['time', 'pool']
+        coords={'time': coords_time, 'pool': coords_pool},
+        dims=['time', 'pool'],
+        attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit}
     )
 
     data = np.nan * np.ones((len(ds.time), nr_pools, nr_pools))
     if not error:
-        data[:-1, ...] = ds_pwc_mr_fd['Bs'].data
+        data[:-1, ...] = pwc_mr_fd.Bs
     data_vars['Bs'] = xr.DataArray(
         data=data,
-        dims=['time', 'pool_to', 'pool_from']
+        coords={
+            'time': coords_time,
+            'pool_to': coords_pool,
+            'pool_from': coords_pool
+        },
+        dims=['time', 'pool_to', 'pool_from'],
+        attrs={'units': '1/'+mdo.time_agg.unit}
     )
 
-    data_vars['log'] = xr.DataArray(data=error)
+    data = np.array(error, dtype="<U150")
+    data_vars['log'] = xr.DataArray(data=data)
 
-    pools = range(nr_pools)
-    sub_coords = {
-        'time': ds.time,
-        'pool': pools,
-        'pool_to': pools,
-        'pool_from': pools
+    coords = {
+        'time': coords_time,
+        'pool': coords_pool,
+        'pool_to': coords_pool,
+        'pool_from': coords_pool
     }
-    sub_ds = xr.Dataset(
-        coords=sub_coords,
-        data_vars=data_vars
+    ds_res = xr.Dataset(
+        coords=coords,
+        data_vars=data_vars,
     )
+    ds_res.close()
 
-    if not error:
-        ds_pwc_mr_fd.close()
-    sub_ds.close()
-    return sub_ds
+    return ds_res
 
 
 ################################################################################
