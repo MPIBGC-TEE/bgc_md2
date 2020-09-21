@@ -31,6 +31,7 @@ pythreejs
 frozendict
 dask
 xarray
+graphviz
 pygraphviz
 sphinx
 pip

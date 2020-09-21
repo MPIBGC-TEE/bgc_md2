@@ -38,10 +38,10 @@ client
 
 
 # +
-pwc_mr_fd_archive = 'pwc_mr_fd_archive/'
+pwc_mr_fd_archive = '/home/data/CARDAMOM/output/pwc_mr_fd_archive/'
 
 #data_folder = "/home/hmetzler/Desktop/CARDAMOM/" # local
-data_folder = "/home/data/CARDAMOM/"  # matagorda
+data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya, raka..
 
 #filestem = "cardamom_for_holger_10_ensembles"
 #chunk_dict = {"ens": 2}
@@ -117,13 +117,13 @@ def func_chunk(chunk_ds):
 results = []
 for index in range(ds.ens.data[0], ds.ens.data[-1], chunk_dict['ens']):
     chunk_ds = ds.isel(ens=slice(index, index+chunk_dict['ens'], 1))
-#    print(chunk_ds)
+    print(chunk_ds)
     results.append(delayed(func_chunk)(chunk_ds))
 
 #prof = ResourceProfiler()
 #prof.register()
 delayed_results = delayed(results)
-#delayed_results.visualize()
+# delayed_results.visualize() #needs graphviz
 
 # +
 # %%time
@@ -131,15 +131,3 @@ delayed_results = delayed(results)
 #delayed_results.compute(scheduler='processes')#, num_workers=2)
 result = compute(delayed_results, scheduler='distributed', num_workers=10, memory_limit="3GB")
 #result.visualize()
-# -
-
-prof.visualize()
-
-ds.close()
-
-del result
-
-
-dask.config.get('scheduler')
-
-

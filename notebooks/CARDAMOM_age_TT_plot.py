@@ -22,6 +22,7 @@ import pandas as pd
 xr.set_options(display_style='html')
 # -
 
+
 age_output_dir = '/home/data/CARDAMOM/output/age_output/'
 #filestem = "cardamom_for_holger_10_ensembles"
 

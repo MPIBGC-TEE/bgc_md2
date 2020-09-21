@@ -1,7 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py
+#     formats: ipynb,py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -27,14 +27,11 @@ from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 client = Client(n_workers=10, threads_per_worker=1, memory_limit="3GB")
 client
 
-# +
-#pwc_mr_fd_archive = 'pwc_mr_fd_archive/'
+pwc_mr_fd_archive = '/home/data/CARDAMOM/output/pwc_mr_fd_archive/'
 age_output_dir = 'age_output/'
 #filestem = "cardamom_for_holger_10_ensembles"
 filestem = "cardamom_for_holger"
-
 comp_dict = {'zlib': True, 'complevel': 9}
-# -
 
 ds_pwc_mr_global = xr.open_mfdataset(pwc_mr_fd_archive + '*.nc')
 ds_pwc_mr_global#.compute()
@@ -153,3 +150,6 @@ delayed_results = delayed(results)
 # %%time
 
 result = compute(delayed_results, scheduler='distributed', num_workers=10, memory_limit="3GB")
+# -
+
+
