@@ -7,15 +7,20 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 from testinfrastructure.InDirTest import InDirTest
 
-from bgc_md2.models.helpers import (
-    provided_mvars,
-    computable_mvars,
-    path_dict_to_single_mvar,
-    get_single_mvar_value,
+from bgc_md2.resolve.helpers import (
     bgc_md2_computers,
     bgc_md2_computer_aliases,
     bgc_md2_mvar_aliases,
 )
+#from bgc_md2.models.helpers import (
+#    provided_mvars,
+#    computable_mvars,
+#    path_dict_to_single_mvar,
+#    get_single_mvar_value,
+#    bgc_md2_computers,
+#    bgc_md2_computer_aliases,
+#    bgc_md2_mvar_aliases,
+#)
 from bgc_md2.resolve.graph_helpers import sparse_powerset_graph
 from bgc_md2.resolve.non_graph_helpers import (
     all_mvars
@@ -45,11 +50,13 @@ from bgc_md2.resolve.graph_plotting import (
     # ,draw_Graph_with_computers_svg
 )
 from testinfrastructure.helpers import pp
+from bgc_md2.resolve.MVarSet import MVarSet
 
 
 class TestCastanho(InDirTest):
     def setUp(self):
         self.mn = "Castanho2013Biogeosciences"
+        self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
                 CompartmentalMatrix,
@@ -72,8 +79,8 @@ class TestCastanho(InDirTest):
         )
 
     def test_provided_mvars(self):
-        mvs = provided_mvars(self.mn)
-        self.assertSetEqual(mvs, self.ref_provided_mvars)
+        mvs = self.mvs 
+        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
 
 #    @unittest.skip
     def test_computable_mvars(self):
@@ -91,10 +98,11 @@ class TestCastanho(InDirTest):
         fig = plt.figure()
         draw_update_sequence(bgc_md2_computers(), max_it=8, fig=fig)
         fig.savefig("c1.pdf")
-        mvs = computable_mvars(self.mn)
-        list_str = "\n".join(["<li> " + str(var.__name__) + " </li>" for var in mvs])
+        mvs=self.mvs
+        mvars = mvs.computable_mvar_types()
+        list_str = "\n".join(["<li> " + str(var.__name__) + " </li>" for var in mvars])
         print(list_str)
-        for var in mvs:
+        for var in mvars:
             print("########################################")
             print(str(var.__name__))
-            print(get_single_mvar_value(var,self.mn))
+            print(mvs._get_single_mvar_value(var))

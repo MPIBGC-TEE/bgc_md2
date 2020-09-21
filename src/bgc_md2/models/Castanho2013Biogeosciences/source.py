@@ -5,6 +5,7 @@ from bgc_md2.resolve.mvars import (
     TimeSymbol,
     StateVariableTuple,
 )
+from bgc_md2.resolve.MVarSet import MVarSet
 
 sym_dict={
         'C_f':      'Carbon in foliage',
@@ -30,9 +31,9 @@ A = CompartmentalMatrix(
 )
 t = TimeSymbol("t")
 
-specialVars = {
+mvs = MVarSet({
     A,  # the overall compartmental matrix
     Input,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the the complete system
-}
+})
