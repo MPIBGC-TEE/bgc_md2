@@ -17,7 +17,7 @@ For developers who work with CompartmentalSystems LAPM and testinfrastructure si
    * Make sure that the submodule folders in `src` are not empty. In case they are you need to run
    ```
    git submodule init
-   git submodules update
+   git submodule update
    ```
    * create a conda environment and run the install script    
    ```bash 
