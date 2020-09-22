@@ -26,6 +26,18 @@ For developers who work with CompartmentalSystems LAPM and testinfrastructure si
    ./install_developer_conda.sh 
    ```
    This will install the dependencies and run ```python setup.py develop``` for every subpackage so that your code changes  in one of these packages take immediate effect.
+
+After installation, we recommend to go to `tests` folder and run all tests as
+```
+./run_tests.py
+```
+
+If you can run this script successfully, you have a working installation of bgc_md and can run all functions. 
+We noticed that in MacOS, it is necessary to update packages in the conda environment before running the tests successfully. The following code will do the updates:
+```
+conda update --all
+```
+Try to run the tests again, and if you're successful, you're done!
    
 ## Structure
 This prototype represents models as subfolders of folder 
