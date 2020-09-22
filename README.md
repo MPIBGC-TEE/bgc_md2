@@ -1,6 +1,7 @@
 
 ## Installation
-* For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
+We assume here that you have a recent installation of python3 and conda. 
+For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
    * Clone the repository and its [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
    ```
    git clone --recurse-submodules https://github.com/MPIBGC-TEE/bgc_md2.git 
@@ -12,6 +13,11 @@
    (Or configure an alias ```spull``` by)
    ```
    git config alias.spull 'pull --recurse-submodules'
+   ```
+   * Make sure that the submodule folders in `src` are not empty. In case they are you need to run
+   ```
+   git submodule init
+   git submodules update
    ```
    * create a conda environment and run the install script    
    ```bash 
