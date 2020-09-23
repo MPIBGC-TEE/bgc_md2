@@ -1,49 +1,59 @@
 
 ## Installation
-We assume here that you have a recent installation of python3 and conda. 
-For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
+
+* For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
    * Clone the repository and its [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
-   ```
-   git clone --recurse-submodules https://github.com/MPIBGC-TEE/bgc_md2.git 
-   ```
-   * To pull the changes in bgc_md2 and the submodules simultaneuously use:
-   ```
-   git pull --recurse-submodules
-   ```
-   (Or configure an alias ```spull``` by)
-   ```
-   git config alias.spull 'pull --recurse-submodules'
-   ```
-   * Make sure that the submodule folders in `src` are not empty. In case they are you need to run
-   ```
-   git submodule init
-   git submodule update
-   ```
-   * create a conda environment and run the install script    
-   ```bash 
-   conda create -y --name bgc_md2
-   conda activate bgc_md2
-   ./install_developer_conda.sh 
-   ```
-   This will install the dependencies and run ```python setup.py develop``` for every subpackage so that your code changes  in one of these packages take immediate effect.
+     * If you do *not* have a bgc_md2 repo yet:
+       ```bash
+       git clone --recurse-submodules https://github.com/MPIBGC-TEE/bgc_md2.git
+       ```
+       
+     * If you *already* have a bgc_md2 repo (and want to keep it):
+        * Pull the changes in bgc_md2 and the submodules simultaneuously:
+          ```
+          git pull --recurse-submodules
+          ```
+        * Make sure that the submodule folders in `src` are not empty. 
+          ```
+          git submodule init
+          git submodule update
+          ```
+   * Update conda
+     ```
+     conda update --all
+     ```
+   * Create a conda environment and run the install script:
+     ```bash 
+     conda create -y --name bgc_md2
+     conda activate bgc_md2
+     ./install_developer_conda.sh 
+     ```
+     This will install the dependencies and run ```python setup.py develop``` for every subpackage so that your code changes 
+     in one of these packages take mmediate effect.
 
-After installation, we recommend to go to `tests` folder and run all tests as
-```
-./run_tests.py
-```
-
-If you can run this script successfully, you have a working installation of bgc_md and can run all functions. 
-We noticed that in MacOS, it is necessary to update packages in the conda environment before running the tests successfully. The following code will do the updates:
-```
-conda update --all
-```
-Try to run the tests again, and if you're successful, you're done!
+    * Run the tests.
+      ```
+      cd tests
+      ./run_tests.py
+      ```
+      If you can run this script successfully, you have a working installation of bgc_md and can run all functions. 
+  
+   * Troubleshooting:
+      * We noticed that in MacOS, it is necessary to update packages in the conda environment before running the tests successfully.
+        Try to update conda ( ```conda update --all)``` and run the tests again.
+        
+   * Working with the installation:
+      * pulling:
+        Since you will nearly always pull with the ```--recurse-submodules``` flag   
+        consider creating an alias
+        ```
+        git config alias.spull 'pull --recurse-submodules'
+        ```
+        which enables you to say  ```git spull`` to achieve the same effect
+        
+      * Tips to work with [git submodules:](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
    
-## Structure
-This prototype represents models as subfolders of folder 
-```bash
-models
-```
+
 ## Documentation
 * The latest build of the package documentation can be found [here:](https://mpibgc-tee.github.io/bgc_md2/).
 
