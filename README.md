@@ -49,7 +49,7 @@
         ```
         git config alias.spull 'pull --recurse-submodules'
         ```
-        which enables you to say  ```git spull`` to achieve the same effect
+        which enables you to say  ```git spull``` to achieve the same effect
         
       * Tips to work with [git submodules:](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
    
