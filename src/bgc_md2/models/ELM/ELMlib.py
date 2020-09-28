@@ -1,10 +1,6 @@
 from netCDF4 import Dataset
 import numpy as np
 import pandas as pd
-import pyspark
-from pyspark.sql import SparkSession
-from pyspark.conf import SparkConf
-from pyspark.sql.functions import udf
 
 from ModelDataObject import (
     ModelDataObject,
@@ -16,54 +12,12 @@ from SmoothModelRunFromData import SmoothModelRunFromData as SMRFD
 from Variable import Variable
 
 
-################################################################################
-
-
-spark = SparkSession.builder.master("local").config(conf=SparkConf()).getOrCreate()
 
 
 ################################################################################
 
 
-def initialize_spark_df_from_nc(nc_filename):
-    ds = Dataset(nc_filename)
-
-    lon = ds["lon"][:]
-    lat = ds["lat"][:]
-    lat_indices, lon_indices = np.meshgrid(
-        range(len(lat)), range(len(lon)), indexing="ij"
-    )
-    lats, lons = np.meshgrid(lat, lon, indexing="ij")
-    df = pd.DataFrame(
-        {
-            "cell_nr": range(len(lat) * len(lon)),
-            "lat_index": lat_indices.flatten(),
-            "lon_index": lon_indices.flatten(),
-            "lat": lats.flatten(),
-            "lon": lons.flatten(),
-        }
-    )
-
-    df_spark = spark.createDataFrame(df)
-    ds.close()
-    return df_spark
-
-
-def load_mdo_12C(parameter_set):
-    #    dataset         = parameter_set['dataset']
-    ds_filename = parameter_set["ds_filename"]
-    stock_unit = parameter_set["stock_unit"]
-    cftime_unit_src = parameter_set["cftime_unit_src"]
-    calendar_src = parameter_set["calendar_src"]
-    nr_layers = parameter_set["nr_layers"]
-
-    dz_var_name = parameter_set.get("dz_var_name", None)
-    dz_var_names = parameter_set.get("dz_var_names", dict())
-    min_time = parameter_set.get("min_time", 0)
-    max_time = parameter_set.get("max_time", None)
-    nstep = parameter_set.get("nstep", 1)
-    time_shift = parameter_set.get("time_shift", 0)
-
+def load_model_structure():
     pool_structure = [
         {
             "pool_name": "CWD",
@@ -210,6 +164,32 @@ def load_mdo_12C(parameter_set):
         vertical_structure=vertical_structure,
         external_output_structure=external_output_structure,
     )
+
+    return model_structure
+
+
+def load_mdo(ds):
+    ms = load_model_structure()
+
+    mdo = ModelDataObject(
+        model_structure=ms,
+        dataset=ds,
+        stock_unit=
+
+def load_mdo_12C(parameter_set):
+    #    dataset         = parameter_set['dataset']
+    ds_filename = parameter_set["ds_filename"]
+    stock_unit = parameter_set["stock_unit"]
+    cftime_unit_src = parameter_set["cftime_unit_src"]
+    calendar_src = parameter_set["calendar_src"]
+    nr_layers = parameter_set["nr_layers"]
+
+    dz_var_name = parameter_set.get("dz_var_name", None)
+    dz_var_names = parameter_set.get("dz_var_names", dict())
+    min_time = parameter_set.get("min_time", 0)
+    max_time = parameter_set.get("max_time", None)
+    nstep = parameter_set.get("nstep", 1)
+    time_shift = parameter_set.get("time_shift", 0)
 
     mdo_12C = ModelDataObject(
         model_structure=model_structure,
