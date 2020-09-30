@@ -448,6 +448,22 @@ class ModelDataObject(object):
         else:
             return dmr
 
+    def check_data_consistency(self, tol=1e-10):
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
+        diff = xs.data[1:, ...] - (
+            xs.data[:-1, ...]  +
+            Us.data + 
+            Fs.data.sum(axis=2) -
+            Fs.data.sum(axis=1) - 
+            Rs.data
+        )
+        
+        if np.max(np.abs(diff)) <= tol:
+            return True
+        else:
+            return False
+
     def create_model_run(self, errors=False):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
@@ -475,6 +491,7 @@ class ModelDataObject(object):
                 Us.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled(),
+                xs.data.filled()
             )
         else:
             pwc_mr_fd = None
