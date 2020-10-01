@@ -1,7 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:light
+#     formats: py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -30,7 +30,7 @@ from sympy import Symbol,var
 
 port_dict = {
     'mm':8789,
-    'hmetzler':8790, # change at will
+    'hmetzler':8790, # change at will to a port you forward via ssh to your local machine
     'cs':8791        # change at will
 }
 my_user_name = getuser()
@@ -58,12 +58,9 @@ ps = [outpath.joinpath(fn) for fn in fns]
 
 dat0 = xr.open_dataset(ps[0])
 dat0
-
-# +
-xr.open_dataset(Path(cableDataDir).joinpath(runId,'restart_in.nc'))
-
-
 # -
+
+xr.open_dataset(Path(cableDataDir).joinpath(runId,'restart_in.nc'))
 
 # assemble all files into one dataset
 ds = xr.open_mfdataset(
@@ -71,6 +68,11 @@ ds = xr.open_mfdataset(
     combine="by_coords",
     parallel=True # use dask
 );ds
+
+post_processing_dir= "../src/bgc_md2/models/cable_all/cable_transit_time/postprocessing/scripts_org"
+dfac = xr.open_dataset(Path(post_processing_dir).joinpath('outAC.nc'))
+dfac
+
 
 # now start postprocessing the raw data to get the fluxes
 # following ../src/bgc_md2/models/cable_all/cable_transit_time/postprocessing/scripts_org/GetFluxFromCABLEoutput.txt
@@ -82,7 +84,6 @@ for s in ('leaf','wood','fine_root','metabolic_lit','structural_lit','cwd','fast
     var(s)
 
 # +
-#ds=data
 
 leaf_ind = 0
 wood_ind = 1
@@ -127,8 +128,8 @@ InternalFluxes= {
     (fine_root,structural_lit) : ds.fromRoottoL.sel(litter_casa_pools=structural_ind)* Flux_from_Root, #7
     (wood,cwd)                 : ds.fromWoodtoL.sel(litter_casa_pools=cwd_ind)       * Flux_from_Wood, #8
     #
-    # 9. Metabolic litter to Fast soil: fAC->A(6,3,:,:)*fAC->C(3,:,:) missing 
-    (metabolic_lit,fast_soil)  : Flux_from_metabolic_lit,
+    # 9. 
+    (metabolic_lit,fast_soil)  : dfac.A.sel(poolx=6,pooly=3)*dfac.C.sel(poolx=3)*Flux_from_metabolic_lit,
     #
     # 11. Structural Litter to Fast soil: fAC->A(6,4,:,:)*fAC->C(4,:,:) missing
     # *fin->Clitter(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
@@ -185,6 +186,55 @@ OutFluxes = {
 }
 
 # -
+# reconstruction of A 
+#nland=5656
+#npool=9
+#
+#A=new((/npool,npool,npatch,nland/),float)
+#C=new((/npool,npool,npatch,nland/),float)
+#
+#A=0
+#C=0
+#do isim=0,nsim-1
+#   print((/SimName(isim)/))
+#   fin=addfile(FilePath+SimName(isim)+"/output/out_ncar_"+year+"_ndep.nc","r")
+#   iveg=where(ismissing(fin->iveg),18,fin->iveg)
+#;   npatchveg=dim_num_n(.not. ismissing(fin->iveg),0)
+#   do ipool=0,npool-1
+#      print((1-0.75*(silt(ipool)+clay(ipool))))
+#      print(any(where(tau(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,1.0/tau(ndtooned(iveg-1),ipool))/365.0 .eq. 0))
+#      print(any(where(xkoptlitter(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,xkoptlitter(ndtooned(iveg-1),ipool)) .eq. 0))
+#      print(any(where(xkoptsoil(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,xkoptsoil(ndtooned(iveg-1),ipool)) .eq. 0))
+#      print(any(where(fracLigninplant(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,exp(-3.0*fracLigninplant(ndtooned(iveg-1),ipool))).eq. 0))
+#      ivegoned=(ndtooned(iveg))
+#;      print(ivegoned(ind0))
+#;      print(
+#      tmp=exp(-3.0*where(fracLigninplant(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,fracLigninplant(ndtooned(iveg-1),ipool)))
+#      C(ipool,ipool,:,:)=onedtond(where(tau(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,1.0/tau(ndtooned(iveg-1),ipool))/365.0 \
+#                         *where(xkoptlitter(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,xkoptlitter(ndtooned(iveg-1),ipool))  \
+#                         *where(xkoptsoil(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,xkoptsoil(ndtooned(iveg-1),ipool)) \
+#                         *where(fracLigninplant(ndtooned(iveg-1),ipool) .eq. -9999,C@_FillValue,exp(-3.0*fracLigninplant(ndtooned(iveg-1),ipool))) \
+#                         *(1-0.75*(silt(ipool)+clay(ipool))),(/npatch,nland/)) 
+#      A(ipool,ipool,:,:)=-1
+#      print((/ipool/))
+#      print(any(C(ipool,ipool,:,:) .eq. 0))
+#;      print(C(ipool,ipool,:,:))
+#   end do
+#   A(3:5,0,:,:)= (/fin->fromLeaftoL (1,:,:,:)/)
+#   A(3:5,1,:,:)= (/fin->fromRoottoL (1,:,:,:)/)
+#   A(3:5,2,:,:)= (/fin->fromWoodtoL (1,:,:,:)/)
+#   A(6:8,3,:,:)= (/fin->fromMettoS  (1,:,:,:)/)    
+#   A(6:8,4,:,:)= (/fin->fromStrtoS  (1,:,:,:)/)    
+#   A(6:8,5,:,:)= (/fin->fromCWDtoS  (1,:,:,:)/)    
+#   A(7  ,6,:,:)= (/fin->fromSOMtoSOM(1,0,:,:)/)    
+#   A(8  ,6,:,:)= (/fin->fromSOMtoSOM(1,1,:,:)/)    
+#   A(8  ,7,:,:)= (/fin->fromSOMtoSOM(1,2,:,:)/)    
+#   A@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)    
+#   C@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)    
+#       
+#   system("if [ -f "+FilePath+SimName(isim)+"/outAC.nc ];then rm "+FilePath+SimName(isim)+"/outAC.nc;fi")    
+#   fout  = addfile (FilePath+SimName(isim)+"/outAC.nc", "c")  ; open output file    
+#     
 
 
 
