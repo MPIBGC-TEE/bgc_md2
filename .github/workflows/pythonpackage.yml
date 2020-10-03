@@ -27,7 +27,6 @@ jobs:
     - run: which python
     - name: Install dependencies
       run: |
-              #sudo chmod -R u=rwx src/
         sudo ./install_developer_conda.sh
 
     - name: Test with unittest
