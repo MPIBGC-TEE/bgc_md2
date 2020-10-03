@@ -13,10 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    #- uses: textbook/git-checkout-submodule-action@master
-    - uses: jwsi/submodule-checkout@v1
-      with:
-        repository: MPIBGC-TEE/bgc_md2
+    - uses: textbook/git-checkout-submodule-action@master
+      #- uses: jwsi/submodule-checkout@v1
+      #with:
+      #  repository: MPIBGC-TEE/bgc_md2
     - name: Set up conda 
       uses: s-weigand/setup-conda@v1
       with:
