@@ -29,8 +29,7 @@ jobs:
         python --version
     - name: Install dependencies
       run: |
-        sudo chmod -R 755 src
-        ./install_developer_conda.sh
+        sudo ./install_developer_conda.sh
 
     - name: Test with unittest
       run: |
