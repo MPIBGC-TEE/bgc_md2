@@ -13,14 +13,14 @@ set -e
 # To make that easy we assume that there repositories have been checked
 # out under src/ComartmentalSystems src/LAPM and src/testinfrastructure 
 
-conda install -c conda-forge --file requirements.conda
-
+conda install -c conda-forge python #should automatically install newest available python3
 for dir in testinfrastructure LAPM CompartmentalSystems
 do 
   echo '#################'
   echo $dir
   cd src/${dir}
-  source install_developer_conda.sh
+  ./install_developer_conda.sh
   cd -
 done
+conda install -c conda-forge --file requirements.conda
 python setup.py develop
