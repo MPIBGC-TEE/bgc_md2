@@ -24,10 +24,13 @@ jobs:
         python-version: ${{ matrix.python-version }}
         conda-channels: anaconda, conda-forge
     - run: conda --version
-    - run: which python
+    - run: |
+        which python
+        python --version
     - name: Install dependencies
       run: |
-        sudo ./install_developer_conda.sh
+        sudo chmod -R 755 src
+        ./install_developer_conda.sh
 
     - name: Test with unittest
       run: |
