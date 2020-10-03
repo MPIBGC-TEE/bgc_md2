@@ -39,11 +39,7 @@ from bgc_md2.resolve.graph_plotting import (
     # ,draw_Graph_with_computers_svg
 )
 from bgc_md2.resolve.graph_helpers import sparse_powerset_graph
-from bgc_md2.models.helpers import (
-    # provided_mvars,
-    # computable_mvars,
-    # path_dict_to_single_mvar,
-    # get_single_mvar_value,
+from bgc_md2.resolve.helpers import (
     bgc_md2_computers,
     bgc_md2_computer_aliases,
     bgc_md2_mvar_aliases,

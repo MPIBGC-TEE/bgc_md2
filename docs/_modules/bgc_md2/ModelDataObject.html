@@ -630,48 +630,48 @@
             <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
             <span class="n">data</span><span class="o">=</span><span class="n">Fs</span><span class="p">[:,</span> <span class="n">pool_nr_to</span><span class="p">,</span> <span class="n">pool_nr_from</span><span class="p">],</span>
             <span class="n">unit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stock_unit</span>
-        <span class="p">)</span></div>
+        <span class="p">)</span></div></div>
 
-<div class="viewcode-block" id="ModelDataObject.get_netcdf"><a class="viewcode-back" href="../../bgc_md2.html#bgc_md2.ModelDataObject.ModelDataObject.get_netcdf">[docs]</a>    <span class="k">def</span> <span class="nf">get_netcdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mr</span><span class="p">):</span>
-        <span class="n">ds_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;time_unit&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
-
-        <span class="n">coords_time</span> <span class="o">=</span> <span class="n">mr</span><span class="o">.</span><span class="n">times</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">coords_pool</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">mr</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
-        <span class="n">coords</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">coords_time</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">}</span>
-        <span class="n">data_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        
-        <span class="n">start_values</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">mr</span><span class="o">.</span><span class="n">start_values</span><span class="p">,</span>
-            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pool&#39;</span><span class="p">],</span>
-            <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">},</span>
-            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">stock_unit</span><span class="p">}</span>
-        <span class="p">)</span>
-        <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_values</span>
-
-        <span class="n">us</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">mr</span><span class="o">.</span><span class="n">us</span><span class="p">,</span>
-            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">],</span>
-            <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
-            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">stock_unit</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
-        <span class="p">)</span>
-        <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">us</span>
-
-        <span class="n">Bs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">mr</span><span class="o">.</span><span class="n">Bs</span><span class="p">,</span>
-            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_to&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_from&#39;</span><span class="p">],</span>
-            <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">coords_time</span><span class="p">,</span> <span class="n">coords_pool</span><span class="p">,</span> <span class="n">coords_pool</span><span class="p">],</span>
-            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;1/&#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
-        <span class="p">)</span>
-        <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Bs</span>
-
-        <span class="n">ds_mr</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
-            <span class="n">data_vars</span><span class="o">=</span><span class="n">data_vars</span><span class="p">,</span>
-            <span class="n">attrs</span><span class="o">=</span><span class="n">ds_attrs</span>
-        <span class="p">)</span>
-<span class="c1">#        ds_mr.to_netcdf(file_path)</span>
-<span class="c1">#        ds_mr.close()</span>
-        <span class="k">return</span> <span class="n">ds_mr</span></div></div>
+<span class="c1">#    def get_netcdf(self, mr):</span>
+<span class="c1">##        ds_attrs = {&#39;time_unit&#39;: self.time_agg.unit}</span>
+<span class="c1">#</span>
+<span class="c1">##        coords_pool = [d[&#39;pool_name&#39;] for d in self.model_structure.pool_structure]</span>
+<span class="c1">#</span>
+<span class="c1">#        data_vars = dict()</span>
+<span class="c1">#        </span>
+<span class="c1">#        data = mr.start_values</span>
+<span class="c1">#        start_values = xr.DataArray(</span>
+<span class="c1">#            data=mr.start_values,</span>
+<span class="c1">#            dims=[&#39;pool&#39;],</span>
+<span class="c1">##            coords={&#39;pool&#39;: coords_pool},</span>
+<span class="c1">#            attrs={&#39;units&#39;: self.stock_unit}</span>
+<span class="c1">#        )</span>
+<span class="c1">#        data_vars[&#39;start_values&#39;] = start_values</span>
+<span class="c1">#</span>
+<span class="c1">#        us = xr.DataArray(</span>
+<span class="c1">#            data=mr.us,</span>
+<span class="c1">#            dims=[&#39;time&#39;, &#39;pool&#39;],</span>
+<span class="c1">#            coords={&#39;pool&#39;: coords_pool},</span>
+<span class="c1">#            attrs={&#39;units&#39;: self.stock_unit+&#39;/&#39;+self.time_agg.unit}</span>
+<span class="c1">#        )</span>
+<span class="c1">#        data_vars[&#39;us&#39;] = us</span>
+<span class="c1">#</span>
+<span class="c1">#        Bs = xr.DataArray(</span>
+<span class="c1">#            data=mr.Bs,</span>
+<span class="c1">#            dims=[&#39;time&#39;, &#39;pool_to&#39;, &#39;pool_from&#39;],</span>
+<span class="c1">#            coords={&#39;pool_to&#39;: coords_pool, &#39;pool_from&#39;: coords_pool],</span>
+<span class="c1">#            attrs={&#39;units&#39;: &#39;1/&#39;+self.time_agg.unit}</span>
+<span class="c1">#        )</span>
+<span class="c1">#        data_vars[&#39;Bs&#39;] = Bs</span>
+<span class="c1">#</span>
+<span class="c1">#        ds_mr = xr.Dataset(</span>
+<span class="c1">##            coords=coords,</span>
+<span class="c1">#            data_vars=data_vars,</span>
+<span class="c1">##            attrs=ds_attrs</span>
+<span class="c1">#        )</span>
+<span class="c1">##        ds_mr.to_netcdf(file_path)</span>
+<span class="c1">##        ds_mr.close()</span>
+<span class="c1">#        return ds_mr</span>
 </pre></div>
 
           </div>
@@ -690,6 +690,10 @@
 
 
 <h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../manual/usage.html">Usecases / Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../manual/structure.html">Structure</a></li>
+</ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>

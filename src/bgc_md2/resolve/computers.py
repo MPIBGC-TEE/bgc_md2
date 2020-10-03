@@ -161,7 +161,14 @@ def quantity_model_run_1(
         start_values_q,
         times_q,
     )
+
 def quantity_solution_array_1(
     qmr: QuantityModelRun
     )->QuantitySolutionArray:
     return QuantitySolutionArray(qmr.solve())
+
+def smooth_reservoir_model_2(
+    smr: SmoothModelRun
+    )-> SmoothReservoirModel:
+    return smr.model
+

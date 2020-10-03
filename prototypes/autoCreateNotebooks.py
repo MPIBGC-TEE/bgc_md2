@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.5.0
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -21,14 +21,14 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 # %autoreload 2
 import bgc_md2.helper as h
 
-model_inspection = h.ModelInspectionBox()
+model_inspection = h.MvarSetInspectionBox()
 
-model_list = h.ModelListGridBox(inspection_box=model_inspection)
+model_list = h.MvarSetListGridBox(inspection_box=model_inspection)
 model_list
 
 model_inspection
 
-model_list.inspect_model(model_list.names[0])
+model_list.inspect_mvs(model_list.names[0])
 
 # # Some alternatives to create html an markdown programmatically
 #

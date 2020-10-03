@@ -64,15 +64,16 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.models.html#submodules">Submodules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.models.html#module-bgc_md2.models.BibInfo">bgc_md2.models.BibInfo module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bgc_md2.models.html#module-bgc_md2.models.helpers">bgc_md2.models.helpers module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.models.html#module-bgc_md2.models">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="bgc_md2.resolve.html">bgc_md2.resolve package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.MVarSet">bgc_md2.resolve.MVarSet module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.computers">bgc_md2.resolve.computers module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.graph_helpers">bgc_md2.resolve.graph_helpers module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.graph_plotting">bgc_md2.resolve.graph_plotting module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.helpers">bgc_md2.resolve.helpers module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.inspect_type_hints_old">bgc_md2.resolve.inspect_type_hints_old module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.mvars">bgc_md2.resolve.mvars module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bgc_md2.resolve.html#module-bgc_md2.resolve.non_graph_helpers">bgc_md2.resolve.non_graph_helpers module</a></li>
@@ -129,11 +130,6 @@
 <dl class="py method">
 <dt id="bgc_md2.ModelDataObject.ModelDataObject.get_dz">
 <code class="sig-name descname">get_dz</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pool_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/ModelDataObject.html#ModelDataObject.get_dz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.ModelDataObject.ModelDataObject.get_dz" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="bgc_md2.ModelDataObject.ModelDataObject.get_netcdf">
-<code class="sig-name descname">get_netcdf</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mr</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/ModelDataObject.html#ModelDataObject.get_netcdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.ModelDataObject.ModelDataObject.get_netcdf" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -368,64 +364,38 @@
 <div class="section" id="module-bgc_md2.helper">
 <span id="bgc-md2-helper-module"></span><h2>bgc_md2.helper module<a class="headerlink" href="#module-bgc_md2.helper" title="Permalink to this headline">¶</a></h2>
 <dl class="py class">
-<dt id="bgc_md2.helper.Model">
-<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.helper.</code><code class="sig-name descname">Model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.Model" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt id="bgc_md2.helper.Model.graph">
-<code class="sig-name descname">graph</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#Model.graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.Model.graph" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="bgc_md2.helper.Model.mvar_names">
-<em class="property">property </em><code class="sig-name descname">mvar_names</code><a class="headerlink" href="#bgc_md2.helper.Model.mvar_names" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="bgc_md2.helper.Model.mvars">
-<em class="property">property </em><code class="sig-name descname">mvars</code><a class="headerlink" href="#bgc_md2.helper.Model.mvars" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="bgc_md2.helper.Model.render">
-<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">var</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#Model.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.Model.render" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt id="bgc_md2.helper.ModelInspectionBox">
-<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.helper.</code><code class="sig-name descname">ModelInspectionBox</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#ModelInspectionBox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.ModelInspectionBox" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetInspectionBox">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.helper.</code><code class="sig-name descname">MvarSetInspectionBox</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#MvarSetInspectionBox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.MvarSetInspectionBox" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ipywidgets.widgets.widget_box.VBox</span></code></p>
 <dl class="py method">
-<dt id="bgc_md2.helper.ModelInspectionBox.create_notebook">
-<code class="sig-name descname">create_notebook</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#ModelInspectionBox.create_notebook"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.ModelInspectionBox.create_notebook" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetInspectionBox.create_notebook">
+<code class="sig-name descname">create_notebook</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#MvarSetInspectionBox.create_notebook"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.MvarSetInspectionBox.create_notebook" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="bgc_md2.helper.ModelInspectionBox.nb_link_box">
-<code class="sig-name descname">nb_link_box</code><em class="property"> = None</em><a class="headerlink" href="#bgc_md2.helper.ModelInspectionBox.nb_link_box" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetInspectionBox.nb_link_box">
+<code class="sig-name descname">nb_link_box</code><em class="property"> = None</em><a class="headerlink" href="#bgc_md2.helper.MvarSetInspectionBox.nb_link_box" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="bgc_md2.helper.ModelInspectionBox.update">
-<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#ModelInspectionBox.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.ModelInspectionBox.update" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetInspectionBox.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#MvarSetInspectionBox.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.MvarSetInspectionBox.update" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
-<dt id="bgc_md2.helper.ModelListGridBox">
-<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.helper.</code><code class="sig-name descname">ModelListGridBox</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#ModelListGridBox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.ModelListGridBox" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetListGridBox">
+<em class="property">class </em><code class="sig-prename descclassname">bgc_md2.helper.</code><code class="sig-name descname">MvarSetListGridBox</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#MvarSetListGridBox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.MvarSetListGridBox" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ipywidgets.widgets.widget_templates.GridspecLayout</span></code></p>
 <dl class="py method">
-<dt id="bgc_md2.helper.ModelListGridBox.inspect_model">
-<code class="sig-name descname">inspect_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#ModelListGridBox.inspect_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.ModelListGridBox.inspect_model" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetListGridBox.inspect_mvs">
+<code class="sig-name descname">inspect_mvs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#MvarSetListGridBox.inspect_mvs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.MvarSetListGridBox.inspect_mvs" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="bgc_md2.helper.ModelListGridBox.populate">
-<code class="sig-name descname">populate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#ModelListGridBox.populate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.ModelListGridBox.populate" title="Permalink to this definition">¶</a></dt>
+<dt id="bgc_md2.helper.MvarSetListGridBox.populate">
+<code class="sig-name descname">populate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bgc_md2/helper.html#MvarSetListGridBox.populate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bgc_md2.helper.MvarSetListGridBox.populate" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -488,6 +458,10 @@
 
 
 <h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="manual/usage.html">Usecases / Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manual/structure.html">Structure</a></li>
+</ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>

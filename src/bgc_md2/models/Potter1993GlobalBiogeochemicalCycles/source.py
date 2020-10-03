@@ -14,6 +14,7 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
+from bgc_md2.helper import MVarSet
 
 # We can retain make the original description available to the framework as 
 # part of the bibliographical information in a dictionary which could also be used to define
@@ -108,7 +109,8 @@ np1 = NumericParameterization(
 #        - "Tropical evergreen rain forest":
 #            values: {alpha_f: 0.25, alpha_r: 0.25, alpha_w: 0.5, tau_f: 1.5, tau_r: 2, tau_w: 25}
 #            doi: 10.2307/1313568
-specialVars = {
+#specialVars = {
+mvs=MVarSet({
     BibInfo(# Bibliographical Information
         name="CASA",
         longName="Carnegie-Ames-Stanford approach", 
@@ -134,4 +136,4 @@ specialVars = {
     VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
     np1
-}
+})

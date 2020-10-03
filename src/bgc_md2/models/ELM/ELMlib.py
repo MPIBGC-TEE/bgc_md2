@@ -1,69 +1,55 @@
-from netCDF4 import Dataset
 import numpy as np
 import pandas as pd
-import pyspark
-from pyspark.sql import SparkSession
-from pyspark.conf import SparkConf
-from pyspark.sql.functions import udf
+import xarray as xr
+from pathlib import Path
 
-from ModelDataObject import (
+from bgc_md2.ModelDataObject import (
     ModelDataObject,
     getStockVariable_from_Density,
     getFluxVariable_from_DensityRate,
 )
-from ModelStructure import ModelStructure
-from SmoothModelRunFromData import SmoothModelRunFromData as SMRFD
-from Variable import Variable
+from bgc_md2.ModelStructure import ModelStructure
+from CompartmentalSystems.pwc_model_run_fd import (
+    PWCModelRunFD,
+    PWCModelRunFDError
+)
+from bgc_md2.Variable import Variable
 
 
 ################################################################################
 
 
-spark = SparkSession.builder.master("local").config(conf=SparkConf()).getOrCreate()
+def load_parameter_set(**keywords):
+    nstep = keywords.get("nstep", 1)
 
+    parameter_set = {
+        "stock_unit": "g/m^2",
+        "nr_layers": 10,
+        "nstep": nstep,
+    }
 
-################################################################################
-
-
-def initialize_spark_df_from_nc(nc_filename):
-    ds = Dataset(nc_filename)
-
-    lon = ds["lon"][:]
-    lat = ds["lat"][:]
-    lat_indices, lon_indices = np.meshgrid(
-        range(len(lat)), range(len(lon)), indexing="ij"
+    ## depth variable with bounds
+    ds_depth = keywords['ds_depth']
+    dz_var = ds_depth.variables["DZSOI"]
+    dz_var_name = "dz"
+    dz = Variable(
+        name=dz_var_name,
+        data=dz_var[:parameter_set["nr_layers"], 0],
+        unit=dz_var.attrs['units'],
     )
-    lats, lons = np.meshgrid(lat, lon, indexing="ij")
-    df = pd.DataFrame(
-        {
-            "cell_nr": range(len(lat) * len(lon)),
-            "lat_index": lat_indices.flatten(),
-            "lon_index": lon_indices.flatten(),
-            "lat": lats.flatten(),
-            "lon": lons.flatten(),
-        }
-    )
+    ds_depth.close()
+    
+    parameter_set["dz_var_name"] = dz_var_name
+    parameter_set["dz_var_names"] = {dz_var_name: dz}
 
-    df_spark = spark.createDataFrame(df)
-    ds.close()
-    return df_spark
+    #    dataset = Dataset(parameter_set['ds_filename'], 'r')
+    #    parameter_set['dataset']   = dataset
+    #    parameter_set['calendar_src']  = dataset['time'].calendar
+
+    return parameter_set
 
 
-def load_mdo_12C(parameter_set):
-    #    dataset         = parameter_set['dataset']
-    ds_filename = parameter_set["ds_filename"]
-    stock_unit = parameter_set["stock_unit"]
-    cftime_unit_src = parameter_set["cftime_unit_src"]
-    calendar_src = parameter_set["calendar_src"]
-    nr_layers = parameter_set["nr_layers"]
-
-    dz_var_name = parameter_set.get("dz_var_name", None)
-    dz_var_names = parameter_set.get("dz_var_names", dict())
-    min_time = parameter_set.get("min_time", 0)
-    max_time = parameter_set.get("max_time", None)
-    nstep = parameter_set.get("nstep", 1)
-    time_shift = parameter_set.get("time_shift", 0)
-
+def load_model_structure(nr_layers, dz_var_name):
     pool_structure = [
         {
             "pool_name": "CWD",
@@ -210,6 +196,131 @@ def load_mdo_12C(parameter_set):
         vertical_structure=vertical_structure,
         external_output_structure=external_output_structure,
     )
+
+    return model_structure
+
+
+def load_mdo(ds, parameter_set):
+    nstep = parameter_set.get("nstep", 1)
+    stock_unit = parameter_set["stock_unit"]
+    nr_layers = parameter_set["nr_layers"]
+    dz_var_name = parameter_set["dz_var_name"]
+    dz_var_names = parameter_set["dz_var_names"]
+
+    ms = load_model_structure(nr_layers, dz_var_name)
+
+    time = Variable(
+        name="time",
+        data=np.arange(len(ds.time)),
+        unit="d"
+    )
+
+    mdo = ModelDataObject(
+        model_structure=ms,
+        dataset=ds,
+        nstep=nstep,
+        stock_unit=stock_unit,
+        time=time,
+        dz_var_names=dz_var_names,
+    )
+
+    return mdo
+
+
+def compute_ds_pwc_mr_fd(ds, parameter_set):
+#    if ds.ens.values.shape == (0,):
+
+    mdo = load_mdo(ds, parameter_set)
+    ms = mdo.model_structure
+    nr_pools = ms.nr_pools
+
+    error = ''
+    try:
+        #pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
+        pwc_mr_fd = mdo.create_model_run()
+    except PWCModelRunFDError as e:
+        error = str(e)
+
+    coords_time = ds.time
+    coords_pool = np.arange(nr_pools)
+
+    data_vars = dict()
+    data = np.nan * np.ones((nr_pools, ))
+    if not error:
+        data = pwc_mr_fd.start_values
+    data_vars['start_values'] = xr.DataArray(
+        data=data,
+        coords={'pool': coords_pool},
+        dims=['pool'],
+        attrs={'units': mdo.stock_unit}
+    )
+
+    data = np.nan * np.ones((len(ds.time),))
+    if not error:
+        data = pwc_mr_fd.times
+    data_vars['times'] = xr.DataArray(
+        data=data,
+        coords={'time': coords_time},
+        dims=['time'],
+        attrs={'units': mdo.time_agg.unit}
+    )
+
+    data = np.nan * np.ones((len(ds.time), nr_pools))
+    if not error:
+        data[:-1, ...] = pwc_mr_fd.us
+    data_vars['us'] = xr.DataArray(
+        data=data,
+        coords={'time': coords_time, 'pool': coords_pool},
+        dims=['time', 'pool'],
+        attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit}
+    )
+
+    data = np.nan * np.ones((len(ds.time), nr_pools, nr_pools))
+    if not error:
+        data[:-1, ...] = pwc_mr_fd.Bs
+    data_vars['Bs'] = xr.DataArray(
+        data=data,
+        coords={
+            'time': coords_time,
+            'pool_to': coords_pool,
+            'pool_from': coords_pool
+        },
+        dims=['time', 'pool_to', 'pool_from'],
+        attrs={'units': '1/'+mdo.time_agg.unit}
+    )
+
+    data = np.array(error, dtype="<U150")
+    data_vars['log'] = xr.DataArray(data=data)
+
+    coords = {
+        'time': coords_time,
+        'pool': coords_pool,
+        'pool_to': coords_pool,
+        'pool_from': coords_pool
+    }
+    ds_res = xr.Dataset(
+        coords=coords,
+        data_vars=data_vars,
+    )
+    ds_res.close()
+
+    return ds_res
+
+
+def load_mdo_12C(parameter_set):
+    #    dataset         = parameter_set['dataset']
+    ds_filename = parameter_set["ds_filename"]
+    stock_unit = parameter_set["stock_unit"]
+    cftime_unit_src = parameter_set["cftime_unit_src"]
+    calendar_src = parameter_set["calendar_src"]
+    nr_layers = parameter_set["nr_layers"]
+
+    dz_var_name = parameter_set.get("dz_var_name", None)
+    dz_var_names = parameter_set.get("dz_var_names", dict())
+    min_time = parameter_set.get("min_time", 0)
+    max_time = parameter_set.get("max_time", None)
+    nstep = parameter_set.get("nstep", 1)
+    time_shift = parameter_set.get("time_shift", 0)
 
     mdo_12C = ModelDataObject(
         model_structure=model_structure,
@@ -533,50 +644,55 @@ def load_model_14C_data(parameter_set, location):
     return (location["cell_nr"], log, xs_14C, us_14C, rs_14C)
 
 
-def load_parameter_set(**keywords):
-    ds_filename = keywords.get("ds_filename")
-    nstep = keywords.get("nstep", 1)
-    min_time = keywords.get("min_time", 0)
-    max_time = keywords.get("max_time", None)
-    cftime_unit_src = "days since 1901-01-01 00:00:00"
-    cftime_unit_src = keywords.get("cftime_unit_src", cftime_unit_src)
-    time_shift = keywords.get("time_shift", 0)
-    calendar_src = keywords.get("calendar", "noleap")
+def resample_daily_to_monthly(ds):
+    ms = load_model_structure(nr_layers=10, dz_var_name='dz')
 
-    parameter_set = {
-        "ds_filename": ds_filename,
-        "stock_unit": "g/m^2",
-        "nr_layers": 10,
-        "dz_var_name": "dz",
-        "min_time": min_time,  # actually the minimum time INDEX
-        "max_time": max_time,  # before time aggregation
-        "nstep": nstep,
-        "time_shift": time_shift,
-        "cftime_unit_src": cftime_unit_src,
-        "decay_rate": np.log(2) / 5568.0 / 365.0,  # daily value
-        "calendar_src": calendar_src,
+
+    data_vars = dict()
+
+    stock_vars = [d['stock_var'] for d in ms.pool_structure]
+    for stock_var in stock_vars:
+        data_vars[stock_var] = ds[stock_var].resample(
+            time='1M',
+            keep_attrs=True
+        ).first()
+
+    time_resampled = ds.coords['time'].resample(time='1M', label='left').first().data
+    print(time_resampled)
+    coords_resampled = {
+        'time': time_resampled,
+        'lat': ds.coords['lat'],
+        'lon': ds.coords['lon']
     }
 
-    ## depth variable with bounds
-    ds_depth = Dataset("../Data/DZSOI.nc", "r")
-    dz_var = ds_depth.variables["DZSOI"]
-    dz = Variable(
-        name=parameter_set["dz_var_name"],
-        data=dz_var[: parameter_set["nr_layers"], 0],
-        unit=dz_var.units,
+    ds_resampled = xr.Dataset(
+#        coords=coords_resampled,
+        data_vars=data_vars
     )
-    ds_depth.close()
-    parameter_set["dz_var_names"] = {"dz": dz}
-
-    #    dataset = Dataset(parameter_set['ds_filename'], 'r')
-    #    parameter_set['dataset']   = dataset
-    #    parameter_set['calendar_src']  = dataset['time'].calendar
-
-    return parameter_set
+    ds_resampled.coords['time'] = time_resampled
+    print(type(time_resampled))
+    return ds_resampled
 
 
 ################################################################################
 
 
 if __name__ == "__main__":
-    pass
+    ELMDataDir = "/home/hmetzler/SOIL-R/Manuscripts/Berkeley/2019/Data/"
+    runID = "14C_transient_holger_fire.2x2_small"
+#    runID = "holger.new3sites.tr_2019_grid"
+    fn = runID + ".nc"
+
+    ds = xr.open_dataset(Path(ELMDataDir).joinpath(runID + ".nc"))
+    print('A')
+    ds_depth = xr.open_dataset(Path(ELMDataDir).joinpath('DZSOI.nc'))
+    print('B')
+    parameter_set = load_parameter_set(
+        nstep       = 365,
+        ds_depth    = ds_depth
+    )
+    print('C')
+    ds_single_site = ds.isel(lat=0, lon=0)
+    print('D')
+    ds_mr_pwc_fd = compute_ds_pwc_mr_fd(ds_single_site, parameter_set)
+

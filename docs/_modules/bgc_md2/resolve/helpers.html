@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bgc_md2.resolve.helpers &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for bgc_md2.resolve.helpers</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">ascii_lowercase</span><span class="p">,</span> <span class="n">ascii_uppercase</span>
+<span class="kn">from</span> <span class="nn">frozendict</span> <span class="kn">import</span> <span class="n">frozendict</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">computers</span> <span class="k">as</span> <span class="n">cmod</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">non_graph_helpers</span> <span class="k">as</span> <span class="n">ngh</span>
+
+<div class="viewcode-block" id="list_mult"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.helpers.list_mult">[docs]</a><span class="k">def</span> <span class="nf">list_mult</span><span class="p">(</span><span class="n">ll</span><span class="p">):</span>
+    <span class="c1"># tensor product of list....</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ll</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ll</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ll</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ll</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">l1</span> <span class="o">=</span> <span class="n">ll</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="n">ll</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">new_last</span> <span class="o">=</span> <span class="p">[</span><span class="n">t2</span><span class="o">+</span><span class="n">t1</span> <span class="k">for</span> <span class="n">t1</span> <span class="ow">in</span> <span class="n">l1</span> <span class="k">for</span> <span class="n">t2</span> <span class="ow">in</span> <span class="n">l2</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_last</span>
+
+    <span class="k">return</span> <span class="n">list_mult</span><span class="p">(</span><span class="n">ll</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="n">new_last</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="bgc_md2_computers"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.helpers.bgc_md2_computers">[docs]</a><span class="k">def</span> <span class="nf">bgc_md2_computers</span><span class="p">():</span>
+    <span class="c1">#sep = &quot;.&quot;</span>
+    <span class="c1">#pkg_name = __name__.split(sep)[0]</span>
+    <span class="c1">#cmod = importlib.import_module(&quot;.resolve.computers&quot;, package=pkg_name)</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">cmod</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cmod</span><span class="o">.</span><span class="fm">__dir__</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">cmod</span><span class="p">,</span> <span class="n">c</span><span class="p">))</span>
+        <span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="bgc_md2_computer_aliases"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.helpers.bgc_md2_computer_aliases">[docs]</a><span class="k">def</span> <span class="nf">bgc_md2_computer_aliases</span><span class="p">():</span>
+    <span class="n">comp_abbreviations</span> <span class="o">=</span> <span class="n">list_mult</span><span class="p">([</span><span class="n">ascii_lowercase</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">frozendict</span><span class="p">({</span>
+        <span class="n">v</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span> <span class="n">comp_abbreviations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bgc_md2_computers</span><span class="p">())</span>
+    <span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="bgc_md2_mvar_aliases"><a class="viewcode-back" href="../../../bgc_md2.resolve.html#bgc_md2.resolve.helpers.bgc_md2_mvar_aliases">[docs]</a><span class="k">def</span> <span class="nf">bgc_md2_mvar_aliases</span><span class="p">():</span>
+    <span class="n">var_abbreviations</span> <span class="o">=</span> <span class="n">list_mult</span><span class="p">([</span><span class="n">ascii_uppercase</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)])</span>
+    <span class="n">allVars</span> <span class="o">=</span> <span class="n">ngh</span><span class="o">.</span><span class="n">all_mvars</span><span class="p">(</span><span class="n">bgc_md2_computers</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">frozendict</span><span class="p">({</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">var_abbreviations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">allVars</span><span class="p">)))</span>
+    <span class="p">})</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../manual/usage.html">Usecases / Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../manual/structure.html">Structure</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

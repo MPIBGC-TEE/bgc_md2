@@ -476,7 +476,8 @@
 <span class="c1">#    if ds.ens.values.shape == (0,):</span>
 
     <span class="n">mdo</span> <span class="o">=</span> <span class="n">load_mdo</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
-    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">model_structure</span><span class="o">.</span><span class="n">nr_pools</span>
+    <span class="n">ms</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">model_structure</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">ms</span><span class="o">.</span><span class="n">nr_pools</span>
     <span class="n">error</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="c1">#pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)</span>
@@ -484,53 +485,70 @@
     <span class="k">except</span> <span class="n">PWCModelRunFDError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">error</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">ds_pwc_mr_fd</span> <span class="o">=</span> <span class="n">mdo</span><span class="o">.</span><span class="n">get_netcdf</span><span class="p">(</span><span class="n">pwc_mr_fd</span><span class="p">)</span>
-    <span class="n">data_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">coords_time</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">time</span>
+    <span class="n">coords_pool</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;pool_name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">ms</span><span class="o">.</span><span class="n">pool_structure</span><span class="p">]</span>
 
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nr_pools</span><span class="p">,))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nr_pools</span><span class="p">,))</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">start_values</span>
     <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;start_values&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
         <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-        <span class="n">dims</span><span class="o">=</span><span class="s1">&#39;pool&#39;</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">},</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pool&#39;</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="n">mdo</span><span class="o">.</span><span class="n">stock_unit</span><span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">times</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;times&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">coords_time</span><span class="p">},</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="n">mdo</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
     <span class="p">)</span>
 
     <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="n">nr_pools</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">us</span>
     <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;us&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
         <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">]</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">coords_time</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">},</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool&#39;</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="n">mdo</span><span class="o">.</span><span class="n">stock_unit</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">mdo</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
     <span class="p">)</span>
 
     <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="n">nr_pools</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_pwc_mr_fd</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">pwc_mr_fd</span><span class="o">.</span><span class="n">Bs</span>
     <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;Bs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
         <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_to&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_from&#39;</span><span class="p">]</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">coords_time</span><span class="p">,</span>
+            <span class="s1">&#39;pool_to&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">,</span>
+            <span class="s1">&#39;pool_from&#39;</span><span class="p">:</span> <span class="n">coords_pool</span>
+        <span class="p">},</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_to&#39;</span><span class="p">,</span> <span class="s1">&#39;pool_from&#39;</span><span class="p">],</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;1/&#39;</span><span class="o">+</span><span class="n">mdo</span><span class="o">.</span><span class="n">time_agg</span><span class="o">.</span><span class="n">unit</span><span class="p">}</span>
     <span class="p">)</span>
 
-    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;log&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;&lt;U150&quot;</span><span class="p">)</span>
+    <span class="n">data_vars</span><span class="p">[</span><span class="s1">&#39;log&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
-    <span class="n">pools</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
-    <span class="n">sub_coords</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
-        <span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">pools</span><span class="p">,</span>
-        <span class="s1">&#39;pool_to&#39;</span><span class="p">:</span> <span class="n">pools</span><span class="p">,</span>
-        <span class="s1">&#39;pool_from&#39;</span><span class="p">:</span> <span class="n">pools</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">coords_time</span><span class="p">,</span>
+        <span class="s1">&#39;pool&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">,</span>
+        <span class="s1">&#39;pool_to&#39;</span><span class="p">:</span> <span class="n">coords_pool</span><span class="p">,</span>
+        <span class="s1">&#39;pool_from&#39;</span><span class="p">:</span> <span class="n">coords_pool</span>
     <span class="p">}</span>
-    <span class="n">sub_ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
-        <span class="n">coords</span><span class="o">=</span><span class="n">sub_coords</span><span class="p">,</span>
-        <span class="n">data_vars</span><span class="o">=</span><span class="n">data_vars</span>
+    <span class="n">ds_res</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
+        <span class="n">data_vars</span><span class="o">=</span><span class="n">data_vars</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="n">ds_res</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">ds_pwc_mr_fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    <span class="n">sub_ds</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">sub_ds</span></div>
+    <span class="k">return</span> <span class="n">ds_res</span></div>
 
 
 <span class="c1">################################################################################</span>
@@ -688,6 +706,10 @@
 
 
 <h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../manual/usage.html">Usecases / Objectives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../manual/structure.html">Structure</a></li>
+</ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>

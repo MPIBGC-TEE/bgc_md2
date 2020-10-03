@@ -105,7 +105,7 @@ smr.initialize_state_transition_operator_cache(lru_maxsize=5000, size=100)
 smrs.append(smr)
 
 
-soln, _ = smr.solve()
+soln = smr.solve()
 cstocks = pd.DataFrame(soln, columns=pool_names)
 stocks = cstocks.join(pd.DataFrame({"Time": times}))
 stocks.to_csv("stocks.csv", index=False)
@@ -213,3 +213,19 @@ ftt_density = ftt_density_func(ages)
 
 ftt = pd.DataFrame(ftt_density, columns=years)
 ftt.to_csv("forward_transit_time.csv", index=False)
+
+# Backward transit times
+tol = 1e-1
+btt_density = smr.backward_transit_time_density(pool_age_densities)
+btt_mean = smr.backward_transit_time_moment(1, start_age_moments)
+F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value(F0=F0)
+btt_median = smr.distribution_quantiles(0.5, 
+                                            F_btt_sv, 
+                                            norm_consts = smr.external_output_vector.sum(1), 
+                                            start_values = btt_mean, 
+                                            method = 'brentq', 
+                                            tol = tol)
+
+btt_density.to_csv("backward_transit_time_density.csv", index=False)
+btt_mean.to_csv("backward_transit_time_mean.csv", index=False)
+btt_median.to_csv("backward_transit_time_median.csv", index=False)
