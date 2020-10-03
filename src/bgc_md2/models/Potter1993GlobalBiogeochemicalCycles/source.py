@@ -1,4 +1,3 @@
-
 from sympy import var, symbols, Symbol, ImmutableMatrix, diag, exp, Rational
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
@@ -127,7 +126,7 @@ specialVars = {
     # the following variables constitute the compartmental system:
     #
     A,  # the overall compartmental matrix
-    Input,  # the overall imput
+    Input,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the the complete system
     VegetationCarbonInputScalar(u),
