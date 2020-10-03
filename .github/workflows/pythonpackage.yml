@@ -12,7 +12,8 @@ jobs:
         #python-version: [3.6,3.7, 3.8]
 
     steps:
-    - uses: textbook/git-checkout-submodule-action@master
+    #- uses: textbook/git-checkout-submodule-action@master
+    - uses: jwsi/submodule-checkout@v1
     - name: Set up conda 
       uses: s-weigand/setup-conda@v1
       with:
