@@ -128,7 +128,7 @@ mvs=MVarSet({
     # the following variables constitute the compartmental system:
     #
     A,  # the overall compartmental matrix
-    Input,  # the overall imput
+    Input,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the the complete system
     VegetationCarbonInputScalar(u),
