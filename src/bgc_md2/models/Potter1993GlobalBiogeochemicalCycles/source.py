@@ -130,7 +130,7 @@ mvs=MVarSet({
     A,  # the overall compartmental matrix
     Input,  # the overall input
     t,  # time for the complete system
-    x,  # state vector of the the complete system
+    x,  # state vector of the complete system
     VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
     VegetationCarbonInputPartitioningTuple(b),

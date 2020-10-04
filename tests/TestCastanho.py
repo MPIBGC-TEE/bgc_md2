@@ -62,9 +62,9 @@ class TestCastanho(InDirTest):
                 CompartmentalMatrix,
                 TimeSymbol,
                 StateVariableTuple,
-#                VegetationCarbonInputPartitioningTuple,
-#                VegetationCarbonInputScalar,
-#                VegetationCarbonStateVariableTuple,
+                VegetationCarbonInputPartitioningTuple,
+                VegetationCarbonInputScalar,
+                VegetationCarbonStateVariableTuple,
                 InputTuple,
 #                # NumericStartValueDict,
 #                # NumericSimulationTimes,
@@ -78,9 +78,9 @@ class TestCastanho(InDirTest):
             ]
         )
 
-    def test_provided_mvars(self):
-        mvs = self.mvs 
-        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
+#    def test_provided_mvars(self):
+#        mvs = self.mvs 
+#        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
 
 #    @unittest.skip
     def test_computable_mvars(self):
