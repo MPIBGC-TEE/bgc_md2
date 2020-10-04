@@ -491,7 +491,7 @@ class ModelDataObject(object):
                 Us.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled(),
-                xs.data.filled()
+#                xs.data.filled()
             )
         else:
             pwc_mr_fd = None
