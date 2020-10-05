@@ -1,4 +1,4 @@
-name: Python package
+name: test_conda_developer_installation
 
 on: [push]
 
