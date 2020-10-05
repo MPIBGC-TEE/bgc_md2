@@ -68,7 +68,7 @@ class TestLuo(InDirTest):
                 InputTuple,
 #                # NumericStartValueDict,
 #                # NumericSimulationTimes,
-#                 NumericParameterization,
+                 NumericParameterization,
 #                # QuantityStartValueDict,
 #                # QuantitySimulationTimes,
 #                # QuantityParameterization,

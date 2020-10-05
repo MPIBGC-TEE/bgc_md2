@@ -1,3 +1,4 @@
+import numpy as np
 from sympy import var, symbols, Symbol, ImmutableMatrix, diag, Min
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
@@ -9,6 +10,8 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
     NumericParameterization,
+    NumericStartValueDict,
+    NumericSimulationTimes,
    )
 from ..BibInfo import BibInfo 
 from bgc_md2.helper import MVarSet
@@ -17,7 +20,7 @@ sym_dict={
         'C_f': 'Carbon in foliage',
         'C_r': 'Carbon in roots',
         'C_w': 'Carbon in woody tissue',
-        'GPP': 'Photosynthetic rate (Carbon input) at time t ',#unit: "gC*day^{-1}"
+        'GPP': 'Photosynthetic rate (Carbon input) at time t ',
         'T':   'Temperature',
         'Q_10': 'Temperature quotient that describes a change in decomposition rate for evey 10°C difference in temperature',
         'W': 'Volumetric soil moisture',
@@ -45,13 +48,33 @@ Input = InputTuple(u * ImmutableMatrix(b))
 A = CompartmentalMatrix(
     diag(-gamma_f, -gamma_w, -gamma_r)
 )
-t = TimeSymbol("t") #unit: "day"
+t = TimeSymbol("t")
 
+# "Original parameters of the publication. Parameter value of GPP corresponds to an annual average"
+# T, Q_10, and W are variables that should be looked at in a data set. What I have here are invented values
 np1 = NumericParameterization(
     par_dict={
-    },
+    Q_10: 1, 
+    W: 4.2, 
+    T: 25, 
+    GPP: 3370, #"gC*day^{-1}"
+    eta_f: 0.14,
+    eta_r: 0.26,
+    eta_w: 0.14, 
+    gamma_f: 0.00258, 
+    gamma_w: 0.0000586, 
+    gamma_r: 0.00239},
     func_dict=frozendict({})
+    # state_var_units=gram/kilometer**2,
+    # time_unit=day
 )
+nsv1 = NumericStartValueDict({
+    C_f: 250, 
+    C_w: 4145, 
+    C_r: 192
+})
+
+ntimes = NumericSimulationTimes(np.arange(0, 150, 2.5))
 
 mvs=MVarSet({
     BibInfo(# Bibliographical Information
