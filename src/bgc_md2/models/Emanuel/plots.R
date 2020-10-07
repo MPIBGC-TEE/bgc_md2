@@ -9,6 +9,8 @@ medianAges=read.csv("median_ages.csv")
 ftt=read.csv("forward_transit_time.csv")
 agedensEq=read.csv("start_age_dens.csv")
 agedens=read.csv("Emmanuel_age_dens.csv")
+bttdens=read.csv('backward_transit_time_densities.csv')
+bttmeans=read.csv('backward_transit_time_mean_and_median.csv')
 
 pool_names=c("Non-woody tree parts", "Woody tree parts", "Ground vegetation", "Detritus/Decomposers", "Soil" )
 
@@ -52,6 +54,19 @@ years=seq(1851,2000)
 pdf("Figures/forwardTransitTime3d.pdf")
 wireframe(t(as.matrix(ftt)), shade=TRUE, ylim=c(0,50), xlab="Calendar year", ylab="Age (yr)", zlab="C stock \n (PgC)", aspect = c(61/87, 0.4),
           main="Forward transit time")
+dev.off()
+
+pdf("Figures/backwardTransitTime3d.pdf")
+wireframe(t(as.matrix(bttdens)), shade=TRUE, ylim=c(0,50), xlab="Calendar year", ylab="Age (yr)", zlab="C stock \n (PgC)", aspect = c(61/87, 0.4),
+          main="Backward transit time")
+dev.off()
+
+pdf('Figures/meanBackwardTransitTime.pdf')
+plot(bttmeans$Year, bttmeans$meanBTT, type="l", xlab="Calenday year", ylab="Mean backward transit time (yr)", bty="n")
+dev.off()
+
+pdf('Figures/medianBackwardTransitTime.pdf')
+plot(bttmeans$Year, bttmeans$medianBTT, type="l", xlab="Calenday year", ylab="Median backward transit time (yr)", bty="n")
 dev.off()
 
 pdf("Figures/poolAgesEq.pdf")
