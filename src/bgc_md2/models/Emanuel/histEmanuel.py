@@ -217,6 +217,7 @@ ftt.to_csv("forward_transit_time.csv", index=False)
 # Backward transit times
 tol = 1e-1
 btt_density = smr.backward_transit_time_density(pool_age_densities)
+btt_dens = pd.DataFrame(btt_density, columns=times)
 btt_mean = smr.backward_transit_time_moment(1, start_age_moments)
 F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value(F0=F0)
 btt_median = smr.distribution_quantiles(0.5, 
@@ -226,6 +227,8 @@ btt_median = smr.distribution_quantiles(0.5,
                                             method = 'brentq', 
                                             tol = tol)
 
-btt_density.to_csv("backward_transit_time_density.csv", index=False)
-btt_mean.to_csv("backward_transit_time_mean.csv", index=False)
-btt_median.to_csv("backward_transit_time_median.csv", index=False)
+
+btt_dens.to_csv("backward_transit_time_densities.csv", index=False)
+
+btt_mean_and_median=pd.DataFrame({'Year':times, 'meanBTT':btt_mean, 'medianBTT':btt_median})
+btt_mean_and_median.to_csv("backward_transit_time_mean_and_median.csv", index=False)
