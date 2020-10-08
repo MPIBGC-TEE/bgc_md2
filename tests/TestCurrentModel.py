@@ -53,9 +53,13 @@ from testinfrastructure.helpers import pp
 from bgc_md2.resolve.MVarSet import MVarSet
 
 
-class TestLuo(InDirTest):
+class TestCurrentModel(InDirTest):
+#class TestLuo(InDirTest):
     def setUp(self):
-        self.mn = "Luo2012TE"
+        self.mn = "DeAngelis2012TheorEcol"
+#        self.mn = "Comins1993EA"
+#        self.mn = "Running1988EcolModel"
+#        self.mn = "Luo2012TE"
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
@@ -68,7 +72,7 @@ class TestLuo(InDirTest):
                 InputTuple,
 #                # NumericStartValueDict,
 #                # NumericSimulationTimes,
-                 NumericParameterization,
+#                 NumericParameterization,
 #                # QuantityStartValueDict,
 #                # QuantitySimulationTimes,
 #                # QuantityParameterization,

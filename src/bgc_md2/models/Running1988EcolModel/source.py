@@ -25,14 +25,15 @@ sym_dict={
         'eta_w': 'Fixed partitioning ratio of available carbon allocated to wood',
         'gamma_f': 'Foliage turnover rate',
         'gamma_r': 'Roots turnover rate',
-        'gamma_w': 'Wood turnover rate'
+        'gamma_w': 'Wood turnover rate',
+        'u': 'scalar function of photosynthetic inputs'
 }
 for name in sym_dict.keys():
     var(name)
 
 t = TimeSymbol("t") #"days, years for allocation"
 x = StateVariableTuple((C_f, C_r, C_w ))
-u = u 
+u 
 b = (eta_f, eta_w, eta_r)
 Input = InputTuple(u * ImmutableMatrix(b))
 A = CompartmentalMatrix(
@@ -71,13 +72,13 @@ mvs=MVarSet({
         entryAuthor="Verónika Ceballos-Núñez",
         entryAuthorOrcid="0000-0002-0046-1160",
         entryCreationDate="17/7/2015",
-        doi: 10.1016/0304-3800(88)90112-3,
-#        modApproach: process based,
-#        partitioningScheme: fixed,
-#        claimedDynamicPart: "no",
-#        spaceScale: forest, 
-#        #    unit: "1°",
-#        timeResolution: monthly,
+        doi= "10.1016/0304-3800(88)90112-3",
+#        modApproach= process based,
+#        partitioningScheme= fixed,
+#        claimedDynamicPart= "no",
+#        spaceScale= forest, 
+#        #    unit= "1°",
+#        timeResolution= monthly,
 #      - reviewer: Carlos Sierra
 #        orcid: 0000-0003-0009-4169
 #        date: 12/04/2016
