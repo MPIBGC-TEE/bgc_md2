@@ -56,7 +56,9 @@ from bgc_md2.resolve.MVarSet import MVarSet
 class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
-        self.mn = "Wang2010Biogeosciences"
+        self.mn = "King1993TreePhysiol"
+#        self.mn = "Murty2000EcolModell"
+#        self.mn = "Wang2010Biogeosciences"
 #        self.mn = "DeAngelis2012TheorEcol"
 #        self.mn = "Comins1993EA"
 #        self.mn = "Running1988EcolModel"
