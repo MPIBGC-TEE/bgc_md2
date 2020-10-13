@@ -62,12 +62,21 @@ wireframe(t(as.matrix(bttdens)), shade=TRUE, ylim=c(0,50), xlab="Calendar year",
 dev.off()
 
 pdf('Figures/meanBackwardTransitTime.pdf')
-plot(bttmeans$Year, bttmeans$meanBTT, type="l", xlab="Calenday year", ylab="Mean backward transit time (yr)", bty="n")
+plot(bttmeans$Year, bttmeans$meanBTT, type="l", xlab="Calendar year", ylab="Mean backward transit time (yr)", bty="n")
 dev.off()
 
 pdf('Figures/medianBackwardTransitTime.pdf')
 plot(bttmeans$Year, bttmeans$medianBTT, type="l", xlab="Calenday year", ylab="Median backward transit time (yr)", bty="n")
 dev.off()
+
+
+pdf('Figures/meanMedianBTT.pdf')
+par(mar=c(4,4,0,0))
+plot(bttmeans$Year, bttmeans$meanBTT, type="l",ylim=c(0,18),col=2, xlab="Calendar year", ylab="Backward transit time (yr)", bty="n")
+lines(bttmeans$Year, bttmeans$medianBTT,col=4)
+legend("bottomleft", c("Mean transit time", "Median transit time"), lty=1, col=c(2,4), bty="n")
+dev.off()
+
 
 pdf("Figures/poolAgesEq.pdf")
 par(mar=c(4,4,1,0))
