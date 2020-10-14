@@ -12,4 +12,14 @@ outpath = Path(cableDataDir).joinpath(runId, outDir)
 ps = [outpath.joinpath(fn) for fn in fns]
 
 dat0 = xr.open_dataset(ps[0])
-data = xr.open_mfdataset(paths=ps, combine="by_coords")
+
+# data_vars minimal 
+# is critical to avoid 
+# appending a time dimension to variables 
+# that do not have it in a single file DataSet 
+# iveg 
+data = xr.open_mfdataset(
+    paths=ps, 
+    concat_dim='time',
+    data_vars='minimal' 
+)
