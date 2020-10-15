@@ -140,13 +140,28 @@ Flux_from_structural_lit = ds.Clitter.sel(litter_casa_pools=structural_ind)*xk_t
 Flux_from_metabolic_lit = ds.Clitter.sel(litter_casa_pools=metabolic_ind)*xk_t_w_Nl
 
 InternalFluxes= {
-    (leaf,metabolic_lit)       : ds.fromLeaftoL.sel(litter_casa_pools=metabolic_ind) * Flux_from_Leaf, #4
-    (leaf,structural_lit)      : ds.fromLeaftoL.sel(litter_casa_pools=structural_ind)* Flux_from_Leaf, #5
-    (fine_root,metabolic_lit)  : ds.fromRoottoL.sel(litter_casa_pools=metabolic_ind) * Flux_from_Root, #6
-    (fine_root,structural_lit) : ds.fromRoottoL.sel(litter_casa_pools=structural_ind)* Flux_from_Root, #7
-    (wood,cwd)                 : ds.fromWoodtoL.sel(litter_casa_pools=cwd_ind)       * Flux_from_Wood, #8
+    # 4. Leaf to Metoblic litter
+    # fin->fromLeaftoL(:,0,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:)
+    (leaf,metabolic_lit)       : ds.fromLeaftoL.sel(litter_casa_pools=metabolic_ind) * Flux_from_Leaf, 
     #
-    # 9. 
+    # 5. Leaf to Structural litter
+    # fin->fromLeaftoL(:,1,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:)
+    (leaf,structural_lit)      : ds.fromLeaftoL.sel(litter_casa_pools=structural_ind)* Flux_from_Leaf, 
+    #
+    # 6. Root to Metoblic litter
+    # fin->fromRoottoL(0,0,:,:)*fin->Cplant(:,2,:,:)*fin->kplant(:,2,:,:)
+    (fine_root,metabolic_lit)  : ds.fromRoottoL.sel(litter_casa_pools=metabolic_ind) * Flux_from_Root, 
+    #
+    #7. Root to Structural litter
+    # fin->fromRoottoL(0,1,:,:)*fin->Cplant(:,2,:,:)*fin->kplant(:,2,:,:)
+    (fine_root,structural_lit) : ds.fromRoottoL.sel(litter_casa_pools=structural_ind)* Flux_from_Root, 
+    #
+    # 8. Wood to CWD
+    # fin->fromWoodtoL(:,2,:,:)*fin->Cplant(:,1,:,:)*fin->kplant(:,1,:,:)
+    (wood,cwd)                 : ds.fromWoodtoL.sel(litter_casa_pools=cwd_ind)       * Flux_from_Wood, 
+    #
+    # 9. Metabolic litter to Fast soil
+    # fAC->A(6,3,:,:)*fAC->C(3,:,:)*fin->Clitter(:,0,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
     (metabolic_lit,fast_soil)  : A[6,3,:,:] * C[3,:,:] * Flux_from_metabolic_lit,
     #
     # 11. Structural Litter to Fast soil: 
@@ -211,7 +226,3 @@ OutFluxes = {
 #  C@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)
 
 
-dat0.fromLeaftoL.dims
-ds.fromLeaftoL.isel(time=1).shape
-dfac.A[:,:,1,1]
-dfac.A.mean('patch').mean('land')
