@@ -84,7 +84,7 @@ mvs=MVarSet({
         entryAuthor="Verónika Ceballos-Núñez",
         entryAuthorOrcid="0000-0002-0046-1160",
         entryCreationDate="24/3/2016",
-#        doi="",
+        doi="",
 #        further_references=BibInfo(doi=""),
 #        modApproach: process based,
 #        partitioningScheme: fixed,

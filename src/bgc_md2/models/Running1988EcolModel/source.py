@@ -73,17 +73,6 @@ mvs=MVarSet({
         entryAuthorOrcid="0000-0002-0046-1160",
         entryCreationDate="17/7/2015",
         doi= "10.1016/0304-3800(88)90112-3",
-#        modApproach= process based,
-#        partitioningScheme= fixed,
-#        claimedDynamicPart= "no",
-#        spaceScale= forest, 
-#        #    unit= "1°",
-#        timeResolution= monthly,
-#      - reviewer: Carlos Sierra
-#        orcid: 0000-0003-0009-4169
-#        date: 12/04/2016
-#        desc: "Added a set of parameters that were missing from original publication."
-#        type: shallow 
         sym_dict=sym_dict
     ),
     A,  # the overall compartmental matrix

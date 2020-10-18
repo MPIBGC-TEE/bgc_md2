@@ -62,6 +62,7 @@ A = CompartmentalMatrix(
     diag(-mu_leaf, -mu_root, -mu_wood)
 )
 t = TimeSymbol("t") #'day'
+#        timeResolution = daily # or yearly? incongruent turnover units
 
 # Commented out the following lines because original publication only has 3 parameter values
 # In original publication: 
@@ -135,13 +136,6 @@ mvs=MVarSet({
         entryAuthorOrcid="0000-0002-0046-1160",
         entryCreationDate="14/3/2016",
         doi="10.5194/bg-7-2261-2010",
-#        modApproach = process based,
-#        partitioningScheme = fixed,
-#        claimedDynamicPart = "no",
-# Also includes soil pools and litter pools (interphase between vegetation and soil)
-#        spaceScale = global 
-#        unit = "1°"
-#        timeResolution = daily # or yearly? incongruent turnover units
         sym_dict=sym_dict
         
     ),

@@ -112,12 +112,6 @@ mvs=MVarSet({
         entryAuthorOrcid="0000-0002-0046-1160",
         entryCreationDate="15/3/2016",
         doi="10.1007/s12080-011-0135-z",
-#        modApproach=process based,
-#        partitioningScheme=fixed,
-#        claimedDynamicPart="yes",
-#        spaceScale=global, 
-#        #    unit="1°",
-#        timeResolution=monthly,
         sym_dict=sym_dict
     ),
     A,  # the overall compartmental matrix

@@ -107,13 +107,6 @@ mvs = MVarSet({
         entryCreationDate="21/1/2016",
         doi="10.1111/j.1365-2486.2004.00890.x",
         sym_dict=sym_dict
-#        ,modApproach="process based"
-#        ,partitioningScheme="dynamic" #if L and W change with time
-#        ,claimedDynamicPart="yes"
-## Dynamically performs allocation on the basis of the light, water and phenological status pf the canopy.
-#        ,spaceScale="global" 
-#        ,#    unit=""1°"
-#        ,timeResolution="monthly"
     ),
     A,  # the overall compartmental matrix
     Input,  # the overall input

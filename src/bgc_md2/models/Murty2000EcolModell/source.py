@@ -91,14 +91,6 @@ mvs = MVarSet({
         entryAuthorOrcid="0000-0002-0046-1160",
         entryCreationDate="16/3/2016",
         doi="10.1016/S0304-3800(00)00345-8",
-#        ,modApproach="process based"
-#        ,# Age-dependent
-#        ,partitioningScheme="fixed"
-#        ,#partitioningScheme="semi_dynamic"
-#        ,claimedDynamicPart="no"
-#        ,spaceScale="global"
-#        ,#    unit= "1°"
-#        ,timeResolution="yearly"
     ),
     A,  # the overall compartmental matrix
     Input,  # the overall input

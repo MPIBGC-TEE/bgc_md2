@@ -60,11 +60,6 @@ mvs = MVarSet({
         entryCreationDate="",
         doi="10.1016/j.ecocom.2010.04.002",
         sym_dict=sym_dict
-#        ,modApproach="process based"
-#        ,partitioningScheme="dynamic"
-#        ,claimedDynamicPart="yes"
-#        ,spaceScale="forest"
-#        ,timeResolution="daily"
     ),
     A,  # the overall compartmental matrix
     Input,  # the overall input

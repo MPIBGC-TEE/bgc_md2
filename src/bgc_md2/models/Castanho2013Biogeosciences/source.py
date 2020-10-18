@@ -60,19 +60,6 @@ mvs = MVarSet({
         doi="10.5194/bg-10-2255-2013",
         #further_references=BibInfo(doi="10.5194/bg-10-2255-2013"),
         sym_dict=sym_dict
-        #,modApproach: process based
-        #,partitioningScheme: dynamic #fixed
-        #,claimedDynamicPart: "no"
-        #,spaceScale: Amazon region 
-        #,#    unit: "1°*1°"
-        #,timeResolution: monthly 
-        #,reviews:" 
-        #      - reviewer: Carlos Sierra
-        #        orcid: 0000-0003-0009-4169
-        #        date: 12/04/2016
-        #        desc: "Changed the allocation coefficients for functions that depend on percentage sand. Checked equations against the original paper"
-        #        type: deep"
-        ## Model uses an integrated framework based on land suface biophysics (canopy and soil physics, plant physiology), vegetation phenology, vegetation dynamics and competition, terrestrial carbon and nutrient cycling
     ),
     A,  # the overall compartmental matrix
     Input,  # the overall input

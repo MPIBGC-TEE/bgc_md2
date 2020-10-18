@@ -44,7 +44,7 @@ Input = InputTuple(u*ImmutableMatrix(b))
 A = CompartmentalMatrix(
     diag(-gamma_f, -gamma_r, 0)
 )
-t = TimeSymbol("t")
+t = TimeSymbol("t") # units: days, years for allocation
 
 #Parameter set:  "Chosen based on the performance of Pinus radiata at Puruki, New Zeland":
 ## eta_ are not mentioned in the paper... probably the different values they gave to them were part of the hypothesis
@@ -68,14 +68,6 @@ mvs=MVarSet({
         entryCreationDate="29/7/2015",
         doi="10.1093/treephys/12.2.119",
         sym_dict=sym_dict
-#        ,modApproach= "process based"
-#        ,partitioningScheme= "fixed"
-#        ,claimedDynamicPart= "yes"
-#        ,spaceScale= "forest" 
-#        ,#    unit= "1°"
-#        ,timeResolution= "monthly"
-#t = # units: days, years for allocation
-# Characteristics: even-aged conifer stands with adequate water, but suboptimal nitrogen.
     ),
     #
     # the following variables constitute the compartmental system:
