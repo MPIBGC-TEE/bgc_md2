@@ -5,10 +5,10 @@ fAC=addfile("outAC.nc","r")                      ;parameter file
 fin->NPP*fin->fracCalloc(:,0,:,:) ; I(:,0) = fin->NPP*fin->fracCalloc(:,0); B(:,0,0) = fin->kplant(:,0)
 
 2. Input to root
-fin->NPP*fin->fracCalloc(:,2,:,:)
+fin->NPP*fin->fracCalloc(:,2,:,:) ; I(:,1) = fin->NPP*fin->fracCalloc(:,2); B(:,1,1) = fin->kplant(:,2)
 
 3. Input to wood
-fin->NPP*fin->fracCalloc(:,1,:,:)
+fin->NPP*fin->fracCalloc(:,1,:,:) ; I(:,2) = fin->NPP*fin->fracCalloc(:,1); B(:,2,2) = fin->,plant(:,1)
 
 4. Leaf to Metoblic litter
 fin->fromLeaftoL(:,0,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:) ;
