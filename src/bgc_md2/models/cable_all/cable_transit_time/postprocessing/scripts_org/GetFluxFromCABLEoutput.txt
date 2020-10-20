@@ -2,21 +2,21 @@ fin=addfile("out_ncar_????_ndep.nc","r")  ;daily output from cable
 fAC=addfile("outAC.nc","r")                      ;parameter file
 
 1. Input to leaf:
-fin->NPP*fin->fracCalloc(:,0,:,:) ; I(:,0) = fin->NPP*fin->fracCalloc(:,0); B(:,0,0) = fin->kplant(:,0)
+fin->NPP*fin->fracCalloc(:,0,:,:) ; I(:,0) = fin->NPP*fin->fracCalloc(:,0); 
 
 2. Input to root
-fin->NPP*fin->fracCalloc(:,2,:,:) ; I(:,1) = fin->NPP*fin->fracCalloc(:,2); B(:,1,1) = fin->kplant(:,2)
+fin->NPP*fin->fracCalloc(:,2,:,:) ; I(:,1) = fin->NPP*fin->fracCalloc(:,2); 
 
 3. Input to wood
-fin->NPP*fin->fracCalloc(:,1,:,:) ; I(:,2) = fin->NPP*fin->fracCalloc(:,1); B(:,2,2) = fin->,plant(:,1)
+fin->NPP*fin->fracCalloc(:,1,:,:) ; I(:,2) = fin->NPP*fin->fracCalloc(:,1); 
 
-4. Leaf to Metoblic litter
-fin->fromLeaftoL(:,0,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:) ;
+7. Leaf to Metoblic litter
+fin->fromLeaftoL(:,0,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:); 
 
-5. Leaf to Structural litter
-fin->fromLeaftoL(:,1,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:)
+8. Leaf to Structural litter
+fin->fromLeaftoL(:,1,:,:)*fin->Cplant(:,0,:,:)*fin->kplant(:,0,:,:) 
 
-6. Root to Metoblic litter
+9. Root to Metoblic litter
 fin->fromRoottoL(0,0,:,:)*fin->Cplant(:,2,:,:)*fin->kplant(:,2,:,:)
 
 7. Root to Structural litter
@@ -63,3 +63,67 @@ fAC->A(8,7,:,:)*fAC->C(7,:,:)*fin->Csoil(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwate
 
 21. slow soil to atmosphere
 (1-fAC->A(8,7,:,:))*fAC->C(7,:,:)*fin->Csoil(:,1,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+B matrix:
+a. Leaf turnover
+B(:,0,0,:,:) = - fin->kplant(:,0,:,:)
+
+b. Root turnover
+B(:,1,1,:,:) = - fin->kplant(:,2,:,:)
+
+c. Wood turnover
+B(:,2,2,:,:) = - fin->kplant(:,1,:,:)
+
+d. Leaf to Metoblic litter
+B(:,3,0,:,:) = fin->fromLeaftoL(:,0,:,:)*fin->kplant(:,0,:,:)
+
+e. Root to Metoblic litter
+B(:,3,1,:,:) = fin->fromRoottoL(0,0,:,:)*fin->kplant(:,2,:,:)
+
+f. Metabolic turnover
+B(:,3,3,:,:) = - fAC->C(3,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:) 
+
+g. Leaf to Structural litter
+B(:,4,0,:,:) = fin->fromLeaftoL(:,1,:,:)*fin->kplant(:,0,:,:)
+
+h. Root to Structural litter
+B(:,4,1,:,:) = fin->fromRoottoL(0,1,:,:)*fin->kplant(:,2,:,:)
+
+i. Structural turnover
+B(:,4,4,:,:) = - fAC->C(4,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+j. Wood to CWD
+B(:,5,2,:,:) = fin->fromWoodtoL(:,2,:,:)*fin->kplant(:,1,:,:)
+
+k. CWD turnover
+B(:,5,5,:,:) = - fAC->C(5,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+l. Metabolic litter to Fast soil
+B(:,6,3,:,:) = fAC->A(6,3,:,:)*fAC->C(3,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+m. Structural litter to Fast soil
+B(:,6,4,:,:) = fAC->A(6,4,:,:)*fAC->C(4,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+n. CWD to Fast soil
+B(:,6,5,:,:) = fAC->A(6,5,:,:)*fAC->C(5,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+o. Fast soil turnover
+B(:,6,6,:,:) = - fAC->C(6,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+p. Structural litter to Slow soil
+B(:,7,4,:,:) = fAC->A(7,4,:,:)*fAC->C(4,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+q. CWD to Slow soil
+B(:,7,5,:,:) = fAC->A(7,5,:,:)*fAC->C(5,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)*fin->xkNlimiting(:,:,:)
+
+r. Fast soil to Slow soil
+B(:,7,6,:,:) = fAC->A(7,6,:,:)*fAC->C(6,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+s. Slow soil turnover
+B(:,7,7,:,:) = - fAC->C(7,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+t. Slow soil to Passive soil
+B(:,8,7,:,:) = fAC->A(8,7,:,:)*fAC->C(7,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
+
+u. Passive soil turnover
+B(:,8,8,:,:) = - fAC->C(8,:,:)*fin->xktemp(:,:,:)*fin->xkwater(:,:,:)
