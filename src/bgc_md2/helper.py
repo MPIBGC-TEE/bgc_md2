@@ -22,7 +22,14 @@ from .resolve.graph_helpers import (
 )
 
 
-# fixme mm:
+def batchSlices(nland, nproc):
+    return [
+        slice(i*nproc,min((i+1)*nproc,nland)) 
+        for i in range(int(nland/nproc)+1)
+    ]
+
+    # fixme mm:
+
 # As an intermediate solution I created the following subclass to account for model specific stuff.
 # I abandoned this because it complicated the user interface. (The MVarsSets are now explicitly created in the 
 # source.py files and ONE MVarSet class is enough to worry the user about...
@@ -307,3 +314,4 @@ class MvarSetInspectionBox(widgets.VBox):
 
         self.nb_link_box = widgets.VBox()
         self.children += (self.nb_link_box,)
+
