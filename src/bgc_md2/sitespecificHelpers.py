@@ -39,7 +39,7 @@ def get_client():
     except IOError:
         my_cluster = getCluster()
         client = Client(my_cluster)#same as Client(addr)
-
+    print(client)
     return client
 
 
@@ -50,6 +50,9 @@ def getCluster():
         #,
         #n_workers=24,
         #threads_per_worker=4 
+        #,
+        #n_workers=96,
+        #threads_per_worker=1 
     )
     return my_cluster
 

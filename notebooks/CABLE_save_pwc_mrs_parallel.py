@@ -38,7 +38,6 @@ port_dict = {
     'cs':(8691,8791)        # change at will
 }
 my_user_name = getuser()
-print(my_user_name)
 addr = 'localhost:'+str(port_dict[my_user_name][0])
 try:
     Client(addr) 
@@ -51,6 +50,7 @@ except IOError:
         dashboard_address='localhost:'+str(port_dict[my_user_name][1])
     )
     Client(my_cluster)#same as Client(addr)
+print(my_user_name)
 
 
 
@@ -76,6 +76,7 @@ stateVariableTuple=(leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_so
 npool=len(stateVariableTuple)
 npatch=ds.dims['patch']
 nland=ds.dims['land']
+ntime=ds.dims['time']
 
 ds.fromLeaftoL.sel(litter_casa_pools=[2],land=100)[0:-1:5000].plot(hue='patch')
 ds.fromLeaftoL.sel(litter_casa_pools=2,land=100).mean('patch')[0:-1:5000]
@@ -220,9 +221,18 @@ OutFluxes = {
 # -
 
 # We now reconstruct the matrix B by factoring out the pool contents from The Flux_from_... terms
-# 
+#
 # The first task is to identify the state variables in the output file
 #  A@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)
 #  C@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)
 
-
+#time dependent B matrix (The first index indexes time):
+B_chunk = (ntime,npool,npool,npatch)
+B_shape = B_chunk+(nland,)
+#B=dask.array.full(B_shape,np.nan,dtype='float64',chunksize=B_chunk)
+B=dask.array.where(
+    ds.iveg==ds.iveg.attrs['_FillValue'],
+    dask.array.full(B_shape,np.nan,chunks=B_chunk+(1,)),
+    dask.array.zeros(B_shape,chunks=B_chunk+(1,)),
+)
+B

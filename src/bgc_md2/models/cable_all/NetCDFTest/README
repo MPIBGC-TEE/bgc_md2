@@ -4,6 +4,17 @@ type: 	nix-shell or:	nix-shell shell.nix
 
 Which is the expression to provide all the libs we need
 
+In the nix-shell that is created you can run the mpi programs that have been built:
+
+mpirun -np 4 python commonSrc/readAndWriteNcdfPythonParrallel.py
+
+mpirun -np 4 NCDFParallelIOExample_original/result/bin/simple_xy_par_wr
+
+or 
+mpirun -np 16 NCDFParallelIOExample_2D/result/bin/NCDFParallelIOExample_2D
+
+
+
 We build the fortran (netcdffortran) and python (nectdf4_python) bindings with
 mpi enabled.  This allows parallel IO which allows us to write to a single file
 from all processors simultaneously which helps us to avoid the very complicated
