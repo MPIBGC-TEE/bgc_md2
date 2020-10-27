@@ -6,8 +6,6 @@ from bgc_md2.resolve.mvars import (
     InputTuple,
     TimeSymbol,
     StateVariableTuple,
-    VegetationCarbonInputScalar,
-    VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
     NumericParameterization,
     NumericStartValueDict,
@@ -83,9 +81,7 @@ lambda_s = Q/(1+P+Q)
 lambda_r = 1/(1+P+Q)
 
 x = StateVariableTuple((W_N, W_C, W_p, W_s, W_r))
-u = (sigma_c*A,sigma_r*W_r,0,0,0)
-b = 1 
-Input = InputTuple(b*ImmutableMatrix(u))
+u = InputTuple((sigma_c*A,sigma_r*W_r,0,0,0))
 A = CompartmentalMatrix(
 [[-((f_cp*lambda_p*W_p)+(f_cs*lambda_s*W_s)+(f_cr*lambda_r*W_r))*((kappa*W_N)/W_g**2), 0, 0, 0, 0],
                               [0, -((f_np*lambda_p*W_p)+(f_ns*lambda_s*W_s)+(f_nr*lambda_r*W_r))*((kappa*W_C)/W_g**2), 0, 0, 0],
@@ -117,12 +113,9 @@ mvs = MVarSet({
         sym_dict=sym_dict
     ),
     A,  # the overall compartmental matrix
-    Input,  # the overall input
+    u,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the complete system
-    VegetationCarbonInputScalar(b),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(u),
     VegetationCarbonStateVariableTuple((W_N, W_C, W_p, W_s, W_r)),
     np1,
     nsv1,

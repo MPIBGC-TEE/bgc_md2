@@ -57,28 +57,18 @@ class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
 #        self.mn = ""
-#        self.mn = "Thomas2014GeosciModelDev"
-#        self.mn = "ElMasri2013AgricForMeteorol"
-#        self.mn = "Pavlick2013Biogeosciences"
-#        self.mn = "Foley1996GBC"
-#        self.mn = "Gu2010EcologicalComplexity"
-#        self.mn = "Arora2005GCB-1"
-#        self.mn = "King1993TreePhysiol"
-#        self.mn = "Murty2000EcolModell"
-#        self.mn = "Wang2010Biogeosciences"
-#        self.mn = "DeAngelis2012TheorEcol"
-#        self.mn = "Comins1993EA"
-#        self.mn = "Running1988EcolModel"
-#        self.mn = "Luo2012TE"
+        self.mn = "Emanuel1981"
+#        self.mn = "Rasmussen2016JMB"
+#        self.mn = "Hilbert1991AnnBot"
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
                 CompartmentalMatrix,
                 TimeSymbol,
                 StateVariableTuple,
-                VegetationCarbonInputPartitioningTuple,
-                VegetationCarbonInputScalar,
-                VegetationCarbonStateVariableTuple,
+#                VegetationCarbonInputPartitioningTuple,
+#                VegetationCarbonInputScalar,
+#                VegetationCarbonStateVariableTuple,
                 InputTuple,
 #                # NumericStartValueDict,
 #                # NumericSimulationTimes,
@@ -96,7 +86,7 @@ class TestCurrentModel(InDirTest):
 #        mvs = self.mvs 
 #        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
 
-    @unittest.skip
+#    @unittest.skip
     def test_computable_mvars(self):
         spsg=sparse_powerset_graph(bgc_md2_computers())
         f = plt.figure()
