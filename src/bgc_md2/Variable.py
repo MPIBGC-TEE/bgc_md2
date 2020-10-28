@@ -56,7 +56,8 @@ class Variable(object):
         if isinstance(self.data.mask, np.bool_):
             self.data.mask = np.ones_like(self.data.data) * self.data.mask
 
-    def __str__(self):
+#    def __str__(self):
+    def __repr__(self):
         s = str(type(self)) + "\n"
         s += "-" * len(str(type(self))) + "\n"
         s += "name: {}\n".format(self.name)
@@ -120,6 +121,14 @@ class Variable(object):
         else:
             return self.__add__(other)
 
+    def __sub__(self, other):
+        assert self.unit == other.unit
+
+        data_res = self.data - other.data
+        unit_res = self.unit
+
+        return self.__class__(data=data_res, unit=unit_res)
+
     def absolute_error(self, v_right):
         assert self.data.shape == v_right.data.shape
         abs_err = self.__class__(
@@ -139,6 +148,32 @@ class Variable(object):
         )
 
         return rel_err
+
+    # fixme: test
+    def max(self):
+        return self.__class__(
+            name=self.name + " (max)",
+            data=np.max(self.data),
+            unit=self.unit
+        )
+
+    # fixme: test
+    def argmax(self):
+        res =  self.__class__(
+            name=self.name + " (argmax)",
+            data=np.unravel_index(np.argmax(self.data), self.data.shape),
+            unit=self.unit
+        )
+        print(res)
+        return res
+
+    #fixme: test
+    def sum(self, axis=None):
+        return self.__class__(
+            name=self.name + " (sum, axis=" + str(axis) + ")",
+            data=self.data.sum(axis=axis),
+            unit=self.unit
+        )
 
 
 class StockVariable(Variable):

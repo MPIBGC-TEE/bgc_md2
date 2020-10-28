@@ -23,6 +23,56 @@ from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
 from bgc_md2.models.CARDAMOM.compute_start_values_14C import compute_start_values_14C
 
 
+def load_model_structure_greg():
+    # labile, leaf, root, wood, litter, and soil
+
+    pool_structure = [
+        {"pool_name": "Labile", "stock_var": "c_labile"},
+        {"pool_name": "Leaf", "stock_var": "c_foliar"},
+        {"pool_name": "Root", "stock_var": "c_root"},
+        {"pool_name": "Wood", "stock_var": "c_wood"},
+        {"pool_name": "Litter", "stock_var": "c_finelitter"},
+        {"pool_name": "Soil", "stock_var": "c_som"},
+    ]
+
+    external_input_structure = {
+        "Labile": ["gpp_to_labile"],
+        "Leaf": ["gpp_to_leaf"],
+        "Root": ["gpp_to_root"],
+        "Wood": ["gpp_to_wood"],
+    }
+
+    horizontal_structure = {
+        ("Labile", "Leaf"): ["labile_to_foliar"],
+        ("Labile", "Litter"): ["fire_labile_to_litter"],
+        ("Leaf", "Litter"): ["leaf_to_litter", "fire_foliar_to_litter"],
+        ("Wood", "Soil"): ["wood_to_soilc", "fire_wood_to_som"],
+        ("Root", "Litter"): ["root_to_litter", "fire_root_to_litter"],
+        ("Litter", "Soil"): ["litter_to_som", "fire_litter_to_som"],
+    }
+
+    vertical_structure = {}
+
+    external_output_structure = {
+        "Labile": ["fire_em_labile"],
+        "Leaf": ["fire_em_foliar"],
+        "Root": ["fire_em_root"],
+        "Wood": ["fire_em_wood"],
+        "Litter": ["hetresp_litter", "fire_em_litter"],
+        "Soil": ["hetresp_som", "fire_em_som"]
+    }
+
+    model_structure = ModelStructure(
+        pool_structure=pool_structure,
+        external_input_structure=external_input_structure,
+        horizontal_structure=horizontal_structure,
+        vertical_structure=vertical_structure,
+        external_output_structure=external_output_structure,
+    )
+
+    return model_structure
+
+
 def load_model_structure():
     # labile, leaf, root, wood, litter, and soil
 
@@ -73,10 +123,39 @@ def load_mdo(ds):
 
     ms = load_model_structure()
 
-    #    ## bring fluxes from gC/m2/day to gC/m2/month
+    # bring fluxes from gC/m2/day to gC/m2/month
 
     ## all months are supposed to comprise 365.25/12 days
     days_per_month = 365.25 / 12.0
+
+    time = Variable(
+        name="time",
+        data=np.arange(len(ds.time)) * days_per_month,
+        unit="d"
+    )
+
+    mdo = ModelDataObject(
+        model_structure=ms,
+        dataset=ds, 
+        stock_unit="gC/m2", 
+        time=time
+    )
+
+    return mdo
+
+
+def load_mdo_greg(ds):
+    #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
+
+    ms = load_model_structure_greg()
+
+    # bring fluxes from gC/m2/day to gC/m2/month
+
+    ## all months are supposed to comprise 365.25/12 days
+#    days_per_month = 365.25 / 12.0
+
+    # data_test.py says tht for labile 31.0 is constantly right
+    days_per_month = 31.0
 
     time = Variable(
         name="time",
@@ -660,14 +739,65 @@ if __name__ == "__main__":
 #    #    ds_Delta_14C_pwc_mr_fd.close()
 #    #ds.close()
 
-    dataset = xr.open_dataset("~/Desktop/CARDAMOM/cardamom_for_holger_10_ensembles.nc")
-    ds = dataset.isel(ens=0, lat=0, lon=0)
-    mdo = load_mdo(ds)
-
-    print(mdo.check_data_consistency())
+#    dataset = xr.open_dataset("~/Desktop/CARDAMOM/cardamom_for_holger_10_ensembles.nc")
+#    ds = dataset.isel(ens=0, lat=0, lon=0)
+#    mdo = load_mdo(ds)
+#
+#    print(mdo.check_data_consistency())
 #    pwc_mr_fd = mdo.create_model_run()
-    
+   
+    ## GREG ##
+ 
+#    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_20/with_units/*.nc")
+##    ds_single_site_and_prob = ds.isel(lat=30, lon=50, prob=0, time=slice(0,144))
+#    ds_single_site_and_prob = ds.isel(lat=30, lon=50, prob=0)
+#    mdo = load_mdo_greg(ds_single_site_and_prob)
+#    consistency = mdo.check_data_consistency()
+#    print('Data consistency:\n', consistency, '\n')
+#
+#    mr, err_dict = mdo.create_model_run(
+#        errors=True,
+##        integration_method='trapezoidal',
+##        nr_nodes=11
+#    )
+#    for typ, err_dict_typ in err_dict.items():
+#        print(
+#            typ,
+#            err_dict_typ['abs_err'].data.max(),
+#            err_dict_typ['rel_err'].data.max()
+#        )
+#
+#    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/*.nc")
+#    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/cru004GCR006_1920_2015_nbe2002_2042.nc")
+    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_23/cru004GCR006_1920_2015_nbe2002_2042.nc")
 
+
+#    for ps in range(33, 1000):
+#    for ps in range(1):
+#        print('------ parameterset_nr =', ps, '------')
+#        ds_single_site_and_prob = ds.isel(
+#            parameterset=ps,
+#            time=slice(972, 1044)
+#        )
+    ds_single_site_and_prob = ds.isel(parameterset=100)
+    mdo = load_mdo_greg(ds_single_site_and_prob)
+    consistency = mdo.check_data_consistency()
+    print('Data consistency:\n', consistency, '\n')
+#
+#        mr, err_dict = mdo.create_model_run(
+#            errors=True,
+##            integration_method='trapezoidal',
+##            nr_nodes=11
+#        )
+#        for typ, err_dict_typ in err_dict.items():
+#            print(
+#                typ,
+#                err_dict_typ['abs_err'].data.max(),
+#                err_dict_typ['rel_err'].data.max()
+#            )
+#
+##        print(err_dict)
+#        print('---------------------------\n')
 
 
 

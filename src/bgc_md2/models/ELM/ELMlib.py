@@ -42,11 +42,230 @@ def load_parameter_set(**keywords):
     parameter_set["dz_var_name"] = dz_var_name
     parameter_set["dz_var_names"] = {dz_var_name: dz}
 
+    parameter_set['integration_method'] = keywords.get(
+        'integration_method', 'solve_ivp'
+    )
+    parameter_set['nr_nodes'] = keywords.get('nr_nodes', None)
+
     #    dataset = Dataset(parameter_set['ds_filename'], 'r')
     #    parameter_set['dataset']   = dataset
     #    parameter_set['calendar_src']  = dataset['time'].calendar
 
     return parameter_set
+
+
+def load_model_structure_with_vegetation(nr_layers, dz_var_name):
+    # list of all pools
+    pool_structure = [
+        # vegetation component
+        {
+            "pool_name": "Leaves", # arbitrary name
+            "stock_var": "LEAFC_TOT", # associated netcdf variable
+            "nr_layers": 1
+        },
+        {
+            "pool_name": "Live stem",
+            "stock_var": "LIVESTEMC_TOT",
+            "nr_layers": 1
+        },
+        {
+            "pool_name": "Dead stem",
+            "stock_var": "DEADSTEMC_TOT",
+            "nr_layers": 1
+        },
+        {
+            "pool_name": "Fine roots",
+            "stock_var": "FROOTC_TOT",
+            "nr_layers": 1
+        },
+        {
+            "pool_name": "Live coarse roots",
+            "stock_var": "LIVECROOTC_TOT",
+            "nr_layers": 1
+        },
+        {
+            "pool_name": "Dead coarse roots",
+            "stock_var": "DEADCROOTC_TOT",
+            "nr_layers": 1
+        },      
+
+        # soil component
+        {
+            "pool_name": "CWD",
+            "stock_var": "CWDC_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name # variable for layer thicknesses, DZSOI
+        },
+        {
+            "pool_name": "Litter metabolic",
+            "stock_var": "LITR1C_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name
+        },
+        {
+            "pool_name": "Litter cellulose",
+            "stock_var": "LITR2C_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name
+        },
+        {
+            "pool_name": "Litter lignin",
+            "stock_var": "LITR3C_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name
+        },
+        {
+            "pool_name": "Soil 1",
+            "stock_var": "SOIL1C_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name
+        },
+        {
+            "pool_name": "Soil 2",
+            "stock_var": "SOIL2C_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name
+        },
+        {
+            "pool_name": "Soil 3",
+            "stock_var": "SOIL3C_vr",
+            "nr_layers": nr_layers,
+            "dz_var": dz_var_name
+        },
+    ]
+
+    # fluxes from outside the model into vegetation
+    # are there any direct fluxes from outside to soil component
+    # that I missed?
+    external_input_structure = {
+        # pool_name: list of associated flux variables
+        "Leaves": ["PSN_TO_LEAFC_TOT"],
+        "Live stem": ["PSN_TO_LIVESTEMC_TOT"],
+        "Dead stem": ["PSN_TO_DEADSTEMC_TOT"],
+        "Fine roots": ["PSN_TO_FROOTC_TOT"],
+        "Live coarse roots": ["PSN_TO_LIVECROOTC_TOT"],
+        "Dead coarse roots": ["PSN_TO_DEADCROOTC_TOT"]
+    }
+
+    # internal horizontal fluxes
+    horizontal_structure = {
+        # (pool_from, pool_to): list of associated flux variables
+
+        # vegetation component
+        ("Live stem", "Dead stem"): ["LIVESTEMC_TO_DEADSTEMC"],
+        ("Live coarse roots", "Dead coarse roots"): ["LIVECROOTC_TO_DEADCROOTC"],
+
+        # vegetation component to soil component
+        ("Leaves", "Litter metabolic"): ["LEAFC_TO_LITTER_MET_vr"],
+        ("Leaves", "Litter cellulose"): ["LEAFC_TO_LITTER_CEL_vr"],
+        ("Leaves", "Litter lignin"): ["LEAFC_TO_LITTER_LIG_vr"],
+
+        ("Live stem", "Litter metabolic"): ["LIVESTEMC_TO_LITTER_MET_vr"],
+        ("Live stem", "CWD"): ["LIVESTEMC_TO_CWDC_vr"],
+
+        ("Dead stem", "Litter metabolic"): ["DEADSTEMC_TO_LITTER_MET_vr"],
+        ("Dead stem", "CWD"): ["DEADSTEMC_TO_CWDC_vr"],
+
+        ("Fine roots", "Litter metabolic"): ["FROOTC_TO_LITTER_MET_vr"],
+        ("Fine roots", "Litter cellulose"): ["FROOTC_TO_LITTER_CEL_vr"],
+        ("Fine roots", "Litter lignin"): ["FROOTC_TO_LITTER_LIG_vr"],
+
+        ("Live coarse roots", "Litter metabolic"): ["LIVECROOTC_TO_LITTER_MET_vr"],
+        ("Live coarse roots", "CWD"): ["LIVECROOTC_TO_CWDC_vr"],
+
+        ("Dead coarse roots", "Litter metabolic"): ["DEADCROOTC_TO_LITTER_MET_vr"],
+        ("Dead coarse roots", "CWD"): ["DEADCROOTC_TO_CWDC_vr"],
+
+        # soil component
+        ("CWD", "Litter cellulose"): ["CWDC_TO_LITR2C_vr"],
+        ("CWD", "Litter lignin"): ["CWDC_TO_LITR3C_vr"],
+        ("Litter metabolic", "Soil 1"): ["LITR1C_TO_SOIL1C_vr"],
+        ("Litter cellulose", "Soil 1"): ["LITR2C_TO_SOIL1C_vr"],
+        ("Litter lignin", "Soil 2"): ["LITR3C_TO_SOIL2C_vr"],
+        ("Soil 1", "Soil 2"): ["SOIL1C_TO_SOIL2C_vr"],
+        ("Soil 1", "Soil 3"): ["SOIL1C_TO_SOIL3C_vr"],
+        ("Soil 2", "Soil 1"): ["SOIL2C_TO_SOIL1C_vr"],
+        ("Soil 2", "Soil 3"): ["SOIL2C_TO_SOIL3C_vr"],
+        ("Soil 3", "Soil 1"): ["SOIL3C_TO_SOIL1C_vr"],
+    }
+
+    # internal vertical fluxes, soil only
+    vertical_structure = {
+        "CWD": {
+            "to_below": ["CWD_diffus_down"],
+            "from_below": ["CWD_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+        "Litter metabolic": { 
+            "to_below": ["LITR1_diffus_down"],
+            "from_below": ["LITR1_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+        "Litter cellulose": { 
+            "to_below": ["LITR2_diffus_down"],
+            "from_below": ["LITR2_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+        "Litter lignin": {
+            "to_below": ["LITR3_diffus_down"],
+            "from_below": ["LITR3_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+        "Soil 1": {
+            "to_below": ["SOIL1_diffus_down"],
+            "from_below": ["SOIL1_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+        "Soil 2": {
+            "to_below": ["SOIL2_diffus_down"],
+            "from_below": ["SOIL2_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+        "Soil 3": {
+            "to_below": ["SOIL3_diffus_down"],
+            "from_below": ["SOIL3_diffus_up"],
+            "to_above": [],
+            "from_above": [],
+        },
+    }
+
+    # fluxes leaving the model
+    external_output_structure = {
+        # pool_name: list of fluxes leaving the model
+
+        # vegetation component
+        "Leaves": ["LEAF_MR", "LEAF_GR"],
+        "Live stem": ["LIVESTEM_MR", "LIVESTEM_GR"],
+        "Dead stem": ["DEADSTEM_GR"],
+        "Fine roots": ["FROOT_MR", "FROOT_GR"],
+        "Live coarse roots": ["LIVECROOT_MR", "LIVECROOT_GR"],
+        "Dead coarse roots": ["DEADCROOT_GR"],
+
+        # soil component
+        "CWD": ["CWD_HR_L2_vr", "CWD_HR_L3_vr", "M_CWDC_TO_FIRE_vr"],
+        "Litter metabolic": ["LITR1_HR_vr", "M_LITR1C_TO_FIRE_vr"],
+        "Litter cellulose": ["LITR2_HR_vr", "M_LITR2C_TO_FIRE_vr"],
+        "Litter lignin": ["LITR3_HR_vr", "M_LITR3C_TO_FIRE_vr"],
+        "Soil 1": ["SOIL1_HR_S2_vr", "SOIL1_HR_S3_vr"],
+        "Soil 2": ["SOIL2_HR_S1_vr", "SOIL2_HR_S3_vr"],
+        "Soil 3": ["SOIL3_HR_vr"],
+    }
+
+    model_structure = ModelStructure(
+        pool_structure=pool_structure,
+        external_input_structure=external_input_structure,
+        horizontal_structure=horizontal_structure,
+        vertical_structure=vertical_structure,
+        external_output_structure=external_output_structure,
+    )
+
+    return model_structure
 
 
 def load_model_structure(nr_layers, dz_var_name):
@@ -200,6 +419,33 @@ def load_model_structure(nr_layers, dz_var_name):
     return model_structure
 
 
+def load_mdo_with_vegetation(ds, parameter_set):
+    nstep = parameter_set.get("nstep", 1)
+    stock_unit = parameter_set["stock_unit"]
+    nr_layers = parameter_set["nr_layers"]
+    dz_var_name = parameter_set["dz_var_name"]
+    dz_var_names = parameter_set["dz_var_names"]
+
+    ms = load_model_structure_with_vegetation(nr_layers, dz_var_name)
+
+    time = Variable(
+        name="time",
+        data=np.arange(len(ds.time)),
+        unit="d"
+    )
+
+    mdo = ModelDataObject(
+        model_structure=ms,
+        dataset=ds,
+        nstep=nstep,
+        stock_unit=stock_unit,
+        time=time,
+        dz_var_names=dz_var_names,
+    )
+
+    return mdo
+
+
 def load_mdo(ds, parameter_set):
     nstep = parameter_set.get("nstep", 1)
     stock_unit = parameter_set["stock_unit"]
@@ -231,17 +477,34 @@ def compute_ds_pwc_mr_fd(ds, parameter_set):
 #    if ds.ens.values.shape == (0,):
 
     mdo = load_mdo(ds, parameter_set)
+    print(mdo.time_agg)
     ms = mdo.model_structure
     nr_pools = ms.nr_pools
 
     error = ''
     try:
         #pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
-        pwc_mr_fd = mdo.create_model_run()
+        pwc_mr_fd, err_dict = mdo.create_model_run(
+            parameter_set['integration_method'],
+            parameter_set['nr_nodes'],
+            errors=True
+        )
+        
+        print('ELMlib 251')
+        for var_name, err_dict in err_dict.items():
+            for err_type, val in err_dict.items():
+                print('var_name', var_name)
+                print('np.max(val.data)', np.max(val.data))
+                print()
+
     except PWCModelRunFDError as e:
         error = str(e)
 
-    coords_time = ds.time
+    print('A')
+
+#    coords_time = ds.time # wrong length
+    coords_time = mdo.time_agg.data
+    print('ELMlib 264', coords_time)
     coords_pool = np.arange(nr_pools)
 
     data_vars = dict()
@@ -255,7 +518,9 @@ def compute_ds_pwc_mr_fd(ds, parameter_set):
         attrs={'units': mdo.stock_unit}
     )
 
-    data = np.nan * np.ones((len(ds.time),))
+
+#    data = np.nan * np.ones((len(ds.time),)) # wrong length
+    data = np.nan * np.ones((len(pwc_mr_fd.times),))
     if not error:
         data = pwc_mr_fd.times
     data_vars['times'] = xr.DataArray(
@@ -265,7 +530,7 @@ def compute_ds_pwc_mr_fd(ds, parameter_set):
         attrs={'units': mdo.time_agg.unit}
     )
 
-    data = np.nan * np.ones((len(ds.time), nr_pools))
+    data = np.nan * np.ones((len(pwc_mr_fd.times), nr_pools))
     if not error:
         data[:-1, ...] = pwc_mr_fd.us
     data_vars['us'] = xr.DataArray(
@@ -275,7 +540,7 @@ def compute_ds_pwc_mr_fd(ds, parameter_set):
         attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit}
     )
 
-    data = np.nan * np.ones((len(ds.time), nr_pools, nr_pools))
+    data = np.nan * np.ones((len(pwc_mr_fd.times), nr_pools, nr_pools))
     if not error:
         data[:-1, ...] = pwc_mr_fd.Bs
     data_vars['Bs'] = xr.DataArray(
@@ -303,6 +568,8 @@ def compute_ds_pwc_mr_fd(ds, parameter_set):
         data_vars=data_vars,
     )
     ds_res.close()
+
+    print('B')
 
     return ds_res
 
@@ -647,7 +914,6 @@ def load_model_14C_data(parameter_set, location):
 def resample_daily_to_monthly(ds):
     ms = load_model_structure(nr_layers=10, dz_var_name='dz')
 
-
     data_vars = dict()
 
     stock_vars = [d['stock_var'] for d in ms.pool_structure]
@@ -657,8 +923,33 @@ def resample_daily_to_monthly(ds):
             keep_attrs=True
         ).first()
 
+    flux_vars = []
+    for flux_structure in [
+        ms.external_input_structure,
+        ms.horizontal_structure,
+        ms.external_output_structure
+    ]:
+        for flux_list in flux_structure.values():
+            flux_vars += flux_list 
+    
+    for pool_dict in ms.vertical_structure.values():
+        for flux_list in pool_dict.values():
+            flux_vars += flux_list
+ 
+    for flux_var in flux_vars:
+        data_vars[flux_var] = ds[flux_var][1:, ...].resample(
+            time='1M',
+            keep_attrs=True # seems to be ignored
+        ).sum(dim='time')
+        data_vars[flux_var].attrs = ds[flux_var].attrs
+
     time_resampled = ds.coords['time'].resample(time='1M', label='left').first().data
-    print(time_resampled)
+
+    # variables to copy: area, landfrac
+
+    data_vars['area'] = ds['area']
+    data_vars['landfrac'] = ds['landfrac']
+
     coords_resampled = {
         'time': time_resampled,
         'lat': ds.coords['lat'],
@@ -670,7 +961,7 @@ def resample_daily_to_monthly(ds):
         data_vars=data_vars
     )
     ds_resampled.coords['time'] = time_resampled
-    print(type(time_resampled))
+
     return ds_resampled
 
 
@@ -678,21 +969,57 @@ def resample_daily_to_monthly(ds):
 
 
 if __name__ == "__main__":
-    ELMDataDir = "/home/hmetzler/SOIL-R/Manuscripts/Berkeley/2019/Data/"
-    runID = "14C_transient_holger_fire.2x2_small"
-#    runID = "holger.new3sites.tr_2019_grid"
-    fn = runID + ".nc"
+#    ELMDataDir = "/home/hmetzler/SOIL-R/Manuscripts/Berkeley/2019/Data/"
+#    runID = "14C_transient_holger_fire.2x2_small"
+##    runID = "holger.new3sites.tr_2019_grid"
+#    fn = runID + ".nc"
+#
+#    ds = xr.open_dataset(Path(ELMDataDir).joinpath(runID + ".nc"))
+#   
+#    # shorten time just for code testing reasons    
+#    ds = ds.isel(time=slice(300, 40150, 1))
+#    
+#    ds_depth = xr.open_dataset(Path(ELMDataDir).joinpath('DZSOI.nc'))
+#    parameter_set = load_parameter_set(
+#        nstep       = 30,
+#        ds_depth    = ds_depth,
+#        integration_method = 'trapezoidal',
+#        nr_nodes = 11
+#    )
+#    ds_single_site = ds.isel(lat=0, lon=0)
+#
+#    # try to check data consistency using mdo
+#    ds_mr_pwc_fd = compute_ds_pwc_mr_fd(ds_single_site, parameter_set)
+#    print('---- Result -----\n', ds_mr_pwc_fd)
 
-    ds = xr.open_dataset(Path(ELMDataDir).joinpath(runID + ".nc"))
-    print('A')
+    ELMDataDir = "/home/hmetzler/SOIL-R/Manuscripts/Berkeley/2019/Data/"
+    runID = "Holger_veg_soil/"
+    
+    # leads to automatic chunking, one chunk per file
+    # PosixPath object not iterable
+    print('loading global dataset')
+    ds = xr.open_mfdataset(ELMDataDir + runID + "*.nc")
+    print('global dataset loaded')
+
     ds_depth = xr.open_dataset(Path(ELMDataDir).joinpath('DZSOI.nc'))
-    print('B')
     parameter_set = load_parameter_set(
-        nstep       = 365,
-        ds_depth    = ds_depth
+        nstep       = 1,
+        ds_depth    = ds_depth,
+        integration_method = 'trapezoidal',
+        nr_nodes = 11
     )
-    print('C')
-    ds_single_site = ds.isel(lat=0, lon=0)
-    print('D')
-    ds_mr_pwc_fd = compute_ds_pwc_mr_fd(ds_single_site, parameter_set)
+    ds_single_site = ds.isel(lat=30, lon=50)
+
+    # try to check data consistency using mdo
+    print('starting data consistency check')
+    mdo = load_mdo_with_vegetation(ds_single_site, parameter_set)
+    abs_err, rel_err = mdo.check_data_consistency()
+
+    print('\n Consistency check')
+    print(abs_err)
+    print(abs_err.max())
+    print(rel_err)
+    print(rel_err.max())
+
+
 

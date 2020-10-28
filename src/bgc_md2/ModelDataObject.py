@@ -30,14 +30,25 @@ def readVariable(**keywords):
     try:
         if ReturnClass == StockVariable:
             if var.cell_methods != "time: instantaneous":
-                raise (ModelDataObjectException("Stock data is not instantaneous"))
+                pass
+#                raise(
+#                    ModelDataObjectException(
+#                        "Stock data " + variable_name + " is not instantaneous"
+#                    )
+#                )
 
         if ReturnClass == FluxVariable:
             if var.cell_methods != "time: mean":
-                raise (ModelDataObjectException("Flux data is not as a mean"))
+                pass
+#                raise(
+#                    ModelDataObjectException(
+#                        "Flux data " + variable_name + " is not a mean"
+#                    )
+#                )
     except AttributeError:
-        s = "'cell_methods' not specified"
-        raise (ModelDataObjectException(s))
+        pass
+#        s = "'cell_methods' not specified"
+#        raise (ModelDataObjectException(s))
 
     ## read variable depending on dimensions
     ndim = var.ndim
@@ -53,7 +64,6 @@ def readVariable(**keywords):
         raise (ModelDataObjectException("Data structure not understood"))
 
     sdv = ReturnClass(data=data, unit=var.units)
-
     return sdv
 
 
@@ -269,35 +279,63 @@ class ModelDataObject(object):
 
             src_nr_layers = ms.get_nr_layers(src_pool_name)
             tar_nr_layers = ms.get_nr_layers(tar_pool_name)
-            assert src_nr_layers == tar_nr_layers
-            nr_layers = src_nr_layers
+#            assert src_nr_layers == tar_nr_layers
+            if src_nr_layers == tar_nr_layers:
+                nr_layers = src_nr_layers
 
-            src_dz = self.get_dz(src_pool_name)
-            tar_dz = self.get_dz(tar_pool_name)
+                src_dz = self.get_dz(src_pool_name)
+                tar_dz = self.get_dz(tar_pool_name)
 
-            assert src_dz.name == tar_dz.name
-            dz = src_dz
+                assert src_dz.name == tar_dz.name
+                dz = src_dz
 
-            fvs_agg = []
-            for variable_name in variable_names:
-                fv_agg = func(
-                    mdo=self,
-                    variable_name=variable_name,
-                    nr_layers=nr_layers,
-                    dz=dz,
-                    **keywords
-                )
-                fvs_agg.append(fv_agg)
+                fvs_agg = []
+                for variable_name in variable_names:
+                    fv_agg = func(
+                        mdo=self,
+                        variable_name=variable_name,
+                        nr_layers=nr_layers,
+                        dz=dz,
+                        **keywords
+                    )
+                    fvs_agg.append(fv_agg)
 
-            fv_agg = sum(fvs_agg)
+                fv_agg = sum(fvs_agg)
 
-            for ly in range(nr_layers):
-                src_pool_nr = ms.get_pool_nr(src_pool_name, ly)
-                tar_pool_nr = ms.get_pool_nr(tar_pool_name, ly)
-                #                print(src_pool_name, tar_pool_name, ly, src_pool_nr, tar_pool_nr, flush=True)
-                data = fv_agg.data[:, ly, ...]
-                HFs_data[..., tar_pool_nr, src_pool_nr] = data
+                for ly in range(nr_layers):
+                    src_pool_nr = ms.get_pool_nr(src_pool_name, ly)
+                    tar_pool_nr = ms.get_pool_nr(tar_pool_name, ly)
+                    # print(src_pool_name, tar_pool_name, ly, src_pool_nr, tar_pool_nr, flush=True)
+                    data = fv_agg.data[:, ly, ...]
+                    HFs_data[..., tar_pool_nr, src_pool_nr] = data
+            elif src_nr_layers == 1:
+                tar_dz = self.get_dz(tar_pool_name)
 
+                fvs_agg = []
+                for variable_name in variable_names:
+                    fv_agg = func(
+                        mdo=self,
+                        variable_name=variable_name,
+                        nr_layers=tar_nr_layers,
+                        dz=tar_dz,
+                        **keywords
+                    )
+                    fvs_agg.append(fv_agg)
+
+                    fv_agg = sum(fvs_agg)
+
+                src_pool_nr = ms.get_pool_nr(src_pool_name, 0)
+                for ly in range(tar_nr_layers):
+                    tar_pool_nr = ms.get_pool_nr(tar_pool_name, ly)
+                    # print(src_pool_name, tar_pool_name, ly, src_pool_nr, tar_pool_nr, flush=True)
+                    data = fv_agg.data[:, ly, ...]
+                    HFs_data[..., tar_pool_nr, src_pool_nr] = data * 2
+            else:
+                s = "layer structure for flux between" + \
+                    src_pool_name + " and " + tar_pool_name + \
+                    " not understood" 
+                raise(ModelDataException(s))
+                    
         HFs = FluxVariable(
             name="horizontal fluxes", data=HFs_data, unit=self.stock_unit
         )
@@ -448,23 +486,28 @@ class ModelDataObject(object):
         else:
             return dmr
 
-    def check_data_consistency(self, tol=1e-10):
+    def check_data_consistency(self):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
-        diff = xs.data[1:, ...] - (
-            xs.data[:-1, ...]  +
-            Us.data + 
-            Fs.data.sum(axis=2) -
-            Fs.data.sum(axis=1) - 
-            Rs.data
-        )
-        
-        if np.max(np.abs(diff)) <= tol:
-            return True
-        else:
-            return False
 
-    def create_model_run(self, errors=False):
+        xs_data_save = xs.data
+        xs.data = xs.data[:-1, ...]
+        
+        rhs = (xs + Us + Fs.sum(axis=2) - Fs.sum(axis=1) - Rs)
+        rhs.name = 'Data consistency'
+        xs.data = xs_data_save[1:, ...]
+
+        abs_err = rhs.absolute_error(xs).max()
+        rel_err = rhs.relative_error(xs).max()
+
+        return abs_err, rel_err
+
+    def create_model_run(
+        self, 
+        integration_method='solve_ivp',
+        nr_nodes=None,
+        errors=False
+    ):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
         # print(self.time_agg.data)
@@ -492,19 +535,32 @@ class ModelDataObject(object):
                 Fs.data.filled(),
                 Rs.data.filled(),
 #                xs.data.filled()
+                integration_method,
+                nr_nodes
             )
         else:
             pwc_mr_fd = None
+        
 
         if errors:
+#            print('Computing reconstruction errors')
             err_dict = {}
 
+#            print('  solution error')
             soln = pwc_mr_fd.solve()
-            soln_pwc_mr_fd = Variable(data=soln, unit=self.stock_unit)
+            soln_pwc_mr_fd = Variable(
+                name="stocks",
+                data=soln,
+                unit=self.stock_unit
+            )
             abs_err = soln_pwc_mr_fd.absolute_error(xs)
             rel_err = soln_pwc_mr_fd.relative_error(xs)
-            err_dict["stocks"] = {"abs_err": abs_err, "rel_err": rel_err}
+            err_dict["stocks"] = {
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max()
+            }
 
+#            print('  input fluxes error')
             Us_pwc_mr_fd = Variable(
                 name="acc_gross_external_input_vector",
                 data=pwc_mr_fd.acc_gross_external_input_vector(),
@@ -513,10 +569,11 @@ class ModelDataObject(object):
             abs_err = Us_pwc_mr_fd.absolute_error(Us)
             rel_err = Us_pwc_mr_fd.relative_error(Us)
             err_dict["acc_gross_external_inputs"] = {
-                "abs_err": abs_err,
-                "rel_err": rel_err,
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max(),
             }
 
+#            print('  output fluxes error')
             Rs_pwc_mr_fd = Variable(
                 name="acc_gross_external_output_vector",
                 data=pwc_mr_fd.acc_gross_external_output_vector(),
@@ -525,10 +582,11 @@ class ModelDataObject(object):
             abs_err = Rs_pwc_mr_fd.absolute_error(Rs)
             rel_err = Rs_pwc_mr_fd.relative_error(Rs)
             err_dict["acc_gross_external_outputs"] = {
-                "abs_err": abs_err,
-                "rel_err": rel_err,
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max(),
             }
 
+#            print('  internal fluxes error')
             Fs_pwc_mr_fd = Variable(
                 name="acc_gross_internal_flux_matrix",
                 data=pwc_mr_fd.acc_gross_internal_flux_matrix(),
@@ -537,10 +595,13 @@ class ModelDataObject(object):
             abs_err = Fs_pwc_mr_fd.absolute_error(Fs)
             rel_err = Fs_pwc_mr_fd.relative_error(Fs)
             err_dict["acc_gross_internal_fluxes"] = {
-                "abs_err": abs_err,
-                "rel_err": rel_err,
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max(),
             }
+            abs_err.argmax()
+            rel_err.argmax()
 
+#            print('done')
             return pwc_mr_fd, err_dict
         else:
             return pwc_mr_fd
