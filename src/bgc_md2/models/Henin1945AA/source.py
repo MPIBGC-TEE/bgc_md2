@@ -13,11 +13,11 @@ from bgc_md2.helper import MVarSet
 
 sym_dict = {
         'A': 'labile pool' # "MgC*ha^{-1}" 
-        'B': 'stable pool' # "MgC*ha^{-1}" 
-        'alpha': 'annual decomposition rate of labile pool' # "yr^{-1}"
-        'beta': 'annual decomposition rate of stable pool' # "yr^{-1}"
-        'm': 'annual organic matter input' # "MgC yr^{-1}"
-        'K': 'isohumic coefficient'
+        ,'B': 'stable pool' # "MgC*ha^{-1}" 
+        ,'alpha': 'annual decomposition rate of labile pool' # "yr^{-1}"
+        ,'beta': 'annual decomposition rate of stable pool' # "yr^{-1}"
+        ,'m': 'annual organic matter input' # "MgC yr^{-1}"
+        ,'K': 'isohumic coefficient'
 }
 
 for name in sym_dict.keys():
@@ -26,7 +26,8 @@ t = TimeSymbol("t") # unit: "year"
 C = StateVariableTuple((A,B))
 I = InputTuple((m,0))
 A_GeM = CompartmentalMatrix(
-[-alpha, 0, alpha*K, -beta])
+[[-alpha,     0 ],
+ [alpha*K, -beta]])
 
 mvs = MVarSet({
     BibInfo(# Bibliographical Information
