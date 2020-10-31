@@ -28,9 +28,9 @@ sym_dict = {
         ,'x_8': 'Carbon in passive SOM'
         ,'T_k': 'Canopy temperature in Kelvin'
         ,'R': 'Universal gas constant'
-        ,'E_p': 'Activation energy'
+        ,'E_p': 'Activation energy' # It may differ for each parameter
         ,'Arrhenius': 'Arrhenius multiplier'
-        ,'C_a': 'Ambient CO2 concentration'
+        ,'C_a': 'Ambient CO2 concentration' # From external atmospheric CO2 concentration data
         ,'C_i': 'Leaf internal CO2 concentration'
         ,'Gamma': 'CO2 compensation point without dark respiration'
         ,'L': 'Leaf area index'
@@ -41,11 +41,11 @@ sym_dict = {
         ,'J_m': 'Maximum electron transport rate'
         ,'J_e': 'Rate of light electron transport'
         ,'V_m': 'Maximum carboxylation rate'
-        ,'O_x': 'Oxygen concentration in the air'
+        ,'O_x': 'Oxygen concentration in the air' # value: 0.21
         ,'K_o': 'Michaelis-Menten constant for oxygenation'
         ,'K_c': 'Michaelis-Menten constant for carboxylation'
         ,'J_c': 'Rate of carboxilation with CO2 limitation'
-        ,'R_d': 'Dark respiration'
+        ,'R_d': 'Dark respiration' # Find expression in fortran code
         ,'A': 'Gross leaf CO2 assimilation rate'
         ,'D': 'Vapor pressure deficit'
         ,'D_0': 'Empirical coefficient'
@@ -92,7 +92,7 @@ for name in sym_dict.keys():
 R = 8.314
 Arrhenius = exp((E_p * (T_k - 298))/(R * T_k * 298))
 I = I_0 * exp(-k * L)
-J_e = ((alpha_q * I * J_m)/(sqrt((J_m)^2 * (alpha_q)^2 * I^2))) * ((C_i - Gamma)/(4*(C_i + 2 * Gamma)))
+J_e = 1#((alpha_q * I * J_m)/(sqrt((J_m)^2 * (alpha_q)^2 * I^2))) * ((C_i - Gamma)/(4*(C_i + 2 * Gamma))) #Fixme: had to set J_e to 1 because problem with sqrt AttributeError: 'Not' object has no attribute '_eval_power'
 J_c = (V_m * (C_i - Gamma))/(C_i + K_c *( 1 + (O_x/K_o) ))
 A = Min(J_c, J_e) - R_d
 g_l * A /((C_i - Gamma) *(1+(D/D_0)))
