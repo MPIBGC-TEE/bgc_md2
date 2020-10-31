@@ -26,11 +26,8 @@ from sympy import Symbol,var
 import bgc_md2.models.cable_all.cableHelpers as cH
 from bgc_md2.helper import batchSlices
 
-# +
-
 from bgc_md2.sitespecificHelpers import get_client
 client = get_client()
-# -
 
 example_run_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/'
 outDir = "output/new4"
@@ -39,11 +36,7 @@ outpath = Path(example_run_dir).joinpath(outDir)
 #dad = cH.da_dict_from_dataset(ds)
 zarr_dir_path= outpath.joinpath('zarr_vars')
 dad=cH.cable_dask_array_dict(zarr_dir_path)
-
-# +
-
-dad.keys()
-# -
+dad['Cplant']
 
 npool = sum([dad[name].shape[1] for name in ['Cplant','Csoil','Clitter']])
 s=dad['Cplant'].shape
@@ -89,7 +82,7 @@ dad['fromRoottoL']
 
 
 # +
-def set_veg(
+def init_chunk(
     bc,
     #iveg_c,
     kplant_c,
@@ -159,7 +152,7 @@ def set_veg(
     return bn
 
 B_res = B.map_blocks(
-    set_veg,
+    init_chunk,
     dad['kplant'],
     dad['fromLeaftoL'],
     dad['fromRoottoL'],
@@ -171,9 +164,53 @@ B_res = B.map_blocks(
     dad['xkNlimiting'],
     dtype=np.float64
 )
+B_res
 # -
 
-B_res.dtype
+# # test the consistency of B #
+#
+
+# ## construct the state vector ##
+
+dad['Csoil'][:,0,:,:]
+
+dask.array.stack(
+    [
+        dad['Csoil'][:,0,:,:],
+        dad['Csoil'][:,2,:,:]
+    ],1
+)
+
+for s in ('leaf','wood','fine_root','metabolic_lit','structural_lit','cwd','fast_soil','slow_soil','passive_soil'):
+    var(s)
+stateVariableTuple=(leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)
+npool=len(stateVariableTuple)
+var_arr_dict={
+    leaf:dad['Cplant'][:,0,:,:],
+    fine_root:dad['Cplant'][:,2,:,:],
+    wood:dad['Cplant'][:,1,:,:],
+    metabolic_lit : dad['Clitter'][:,0,:,:],
+    structural_lit : dad['Clitter'][:,1,:,:],
+    cwd : dad['Clitter'][:,2,:,:],
+    fast_soil : dad['Csoil'][:,0,:,:],
+    slow_soil : dad['Csoil'][:,1,:,:],
+    passive_soil : dad['Csoil'][:,2,:,:]
+}
+X=dask.array.stack([var_arr_dict[var]for var in stateVariableTuple],1) 
+X
+
+# +
+ncores=96
+slices=batchSlices(nland,ncores)
+#slices[0:1]
+for s in slices[0:1]:
+    B_batch=B_res[:,:,:,:,s]
+    x_batch=X[:,:,:,s]
+    
+    
+# -
+
+# # Now we can write B chunkwise to a zarr array #
 
 
 # +
@@ -183,12 +220,9 @@ B_dir_path=zarr_dir_path.joinpath('B')
 
 z1 = zarr.open(str(B_dir_path), mode='w', shape=B_res.shape,
             chunks=B_res.chunksize, dtype=B_res.dtype)
-ncores=96
-lowerBounds=[i*ncores for i in range(int(nland/ncores))]
-upperBounds=[l-1 for l in lowerBounds[1:]]+[nland]
-slices=[slice(l,upperBounds[i]) for i,l in enumerate(lowerBounds)]
 #B[:,:,:,:,s]
-for s in slices:
+#for s in slices:
+for s in slices[0:1]:
     batch=B_res[:,:,:,:,s]
     z1[:,:,:,:,s]=B_res[:,:,:,:,s].compute() #the explicit compute is necessarry here, otherwise we get an error  
 
