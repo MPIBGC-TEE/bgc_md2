@@ -25,7 +25,7 @@
      ```
    * Create a conda environment and run the install script:
      ```bash 
-     conda create -y --name bgc_md2
+     conda create -y --name bgc_md2 python=3
      conda activate bgc_md2
      ./install_developer_conda.sh 
      ```
