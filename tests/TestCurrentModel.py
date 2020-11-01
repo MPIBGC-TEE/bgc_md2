@@ -70,6 +70,7 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "Comins1993EA"
 #        self.mn = "Running1988EcolModel"
 #        self.mn = "Luo2012TE"
+        self.mn = "Potter1993GlobalBiogeochemicalCycles"
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
@@ -96,7 +97,7 @@ class TestCurrentModel(InDirTest):
 #        mvs = self.mvs 
 #        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
 
-    @unittest.skip
+#    @unittest.skip
     def test_computable_mvars(self):
         spsg=sparse_powerset_graph(bgc_md2_computers())
         f = plt.figure()
