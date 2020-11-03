@@ -35,87 +35,57 @@ t = TimeSymbol("t") # unit: "year"
 x = StateVariableTuple((Y, O))
 u = InputTuple((i, 0))
 B = CompartmentalMatrix(xi * T * N)
-#np1 = NumericParameterization(
-#    par_dict={
-#},
-#    func_dict=frozendict({})
-#)
-#
-#nsv1 = NumericStartValueDict({
-#})
-#ntimes = NumericSimulationTimes(np.arange())
+#        - "Bare fallow":
+np1 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0, h: 0.13, r: 1.32},
+    func_dict=frozendict({})
+)
+nsv1 = NumericStartValueDict({Y: 0.3, O: 3.96})
 
-#model_run_data:
-#    parameter_sets:
-#        - "Bare fallow":
-#            values:
-#                k_1: 0.8
-#                k_2: 0.00605
-#                i: 0
-#                h: 0.13
-#                r: 1.32
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
 #        - "+N +straw":
-#            values:
-#                k_1: 0.8
-#                k_2: 0.00605
-#                i: 0.285
-#                h: 0.125
-#                r: 1.00
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
+np2 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0.285, h: 0.125, r: 1.00},
+    func_dict=frozendict({})
+)
+nsv2 = NumericStartValueDict({Y: 0.3, O: 4.11})
+
 #        - "-N +straw":
-#            values: {k_1: 0.8, k_2: 0.00605, i: 0.248, h: 0.125, r: 1.22}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
+np3 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0.248, h: 0.125, r: 1.22},
+    func_dict=frozendict({})
+)
+nsv3 = NumericStartValueDict({Y: 0.3, O: 4.05})
+
 #        - "-N -straw":
-#            values: {k_1: 0.8, k_2: 0.00605, i: 0.057, h: 0.125, r: 1.17}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
+np4 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0.057, h: 0.125, r: 1.17},
+    func_dict=frozendict({})
+)
+nsv4 = NumericStartValueDict({Y: 0.3, O: 3.99})
+
 #        - "+N -straw":
-#            values: {k_1: 0.8, k_2: 0.00605, i: 0.091, h: 0.125, r: 1.07}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
+np5 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0.091, h: 0.125, r: 1.07},
+    func_dict=frozendict({})
+)
+nsv5 = NumericStartValueDict({Y: 0.3, O: 4.02})
+
 #        - "Farmyard manure":
-#            values: {k_1: 0.8, k_2: 0.00605, i: 0.272, h: 0.250, r: 1.10}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
+np6 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0.272, h: 0.250, r: 1.10},
+    func_dict=frozendict({})
+)
+nsv6 = NumericStartValueDict({Y: 0.3, O: 3.99})
+
 #        - "Sewage sludge":
-#            values: {k_1: 0.8, k_2: 0.00605, i: 0.296, h: 0.34, r: 0.97}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#
-#    initial_values:
-#        - "Bare fallow":
-#            values: {Y: 0.3, O: 3.96}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#        - "+N +straw":
-#            values: {Y: 0.3, O: 4.11}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#        - "-N +straw":
-#            values: {Y: 0.3, O: 4.05}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#        - "-N -straw":
-#            values: {Y: 0.3, O: 3.99}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#        - "+N -straw":
-#            values: {Y: 0.3, O: 4.02}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#        - "Farmyard manure":
-#            values: {Y: 0.3, O: 3.99}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#        - "Sewage sludge":
-#            values: {Y: 0.3, O: 4.14}
-#            #doi: 10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2
-#
-#    run_times:
-#        - RT1:
-#            start: 0
-#            end: 100
-#            step_size: 0.1
-#
-#    possible_combinations:
-#        - ["Bare fallow", "Bare fallow", RT1]
-#        - ["+N +straw", "+N +straw", RT1]
-#        - ["-N +straw", "-N +straw", RT1]
-#        - ["-N -straw", "-N -straw", RT1]
-#        - ["+N -straw", "+N -straw", RT1]
-#        - ["Farmyard manure", "Farmyard manure", RT1]
-#        - ["Sewage sludge", "Sewage sludge", RT1]
+np7 = NumericParameterization(
+    par_dict={k_1: 0.8, k_2: 0.00605, i: 0.296, h: 0.34, r: 0.97},
+    func_dict=frozendict({})
+)
+nsv7 = NumericStartValueDict({Y: 0.3, O: 4.14})
+# ntimes can be used for all parameter sets
+ntimes = NumericSimulationTimes(np.arange(0,100,0.1))
+
 mvs = MVarSet({
     BibInfo(# Bibliographical Information
         name="ICBM",
@@ -131,7 +101,7 @@ mvs = MVarSet({
     u,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the complete system
-#    np1,
-#    nsv1,
-#    ntimes
+    np1,
+    nsv1,
+    ntimes
 })
