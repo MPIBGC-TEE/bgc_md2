@@ -57,6 +57,7 @@ class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
 #        self.mn = ""
+        self.mn = "Haverd2016Biogeosciences"
 #        self.mn = "Thomas2014GeosciModelDev"
 #        self.mn = "ElMasri2013AgricForMeteorol"
 #        self.mn = "Pavlick2013Biogeosciences"
@@ -70,7 +71,7 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "Comins1993EA"
 #        self.mn = "Running1988EcolModel"
 #        self.mn = "Luo2012TE"
-        self.mn = "Potter1993GlobalBiogeochemicalCycles"
+#        self.mn = "Potter1993GlobalBiogeochemicalCycles"
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
