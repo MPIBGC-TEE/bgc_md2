@@ -225,6 +225,7 @@ z1 = zarr.open(str(B_dir_path), mode='w', shape=B_res.shape,
 for s in slices[0:1]:
     batch=B_res[:,:,:,:,s]
     z1[:,:,:,:,s]=B_res[:,:,:,:,s].compute() #the explicit compute is necessarry here, otherwise we get an error  
+#    z1[...;s] = B_res[...;s].compute()
 
 # +
 

@@ -57,9 +57,14 @@ class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
 #        self.mn = ""
-        self.mn = "Henin1945AA"
+        self.mn = "Andren1997EA"
+#        self.mn = "Jenkinson1977SoilScience"
+#        self.mn = "Zelenev2000MicrobialEcology"
+#        self.mn = "Allison2010NG"
+#        self.mn = "Parton1987SoilSciSocAmJ"
+#        self.mn = "Henin1945AA"
 #        self.mn = "TECO"
-#        self.mn = "Emanuel1981"
+	#        self.mn = "Emanuel1981"
 #        self.mn = "Rasmussen2016JMB"
 #        self.mn = "Hilbert1991AnnBot"
         self.mvs = MVarSet.from_model_name(self.mn)
@@ -88,7 +93,7 @@ class TestCurrentModel(InDirTest):
 #        mvs = self.mvs 
 #        self.assertSetEqual(mvs.provided_mvar_types, self.ref_provided_mvars)
 
-    @unittest.skip
+#    @unittest.skip
     def test_computable_mvars(self):
         spsg=sparse_powerset_graph(bgc_md2_computers())
         f = plt.figure()
