@@ -770,6 +770,7 @@ if __name__ == "__main__":
 #    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/*.nc")
 #    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/cru004GCR006_1920_2015_nbe2002_2042.nc")
     ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_23/cru004GCR006_1920_2015_nbe2002_2042.nc")
+    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_26/*.nc")
 
 
 #    for ps in range(33, 1000):
@@ -779,7 +780,7 @@ if __name__ == "__main__":
 #            parameterset=ps,
 #            time=slice(972, 1044)
 #        )
-    ds_single_site_and_prob = ds.isel(parameterset=100)
+    ds_single_site_and_prob = ds.isel(lat=30, lon=40, prob=25)
     mdo = load_mdo_greg(ds_single_site_and_prob)
     consistency = mdo.check_data_consistency()
     print('Data consistency:\n', consistency, '\n')
