@@ -1,4 +1,4 @@
-from sympy import var, ImmutableMatrix
+from sympy import var
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
