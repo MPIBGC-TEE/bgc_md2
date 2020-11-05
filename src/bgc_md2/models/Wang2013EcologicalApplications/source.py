@@ -1,5 +1,4 @@
-import numpy as np
-from sympy import var, ImmutableMatrix, exp
+from sympy import var, ImmutableMatrix
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
