@@ -769,7 +769,7 @@ if __name__ == "__main__":
 #
 #    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/*.nc")
 #    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/cru004GCR006_1920_2015_nbe2002_2042.nc")
-    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_23/cru004GCR006_1920_2015_nbe2002_2042.nc")
+#    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_23/cru004GCR006_1920_2015_nbe2002_2042.nc")
     ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_26/*.nc")
 
 
