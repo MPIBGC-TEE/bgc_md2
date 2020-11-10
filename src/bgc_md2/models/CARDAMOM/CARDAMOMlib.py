@@ -231,30 +231,30 @@ def compute_ds_pwc_mr_fd_greg(ds):
 #    return model_structure
 #
 #
-#def load_mdo(ds):
-#    #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
-#
-#    ms = load_model_structure()
-#
-#    # bring fluxes from gC/m2/day to gC/m2/month
-#
-#    ## all months are supposed to comprise 365.25/12 days
-#    days_per_month = 365.25 / 12.0
-#
-#    time = Variable(
-#        name="time",
-#        data=np.arange(len(ds.time)) * days_per_month,
-#        unit="d"
-#    )
-#
-#    mdo = ModelDataObject(
-#        model_structure=ms,
-#        dataset=ds, 
-#        stock_unit="gC/m2", 
-#        time=time
-#    )
-#
-#    return mdo
+def load_mdo(ds):
+    #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
+
+    ms = load_model_structure()
+
+    # bring fluxes from gC/m2/day to gC/m2/month
+
+    ## all months are supposed to comprise 365.25/12 days
+    days_per_month = 365.25 / 12.0
+
+    time = Variable(
+        name="time",
+        data=np.arange(len(ds.time)) * days_per_month,
+        unit="d"
+    )
+
+    mdo = ModelDataObject(
+        model_structure=ms,
+        dataset=ds, 
+        stock_unit="gC/m2", 
+        time=time
+    )
+
+    return mdo
 
 
 def plot_Delta_14C_in_time(ms, soln, soln_14C):

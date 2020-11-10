@@ -44,7 +44,7 @@ print('notebook port:', my_port)
 my_dashboard_port = my_port + 5
 my_cluster = LocalCluster(
     dashboard_address='localhost:'+str(my_dashboard_port),
-    n_workers=80,
+    n_workers=48,
     threads_per_worker=1    
 )
 print('dashboard port:', my_dashboard_port)
@@ -233,11 +233,11 @@ def make_fake_ds(dataset):
 chunk_dict = {"lat": 1, "lon": 1, 'prob': 5}
 #sub_chunk_dict = {'lat': 1, 'lon': 1, 'prob': 1}
 
-#ds_sub = ds.isel(
-#    lat=slice(0, 2, 1),
-#    lon=slice(0, 2, 1),
-#    prob=slice(0, 2, 1)
-#).chunk(chunk_dict)
+ds_sub = ds.isel(
+    lat=slice(0, 35, 1), #  0-34
+    lon=slice(0, 73, 1), #  0-72
+    prob=slice(0, 5, 1)  #  0-4
+).chunk(chunk_dict)
 
 #ds_sub = ds.isel(
 #    lat=slice(28, 30, 1),
@@ -245,7 +245,7 @@ chunk_dict = {"lat": 1, "lon": 1, 'prob': 5}
 #    prob=slice(0, 20, 1)
 #).chunk(chunk_dict)
 
-ds_sub = ds.chunk(chunk_dict)
+#ds_sub = ds.chunk(chunk_dict)
 ds_sub
 
 
