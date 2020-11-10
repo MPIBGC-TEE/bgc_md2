@@ -18,14 +18,10 @@ from dask.distributed import Client
 
 import xarray as xr
 import numpy as np
-import matplotlib.pyplot as plt
 
 import importlib
-import bgc_md2
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
-from dask import delayed, compute
-from dask.diagnostics import Profiler, ResourceProfiler
 from dask.distributed import Client, LocalCluster
 from getpass import getuser
 # -
@@ -47,10 +43,12 @@ print('username:', my_user_name)
 my_port = port_dict[my_user_name]
 print('notebook port:', my_port)
 
-# dasboard needs a different port for accessing it remotely
+# dashboard needs a different port for accessing it remotely
 my_dashboard_port = my_port +5
 my_cluster = LocalCluster(
     dashboard_address='localhost:'+str(my_dashboard_port),
+    n_workers=48,
+    threads_per_worker=1
 )
 print('dashboard port:', my_dashboard_port)
 
@@ -83,9 +81,8 @@ Client(my_cluster)
 # and open link given above.
 
 # +
-data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya, raka..
+data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya
 output_folder = "output/"
-#pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
 
 filestem = "Greg_2020_10_26/"
 ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
@@ -176,7 +173,8 @@ ds_data_consistency = xr.map_blocks(func_chunk, ds_sub, template=fake_ds)
 comp_dict = {'zlib': True, 'complevel': 9}
 ds_data_consistency.to_netcdf(
     data_folder + filestem + output_folder + "data_consistency.nc",
-    compression=comp_dict
+    compression=comp_dict,
+    compute=True
 )
 
 ds.close()

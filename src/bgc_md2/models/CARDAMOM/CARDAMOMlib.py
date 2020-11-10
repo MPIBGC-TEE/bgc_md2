@@ -73,77 +73,6 @@ def load_model_structure_greg():
     return model_structure
 
 
-def load_model_structure():
-    # labile, leaf, root, wood, litter, and soil
-
-    pool_structure = [
-        {"pool_name": "Labile", "stock_var": "Labile"},
-        {"pool_name": "Leaf", "stock_var": "Leaf"},
-        {"pool_name": "Root", "stock_var": "Root"},
-        {"pool_name": "Wood", "stock_var": "Wood"},
-        {"pool_name": "Litter", "stock_var": "Litter"},
-        {"pool_name": "Soil", "stock_var": "Soil"},
-    ]
-
-    external_input_structure = {
-        "Labile": ["NPP_to_Labile"],
-        "Leaf": ["NPP_to_Leaf"],
-        "Root": ["NPP_to_Root"],
-        "Wood": ["NPP_to_Wood"],
-    }
-
-    horizontal_structure = {
-        ("Labile", "Leaf"): ["Labile_to_Leaf"],
-        ("Leaf", "Litter"): ["Leaf_to_Litter"],
-        ("Wood", "Soil"): ["Wood_to_Soil"],
-        ("Root", "Litter"): ["Root_to_Litter"],
-        ("Litter", "Soil"): ["Litter_to_Soil"],
-    }
-
-    vertical_structure = {}
-
-    external_output_structure = {
-        "Litter": ["Litter_to_RH"],
-        "Soil": ["Soil_to_RH"]
-    }
-
-    model_structure = ModelStructure(
-        pool_structure=pool_structure,
-        external_input_structure=external_input_structure,
-        horizontal_structure=horizontal_structure,
-        vertical_structure=vertical_structure,
-        external_output_structure=external_output_structure,
-    )
-
-    return model_structure
-
-
-def load_mdo(ds):
-    #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
-
-    ms = load_model_structure()
-
-    # bring fluxes from gC/m2/day to gC/m2/month
-
-    ## all months are supposed to comprise 365.25/12 days
-    days_per_month = 365.25 / 12.0
-
-    time = Variable(
-        name="time",
-        data=np.arange(len(ds.time)) * days_per_month,
-        unit="d"
-    )
-
-    mdo = ModelDataObject(
-        model_structure=ms,
-        dataset=ds, 
-        stock_unit="gC/m2", 
-        time=time
-    )
-
-    return mdo
-
-
 def load_mdo_greg(ds):
     #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
 
@@ -171,6 +100,161 @@ def load_mdo_greg(ds):
     )
 
     return mdo
+
+
+def compute_ds_pwc_mr_fd_greg(ds):
+    mdo = load_mdo_greg(ds)
+    ms = mdo.model_structure
+    nr_pools = ms.nr_pools
+    error = ''
+    try:
+        #pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
+        pwc_mr_fd = mdo.create_model_run()
+    except (PWCModelRunFDError, ValueError, OverflowError) as e:
+        error = str(e)
+
+    coords_time = ds.time
+    coords_pool = [d['pool_name'] for d in ms.pool_structure]
+
+    data_vars = dict()
+
+    #  start_values
+    data = np.nan * np.ones((nr_pools,))
+    if not error:
+        data = pwc_mr_fd.start_values
+    data_vars['start_values'] = xr.DataArray(
+        data=data,
+        coords={'pool': coords_pool},
+        dims=['pool'],
+        attrs={'units': mdo.stock_unit}
+    )
+
+    # times
+    data = np.nan * np.ones((len(ds.time),))
+    if not error:
+        data = pwc_mr_fd.times
+    data_vars['times'] = xr.DataArray(
+        data=data,
+        coords={'time': coords_time},
+        dims=['time'],
+        attrs={'units': mdo.time_agg.unit}
+    )
+
+    # external inputs
+    data = np.nan * np.ones((len(ds.time), nr_pools))
+    if not error:
+        data[:-1, ...] = pwc_mr_fd.us
+    data_vars['us'] = xr.DataArray(
+        data=data,
+        coords={'time': coords_time, 'pool': coords_pool},
+        dims=['time', 'pool'],
+        attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit}
+    )
+
+    # B matrices
+    data = np.nan * np.ones((len(ds.time), nr_pools, nr_pools))
+    if not error:
+        data[:-1, ...] = pwc_mr_fd.Bs
+    data_vars['Bs'] = xr.DataArray(
+        data=data,
+        coords={
+            'time': coords_time,
+            'pool_to': coords_pool,
+            'pool_from': coords_pool
+        },
+        dims=['time', 'pool_to', 'pool_from'],
+        attrs={'units': '1/'+mdo.time_agg.unit}
+    )
+
+    # potential error message
+    data = np.array(error, dtype="<U150")
+    data_vars['log'] = xr.DataArray(data=data)
+
+    coords = {
+        'time': coords_time,
+        'pool': coords_pool,
+        'pool_to': coords_pool,
+        'pool_from': coords_pool
+    }
+
+    ds_res = xr.Dataset(
+        coords=coords,
+        data_vars=data_vars,
+    )
+    ds_res.close()
+
+    return ds_res
+
+
+#def load_model_structure():
+#    # labile, leaf, root, wood, litter, and soil
+#
+#    pool_structure = [
+#        {"pool_name": "Labile", "stock_var": "Labile"},
+#        {"pool_name": "Leaf", "stock_var": "Leaf"},
+#        {"pool_name": "Root", "stock_var": "Root"},
+#        {"pool_name": "Wood", "stock_var": "Wood"},
+#        {"pool_name": "Litter", "stock_var": "Litter"},
+#        {"pool_name": "Soil", "stock_var": "Soil"},
+#    ]
+#
+#    external_input_structure = {
+#        "Labile": ["NPP_to_Labile"],
+#        "Leaf": ["NPP_to_Leaf"],
+#        "Root": ["NPP_to_Root"],
+#        "Wood": ["NPP_to_Wood"],
+#    }
+#
+#    horizontal_structure = {
+#        ("Labile", "Leaf"): ["Labile_to_Leaf"],
+#        ("Leaf", "Litter"): ["Leaf_to_Litter"],
+#        ("Wood", "Soil"): ["Wood_to_Soil"],
+#        ("Root", "Litter"): ["Root_to_Litter"],
+#        ("Litter", "Soil"): ["Litter_to_Soil"],
+#    }
+#
+#    vertical_structure = {}
+#
+#    external_output_structure = {
+#        "Litter": ["Litter_to_RH"],
+#        "Soil": ["Soil_to_RH"]
+#    }
+#
+#    model_structure = ModelStructure(
+#        pool_structure=pool_structure,
+#        external_input_structure=external_input_structure,
+#        horizontal_structure=horizontal_structure,
+#        vertical_structure=vertical_structure,
+#        external_output_structure=external_output_structure,
+#    )
+#
+#    return model_structure
+#
+#
+#def load_mdo(ds):
+#    #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
+#
+#    ms = load_model_structure()
+#
+#    # bring fluxes from gC/m2/day to gC/m2/month
+#
+#    ## all months are supposed to comprise 365.25/12 days
+#    days_per_month = 365.25 / 12.0
+#
+#    time = Variable(
+#        name="time",
+#        data=np.arange(len(ds.time)) * days_per_month,
+#        unit="d"
+#    )
+#
+#    mdo = ModelDataObject(
+#        model_structure=ms,
+#        dataset=ds, 
+#        stock_unit="gC/m2", 
+#        time=time
+#    )
+#
+#    return mdo
 
 
 def plot_Delta_14C_in_time(ms, soln, soln_14C):
