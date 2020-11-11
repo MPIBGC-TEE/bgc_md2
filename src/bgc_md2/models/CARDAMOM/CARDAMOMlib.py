@@ -186,51 +186,51 @@ def compute_ds_pwc_mr_fd_greg(ds):
     return ds_res
 
 
-#def load_model_structure():
-#    # labile, leaf, root, wood, litter, and soil
-#
-#    pool_structure = [
-#        {"pool_name": "Labile", "stock_var": "Labile"},
-#        {"pool_name": "Leaf", "stock_var": "Leaf"},
-#        {"pool_name": "Root", "stock_var": "Root"},
-#        {"pool_name": "Wood", "stock_var": "Wood"},
-#        {"pool_name": "Litter", "stock_var": "Litter"},
-#        {"pool_name": "Soil", "stock_var": "Soil"},
-#    ]
-#
-#    external_input_structure = {
-#        "Labile": ["NPP_to_Labile"],
-#        "Leaf": ["NPP_to_Leaf"],
-#        "Root": ["NPP_to_Root"],
-#        "Wood": ["NPP_to_Wood"],
-#    }
-#
-#    horizontal_structure = {
-#        ("Labile", "Leaf"): ["Labile_to_Leaf"],
-#        ("Leaf", "Litter"): ["Leaf_to_Litter"],
-#        ("Wood", "Soil"): ["Wood_to_Soil"],
-#        ("Root", "Litter"): ["Root_to_Litter"],
-#        ("Litter", "Soil"): ["Litter_to_Soil"],
-#    }
-#
-#    vertical_structure = {}
-#
-#    external_output_structure = {
-#        "Litter": ["Litter_to_RH"],
-#        "Soil": ["Soil_to_RH"]
-#    }
-#
-#    model_structure = ModelStructure(
-#        pool_structure=pool_structure,
-#        external_input_structure=external_input_structure,
-#        horizontal_structure=horizontal_structure,
-#        vertical_structure=vertical_structure,
-#        external_output_structure=external_output_structure,
-#    )
-#
-#    return model_structure
-#
-#
+def load_model_structure():
+    # labile, leaf, root, wood, litter, and soil
+
+    pool_structure = [
+        {"pool_name": "Labile", "stock_var": "Labile"},
+        {"pool_name": "Leaf", "stock_var": "Leaf"},
+        {"pool_name": "Root", "stock_var": "Root"},
+        {"pool_name": "Wood", "stock_var": "Wood"},
+        {"pool_name": "Litter", "stock_var": "Litter"},
+        {"pool_name": "Soil", "stock_var": "Soil"},
+    ]
+
+    external_input_structure = {
+        "Labile": ["NPP_to_Labile"],
+        "Leaf": ["NPP_to_Leaf"],
+        "Root": ["NPP_to_Root"],
+        "Wood": ["NPP_to_Wood"],
+    }
+
+    horizontal_structure = {
+        ("Labile", "Leaf"): ["Labile_to_Leaf"],
+        ("Leaf", "Litter"): ["Leaf_to_Litter"],
+        ("Wood", "Soil"): ["Wood_to_Soil"],
+        ("Root", "Litter"): ["Root_to_Litter"],
+        ("Litter", "Soil"): ["Litter_to_Soil"],
+    }
+
+    vertical_structure = {}
+
+    external_output_structure = {
+        "Litter": ["Litter_to_RH"],
+        "Soil": ["Soil_to_RH"]
+    }
+
+    model_structure = ModelStructure(
+        pool_structure=pool_structure,
+        external_input_structure=external_input_structure,
+        horizontal_structure=horizontal_structure,
+        vertical_structure=vertical_structure,
+        external_output_structure=external_output_structure,
+    )
+
+    return model_structure
+
+
 def load_mdo(ds):
     #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
 
