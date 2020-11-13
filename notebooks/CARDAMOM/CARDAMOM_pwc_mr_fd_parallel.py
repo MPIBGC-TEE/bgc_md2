@@ -40,12 +40,22 @@ print('username:', my_user_name)
 my_port = port_dict[my_user_name]
 print('notebook port:', my_port)
 
+# prevent worker from stupid too early memory shuffling
+worker_kwargs = {
+#    'memory_limit': '2G',
+    'memory_target_fraction': 0.95,
+    'memory_spill_fraction': 0.95,
+    'memory_pause_fraction': 0.95,
+#    'memory_terminate_fraction': False, # leads to errors if commented in
+}
+
 # dashboard needs a different port for accessing it remotely
 my_dashboard_port = my_port + 5
 my_cluster = LocalCluster(
     dashboard_address='localhost:'+str(my_dashboard_port),
     n_workers=48,
-    threads_per_worker=1    
+    threads_per_worker=1,
+#    **worker_kwargs
 )
 print('dashboard port:', my_dashboard_port)
 
@@ -64,7 +74,7 @@ Client(my_cluster)
 # `
 # ### locally
 # `
-# ssh -L 8080:localhost:8890 antakya_from_home
+# ssh -L 8080:localhost:8790 antakya_from_home
 # `
 #
 # In browser open `localhost:8080`.
@@ -82,7 +92,9 @@ data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya
 filestem = "Greg_2020_10_26/"
 output_folder = "output/"
 #pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
-logfilename = data_folder + filestem + output_folder + "pwc_mr_fd.log"
+
+prob_nr = 0
+logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_%04d.log" % prob_nr
 
 ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
 ds
@@ -230,13 +242,14 @@ def make_fake_ds(dataset):
 
 
 # +
-chunk_dict = {"lat": 1, "lon": 1, 'prob': 5}
+chunk_dict = {"lat": 1, "lon": 1, 'prob': 1}
 #sub_chunk_dict = {'lat': 1, 'lon': 1, 'prob': 1}
+comp_dict = {'zlib': True, 'complevel': 9}
 
 ds_sub = ds.isel(
-    lat=slice(0, 35, 1), #  0-34
-    lon=slice(0, 73, 1), #  0-72
-    prob=slice(0, 5, 1)  #  0-4
+    lat=slice(0, 34, 1), #  0-33
+    lon=slice(0, 71, 1), #  0-70
+    prob=slice(prob_nr, prob_nr+1, 1)  #  0-0
 ).chunk(chunk_dict)
 
 #ds_sub = ds.isel(
@@ -246,6 +259,8 @@ ds_sub = ds.isel(
 #).chunk(chunk_dict)
 
 #ds_sub = ds.chunk(chunk_dict)
+
+
 ds_sub
 
 
@@ -270,7 +285,7 @@ def nested_groupby_apply(dataset, groupby, apply_fn, **kwargs):
 
 def func_pwc_mr_fd(ds_single):
 #    print(ds_single)
-    ds_res = CARDAMOMlib.compute_ds_pwc_mr_fd_greg(ds_single)
+    ds_res = CARDAMOMlib.compute_ds_pwc_mr_fd_greg(ds_single, comp_dict)
     write_to_logfile(
         "finished single,",
         "lat:", ds_single.lat.data,
@@ -296,12 +311,12 @@ def func_chunk(chunk_ds):
         chunk_ds.lat[0].data, chunk_ds.lon[0].data, chunk_ds.prob[0].data,
         flush=True
     )
-    write_to_logfile(
-        'chunk finished,',
-        "lat:", chunk_ds.lat[0].data,
-        "lon:", chunk_ds.lon[0].data,
-        "prob:", chunk_ds.prob[0].data
-    )
+#    write_to_logfile(
+#        'chunk finished,',
+#        "lat:", chunk_ds.lat[0].data,
+#        "lon:", chunk_ds.lon[0].data,
+#        "prob:", chunk_ds.prob[0].data
+#    )
 
     return res_ds
 
@@ -317,11 +332,14 @@ ds_pwc_mr_fd = xr.map_blocks(func_chunk, ds_sub, template=fake_ds)
 c = ds_sub.chunks
 nr_chunks = np.prod([len(val) for val in c.values()])
 nr_singles = len(ds_sub.lat) * len(ds_sub.lon) * len(ds_sub.prob)
-write_to_logfile('starting:', nr_chunks, "chunks, ", nr_singles, "singles")
+write_to_logfile(
+    'starting:',
+#    nr_chunks, "chunks, ",
+    nr_singles, "singles"
+)
 
-comp_dict = {'zlib': True, 'complevel': 9}
 ds_pwc_mr_fd.to_netcdf(
-    data_folder + filestem + output_folder + "pwc_mr_fd.nc",
+    data_folder + filestem + output_folder + "pwc_mr_fd_%04d.nc" % prob_nr,
     compute=True
 )
 
@@ -342,3 +360,5 @@ ds_sub.close()
 del ds_sub
 ds_pwc_mr_fd.close()
 del ds_pwc_mr_fd
+
+

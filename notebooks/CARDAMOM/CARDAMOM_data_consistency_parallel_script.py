@@ -133,6 +133,7 @@ if __name__ == "__main__":
     # dasboard needs a different port for accessing it remotely
     my_cluster = LocalCluster(
         dashboard_address='localhost:'+str(my_port+5),
+        nr_workers=30
     )
     
     Client(my_cluster)

@@ -102,7 +102,7 @@ def load_mdo_greg(ds):
     return mdo
 
 
-def compute_ds_pwc_mr_fd_greg(ds):
+def compute_ds_pwc_mr_fd_greg(ds, comp_dict):
     mdo = load_mdo_greg(ds)
     ms = mdo.model_structure
     nr_pools = ms.nr_pools
@@ -126,7 +126,8 @@ def compute_ds_pwc_mr_fd_greg(ds):
         data=data,
         coords={'pool': coords_pool},
         dims=['pool'],
-        attrs={'units': mdo.stock_unit}
+        attrs={'units': mdo.stock_unit},
+#        encoding=comp_dict
     )
 
     # times
@@ -137,7 +138,8 @@ def compute_ds_pwc_mr_fd_greg(ds):
         data=data,
         coords={'time': coords_time},
         dims=['time'],
-        attrs={'units': mdo.time_agg.unit}
+        attrs={'units': mdo.time_agg.unit},
+#        encoding=comp_dict
     )
 
     # external inputs
@@ -148,7 +150,8 @@ def compute_ds_pwc_mr_fd_greg(ds):
         data=data,
         coords={'time': coords_time, 'pool': coords_pool},
         dims=['time', 'pool'],
-        attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit}
+        attrs={'units': mdo.stock_unit+'/'+mdo.time_agg.unit},
+#        encoding=comp_dict
     )
 
     # B matrices
@@ -163,7 +166,8 @@ def compute_ds_pwc_mr_fd_greg(ds):
             'pool_from': coords_pool
         },
         dims=['time', 'pool_to', 'pool_from'],
-        attrs={'units': '1/'+mdo.time_agg.unit}
+        attrs={'units': '1/'+mdo.time_agg.unit},
+#        encoding=comp_dict
     )
 
     # potential error message
@@ -180,6 +184,7 @@ def compute_ds_pwc_mr_fd_greg(ds):
     ds_res = xr.Dataset(
         coords=coords,
         data_vars=data_vars,
+#        encoding=comp_dict
     )
     ds_res.close()
 
