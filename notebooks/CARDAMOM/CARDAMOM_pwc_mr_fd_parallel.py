@@ -41,6 +41,8 @@ my_port = port_dict[my_user_name]
 print('notebook port:', my_port)
 
 # prevent worker from stupid too early memory shuffling
+# seems to be ignored though...
+# needs to be added manually to worker while in progress
 worker_kwargs = {
 #    'memory_limit': '2G',
     'memory_target_fraction': 0.95,
@@ -94,9 +96,10 @@ output_folder = "output/"
 #pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
 
 prob_nr = 0
-logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_%04d.log" % prob_nr
+logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook_%04d.log" % prob_nr
 
-ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
+#ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
+ds = xr.open_mfdataset(data_folder + filestem + "small_netcdf/*.nc")
 ds
 
 
@@ -246,11 +249,11 @@ chunk_dict = {"lat": 1, "lon": 1, 'prob': 1}
 #sub_chunk_dict = {'lat': 1, 'lon': 1, 'prob': 1}
 comp_dict = {'zlib': True, 'complevel': 9}
 
-ds_sub = ds.isel(
-    lat=slice(0, 34, 1), #  0-33
-    lon=slice(0, 71, 1), #  0-70
-    prob=slice(prob_nr, prob_nr+1, 1)  #  0-0
-).chunk(chunk_dict)
+#ds_sub = ds.isel(
+#    lat=slice(0, 34, 1), #  0-33
+#    lon=slice(0, 71, 1), #  0-70
+#    prob=slice(prob_nr, prob_nr+2, 1)  #  0-1
+#).chunk(chunk_dict)
 
 #ds_sub = ds.isel(
 #    lat=slice(28, 30, 1),
@@ -258,8 +261,7 @@ ds_sub = ds.isel(
 #    prob=slice(0, 20, 1)
 #).chunk(chunk_dict)
 
-#ds_sub = ds.chunk(chunk_dict)
-
+ds_sub = ds.chunk(chunk_dict)
 
 ds_sub
 

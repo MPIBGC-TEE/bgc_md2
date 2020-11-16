@@ -58,7 +58,8 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
     
     logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_%04d.log" % prob_nr
     
-    ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
+#    ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
+    ds = xr.open_dataset(data_folder + filestem + "small_netcdf/" + "rechunked.nc")
     #ds
 
 
@@ -264,11 +265,13 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
     
     def func_chunk(chunk_ds):
 #        print('func_chunk', chunk_ds.lat.data, chunk_ds.lon.data)
-        worker = get_worker()
-        worker.memory_target_fraction = 0.95
-        worker.memory_spill_fraction =  False
-        worker.memory_pause_fraction = False
-        worker.memory_terminate_fraction = False
+
+#        worker = get_worker()
+#        worker.memory_target_fraction = 0.95
+#        worker.memory_spill_fraction =  False
+#        worker.memory_pause_fraction = False
+#        worker.memory_terminate_fraction = False
+
 #        print(worker.memory_target_fraction, flush=True)
 #        print(worker.memory_spill_fraction, flush=True)
 #        print(worker.memory_pause_fraction, flush=True)
