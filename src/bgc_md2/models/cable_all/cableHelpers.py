@@ -1,8 +1,11 @@
 import dask
 import shutil
 import xarray as xr
+import zarr as zr
 from pathlib import Path
 import numpy as np
+from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+
 
 # fixme mm 10-14-2020
 # This module contains hardcoded paths which will ultimately have to go.
@@ -37,12 +40,8 @@ def cable_ds(out_dir_path, first_yr=1901, last_yr=2004):
     return ds
 
 
-def cable_dask_array_dict(dirpath_str):
-    paths = [p for p in Path(dirpath_str).iterdir() if p.is_dir()]
-    return {p.name: dask.array.from_zarr(str(p)) for p in paths}
 
-
-def reconstruct_A(fn: str) -> np.ndarray:
+def reconstruct__first_day_A(fn: str) -> np.ndarray:
     ds = xr.open_dataset(
         fn,
         mask_and_scale=False,  # avoids the unintended conversion of iveg from int32 to float32
@@ -77,6 +76,108 @@ def single_year_ds(fn: str) -> xr.core.dataset.Dataset:
         mask_and_scale=False,
         # translated to float32
     )
+def init_I_chunk(
+    I,
+    NPP,
+    fracCalloc
+):
+    # Input fluxes
+    # Note that there is an implicit ordering of state variables
+    # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)    
+
+    I[:,0,:,:] = NPP[:,:,:] * fracCalloc[:, 0, :, :] 
+    I[:,1,:,:] = NPP[:,:,:] * fracCalloc[:, 2, :, :] # note the different orderin in cable 1, 2
+    I[:,2,:,:] = NPP[:,:,:] * fracCalloc[:, 1, :, :] # note the different orderin in cable 2, 1
+    return I
+
+def init_B_chunk(
+    bc,
+    #iveg,
+    kplant,
+    fromLeaftoL,
+    fromRoottoL,
+    fromWoodtoL,
+    fromMettoS,
+    fromStrtoS,
+    fromCWDtoS,
+    fromSOMtoSOM,
+    C,
+    #A,
+    xktemp,
+    xkwater,
+    xkNlimiting
+):
+    # Note that there is an implicit ordering of state variables
+    # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)    
+    #
+    # numpy arrays elements can be assigned values, but dask arrays are immutable 
+    # and consequently can not be assigned values 
+    # Therefore we create the numpy variants of the chunks
+    print(bc.shape)
+    bn=np.array(bc)
+    # valid 
+
+    A= np.array(bc)
+    npool = 9
+    for i in range(npool):
+        A[:, i, i, :, :] = -1
+
+    A[:, 3:6, 0, :] = fromLeaftoL[:, :, :]
+    A[:, 3:6, 1, :] = fromRoottoL[:, :, :]
+    A[:, 3:6, 2, :] = fromWoodtoL[:, :, :]
+    A[:, 6:9, 3, :] = fromMettoS[:, :, :]
+    A[:, 6:9, 4, :] = fromStrtoS[:, :, :]
+    A[:, 6:9, 5, :] = fromCWDtoS[:, :, :]
+    A[:, 7  , 6, :] = fromSOMtoSOM[:, 0, :]
+    A[:, 8  , 6, :] = fromSOMtoSOM[:, 1, :]
+    A[:, 8  , 7, :] = fromSOMtoSOM[:, 2, :]
+    #)# numpy arrays elements can be assigned values, dask arrays can not be assigned
+    # a. Leaf turnover
+    bn[:, 0, 0, :, :] = - kplant[:, 0, :, :]
+    #
+    # b. Root turnover
+    bn[:, 1, 1, :, :] = - kplant[:, 1, :, :]  # note exchange of  1 and 2
+    #
+    bn[:, 2, 2, :, :] = - kplant[:, 2, :, :]  # note exchange of  1 and 2 
+    bn[:, 3, 0, :, :] =   fromLeaftoL[:, 0, :, :]*kplant[:, 0, :, :]
+    bn[:, 3, 1, :, :] =   fromRoottoL[0, 0, :, :]*kplant[:, 2, :, :]
+    bn[:, 3, 3, :, :] = - C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 4, 0, :, :] =   fromLeaftoL[:, 1, :, :] *kplant[:, 0, :, :]
+    bn[:, 4, 1, :, :] =   fromRoottoL[0, 1, :, :] *kplant[:, 2, :, :]
+    bn[:, 4, 4, :, :] = - C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 5, 2, :, :] =   fromWoodtoL[:, 2, :, :] *kplant[:, 1, :, :]
+    bn[:, 5, 5, :, :] = - C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    # l. Metabolic litter to Fast soil
+    bn[:, 6, 3, :, :] = A[:, 6, 3, :, :]*C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # m. Structural litter to Fast soil
+    bn[:, 6, 4, :, :] = A[:, 6, 4, :, :]*C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # n. CWD to Fast soil
+    bn[:, 6, 5, :, :] = A[:, 6, 5, :, :]*C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # o. Fast soil turnover
+    bn[:, 6, 6, :, :] = - C[6, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    #
+    # p. Structural litter to Slow soil
+    bn[:, 7, 4, :, :] = A[:, 7, 4, :, :]*C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # q. CWD to Slow soil
+    bn[:, 7, 5, :, :] = A[:, 7, 5, :, :]*C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # r. Fast soil to Slow soil
+    bn[:, 7, 6, :, :] = A[:, 7, 6, :, :]*C[6, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    #
+    # s. Slow soil turnover
+    bn[:, 7, 7, :, :] = - C[7, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    #
+    # t. Slow soil to Passive soil
+    bn[:, 8, 7, :, :] = A[:, 8, 7, :, :]*C[7, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    #
+    # u. Passive soil turnover
+    bn[:, 8, 8, :, :] = - C[8, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    #return dask.array.from_array(bn)
+    return bn
 
 
 def reconstruct_C(fn: str) -> np.ndarray:
@@ -91,25 +192,24 @@ def reconstruct_C(fn: str) -> np.ndarray:
         C[ipool, ipool, :, :] = C_diag[ipool, :, :]
     return C
 
-
-def reconstruct_C_diag(fn: str) -> np.ndarray:
+def c_diag_from_iveg(
+        iveg_data: np.ndarray,
+        ifv: np.int32 
+    )->np.ndarray:
     """Reconstruct the output of the original ncl script
     `bgc_md2/src/bgc_md2/models/cable_all/cable_transit_time/postprocessing/scripts_org/mkinitialmatrix.ncl`
     The original algorithm supposedly unintentionally produces `inf` values
     where actually `NaN` are appropriate because no `iveg` value is available.
-    This happens by multiplicating the fillValue and causing an overflow.  This
-    function implements the expected behaviour, where lookups with a non
-    availabel index just returns a nan for the looked up value.
+    In the original script this happens by multiplying the (huge) fillValue and thereby 
+    causing an overflow.  
+    This function implements the expected behaviour, where lookups with a non
+    available index just return a nan for the looked up value.
+    The function can also be called on a iveg_data_chunk
     """
-    ds = single_year_ds(fn)
-    dd = ds.dims
-    npool = sum(
-        [dd[k] for k in ["plant_casa_pools", "soil_casa_pool", "litter_casa_pools"]]
-    )
-    npatch = dd["patch"]
-    nland = dd["land"]
-    arr_shape = (npool, npatch, nland)
 
+    npatch, nland = iveg_data.shape
+    npool = 9
+    arr_shape = (npool, npatch, nland)
     nans = [np.nan for i in range(npool)]
     tau = np.array(
         [
@@ -161,7 +261,7 @@ def reconstruct_C_diag(fn: str) -> np.ndarray:
         ]
     )
 
-    xkoptsoil = dask.array.from_array(
+    xkoptsoil = np.array(
         [
             [1, 1, 1, 1, 1, 1, 0.40, 0.40, 0.40],
             [1, 1, 1, 1, 1, 1, 0.40, 0.40, 0.40],
@@ -216,7 +316,7 @@ def reconstruct_C_diag(fn: str) -> np.ndarray:
             # was true for this part of the array.
             #
             # We could actually leave out this line of the array completely and
-            # map the ivge _FillValue to one any of the regular values
+            # map the ivge _FillValue to any one  of the regular values
             # (0,1,...16) So we would always find a tau ,.. fracLigninpant and
             # could compute the result mapping the _FillValue to the 17 th line
             # of the arrays and putting a value of -9999 there can be seen as
@@ -236,15 +336,14 @@ def reconstruct_C_diag(fn: str) -> np.ndarray:
     # available parts attrs[_FillValue] to an integer (in this case 17 where 17
     # refers to the line with values that will never be used) this is
     # necessarry since numpy tries to lookup the values BEFORE masking them...
-    ifv = ds.iveg.attrs["_FillValue"]
-    iveg_m1 = np.where(ds.iveg.data == ifv, 18, ds.iveg.data) - 1
+    iveg_m1 = np.where(iveg_data == ifv, 18, iveg_data) - 1
     flat_m1 = iveg_m1.flatten()
 
     C = np.zeros(arr_shape, dtype="float32")
     for ipool in range(npool):
         C[ipool, :, :] = (
             np.where(
-                ds.iveg.data.flatten == ifv,
+                iveg_data.flatten == ifv,
                 np.nan,
                 1.0
                 / tau[flat_m1, ipool]
@@ -258,34 +357,32 @@ def reconstruct_C_diag(fn: str) -> np.ndarray:
     return C
 
 
-def da_dict_from_dataset(ds):
-    def da_from_var_name(var_name):
-        var = ds.get(var_name)
-        raw = var.data
-        try:
-            fv = var.attrs["_FillValue"]
-            refined = dask.array.where(raw == fv, np.nan, raw)
-        except KeyError:
-            try:
-                fv = var.attrs["missing_value"]
-                refined = dask.array.where(raw == fv, np.nan, raw)
-            except KeyError:
-                refined = raw
-
-        return refined
-
-    return {
-        var_name: da_from_var_name(var_name)
-        for var_name in ds.data_vars
-    }
+def reconstruct_C_diag(fn: str) -> np.ndarray:
+    ds = single_year_ds(fn)
+    return c_diag_from_iveg(ds.iveg.data,ds.iveg.attrs['_FillValue']) 
 
 
-def write_vars_as_zarr(ds, dir_name):
+def write_vars_as_zarr(
+    ds: xr.Dataset,
+    dir_name: str
+):
     dir_p = Path(dir_name)
     if dir_p.exists():
         shutil.rmtree(dir_p)
-    
+
     dir_p.mkdir(parents=True, exist_ok=True)
-    for var_name,v in da_dict_from_dataset(ds).items():
+    
+    for var_name, v in ds.variables.items():
         zarr_dir_name = str(dir_p.joinpath(var_name))
-        v.to_zarr(zarr_dir_name)
+        dask.array.asarray(v.data).to_zarr(zarr_dir_name)
+
+
+
+
+
+def cable_dask_array_dict(dirpath_str):
+    dir_p = Path(dirpath_str)
+    paths = [p for p in dir_p.iterdir() if p.is_dir()]
+    var_dict = {p.name: dask.array.from_zarr(str(p)) for p in paths}
+    return var_dict 
+    

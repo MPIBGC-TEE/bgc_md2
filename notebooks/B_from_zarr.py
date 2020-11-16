@@ -13,6 +13,11 @@
 #     name: python3
 # ---
 
+# The original ncl script `mm_mkinitialmatrices_A_C_1901_to_2004.ncl`
+# only uses data of the first day of each year to create only one A per year.
+# We produce a completely time dependent A that changes daily but do not 
+# store it but use it directly in the computation of B.
+
 from getpass import getuser
 import xarray as xr
 import numpy as np
@@ -23,8 +28,11 @@ from dask.distributed import LocalCluster
 from pathlib import Path
 import shutil
 from sympy import Symbol,var
+import matplotlib.pyplot as plt
 import bgc_md2.models.cable_all.cableHelpers as cH
 from bgc_md2.helper import batchSlices
+# #%autoreload 
+
 
 from bgc_md2.sitespecificHelpers import get_client
 client = get_client()
@@ -32,11 +40,49 @@ client = get_client()
 example_run_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/'
 outDir = "output/new4"
 outpath = Path(example_run_dir).joinpath(outDir)
+# Allthough we will later use zarr arrays
+# we open one of the original netcdf output files
+# to get the meta information about fill values 
+# Since the file is small this is  fast
+syds=cH.single_year_ds(outpath.joinpath('out_ncar_1901_ndep.nc'))
+tk='_FillValue'
+ifv=syds.iveg.attrs[tk]
+ffv=syds.Cplant.attrs[tk]
+
+# +
 #ds=cH.cable_ds(outpath)
+#ds
+# -
+
 #dad = cH.da_dict_from_dataset(ds)
-zarr_dir_path= outpath.joinpath('zarr_vars')
+zarr_dir_path= outpath.joinpath('zarr')
 dad=cH.cable_dask_array_dict(zarr_dir_path)
-dad['Cplant']
+
+#lets find the patch point combinations where there are data
+iveg = dad['iveg']
+#cond_1=(iveg!=ifv).compute_chunk_sizes()
+cond_1=(iveg!=ifv).compute()
+ps,lps=np.nonzero(cond_1)
+
+ind0=(ps[0],lps[0])
+ind0
+
+for i in range(20):
+    ind=(ps[i],lps[i])
+    print(ind,iveg[ind])
+
+# Now lets choose tracetories where we have some non zero Csoil data. 
+# Since boolean arrays in python are actually integers( 0 and 1) the logical 'and' is
+# represented by the product of two such arrays
+cond_2=(dad['Csoil'][0,0,:,:]!=0).compute()
+psnz,lpsnz=np.nonzero(cond_1*cond_2) 
+ax=plt.axes()
+for i in range(4):
+    print(psnz[i],lpsnz[i])
+    ax.plot(dad['Csoil'][:,0,psnz[i],lpsnz[i]])
+
+# before we do any computation we build new arrays which only contain valid landpoint patch combinations
+
 
 npool = sum([dad[name].shape[1] for name in ['Cplant','Csoil','Clitter']])
 s=dad['Cplant'].shape
@@ -46,20 +92,25 @@ ntime  =s[0]
 s,ntime,npool,npatch,nland
 
 
-# We now reconstruct the matrix B by factoring out the pool contents from The Flux_from_... terms
-#
-# The first task is to identify the state variables in the output file
-#  A@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)
-#  C@pool_name  = (/"leaf,root,wood,metabolic,structure,CWD,fast,slow,passive"/)
-
 # +
-first_yr = 1901
-last_yr = 2004
-fns = ["out_ncar_" + str(yr) + "_ndep.nc" for yr in range(first_yr, last_yr + 1)]
-ps = [outpath.joinpath(fn) for fn in fns]
 
-C_d=dask.array.from_array(cH.reconstruct_C_diag(ps[0]),chunks=(npool,npatch,1))
-A_d=dask.array.from_array(cH.reconstruct_A(ps[0])     ,chunks=(npool,npool,npatch,1))
+#first_yr = 1901
+#last_yr = 2004
+#fns = ["out_ncar_" + str(yr) + "_ndep.nc" for yr in range(first_yr, last_yr + 1)]
+#ps = [outpath.joinpath(fn) for fn in fns]
+#
+#C_d=dask.array.from_array(cH.reconstruct_C_diag(ps[0]),chunks=(npool,npatch,1))
+
+#A_d=dask.array.from_array(cH.reconstruct_first_day_A(ps[0])     ,chunks=(npool,npool,npatch,1))
+# -
+
+C_d=dask.array.from_array(
+    cH.c_diag_from_iveg(np.array(iveg),ifv),
+    chunks=(npool,npatch,1)
+)
+#np.array(iveg)
+
+
 
 # +
 # in order to make the array multiplication more obvious we stack the constant A and C matrices in time
@@ -71,115 +122,62 @@ A_d=dask.array.from_array(cH.reconstruct_A(ps[0])     ,chunks=(npool,npool,npatc
 B_chunk = (ntime,npool,npool,npatch)
 B_shape = B_chunk+(nland,)
 #B=dask.array.full(B_shape,np.nan,dtype='float64',chunksize=B_chunk)
-B=dask.array.where(
-    dask.array.isnan(dad['iveg']),
-    dask.array.full(B_shape,np.nan,chunks=B_chunk+(1,)),
+B_temp=dask.array.where(
+    dask.array.isnan(dad['iveg']==ifv),
+    dask.array.full(B_shape,ffv,chunks=B_chunk+(1,)),
     dask.array.zeros(B_shape,chunks=B_chunk+(1,)),
 )
-B
+B_temp
+
+I_chunk = (ntime,npool,npatch)
+I_shape = I_chunk+(nland,)
+I_temp = dask.array.where(
+    dask.array.isnan(dad['iveg']==ifv),# this works since the last two dimensions of iveg and I match
+    dask.array.full(I_shape,ffv,chunks=I_chunk+(1,)),
+    dask.array.zeros(I_shape,chunks=I_chunk+(1,))
+)
 
 dad['fromRoottoL']
 
-
-# +
-def init_chunk(
-    bc,
-    #iveg_c,
-    kplant_c,
-    fromLeaftoL_c,
-    fromRoottoL_c,
-    fromWoodtoL_c,
-    C_c,
-    A_c,
-    xktemp_c,
-    xkwater_c,
-    xkNlimiting_c
-    
-    ):
-    #)# numpy arrays elements can be assigned values, dask arrays can not be assigned
-    ##a. Leaf turnover
-    bn=np.array(bc)
-    bn[:,0,0,:] = - kplant_c[:,0,:]
-    #
-    #b. Root turnover
-    bn[:,1,1,:] = - kplant_c[:,2,:] #mixed 1 and 2?
-    #
-    bn[:,2,2,:] = - kplant_c[:,1,:] #mixed 1 and 2?
-    bn[:,3,0,:] =   fromLeaftoL_c[:,0,:]*kplant_c[:,0,:]
-    #
-    #e. Root to Metoblic litter
-    #bn[:,3,1,:] =   fromRoottoL_c[0,0,:]*kplant_c[:,2,:] # original time dim wrongly set to 0?
-    bn[:,3,1,:] =   fromRoottoL_c[:,0,:]*kplant_c[:,2,:] 
-    
-    bn[:,3,3,:] = - C_c[3,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:] 
-    bn[:,4,0,:] =   fromLeaftoL_c[:,1,:]*kplant_c[:,0,:]
-    #
-    #bn[:,4,1,:] =   fromRoottoL_c[0,1,:]*kplant_c[:,2,:]original time dim wrongly set to 0?
-    bn[:,4,1,:] =   fromRoottoL_c[0,1,:]*kplant_c[:,2,:]
-    
-    bn[:,4,4,:] = - C_c[4,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:]
-    bn[:,5,2,:] =   fromWoodtoL_c[:,2,:]*kplant_c[:,1,:]
-    bn[:,5,5,:] = - C_c[5,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:,:]
-    #l. Metabolic litter to Fast soil
-    bn[:,6,3,:] = A_c[6,3,:]*C_c[3,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:]
-    
-    #m. Structural litter to Fast soil
-    bn[:,6,4,:] = A_c[6,4,:]*C_c[4,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:]
-    ##
-    #n. CWD to Fast soil
-    bn[:,6,5,:] = A_c[6,5,:]*C_c[5,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:]
-    #
-    #o. Fast soil turnover
-    bn[:,6,6,:] = - C_c[6,:]*xktemp_c[:,:]*xkwater_c[:,:]
-    #
-    #p. Structural litter to Slow soil
-    bn[:,7,4,:] = A_c[7,4,:]*C_c[4,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:]
-    #
-    #q. CWD to Slow soil
-    bn[:,7,5,:] = A_c[7,5,:]*C_c[5,:]*xktemp_c[:,:]*xkwater_c[:,:]*xkNlimiting_c[:,:]
-    #
-    #r. Fast soil to Slow soil
-    bn[:,7,6,:] = A_c[7,6,:]*C_c[6,:]*xktemp_c[:,:]*xkwater_c[:,:]
-    #
-    #s. Slow soil turnover
-    bn[:,7,7,:] = - C_c[7,:]*xktemp_c[:,:]*xkwater_c[:,:]
-    #
-    #t. Slow soil to Passive soil
-    bn[:,8,7,:] = A_c[8,7,:]*C_c[7,:]*xktemp_c[:,:]*xkwater_c[:,:]
-    #
-    #u. Passive soil turnover
-    bn[:,8,8,:] = - C_c[8,:]*xktemp_c[:,:]*xkwater_c[:,:]
-    return bn
-
-B_res = B.map_blocks(
-    init_chunk,
+B_res = B_temp.map_blocks(
+    cH.init_B_chunk,
     dad['kplant'],
     dad['fromLeaftoL'],
     dad['fromRoottoL'],
     dad['fromWoodtoL'],
+    dad['fromMettoS'], 
+    dad['fromStrtoS'], 
+    dad['fromCWDtoS'], 
+    dad['fromSOMtoSOM'],
     C_d,
-    A_d,
     dad['xktemp'],
     dad['xkwater'],
     dad['xkNlimiting'],
     dtype=np.float64
 )
 B_res
-# -
+
+dad['NPP']
+dad['fracCalloc']
+
+#B_res[:,:,:,:,0:95].compute()
+B_res[:,:,:,psnz[0],lpsnz[0]].compute()
+
+I_res = I_temp.map_blocks(
+    cH.init_I_chunk,
+    dad['NPP'],
+    dad['fracCalloc'],
+    dtype=np.float64
+)
+I_res[:,:,psnz[0],lpsnz[0]].compute()
 
 # # test the consistency of B #
 #
 
 # ## construct the state vector ##
 
-dad['Csoil'][:,0,:,:]
-
-dask.array.stack(
-    [
-        dad['Csoil'][:,0,:,:],
-        dad['Csoil'][:,2,:,:]
-    ],1
-)
+# +
+from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 
 for s in ('leaf','wood','fine_root','metabolic_lit','structural_lit','cwd','fast_soil','slow_soil','passive_soil'):
     var(s)
@@ -196,36 +194,108 @@ var_arr_dict={
     slow_soil : dad['Csoil'][:,1,:,:],
     passive_soil : dad['Csoil'][:,2,:,:]
 }
-X=dask.array.stack([var_arr_dict[var]for var in stateVariableTuple],1) 
+X=dask.array.stack([var_arr_dict[var]for var in stateVariableTuple],1).rechunk((ntime,npool,npatch,1)) 
 X
+# -
+
+#srn (Sensible Run Number enumerates the patch landpoint combinations (where iveg!=_FillValue..))
+from functools import reduce
+lt=500
+def solve(x0,B_time,I_time):
+    ntimes,npool=I_time.shape 
+    my_one=np.eye(npool)
+    xs = reduce(
+        lambda acc,k:acc +[ (B_time[k,:,:]+my_one) @ acc[-1] + I_time[k,:]],
+        range(0,ntimes-1),
+        #range(0,lt),
+        [x0]
+    )
+    return dask.array.stack(xs,axis=0)
+
+
+
+ax.clear()
+
+#for srn in range(len(psnz)):  
+for srn in range(1):  
+    x_time=X[:,:,psnz[srn],lpsnz[srn]]
+    x0=x_time[0]
+    b_time = B_res[:,:,:,psnz[srn],lpsnz[srn]]
+    i_time = I_res[:,:,psnz[srn],lpsnz[srn]]
+    sol_time = solve(x0,b_time,i_time)
+    ax=plt.axes()
+    ax.plot(x_time,'+')
+    ax.plot(sol_time,'-')
+    print(sol_time.compute())
+    
+
+(np.matmul(b_time[0],x0)+i_time[0]+x0).compute(),x_time[1].compute(),sol_time[1].compute()
+
 
 # +
-ncores=96
-slices=batchSlices(nland,ncores)
-#slices[0:1]
-for s in slices[0:1]:
-    B_batch=B_res[:,:,:,:,s]
-    x_batch=X[:,:,:,s]
+# now do it in parrallel with blockwise
+def chunk_trajectories(iveg,X0,B_c,I_c):
     
+    ntime,npool,npatch,nland=I_c.shape
+    xt=np.full((ntime,npool,npatch,nland),np.nan)
     
+    cond=(iveg!=ifv)
+    psnz,lpsnz=np.nonzero(cond)
+    nv=len(psnz)
+    for srn in range(nv):  
+        x0=X0[:,psnz[srn],lpsnz[srn]]
+        b_time = B_c[:,:,:,psnz[srn],lpsnz[srn]]
+        i_time = I_c[:,:,psnz[srn],lpsnz[srn]]
+        sol_time = solve(x0,b_time,i_time)
+        lt=len(sol_time)
+        xt[0:lt,:,psnz[srn],lpsnz[srn]]=sol_time
+    #    #ax=plt.axes()
+    return xt
+
+SOL=dask.array.blockwise(chunk_trajectories,'ijkl',iveg,'kl',X[0,:,:,:],'jkl', B_res, 'ijjkl',I_res,'ijkl',dtype='f8')
+#X=dask.array.blockwise(trajectory,'ijkl',X0,'jkl',times,'i',dtype='f8')
+SOL[:,:,0,0:95].compute()      
+# -
+
+
+
+# +
+#ncores=95
+#slices=batchSlices(nland,ncores)
+##slices[0:1]
+#for s in slices[0:1]:
+#    B_batch=B_res[:,:,:,:,s]
+#    x0_batch=X[0,:,:,s]
+#    I_batch=I_res[:,:,:,s]
+#    iveg_batch=iveg[:,s]
+#    SOL=dask.array.blockwise(chunk_trajectories,'ijkl',iveg_batch,'kl',x0_batch,'jkl', B_batch, 'ijjkl',I_batch,'ijkl',dtype='f8')
+#    SOL.compute()
+#    
 # -
 
 # # Now we can write B chunkwise to a zarr array #
 
 
 # +
-B_dir_path=zarr_dir_path.joinpath('B')
-#if B_dir_path.exists():
-#    shutil.rmtree(B_dir_path)
+#var_dir_path=zarr_dir_path.joinpath('B')
+#if var_dir_path.exists():
+#    shutil.rmtree(var_dir_path)
 
-z1 = zarr.open(str(B_dir_path), mode='w', shape=B_res.shape,
+zB = zarr.open(str(zarr_dir_path.joinpath('B')), mode='w', shape=B_res.shape,
             chunks=B_res.chunksize, dtype=B_res.dtype)
+zSOL = zarr.open(str(zarr_dir_path.joinpath('SOL')), mode='w', shape=SOL.shape,
+            chunks=SOL.chunksize, dtype=SOL.dtype)
 #B[:,:,:,:,s]
-#for s in slices:
-for s in slices[0:1]:
-    batch=B_res[:,:,:,:,s]
-    z1[:,:,:,:,s]=B_res[:,:,:,:,s].compute() #the explicit compute is necessarry here, otherwise we get an error  
-#    z1[...;s] = B_res[...;s].compute()
+for s in slices:
+#for s in slices[0:1]:
+    B_batch=B_res[:,:,:,:,s]
+    x0_batch=X[0,:,:,s]
+    I_batch=I_res[:,:,:,s]
+    iveg_batch=iveg[:,s]
+    SOL_batch=dask.array.blockwise(chunk_trajectories,'ijkl',iveg_batch,'kl',x0_batch,'jkl', B_batch, 'ijjkl',I_batch,'ijkl',dtype='f8')
+    #SOL.compute()
+    zB[:,:,:,:,s]=B_batch.compute() #the explicit compute is necessarry here, otherwise we get an error  
+    zSOL[:,:,:,s]=SOL_batch.compute() #the explicit compute is necessarry here, otherwise we get an error  
 
 # +
 
