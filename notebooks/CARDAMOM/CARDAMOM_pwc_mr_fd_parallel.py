@@ -16,12 +16,14 @@
 # +
 from dask.distributed import Client
 
-import xarray as xr
+#import xarray as xr
 import numpy as np
+from pathlib import Path
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
 from dask.distributed import Client, LocalCluster
+import dask.array as da
 from getpass import getuser
 
 import time
@@ -99,9 +101,33 @@ prob_nr = 0
 logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook_%04d.log" % prob_nr
 
 #ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
-ds = xr.open_mfdataset(data_folder + filestem + "small_netcdf/*.nc")
-ds
+#ds = xr.open_mfdataset(data_folder + filestem + "small_netcdf/*.nc")
 
+zarr_path = Path(data_folder).joinpath(filestem).joinpath("zarr_version")
+variable_paths = [p for p in zarr_path.iterdir() if p.is_dir()]
+
+variable_names = []
+variables = []
+for variable_path in variable_paths:
+    variable_names.append(variable_path.name)
+    variables.append(da.from_zarr(str(variable_path)))
+
+
+# +
+template_start_values = np.ones((6,5,4))
+
+def func_start_values(*args):
+    print(args)
+    d = {variable_names[i]: args[i] for i in range(len(args))}
+    #print(d)
+    return template_start_values
+
+
+# -
+
+res = variables[0].map_blocks(func_start_values, *variables[1:], meta=template_start_values)
+
+res.compute()
 
 # +
 ms = CARDAMOMlib.load_model_structure_greg()
@@ -245,28 +271,6 @@ def make_fake_ds(dataset):
 
 
 # +
-chunk_dict = {"lat": 1, "lon": 1, 'prob': 1}
-#sub_chunk_dict = {'lat': 1, 'lon': 1, 'prob': 1}
-comp_dict = {'zlib': True, 'complevel': 9}
-
-#ds_sub = ds.isel(
-#    lat=slice(0, 34, 1), #  0-33
-#    lon=slice(0, 71, 1), #  0-70
-#    prob=slice(prob_nr, prob_nr+2, 1)  #  0-1
-#).chunk(chunk_dict)
-
-#ds_sub = ds.isel(
-#    lat=slice(28, 30, 1),
-#    lon=slice(38, 40, 1),
-#    prob=slice(0, 20, 1)
-#).chunk(chunk_dict)
-
-ds_sub = ds.chunk(chunk_dict)
-
-ds_sub
-
-
-# +
 def write_to_logfile(*args):
     t = time.localtime()
     current_time = time.strftime("%H:%M:%S", t)
@@ -340,8 +344,13 @@ write_to_logfile(
     nr_singles, "singles"
 )
 
-ds_pwc_mr_fd.to_netcdf(
-    data_folder + filestem + output_folder + "pwc_mr_fd_%04d.nc" % prob_nr,
+#ds_pwc_mr_fd.to_netcdf(
+#    data_folder + filestem + output_folder + "pwc_mr_fd_%04d.nc" % prob_nr,
+#    compute=True
+#)
+
+ds_pwc_mr_fd.to_zarr(
+    data_folder + filestem + output_folder + "pwc_mr_fd_%04d" % prob_nr,
     compute=True
 )
 
