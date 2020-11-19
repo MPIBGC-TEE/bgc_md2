@@ -18,6 +18,7 @@ from dask.distributed import Client
 
 #import xarray as xr
 import numpy as np
+import zarr
 from pathlib import Path
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
@@ -59,6 +60,7 @@ my_cluster = LocalCluster(
     dashboard_address='localhost:'+str(my_dashboard_port),
     n_workers=48,
     threads_per_worker=1,
+#    memory_limit="1GB"
 #    **worker_kwargs
 )
 print('dashboard port:', my_dashboard_port)
@@ -97,8 +99,7 @@ filestem = "Greg_2020_10_26/"
 output_folder = "output/"
 #pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
 
-prob_nr = 0
-logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook_%04d.log" % prob_nr
+logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook.log"
 
 #ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
 #ds = xr.open_mfdataset(data_folder + filestem + "small_netcdf/*.nc")
@@ -106,168 +107,207 @@ logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook_%04d.
 zarr_path = Path(data_folder).joinpath(filestem).joinpath("zarr_version")
 variable_paths = [p for p in zarr_path.iterdir() if p.is_dir()]
 
+non_data_vars = ['lat', 'lon', 'prob', 'time']
+
 variable_names = []
 variables = []
 for variable_path in variable_paths:
-    variable_names.append(variable_path.name)
-    variables.append(da.from_zarr(str(variable_path)))
+    name = variable_path.name
+    if name not in non_data_vars:
+        variable_names.append(name)
+        variables.append(da.from_zarr(str(variable_path)))
+        
+variables.append(da.from_zarr(str(zarr_path.joinpath('lat')), chunks=(1,)).reshape(-1, 1, 1, 1))
+variable_names.append('lat')
+variables.append(da.from_zarr(str(zarr_path.joinpath('lon')), chunks=(1,)).reshape(1, -1, 1, 1))
+variable_names.append('lon')
+variables.append(da.from_zarr(str(zarr_path.joinpath('prob')), chunks=(1,)).reshape(1, 1, -1, 1))
+variable_names.append('prob')
+variables.append(da.from_zarr(str(zarr_path.joinpath('time'))).reshape(1, 1, 1, -1))
+variable_names.append('time')
+
+variables
 
 
 # +
-template_start_values = np.ones((6,5,4))
+lims = (2, 2, 2)
+
+for nr, name, var in zip(range(len(variables)), variable_names, variables):
+    if name not in non_data_vars:
+#        variables[nr] = variables[nr][:nr_lim, :nr_lim, :nr_lim, ...]
+        variables[nr] = variables[nr][:lims[0], :lims[1], :lims[2], ...]
+  
+name = "lat"
+index = variable_names.index(name)
+variables[index] = variables[index][:lims[0], ...]
+
+name = "lon"
+index = variable_names.index(name)
+variables[index] = variables[index][:, :lims[1], ...]
+
+name = "prob"
+index = variable_names.index(name)
+variables[index] = variables[index][:, :, :lims[2], ...]
+
+#for nr, name in enumerate(['lat', 'lon', 'prob']):
+#    index = variable_names.index(name)
+#    idx = [slice(None)] * nr + [slice(0, lims[nr], 1)]
+#    print(idx)
+#    variables[index] = variables[index][idx]
+    
+variables
+
+
+# +
+#from time import sleep
 
 def func_start_values(*args):
-    print(args)
-    d = {variable_names[i]: args[i] for i in range(len(args))}
-    #print(d)
-    return template_start_values
+    v_names = args[-1]
+    d = {v_names[i]: args[i].reshape((-1,)) for i in range(len(args[:-1]))}
+#    print([v.shape for v in d.values()])
+    print('lat:', d['lat'], 'lon:', d['lon'], 'prob:', d['prob'], flush=True)
+#    print('time:', d['time'], flush=True)
+#    print([v.shape for v in d.values()], flush=True)
+
+    start_values = CARDAMOMlib.load_start_values_greg_dict(d)
+#    print(start_values, flush=True)
+
+#    start_values = da.from_array(1.1 * np.ones((1, 1, 1, 6), dtype=np.float64, chunks=(1,1,6))
+#    start_values.to_dask()
+    return start_values.reshape(1, 1, 1, 6)
+
+
+# +
+shape = (34, 71, 50, 6)                                                                                         
+chunks = (1, 1, 1, 6)                   
+
+# set up zarr array to store data
+store = zarr.DirectoryStore('TB1.zarr')
+root = zarr.group(store) 
+TB1 = root.zeros(
+    'data', 
+    shape=shape, 
+    chunks=chunks, 
+    dtype=np.float64
+)
+# -
+
+start_values = variables[0].map_blocks(
+    func_start_values,
+    *variables[1:],
+    variable_names,
+    drop_axis=3,
+    new_axis=3,
+    chunks=(1, 1, 1, 6),
+    dtype=np.float64,
+    meta=np.ndarray((34, 71, 50, 6), dtype=np.float64)
+)
+start_values
+
+# +
+# %%time
+
+#start_values.compute()
+start_values_delayed = start_values.to_zarr(
+    data_folder + filestem + output_folder + "start_values",
+    overwrite=True,
+    lock=False,
+    return_stored=False,
+    compute=False,
+    kwargs={'chunks': (1, 1, 1, 6)}
+)
+#start_values_delayed = start_values.store(TB1, lock=False, compute=False)   
+
+# +
+#start_values_delayed.visualize(optimize_graph=True)
+
+# +
+# %%time
+
+#_ = da.compute(start_values_delayed, scheduler="distributed")
+start_values_delayed.compute()
+
+
+# -
+def func_us(*args):
+    v_names = args[-1]
+    d = {v_names[i]: args[i].reshape((-1,)) for i in range(len(args[:-1]))}
+#    print([v.shape for v in d.values()])
+    print('lat:', d['lat'], 'lon:', d['lon'], 'prob:', d['prob'], flush=True)
+#    print('time:', d['time'], flush=True)
+#    print([v.shape for v in d.values()], flush=True)
+
+    us = CARDAMOMlib.load_us_greg_dict(d)
+#    print(start_values, flush=True)
+
+    return us.reshape(1, 1, 1, , len(d['time'], 6)
+
+
+us = variables[0].map_blocks(
+    func_us,
+    *variables[1:],
+    variable_names,
+    new_axis=4,
+    chunks=(1, 1, 1, variables[variable_names.index('time')].shape[-1], 6),
+    dtype=np.float64
+)
+us
+
+# +
+# %%time
+
+us.to_zarr(data_folder + filestem + output_folder + "us")
+
+
+# +
+def write_to_logfile(*args):
+    t = time.localtime()
+    current_time = time.strftime("%H:%M:%S", t)
+    with open(logfilename, 'a') as f:
+        t = (current_time,) + args
+        f.write(" ".join([str(s) for s in t]) + '\n')
+
+def func_Bs(*args):
+    v_names = args[-1]
+    d = {v_names[i]: args[i].reshape((-1,)) for i in range(len(args[:-1]))}
+#    print([v.shape for v in d.values()])
+#    print('lat:', d['lat'], 'lon:', d['lon'], 'prob:', d['prob'], flush=True)
+#    print('time:', d['time'], flush=True)
+#    print([v.shape for v in d.values()], flush=True)
+
+    Bs = CARDAMOMlib.load_Bs_greg_dict(d)
+#    print(start_values, flush=True)
+
+    write_to_logfile(
+        "finished single,",
+        "lat:", d["lat"],
+        "lon:", d["lon"],
+        "prob:", d["prob"]
+    )
+
+    return Bs.reshape(1, 1, 1, len(d['time']), 6, 6)
 
 
 # -
 
-res = variables[0].map_blocks(func_start_values, *variables[1:], meta=template_start_values)
-
-res.compute()
+Bs = variables[0].map_blocks(
+    func_Bs,
+    *variables[1:],
+    variable_names,
+    new_axis=[4, 5],
+    chunks=(1, 1, 1, variables[variable_names.index('time')].shape[-1], 6, 6),
+    dtype=np.float64
+)
+Bs
 
 # +
-ms = CARDAMOMlib.load_model_structure_greg()
+# %%time
 
-def make_fake_ds(dataset):
-    # fake start_values data
-    fake_data_sv = np.zeros((
-        len(dataset.lat),
-        len(dataset.lon),
-        len(dataset.prob),
-        ms.nr_pools
-    ))
+Bs.to_zarr(data_folder + filestem + output_folder + "Bs")
+# -
 
-    coords_pool = [d['pool_name'] for d in ms.pool_structure]
-    fake_coords_sv = {
-        'lat': dataset.lat.data,
-        'lon': dataset.lon.data,
-        'prob': dataset.prob.data,
-        'pool': coords_pool
-    }
-
-    fake_array_sv = xr.DataArray(
-        data=fake_data_sv,
-        dims=['lat', 'lon', 'prob', 'pool'],
-        coords=fake_coords_sv
-    )
-
-    # fake times data
-    fake_data_times = np.zeros((
-        len(dataset.lat),
-        len(dataset.lon),
-        len(dataset.prob),
-        len(dataset.time)
-    ))
-
-    fake_coords_times = {
-        'lat': dataset.lat.data,
-        'lon': dataset.lon.data,
-        'prob': dataset.prob.data,
-        'time': dataset.time.data
-    }
-
-    fake_array_times = xr.DataArray(
-        data=fake_data_times,
-        dims=['lat', 'lon', 'prob', 'time'],
-        coords=fake_coords_times
-    )
-
-    # fake us data
-    fake_data_us = np.zeros((
-        len(dataset.lat),
-        len(dataset.lon),
-        len(dataset.prob),
-        len(dataset.time),
-        ms.nr_pools
-    ))
-
-    fake_coords_us = {
-        'lat': dataset.lat.data,
-        'lon': dataset.lon.data,
-        'prob': dataset.prob.data,
-        'time': dataset.time.data,
-        'pool': coords_pool
-    }
-
-    fake_array_us = xr.DataArray(
-        data=fake_data_us,
-        dims=['lat', 'lon', 'prob', 'time', 'pool'],
-        coords=fake_coords_us
-    )
-
-    # fake Bs data
-    fake_data_Bs = np.zeros((
-        len(dataset.lat),
-        len(dataset.lon),
-        len(dataset.prob),
-        len(dataset.time),
-        ms.nr_pools,
-        ms.nr_pools
-    ))
-
-    fake_coords_Bs = {
-        'lat': dataset.lat.data,
-        'lon': dataset.lon.data,
-        'prob': dataset.prob.data,
-        'time': dataset.time.data,
-        'pool_to': coords_pool,
-        'pool_from': coords_pool
-    }
-
-    fake_array_Bs = xr.DataArray(
-        data=fake_data_Bs,
-        dims=['lat', 'lon', 'prob', 'time', 'pool_to', 'pool_from'],
-        coords=fake_coords_Bs
-    )
-
-    # fake log data
-    shape = (
-        len(dataset.lat),
-        len(dataset.lon),
-     len(dataset.prob),
-    )
-    fake_data_log = np.ndarray(shape, dtype="<U150")
-
-    fake_coords_log = {
-        'lat': dataset.lat.data,
-        'lon': dataset.lon.data,
-        'prob': dataset.prob.data
-    }
-
-    fake_array_log = xr.DataArray(
-        data=fake_data_log,
-        dims=['lat', 'lon', 'prob'],
-        coords=fake_coords_log
-    )
-
-    # collect fake arrays in ds
-    fake_data_vars = dict()
-    fake_data_vars['start_values'] = fake_array_sv
-    fake_data_vars['times'] = fake_array_times
-    fake_data_vars['us'] = fake_array_us
-    fake_data_vars['Bs'] = fake_array_Bs
-    fake_data_vars['log'] = fake_array_log
-
-    fake_coords = {
-        'lat': dataset.lat.data,
-        'lon': dataset.lon.data,
-        'prob': dataset.prob.data,
-        'time': dataset.time.data,
-        'pool': coords_pool,
-        'pool_to': coords_pool,
-        'pool_from': coords_pool
-    }
-
-    fake_ds = xr.Dataset(
-        data_vars=fake_data_vars,
-        coords=fake_coords
-    )
-
-    return fake_ds
+to_zarr(data_folder + filestem + output_folder + "start_values")
+print('done')
 
 
 # +

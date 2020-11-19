@@ -5,12 +5,11 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 from bgc_md2.ModelStructure import ModelStructure
-from bgc_md2.ModelDataObject import (
-    ModelDataObject,
-    getStockVariable_from_Density,
-    getFluxVariable_from_DensityRate,
-    getFluxVariable_from_Rate,
-)
+from bgc_md2.ModelDataObject import  ModelDataObject
+
+
+from bgc_md2.ModelDataObject_dict import  ModelDataObject_dict
+
 from bgc_md2.Variable import Variable
 
 from CompartmentalSystems.discrete_model_run import DMRError
@@ -21,6 +20,23 @@ from CompartmentalSystems.pwc_model_run_fd import (
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
 from bgc_md2.models.CARDAMOM.compute_start_values_14C import compute_start_values_14C
+
+
+
+def load_start_values_greg_dict(single_site_dict):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    xs = mdo.load_stocks()
+    del mdo
+
+    return xs.data.filled()[0, ...]
+
+
+def load_Bs_greg_dict(single_site_dict):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    Bs = mdo.load_Bs()
+    del mdo
+
+    return Bs
 
 
 def load_model_structure_greg():
@@ -100,6 +116,38 @@ def load_mdo_greg(ds):
     )
 
     return mdo
+
+
+def load_mdo_greg_dict(ds_dict):
+    #    days_per_month = np.array(np.diff(ds.time), dtype='timedelta64[D]').astype(float)
+
+    ms = load_model_structure_greg()
+
+    # bring fluxes from gC/m2/day to gC/m2/month
+
+    ## all months are supposed to comprise 365.25/12 days
+#    days_per_month = 365.25 / 12.0
+
+    # data_test.py says tht for labile 31.0 is constantly right
+    days_per_month = 31.0
+
+    time = Variable(
+        name="time",
+        data=np.arange(len(ds_dict['time'])) * days_per_month,
+#        unit="d"
+        unit="1"
+    )
+
+    mdo = ModelDataObject_dict(
+        model_structure=ms,
+        dataset=ds_dict, 
+#        stock_unit="gC/m2", 
+        stock_unit="1", 
+        time=time
+    )
+
+    return mdo
+
 
 
 def compute_ds_pwc_mr_fd_greg(ds, comp_dict):
@@ -859,7 +907,7 @@ if __name__ == "__main__":
 #    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/*.nc")
 #    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_21/cru004GCR006_1920_2015_nbe2002_2042.nc")
 #    ds = xr.open_dataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_23/cru004GCR006_1920_2015_nbe2002_2042.nc")
-    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_26/*.nc")
+#    ds = xr.open_mfdataset("/home/hmetzler/Desktop/CARDAMOM/Greg_2020_10_26/*.nc")
 
 
 #    for ps in range(33, 1000):
@@ -869,10 +917,10 @@ if __name__ == "__main__":
 #            parameterset=ps,
 #            time=slice(972, 1044)
 #        )
-    ds_single_site_and_prob = ds.isel(lat=30, lon=40, prob=25)
-    mdo = load_mdo_greg(ds_single_site_and_prob)
-    consistency = mdo.check_data_consistency()
-    print('Data consistency:\n', consistency, '\n')
+#    ds_single_site_and_prob = ds.isel(lat=30, lon=40, prob=25)
+#    mdo = load_mdo_greg(ds_single_site_and_prob)
+#    consistency = mdo.check_data_consistency()
+#    print('Data consistency:\n', consistency, '\n')
 #
 #        mr, err_dict = mdo.create_model_run(
 #            errors=True,
@@ -890,5 +938,48 @@ if __name__ == "__main__":
 #        print('---------------------------\n')
 
 
+    from pathlib import Path
+    import dask.array as da
 
- 
+    data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya
+    filestem = "Greg_2020_10_26/"
+    output_folder = "output/"
+
+    zarr_path = Path(data_folder).joinpath(filestem).joinpath("zarr_version")
+    variable_paths = [p for p in zarr_path.iterdir() if p.is_dir()]
+
+    variable_names = []
+    variables = []
+    for variable_path in variable_paths:
+        variable_names.append(variable_path.name)
+        variables.append(da.from_zarr(str(variable_path)))
+
+    lat, lon, prob = (0, 0, 0)
+#    lat, lon, prob = (30, 50, 0)
+
+
+    no_data_vars = ['lat', 'lon', 'prob', 'time']
+#    for name, v in zip(variable_names, variables):
+#        if name not in no_data_vars:
+#            print(name)
+#            print(v[lat, lon, prob, ...])
+                
+    single_site_dict = {
+#        name: v[lat, lon, prob].reshape(1, 1, 1, -1)\
+        name: v[lat, lon, prob]\
+        for (name, v) in zip(variable_names, variables)\
+        if name not in no_data_vars
+    }
+
+    for name in no_data_vars:
+        index = variable_names.index(name)
+        single_site_dict[name] = variables[index]
+
+    mdo = load_mdo_greg_dict(single_site_dict)
+    Bs = mdo.load_Bs()
+
+    print(Bs)
+
+
+
+

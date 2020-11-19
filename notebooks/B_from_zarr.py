@@ -1,7 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: py:light
+#     formats: ipynb,py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -227,7 +227,7 @@ for srn in range(1):
     ax.plot(x_time,'+')
     ax.plot(sol_time,'-')
     print(sol_time.compute())
-    
+
 
 (np.matmul(b_time[0],x0)+i_time[0]+x0).compute(),x_time[1].compute(),sol_time[1].compute()
 
