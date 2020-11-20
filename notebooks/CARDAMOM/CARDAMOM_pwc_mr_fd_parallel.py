@@ -130,7 +130,7 @@ variables
 
 
 # +
-lims = (2, 2, 2)
+lims = (None, None, 5)
 
 for nr, name, var in zip(range(len(variables)), variable_names, variables):
     if name not in non_data_vars:
@@ -240,7 +240,7 @@ def func_us(*args):
     us = CARDAMOMlib.load_us_greg_dict(d)
 #    print(start_values, flush=True)
 
-    return us.reshape(1, 1, 1, , len(d['time'], 6)
+    return us.reshape(1, 1, 1, len(d['time']), 6)
 
 
 us = variables[0].map_blocks(
@@ -249,7 +249,8 @@ us = variables[0].map_blocks(
     variable_names,
     new_axis=4,
     chunks=(1, 1, 1, variables[variable_names.index('time')].shape[-1], 6),
-    dtype=np.float64
+    dtype=np.float64,
+    meta=np.ndarray((1, 1, 1, variables[variable_names.index('time')].shape[-1], 6), dtype=np.float64)
 )
 us
 
@@ -275,7 +276,11 @@ def func_Bs(*args):
 #    print('time:', d['time'], flush=True)
 #    print([v.shape for v in d.values()], flush=True)
 
-    Bs = CARDAMOMlib.load_Bs_greg_dict(d)
+    Bs = CARDAMOMlib.load_Bs_greg_dict(
+        d,
+        integration_method="trapezoidal",
+        nr_nodes=51
+    )
 #    print(start_values, flush=True)
 
     write_to_logfile(
@@ -296,14 +301,15 @@ Bs = variables[0].map_blocks(
     variable_names,
     new_axis=[4, 5],
     chunks=(1, 1, 1, variables[variable_names.index('time')].shape[-1], 6, 6),
-    dtype=np.float64
+    dtype=np.float64,
+    meta=np.ndarray((1, 1, 1, variables[variable_names.index('time')].shape[-1], 6, 6), dtype=np.float64)
 )
 Bs
 
 # +
 # %%time
 
-Bs.to_zarr(data_folder + filestem + output_folder + "Bs")
+Bs.to_zarr(data_folder + filestem + output_folder + "Bs", overwrite=True)
 # -
 
 to_zarr(data_folder + filestem + output_folder + "start_values")

@@ -31,9 +31,24 @@ def load_start_values_greg_dict(single_site_dict):
     return xs.data.filled()[0, ...]
 
 
-def load_Bs_greg_dict(single_site_dict):
+def load_us_greg_dict(single_site_dict):
     mdo = load_mdo_greg_dict(single_site_dict)
-    Bs = mdo.load_Bs()
+    us = mdo.load_us()
+    del mdo
+
+    return us
+
+
+def load_Bs_greg_dict(
+        single_site_dict,
+        integration_method='solve_ivp',
+        nr_nodes=None
+    ):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    Bs = mdo.load_Bs(
+        integration_method,
+        nr_nodes
+    )
     del mdo
 
     return Bs
@@ -954,8 +969,8 @@ if __name__ == "__main__":
         variable_names.append(variable_path.name)
         variables.append(da.from_zarr(str(variable_path)))
 
-    lat, lon, prob = (0, 0, 0)
-#    lat, lon, prob = (30, 50, 0)
+#    lat, lon, prob = (0, 0, 0)
+    lat, lon, prob = (30, 50, 0)
 
 
     no_data_vars = ['lat', 'lon', 'prob', 'time']
@@ -975,10 +990,9 @@ if __name__ == "__main__":
         index = variable_names.index(name)
         single_site_dict[name] = variables[index]
 
-    mdo = load_mdo_greg_dict(single_site_dict)
-    Bs = mdo.load_Bs()
+    us = load_us_greg_dict(single_site_dict)
 
-    print(Bs)
+    print(us)
 
 
 

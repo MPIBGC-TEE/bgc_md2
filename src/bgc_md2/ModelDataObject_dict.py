@@ -507,6 +507,27 @@ class ModelDataObject_dict(object):
 
         return abs_err, rel_err
 
+    def load_us(self):
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
+        times = self.time_agg.data.filled()
+        nr_pools = self.model_structure.nr_pools
+
+        data = np.nan * np.ones((len(times), nr_pools))
+        try:
+            us = PWCMRFD.reconstruct_us(
+                times,
+                Us.data.filled(),
+            )
+                
+            data[:-1, ...] = us
+
+        except (PWCModelRunFDError, ValueError, OverflowError) as e:
+            error = str(e)
+            print(error, flush=True)
+
+        return data
+
 
     def load_Bs(
         self,
