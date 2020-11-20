@@ -136,9 +136,9 @@ def init_B_chunk(
     bn[:, 0, 0, :, :] = - kplant[:, 0, :, :]
     #
     # b. Root turnover
-    bn[:, 1, 1, :, :] = - kplant[:, 1, :, :]  # note exchange of  1 and 2
+    bn[:, 1, 1, :, :] = - kplant[:, 2, :, :]  # note exchange of  1 and 2
     #
-    bn[:, 2, 2, :, :] = - kplant[:, 2, :, :]  # note exchange of  1 and 2 
+    bn[:, 2, 2, :, :] = - kplant[:, 1, :, :]  # note exchange of  1 and 2 
     bn[:, 3, 0, :, :] =   fromLeaftoL[:, 0, :, :]*kplant[:, 0, :, :]
     bn[:, 3, 1, :, :] =   fromRoottoL[0, 0, :, :]*kplant[:, 2, :, :]
     bn[:, 3, 3, :, :] = - C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
