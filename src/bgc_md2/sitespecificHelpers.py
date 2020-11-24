@@ -51,7 +51,7 @@ def getCluster():
         #n_workers=24,
         #threads_per_worker=4 
         ,
-        n_workers=96,
+        n_workers=48,
         threads_per_worker=1 
     )
     return my_cluster

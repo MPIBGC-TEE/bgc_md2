@@ -31,10 +31,11 @@ from sympy import Symbol,var
 import matplotlib.pyplot as plt
 import bgc_md2.models.cable_all.cableHelpers as cH
 from bgc_md2.helper import batchSlices
+from time import time
 # #%autoreload 
 
 
-from bgc_md2.sitespecificHelpers import get_client
+from bgc_md2.sitespecificHelpers import get_client,getCluster
 client = get_client()
 
 example_run_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/'
@@ -67,7 +68,7 @@ ps,lps=np.nonzero(cond_1)
 ind0=(ps[0],lps[0])
 ind0
 
-for i in range(20):
+for i in range(5):
     ind=(ps[i],lps[i])
     print(ind,iveg[ind])
 
@@ -137,8 +138,6 @@ I_temp = dask.array.where(
     dask.array.zeros(I_shape,chunks=I_chunk+(1,))
 )
 
-dad['fromRoottoL']
-
 B_res = B_temp.map_blocks(
     cH.init_B_chunk,
     dad['kplant'],
@@ -156,9 +155,6 @@ B_res = B_temp.map_blocks(
     dtype=np.float64
 )
 B_res
-
-dad['NPP']
-dad['fracCalloc']
 
 #B_res[:,:,:,:,0:95].compute()
 B_res[:,:,:,psnz[0],lpsnz[0]].compute()
@@ -199,15 +195,16 @@ X
 # -
 
 #srn (Sensible Run Number enumerates the patch landpoint combinations (where iveg!=_FillValue..))
-from functools import reduce
-lt=500
+lt=100
+
+
 def solve(x0,B_time,I_time):
     ntimes,npool=I_time.shape 
     my_one=np.eye(npool)
     xs = reduce(
-        lambda acc,k:acc +[ (B_time[k,:,:]+my_one) @ acc[-1] + I_time[k,:]],
-        range(0,ntimes-1),
-        #range(0,lt),
+        lambda acc,k:acc +[ (B_time[k,:,:]+my_one) @ acc[-1] + I_time[k+1,:]],
+        #range(0,ntimes-1),
+        range(0,lt),
         [x0]
     )
     return dask.array.stack(xs,axis=0)
@@ -217,19 +214,58 @@ def solve(x0,B_time,I_time):
 ax.clear()
 
 #for srn in range(len(psnz)):  
+start=time()
 for srn in range(1):  
-    x_time=X[:,:,psnz[srn],lpsnz[srn]]
+    x_time=X[:,:,psnz[srn],lpsnz[srn]][0:(lt+1)].compute() #just use the first lt
     x0=x_time[0]
     b_time = B_res[:,:,:,psnz[srn],lpsnz[srn]]
     i_time = I_res[:,:,psnz[srn],lpsnz[srn]]
-    sol_time = solve(x0,b_time,i_time)
-    ax=plt.axes()
-    ax.plot(x_time,'+')
-    ax.plot(sol_time,'-')
-    print(sol_time.compute())
+    sol_time = solve(x0,b_time,i_time).compute()
+    diff=(sol_time-x_time)
+print(time()-start)    
+
+diff.shape
 
 
-(np.matmul(b_time[0],x0)+i_time[0]+x0).compute(),x_time[1].compute(),sol_time[1].compute()
+for pi in range(npool):
+    print(np.min(diff[:,pi]),np.max(diff[:,pi]))
+
+
+fig=plt.figure(figsize=(15,10))
+ax=fig.add_axes([0,0,1,1])
+colors=[
+    'tab:blue',
+    'tab:orange',
+    'tab:green',
+    'tab:red',
+    'tab:purple',
+    'tab:brown',
+    'tab:pink',
+    'tab:gray',
+    'tab:olive',
+    'tab:cyan'
+]
+for pi in range(npool):
+    ax.plot(x_time[:,pi],linestyle='-',color=colors[pi],label='x_'+str(pi))
+    ax.plot(sol_time[:,pi],linestyle=':',color=colors[pi],label='sol_'+str(pi))
+ax.legend()   
+
+
+
+# +
+fig2=plt.figure(figsize=(15,30))
+axes = fig2.subplots(nrows=npool,ncols=1)
+
+for pi in range(npool):
+    ax=axes[pi]
+    ax.plot(x_time[:,pi],linestyle='-',color=colors[pi])
+    ax.plot(sol_time[:,pi],linestyle=':',color=colors[pi])
+fig2
+# -
+
+x_time[1],sol_time[1]
+
+np.matmul(b_time[0],x0)+i_time[0]+x0
 
 
 # +
@@ -254,14 +290,13 @@ def chunk_trajectories(iveg,X0,B_c,I_c):
 
 SOL=dask.array.blockwise(chunk_trajectories,'ijkl',iveg,'kl',X[0,:,:,:],'jkl', B_res, 'ijjkl',I_res,'ijkl',dtype='f8')
 #X=dask.array.blockwise(trajectory,'ijkl',X0,'jkl',times,'i',dtype='f8')
-SOL[:,:,0,0:95].compute()      
+SOL[:,:,0,0:47].compute()      
 # -
 
 
 
-# +
-#ncores=95
-#slices=batchSlices(nland,ncores)
+ncores=95
+slices=batchSlices(nland,ncores)
 ##slices[0:1]
 #for s in slices[0:1]:
 #    B_batch=B_res[:,:,:,:,s]
@@ -271,15 +306,15 @@ SOL[:,:,0,0:95].compute()
 #    SOL=dask.array.blockwise(chunk_trajectories,'ijkl',iveg_batch,'kl',x0_batch,'jkl', B_batch, 'ijjkl',I_batch,'ijkl',dtype='f8')
 #    SOL.compute()
 #    
-# -
 
 # # Now we can write B chunkwise to a zarr array #
 
 
 # +
-#var_dir_path=zarr_dir_path.joinpath('B')
-#if var_dir_path.exists():
-#    shutil.rmtree(var_dir_path)
+for var_name in ('B','SOL'):
+    var_dir_path=zarr_dir_path.joinpath(var_name)
+    if var_dir_path.exists():
+        shutil.rmtree(var_dir_path)
 
 zB = zarr.open(str(zarr_dir_path.joinpath('B')), mode='w', shape=B_res.shape,
             chunks=B_res.chunksize, dtype=B_res.dtype)

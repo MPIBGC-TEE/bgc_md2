@@ -138,14 +138,31 @@ def init_B_chunk(
     # b. Root turnover
     bn[:, 1, 1, :, :] = - kplant[:, 2, :, :]  # note exchange of  1 and 2
     #
+    # c. Wood turnover
     bn[:, 2, 2, :, :] = - kplant[:, 1, :, :]  # note exchange of  1 and 2 
+    #
+    # d. Leaf to Metoblic litter
     bn[:, 3, 0, :, :] =   fromLeaftoL[:, 0, :, :]*kplant[:, 0, :, :]
-    bn[:, 3, 1, :, :] =   fromRoottoL[0, 0, :, :]*kplant[:, 2, :, :]
+    #
+    # e. Root to Metoblic litter
+    bn[:, 3, 1, :, :] =   fromRoottoL[0, 0, :, :]*kplant[:, 2, :, :] # mm
+    #
+    # f. Metabolic turnover
     bn[:, 3, 3, :, :] = - C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # g. Leaf to Structural litter
     bn[:, 4, 0, :, :] =   fromLeaftoL[:, 1, :, :] *kplant[:, 0, :, :]
+    #
+    # h. Root to Structural litter
     bn[:, 4, 1, :, :] =   fromRoottoL[0, 1, :, :] *kplant[:, 2, :, :]
+    #
+    # i. Structural turnover
     bn[:, 4, 4, :, :] = - C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    #
+    # j. Wood to CWD
     bn[:, 5, 2, :, :] =   fromWoodtoL[:, 2, :, :] *kplant[:, 1, :, :]
+    #
+    # k. CWD turnover
     bn[:, 5, 5, :, :] = - C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
     # l. Metabolic litter to Fast soil
     bn[:, 6, 3, :, :] = A[:, 6, 3, :, :]*C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
@@ -378,11 +395,54 @@ def write_vars_as_zarr(
 
 
 
-
-
 def cable_dask_array_dict(dirpath_str):
     dir_p = Path(dirpath_str)
     paths = [p for p in dir_p.iterdir() if p.is_dir()]
     var_dict = {p.name: dask.array.from_zarr(str(p)) for p in paths}
     return var_dict 
+
+
+def reform(combi):
+    return combi.map_blocks(
+        lambda timeLine: np.expand_dims(timeLine,axis=-1),
+        new_axis=len(combi.shape)
+    )
+
+
+def valid_combies(nz,mat):
+    s=mat.shape
+    print(len(s))
+    ps,lps=nz
+    ps.compute_chunk_sizes()
+    lps.compute_chunk_sizes()
+
+    i = 0
+    mat_new = reform(mat[..., ps[i], lps[i]])
+    print(mat_new.shape)
+    # we now construct the squezed dask array (without computing it) 
+    while i < len(ps)-1:
+        i += 1
+        mat_new = dask.array.concatenate(
+            [
+                mat_new,
+                reform(mat[..., ps[i], lps[i]])
+            ],
+            axis=len(s)-2
+        )
+    return mat_new
+
+def write_valid_combies_as_zarr(
+    ds: xr.Dataset,
+    dir_name: str
+):
+    dir_p = Path(dir_name)
+    if dir_p.exists():
+        shutil.rmtree(dir_p)
+
+    dir_p.mkdir(parents=True, exist_ok=True)
     
+    for var_name, v in ds.variables.items():
+        zarr_dir_name = str(dir_p.joinpath(var_name))
+        dask.array.asarray(v.data).to_zarr(zarr_dir_name)
+
+
