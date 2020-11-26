@@ -5,6 +5,7 @@ import zarr as zr
 from pathlib import Path
 import numpy as np
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from bgc_md2.helper import batchSlices
 
 
 # fixme mm 10-14-2020
@@ -384,14 +385,33 @@ def write_vars_as_zarr(
     dir_name: str
 ):
     dir_p = Path(dir_name)
-    if dir_p.exists():
-        shutil.rmtree(dir_p)
 
     dir_p.mkdir(parents=True, exist_ok=True)
     
     for var_name, v in ds.variables.items():
-        zarr_dir_name = str(dir_p.joinpath(var_name))
-        dask.array.asarray(v.data).to_zarr(zarr_dir_name)
+        zarr_dir_path= dir_p.joinpath(var_name)
+        zarr_dir_name = str(zarr_dir_path)
+        if not(zarr_dir_path.exists()):
+            arr = dask.array.asarray(v.data)
+            print(var_name+' '+str(arr.nbytes/1024**3)+' GB')
+            if arr.nbytes < 8*1024**3:
+                # if the array fits into memory
+                # the direct call of the to_zarr method
+                # is possible (allthough it seems to imply a compute() 
+                # for the whole array
+                arr.to_zarr(zarr_dir_name)
+            else:
+                # if the array is bigger than memory we compute explicitly
+                # a part of it and write it to the zarr array.
+                # This takes longer but gives us control over the
+                # memory usage
+                z=zr.open(zarr_dir_name,mode='w',shape=arr.shape,chunks=arr.chunksize)
+                ncores=128
+                slices=batchSlices(arr.shape[-1],ncores)
+                #for s in slices[0:1]:
+                for s in slices:
+                    print(s)
+                    z[...,s] = arr[...,s].compute()
 
 
 
