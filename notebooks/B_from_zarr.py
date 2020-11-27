@@ -156,23 +156,21 @@ B_res = B_temp.map_blocks(
 )
 B_res
 
-#B_res[:,:,:,:,0:95].compute()
-B_res[:,:,:,psnz[0],lpsnz[0]].compute()
+nz = dask.array.nonzero(cond_1)
 
+B_val=cH.valid_combies_parallel(nz,B_res)
+
+# +
 I_res = I_temp.map_blocks(
     cH.init_I_chunk,
     dad['NPP'],
     dad['fracCalloc'],
     dtype=np.float64
 )
-I_res[:,:,psnz[0],lpsnz[0]].compute()
+#I_res[:,:,psnz[0],lpsnz[0]].compute()
 
-# # test the consistency of B #
-#
+I_val=cH.valid_combies_parallel(nz,I_res)
 
-# ## construct the state vector ##
-
-# +
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 
 for s in ('leaf','wood','fine_root','metabolic_lit','structural_lit','cwd','fast_soil','slow_soil','passive_soil'):
@@ -192,17 +190,34 @@ var_arr_dict={
 }
 X=dask.array.stack([var_arr_dict[var]for var in stateVariableTuple],1).rechunk((ntime,npool,npatch,1)) 
 X
+
+X0=X[0,...]
+X0
+
+X0_val=cH.valid_combies_parallel(nz,X0)
 # -
 
+cH.batchwise_to_zarr(B_val, str(zarr_dir_path.joinpath('B_val')))
+
+type(I_res)
+
+#B_res[:,:,:,:,0:95].compute()
+B_res[:,:,:,psnz[0],lpsnz[0]].compute()
+
+# # test the consistency of B #
+#
+
+# ## construct the state vector ##
+
 #srn (Sensible Run Number enumerates the patch landpoint combinations (where iveg!=_FillValue..))
-lt=100
+lt=1000
 
-
+from functools import reduce
 def solve(x0,B_time,I_time):
     ntimes,npool=I_time.shape 
     my_one=np.eye(npool)
     xs = reduce(
-        lambda acc,k:acc +[ (B_time[k,:,:]+my_one) @ acc[-1] + I_time[k+1,:]],
+        lambda acc,k:acc +[ (B_time[k,:,:]+my_one) @ acc[-1] + I_time[k,:]],
         #range(0,ntimes-1),
         range(0,lt),
         [x0]
@@ -222,7 +237,7 @@ for srn in range(1):
     i_time = I_res[:,:,psnz[srn],lpsnz[srn]]
     sol_time = solve(x0,b_time,i_time).compute()
     diff=(sol_time-x_time)
-print(time()-start)    
+print(time()-start)   
 
 diff.shape
 
@@ -290,9 +305,9 @@ def chunk_trajectories(iveg,X0,B_c,I_c):
 
 SOL=dask.array.blockwise(chunk_trajectories,'ijkl',iveg,'kl',X[0,:,:,:],'jkl', B_res, 'ijjkl',I_res,'ijkl',dtype='f8')
 #X=dask.array.blockwise(trajectory,'ijkl',X0,'jkl',times,'i',dtype='f8')
-SOL[:,:,0,0:47].compute()      
+sols=SOL[:,:,0,0:200].compute()      
 # -
-
+sols
 
 
 ncores=95
@@ -311,15 +326,19 @@ slices=batchSlices(nland,ncores)
 
 
 # +
-for var_name in ('B','SOL'):
+for var_name in ('B','SOL','u'):
     var_dir_path=zarr_dir_path.joinpath(var_name)
     if var_dir_path.exists():
         shutil.rmtree(var_dir_path)
 
 zB = zarr.open(str(zarr_dir_path.joinpath('B')), mode='w', shape=B_res.shape,
             chunks=B_res.chunksize, dtype=B_res.dtype)
-zSOL = zarr.open(str(zarr_dir_path.joinpath('SOL')), mode='w', shape=SOL.shape,
-            chunks=SOL.chunksize, dtype=SOL.dtype)
+zI = zarr.open(str(zarr_dir_path.joinpath('I')), mode='w', shape=I_res.shape,
+            chunks=I_res.chunksize, dtype=I_res.dtype)
+zx0 = zarr.open(str(zarr_dir_path.joinpath('x0')), mode='w', shape=x0_res.shape,
+            chunks=I_res.chunksize, dtype=I_res.dtype)
+#zSOL = zarr.open(str(zarr_dir_path.joinpath('SOL')), mode='w', shape=SOL.shape,
+#            chunks=SOL.chunksize, dtype=SOL.dtype)
 #B[:,:,:,:,s]
 for s in slices:
 #for s in slices[0:1]:
@@ -327,10 +346,9 @@ for s in slices:
     x0_batch=X[0,:,:,s]
     I_batch=I_res[:,:,:,s]
     iveg_batch=iveg[:,s]
-    SOL_batch=dask.array.blockwise(chunk_trajectories,'ijkl',iveg_batch,'kl',x0_batch,'jkl', B_batch, 'ijjkl',I_batch,'ijkl',dtype='f8')
-    #SOL.compute()
     zB[:,:,:,:,s]=B_batch.compute() #the explicit compute is necessarry here, otherwise we get an error  
-    zSOL[:,:,:,s]=SOL_batch.compute() #the explicit compute is necessarry here, otherwise we get an error  
+    #SOL_batch=dask.array.blockwise(chunk_trajectories,'ijkl',iveg_batch,'kl',x0_batch,'jkl', B_batch, 'ijjkl',I_batch,'ijkl',dtype='f8')
+    #zSOL[:,:,:,s]=SOL_batch.compute() #the explicit compute is necessarry here, otherwise we get an error  
 
 # +
 
