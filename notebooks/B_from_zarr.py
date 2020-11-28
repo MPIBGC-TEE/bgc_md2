@@ -32,11 +32,13 @@ import matplotlib.pyplot as plt
 import bgc_md2.models.cable_all.cableHelpers as cH
 from bgc_md2.helper import batchSlices
 from time import time
-# #%autoreload 
+%load_ext autoreload 
+%autoreload 2
 
 
-from bgc_md2.sitespecificHelpers import get_client,getCluster
-client = get_client()
+from bgc_md2.sitespecificHelpers import get_client, getCluster
+cluster = getCluster()
+client = Client(cluster)
 
 example_run_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/'
 outDir = "output/new4"

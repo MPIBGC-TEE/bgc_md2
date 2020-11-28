@@ -238,6 +238,52 @@ def init_B_chunk(
     # return dask.array.from_array(bn)
     return bn
 
+def reconstruct_B(
+    ifv,
+    ffv,
+    iveg,
+    kplant,
+    fromLeaftoL,
+    fromRoottoL,
+    fromWoodtoL,
+    fromMettoS,
+    fromStrtoS,
+    fromCWDtoS,
+    fromSOMtoSOM,
+    xktemp,
+    xkwater,
+    xkNlimiting
+) -> dask.array.core.Array:
+    npool = 9
+    ntime,_,npatch,nland=kplant.shape
+    C_d=dask.array.from_array(
+        c_diag_from_iveg(np.array(iveg),ifv),
+        chunks=(npool,npatch,1)
+    )
+    B_chunk = (ntime,npool,npool,npatch)
+    B_shape = B_chunk+(nland,)
+    B_temp=dask.array.where(
+        dask.array.isnan(iveg==ifv),
+        dask.array.full(B_shape,ffv,chunks=B_chunk+(1,)),
+        dask.array.zeros(B_shape,chunks=B_chunk+(1,)),
+    )
+    return B_temp.map_blocks(
+        init_B_chunk,
+        kplant,
+        fromLeaftoL,
+        fromRoottoL,
+        fromWoodtoL,
+        fromMettoS,
+        fromStrtoS,
+        fromCWDtoS,
+        fromSOMtoSOM,
+        C_d,
+        xktemp,
+        xkwater,
+        xkNlimiting,
+        dtype=np.float64
+    )
+
 
 def reconstruct_C(fn: str) -> np.ndarray:
     ds = single_year_ds(fn)
@@ -418,6 +464,28 @@ def reconstruct_C_diag(fn: str) -> np.ndarray:
     ds = single_year_ds(fn)
     return c_diag_from_iveg(ds.iveg.data, ds.iveg.attrs["_FillValue"])
 
+def reconstruct_u(
+    ifv,
+    ffv,
+    iveg,
+    NPP,
+    fracCalloc
+)->dask.array.core.Array:
+    npool = 9
+    ntime,npatch,nland=NPP.shape
+    I_chunk = (ntime,npool,npatch)
+    I_shape = I_chunk+(nland,)
+    I_temp = dask.array.where(
+        dask.array.isnan(iveg==ifv),# this works since the last two dimensions of iveg and I match
+        dask.array.full(I_shape,ffv,chunks=I_chunk+(1,)),
+        dask.array.zeros(I_shape,chunks=I_chunk+(1,))
+    )
+    return  I_temp.map_blocks(
+        init_I_chunk,
+        NPP,
+        fracCalloc,
+        dtype=np.float64
+    )
 
 def write_vars_as_zarr(ds: xr.Dataset, dir_name: str):
     dir_p = Path(dir_name)
@@ -451,7 +519,7 @@ def batchwise_to_zarr(arr: dask.array.core.Array, zarr_dir_name: str, rm=False):
         # This takes longer but gives us control over the
         # memory usage
         z = zr.open(zarr_dir_name, mode="w", shape=arr.shape, chunks=arr.chunksize)
-        ncores = 128
+        ncores = 8
         slices = batchSlices(arr.shape[-1], ncores)
         for s in slices:
             print(s)
