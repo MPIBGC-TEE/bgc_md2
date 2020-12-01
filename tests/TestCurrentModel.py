@@ -71,7 +71,6 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "Wang2010Biogeosciences"
 #        self.mn = "DeAngelis2012TheorEcol"
 #        self.mn = "Comins1993EA"
-#        self.mn = "Running1988EcolModel"
 #        self.mn = "Luo2012TE"
 #        self.mn = "Potter1993GlobalBiogeochemicalCycles"
         self.mvs = MVarSet.from_model_name(self.mn)
