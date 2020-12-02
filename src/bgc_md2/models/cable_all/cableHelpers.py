@@ -5,7 +5,7 @@ import zarr as zr
 from pathlib import Path
 import numpy as np
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
-
+from bgc_md2.helper import batchSlices
 
 # fixme mm 10-14-2020
 # This module contains hardcoded paths which will ultimately have to go.
@@ -38,7 +38,6 @@ def cable_ds(out_dir_path, first_yr=1901, last_yr=2004):
     # We can rechunk the whole dataset (or could have given a chunk argument to  xr.open_mfdataset)
     ds = ds.chunk(chunk_dict)
     return ds
-
 
 
 def reconstruct__first_day_A(fn: str) -> np.ndarray:
@@ -76,23 +75,26 @@ def single_year_ds(fn: str) -> xr.core.dataset.Dataset:
         mask_and_scale=False,
         # translated to float32
     )
-def init_I_chunk(
-    I,
-    NPP,
-    fracCalloc
-):
+
+
+def init_I_chunk(I, NPP, fracCalloc):
     # Input fluxes
     # Note that there is an implicit ordering of state variables
-    # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)    
+    # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)
 
-    I[:,0,:,:] = NPP[:,:,:] * fracCalloc[:, 0, :, :] 
-    I[:,1,:,:] = NPP[:,:,:] * fracCalloc[:, 2, :, :] # note the different orderin in cable 1, 2
-    I[:,2,:,:] = NPP[:,:,:] * fracCalloc[:, 1, :, :] # note the different orderin in cable 2, 1
+    I[:, 0, :, :] = NPP[:, :, :] * fracCalloc[:, 0, :, :]
+    I[:, 1, :, :] = (
+        NPP[:, :, :] * fracCalloc[:, 2, :, :]
+    )  # note the different orderin in cable 1, 2
+    I[:, 2, :, :] = (
+        NPP[:, :, :] * fracCalloc[:, 1, :, :]
+    )  # note the different orderin in cable 2, 1
     return I
+
 
 def init_B_chunk(
     bc,
-    #iveg,
+    # iveg,
     kplant,
     fromLeaftoL,
     fromRoottoL,
@@ -102,22 +104,22 @@ def init_B_chunk(
     fromCWDtoS,
     fromSOMtoSOM,
     C,
-    #A,
+    # A,
     xktemp,
     xkwater,
-    xkNlimiting
+    xkNlimiting,
 ):
     # Note that there is an implicit ordering of state variables
-    # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)    
+    # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)
     #
-    # numpy arrays elements can be assigned values, but dask arrays are immutable 
-    # and consequently can not be assigned values 
+    # numpy arrays elements can be assigned values, but dask arrays are immutable
+    # and consequently can not be assigned values
     # Therefore we create the numpy variants of the chunks
     print(bc.shape)
-    bn=np.array(bc)
-    # valid 
+    bn = np.array(bc)
+    # valid
 
-    A= np.array(bc)
+    A = np.array(bc)
     npool = 9
     for i in range(npool):
         A[:, i, i, :, :] = -1
@@ -128,56 +130,159 @@ def init_B_chunk(
     A[:, 6:9, 3, :] = fromMettoS[:, :, :]
     A[:, 6:9, 4, :] = fromStrtoS[:, :, :]
     A[:, 6:9, 5, :] = fromCWDtoS[:, :, :]
-    A[:, 7  , 6, :] = fromSOMtoSOM[:, 0, :]
-    A[:, 8  , 6, :] = fromSOMtoSOM[:, 1, :]
-    A[:, 8  , 7, :] = fromSOMtoSOM[:, 2, :]
-    #)# numpy arrays elements can be assigned values, dask arrays can not be assigned
+    A[:, 7, 6, :] = fromSOMtoSOM[:, 0, :]
+    A[:, 8, 6, :] = fromSOMtoSOM[:, 1, :]
+    A[:, 8, 7, :] = fromSOMtoSOM[:, 2, :]
+    # )# numpy arrays elements can be assigned values, dask arrays can not be assigned
     # a. Leaf turnover
-    bn[:, 0, 0, :, :] = - kplant[:, 0, :, :]
+    bn[:, 0, 0, :, :] = -kplant[:, 0, :, :]
     #
     # b. Root turnover
-    bn[:, 1, 1, :, :] = - kplant[:, 1, :, :]  # note exchange of  1 and 2
+    bn[:, 1, 1, :, :] = -kplant[:, 2, :, :]  # note exchange of  1 and 2
     #
-    bn[:, 2, 2, :, :] = - kplant[:, 2, :, :]  # note exchange of  1 and 2 
-    bn[:, 3, 0, :, :] =   fromLeaftoL[:, 0, :, :]*kplant[:, 0, :, :]
-    bn[:, 3, 1, :, :] =   fromRoottoL[0, 0, :, :]*kplant[:, 2, :, :]
-    bn[:, 3, 3, :, :] = - C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
-    bn[:, 4, 0, :, :] =   fromLeaftoL[:, 1, :, :] *kplant[:, 0, :, :]
-    bn[:, 4, 1, :, :] =   fromRoottoL[0, 1, :, :] *kplant[:, 2, :, :]
-    bn[:, 4, 4, :, :] = - C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
-    bn[:, 5, 2, :, :] =   fromWoodtoL[:, 2, :, :] *kplant[:, 1, :, :]
-    bn[:, 5, 5, :, :] = - C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    # c. Wood turnover
+    bn[:, 2, 2, :, :] = -kplant[:, 1, :, :]  # note exchange of  1 and 2
+    #
+    # d. Leaf to Metoblic litter
+    bn[:, 3, 0, :, :] = fromLeaftoL[:, 0, :, :] * kplant[:, 0, :, :]
+    #
+    # e. Root to Metoblic litter
+    bn[:, 3, 1, :, :] = fromRoottoL[0, 0, :, :] * kplant[:, 2, :, :]  # mm
+    #
+    # f. Metabolic turnover
+    bn[:, 3, 3, :, :] = (
+        -C[3, :, :] * xktemp[:, :, :] * xkwater[:, :, :] * xkNlimiting[:, :, :]
+    )
+    #
+    # g. Leaf to Structural litter
+    bn[:, 4, 0, :, :] = fromLeaftoL[:, 1, :, :] * kplant[:, 0, :, :]
+    #
+    # h. Root to Structural litter
+    bn[:, 4, 1, :, :] = fromRoottoL[0, 1, :, :] * kplant[:, 2, :, :]
+    #
+    # i. Structural turnover
+    bn[:, 4, 4, :, :] = (
+        -C[4, :, :] * xktemp[:, :, :] * xkwater[:, :, :] * xkNlimiting[:, :, :]
+    )
+    #
+    # j. Wood to CWD
+    bn[:, 5, 2, :, :] = fromWoodtoL[:, 2, :, :] * kplant[:, 1, :, :]
+    #
+    # k. CWD turnover
+    bn[:, 5, 5, :, :] = (
+        -C[5, :, :] * xktemp[:, :, :] * xkwater[:, :, :] * xkNlimiting[:, :, :]
+    )
     # l. Metabolic litter to Fast soil
-    bn[:, 6, 3, :, :] = A[:, 6, 3, :, :]*C[3, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 6, 3, :, :] = (
+        A[:, 6, 3, :, :]
+        * C[3, :, :]
+        * xktemp[:, :, :]
+        * xkwater[:, :, :]
+        * xkNlimiting[:, :, :]
+    )
     #
     # m. Structural litter to Fast soil
-    bn[:, 6, 4, :, :] = A[:, 6, 4, :, :]*C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 6, 4, :, :] = (
+        A[:, 6, 4, :, :]
+        * C[4, :, :]
+        * xktemp[:, :, :]
+        * xkwater[:, :, :]
+        * xkNlimiting[:, :, :]
+    )
     #
     # n. CWD to Fast soil
-    bn[:, 6, 5, :, :] = A[:, 6, 5, :, :]*C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 6, 5, :, :] = (
+        A[:, 6, 5, :, :]
+        * C[5, :, :]
+        * xktemp[:, :, :]
+        * xkwater[:, :, :]
+        * xkNlimiting[:, :, :]
+    )
     #
     # o. Fast soil turnover
-    bn[:, 6, 6, :, :] = - C[6, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    bn[:, 6, 6, :, :] = -C[6, :, :] * xktemp[:, :, :] * xkwater[:, :, :]
     #
     # p. Structural litter to Slow soil
-    bn[:, 7, 4, :, :] = A[:, 7, 4, :, :]*C[4, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 7, 4, :, :] = (
+        A[:, 7, 4, :, :]
+        * C[4, :, :]
+        * xktemp[:, :, :]
+        * xkwater[:, :, :]
+        * xkNlimiting[:, :, :]
+    )
     #
     # q. CWD to Slow soil
-    bn[:, 7, 5, :, :] = A[:, 7, 5, :, :]*C[5, :, :]*xktemp[:, :, :]*xkwater[:, :, :]*xkNlimiting[:, :, :]
+    bn[:, 7, 5, :, :] = (
+        A[:, 7, 5, :, :]
+        * C[5, :, :]
+        * xktemp[:, :, :]
+        * xkwater[:, :, :]
+        * xkNlimiting[:, :, :]
+    )
     #
     # r. Fast soil to Slow soil
-    bn[:, 7, 6, :, :] = A[:, 7, 6, :, :]*C[6, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    bn[:, 7, 6, :, :] = (
+        A[:, 7, 6, :, :] * C[6, :, :] * xktemp[:, :, :] * xkwater[:, :, :]
+    )
     #
     # s. Slow soil turnover
-    bn[:, 7, 7, :, :] = - C[7, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    bn[:, 7, 7, :, :] = -C[7, :, :] * xktemp[:, :, :] * xkwater[:, :, :]
     #
     # t. Slow soil to Passive soil
-    bn[:, 8, 7, :, :] = A[:, 8, 7, :, :]*C[7, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
+    bn[:, 8, 7, :, :] = (
+        A[:, 8, 7, :, :] * C[7, :, :] * xktemp[:, :, :] * xkwater[:, :, :]
+    )
     #
     # u. Passive soil turnover
-    bn[:, 8, 8, :, :] = - C[8, :, :]*xktemp[:, :, :]*xkwater[:, :, :]
-    #return dask.array.from_array(bn)
+    bn[:, 8, 8, :, :] = -C[8, :, :] * xktemp[:, :, :] * xkwater[:, :, :]
+    # return dask.array.from_array(bn)
     return bn
+
+def reconstruct_B(
+    ifv,
+    ffv,
+    iveg,
+    kplant,
+    fromLeaftoL,
+    fromRoottoL,
+    fromWoodtoL,
+    fromMettoS,
+    fromStrtoS,
+    fromCWDtoS,
+    fromSOMtoSOM,
+    xktemp,
+    xkwater,
+    xkNlimiting
+) -> dask.array.core.Array:
+    npool = 9
+    ntime,_,npatch,nland=kplant.shape
+    C_d=dask.array.from_array(
+        c_diag_from_iveg(np.array(iveg),ifv),
+        chunks=(npool,npatch,1)
+    )
+    B_chunk = (ntime,npool,npool,npatch)
+    B_shape = B_chunk+(nland,)
+    B_temp=dask.array.where(
+        dask.array.isnan(iveg==ifv),
+        dask.array.full(B_shape,ffv,chunks=B_chunk+(1,)),
+        dask.array.zeros(B_shape,chunks=B_chunk+(1,)),
+    )
+    return B_temp.map_blocks(
+        init_B_chunk,
+        kplant,
+        fromLeaftoL,
+        fromRoottoL,
+        fromWoodtoL,
+        fromMettoS,
+        fromStrtoS,
+        fromCWDtoS,
+        fromSOMtoSOM,
+        C_d,
+        xktemp,
+        xkwater,
+        xkNlimiting,
+        dtype=np.float64
+    )
 
 
 def reconstruct_C(fn: str) -> np.ndarray:
@@ -192,10 +297,8 @@ def reconstruct_C(fn: str) -> np.ndarray:
         C[ipool, ipool, :, :] = C_diag[ipool, :, :]
     return C
 
-def c_diag_from_iveg(
-        iveg_data: np.ndarray,
-        ifv: np.int32 
-    )->np.ndarray:
+
+def c_diag_from_iveg(iveg_data: np.ndarray, ifv: np.int32) -> np.ndarray:
     """Reconstruct the output of the original ncl script
     `bgc_md2/src/bgc_md2/models/cable_all/cable_transit_time/postprocessing/scripts_org/mkinitialmatrix.ncl`
     The original algorithm supposedly unintentionally produces `inf` values
@@ -359,30 +462,147 @@ def c_diag_from_iveg(
 
 def reconstruct_C_diag(fn: str) -> np.ndarray:
     ds = single_year_ds(fn)
-    return c_diag_from_iveg(ds.iveg.data,ds.iveg.attrs['_FillValue']) 
+    return c_diag_from_iveg(ds.iveg.data, ds.iveg.attrs["_FillValue"])
 
+def reconstruct_u(
+    ifv,
+    ffv,
+    iveg,
+    NPP,
+    fracCalloc
+)->dask.array.core.Array:
+    npool = 9
+    ntime,npatch,nland=NPP.shape
+    I_chunk = (ntime,npool,npatch)
+    I_shape = I_chunk+(nland,)
+    I_temp = dask.array.where(
+        dask.array.isnan(iveg==ifv),# this works since the last two dimensions of iveg and I match
+        dask.array.full(I_shape,ffv,chunks=I_chunk+(1,)),
+        dask.array.zeros(I_shape,chunks=I_chunk+(1,))
+    )
+    return  I_temp.map_blocks(
+        init_I_chunk,
+        NPP,
+        fracCalloc,
+        dtype=np.float64
+    )
 
-def write_vars_as_zarr(
-    ds: xr.Dataset,
-    dir_name: str
-):
+def write_vars_as_zarr(ds: xr.Dataset, dir_name: str):
     dir_p = Path(dir_name)
-    if dir_p.exists():
-        shutil.rmtree(dir_p)
 
     dir_p.mkdir(parents=True, exist_ok=True)
-    
+
     for var_name, v in ds.variables.items():
-        zarr_dir_name = str(dir_p.joinpath(var_name))
-        dask.array.asarray(v.data).to_zarr(zarr_dir_name)
+        zarr_dir_path = dir_p.joinpath(var_name)
+        zarr_dir_name = str(zarr_dir_path)
+        if not (zarr_dir_path.exists()):
+            arr = dask.array.asarray(v.data)
+            batchwise_to_zarr(arr, zarr_dir_name)
 
 
+def batchwise_to_zarr(arr: dask.array.core.Array, zarr_dir_name: str, rm=False):
+    dir_p = Path(zarr_dir_name)
+    if rm & dir_p.exists():
+        print("##########################################3")
+        shutil.rmtree(dir_p)
 
+    if arr.nbytes < 8 * 1024 ** 3:
+        # if the array fits into memory
+        # the direct call of the to_zarr method
+        # is possible (allthough it seems to imply a compute()
+        # for the whole array or at least a part that is too big
+        # to handle for bigger arrays
+        arr.to_zarr(zarr_dir_name)
+    else:
+        # if the array is bigger than memory we compute explicitly
+        # a part of it and write it to the zarr array.
+        # This takes longer but gives us control over the
+        # memory usage
+        z = zr.open(zarr_dir_name, mode="w", shape=arr.shape, chunks=arr.chunksize)
+        ncores = 8
+        slices = batchSlices(arr.shape[-1], ncores)
+        for s in slices:
+            print(s)
+            z[..., s] = arr[..., s].compute()
 
 
 def cable_dask_array_dict(dirpath_str):
     dir_p = Path(dirpath_str)
     paths = [p for p in dir_p.iterdir() if p.is_dir()]
     var_dict = {p.name: dask.array.from_zarr(str(p)) for p in paths}
-    return var_dict 
-    
+    return var_dict
+
+
+def reform(combi):
+    return combi.map_blocks(
+        lambda timeLine: np.expand_dims(timeLine, axis=-1), new_axis=len(combi.shape)
+    )
+
+
+def valid_combies_parallel(nz, mat):
+    s = mat.shape
+    print(len(s))
+    ps, lps = nz
+    ps.compute_chunk_sizes()
+    lps.compute_chunk_sizes()
+    rps = ps.rechunk(1,)
+    rlps = lps.rechunk(1,)
+
+    # we know the number of valid entries
+    l_new = len(ps)
+    # an so the shape of the new array.
+    s_f = s[:-1][:-1]
+    s_new = s_f + (l_new,)
+    c_new = s_f + (1,)
+    # now we create a template
+    mt = dask.array.zeros(s_new, chunks=c_new)
+    print(mt.shape)
+    # we now construct the squezed dask array (without computing it)
+    def f(m_c, rps_c, rlps_c):
+        # notes
+        # - rps_c and rlps are the chunks an have actually length 1
+        # - we reference variable mat which is not part of the signature
+        #   but part of the closure.
+        return mat[..., rps_c[0], rlps_c[0]].reshape(m_c.shape)
+
+    return mt.map_blocks(f, rps, rlps, dtype=np.float)
+
+
+def valid_combies(nz, mat):
+    """Although this function does not compute any array values
+    it is very slow on large arrays because the perpetual recreation of the
+    new dask array entails a lot of communication"""
+
+    s = mat.shape
+    print(len(s))
+    ps, lps = nz
+    ps.compute_chunk_sizes()
+    lps.compute_chunk_sizes()
+
+    i = 0
+    mat_new = reform(mat[..., ps[i], lps[i]])
+    print(mat_new.shape)
+    # we now construct the squezed dask array (without computing it)
+    while i < len(ps) - 1:
+        print(i)
+        i += 1
+        mat_new = dask.array.concatenate(
+            [mat_new, reform(mat[..., ps[i], lps[i]])], axis=len(s) - 2
+        )
+    return mat_new
+
+
+# def write_valid_combies_as_zarr(
+#    ds: xr.Dataset,
+#    dir_name: str
+# ):
+#    dir_p = Path(dir_name)
+#    if dir_p.exists():
+#        shutil.rmtree(dir_p)
+#
+#    dir_p.mkdir(parents=True, exist_ok=True)
+#
+#    for var_name, v in ds.variables.items():
+#        zarr_dir_name = str(dir_p.joinpath(var_name))
+#        dask.array.asarray(v.data).to_zarr(zarr_dir_name)
+#
