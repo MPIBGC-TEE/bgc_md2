@@ -31,24 +31,24 @@ def readVariable(**keywords):
         if ReturnClass == StockVariable:
             if var.cell_methods != "time: instantaneous":
                 pass
-#                raise(
-#                    ModelDataObjectException(
-#                        "Stock data " + variable_name + " is not instantaneous"
-#                    )
-#                )
+                raise(
+                    ModelDataObjectException(
+                        "Stock data " + variable_name + " is not instantaneous"
+                    )
+                )
 
         if ReturnClass == FluxVariable:
             if var.cell_methods != "time: mean":
                 pass
-#                raise(
-#                    ModelDataObjectException(
-#                        "Flux data " + variable_name + " is not a mean"
-#                    )
-#                )
+                raise(
+                    ModelDataObjectException(
+                        "Flux data " + variable_name + " is not a mean"
+                    )
+                )
     except AttributeError:
         pass
-#        s = "'cell_methods' not specified"
-#        raise (ModelDataObjectException(s))
+        s = "'cell_methods' not specified"
+        raise (ModelDataObjectException(s))
 
     ## read variable depending on dimensions
     ndim = var.ndim
@@ -539,8 +539,7 @@ class ModelDataObject(object):
                 nr_nodes
             )
         else:
-            pwc_mr_fd = None
-        
+            raise(ModelDataObjectException('Masked data discovered'))
 
         if errors:
 #            print('Computing reconstruction errors')
@@ -556,8 +555,8 @@ class ModelDataObject(object):
             abs_err = soln_pwc_mr_fd.absolute_error(xs)
             rel_err = soln_pwc_mr_fd.relative_error(xs)
             err_dict["stocks"] = {
-                "abs_err": abs_err.max(),
-                "rel_err": rel_err.max()
+                "abs_err": abs_err,#.max(),
+                "rel_err": rel_err#.max()
             }
 
 #            print('  input fluxes error')
@@ -569,8 +568,8 @@ class ModelDataObject(object):
             abs_err = Us_pwc_mr_fd.absolute_error(Us)
             rel_err = Us_pwc_mr_fd.relative_error(Us)
             err_dict["acc_gross_external_inputs"] = {
-                "abs_err": abs_err.max(),
-                "rel_err": rel_err.max(),
+                "abs_err": abs_err,#.max(),
+                "rel_err": rel_err#.max(),
             }
 
 #            print('  output fluxes error')
@@ -582,8 +581,8 @@ class ModelDataObject(object):
             abs_err = Rs_pwc_mr_fd.absolute_error(Rs)
             rel_err = Rs_pwc_mr_fd.relative_error(Rs)
             err_dict["acc_gross_external_outputs"] = {
-                "abs_err": abs_err.max(),
-                "rel_err": rel_err.max(),
+                "abs_err": abs_err,#.max(),
+                "rel_err": rel_err#.max(),
             }
 
 #            print('  internal fluxes error')
@@ -595,16 +594,17 @@ class ModelDataObject(object):
             abs_err = Fs_pwc_mr_fd.absolute_error(Fs)
             rel_err = Fs_pwc_mr_fd.relative_error(Fs)
             err_dict["acc_gross_internal_fluxes"] = {
-                "abs_err": abs_err.max(),
-                "rel_err": rel_err.max(),
+                "abs_err": abs_err,#.max(),
+                "rel_err": rel_err#.max(),
             }
-            abs_err.argmax()
-            rel_err.argmax()
+#            abs_err.argmax()
+#            rel_err.argmax()
 
-#            print('done')
+#            print('done computing errors')
+
             return pwc_mr_fd, err_dict
         else:
-            return pwc_mr_fd
+            return pwc_mr_fd, dict()
 
     def get_stock(self, mr, pool_name, nr_layer=0, name=''):
         ms = self.model_structure

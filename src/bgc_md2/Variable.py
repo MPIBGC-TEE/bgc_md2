@@ -164,7 +164,7 @@ class Variable(object):
             data=np.unravel_index(np.argmax(self.data), self.data.shape),
             unit=self.unit
         )
-        print(res)
+#        print(res)
         return res
 
     #fixme: test

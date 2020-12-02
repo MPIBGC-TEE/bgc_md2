@@ -41,6 +41,7 @@ my_user_name = getuser()
 print('username:', my_user_name)
 
 my_port = port_dict[my_user_name]
+
 print('notebook port:', my_port)
 
 # prevent worker from stupid too early memory shuffling
@@ -99,7 +100,7 @@ filestem = "Greg_2020_10_26/"
 output_folder = "output/"
 #pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
 
-logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook.log"
+logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook_dask_trapezoidal_51_nodes:5-9_probs.log"
 
 #ds = xr.open_mfdataset(data_folder + filestem + "SUM*.nc")
 #ds = xr.open_mfdataset(data_folder + filestem + "small_netcdf/*.nc")
@@ -147,7 +148,7 @@ variables[index] = variables[index][:, :lims[1], ...]
 
 name = "prob"
 index = variable_names.index(name)
-variables[index] = variables[index][:, :, :lims[2], ...]
+variables[index] = variables[index][:, :, 5:(5+lims[2]), ...]
 
 #for nr, name in enumerate(['lat', 'lon', 'prob']):
 #    index = variable_names.index(name)
@@ -170,6 +171,11 @@ def func_start_values(*args):
 #    print([v.shape for v in d.values()], flush=True)
 
     start_values = CARDAMOMlib.load_start_values_greg_dict(d)
+    ds_res = CARDAMOMlib.compute_ds_pwc_mr_fd_greg(
+        ds_single,
+        integration_method='trapezoidal',
+        nr_nodes=51
+    )
 #    print(start_values, flush=True)
 
 #    start_values = da.from_array(1.1 * np.ones((1, 1, 1, 6), dtype=np.float64, chunks=(1,1,6))
@@ -310,6 +316,8 @@ Bs
 # %%time
 
 Bs.to_zarr(data_folder + filestem + output_folder + "Bs", overwrite=True)
+write_to_logfile('done')
+print('done')
 # -
 
 to_zarr(data_folder + filestem + output_folder + "start_values")

@@ -21,6 +21,7 @@ from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as 
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C as PWCMR_14C
 from bgc_md2.models.CARDAMOM.compute_start_values_14C import compute_start_values_14C
 
+import warnings
 
 
 def load_start_values_greg_dict(single_site_dict):
@@ -164,17 +165,28 @@ def load_mdo_greg_dict(ds_dict):
     return mdo
 
 
-
-def compute_ds_pwc_mr_fd_greg(ds, comp_dict):
+def compute_ds_pwc_mr_fd_greg(
+#    comp_dict,
+    ds, 
+    integration_method='solve_ivp',
+    nr_nodes=None,
+    errors=False
+):
     mdo = load_mdo_greg(ds)
     ms = mdo.model_structure
     nr_pools = ms.nr_pools
     error = ''
     try:
-        #pwc_mr_fd, err_dict = mdo.create_model_run(errors=True)
-        pwc_mr_fd = mdo.create_model_run()
-    except (PWCModelRunFDError, ValueError, OverflowError) as e:
+        pwc_mr_fd, err_dict = mdo.create_model_run(
+            integration_method=integration_method,
+            nr_nodes=nr_nodes,
+            errors=errors
+        )
+        print('pwc_mr_fd & errors created', flush=True)
+#    except (PWCModelRunFDError, ValueError, OverflowError) as e:
+    except Exception as e:
         error = str(e)
+        print('CDMlib 189', error, flush=True)
 
     coords_time = ds.time
     coords_pool = [d['pool_name'] for d in ms.pool_structure]
@@ -233,6 +245,90 @@ def compute_ds_pwc_mr_fd_greg(ds, comp_dict):
 #        encoding=comp_dict
     )
 
+    if errors:
+        #  stocks
+        err_name = 'stocks'
+        for err_type in ['abs_err', 'rel_err']:
+            data = np.nan * np.ones((len(ds.time), nr_pools))
+            unit = ''
+            if not error:
+                d = err_dict[err_name][err_type]
+                data = d.data
+                unit = d.unit
+            data_vars[err_name + '_' + err_type] = xr.DataArray(
+                data=data,
+                coords={
+                    'time': coords_time,
+                    'pool': coords_pool
+                },
+                dims=['time', 'pool'],
+                attrs={'units': unit},
+#                encoding=comp_dict
+            )
+    
+        #  input fluxes
+        err_name = 'acc_gross_external_inputs'
+        for err_type in ['abs_err', 'rel_err']:
+            data = np.nan * np.ones((len(ds.time), nr_pools))
+            unit = ''
+            if not error:
+                d = err_dict[err_name][err_type]
+                data[:-1] = d.data
+                unit = d.unit
+            data_vars[err_name + '_' + err_type] = xr.DataArray(
+                data=data,
+                coords={
+                    'time': coords_time,
+                    'pool': coords_pool
+                },
+                dims=['time', 'pool'],
+                attrs={'units': unit},
+#                encoding=comp_dict
+            )
+    
+        #  output fluxes
+        err_name = 'acc_gross_external_outputs'
+        for err_type in ['abs_err', 'rel_err']:
+            data = np.nan * np.ones((len(ds.time), nr_pools))
+            unit = ''
+            if not error:
+                d = err_dict[err_name][err_type]
+                data[:-1] = d.data
+                unit=d.unit
+
+            data_vars[err_name + '_' + err_type] = xr.DataArray(
+                data=data,
+                coords={
+                    'time': coords_time,
+                    'pool': coords_pool
+                },
+                dims=['time', 'pool'],
+                attrs={'units': unit},
+#                encoding=comp_dict
+            )
+    
+        #  internal fluxes
+        err_name = 'acc_gross_internal_fluxes'
+        for err_type in ['abs_err', 'rel_err']:
+            data = np.nan * np.ones((len(ds.time), nr_pools, nr_pools))
+            unit = ''
+            if not error:
+                d = err_dict[err_name][err_type]
+                data[:-1] = d.data
+                unit = d.unit
+    
+            data_vars[err_name + '_' + err_type] = xr.DataArray(
+                data=data,
+                coords={
+                    'time': coords_time,
+                    'pool_to': coords_pool,
+                    'pool_from': coords_pool
+                },
+                dims=['time', 'pool_to', 'pool_from'],
+                attrs={'units': unit},
+#                encoding=comp_dict
+            )
+    
     # potential error message
     data = np.array(error, dtype="<U150")
     data_vars['log'] = xr.DataArray(data=data)
@@ -979,21 +1075,51 @@ if __name__ == "__main__":
 #            print(name)
 #            print(v[lat, lon, prob, ...])
                 
-    single_site_dict = {
-#        name: v[lat, lon, prob].reshape(1, 1, 1, -1)\
-        name: v[lat, lon, prob]\
-        for (name, v) in zip(variable_names, variables)\
-        if name not in no_data_vars
-    }
-
-    for name in no_data_vars:
-        index = variable_names.index(name)
-        single_site_dict[name] = variables[index]
-
-    us = load_us_greg_dict(single_site_dict)
-
-    print(us)
-
-
+#    single_site_dict = {
+##        name: v[lat, lon, prob].reshape(1, 1, 1, -1)\
+#        name: v[lat, lon, prob]\
+#        for (name, v) in zip(variable_names, variables)\
+#        if name not in no_data_vars
+#    }
+#
+#    for name in no_data_vars:
+#        index = variable_names.index(name)
+#        single_site_dict[name] = variables[index]
+#
+#    us = load_us_greg_dict(single_site_dict)
+#
+#    print(us)
 
 
+    data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya
+    filestem = "Greg_2020_10_26/"
+    output_folder = "output/"
+    #pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
+
+#    probs = [11, 26] #, 29, 53, 67]
+#    filenames = [data_folder + filestem + "small_netcdf/%02d_*.nc" % prob for prob in probs]
+#    print(filenames)
+#    dss = [xr.open_mfdataset(filename) for filename in filenames]
+#    ds = xr.concat(dss, dim='prob')
+#    ds_single_site = ds.isel(
+#        lat=29,
+#        lon=59,
+#        prob=0,
+#        time=slice(0, 100, 1)
+#    )
+
+    ds_single_site = xr.open_dataset(
+        data_folder + filestem + "small_netcdf/11_62.00_120.00.nc",
+    ).\
+    isel(lat=0, lon=0, prob=0, time=slice(0, 100,1))
+    print(ds_single_site)
+
+    ds_res = compute_ds_pwc_mr_fd_greg(
+        ds_single_site,
+        integration_method='trapezoidal',
+        nr_nodes=51,
+        errors=True
+    )
+
+    print(ds_res)
+    ds_res.to_netcdf('temp.nc')
