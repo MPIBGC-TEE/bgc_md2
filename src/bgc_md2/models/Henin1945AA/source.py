@@ -45,7 +45,7 @@ mvs = MVarSet({
 #                     title = {{Essai de bilan de la mati\\`{e}re organique du sol}},
 #                     volume = {15},
 #                     year = {1945}
-#                    }"
+#                    }",
         sym_dict=sym_dict
     ),
     A_GeM,  # the overall compartmental matrix, decomposition operator

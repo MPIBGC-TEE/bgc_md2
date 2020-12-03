@@ -17,9 +17,16 @@ from ..BibInfo import BibInfo
 from bgc_md2.helper import MVarSet
 
 sym_dict={
-        'F': 'Foliage carbon content per unit ground area at equilibrium'
-        ,'R': 'Root carbon'
-        ,'W': 'Carbon in woody tissue'
+        'C_f': 'Foliage carbon content'
+        ,'C_r': 'Coarse and fine root carbon'
+        ,'C_w': 'Carbon in woody stem, branches, and large structural roots'
+        ,'C_m': 'Carbon in surface metabolic litter'
+        ,'C_n': 'Carbon in soil metabolic litter'
+        ,'C_u': 'Carbon in surface structural litter'
+        ,'C_v': 'Carbon in soil structural litter'
+        ,'C_a': 'Carbon in active soil organic matter'
+        ,'C_s': 'Carbon in slow soil organic matter'
+        ,'C_p': 'Carbon in passive soil organic matter'
         ,'G': 'Net rate of plant carbon production'
         ,'eta_f': 'Allocation fraction to foliar biomass'
         ,'eta_r': 'Allocation fraction to roots biomass'
@@ -27,20 +34,49 @@ sym_dict={
         ,'gamma_f': 'Foliage senescence rate' #unit: "yr^{-1}" 
         ,'gamma_r': 'Roots senescence rate' #unit: "yr^{-1}" 
         ,'gamma_w': 'Wood senescence rate' #unit: "yr^{-1}" 
+        ,'p_uf': 'Partition coefficient'
+        ,'p_mf': 'Partition coefficient'
+        ,'p_vr': 'Partition coefficient'
+        ,'p_nr': 'Partition coefficient'
+        ,'p_su': 'Partition coefficient'
+        ,'p_sv': 'Partition coefficient'
+        ,'p_sa': 'Partition coefficient'
+        ,'p_ap': 'Partition coefficient'
+        ,'p_as': 'Partition coefficient'
+        ,'p_an': 'Partition coefficient'
+        ,'p_av': 'Partition coefficient'
+        ,'p_am': 'Partition coefficient'
+        ,'p_au': 'Partition coefficient'
+        ,'p_pa': 'Partition coefficient'
+        ,'p_ps': 'Partition coefficient'
+        ,'d_1': 'Decay rate'
+        ,'d_2': 'Decay rate'
+        ,'d_3': 'Decay rate'
+        ,'d_4': 'Decay rate'
+        ,'d_5': 'Decay rate'
+        ,'d_6': 'Decay rate'
+        ,'d_7': 'Decay rate'
 }
 for name in sym_dict.keys():
     var(name)
 
-x = StateVariableTuple((F, R, W ))
+x = StateVariableTuple((C_f, C_w, C_r, C_u, C_m, C_v, C_n, C_a, C_s, C_p))
 u = G
 b = (eta_f, eta_w, eta_r)
-
-Input = InputTuple(u * ImmutableMatrix(b))
-A = CompartmentalMatrix(
-    diag(-gamma_f, -gamma_w, -gamma_r)
-)
 t = TimeSymbol("t") #'yr'
-
+Input = InputTuple((u * ImmutableMatrix(b),0,0,0,0,0,0,0))
+A = CompartmentalMatrix(
+[[  -gamma_f  ,    0   ,      0     ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ]
+,[      0     ,-gamma_w,      0     ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ]
+,[      0     ,    0   ,  -gamma_r  ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ]
+,[gamma_f*p_uf, gamma_w,      0     ,  -d_1  ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ]
+,[gamma_f*p_mf,    0   ,      0     ,    0   ,  -d_2  ,    0   ,    0   ,    0   ,    0   ,    0   ]
+,[      0     ,    0   ,gamma_r*p_vr,    0   ,    0   ,  -d_3  ,    0   ,    0   ,    0   ,    0   ]
+,[      0     ,    0   ,gamma_r*p_nr,    0   ,    0   ,    0   ,  -d_4  ,    0   ,    0   ,    0   ]
+,[      0     ,    0   ,      0     ,d_1*p_au,d_2*p_am,d_3*p_av,d_4*p_an,  -d_5  ,d_6*p_as,d_7*p_ap]
+,[      0     ,    0   ,      0     ,d_1*p_su,    0   ,d_3*p_sv,    0   ,d_5*p_sa,  -d_6  ,    0   ]
+,[      0     ,    0   ,      0     ,    0   ,    0   ,    0   ,    0   ,d_5*p_pa,d_6*p_ps,  -d_7  ]
+])
 # Commented out the following lines because original publication only has 3 parameter values
 #np1 = NumericParameterization(
 #    par_dict={
@@ -80,6 +116,6 @@ mvs=MVarSet({
     VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
     VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((F, W, R)),
+    VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
 #    np1
 })

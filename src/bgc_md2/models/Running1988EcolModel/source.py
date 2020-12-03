@@ -1,5 +1,5 @@
 import numpy as np
-from sympy import var, symbols, Symbol, ImmutableMatrix, diag
+from sympy import var, symbols, Symbol, ImmutableMatrix
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -46,7 +46,6 @@ b = (eta_f, eta_w, eta_r)
 #Input = InputTuple(u * ImmutableMatrix(b))
 Input = InputTuple((u * ImmutableMatrix(b),0,0))
 A = CompartmentalMatrix(
-#    diag(-gamma_f, -gamma_w, -gamma_r)
 [[-gamma_f,    0   ,    0   ,   (l_p*eta_f)  ,(s_p*eta_f)],
  [    0   ,-gamma_r,    0   ,   (l_p*eta_r)  ,(s_p*eta_r)],
  [    0   ,    0   ,-gamma_w,   (l_p*eta_w)  ,(s_p*eta_w)],
