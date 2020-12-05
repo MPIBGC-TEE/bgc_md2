@@ -1,6 +1,6 @@
 #import numpy as np
-from sympy import var, symbols, Symbol, ImmutableMatrix, diag#, Rational
-#from frozendict import frozendict
+from sympy import var, symbols, Symbol, ImmutableMatrix, exp#, Rational
+from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
     InputTuple,
@@ -9,7 +9,7 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
-#    NumericParameterization,
+    NumericParameterization,
 #    NumericStartValueDict,
 #    NumericSimulationTimes,
    )
@@ -56,10 +56,37 @@ sym_dict={
         ,'d_5': 'Decay rate'
         ,'d_6': 'Decay rate'
         ,'d_7': 'Decay rate'
+        ,'L_fl': 'Lignin to biomass ratio in leaf litter'
+        ,'L_rl': 'Lignin to biomass ratio in root litter'
+        ,'omega': 'Carbon content of biomass'
+        ,'lambda_f': 'Ratio of litter N:C to live leaf'
+        ,'upsilon_f': 'N:C ratio in foliage'
+        ,'lambda_r': 'Ratio of litter N:C to live root'
+        ,'upsilon_r': 'N:C ratio in roots'
+        ,'T': 'Soil texture'
+        ,'T_soil': 'Average soil temperature'
+        ,'AT_soil': 'Soil-temperature activity factor'
 }
 for name in sym_dict.keys():
     var(name)
-
+eta_w = 1-eta_f-eta_r #Added by Vero
+p_mf = 0.85 - 0.018*L_fl/(omega*lambda_f*upsilon_f)
+p_uf = 1 - p_mf
+p_nr = 0.85 - 0.018*L_rl/(omega*lambda_r*upsilon_r)
+p_vr = 1 - p_nr 
+p_au = 0.55*(1-L_fl)
+p_su = 0.7*L_fl
+p_av = 0.45*(1-L_fl)
+p_sv = 0.7*L_fl
+p_sa = 0.996-(0.85-0.68*T)
+d_1 = 0.076*exp(-3*L_fl)*AT_soil
+d_2 = 0.28*AT_soil 
+d_3 = 0.094*exp(-3*L_rl)*AT_soil
+d_4 = 0.35*AT_soil
+d_5 = 0.14*(1-0.75*T)*AT_soil
+d_6 = 0.0038*AT_soil
+d_7 = 0.00013*AT_soil
+AT_soil = 0.0326 + 0.00351*(T_soil)**(1.652) - (T_soil/41.748)**7.19
 x = StateVariableTuple((C_f, C_w, C_r, C_u, C_m, C_v, C_n, C_a, C_s, C_p))
 u = G
 b = (eta_f, eta_w, eta_r)
@@ -78,17 +105,31 @@ A = CompartmentalMatrix(
 ,[      0     ,    0   ,      0     ,    0   ,    0   ,    0   ,    0   ,d_5*p_pa,d_6*p_ps,  -d_7  ]
 ])
 # Commented out the following lines because original publication only has 3 parameter values
-#np1 = NumericParameterization(
-#    par_dict={
+np1 = NumericParameterization(
+    par_dict={
 #    G: , #"Mg*ha^{-1}*yr^{-1}"
-#    eta_f: 'Rational(1,3)', 
-#    eta_r: 'Rational(1,3)', 
-#    eta_w: 'Rational(1,3)',
-#},
-#    func_dict=frozendict({})
-#    # state_var_units=gram/kilometer**2,
-#    # time_unit=day
-#)
+    eta_f: 0.3 
+    ,eta_r: 0.3 
+    ,gamma_f: 0.5 #"yr^{-1}"
+    ,gamma_r: 1.5 #"yr^{-1}"
+    ,gamma_w: 0.01 #"yr^{-1}"
+    ,lambda_f: 1
+    ,lambda_r: 1
+    ,omega: 0.45
+    ,L_fl: 0.2
+    ,L_rl: 0.16
+    ,T: 0.5
+    ,p_am: 0.45
+    ,p_an: 0.45
+    ,p_pa: 0.004
+    ,p_as: 0.42
+    ,p_ps: 0.03
+    ,p_ap: 0.45
+},
+    func_dict=frozendict({})
+    # state_var_units=gram/kilometer**2,
+    # time_unit=day
+)
 #nsv1 = NumericStartValueDict({
 #    F: , #"Mg/ha"
 #    W: , #"Mg/ha"
@@ -117,5 +158,5 @@ mvs=MVarSet({
     # vegetation carbon partitioning.
     VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
-#    np1
+    np1
 })
