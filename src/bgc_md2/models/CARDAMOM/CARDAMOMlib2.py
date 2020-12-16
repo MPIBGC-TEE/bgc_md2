@@ -8,7 +8,11 @@ from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject import  ModelDataObject
 
 
-from bgc_md2.ModelDataObject_dict import  ModelDataObject_dict
+from bgc_md2.ModelDataObject_dict import (
+    ModelDataObject_dict,
+    getStockVariable_from_Density,
+    getFluxVariable_from_DensityRate
+)
 
 from bgc_md2.Variable import Variable
 
@@ -55,6 +59,65 @@ def load_Bs_greg_dict(
     del mdo
 
     return Bs
+
+
+def load_xs_greg_dict(single_site_dict):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    xs = mdo.load_stocks(
+        func=getStockVariable_from_Density,
+        data_shift=0
+    )
+    del mdo
+
+    return xs.data.filled()
+
+
+def load_Us_greg_dict(single_site_dict):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    Us = mdo.load_external_input_fluxes(
+        func=getFluxVariable_from_DensityRate,
+        data_shift=1
+    )
+    del mdo
+
+    shp = list(Us.data.shape)
+    shp[0] += 1
+    data = np.nan * np.ones(shp)
+    data[:-1] = Us.data.filled()
+
+    return data
+
+
+def load_Fs_greg_dict(single_site_dict):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    HFs = mdo.load_horizontal_fluxes(
+        func=getFluxVariable_from_DensityRate,
+        data_shift=1
+    )
+    del mdo
+
+    shp = list(HFs.data.shape)
+    shp[0] += 1
+    data = np.nan * np.ones(shp)
+    data[:-1] = HFs.data.filled()
+
+    return data
+
+
+def load_Rs_greg_dict(single_site_dict):
+    mdo = load_mdo_greg_dict(single_site_dict)
+    Rs = mdo.load_external_output_fluxes(
+        func=getFluxVariable_from_DensityRate,
+        data_shift=1
+    )
+    del mdo
+
+    shp = list(Rs.data.shape)
+    shp[0] += 1
+    data = np.nan * np.ones(shp)
+    data[:-1] = Rs.data.filled()
+
+    return data
 
 
 def load_model_structure_greg():

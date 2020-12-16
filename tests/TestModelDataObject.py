@@ -596,7 +596,7 @@ class TestModelDataObject(unittest.TestCase):
     def test_create_model_run(self):
         mdo = self.mdo_discretizable
 
-        mr_pwc = mdo.create_model_run()
+        mr_pwc, err_dict = mdo.create_model_run()
         self.assertEqual(mr_pwc.model.nr_pools, 9)
         soln = mr_pwc.solve()
         self.assertTrue(np.allclose(mr_pwc.times, [0, 2, 4, 6, 8, 9]))
@@ -617,7 +617,7 @@ class TestModelDataObject(unittest.TestCase):
         dataset = xr.open_dataset(my_data_path)
         ds = dataset.isel(ens=0, lat=0, lon=0, time=slice(None, 24))
         mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
+        mr, err_dict = mdo.create_model_run()
 
         soln = mr.solve()
         for nr, pool_dict in enumerate(mdo.model_structure.pool_structure):
@@ -636,7 +636,7 @@ class TestModelDataObject(unittest.TestCase):
         dataset = xr.open_dataset(my_data_path)
         ds = dataset.isel(ens=0, lat=0, lon=0, time=slice(None, 24))
         mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
+        mr, err_dict = mdo.create_model_run()
 
         ms = mdo.model_structure
         Us = mr.acc_gross_external_input_vector()
@@ -664,7 +664,7 @@ class TestModelDataObject(unittest.TestCase):
         dataset = xr.open_dataset(my_data_path)
         ds = dataset.isel(ens=0, lat=0, lon=0, time=slice(None, 24))
         mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
+        mr, err_dict = mdo.create_model_run()
 
         ms = mdo.model_structure
         Rs = mr.acc_gross_external_output_vector()
@@ -692,7 +692,7 @@ class TestModelDataObject(unittest.TestCase):
         dataset = xr.open_dataset(my_data_path)
         ds = dataset.isel(ens=0, lat=0, lon=0, time=slice(None, 24))
         mdo = load_mdo(ds)
-        mr = mdo.create_model_run()
+        mr, err_dict = mdo.create_model_run()
 
         ms = mdo.model_structure
         Fs = mr.acc_gross_internal_flux_matrix()
