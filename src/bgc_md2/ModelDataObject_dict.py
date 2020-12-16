@@ -532,7 +532,8 @@ class ModelDataObject_dict(object):
     def load_Bs(
         self,
         integration_method='solve_ivp',
-        nr_nodes=None
+        nr_nodes=None,
+        time_limit_in_min=np.inf
     ):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
@@ -540,6 +541,7 @@ class ModelDataObject_dict(object):
         nr_pools = self.model_structure.nr_pools
 
         data = np.nan * np.ones((len(times), nr_pools, nr_pools))
+
         try:
             Bs = PWCMRFD.reconstruct_Bs(
                 times,
@@ -547,15 +549,14 @@ class ModelDataObject_dict(object):
                 Us.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled(),
-                integration_method,
-                nr_nodes
+                integration_method=integration_method,
+                nr_nodes=nr_nodes,
             )
+            
             data[:-1, ...] = Bs
         except (PWCModelRunFDError, ValueError, OverflowError) as e:
             error = str(e)
-            print('---------------------------', flush=True)
             print(error, flush=True)
-            print('---------------------------', flush=True)
 
         return data
 

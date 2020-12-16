@@ -19,6 +19,7 @@ from dask.distributed import LocalCluster
 from getpass import getuser
 from subprocess import run
 
+
 port_dict = {
     'mm': (8689, 8789),       # first is the port of the actual scheduler,
                               # second the port for the dashboard
@@ -57,4 +58,5 @@ def getCluster():
     return my_cluster
 
 
-
+if __name__ == "__main__":
+    pass
