@@ -34,8 +34,8 @@ from bgc_md2.notebookHelpers import write_to_logfile, custom_timeout
 # +
 port_dict = {
     'mm': 8789,
-#    'hmetzler': 8790, # change at will
-    'hmetzler': 8791, # change at will
+    'hmetzler': 8790, # change at will
+#    'hmetzler': 8791, # change at will
     'cs': 8791        # change at will
 }
 my_user_name = getuser()
@@ -102,9 +102,10 @@ filestem = "Greg_2020_10_26/"
 zarr_data_folder = "zarr_version"
 output_folder = "output/"
 
-project_name = "Bs_experimental"
+#project_name = "Bs_experimental"
+project_name = "solve_ivp_0000-0001_root_success_check"
 logfilename = data_folder + filestem + output_folder + project_name + ".log"
-zarr_dir_name = data_folder + filestem + output_folder + project_name
+zarr_dir_name = data_folder + filestem + output_folder + project_name + "/Bs"
 
 zarr_path = Path(data_folder).joinpath(filestem).joinpath(zarr_data_folder)
 variable_paths = [p for p in zarr_path.iterdir() if p.is_dir()]
@@ -163,13 +164,13 @@ z.shape
 
 
 # +
-timeouts = [30, 300, 600, 1200]
+timeouts = [30, 300, 2000]
 dims = {"lat": 0, "lon": 1, "prob": 2, "time": 3}
 
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(2, 4, 1)
+    "prob": slice(0, 2, 1)
 }
 
 batch_nrs = {
@@ -218,8 +219,8 @@ def func_Bs(*args):
             time_limit_in_min*60,
             CARDAMOMlib.load_Bs_greg_dict,
             d,
-            integration_method="trapezoidal",
-            nr_nodes=1001
+#            integration_method="trapezoidal",
+#            nr_nodes=1001
         )
     except TimeoutError:
         duration = (time.time() - start_time) / 60
@@ -407,6 +408,8 @@ def remove_timeouts(timeout):
     print('done, timeout = ', timeout, 'min')
 
 
+timeouts
+
 # +
 # %%time
 
@@ -417,9 +420,13 @@ for timeout in timeouts[1:]:
 # -
 
 
+a = da.from_zarr(zarr_dir_name)[slices['lat'], slices['lon'], slices['prob'], 0, 0, 0]
+a
 
+good_indices = np.where(~np.isnan(a.compute()))
+len(good_indices[0])
 
-
+134/(4828*0.37) * 100
 
 
 
@@ -507,6 +514,8 @@ timeout_Bs_computed = timeout_Bs.compute()
 
 
 
+
+
 len(np.where(timeout_Bs_computed[:, 0, 0, 0] == -np.inf)[0])
 
 f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
@@ -531,6 +540,7 @@ print('done, timeout = ', timeout, 'min')
 # -
 write_to_logfile(logfilename, 'done, timeout =', timeout, 'min')
 print('done, timeout = ', timeout, 'min')
+
 
 
 
@@ -961,6 +971,8 @@ ds_pwc_mr_fd.to_zarr(
 
 write_to_logfile('done')
 # -
+
+
 
 
 
