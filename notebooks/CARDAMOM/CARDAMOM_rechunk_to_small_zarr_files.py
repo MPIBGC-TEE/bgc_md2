@@ -28,10 +28,6 @@ from getpass import getuser
 
 
 # +
-#importlib.reload(bgc_md2.models.CARDAMOM.CARDAMOMlib)
-
-
-# +
 port_dict = {
     'mm':8789,
     'hmetzler':8790, # change at will

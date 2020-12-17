@@ -418,8 +418,6 @@ for timeout in timeouts[1:]:
     remove_timeouts(timeout)
     print()
 # -
-
-
 a = da.from_zarr(zarr_dir_name)[slices['lat'], slices['lon'], slices['prob'], 0, 0, 0]
 a
 
@@ -516,6 +514,8 @@ timeout_Bs_computed = timeout_Bs.compute()
 
 
 
+
+
 len(np.where(timeout_Bs_computed[:, 0, 0, 0] == -np.inf)[0])
 
 f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
@@ -540,6 +540,9 @@ print('done, timeout = ', timeout, 'min')
 # -
 write_to_logfile(logfilename, 'done, timeout =', timeout, 'min')
 print('done, timeout = ', timeout, 'min')
+
+
+
 
 
 
@@ -971,6 +974,8 @@ ds_pwc_mr_fd.to_zarr(
 
 write_to_logfile('done')
 # -
+
+
 
 
 

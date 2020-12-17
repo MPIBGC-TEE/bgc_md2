@@ -14,65 +14,23 @@
 # ---
 
 # +
-#import xarray as xr
-import numpy as np
 import zarr
-import dask
 import shutil
+
+import numpy as np
+import dask.array as da
+
 from pathlib import Path
 
-from bgc_md2.models.CARDAMOM import CARDAMOMlib2 as CARDAMOMlib
-
-from dask.distributed import Client, LocalCluster, get_worker
-import dask.array as da
-from getpass import getuser
-
-import time
+from bgc_md2.models.CARDAMOM import CARDAMOMlib
 from bgc_md2.notebookHelpers import write_to_logfile, custom_timeout
 
-
-# +
-port_dict = {
-    'mm':8789,
-    'hmetzler':8790, # change at will
-#    'hmetzler':8888, # change at will
-    'cs':8791        # change at will
-}
-my_user_name = getuser()
-print('username:', my_user_name)
-
-my_port = port_dict[my_user_name]
-
-print('notebook port:', my_port)
-
-# prevent worker from stupid too early memory shuffling
-# seems to be ignored though...
-# needs to be added manually to worker while in progress
-worker_kwargs = {
-#    'memory_limit': '2G',
-    'memory_target_fraction': 0.95,
-    'memory_spill_fraction': 0.95,
-    'memory_pause_fraction': 0.95,
-#    'memory_terminate_fraction': False, # leads to errors if commented in
-}
-
-dask.config.set({'distributed.worker.daemon': False})
-
-# dashboard needs a different port for accessing it remotely
-my_dashboard_port = my_port + 5
-my_cluster = LocalCluster(
-    dashboard_address='localhost:'+str(my_dashboard_port),
-    n_workers=48,
-    threads_per_worker=1,
-#    memory_limit="1GB"
-#    **worker_kwargs
-)
-print('dashboard port:', my_dashboard_port)
-#dask.config.set({'distributed.worker.daemon': False})
-
-Client(my_cluster)
-#dask.config.set({'distributed.worker.daemon': False})
+from dask.distributed import Client
 # -
+
+
+my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
+Client(my_cluster)
 
 # ## How to connect to remote
 # **Remark**: Port values to be adapted, see above.
@@ -100,10 +58,8 @@ Client(my_cluster)
 # and in browser open `localhost:8081/status/`.
 
 # +
-data_folder = "/home/data/CARDAMOM/"  # matagorda, antakya
-filestem = "Greg_2020_10_26/"
-output_folder = "output/"
-#pwc_mr_fd_archive = data_folder + output_folder + 'pwc_mr_fd/'
+data_folder = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+output_folder = data_folder.joinpath("output")
 
 logfilename = data_folder + filestem + output_folder + "pwc_mr_fd_notebook_dask_and_zarr.log"
 
