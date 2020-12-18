@@ -59,9 +59,9 @@ Client(my_cluster)
 #
 # and open link given above.
 
-data_folder = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-target_folder = data_folder.joinpath("rechunked_zarr_version")
-ds = xr.open_mfdataset(str(data_folder) + "/SUM*.nc")
+data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+target_path = data_path.joinpath("rechunked_zarr_version")
+ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
 ds
 
 chunk_dict = {"lat": 1, "lon": 1, "prob": 1}
@@ -77,7 +77,7 @@ overwrite = False # if False, raises zarr.errors.ContainsArrayError if zarr arch
 # %%time
 
 for name, value in tqdm(ds_rechunked.variables.items()):
-    zarr_dir_path = target_folder.joinpath(name)
+    zarr_dir_path = target_path.joinpath(name)
     zarr_dir_name = str(zarr_dir_path)
     print(zarr_dir_name)
     
