@@ -570,7 +570,11 @@ def reconstruct_u(
         dtype=np.float64
     )
 
-def write_vars_as_zarr(ds: xr.Dataset, dir_name: str):
+def write_vars_as_zarr(
+        ds: xr.Dataset,
+        dir_name: str,
+        batch_size: int=16
+):
     dir_p = Path(dir_name)
 
     dir_p.mkdir(parents=True, exist_ok=True)
@@ -580,10 +584,19 @@ def write_vars_as_zarr(ds: xr.Dataset, dir_name: str):
         zarr_dir_name = str(zarr_dir_path)
         if not (zarr_dir_path.exists()):
             arr = dask.array.asarray(v.data)
-            batchwise_to_zarr(arr, zarr_dir_name)
+            batchwise_to_zarr(
+                arr,
+                zarr_dir_name,
+                batch_size
+            )
 
 
-def batchwise_to_zarr(arr: dask.array.core.Array, zarr_dir_name: str, rm=False):
+def batchwise_to_zarr(
+        arr: dask.array.core.Array,
+        zarr_dir_name: str,
+        rm: bool=False,
+        batch_size: int=16
+    ):
     dir_p = Path(zarr_dir_name)
     if  dir_p.exists():
         if rm :
@@ -617,32 +630,30 @@ def batchwise_to_zarr(arr: dask.array.core.Array, zarr_dir_name: str, rm=False):
             z[..., s] = arr[..., s].compute()
 
 
-def cable_dask_array_dict(out_dir):
-    out_path = Path(out_dir)
-
+def cable_dask_array_dict(dirpath_str):
     dir_p = Path(dirpath_str)
     paths = [p for p in dir_p.iterdir() if p.is_dir()]
     var_dict = {p.name: dask.array.from_zarr(str(p)) for p in paths}
     return var_dict
 
 def load_or_make_cable_dask_array_dict(
-        example_run_dir: Union[str,Path],
-        dir_p: Union[str,Path], 
-        rm=False: bool
+        cable_run_output_dir: Union[str,Path],
+        zarr_dir_path: Union[str,Path], 
+        rm: bool=False,
+        batch_size: int=16
     ):
-    ds = cable_ds(example_run_dir)
+    ds = cable_ds(cable_run_output_dir)
 
-    dir_p = Path(example_run_dir).joinpath('zarr')
-    if  not dir_p.exists():
-        dir_p.mkdir()
+    if  not zarr_dir_path.exists():
+        zarr_dir_path.mkdir()
 
     for var_name, v in ds.variables.items():
-        zarr_dir_path = dir_p.joinpath(var_name)
-        zarr_dir_name = str(zarr_dir_path)
+        sub_dir_path = zarr_dir_path.joinpath(var_name)
+        zarr_dir_name = str(sub_dir_path)
         arr = dask.array.asarray(v.data)
-        batchwise_to_zarr(arr, zarr_dir_name,rm=rm)
+        batchwise_to_zarr(arr, zarr_dir_name,rm=rm,batch_size=batch_size)
 
-    return cable_dask_array_dict(dir_p)
+    return cable_dask_array_dict(zarr_dir_path)
 
 
 def reform(combi):
@@ -769,7 +780,15 @@ def valid_trajectory(x0_c,times,B_c,U_c):
     sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
     return sol
 
-def load_or_make_B_u_x0_from_zarr(out_path,zarr_sub_dir_name,rm=False):
+
+# fixme mm 12-18-2020
+# this function should not be necessarry any more
+def load_or_make_B_u_x0_from_zarr(
+        out_path,
+        zarr_sub_dir_name,
+        rm=False,
+        batch_size: int=16
+    ):
     zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
     names = ("B","u","x0")
     sub_dir_paths = [
@@ -795,7 +814,8 @@ def load_or_make_B_u_x0_from_zarr(out_path,zarr_sub_dir_name,rm=False):
                         name + suffix
                     )
                  ),
-                rm=rm
+                rm=rm,
+                batch_size=batch_size
             )
         # redefine as based on the just written zarr array
         # which is faster (due to better chunking) 
@@ -809,13 +829,14 @@ def load_or_make_B_u_x0_from_zarr(out_path,zarr_sub_dir_name,rm=False):
 def load_or_make_valid_B_u_x0(
         out_path: Path,
         zarr_sub_dir_name: str,
-        rm=False
+        names: List[str]=['B_val','u_val','x0_val'],
+        rm: bool=False,
+        batch_size: int=16
 )->Tuple[dask.array.core.Array]:
 
     zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
-    names= ['B_val','u_val','x0_val']
     sub_dir_paths = [
-        zarr_dir_path.joinpath(name) for name in names
+        zarr_dir_path.joinpath(name) for name in val_names
     ]
 
     if all((p.exists() for p in sub_dir_paths)):
@@ -858,14 +879,17 @@ def load_or_make_valid_B_u_x0(
         return load_or_make_valid_B_u_x0(
             out_path,
             zarr_sub_dir_name,
-            rm=rm
+            name=names,
+            rm=rm,
+            batch_size=batch_size
         )
 
 def load_or_make_valid_B_u_x0_slice(
         out_path: Path,
         zarr_sub_dir_name: str,
         sl: slice,
-        rm=False
+        rm=False,
+        batch_size: int=16
 )->Tuple[dask.array.core.Array]:
 
     zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
@@ -916,6 +940,7 @@ def load_or_make_valid_B_u_x0_slice(
             out_path,
             zarr_sub_dir_name,
             sl,
-            rm=rm
+            rm=rm,
+            batch_size=batch_size
         )
 

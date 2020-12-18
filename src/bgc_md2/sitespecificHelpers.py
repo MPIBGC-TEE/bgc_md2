@@ -35,8 +35,9 @@ user_specific_scheduler_addr = 'localhost:'+str(user_specific_scheduler_port)
 user_specific_dashboard_addr = 'localhost:'+str(port_dict[my_user_name][1])
 
 hosts={
-        b'matagorda':(32,1,'1GB'),
-        #b'matagorda':(8,4,'4GB'),
+        #b'matagorda':(32,1,'1GB'),
+        #b'matagorda':(16,2,'4GB'),
+        b'matagorda':(8,4,'4GB'),
         b'antakya':(96,1,'2.5GB')
 }
 def get_client():
