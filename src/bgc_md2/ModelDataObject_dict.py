@@ -193,7 +193,6 @@ class ModelDataObject_dict(object):
         xs_data = np.ma.masked_array(
             data=np.zeros((len(time_agg.data), ms.nr_pools)), mask=False
         )
-
         for item in ms.pool_structure:
             pool_name = item["pool_name"]
             variable_name = item["stock_var"]
@@ -208,7 +207,6 @@ class ModelDataObject_dict(object):
                 dz=dz,
                 **keywords
             )
-
             for ly in range(nr_layers):
                 pool_nr = ms.get_pool_nr(pool_name, ly)
                 data = sv_pool_agg.data[:, ly, ...]
@@ -533,7 +531,6 @@ class ModelDataObject_dict(object):
         self,
         integration_method='solve_ivp',
         nr_nodes=None,
-        time_limit_in_min=np.inf
     ):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
@@ -541,22 +538,22 @@ class ModelDataObject_dict(object):
         nr_pools = self.model_structure.nr_pools
 
         data = np.nan * np.ones((len(times), nr_pools, nr_pools))
-
-        try:
-            Bs = PWCMRFD.reconstruct_Bs(
-                times,
-                xs.data.filled()[0],
-                Us.data.filled(),
-                Fs.data.filled(),
-                Rs.data.filled(),
-                integration_method=integration_method,
-                nr_nodes=nr_nodes,
-            )
-            
-            data[:-1, ...] = Bs
-        except (PWCModelRunFDError, ValueError, OverflowError) as e:
-            error = str(e)
-            print(error, flush=True)
+#
+#        try:
+        Bs = PWCMRFD.reconstruct_Bs(
+            times,
+            xs.data.filled()[0],
+            Us.data.filled(),
+            Fs.data.filled(),
+            Rs.data.filled(),
+            integration_method=integration_method,
+            nr_nodes=nr_nodes,
+        )
+        
+        data[:-1, ...] = Bs
+#        except (PWCModelRunFDError, ValueError, OverflowError) as e:
+#            error = str(e)
+#            print(error, flush=True)
 
         return data
 

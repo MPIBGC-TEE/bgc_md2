@@ -1,5 +1,6 @@
 import dask
 import time
+import zarr 
 
 import dask.array as da
 import numpy as np
@@ -10,7 +11,11 @@ from getpass import getuser
 from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject_dict import ModelDataObject_dict as ModelDataObject
 from bgc_md2.Variable import Variable
-from bgc_md2.notebook_helpers import write_to_logfile, custom_timeout
+from bgc_md2.notebook_helpers import (
+    write_to_logfile,
+    write_header_to_logfile,
+    custom_timeout
+)
 
 
 def prepare_cluster(n_workers, alternative_port=None):
@@ -166,6 +171,7 @@ def func_for_map_blocks(*args):
     additional_params = args[-1]
 
     func = additional_params["func"] # the actual function to be called
+
     v_names = additional_params["variable_names"]
     time_limit_in_min = additional_params["time_limit_in_min"]
     return_shape = additional_params["return_shape"]
@@ -176,7 +182,7 @@ def func_for_map_blocks(*args):
 
     res = -np.inf * np.ones(return_shape)
     start_time = time.time()
-    timeout_msg = ""
+    error_msg = ""
     try:
         res = custom_timeout(
             time_limit_in_min*60,
@@ -185,8 +191,12 @@ def func_for_map_blocks(*args):
         )
     except TimeoutError:
         duration = (time.time() - start_time) / 60
-        timeout_msg = "Timeout after %2.2f min" % duration
-        print(timeout_msg)
+        error_msg = "Timeout after %2.2f min" % duration
+        print(error_msg, flush=True)
+    except Exception as e:
+        res = np.nan * np.ones(return_shape)
+        error_msg = str(e)
+        print(error_msg, flush=True)
 
     write_to_logfile(
         logfile_name,
@@ -194,7 +204,7 @@ def func_for_map_blocks(*args):
         "lat:", d["lat"],
         "lon:", d["lon"],
         "prob:", d["prob"],
-        timeout_msg
+        error_msg
     )
 
     return res.reshape(return_shape)
@@ -214,6 +224,121 @@ def compute_us(single_site_dict):
     del mdo
 
     return us
+
+
+def compute_Bs(
+    single_site_dict,
+    integration_method='solve_ivp',
+    nr_nodes=None
+):
+    mdo = _load_mdo(single_site_dict)
+    Bs = mdo.load_Bs(
+        integration_method,
+        nr_nodes
+    )
+    del mdo
+
+    return Bs
+
+
+def get_timeout_sites(zarr_path, slices):
+    timeout_zarr = zarr.open(str(zarr_path))
+    fill_tup = (slice(0, 1, 1), ) * (timeout_zarr.ndim - 3)
+    tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup
+    timeout_da = da.from_zarr(timeout_zarr)[tup]
+    timeout_coords = np.where(timeout_da.compute() == -np.inf)[:3]
+    nr_timeout_sites = len(timeout_coords[0])
+
+    return nr_timeout_sites, timeout_coords
+
+
+def remove_timeouts(
+    time_limit_in_min,
+    zarr_path,
+    variable_names,
+    variables,
+    non_data_variables,
+    slices,
+    task,
+    additional_params
+):
+    logfile_name = additional_params["logfile_name"]
+
+    nr_timeout_sites, timeout_coords = get_timeout_sites(zarr_path, slices)
+
+    if nr_timeout_sites > 0:
+        print('number of timeout sites:', nr_timeout_sites)
+    else:
+        print('timeout sites successfully removed')
+        return
+
+    # select timeout sites from variables
+    timeout_variables = []
+    for v, name in zip(variables, variable_names):
+        if name not in non_data_variables:
+            v_stack_list = []
+            for lat, lon, prob in zip(*[timeout_coords[k] for k in range(3)]):
+                v_stack_list.append(v[lat, lon, prob])
+
+            timeout_variables.append(da.stack(v_stack_list))
+
+    # add lat, lon, prob, time
+    timeout_variables.append(da.from_array(timeout_coords[0].reshape(-1, 1), chunks=(1, 1))) # lat
+    timeout_variables.append(da.from_array(timeout_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
+    timeout_variables.append(da.from_array(timeout_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
+    time_da = variables[variable_names.index('time')].reshape(1, -1).rechunk((1, 1152))
+    timeout_variables.append(time_da)
+#    x = timeout_variables[-1].rechunk((1, 1152))
+#    print('x', x, flush=True)
+#    timeout_variables[-1] = 'LECK MICH!'
+#    timeout_variables[-1] = x
+    # prepare the delayed computation
+    additional_params['time_limit_in_min'] = time_limit_in_min
+
+    _task = task.copy()
+    _task['return_shape'] = task['return_shape'][2:]
+    _task['meta_shape'] = (15, 1152, 6, 6)
+    _task['drop_axis'] = []
+    _task['new_axis'] = [2, 3]
+
+    _additional_params = additional_params.copy()
+    _additional_params['return_shape'] = _task["return_shape"]
+
+    res_da = timeout_variables[0].map_blocks(
+        func_for_map_blocks,
+        *timeout_variables[1:], # variables[0] comes automatically as first argument
+        _additional_params,
+        drop_axis=_task["drop_axis"],
+        new_axis=_task["new_axis"],
+        chunks=_task["return_shape"],
+        dtype=np.float64,
+        meta=np.ndarray(task["meta_shape"][2:], dtype=np.float64)
+    )
+
+    # write header to logfile
+    print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
+    print('starting, timeout (min) =', time_limit_in_min, flush=True)
+
+    # do the computation
+    res_computed = res_da.compute() # hopefully fits in memory
+
+    # compute the z coords from the sliced Bs coords
+    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
+    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
+    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
+    timeout_coords_z_lat = np.array([f_lat(x) for x in timeout_coords[0]])
+    timeout_coords_z_lon = np.array([f_lon(x) for x in timeout_coords[1]])
+    timeout_coords_z_prob = np.array([f_prob(x) for x in timeout_coords[2]])
+
+    timeout_coords_z = (timeout_coords_z_lat, timeout_coords_z_lon, timeout_coords_z_prob)
+
+    # update zarr file
+    z = zarr.open(str(zarr_path))
+    for nr, lat, lon, prob in zip(range(nr_timeout_sites), *[timeout_coords_z[k] for k in range(3)]):
+        z[lat, lon, prob, ...] = res_computed[nr, ...]
+
+    write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
+    print('done, timeout (min) = ', time_limit_in_min, flush=True)
 
 
 ###############################################################################
