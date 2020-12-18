@@ -20,9 +20,9 @@ from bgc_md2.notebook_helpers import (
 
 def prepare_cluster(n_workers, alternative_port=None):
     port_dict = {
-        "mm": 8789,
-        "hmetzler": 8790, # change at will
-        "cs": 8791        # change at will
+        "cs": 8888        # change at will
+        "mm": 8889,
+        "hmetzler": 8890, # change at will
     }
     my_user_name = getuser()
     print("username:", my_user_name)
@@ -38,7 +38,7 @@ def prepare_cluster(n_workers, alternative_port=None):
     dask.config.set({"distributed.worker.daemon": False})
     
     # dashboard needs a different port for accessing it remotely
-    my_dashboard_port = my_port + 5
+    my_dashboard_port = my_port - 100
 
     # seem to be ignored, use dask.distributed.get_worker as the worker process is running
     # and set the values manually:
