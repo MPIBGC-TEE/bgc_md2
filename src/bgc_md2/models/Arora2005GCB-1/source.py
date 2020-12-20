@@ -16,6 +16,8 @@ sym_dict = {
         'C_L': 'Amount of carbon for the leaf' # "kgC*m^{-2}" 
         ,'C_S': 'Amount of carbon for the stem' # "kgC*m^{-2}" 
         ,'C_R': 'Amount of carbon for the root' # "kgC*m^{-2}" 
+        ,'C_D': 'Amount of carbon for the debris (litter)' # "kgC*m^{-2}" 
+        ,'C_H': 'Soil carbon' # "kgC*m^{-2}" 
         ,'R_gL': 'Growth respiration flux for the leaves'
         ,'R_mL': 'Maintenance respiration flux for the leaves'
         ,'R_gS': 'Growth respiration flux for the stem'
@@ -53,6 +55,7 @@ sym_dict = {
         ,'gamma_T': 'Loss rate under cold stress' # day^{-1} 
         ,'gamma_S': 'Stem turnover rate'  # year^{-1} 
         ,'gamma_R': 'Root turnover rate' # year^{-1} 
+        ,'gamma_DH': 'Rate at which carbon is transferred from humidified litter to soil carbon' # year^{-1} #In the paper the flux is C_{D->H}, so I added the rate to express it
         ,'D_L': 'Litter loss from the leaves'
         ,'D_S': 'Litter loss from the stem'
         ,'D_R': 'Litter loss from the root'
@@ -79,15 +82,17 @@ D_L=(gamma_N+gamma_W+gamma_T)*C_L
 D_S=gamma_S*C_S
 D_R=gamma_R*C_R
 
-x = StateVariableTuple((C_L, C_S, C_R))
-b = 1
-u = (C_L, C_S, C_R)
-Input = InputTuple(ImmutableMatrix(u)*1) #Fixme: does input always have to be a Tuple? what happens when, in this case, "f_v = u + A*x"? 
-A = CompartmentalMatrix([[-(gamma_N+gamma_W+gamma_T),0,0],
-                               [0, -gamma_S-R_gS-R_mS, 0],
-                               [0, 0, -gamma_R-R_gR-R_mR]]
-)
-# 
+x = StateVariableTuple((C_L, C_S, C_R, C_D, C_H))
+u = (G, 0, 0, 0, 0)
+Input = InputTuple((ImmutableMatrix(u))) #f_v = u + A*x
+A = CompartmentalMatrix([
+[-(gamma_N+gamma_W+gamma_T+(A_R+A_S+R_gL+R_mL)),          0       ,          0       ,        0     ,  0  ],
+[                      A_S                     ,-gamma_S-R_gS-R_mS,          0       ,        0     ,  0  ],
+[                      A_R                     ,          0       ,-gamma_R-R_gR-R_mR,        0     ,  0  ],
+[            gamma_N+gamma_W+gamma_T           ,       gamma_S    ,      gamma_R     ,-gamma_DH-R_hD,  0  ],
+[                       0                      ,          0       ,          0       ,    gamma_DH  ,-R_hH]
+])
+ 
 t = TimeSymbol("t")
 
 
@@ -112,8 +117,7 @@ mvs = MVarSet({
     Input,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the complete system
-    VegetationCarbonInputScalar(b),
+#    VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(u),
     VegetationCarbonStateVariableTuple((C_L, C_S, C_R)),
 })

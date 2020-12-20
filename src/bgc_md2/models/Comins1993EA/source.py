@@ -70,6 +70,7 @@ sym_dict={
 for name in sym_dict.keys():
     var(name)
 eta_w = 1-eta_f-eta_r #Added by Vero
+#SEE page 7 for equations of G, upsilon...
 p_mf = 0.85 - 0.018*L_fl/(omega*lambda_f*upsilon_f)
 p_uf = 1 - p_mf
 p_nr = 0.85 - 0.018*L_rl/(omega*lambda_r*upsilon_r)
