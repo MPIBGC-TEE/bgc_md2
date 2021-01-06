@@ -86,12 +86,13 @@ x = StateVariableTuple((C_L, C_S, C_R, C_D, C_H))
 u = (G, 0, 0, 0, 0)
 Input = InputTuple((ImmutableMatrix(u))) #f_v = u + A*x
 A = CompartmentalMatrix([
-[-(gamma_N+gamma_W+gamma_T+(A_R+A_S+R_gL+R_mL)),          0       ,          0       ,        0     ,  0  ],
-[                      A_S                     ,-gamma_S-R_gS-R_mS,          0       ,        0     ,  0  ],
-[                      A_R                     ,          0       ,-gamma_R-R_gR-R_mR,        0     ,  0  ],
-[            gamma_N+gamma_W+gamma_T           ,       gamma_S    ,      gamma_R     ,-gamma_DH-R_hD,  0  ],
-[                       0                      ,          0       ,          0       ,    gamma_DH  ,-R_hH]
+[-(gamma_N+gamma_W+gamma_T+(A_R+A_S+((R_gL+R_mL)/C_L))),          0       ,          0       ,        0     ,  0  ],
+[                      A_S                     ,-gamma_S-((R_gS-R_mS)/C_S),          0       ,        0     ,  0  ],
+[                      A_R                     ,          0       ,-gamma_R-((R_gR-R_mR)/C_R),        0     ,  0  ],
+[            gamma_N+gamma_W+gamma_T           ,       gamma_S    ,      gamma_R     ,-gamma_DH-(R_hD/C_D),  0  ],
+[                       0                      ,          0       ,          0       ,    gamma_DH  ,-(R_hH/C_H)]
 ])
+### Had to divide Respiration fluxes by state variables because the flux was not presented as a rate*state variable tuple. 
  
 t = TimeSymbol("t")
 
