@@ -5,6 +5,8 @@ import zarr
 import dask.array as da
 import numpy as np
 
+from tqdm import tqdm
+
 from dask.distributed import LocalCluster
 from getpass import getuser
 
@@ -20,9 +22,9 @@ from bgc_md2.notebook_helpers import (
 
 def prepare_cluster(n_workers, alternative_port=None):
     port_dict = {
-        "cs": 8888        # change at will
+        "cs": 8888,        # change at will
         "mm": 8889,
-        "hmetzler": 8890, # change at will
+        "hmetzler": 8890 # change at will
     }
     my_user_name = getuser()
     print("username:", my_user_name)
@@ -164,6 +166,38 @@ def batchwise_to_zarr(
         z[s_z[0], s_z[1], s_z[2], ...] = arr[s_arr[0], s_arr[1], s_arr[2], ...].compute()
 
 
+def linear_batchwise_to_zarr(
+    res_da, # dask array
+    z, # target zarr archive
+    slices, # slices of interest,
+    coords_res_da,
+    batch_size,
+):  
+    nr_total = res_da.shape[0]
+    nr_splits = nr_total // batch_size + (nr_total % batch_size > 0)
+    batches = np.array_split(np.arange(nr_total), nr_splits)
+
+    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
+    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
+    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
+
+    for batch in tqdm(batches):
+        s = slice(batch[0], batch[-1]+1, 1)
+
+        res_batch = res_da[s, ...].compute() # in parallel
+        
+        # compute the z coords from the sliced res_da coords
+        coords_z_lat = np.array([f_lat(x) for x in coords_res_da[0][s]])
+        coords_z_lon = np.array([f_lon(x) for x in coords_res_da[1][s]])
+        coords_z_prob = np.array([f_prob(x) for x in coords_res_da[2][s]])
+
+        coords_z = (coords_z_lat, coords_z_lon, coords_z_prob)
+        # update zarr file
+        for nr, lat, lon, prob in zip(range(len(batch)), *[coords_z[k] for k in range(3)]):
+            z[lat, lon, prob, ...] = res_batch[nr, ...]
+
+
+
 # args[0] is the object on which map_blocks is called
 # args[:-1] are the variables that get automatically chunked
 # args[-1] is supposed to be a dictionary with additional parameters
@@ -241,101 +275,103 @@ def compute_Bs(
     return Bs
 
 
-def get_timeout_sites(zarr_path, slices):
-    timeout_zarr = zarr.open(str(zarr_path))
-    fill_tup = (slice(0, 1, 1), ) * (timeout_zarr.ndim - 3)
+def get_incomplete_sites(z, slices):
+    fill_tup = (slice(0, 1, 1), ) * (z.ndim - 3)
     tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup
-    timeout_da = da.from_zarr(timeout_zarr)[tup]
-    timeout_coords = np.where(timeout_da.compute() == -np.inf)[:3]
-    nr_timeout_sites = len(timeout_coords[0])
+    sliced_da = da.from_zarr(z)[tup]
+    incomplete_coords = np.where(sliced_da.compute() == -np.inf)[:3]
+    nr_incomplete_sites = len(incomplete_coords[0])
 
-    return nr_timeout_sites, timeout_coords
+    return nr_incomplete_sites, incomplete_coords
 
 
-def remove_timeouts(
+def compute_incomplete_sites(
     time_limit_in_min,
-    zarr_path,
+    z,
     variable_names,
     variables,
     non_data_variables,
     slices,
     task,
-    additional_params
+    logfile_name,
 ):
-    logfile_name = additional_params["logfile_name"]
+    nr_incomplete_sites, incomplete_coords = get_incomplete_sites(z, slices)
 
-    nr_timeout_sites, timeout_coords = get_timeout_sites(zarr_path, slices)
-
-    if nr_timeout_sites > 0:
-        print('number of timeout sites:', nr_timeout_sites)
+    if nr_incomplete_sites > 0:
+        print('number of incomplete sites:', nr_incomplete_sites)
     else:
-        print('timeout sites successfully removed')
+        print('no incomplete sites remaining')
         return
 
-    # select timeout sites from variables
-    timeout_variables = []
+    # select incomplete sites from variables
+    incomplete_variables = []
     for v, name in zip(variables, variable_names):
         if name not in non_data_variables:
             v_stack_list = []
-            for lat, lon, prob in zip(*[timeout_coords[k] for k in range(3)]):
+            for lat, lon, prob in zip(*[incomplete_coords[k] for k in range(3)]):
                 v_stack_list.append(v[lat, lon, prob])
 
-            timeout_variables.append(da.stack(v_stack_list))
+            incomplete_variables.append(da.stack(v_stack_list))
 
     # add lat, lon, prob, time
-    timeout_variables.append(da.from_array(timeout_coords[0].reshape(-1, 1), chunks=(1, 1))) # lat
-    timeout_variables.append(da.from_array(timeout_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
-    timeout_variables.append(da.from_array(timeout_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
+    incomplete_variables.append(da.from_array(incomplete_coords[0].reshape(-1, 1), chunks=(1, 1))) # lat
+    incomplete_variables.append(da.from_array(incomplete_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
+    incomplete_variables.append(da.from_array(incomplete_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
     time_da = variables[variable_names.index('time')].reshape(1, -1).rechunk((1, 1152))
-    timeout_variables.append(time_da)
-#    x = timeout_variables[-1].rechunk((1, 1152))
-#    print('x', x, flush=True)
-#    timeout_variables[-1] = 'LECK MICH!'
-#    timeout_variables[-1] = x
+    incomplete_variables.append(time_da)
+
     # prepare the delayed computation
-    additional_params['time_limit_in_min'] = time_limit_in_min
+    additional_params = {
+        "func": task["func"],
+        "variable_names": variable_names,
+        "time_limit_in_min": time_limit_in_min,
+        "return_shape": task["return_shape"],
+        "logfile_name": logfile_name
+    }
+    meta_shape = list(task["meta_shape"])
+    meta_shape[0] = nr_incomplete_sites
+    meta_shape = tuple(meta_shape)
 
-    _task = task.copy()
-    _task['return_shape'] = task['return_shape'][2:]
-    _task['meta_shape'] = (15, 1152, 6, 6)
-    _task['drop_axis'] = []
-    _task['new_axis'] = [2, 3]
-
-    _additional_params = additional_params.copy()
-    _additional_params['return_shape'] = _task["return_shape"]
-
-    res_da = timeout_variables[0].map_blocks(
+    res_da = incomplete_variables[0].map_blocks(
         func_for_map_blocks,
-        *timeout_variables[1:], # variables[0] comes automatically as first argument
-        _additional_params,
-        drop_axis=_task["drop_axis"],
-        new_axis=_task["new_axis"],
-        chunks=_task["return_shape"],
+        *incomplete_variables[1:], # variables[0] comes automatically as first argument
+        additional_params,
+        drop_axis=task["drop_axis"],
+        new_axis=task["new_axis"],
+        chunks=task["return_shape"],
         dtype=np.float64,
-        meta=np.ndarray(task["meta_shape"][2:], dtype=np.float64)
+        meta=np.ndarray(meta_shape, dtype=np.float64)
     )
 
     # write header to logfile
     print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
-    print('starting, timeout (min) =', time_limit_in_min, flush=True)
+    print("starting", flush=True)
 
     # do the computation
-    res_computed = res_da.compute() # hopefully fits in memory
+    linear_batchwise_to_zarr(
+        res_da, # dask array
+        z, # target zarr archive
+        slices, # slices of interest,
+        incomplete_coords,
+        task["batch_size"],
+    )
 
-    # compute the z coords from the sliced Bs coords
-    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
-    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
-    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
-    timeout_coords_z_lat = np.array([f_lat(x) for x in timeout_coords[0]])
-    timeout_coords_z_lon = np.array([f_lon(x) for x in timeout_coords[1]])
-    timeout_coords_z_prob = np.array([f_prob(x) for x in timeout_coords[2]])
-
-    timeout_coords_z = (timeout_coords_z_lat, timeout_coords_z_lon, timeout_coords_z_prob)
-
-    # update zarr file
-    z = zarr.open(str(zarr_path))
-    for nr, lat, lon, prob in zip(range(nr_timeout_sites), *[timeout_coords_z[k] for k in range(3)]):
-        z[lat, lon, prob, ...] = res_computed[nr, ...]
+#    res_computed = res_da.compute() # hopefully fits in memory
+#
+#    # compute the z coords from the sliced Bs coords
+#    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
+#    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
+#    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
+#    coords_z_lat = np.array([f_lat(x) for x in incomplete_coords[0]])
+#    coords_z_lon = np.array([f_lon(x) for x in incomplete_coords[1]])
+#    coords_z_prob = np.array([f_prob(x) for x in incomplete_coords[2]])
+#
+#    coords_z = (coords_z_lat, coords_z_lon, coords_z_prob)
+#
+#    # update zarr file
+##    z = zarr.open(str(zarr_path))
+#    for nr, lat, lon, prob in zip(range(nr_incomplete_sites), *[coords_z[k] for k in range(3)]):
+#        z[lat, lon, prob, ...] = res_computed[nr, ...]
 
     write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
     print('done, timeout (min) = ', time_limit_in_min, flush=True)

@@ -20,7 +20,7 @@ def write_header_to_logfile(logfile_name, var_da, time_limit_in_min):
 #    c = var_da.chunks
 #    nr_chunks = np.prod([len(val) for val in c])
 #    print('nr_chunks:', nr_chunks)
-    nr_singles = np.prod(var_da.shape[:3])
+    nr_singles = np.prod(var_da.shape[:1])
     write_to_logfile(
         logfile_name,
         'starting',
@@ -30,10 +30,10 @@ def write_header_to_logfile(logfile_name, var_da, time_limit_in_min):
         time_limit_in_min
     )
     
-    s = "nr_singles: " + str(nr_singles) + "\n"
-    s += "timeout (min): " + str(time_limit_in_min) + "\n"
-    return s
-
+#    s = "nr_singles: " + str(nr_singles) + "\n"
+#    s += "timeout (min): " + str(time_limit_in_min) + "\n"
+#    return s
+    return ""
 
 def _custom_timeout_target(queue, function, *args, **kwargs):
     try:
@@ -42,51 +42,68 @@ def _custom_timeout_target(queue, function, *args, **kwargs):
         queue.put((False, sys.exc_info()[1]))
 
 def custom_timeout(seconds, function, *args, **kwargs):
-                q = multiprocessing.Queue(1)
-                args = (q, function) + args
-                
-                p = multiprocessing.Process(
-                    target=_custom_timeout_target,
-                    args=args,
-                    kwargs=kwargs
-                )
-                p.daemon = True
-
-                timeout = time.time() + seconds
-
-                def cancel():
-                    if p.is_alive():
-                        p.terminate()
-
-                def ready():
-                    if timeout < time.time():
-                        cancel()
-                        raise(TimeoutError)
-
-                    return q.full() and not q.empty()
-                
-                p.start()
-                while not ready():
-                    time.sleep(0.01)
-
-                flag, result = q.get()
-                if not flag:
-                    raise result
-
-                return result
-
-
-def create_zarr_archive(zarr_path, result_shape, result_chunks, overwrite=False):
-    if overwrite & zarr_path.exists():
-        shutil.rmtree(zarr_path)
-
-    z = zarr.create(
-        result_shape,
-        chunks=result_chunks,
-        dtype=np.float64,
-        fill_value=-np.inf, # -np.inf indicates incomplete computation
-        store=str(zarr_path)
+    q = multiprocessing.Queue(1)
+    args = (q, function) + args
+    
+    p = multiprocessing.Process(
+        target=_custom_timeout_target,
+        args=args,
+        kwargs=kwargs
     )
+    p.daemon = True
+    
+    timeout = time.time() + seconds
+    
+    def cancel():
+        if p.is_alive():
+            p.terminate()
+    
+    def ready():
+        if timeout < time.time():
+            cancel()
+            raise(TimeoutError)
+    
+        return q.full() and not q.empty()
+    
+    p.start()
+    while not ready():
+        time.sleep(0.01)
+    
+    flag, result = q.get()
+    if not flag:
+        raise result
+    
+    return result
+
+
+def load_zarr_archive(zarr_path, result_shape, result_chunks, overwrite=False):
+    if overwrite == True:
+        if zarr_path.exists():
+            shutil.rmtree(zarr_path)
+            print("zarr archive removed")
+
+        z = zarr.create(
+            result_shape,
+            chunks=result_chunks,
+            dtype=np.float64,
+            fill_value=-np.inf, # -np.inf indicates incomplete computation
+            store=str(zarr_path)
+        )
+        print("zarr_archive created")
+    else:
+        if zarr_path.exists():
+            z = zarr.open(str(zarr_path))
+            print("zarr archive loaded")
+        else:
+            z = zarr.create(
+                result_shape,
+                chunks=result_chunks,
+                dtype=np.float64,
+                fill_value=-np.inf, # -np.inf indicates incomplete computation
+                store=str(zarr_path)
+            )
+            print("zarr_archive created")
+    
     return z
 
 
