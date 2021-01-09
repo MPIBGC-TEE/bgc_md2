@@ -57,7 +57,8 @@ class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
 #        self.mn = ""
-        self.mn = "Comins1993EA"
+        self.mn = "Arora2005GCB-1"
+#        self.mn = "Comins1993EA"
 #        self.mn = "Running1988EcolModel"
 #        self.mn = "Fontaine2005Ecologyletters_4_2"
 #        self.mn = "Fontaine2005Ecologyletters_4_1"

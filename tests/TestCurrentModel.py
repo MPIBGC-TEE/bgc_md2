@@ -65,7 +65,6 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "Pavlick2013Biogeosciences"
 #        self.mn = "Foley1996GBC"
 #        self.mn = "Gu2010EcologicalComplexity"
-#        self.mn = "Arora2005GCB-1"
 #        self.mn = "King1993TreePhysiol"
 #        self.mn = "Murty2000EcolModell"
 #        self.mn = "Wang2010Biogeosciences"
