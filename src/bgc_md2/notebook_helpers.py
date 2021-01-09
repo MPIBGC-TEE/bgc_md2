@@ -107,6 +107,20 @@ def load_zarr_archive(zarr_path, result_shape, result_chunks, overwrite=False):
     return z
 
 
+# there is no multi-dimensional 'groupby' in xarray data structures
+def nested_groupby_apply(dataset, groupby, apply_fn, **kwargs):
+    if len(groupby) == 1:
+        res = dataset.groupby(groupby[0]).apply(apply_fn, **kwargs)
+        return res
+    else:
+        return dataset.groupby(groupby[0]).apply(
+            nested_groupby_apply,
+            groupby=groupby[1:],
+            apply_fn=apply_fn,
+            **kwargs
+        )
+        
+
 ###############################################################################
 
 

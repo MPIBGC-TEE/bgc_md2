@@ -11,7 +11,9 @@ from dask.distributed import LocalCluster
 from getpass import getuser
 
 from bgc_md2.ModelStructure import ModelStructure
-from bgc_md2.ModelDataObject_dict import ModelDataObject_dict as ModelDataObject
+from bgc_md2.ModelDataObject import ModelDataObject as ModelDataObject_ds
+from bgc_md2.ModelDataObject_dict import ModelDataObject_dict
+
 from bgc_md2.Variable import Variable
 from bgc_md2.notebook_helpers import (
     write_to_logfile,
@@ -64,6 +66,29 @@ def prepare_cluster(n_workers, alternative_port=None):
     print("default dashboard port (might change if busy):", my_dashboard_port)
 
     return my_cluster
+
+
+def check_data_consistency(ds):
+    ms = _load_model_structure()
+
+    # data_test.py says tht for labile 31.0 is constantly right
+    days_per_month = 31.0
+
+    time = Variable(
+        name="time",
+        data=np.arange(len(ds.time)) * days_per_month,
+        unit="d"
+    )
+
+    mdo_ds = ModelDataObject_ds(
+        model_structure=ms,
+        dataset=ds, 
+        stock_unit="gC/m2", 
+        time=time
+    )
+
+    abs_err, rel_err = mdo_ds.check_data_consistency()
+    return abs_err, rel_err
 
 
 def load_variables_from_zarr(zarr_data_path, non_data_variables):
@@ -447,7 +472,7 @@ def _load_mdo(ds_dict):
         unit="1"
     )
 
-    mdo = ModelDataObject(
+    mdo_dict = ModelDataObject_dict(
         model_structure=ms,
         dataset=ds_dict, 
 #        stock_unit="gC/m2", 
@@ -455,7 +480,7 @@ def _load_mdo(ds_dict):
         time=time
     )
 
-    return mdo
+    return mdo_dict
 
 
 
