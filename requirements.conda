@@ -35,3 +35,4 @@ graphviz
 pygraphviz
 sphinx
 pip
+zarr

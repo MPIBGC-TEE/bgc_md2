@@ -39,6 +39,7 @@ dependencies:
   - pygraphviz
   - sphinx
   - pip
+  - zarr
     #  - pip:
     #      - git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
     #      - git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM

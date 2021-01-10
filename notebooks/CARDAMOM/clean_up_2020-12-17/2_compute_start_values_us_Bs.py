@@ -19,6 +19,7 @@
 
 # +
 import zarr
+import shutil
 
 import numpy as np
 
@@ -27,7 +28,6 @@ from pathlib import Path
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 from bgc_md2.notebook_helpers import (
     write_to_logfile,
-    write_header_to_logfile,
     load_zarr_archive
 )
 
@@ -57,7 +57,7 @@ Client(my_cluster)
 # To connect to bokeh dashbord
 #
 # `
-# ssh -L 8080:localhost:8895 antakya_from_home
+# ssh -L 8080:localhost:8790 antakya_from_home
 # `
 #
 # and open link given above.
@@ -85,7 +85,24 @@ for name, var in zip(variable_names, variables_total):
 
 # We decide in which values of which dimensions we are interested (maybe to save computation time).
 
-# use all "lat", all "lon", the first two "prob", all "time"
+# +
+# write all lat, lon, prob, time to output folder
+
+for name in ["lat", "lon", "prob", "time"]:
+    idx = variable_names.index(name)
+    var = variables_total[idx].reshape(-1)
+    print(name)
+    print(var)
+    print()
+
+    file_path = project_path.joinpath(name)
+    if file_path.exists():
+        shutil.rmtree(file_path)
+        
+    var.to_zarr(str(file_path))
+# -
+
+# use all "lat", all "lon", the first four "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
@@ -124,6 +141,19 @@ nr_pools = 6
 
 task_list = [
     {# 0:
+        "computation": "xs",
+        "overwrite": False,
+        "func": CARDAMOMlib.compute_xs,
+        "timeouts": [np.inf],
+        "batch_size": 5000,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+        "return_shape": (1, nr_times, nr_pools),
+        "meta_shape": (1, nr_times, nr_pools),
+        "drop_axis": 1, # drop time axis
+        "new_axis": [1, 2] # add time and pool axes
+    },    
+    {# 1:
         "computation": "start_values",
         "overwrite": False,
         "func": CARDAMOMlib.compute_start_values,
@@ -136,12 +166,12 @@ task_list = [
         "drop_axis": 1, # remove time axis
         "new_axis": 1 # add pool axis
     },
-    {# 1:
+    {# 2:
         "computation": "us",
         "overwrite": False,
         "func": CARDAMOMlib.compute_us,
         "timeouts": [np.inf],
-        "batch_size": 1000,
+        "batch_size": 5000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -149,7 +179,7 @@ task_list = [
         "drop_axis": 1, # drop time axis
         "new_axis": [1, 2] # add time and pool axes
     },
-    {# 2:
+    {# 3:
         "computation": "Bs",
         "overwrite": False,
         "func": CARDAMOMlib.compute_Bs,

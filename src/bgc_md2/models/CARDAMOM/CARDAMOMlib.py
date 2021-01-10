@@ -222,7 +222,6 @@ def linear_batchwise_to_zarr(
             z[lat, lon, prob, ...] = res_batch[nr, ...]
 
 
-
 # args[0] is the object on which map_blocks is called
 # args[:-1] are the variables that get automatically chunked
 # args[-1] is supposed to be a dictionary with additional parameters
@@ -269,6 +268,14 @@ def func_for_map_blocks(*args):
     return res.reshape(return_shape)
 
 
+def compute_xs(single_site_dict):
+    mdo = _load_mdo(single_site_dict)
+    xs = mdo.load_stocks()
+    del mdo
+
+    return xs.data.filled()
+
+
 def compute_start_values(single_site_dict):
     mdo = _load_mdo(single_site_dict)
     xs = mdo.load_stocks()
@@ -300,10 +307,30 @@ def compute_Bs(
     return Bs
 
 
+def get_complete_sites(z, slices):
+    fill_tup = (slice(0, 1, 1), ) * (z.ndim - 3)
+    tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup
+    
+    if isinstance(z, da.core.Array):
+        sliced_da = z[tup]
+    else:
+        sliced_da = da.from_zarr(z)[tup]
+
+    complete_coords = np.where(sliced_da.compute() != -np.inf)[:3]
+    nr_complete_sites = len(complete_coords[0])
+
+    return nr_complete_sites, complete_coords
+
+
 def get_incomplete_sites(z, slices):
     fill_tup = (slice(0, 1, 1), ) * (z.ndim - 3)
     tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup
-    sliced_da = da.from_zarr(z)[tup]
+    
+    if isinstance(z, da.core.Array):
+        sliced_da = z[tup]
+    else:
+        sliced_da = da.from_zarr(z)[tup]
+
     incomplete_coords = np.where(sliced_da.compute() == -np.inf)[:3]
     nr_incomplete_sites = len(incomplete_coords[0])
 
@@ -378,25 +405,8 @@ def compute_incomplete_sites(
         z, # target zarr archive
         slices, # slices of interest,
         incomplete_coords,
-        task["batch_size"],
+        task["batch_size"]
     )
-
-#    res_computed = res_da.compute() # hopefully fits in memory
-#
-#    # compute the z coords from the sliced Bs coords
-#    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
-#    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
-#    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
-#    coords_z_lat = np.array([f_lat(x) for x in incomplete_coords[0]])
-#    coords_z_lon = np.array([f_lon(x) for x in incomplete_coords[1]])
-#    coords_z_prob = np.array([f_prob(x) for x in incomplete_coords[2]])
-#
-#    coords_z = (coords_z_lat, coords_z_lon, coords_z_prob)
-#
-#    # update zarr file
-##    z = zarr.open(str(zarr_path))
-#    for nr, lat, lon, prob in zip(range(nr_incomplete_sites), *[coords_z[k] for k in range(3)]):
-#        z[lat, lon, prob, ...] = res_computed[nr, ...]
 
     write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
     print('done, timeout (min) = ', time_limit_in_min, flush=True)
