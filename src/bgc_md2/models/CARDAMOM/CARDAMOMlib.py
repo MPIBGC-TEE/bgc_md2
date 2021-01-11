@@ -5,6 +5,7 @@ import zarr
 import dask.array as da
 import numpy as np
 
+from sympy import symbols
 from tqdm import tqdm
 
 from dask.distributed import LocalCluster
@@ -268,6 +269,75 @@ def func_for_map_blocks(*args):
     return res.reshape(return_shape)
 
 
+# args[0] is the object on which map_blocks is called (Bs_da)
+# args[:-1] are the variables that get automatically chunked
+# args[-1] is supposed to be a dictionary with additional parameters
+def func_for_map_blocks_with_pwc_mr(*args):
+    additional_params = args[-1]
+    computation = additional_params["computation"]
+    nr_pools = additional_params["nr_pools"]
+    days_per_month = additional_params["days_per_month"]
+    return_shape = additional_params["return_shape"]
+    func = additional_params["func"]
+    func_args = additional_params["func_args"]
+    time_limit_in_min = additional_params["time_limit_in_min"]
+    logfile_name = additional_params["logfile_name"]
+                                            
+    Bs = args[0].reshape((-1, nr_pools, nr_pools))
+    start_values = args[1].reshape(nr_pools)
+    us = args[2].reshape((-1, nr_pools))
+                                                            
+    lat = args[3].reshape(-1)
+    lon = args[4].reshape(-1)
+    prob = args[5].reshape(-1)
+    times = args[6].reshape(-1)
+                                                                                
+    nr_times = len(times)
+    data_times = np.arange(0, nr_times, 1) * days_per_month
+                                                                                        
+    log_msg = ""
+    res = -np.inf * np.ones(return_shape)
+    try:
+        time_symbol = symbols('t')
+
+        # using the custom_timeout function (even with timeout switched off) 
+        # makes the worker report to the scheduler
+        # and prevents frequent timeouts
+        mr = custom_timeout(
+            np.inf,
+            PWCModelRunFD.from_Bs_and_us,
+            time_symbol,
+            data_times,
+            start_values,
+            Bs[:-1],
+            us[:-1]
+        )
+       
+        print('Computing', computation, flush=True)
+        res = custom_timeout(
+            time_limit_in_min*60,
+            func,
+            mr,
+            *func_args
+        )           
+        print("done", flush=True)
+    except Exception as e:
+        res = np.nan * np.ones_like(res)
+        print(str(e), flush=True)
+        log_msg = str(e)
+
+    write_to_logfile(
+          logfile_name,
+          "single finished,",
+          "lat:", lat,
+          "lon:", lon,
+          "prob:", prob,
+          log_msg
+    )
+    
+    return res.reshape(return_shape)
+
+
 def compute_xs(single_site_dict):
     mdo = _load_mdo(single_site_dict)
     xs = mdo.load_stocks()
@@ -337,9 +407,39 @@ def get_incomplete_sites(z, slices):
     return nr_incomplete_sites, incomplete_coords
 
 
+def get_incomplete_site_tuples_for_pwc_mr_computation(
+    start_values_zarr,
+    us_zarr,
+    Bs_zarr,
+    z,
+    slices
+):
+    _, complete_coords_svs = get_complete_sites(start_values_zarr, slices)
+    _, complete_coords_us = get_complete_sites(us_zarr, slices)
+    _, complete_coords_Bs = get_complete_sites(Bs_zarr, slices)
+    _, incomplete_coords_soln = get_incomplete_sites(z, slices)
+                        
+    coords_list = []
+    for coords in [
+        complete_coords_svs,
+        complete_coords_us,
+        complete_coords_Bs,
+        incomplete_coords_soln
+    ]:
+        coords_list.append(
+            set(
+                (coords[0][i], coords[1][i], coords[2][i]) for i in range(len(coords[0]))
+            )
+        )
+                                            
+    incomplete_coords_tuples = list(set.intersection(*coords_list))
+    return len(incomplete_coords_tuples), incomplete_coords_tuples
+
+
 def compute_incomplete_sites(
     time_limit_in_min,
     z,
+    nr_times,
     variable_names,
     variables,
     non_data_variables,
@@ -369,7 +469,7 @@ def compute_incomplete_sites(
     incomplete_variables.append(da.from_array(incomplete_coords[0].reshape(-1, 1), chunks=(1, 1))) # lat
     incomplete_variables.append(da.from_array(incomplete_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
     incomplete_variables.append(da.from_array(incomplete_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
-    time_da = variables[variable_names.index('time')].reshape(1, -1).rechunk((1, 1152))
+    time_da = variables[variable_names.index('time')].reshape(1, -1).rechunk((1, nr_times))
     incomplete_variables.append(time_da)
 
     # prepare the delayed computation
@@ -405,6 +505,113 @@ def compute_incomplete_sites(
         z, # target zarr archive
         slices, # slices of interest,
         incomplete_coords,
+        task["batch_size"]
+    )
+
+    write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
+    print('done, timeout (min) = ', time_limit_in_min, flush=True)
+
+
+def compute_incomplete_sites_with_pwc_mr(
+    time_limit_in_min,
+    z,
+    nr_pools,
+    nr_times,
+    days_per_month,
+    start_values_da,
+    us_da,
+    Bs_da,
+    slices,
+    task,
+    logfile_name,
+):
+    nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_site_tuples_for_pwc_mr_computation(
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        z,
+        slices
+    )
+
+    if nr_incomplete_sites > 0:
+        print('number of incomplete sites:', nr_incomplete_sites)
+    else:
+        print('no incomplete sites remaining')
+        return
+
+    # select incomplete sites from variables
+    incomplete_variables = []
+
+    shapes = [
+        (nr_times, nr_pools, nr_pools),
+        (1, nr_pools, 1),
+        (nr_times, nr_pools, 1)
+    ]
+    for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
+        v_stack_list = []
+        for ic in incomplete_coords[:100]:
+            v_stack_list.append(v[ic].reshape(shape))
+
+        incomplete_variables.append(da.stack(v_stack_list))
+
+    # add lat, lon, prob
+    for k, name in enumerate(["lat", "lon", "prob"]):
+        incomplete_variables.append(
+            da.from_array(
+                np.array(
+                    [ic[k] for ic in incomplete_coords[:100]]
+                ).reshape(-1, 1, 1, 1),
+                chunks=(1, 1, 1, 1)
+            )
+        )
+
+    # add time
+    incomplete_variables.append(times_da.reshape((1, -1, 1, 1)).rechunk((1, nr_times, 1, 1)))
+
+    # prepare the delayed computation
+    additional_params = {
+        "computation": task["computation"],
+        "nr_pools": nr_pools,
+        "days_per_month": 31.0,
+        "return_shape": task["return_shape"],
+        "func": task["func"],
+        "func_args": task["func_args"],
+        "time_limit_in_min": time_limit_in_min,
+        "logfile_name": logfile_name
+    }
+
+    meta_shape = list(task["meta_shape"])
+    meta_shape[0] = nr_incomplete_sites
+    meta_shape = tuple(meta_shape)
+
+    res_da = incomplete_variables[0].map_blocks(
+        func_for_map_blocks_with_pwc_mr,
+        *incomplete_variables[1:], # variables[0] comes automatically as first argument
+        additional_params,
+        drop_axis=task["drop_axis"],
+        new_axis=task["new_axis"],
+        chunks=task["return_shape"],
+        dtype=np.float64,
+        meta=np.ndarray(meta_shape, dtype=np.float64)
+    )
+
+    # write header to logfile
+    print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
+    print("starting", flush=True)
+
+    # convert the incomplete coordinates from a list of tuples in a tuple of lists
+    incomplete_coords_linear = (
+        [ic[0] for ic in incomplete_coords[:100]],
+        [ic[1] for ic in incomplete_coords[:100]],
+        [ic[2] for ic in incomplete_coords[:100]]
+    )
+
+    # do the computation
+    linear_batchwise_to_zarr(
+        res_da, # dask array
+        z, # target zarr archive
+        slices, # slices of interest,
+        incomplete_coords_linear,
         task["batch_size"]
     )
 

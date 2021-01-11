@@ -202,7 +202,6 @@ for task in task_list:
     print("task: computing", task["computation"])
     print()
     
-    overwrite = task["overwrite"]
     zarr_path = Path(project_path.joinpath(task["computation"]))
     print("zarr archive:", str(zarr_path))
     z = load_zarr_archive(
@@ -221,6 +220,7 @@ for task in task_list:
         CARDAMOMlib.compute_incomplete_sites(
             timeout,
             z,
+            nr_times,
             variable_names,
             variables,
             non_data_variables,
@@ -229,7 +229,7 @@ for task in task_list:
             logfile_name
         )
 
-    nr_incomplete_sites, incomplete_coords = CARDAMOMlib.get_incomplete_sites(z, slices)
+    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_sites(z, slices)
     write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()

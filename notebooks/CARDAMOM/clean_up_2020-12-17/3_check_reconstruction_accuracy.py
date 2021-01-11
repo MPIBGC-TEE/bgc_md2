@@ -35,7 +35,6 @@ from bgc_md2.notebook_helpers import (
     custom_timeout
 )
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD, PWCModelRunFDError
-from sympy import symbols
 
 from dask.distributed import Client
 # -
@@ -116,197 +115,79 @@ nr_lons = len(np.arange(nr_lons_total)[slices["lon"]])
 nr_probs = len(np.arange(nr_probs_total)[slices["prob"]])
 nr_times = len(np.arange(nr_times_total)[slices["time"]])
 nr_lats, nr_lons, nr_probs, nr_times
-
-# +
-# compute the solutions/stocks for the model runs
-
-overwrite = False
-computation = "solution"
-zarr_path = Path(project_path.joinpath(computation))
-print("zarr archive:", str(zarr_path))
-
-result_shape = (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools)
-result_chunks = (1, 1, 1, nr_times, nr_pools)
-
-z = load_zarr_archive(
-    zarr_path,
-    result_shape,
-    result_chunks,
-    overwrite=overwrite
-)
-z.shape
 # -
 
-_, complete_coords_svs = CARDAMOMlib.get_complete_sites(start_values_zarr, slices)
-_, complete_coords_us = CARDAMOMlib.get_complete_sites(us_zarr, slices)
-_, complete_coords_Bs = CARDAMOMlib.get_complete_sites(Bs_zarr, slices)
-_, incomplete_coords_soln = CARDAMOMlib.get_incomplete_sites(z, slices)
-
-# +
-coords_list = []
-for coords in [
-    complete_coords_svs,
-    complete_coords_us,
-    complete_coords_Bs,
-    incomplete_coords_soln
-]:
-    coords_list.append(
-        set(
-            (coords[0][i], coords[1][i], coords[2][i]) for i in range(len(coords[0]))
-        )
-    )
-
-incomplete_coords = list(set.intersection(*coords_list))
-print("Incomplete sites:", len(incomplete_coords))
-
-
-# -
-
-def compute_with_pwc_mr(*args):
-    additional_params = args[-1]
-    computation = additional_params["computation"]
-    nr_pools = additional_params["nr_pools"]
-    days_per_month = additional_params["days_per_month"]
-    return_shape = additional_params["return_shape"]
-    func = additional_params["func"]
-    func_args = additional_params["func_args"]
-    time_limit_in_min = additional_params["time_limit_in_min"]
-    logfile_name = additional_params["logfile_name"]
-    
-    Bs = args[0].reshape((-1, nr_pools, nr_pools))
-    start_values = args[1].reshape(nr_pools)
-    us = args[2].reshape((-1, nr_pools))
-    
-    lat = args[3].reshape(-1)
-    lon = args[4].reshape(-1)
-    prob = args[5].reshape(-1)
-    times = args[6].reshape(-1)
-    
-    nr_times = len(times)
-    data_times = np.arange(0, nr_times, 1) * days_per_month
-
-    log_msg = ""
-    res = -np.inf * np.ones(return_shape)
-    try:
-        time_symbol = symbols('t')
-        # using the custom_timeout function (even with timeout switched off) 
-        # makes the worker report to the scheduler
-        # and prevents frequent timeouts
-        mr = custom_timeout(
-            np.inf,
-            PWCModelRunFD.from_Bs_and_us,
-            time_symbol,
-            data_times,
-            start_values,
-            Bs[:-1],
-            us[:-1]
-        )
-        
-        print('Computing', computation, flush=True)
-#        soln = custom_timeout(
-#            time_limit_in_min*60,
-#                mr.solve
-#            )
-#            print("solved", flush=True)
-#            res = soln
-        res = custom_timeout(
-            time_limit_in_min*60,
-            func,
-            mr,
-            *func_args
-        )           
-        print("done", flush=True)
-    except Exception as e:
-        res = np.nan * np.ones_like(res)
-        print(str(e), flush=True)
-        log_msg = str(e)
-            
-    write_to_logfile(
-        logfile_name,
-        "single finished,",
-        "lat:", lat,
-        "lon:", lon,
-        "prob:", prob,
-        log_msg
-    )
-
-    return res.reshape(return_shape)
-
-
-# +
-incomplete_variables = []
-
-shapes = [
-    (nr_times, nr_pools, nr_pools),
-    (1, nr_pools, 1),
-    (nr_times, nr_pools, 1)
+task_list = [
+    {# 0:
+        "computation": "solution",
+        "overwrite": True,
+        "func": PWCModelRunFD.solve,
+        "func_args": [],
+        "timeouts": [np.inf],
+        "batch_size": 1000,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+        "return_shape": (1, nr_times, nr_pools),
+        "meta_shape": (1, nr_times, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": 1, # add one pool axis for solution
+    }
 ]
-for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
-    v_stack_list = []
-    for ic in incomplete_coords[:100]:
-        v_stack_list.append(v[ic].reshape(shape))
+
+# ## Computing
+#
+# *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
+
+for task in task_list:
+    print("task: computing", task["computation"])
+    print()
     
-    incomplete_variables.append(da.stack(v_stack_list))
-
-for k, name in enumerate(["lat", "lon", "prob"]):
-    incomplete_variables.append(
-        da.from_array(
-            np.array([ic[k] for ic in incomplete_coords[:100]]).reshape(-1, 1, 1, 1),
-            chunks=(1, 1, 1, 1)
-        )
+    zarr_path = Path(project_path.joinpath(task["computation"]))
+    print("zarr archive:", str(zarr_path))
+    z = load_zarr_archive(
+        zarr_path,
+        task["result_shape"],
+        task["result_chunks"],
+        overwrite=task["overwrite"]
     )
-incomplete_variables.append(times_da.reshape((1, -1, 1, 1)).rechunk((1, nr_times, 1, 1)))
-incomplete_variables
-# -
 
-computation = "solution"
-additional_params = {
-    "computation": computation,
-    "func": PWCModelRunFD.solve,
-    "nr_pools": nr_pools,
-    "days_per_month": 31.0,
-    "return_shape": (1, nr_times, nr_pools),
-    "func_args": [],
-    "time_limit_in_min": np.inf,
-    "logfile_name": str(project_path.joinpath(computation + ".log"))
-}
+    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_site_tuples_for_pwc_mr_computation(
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        z,
+        slices
+    )
+    print("Number of incomplete sites:", nr_incomplete_sites)
 
-res_da = incomplete_variables[0].map_blocks(
-    compute_with_pwc_mr,
-    *incomplete_variables[1:],
-    additional_params,
-    drop_axis=(2, 3),
-    new_axis=2,
-    chunks=additional_params["return_shape"],
-    dtype=np.float64,
-    meta=np.ndarray((1, nr_times, nr_pools), dtype=np.float64)
-)
-res_da
+    logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
+    print("Logfile:", logfile_name)
 
-incomplete_coords_linear = (
-    [ic[0] for ic in incomplete_coords[:100]],
-    [ic[1] for ic in incomplete_coords[:100]],
-    [ic[2] for ic in incomplete_coords[:100]],
-)
+    for timeout in task["timeouts"]:        
+        CARDAMOMlib.compute_incomplete_sites_with_pwc_mr(
+            timeout,
+            z,
+            nr_pools,
+            nr_times,
+            31.0, # days_per_month
+            start_values_da,
+            us_da,
+            Bs_da,
+            slices,
+            task,
+            logfile_name
+        )
 
-# +
-time_limit_in_min = additional_params["time_limit_in_min"]
+    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_site_tuples_for_pwc_mr_computation(
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        z,
+        slices
+    )
+    write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
+    print(nr_incomplete_sites, "incomplete sites remaining")
+    print()
 
-# write header to logfile
-print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
-print("starting", flush=True)
-
-# do the computation
-CARDAMOMlib.linear_batchwise_to_zarr(
-    res_da, # dask array
-    z, # target zarr archive
-    slices, # slices of interest,
-    incomplete_coords_linear,
-    10 # batch_size
-)
-
-write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
-print('done, timeout (min) = ', time_limit_in_min, flush=True)
-# -
 
 
