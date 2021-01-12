@@ -11,10 +11,10 @@ from tqdm import tqdm
 from dask.distributed import LocalCluster
 from getpass import getuser
 
+from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject import ModelDataObject as ModelDataObject_ds
 from bgc_md2.ModelDataObject_dict import ModelDataObject_dict
-
 from bgc_md2.Variable import Variable
 from bgc_md2.notebook_helpers import (
     write_to_logfile,
@@ -516,15 +516,19 @@ def compute_incomplete_sites_with_pwc_mr(
     time_limit_in_min,
     z,
     nr_pools,
-    nr_times,
     days_per_month,
-    start_values_da,
-    us_da,
-    Bs_da,
+    times_da,
+    start_values_zarr,
+    us_zarr,
+    Bs_zarr,
     slices,
     task,
     logfile_name,
 ):
+    start_values_da = da.from_zarr(start_values_zarr)
+    us_da = da.from_zarr(us_zarr)
+    Bs_da = da.from_zarr(Bs_zarr)
+
     nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_site_tuples_for_pwc_mr_computation(
         start_values_zarr,
         us_zarr,
@@ -532,7 +536,6 @@ def compute_incomplete_sites_with_pwc_mr(
         z,
         slices
     )
-
     if nr_incomplete_sites > 0:
         print('number of incomplete sites:', nr_incomplete_sites)
     else:
@@ -542,6 +545,7 @@ def compute_incomplete_sites_with_pwc_mr(
     # select incomplete sites from variables
     incomplete_variables = []
 
+    nr_times = len(times_da)
     shapes = [
         (nr_times, nr_pools, nr_pools),
         (1, nr_pools, 1),
@@ -549,7 +553,7 @@ def compute_incomplete_sites_with_pwc_mr(
     ]
     for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
         v_stack_list = []
-        for ic in incomplete_coords[:100]:
+        for ic in incomplete_coords_tuples:
             v_stack_list.append(v[ic].reshape(shape))
 
         incomplete_variables.append(da.stack(v_stack_list))
@@ -559,7 +563,7 @@ def compute_incomplete_sites_with_pwc_mr(
         incomplete_variables.append(
             da.from_array(
                 np.array(
-                    [ic[k] for ic in incomplete_coords[:100]]
+                    [ic[k] for ic in incomplete_coords_tuples]
                 ).reshape(-1, 1, 1, 1),
                 chunks=(1, 1, 1, 1)
             )
@@ -600,10 +604,10 @@ def compute_incomplete_sites_with_pwc_mr(
     print("starting", flush=True)
 
     # convert the incomplete coordinates from a list of tuples in a tuple of lists
-    incomplete_coords_linear = (
-        [ic[0] for ic in incomplete_coords[:100]],
-        [ic[1] for ic in incomplete_coords[:100]],
-        [ic[2] for ic in incomplete_coords[:100]]
+    incomplete_coords = (
+        [ic[0] for ic in incomplete_coords_tuples],
+        [ic[1] for ic in incomplete_coords_tuples],
+        [ic[2] for ic in incomplete_coords_tuples]
     )
 
     # do the computation
@@ -611,7 +615,7 @@ def compute_incomplete_sites_with_pwc_mr(
         res_da, # dask array
         z, # target zarr archive
         slices, # slices of interest,
-        incomplete_coords_linear,
+        incomplete_coords,
         task["batch_size"]
     )
 

@@ -34,7 +34,6 @@ from bgc_md2.notebook_helpers import (
     load_zarr_archive,
     custom_timeout
 )
-from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD, PWCModelRunFDError
 
 from dask.distributed import Client
 # -
@@ -82,13 +81,8 @@ probs_da = da.from_zarr(str(project_path.joinpath("prob")))
 times_da = da.from_zarr(str(project_path.joinpath("time")))
 
 start_values_zarr = zarr.open(str(project_path.joinpath("start_values")))
-start_values_da = da.from_zarr(start_values_zarr)
-
 us_zarr = zarr.open(str(project_path.joinpath("us")))
-us_da = da.from_zarr(us_zarr)
-
 Bs_zarr = zarr.open(str(project_path.joinpath("Bs")))
-Bs_da = da.from_zarr(Bs_zarr)
 
 #xs_da = da.from_zarr(str(project_path.joinpath("xs")))
 
@@ -124,7 +118,7 @@ task_list = [
         "func": PWCModelRunFD.solve,
         "func_args": [],
         "timeouts": [np.inf],
-        "batch_size": 1000,
+        "batch_size": 10,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -168,11 +162,11 @@ for task in task_list:
             timeout,
             z,
             nr_pools,
-            nr_times,
             31.0, # days_per_month
-            start_values_da,
-            us_da,
-            Bs_da,
+            times_da,
+            start_values_zarr,
+            us_zarr,
+            Bs_zarr,
             slices,
             task,
             logfile_name
