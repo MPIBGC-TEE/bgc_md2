@@ -27,13 +27,8 @@ import numpy as np
 
 from pathlib import Path
 
+from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
-from bgc_md2.notebook_helpers import (
-    write_to_logfile,
-    write_header_to_logfile,
-    load_zarr_archive,
-    custom_timeout
-)
 
 from dask.distributed import Client
 # -
@@ -124,7 +119,21 @@ task_list = [
         "return_shape": (1, nr_times, nr_pools),
         "meta_shape": (1, nr_times, nr_pools),
         "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": 1, # add one pool axis for solution
+        "new_axis": 2, # add one pool axis for solution
+    },
+    {# 1:
+        "computation": "age_moment_vectors_up_to_2",
+        "overwrite": True,
+        "func": PWCModelRunFD.age_moment_vector_up_to,
+        "func_args": [2],
+        "timeouts": [np.inf],
+        "batch_size": 10,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 3, nr_pools), # solution + 2 moments
+        "result_chunks": (1, 1, 1, nr_times_total, 3, nr_pools),
+        "return_shape": (1, nr_times, 3, nr_pools),
+        "meta_shape": (1, nr_times, 3, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": [2, 3], # add one moment axis and one pool axis
     }
 ]
 
@@ -132,56 +141,18 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list:
-    print("task: computing", task["computation"])
-    print()
-    
-    zarr_path = Path(project_path.joinpath(task["computation"]))
-    print("zarr archive:", str(zarr_path))
-    z = load_zarr_archive(
-        zarr_path,
-        task["result_shape"],
-        task["result_chunks"],
-        overwrite=task["overwrite"]
-    )
-
-    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_site_tuples_for_pwc_mr_computation(
-        start_values_zarr,
-        us_zarr,
-        Bs_zarr,
-        z,
-        slices
-    )
-    print("Number of incomplete sites:", nr_incomplete_sites)
-
-    logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
-    print("Logfile:", logfile_name)
-
-    for timeout in task["timeouts"]:        
-        CARDAMOMlib.compute_incomplete_sites_with_pwc_mr(
-            timeout,
-            z,
-            nr_pools,
-            31.0, # days_per_month
-            times_da,
-            start_values_zarr,
-            us_zarr,
-            Bs_zarr,
-            slices,
-            task,
-            logfile_name
-        )
-
-    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_site_tuples_for_pwc_mr_computation(
-        start_values_zarr,
-        us_zarr,
-        Bs_zarr,
-        z,
-        slices
-    )
-    write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
-    print(nr_incomplete_sites, "incomplete sites remaining")
-    print()
+task = task_list[1]
+CARDAMOMlib.run_task_with_pwc_mr(
+    project_path,
+    task,
+    nr_pools,
+    31.0, # days per month
+    times_da,
+    start_values_zarr,
+    us_zarr,
+    Bs_zarr,
+    slices
+)
 
 
 

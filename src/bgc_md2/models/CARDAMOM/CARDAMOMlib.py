@@ -5,6 +5,7 @@ import zarr
 import dask.array as da
 import numpy as np
 
+from pathlib import Path
 from sympy import symbols
 from tqdm import tqdm
 
@@ -19,7 +20,8 @@ from bgc_md2.Variable import Variable
 from bgc_md2.notebook_helpers import (
     write_to_logfile,
     write_header_to_logfile,
-    custom_timeout
+    custom_timeout,
+    load_zarr_archive
 )
 
 
@@ -553,7 +555,7 @@ def compute_incomplete_sites_with_pwc_mr(
     ]
     for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
         v_stack_list = []
-        for ic in incomplete_coords_tuples:
+        for ic in incomplete_coords_tuples[:100]:
             v_stack_list.append(v[ic].reshape(shape))
 
         incomplete_variables.append(da.stack(v_stack_list))
@@ -563,7 +565,7 @@ def compute_incomplete_sites_with_pwc_mr(
         incomplete_variables.append(
             da.from_array(
                 np.array(
-                    [ic[k] for ic in incomplete_coords_tuples]
+                    [ic[k] for ic in incomplete_coords_tuples[:100]]
                 ).reshape(-1, 1, 1, 1),
                 chunks=(1, 1, 1, 1)
             )
@@ -605,9 +607,9 @@ def compute_incomplete_sites_with_pwc_mr(
 
     # convert the incomplete coordinates from a list of tuples in a tuple of lists
     incomplete_coords = (
-        [ic[0] for ic in incomplete_coords_tuples],
-        [ic[1] for ic in incomplete_coords_tuples],
-        [ic[2] for ic in incomplete_coords_tuples]
+        [ic[0] for ic in incomplete_coords_tuples[:100]],
+        [ic[1] for ic in incomplete_coords_tuples[:100]],
+        [ic[2] for ic in incomplete_coords_tuples[:100]]
     )
 
     # do the computation
@@ -621,6 +623,68 @@ def compute_incomplete_sites_with_pwc_mr(
 
     write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
     print('done, timeout (min) = ', time_limit_in_min, flush=True)
+
+
+def run_task_with_pwc_mr(
+    project_path,
+    task,
+    nr_pools,
+    days_per_month,
+    times_da,
+    start_values_zarr,
+    us_zarr,
+    Bs_zarr,
+    slices
+):
+    print("task: computing", task["computation"])
+    print()
+            
+    zarr_path = Path(project_path.joinpath(task["computation"]))
+    print("zarr archive:", str(zarr_path))
+    z = load_zarr_archive(
+        zarr_path,
+        task["result_shape"],
+        task["result_chunks"],
+        overwrite=task["overwrite"]
+    )
+
+    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_pwc_mr_computation(
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        z,
+        slices
+    )
+    print("Number of incomplete sites:", nr_incomplete_sites)
+
+    logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
+    print("Logfile:", logfile_name)
+
+    for timeout in task["timeouts"]:        
+        compute_incomplete_sites_with_pwc_mr(
+            timeout,
+            z,
+            nr_pools,
+            days_per_month,
+            times_da,
+            start_values_zarr,
+            us_zarr,
+            Bs_zarr,
+            slices,
+            task,
+            logfile_name
+        )
+
+    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_pwc_mr_computation(
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        z,
+        slices
+    )
+    write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
+    print(nr_incomplete_sites, "incomplete sites remaining")
+    print()
 
 
 ###############################################################################
