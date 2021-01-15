@@ -67,7 +67,7 @@ data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 zarr_data_path = data_path.joinpath("rechunked_zarr")
 output_path = data_path.joinpath("output")
 
-project_path = output_path.joinpath("solve_ivp_0000-0003")
+project_path = output_path.joinpath("solve_ivp_0000-0003_check_success")
 
 # +
 # load variables from zarr archive
@@ -144,6 +144,7 @@ task_list = [
         "computation": "xs",
         "overwrite": False,
         "func": CARDAMOMlib.compute_xs,
+        "func_args": dict(),
         "timeouts": [np.inf],
         "batch_size": 5000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
@@ -157,6 +158,7 @@ task_list = [
         "computation": "start_values",
         "overwrite": False,
         "func": CARDAMOMlib.compute_start_values,
+        "func_args": dict(),
         "timeouts": [np.inf],
         "batch_size": 5000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_pools),
@@ -170,6 +172,7 @@ task_list = [
         "computation": "us",
         "overwrite": False,
         "func": CARDAMOMlib.compute_us,
+        "func_args": dict(),
         "timeouts": [np.inf],
         "batch_size": 5000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
@@ -183,6 +186,7 @@ task_list = [
         "computation": "Bs",
         "overwrite": False,
         "func": CARDAMOMlib.compute_Bs,
+        "func_args": {"check_success": True},
         "timeouts": [30, 300, 2000],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools, nr_pools),
@@ -198,7 +202,7 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list:
+for task in task_list[3:]:
     print("task: computing", task["computation"])
     print()
     

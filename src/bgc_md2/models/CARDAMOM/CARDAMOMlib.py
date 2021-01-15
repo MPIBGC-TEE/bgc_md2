@@ -6,12 +6,13 @@ import dask.array as da
 import numpy as np
 
 from pathlib import Path
-from sympy import symbols
+from sympy import symbols, Matrix
 from tqdm import tqdm
 
 from dask.distributed import LocalCluster
 from getpass import getuser
 
+from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel as LAPM
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject import ModelDataObject as ModelDataObject_ds
@@ -232,6 +233,7 @@ def func_for_map_blocks(*args):
     additional_params = args[-1]
 
     func = additional_params["func"] # the actual function to be called
+    func_args = additional_params["func_args"]
 
     v_names = additional_params["variable_names"]
     time_limit_in_min = additional_params["time_limit_in_min"]
@@ -248,7 +250,8 @@ def func_for_map_blocks(*args):
         res = custom_timeout(
             time_limit_in_min*60,
             func,
-            d
+            d,
+            **func_args
         )
     except TimeoutError:
         duration = (time.time() - start_time) / 60
@@ -367,16 +370,49 @@ def compute_us(single_site_dict):
 def compute_Bs(
     single_site_dict,
     integration_method='solve_ivp',
-    nr_nodes=None
+    nr_nodes=None,
+    check_success=False
 ):
     mdo = _load_mdo(single_site_dict)
     Bs = mdo.load_Bs(
         integration_method,
-        nr_nodes
+        nr_nodes,
+        check_success
     )
     del mdo
 
     return Bs
+
+
+def compute_fake_eq_model(pwc_mr_fd, nr_months):
+    # average the first `nr_months` us and Bs
+    start_age_us = Matrix(pwc_mr_fd.us[:nr_months, ...].mean(axis=0))
+    start_age_Bs = Matrix(pwc_mr_fd.Bs[:nr_months, ...].mean(axis=0))
+                            
+    eq_model = LAPM(
+        start_age_us,
+        start_age_Bs,
+        force_numerical=True
+    )
+    return eq_model
+
+
+def compute_start_age_moments(pwc_mr_fd, nr_months, up_to_order):
+    eq_model = compute_fake_eq_model(pwc_mr_fd, nr_months)
+
+    start_age_moments = np.stack(
+        [
+            np.array(eq_model.a_nth_moment(order), dtype=np.float64).reshape((-1,))
+            for order in range(1, up_to_order+1)
+        ],
+        axis=0
+    )
+    return start_age_moments
+
+
+def compute_age_moment_vector_up_to(pwc_mr_fd, nr_months, up_to_order):
+    start_age_moments = compute_start_age_moments(pwc_mr_fd, nr_months, up_to_order)
+    return pwc_mr_fd.age_moment_vector_up_to(up_to_order, start_age_moments)
 
 
 def get_complete_sites(z, slices):
@@ -435,6 +471,9 @@ def get_incomplete_site_tuples_for_pwc_mr_computation(
         )
                                             
     incomplete_coords_tuples = list(set.intersection(*coords_list))
+    incomplete_coords_tuples.sort()
+#    incomplete_coords_tuples = incomplete_coords_tuples[:100]
+
     return len(incomplete_coords_tuples), incomplete_coords_tuples
 
 
@@ -477,6 +516,7 @@ def compute_incomplete_sites(
     # prepare the delayed computation
     additional_params = {
         "func": task["func"],
+        "func_args": task["func_args"],
         "variable_names": variable_names,
         "time_limit_in_min": time_limit_in_min,
         "return_shape": task["return_shape"],
@@ -555,7 +595,7 @@ def compute_incomplete_sites_with_pwc_mr(
     ]
     for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
         v_stack_list = []
-        for ic in incomplete_coords_tuples[:100]:
+        for ic in incomplete_coords_tuples:
             v_stack_list.append(v[ic].reshape(shape))
 
         incomplete_variables.append(da.stack(v_stack_list))
@@ -565,7 +605,7 @@ def compute_incomplete_sites_with_pwc_mr(
         incomplete_variables.append(
             da.from_array(
                 np.array(
-                    [ic[k] for ic in incomplete_coords_tuples[:100]]
+                    [ic[k] for ic in incomplete_coords_tuples]
                 ).reshape(-1, 1, 1, 1),
                 chunks=(1, 1, 1, 1)
             )
@@ -607,9 +647,9 @@ def compute_incomplete_sites_with_pwc_mr(
 
     # convert the incomplete coordinates from a list of tuples in a tuple of lists
     incomplete_coords = (
-        [ic[0] for ic in incomplete_coords_tuples[:100]],
-        [ic[1] for ic in incomplete_coords_tuples[:100]],
-        [ic[2] for ic in incomplete_coords_tuples[:100]]
+        [ic[0] for ic in incomplete_coords_tuples],
+        [ic[1] for ic in incomplete_coords_tuples],
+        [ic[2] for ic in incomplete_coords_tuples]
     )
 
     # do the computation
@@ -622,7 +662,7 @@ def compute_incomplete_sites_with_pwc_mr(
     )
 
     write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
-    print('done, timeout (min) = ', time_limit_in_min, flush=True)
+    print('done, timeout (min) =', time_limit_in_min, flush=True)
 
 
 def run_task_with_pwc_mr(
@@ -648,14 +688,14 @@ def run_task_with_pwc_mr(
         overwrite=task["overwrite"]
     )
 
-    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_pwc_mr_computation(
-        start_values_zarr,
-        us_zarr,
-        Bs_zarr,
-        z,
-        slices
-    )
-    print("Number of incomplete sites:", nr_incomplete_sites)
+#    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_pwc_mr_computation(
+#        start_values_zarr,
+#        us_zarr,
+#        Bs_zarr,
+#        z,
+#        slices
+#    )
+#    print("Number of incomplete sites:", nr_incomplete_sites)
 
     logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
     print("Logfile:", logfile_name)

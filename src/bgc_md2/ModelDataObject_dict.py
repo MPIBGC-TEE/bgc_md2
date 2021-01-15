@@ -531,6 +531,7 @@ class ModelDataObject_dict(object):
         self,
         integration_method='solve_ivp',
         nr_nodes=None,
+        check_success=False
     ):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
@@ -546,8 +547,9 @@ class ModelDataObject_dict(object):
             Us.data.filled(),
             Fs.data.filled(),
             Rs.data.filled(),
-            integration_method=integration_method,
-            nr_nodes=nr_nodes,
+            integration_method,
+            nr_nodes,
+            check_success
         )
         
         data[:-1, ...] = Bs

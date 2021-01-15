@@ -66,7 +66,7 @@ data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 zarr_data_path = data_path.joinpath("rechunked_zarr")
 output_path = data_path.joinpath("output")
 
-project_path = output_path.joinpath("solve_ivp_0000-0003")
+project_path = output_path.joinpath("solve_ivp_0000-0003_check_success")
 #clean_path = project_path.joinpath("clean")
 
 # +
@@ -113,7 +113,7 @@ task_list = [
         "func": PWCModelRunFD.solve,
         "func_args": [],
         "timeouts": [np.inf],
-        "batch_size": 10,
+        "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -122,12 +122,26 @@ task_list = [
         "new_axis": 2, # add one pool axis for solution
     },
     {# 1:
+        "computation": "age_moment_vectors_up_to_1",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_age_moment_vector_up_to,
+        "func_args": [12, 1], # nr_months for fake eq_model, up_to_order
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 2, nr_pools), # solution + 2 moments
+        "result_chunks": (1, 1, 1, nr_times_total, 2, nr_pools),
+        "return_shape": (1, nr_times, 2, nr_pools),
+        "meta_shape": (1, nr_times, 2, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": [2, 3], # add one moment axis and one pool axis
+    },
+    {# 2:
         "computation": "age_moment_vectors_up_to_2",
         "overwrite": True,
-        "func": PWCModelRunFD.age_moment_vector_up_to,
-        "func_args": [2],
+        "func": CARDAMOMlib.compute_age_moment_vector_up_to,
+        "func_args": [12, 2], # nr_months for fake eq_model, up_to_order
         "timeouts": [np.inf],
-        "batch_size": 10,
+        "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 3, nr_pools), # solution + 2 moments
         "result_chunks": (1, 1, 1, nr_times_total, 3, nr_pools),
         "return_shape": (1, nr_times, 3, nr_pools),
@@ -141,18 +155,20 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-task = task_list[1]
-CARDAMOMlib.run_task_with_pwc_mr(
-    project_path,
-    task,
-    nr_pools,
-    31.0, # days per month
-    times_da,
-    start_values_zarr,
-    us_zarr,
-    Bs_zarr,
-    slices
-)
+for task in task_list:
+    CARDAMOMlib.run_task_with_pwc_mr(
+        project_path,
+        task,
+        nr_pools,
+        31.0, # days per month
+        times_da,
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        slices
+    )
 
+
+# # Artificially split 31 days into 31 times 1 days.
 
 
