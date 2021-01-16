@@ -415,6 +415,35 @@ def compute_age_moment_vector_up_to(pwc_mr_fd, nr_months, up_to_order):
     return pwc_mr_fd.age_moment_vector_up_to(up_to_order, start_age_moments)
 
 
+# needed because propert object PWCModelRunFD.external_output_vector cannot be pickled
+def compute_external_output_vector(pwc_mr_fd):
+    return pwc_mr_fd.external_output_vector
+
+
+def compute_backward_transit_time_moment(pwc_mr_fd, nr_months, order):
+    start_age_moments = compute_start_age_moments(pwc_mr_fd, nr_months, order)
+    return pwc_mr_fd.backward_transit_time_moment(order, start_age_moments)
+
+
+def compute_backward_transit_time_quantile(pwc_mr_fd, nr_months, q):
+    eq_model = compute_fake_eq_model(pwc_mr_fd, nr_months)
+
+    F0_normalized = lambda a: np.array(eq_model.a_cum_dist_func(a), dtype=np.float64).reshape((-1,))
+    F0 = lambda a: F0_normalized(a) * pwc_mr_fd.start_values
+
+    pwc_mr_fd.initialize_state_transition_operator_cache(
+        None,
+        size=len(pwc_mr_fd.times)
+    )
+
+    btt_quantile = pwc_mr_fd.backward_transit_time_quantiles(
+        q,
+        F0,
+    )
+
+    return btt_quantile
+
+
 def get_complete_sites(z, slices):
     fill_tup = (slice(0, 1, 1), ) * (z.ndim - 3)
     tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup

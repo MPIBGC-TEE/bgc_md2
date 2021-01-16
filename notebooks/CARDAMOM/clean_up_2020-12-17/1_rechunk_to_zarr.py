@@ -54,7 +54,7 @@ Client(my_cluster)
 # To connect to bokeh dashbord
 #
 # `
-# ssh -L 8080:localhost:8895 antakya_from_home
+# ssh -L 8081:localhost:8790 antakya_from_home
 # `
 #
 # and open link given above.

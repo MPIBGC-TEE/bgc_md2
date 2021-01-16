@@ -20,7 +20,6 @@
 # ## Computation of data consistency
 
 # +
-#import zarr
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,12 +27,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
-from bgc_md2.notebook_helpers import (
-#    write_to_logfile,
-#    write_header_to_logfile,
-#    load_zarr_archive
-    nested_groupby_apply
-)
+from bgc_md2.notebook_helpers import nested_groupby_apply
 
 from dask.distributed import Client
 # -
@@ -61,7 +55,7 @@ Client(my_cluster)
 # To connect to bokeh dashbord
 #
 # `
-# ssh -L 8080:localhost:8895 antakya_from_home
+# ssh -L 8081:localhost:8790 antakya_from_home
 # `
 #
 # and open link given above.
