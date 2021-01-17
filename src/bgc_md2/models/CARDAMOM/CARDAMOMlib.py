@@ -192,6 +192,7 @@ def batchwise_to_zarr(
             print("s_z")
             print(s_z)
             print()
+
         z[s_z[0], s_z[1], s_z[2], ...] = arr[s_arr[0], s_arr[1], s_arr[2], ...].compute()
 
 
@@ -323,7 +324,7 @@ def func_for_map_blocks_with_pwc_mr(*args):
             time_limit_in_min*60,
             func,
             mr,
-            *func_args
+            **func_args
         )           
         print("done", flush=True)
     except Exception as e:
@@ -343,24 +344,24 @@ def func_for_map_blocks_with_pwc_mr(*args):
     return res.reshape(return_shape)
 
 
-def compute_xs(single_site_dict):
-    mdo = _load_mdo(single_site_dict)
+def compute_xs(single_site_dict, time_step):
+    mdo = _load_mdo(single_site_dict, time_step)
     xs = mdo.load_stocks()
     del mdo
 
     return xs.data.filled()
 
 
-def compute_start_values(single_site_dict):
-    mdo = _load_mdo(single_site_dict)
+def compute_start_values(single_site_dict, time_step):
+    mdo = _load_mdo(single_site_dict, time_step)
     xs = mdo.load_stocks()
     del mdo
 
     return xs.data.filled()[0, ...]
 
 
-def compute_us(single_site_dict):
-    mdo = _load_mdo(single_site_dict)
+def compute_us(single_site_dict, time_step):
+    mdo = _load_mdo(single_site_dict, time_step)
     us = mdo.load_us()
     del mdo
 
@@ -369,11 +370,12 @@ def compute_us(single_site_dict):
 
 def compute_Bs(
     single_site_dict,
+    time_step,
     integration_method='solve_ivp',
     nr_nodes=None,
     check_success=False
 ):
-    mdo = _load_mdo(single_site_dict)
+    mdo = _load_mdo(single_site_dict, time_step)
     Bs = mdo.load_Bs(
         integration_method,
         nr_nodes,
@@ -438,7 +440,7 @@ def compute_backward_transit_time_quantile(pwc_mr_fd, nr_months, q):
 
     btt_quantile = pwc_mr_fd.backward_transit_time_quantiles(
         q,
-        F0,
+        F0
     )
 
     return btt_quantile
@@ -457,6 +459,40 @@ def get_complete_sites(z, slices):
     nr_complete_sites = len(complete_coords[0])
 
     return nr_complete_sites, complete_coords
+
+
+def get_complete_non_nan_sites(z, slices):
+    fill_tup = (slice(0, 1, 1), ) * (z.ndim - 3)
+    tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup
+    
+    if isinstance(z, da.core.Array):
+        sliced_da = z[tup]
+    else:
+        sliced_da = da.from_zarr(z)[tup]
+
+    arr = sliced_da.compute()
+    complete_coords = np.where(
+        (arr != -np.inf) & (~np.isnan(arr))
+    )[:3]
+    nr_complete_sites = len(complete_coords[0])
+
+    return nr_complete_sites, complete_coords
+
+
+def get_nan_sites(z, slices):
+    fill_tup = (slice(0, 1, 1), ) * (z.ndim - 3)
+    tup = (slices['lat'], slices['lon'], slices['prob']) + fill_tup
+    
+    if isinstance(z, da.core.Array):
+        sliced_da = z[tup]
+    else:
+        sliced_da = da.from_zarr(z)[tup]
+
+    arr = sliced_da.compute()
+    nan_coords = np.where(np.isnan(arr))[:3]
+    nr_nan_sites = len(nan_coords[0])
+
+    return nr_nan_sites, nan_coords
 
 
 def get_incomplete_sites(z, slices):
@@ -481,9 +517,9 @@ def get_incomplete_site_tuples_for_pwc_mr_computation(
     z,
     slices
 ):
-    _, complete_coords_svs = get_complete_sites(start_values_zarr, slices)
-    _, complete_coords_us = get_complete_sites(us_zarr, slices)
-    _, complete_coords_Bs = get_complete_sites(Bs_zarr, slices)
+    _, complete_coords_svs = get_complete_non_nan_sites(start_values_zarr, slices)
+    _, complete_coords_us = get_complete_non_nan_sites(us_zarr, slices)
+    _, complete_coords_Bs = get_complete_non_nan_sites(Bs_zarr, slices)
     _, incomplete_coords_soln = get_incomplete_sites(z, slices)
                         
     coords_list = []
@@ -504,6 +540,34 @@ def get_incomplete_site_tuples_for_pwc_mr_computation(
 #    incomplete_coords_tuples = incomplete_coords_tuples[:100]
 
     return len(incomplete_coords_tuples), incomplete_coords_tuples
+
+
+def get_nan_site_tuples_for_pwc_mr_computation(
+    start_values_zarr,
+    us_zarr,
+    Bs_zarr,
+    slices
+):
+    _, nan_coords_svs = get_nan_sites(start_values_zarr, slices)
+    _, nan_coords_us = get_nan_sites(us_zarr, slices)
+    _, nan_coords_Bs = get_nan_sites(Bs_zarr, slices)
+                        
+    coords_list = []
+    for coords in [
+        nan_coords_svs,
+        nan_coords_us,
+        nan_coords_Bs
+    ]:
+        coords_list.append(
+            set(
+                (coords[0][i], coords[1][i], coords[2][i]) for i in range(len(coords[0]))
+            )
+        )
+                                            
+    nan_coords_tuples = list(set.union(*coords_list))
+    nan_coords_tuples.sort()
+
+    return len(nan_coords_tuples), nan_coords_tuples
 
 
 def compute_incomplete_sites(
@@ -599,7 +663,19 @@ def compute_incomplete_sites_with_pwc_mr(
     start_values_da = da.from_zarr(start_values_zarr)
     us_da = da.from_zarr(us_zarr)
     Bs_da = da.from_zarr(Bs_zarr)
+    
+    # copy nans from start_values, us, or Bs tu z
+    nr_nan_sites, nan_coords_tuples = get_nan_site_tuples_for_pwc_mr_computation(
+        start_values_zarr,
+        us_zarr,
+        Bs_zarr,
+        slices
+    )
+    for coords in nan_coords_tuples:
+        z[coords] = np.nan
 
+    # identify non-nan computed sites in start_values, us, and Bs
+    # combine with not yet computed sites in z
     nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_site_tuples_for_pwc_mr_computation(
         start_values_zarr,
         us_zarr,
@@ -813,15 +889,13 @@ def _load_model_structure():
     return model_structure
 
 
-def _load_mdo(ds_dict):
+def _load_mdo(ds_dict, time_step): # time step in days
     ms = _load_model_structure()
-
-    days_per_month = 31.0
 
     # no unit support for dictionary version
     time = Variable(
         name="time",
-        data=np.arange(len(ds_dict['time'])) * days_per_month,
+        data=np.arange(len(ds_dict['time'])) * time_step,
 #        unit="d"
         unit="1"
     )

@@ -117,7 +117,7 @@ task_list = [
         "computation": "age_moment_vectors_up_to_2",
         "overwrite": False,
         "func": CARDAMOMlib.compute_age_moment_vector_up_to,
-        "func_args": [120, 2], # nr_months for fake eq_model, up_to_order
+        "func_args": {"nr_months": 120, "up_to_order": 2}, # nr_months for fake eq_model, up_to_order
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 3, nr_pools), # solution + 2 moments
@@ -131,7 +131,7 @@ task_list = [
         "computation": "external_output_vector",
         "overwrite": False,
         "func": CARDAMOMlib.compute_external_output_vector,
-        "func_args": [],
+        "func_args": dict(),
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
@@ -145,7 +145,7 @@ task_list = [
         "computation": "btt_median",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": [120, 0.5], # 120 month for faking equilibrium model, 0.5 for the median
+        "func_args": {"nr_months": 120, "q": 0.5}, # 120 months for faking equilibrium model, 0.5 for the median
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
@@ -159,7 +159,7 @@ task_list = [
         "computation": "btt_quantile_05",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": [120, 0.05], # 120 month for faking equilibrium model
+        "func_args": {"nr_months": 120, "q": 0.05}, # 120 months for faking equilibrium model
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
@@ -173,7 +173,7 @@ task_list = [
         "computation": "btt_quantile_95",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": [120, 0.95], # 120 month for faking equilibrium model
+        "func_args": {"nr_months": 120, "q": 0.95}, # 120 months for faking equilibrium model
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
@@ -190,7 +190,7 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list[2:3]:
+for task in task_list[3:]:
     CARDAMOMlib.run_task_with_pwc_mr(
         project_path,
         task,
@@ -206,11 +206,20 @@ for task in task_list[2:3]:
 
 # # Plot reconstruction accuracy
 
-def get_non_nan_sites(z, drop_dims=2):
+# +
+def get_non_nan_sites(z, drop_dims):
     fill_tup = (slice(0, 1, 1), ) * drop_dims
     tup = (slice(0, None,1),) * 3 + fill_tup
     cut_z = z[tup]
     non_nan_coords = np.where(~np.isnan(cut_z))[:3]
+    
+    return len(non_nan_coords[0]), non_nan_coords
+
+def get_nan_sites(z, drop_dims):
+    fill_tup = (slice(0, 1, 1), ) * drop_dims
+    tup = (slice(0, None,1),) * 3 + fill_tup
+    cut_z = z[tup]
+    non_nan_coords = np.where(np.isnan(cut_z))[:3]
     
     return len(non_nan_coords[0]), non_nan_coords
 
@@ -271,8 +280,14 @@ v2 = da.from_zarr(str(project_path.joinpath("mean_btt")))[slices["lat"], slices[
 
 get_non_nan_sites(v1, drop_dims=1)[0], get_non_nan_sites(v2, drop_dims=1)[0]
 
-# # Artificially split 31 days into 31 times 1 days.
-
-
+# +
+Bs_zarr = zarr.open(str(project_path.joinpath("Bs")))
+Bs_sliced = Bs_zarr[slices["lat"], slices["lon"], slices["prob"]]
+z = zarr.ones((nr_lats, nr_lons, nr_probs, nr_times, nr_pools))
+print(get_non_nan_sites(Bs_sliced, drop_dims=3)[0])
+#z[np.isnan(Bs_sliced[..., 0, 0, 0]), ...] = np.nan
+print(get_nan_sites(z, drop_dims=2)[0])
+# zarr.create?
+# -
 
 

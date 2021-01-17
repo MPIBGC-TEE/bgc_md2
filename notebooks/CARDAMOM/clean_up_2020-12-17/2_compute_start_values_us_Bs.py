@@ -81,9 +81,6 @@ for name, var in zip(variable_names, variables_total):
     print(name)
     print(var)
     print()
-# -
-
-# We decide in which values of which dimensions we are interested (maybe to save computation time).
 
 # +
 # write all lat, lon, prob, time to output folder
@@ -101,6 +98,8 @@ for name in ["lat", "lon", "prob", "time"]:
         
     var.to_zarr(str(file_path))
 # -
+
+# We decide in which values of which dimensions we are interested (maybe to save computation time).
 
 # use all "lat", all "lon", the first four "prob", all "time"
 slices = {

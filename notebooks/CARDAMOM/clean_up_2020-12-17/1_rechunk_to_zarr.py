@@ -60,7 +60,7 @@ Client(my_cluster)
 # and open link given above.
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-target_path = data_path.joinpath("rechunked_zarr_version")
+target_path = data_path.joinpath("rechunked_zarr")
 ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
 ds
 

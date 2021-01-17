@@ -98,6 +98,11 @@ external_output_vector_da = da.from_zarr(str(project_path.joinpath("external_out
 mean_btt_da = (external_output_vector_da * mean_age_vector_da).sum(-1) / external_output_vector_da.sum(-1)
 btt_moment_2_da = (external_output_vector_da * age_moment_vector_2_da).sum(-1) / external_output_vector_da.sum(-1)
 
+# backward_transit time quantiles
+btt_median_da = da.from_zarr(str(project_path.joinpath("btt_median")))
+btt_quantile_05_da = da.from_zarr(str(project_path.joinpath("btt_quantile_05")))
+btt_quantile_95_da = da.from_zarr(str(project_path.joinpath("btt_quantile_95")))
+
 # +
 coords={
     "lat": lats_da.reshape(-1)[slices["lat"]],
@@ -130,7 +135,10 @@ for d in variables:
 # variables with no pool dimension
 variables = [
     {"name": "mean_btt", "da": mean_btt_da/(31*12), "unit": "yr"},
-    {"name": "btt_moment_2", "da": btt_moment_2_da/(31*12)**2, "unit": "yr^2"}
+    {"name": "btt_moment_2", "da": btt_moment_2_da/(31*12)**2, "unit": "yr^2"},
+    {"name": "btt_median", "da" btt_median_da/(31*12), "unit": "yr"},
+    {"name": "btt_quantile_05", btt_quantile_05_da/(31*12), "unit": "yr"},
+    {"name": "btt_quantile_95", btt_quantile_95_da/(31*12), "unit": "yr"},
 ]
 for d in variables:
     data_vars[d["name"]] = xr.DataArray(
@@ -152,7 +160,5 @@ ds
 
 ds.to_netcdf(project_path.joinpath(netCDF_file), compute=True)
 # -
-
-# # Add BTT quantiles
 
 
