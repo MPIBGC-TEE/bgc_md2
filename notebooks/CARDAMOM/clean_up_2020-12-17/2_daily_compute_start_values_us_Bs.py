@@ -62,14 +62,10 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution = "yearly"
-
 # +
-params = CARDAMOMlib.load_params(time_resolution)
-
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-zarr_data_path = data_path.joinpath("yearly_rechunked_zarr")
-output_path = data_path.joinpath(params["output_folder"])
+zarr_data_path = data_path.joinpath("daily_rechunked_zarr")
+output_path = data_path.joinpath("daily_output")
 
 project_path = output_path.joinpath("solve_ivp_0000-0003_check_success")
 
@@ -149,7 +145,7 @@ task_list = [
         "computation": "xs",
         "overwrite": False,
         "func": CARDAMOMlib.compute_xs,
-        "func_args": {"time_step_in_days": params["time_step_in_days"]},
+        "func_args": {"time_step_in_days": 1},
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
@@ -163,7 +159,7 @@ task_list = [
         "computation": "start_values",
         "overwrite": False,
         "func": CARDAMOMlib.compute_start_values,
-        "func_args": {"time_step_in_days": params["time_step_in_days"]},
+        "func_args": {"time_step_in_days": 1},
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_pools),
@@ -177,7 +173,7 @@ task_list = [
         "computation": "us",
         "overwrite": False,
         "func": CARDAMOMlib.compute_us,
-        "func_args": {"time_step_in_days": params["time_step_in_days"]},
+        "func_args": {"time_step_in_days": 1},
         "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
@@ -191,7 +187,7 @@ task_list = [
         "computation": "Bs",
         "overwrite": False,
         "func": CARDAMOMlib.compute_Bs,
-        "func_args": {"time_step_in_days": params["time_step_in_days"], "check_success": True},
+        "func_args": {"time_step_in_days": 1, "check_success": True},
 #        "timeouts": [30, 300, 2000],
         "timeouts": [np.inf],
         "batch_size": 50,
@@ -208,7 +204,7 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list:
+for task in task_list[2:]:
     print("task: computing", task["computation"])
     print()
     
@@ -254,6 +250,8 @@ for task in task_list:
 ## try to compute new B with given xs
 
 # try different starting B0
+
+# try one year time step
 # -
 
 

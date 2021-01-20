@@ -59,20 +59,10 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution = "monthly"
-
-# +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-target_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
-
-if time_resolution == "monthly":
-    ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
-
-if time_resolution == "yearly":
-    ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
-    
+target_path = data_path.joinpath("yearly_rechunked_zarr")
+ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
 ds
-# -
 
 chunk_dict = {"lat": 1, "lon": 1, "prob": 1}
 ds_rechunked = ds.chunk(chunk_dict)
@@ -82,11 +72,12 @@ ds_rechunked
 # overwite potentially existing zarr files?
 
 overwrite = False # if False, raises zarr.errors.ContainsArrayError if zarr archive already exists
-# -
 
-results = []
-for variable_name, variable in tqdm(ds_rechunked.variables.items()):
-    zarr_dir_path = target_path.joinpath(variable_name)
+# +
+# %%time
+
+for name, value in tqdm(ds_rechunked.variables.items()):
+    zarr_dir_path = target_path.joinpath(name)
     zarr_dir_name = str(zarr_dir_path)
     print(zarr_dir_name)
     
@@ -94,6 +85,9 @@ for variable_name, variable in tqdm(ds_rechunked.variables.items()):
         print('overwrtiting...')
         shutil.rmtree(zarr_dir_path)
 
-    da.asarray(variable.data).to_zarr(zarr_dir_name)
+    da.asarray(value.data).to_zarr(zarr_dir_name)
+
+print("done")
+# -
 
 

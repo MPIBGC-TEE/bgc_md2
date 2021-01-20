@@ -62,9 +62,9 @@ Client(my_cluster)
 
 # +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-output_path = data_path.joinpath("output")
+output_path = data_path.joinpath("yearly_output")
 
-ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
+ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
 ds
 
 
@@ -76,7 +76,8 @@ def func_data_consistency(ds_single):
 #    abs_err, rel_err = mdo.check_data_consistency()
 
     abs_err, rel_err = CARDAMOMlib.check_data_consistency(
-        ds_single
+        ds_single,
+        time_step_in_days=31*12
     )
     data_vars = dict()
     data_vars['abs_err'] = xr.DataArray(
@@ -111,7 +112,7 @@ def func_chunk(chunk_ds):
 
 
 # +
-chunk_dict = {"lat": 1, "lon"}#: 1, "prob": 1}
+chunk_dict = {"lat": 1, "lon": 1}#, "prob": 1}
 #ds_sub = ds.isel(
 #    lat=slice(0, None, 1),
 #    lon=slice(0, None, 1),
@@ -236,5 +237,4 @@ plt.suptitle('CARDAMOM - data consistency (robust version)')
 plt.tight_layout()
 plt.draw()
 # -
-
 

@@ -35,16 +35,18 @@ def write_header_to_logfile(logfile_name, var_da, time_limit_in_min):
 #    return s
     return ""
 
+
 def _custom_timeout_target(queue, function, *args, **kwargs):
     try:
         queue.put((True, function(*args, **kwargs)))
     except:
         queue.put((False, sys.exc_info()[1]))
 
+
 def custom_timeout(seconds, function, *args, **kwargs):
     q = multiprocessing.Queue(1)
     args = (q, function) + args
-    
+
     p = multiprocessing.Process(
         target=_custom_timeout_target,
         args=args,

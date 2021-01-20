@@ -109,7 +109,7 @@ coords={
     "lon": lons_da.reshape(-1)[slices["lon"]],
     "prob": probs_da.reshape(-1)[slices["prob"]],
     "time": times_da.reshape(-1),
-    "pool": np.arange(nr_pools)
+    "pool": CARDAMOMlib.load_model_structure().pool_names
 }
 
 data_vars = dict()

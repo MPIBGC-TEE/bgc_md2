@@ -12,7 +12,7 @@ from tqdm import tqdm
 from dask.distributed import LocalCluster
 from getpass import getuser
 
-from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel as LAPM
+from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject import ModelDataObject as ModelDataObject_ds
@@ -26,7 +26,7 @@ from bgc_md2.notebook_helpers import (
 )
 
 
-def prepare_cluster(n_workers, alternative_port=None):
+def prepare_cluster(n_workers, alternative_dashboard_port=None):
     port_dict = {
         "cs": 8888,        # change at will
         "mm": 8889,
@@ -35,11 +35,7 @@ def prepare_cluster(n_workers, alternative_port=None):
     my_user_name = getuser()
     print("username:", my_user_name)
 
-    if alternative_port is None:
-        my_port = port_dict[my_user_name]
-    else:
-        myport = alternative_port
-
+    my_port = port_dict[my_user_name]
     print("notebook port:", my_port)
     
     # allow starting subprocesses --> allow controlled termination of the process at timeout
@@ -47,6 +43,8 @@ def prepare_cluster(n_workers, alternative_port=None):
     
     # dashboard needs a different port for accessing it remotely
     my_dashboard_port = my_port - 100
+    if alternative_dashboard_port is not None:
+        my_dashboard_port = alternative_dashboard_port
 
     # seem to be ignored, use dask.distributed.get_worker as the worker process is running
     # and set the values manually:
@@ -71,16 +69,35 @@ def prepare_cluster(n_workers, alternative_port=None):
 
     return my_cluster
 
+def load_params(time_resolution):
+    all_params = {
+        "daily": {
+            "output_folder": "daily_output",
+            "time_step_in_days": 1,
+            "nr_time_steps": 10*12*31
+        },
+        "monthly": {
+            "output_folder": "monthly_output",
+            "time_step_in_days": 31,
+            "nr_time_steps": 10*12
+        },
+        "yearly": {
+            "output_folder": "yearly_output",
+            "time_step_in_days": 12*31,
+            "nr_time_steps": 10
+            }
+        }
 
-def check_data_consistency(ds):
-    ms = _load_model_structure()
+    return all_params[time_resolution]
+
+    
+def check_data_consistency(ds, time_step_in_days):
+    ms = load_model_structure()
 
     # data_test.py says tht for labile 31.0 is constantly right
-    days_per_month = 31.0
-
     time = Variable(
         name="time",
-        data=np.arange(len(ds.time)) * days_per_month,
+        data=np.arange(len(ds.time)) * time_step_in_days,
         unit="d"
     )
 
@@ -200,31 +217,20 @@ def linear_batchwise_to_zarr(
     res_da, # dask array
     z, # target zarr archive
     slices, # slices of interest,
-    coords_res_da,
+    coords_tuples, # global coordinates (not sliced)
     batch_size,
 ):  
-    nr_total = res_da.shape[0]
+    nr_total = len(coords_tuples)
     nr_splits = nr_total // batch_size + (nr_total % batch_size > 0)
     batches = np.array_split(np.arange(nr_total), nr_splits)
 
-    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
-    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
-    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
-
     for batch in tqdm(batches):
         s = slice(batch[0], batch[-1]+1, 1)
-
         res_batch = res_da[s, ...].compute() # in parallel
         
-        # compute the z coords from the sliced res_da coords
-        coords_z_lat = np.array([f_lat(x) for x in coords_res_da[0][s]])
-        coords_z_lon = np.array([f_lon(x) for x in coords_res_da[1][s]])
-        coords_z_prob = np.array([f_prob(x) for x in coords_res_da[2][s]])
-
-        coords_z = (coords_z_lat, coords_z_lon, coords_z_prob)
         # update zarr file
-        for nr, lat, lon, prob in zip(range(len(batch)), *[coords_z[k] for k in range(3)]):
-            z[lat, lon, prob, ...] = res_batch[nr, ...]
+        for nr, coords in enumerate(coords_tuples[s]):
+            z[coords] = res_batch[nr, ...]
 
 
 # args[0] is the object on which map_blocks is called
@@ -278,11 +284,13 @@ def func_for_map_blocks(*args):
 # args[0] is the object on which map_blocks is called (Bs_da)
 # args[:-1] are the variables that get automatically chunked
 # args[-1] is supposed to be a dictionary with additional parameters
-def func_for_map_blocks_with_pwc_mr(*args):
+def func_for_map_blocks_with_mr(*args):
     additional_params = args[-1]
+
+    model_type = additional_params["model_type"]
     computation = additional_params["computation"]
     nr_pools = additional_params["nr_pools"]
-    days_per_month = additional_params["days_per_month"]
+    time_step_in_days = additional_params["time_step_in_days"]
     return_shape = additional_params["return_shape"]
     func = additional_params["func"]
     func_args = additional_params["func_args"]
@@ -299,7 +307,7 @@ def func_for_map_blocks_with_pwc_mr(*args):
     times = args[6].reshape(-1)
                                                                                 
     nr_times = len(times)
-    data_times = np.arange(0, nr_times, 1) * days_per_month
+    data_times = np.arange(0, nr_times, 1) * time_step_in_days
                                                                                         
     log_msg = ""
     res = -np.inf * np.ones(return_shape)
@@ -309,16 +317,29 @@ def func_for_map_blocks_with_pwc_mr(*args):
         # using the custom_timeout function (even with timeout switched off) 
         # makes the worker report to the scheduler
         # and prevents frequent timeouts
-        mr = custom_timeout(
-            np.inf,
-            PWCModelRunFD.from_Bs_and_us,
-            time_symbol,
-            data_times,
-            start_values,
-            Bs[:-1],
-            us[:-1]
-        )
-       
+
+        if model_type == "continuous":
+            mr = custom_timeout(
+                np.inf,
+                PWCModelRunFD.from_Bs_and_us,
+                time_symbol,
+                data_times,
+                start_values,
+                Bs[:-1],
+                us[:-1]
+            )
+        elif model_type == "discrete":       
+            mr = custom_timeout(
+                np.inf,
+                DMR.from_Bs_and_net_Us,
+                start_values,
+                data_times,
+                Bs[:-1],
+                us[:-1]
+            )
+        else:
+            raise(ValueError("model_type not recognized"))
+
         print('Computing', computation, flush=True)
         res = custom_timeout(
             time_limit_in_min*60,
@@ -344,24 +365,24 @@ def func_for_map_blocks_with_pwc_mr(*args):
     return res.reshape(return_shape)
 
 
-def compute_xs(single_site_dict, time_step):
-    mdo = _load_mdo(single_site_dict, time_step)
+def compute_xs(single_site_dict, time_step_in_days):
+    mdo = _load_mdo(single_site_dict, time_step_in_days)
     xs = mdo.load_stocks()
     del mdo
 
     return xs.data.filled()
 
 
-def compute_start_values(single_site_dict, time_step):
-    mdo = _load_mdo(single_site_dict, time_step)
+def compute_start_values(single_site_dict, time_step_in_days):
+    mdo = _load_mdo(single_site_dict, time_step_in_days)
     xs = mdo.load_stocks()
     del mdo
 
     return xs.data.filled()[0, ...]
 
 
-def compute_us(single_site_dict, time_step):
-    mdo = _load_mdo(single_site_dict, time_step)
+def compute_us(single_site_dict, time_step_in_days):
+    mdo = _load_mdo(single_site_dict, time_step_in_days)
     us = mdo.load_us()
     del mdo
 
@@ -370,12 +391,12 @@ def compute_us(single_site_dict, time_step):
 
 def compute_Bs(
     single_site_dict,
-    time_step,
+    time_step_in_days,
     integration_method='solve_ivp',
     nr_nodes=None,
     check_success=False
 ):
-    mdo = _load_mdo(single_site_dict, time_step)
+    mdo = _load_mdo(single_site_dict, time_step_in_days)
     Bs = mdo.load_Bs(
         integration_method,
         nr_nodes,
@@ -386,49 +407,67 @@ def compute_Bs(
     return Bs
 
 
-def compute_fake_eq_model(pwc_mr_fd, nr_months):
-    # average the first `nr_months` us and Bs
-    start_age_us = Matrix(pwc_mr_fd.us[:nr_months, ...].mean(axis=0))
-    start_age_Bs = Matrix(pwc_mr_fd.Bs[:nr_months, ...].mean(axis=0))
-                            
-    eq_model = LAPM(
-        start_age_us,
-        start_age_Bs,
-        force_numerical=True
+def compute_Us(single_site_dict, time_step_in_days):
+    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    _, Us, _, _ = mdo.load_xs_Us_Fs_Rs()
+
+    nr_times = len(mdo.time_agg.data)
+    nr_pools = mdo.model_structure.nr_pools
+    data = np.nan * np.ones((nr_times, nr_pools))
+
+    data[:-1, ...] = Us.data.filled()
+    return data
+
+
+def compute_Bs_discrete(single_site_dict, time_step_in_days):
+    mdo = _load_mdo(single_site_dict, time_step_in_days)
+
+    out = mdo.load_xs_Us_Fs_Rs()
+    xs, Us, Fs, Rs = out
+    times = mdo.time_agg.data.filled()
+    nr_pools = mdo.model_structure.nr_pools
+
+    data = np.nan * np.ones((len(times), nr_pools, nr_pools))
+
+#        try:
+    Bs = DMR.reconstruct_Bs(
+        xs.data.filled(),
+        Fs.data.filled(),
+        Rs.data.filled()
     )
-    return eq_model
+        
+    data[:-1, ...] = Bs
+#        except (DMRError, ValueError, OverflowError) as e:
+#            error = str(e)
+#            print(error, flush=True)
+
+    return data
 
 
-def compute_start_age_moments(pwc_mr_fd, nr_months, up_to_order):
-    eq_model = compute_fake_eq_model(pwc_mr_fd, nr_months)
-
-    start_age_moments = np.stack(
-        [
-            np.array(eq_model.a_nth_moment(order), dtype=np.float64).reshape((-1,))
-            for order in range(1, up_to_order+1)
-        ],
-        axis=0
-    )
-    return start_age_moments
-
-
-def compute_age_moment_vector_up_to(pwc_mr_fd, nr_months, up_to_order):
-    start_age_moments = compute_start_age_moments(pwc_mr_fd, nr_months, up_to_order)
-    return pwc_mr_fd.age_moment_vector_up_to(up_to_order, start_age_moments)
+def compute_age_moment_vector_up_to(mr, nr_time_steps, up_to_order):
+    start_age_moments = mr.fake_start_age_moments(nr_time_steps, up_to_order)
+    res = mr.age_moment_vector_up_to(up_to_order, start_age_moments)
+    return res
 
 
 # needed because propert object PWCModelRunFD.external_output_vector cannot be pickled
-def compute_external_output_vector(pwc_mr_fd):
-    return pwc_mr_fd.external_output_vector
+def compute_external_output_vector(mr):
+    return mr.external_output_vector
 
 
-def compute_backward_transit_time_moment(pwc_mr_fd, nr_months, order):
-    start_age_moments = compute_start_age_moments(pwc_mr_fd, nr_months, order)
+def compute_acc_net_external_output_vector(dmr):
+    data = np.nan * np.ones((len(dmr.times), dmr.nr_pools))
+    data[:-1] = dmr.acc_net_external_output_vector()
+    return data
+
+
+def compute_backward_transit_time_moment(pwc_mr_fd, nr_time_steps, order):
+    start_age_moments = compute_start_age_moments(pwc_mr_fd, nr_time_steps, order)
     return pwc_mr_fd.backward_transit_time_moment(order, start_age_moments)
 
 
-def compute_backward_transit_time_quantile(pwc_mr_fd, nr_months, q):
-    eq_model = compute_fake_eq_model(pwc_mr_fd, nr_months)
+def compute_backward_transit_time_quantile(pwc_mr_fd, nr_time_steps, q):
+    eq_model = compute_fake_eq_model(pwc_mr_fd, nr_time_steps)
 
     F0_normalized = lambda a: np.array(eq_model.a_cum_dist_func(a), dtype=np.float64).reshape((-1,))
     F0 = lambda a: F0_normalized(a) * pwc_mr_fd.start_values
@@ -444,6 +483,22 @@ def compute_backward_transit_time_quantile(pwc_mr_fd, nr_months, q):
     )
 
     return btt_quantile
+
+
+def convert_sliced_linear_coords_to_global_coords_tuples(lats, lons, probs, slices):
+    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
+    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
+    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
+
+    coords_z_lat = [f_lat(x) for x in lats]
+    coords_z_lon = [f_lon(x) for x in lons]
+    coords_z_prob = [f_prob(x) for x in probs]
+
+    coord_tuples = [
+        (c[0], c[1], c[2]) for c in zip(coords_z_lat, coords_z_lon, coords_z_prob)
+    ]
+
+    return coord_tuples
 
 
 def get_complete_sites(z, slices):
@@ -471,12 +526,17 @@ def get_complete_non_nan_sites(z, slices):
         sliced_da = da.from_zarr(z)[tup]
 
     arr = sliced_da.compute()
-    complete_coords = np.where(
+    complete_sliced_non_nan_coords_linear = np.where(
         (arr != -np.inf) & (~np.isnan(arr))
     )[:3]
-    nr_complete_sites = len(complete_coords[0])
+    
+    complete_non_nan_coords_tuples = convert_sliced_linear_coords_to_global_coords_tuples(
+        *complete_sliced_non_nan_coords_linear, # *(lat, lon, prob)
+        slices
+    )
+    nr_complete_sites = len(complete_non_nan_coords_tuples)
 
-    return nr_complete_sites, complete_coords
+    return nr_complete_sites, complete_non_nan_coords_tuples
 
 
 def get_nan_sites(z, slices):
@@ -489,10 +549,15 @@ def get_nan_sites(z, slices):
         sliced_da = da.from_zarr(z)[tup]
 
     arr = sliced_da.compute()
-    nan_coords = np.where(np.isnan(arr))[:3]
-    nr_nan_sites = len(nan_coords[0])
+    nan_sliced_coords_linear = np.where(np.isnan(arr))[:3]
 
-    return nr_nan_sites, nan_coords
+    nan_coords_tuples = convert_sliced_linear_coords_to_global_coords_tuples(
+        *nan_sliced_coords_linear, # *(lat, lon, prob)
+        slices
+    )
+    nr_nan_sites = len(nan_coords_tuples)
+
+    return nr_nan_sites, nan_coords_tuples
 
 
 def get_incomplete_sites(z, slices):
@@ -504,13 +569,18 @@ def get_incomplete_sites(z, slices):
     else:
         sliced_da = da.from_zarr(z)[tup]
 
-    incomplete_coords = np.where(sliced_da.compute() == -np.inf)[:3]
-    nr_incomplete_sites = len(incomplete_coords[0])
+    incomplete_sliced_coords_linear = np.where(sliced_da.compute() == -np.inf)[:3]
 
-    return nr_incomplete_sites, incomplete_coords
+    incomplete_coords_tuples = convert_sliced_linear_coords_to_global_coords_tuples(
+        *incomplete_sliced_coords_linear, # *(lat, lon, prob)
+        slices
+    )
+
+    nr_incomplete_sites = len(incomplete_coords_tuples)
+    return nr_incomplete_sites, incomplete_coords_tuples
 
 
-def get_incomplete_site_tuples_for_pwc_mr_computation(
+def get_incomplete_site_tuples_for_mr_computation(
     start_values_zarr,
     us_zarr,
     Bs_zarr,
@@ -520,51 +590,38 @@ def get_incomplete_site_tuples_for_pwc_mr_computation(
     _, complete_coords_svs = get_complete_non_nan_sites(start_values_zarr, slices)
     _, complete_coords_us = get_complete_non_nan_sites(us_zarr, slices)
     _, complete_coords_Bs = get_complete_non_nan_sites(Bs_zarr, slices)
-    _, incomplete_coords_soln = get_incomplete_sites(z, slices)
-                        
-    coords_list = []
-    for coords in [
-        complete_coords_svs,
-        complete_coords_us,
-        complete_coords_Bs,
-        incomplete_coords_soln
-    ]:
-        coords_list.append(
-            set(
-                (coords[0][i], coords[1][i], coords[2][i]) for i in range(len(coords[0]))
-            )
-        )
+    _, incomplete_coords_z = get_incomplete_sites(z, slices)
+    
+    coords_tuples_list = [
+        set(complete_coords_svs),
+        set(complete_coords_us),
+        set(complete_coords_Bs),
+        set(incomplete_coords_z)
+    ]
                                             
-    incomplete_coords_tuples = list(set.intersection(*coords_list))
-    incomplete_coords_tuples.sort()
+    coords_tuples = list(set.intersection(*coords_tuples_list))
+    coords_tuples.sort()
 #    incomplete_coords_tuples = incomplete_coords_tuples[:100]
 
-    return len(incomplete_coords_tuples), incomplete_coords_tuples
+    return len(coords_tuples), coords_tuples
 
 
-def get_nan_site_tuples_for_pwc_mr_computation(
+def get_nan_site_tuples_for_mr_computation(
     start_values_zarr,
     us_zarr,
     Bs_zarr,
     slices
 ):
-    _, nan_coords_svs = get_nan_sites(start_values_zarr, slices)
-    _, nan_coords_us = get_nan_sites(us_zarr, slices)
-    _, nan_coords_Bs = get_nan_sites(Bs_zarr, slices)
+    _, nan_coords_tuples_svs = get_nan_sites(start_values_zarr, slices)
+    _, nan_coords_tuples_us = get_nan_sites(us_zarr, slices)
+    _, nan_coords_tuples_Bs = get_nan_sites(Bs_zarr, slices)
                         
-    coords_list = []
-    for coords in [
-        nan_coords_svs,
-        nan_coords_us,
-        nan_coords_Bs
-    ]:
-        coords_list.append(
-            set(
-                (coords[0][i], coords[1][i], coords[2][i]) for i in range(len(coords[0]))
-            )
-        )
-                                            
-    nan_coords_tuples = list(set.union(*coords_list))
+    nan_coords_tuples_list = [
+        set(nan_coords_tuples_svs),
+        set(nan_coords_tuples_us),
+        set(nan_coords_tuples_Bs)
+    ]
+    nan_coords_tuples = list(set.union(*nan_coords_tuples_list))
     nan_coords_tuples.sort()
 
     return len(nan_coords_tuples), nan_coords_tuples
@@ -581,7 +638,7 @@ def compute_incomplete_sites(
     task,
     logfile_name,
 ):
-    nr_incomplete_sites, incomplete_coords = get_incomplete_sites(z, slices)
+    nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_sites(z, slices)
 
     if nr_incomplete_sites > 0:
         print('number of incomplete sites:', nr_incomplete_sites)
@@ -594,15 +651,33 @@ def compute_incomplete_sites(
     for v, name in zip(variables, variable_names):
         if name not in non_data_variables:
             v_stack_list = []
-            for lat, lon, prob in zip(*[incomplete_coords[k] for k in range(3)]):
+            for coords in incomplete_coords_tuples:
                 v_stack_list.append(v[lat, lon, prob])
 
             incomplete_variables.append(da.stack(v_stack_list))
 
     # add lat, lon, prob, time
-    incomplete_variables.append(da.from_array(incomplete_coords[0].reshape(-1, 1), chunks=(1, 1))) # lat
-    incomplete_variables.append(da.from_array(incomplete_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
-    incomplete_variables.append(da.from_array(incomplete_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
+#    incomplete_variables.append(da.from_array(incomplete_coords[0].reshape(-1, 1), chunks=(1, 1))) # lat
+    incomplete_variables.append(
+        da.from_array(
+            np.array([c[0] for c in incomplete_coords_tuples]).reshape(-1, 1),
+            chunks(1, 1)
+        )
+    )
+#    incomplete_variables.append(da.from_array(incomplete_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
+    incomplete_variables.append(
+        da.from_array(
+            np.array([c[1] for c in incomplete_coords_tuples]).reshape(-1, 1),
+            chunks(1, 1)
+        )
+    )
+#    incomplete_variables.append(da.from_array(incomplete_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
+    incomplete_variables.append(
+        da.from_array(
+            np.array([c[2] for c in incomplete_coords_tuples]).reshape(-1, 1),
+            chunks(1, 1)
+        )
+    )
     time_da = variables[variable_names.index('time')].reshape(1, -1).rechunk((1, nr_times))
     incomplete_variables.append(time_da)
 
@@ -639,7 +714,7 @@ def compute_incomplete_sites(
         res_da, # dask array
         z, # target zarr archive
         slices, # slices of interest,
-        incomplete_coords,
+        incomplete_coords_tuples,
         task["batch_size"]
     )
 
@@ -647,11 +722,11 @@ def compute_incomplete_sites(
     print('done, timeout (min) = ', time_limit_in_min, flush=True)
 
 
-def compute_incomplete_sites_with_pwc_mr(
+def compute_incomplete_sites_with_mr(
     time_limit_in_min,
     z,
     nr_pools,
-    days_per_month,
+    time_step_in_days,
     times_da,
     start_values_zarr,
     us_zarr,
@@ -665,24 +740,25 @@ def compute_incomplete_sites_with_pwc_mr(
     Bs_da = da.from_zarr(Bs_zarr)
     
     # copy nans from start_values, us, or Bs tu z
-    nr_nan_sites, nan_coords_tuples = get_nan_site_tuples_for_pwc_mr_computation(
+    nr_nan_sites, nan_coords_tuples = get_nan_site_tuples_for_mr_computation(
         start_values_zarr,
         us_zarr,
         Bs_zarr,
         slices
     )
-    for coords in nan_coords_tuples:
-        z[coords] = np.nan
+    for nan_coords in nan_coords_tuples:
+        z[nan_coords] = np.nan
 
     # identify non-nan computed sites in start_values, us, and Bs
     # combine with not yet computed sites in z
-    nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_site_tuples_for_pwc_mr_computation(
+    nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_site_tuples_for_mr_computation(
         start_values_zarr,
         us_zarr,
         Bs_zarr,
         z,
         slices
     )
+
     if nr_incomplete_sites > 0:
         print('number of incomplete sites:', nr_incomplete_sites)
     else:
@@ -721,9 +797,10 @@ def compute_incomplete_sites_with_pwc_mr(
 
     # prepare the delayed computation
     additional_params = {
+        "model_type": task["model_type"],
         "computation": task["computation"],
         "nr_pools": nr_pools,
-        "days_per_month": 31.0,
+        "time_step_in_days": time_step_in_days,
         "return_shape": task["return_shape"],
         "func": task["func"],
         "func_args": task["func_args"],
@@ -736,7 +813,7 @@ def compute_incomplete_sites_with_pwc_mr(
     meta_shape = tuple(meta_shape)
 
     res_da = incomplete_variables[0].map_blocks(
-        func_for_map_blocks_with_pwc_mr,
+        func_for_map_blocks_with_mr,
         *incomplete_variables[1:], # variables[0] comes automatically as first argument
         additional_params,
         drop_axis=task["drop_axis"],
@@ -750,19 +827,12 @@ def compute_incomplete_sites_with_pwc_mr(
     print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
     print("starting", flush=True)
 
-    # convert the incomplete coordinates from a list of tuples in a tuple of lists
-    incomplete_coords = (
-        [ic[0] for ic in incomplete_coords_tuples],
-        [ic[1] for ic in incomplete_coords_tuples],
-        [ic[2] for ic in incomplete_coords_tuples]
-    )
-
     # do the computation
     linear_batchwise_to_zarr(
         res_da, # dask array
         z, # target zarr archive
         slices, # slices of interest,
-        incomplete_coords,
+        incomplete_coords_tuples,
         task["batch_size"]
     )
 
@@ -770,11 +840,11 @@ def compute_incomplete_sites_with_pwc_mr(
     print('done, timeout (min) =', time_limit_in_min, flush=True)
 
 
-def run_task_with_pwc_mr(
+def run_task_with_mr(
     project_path,
     task,
     nr_pools,
-    days_per_month,
+    time_step_in_days,
     times_da,
     start_values_zarr,
     us_zarr,
@@ -793,7 +863,7 @@ def run_task_with_pwc_mr(
         overwrite=task["overwrite"]
     )
 
-#    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_pwc_mr_computation(
+#    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_mr_computation(
 #        start_values_zarr,
 #        us_zarr,
 #        Bs_zarr,
@@ -806,11 +876,11 @@ def run_task_with_pwc_mr(
     print("Logfile:", logfile_name)
 
     for timeout in task["timeouts"]:        
-        compute_incomplete_sites_with_pwc_mr(
+        compute_incomplete_sites_with_mr(
             timeout,
             z,
             nr_pools,
-            days_per_month,
+            time_step_in_days,
             times_da,
             start_values_zarr,
             us_zarr,
@@ -820,7 +890,7 @@ def run_task_with_pwc_mr(
             logfile_name
         )
 
-    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_pwc_mr_computation(
+    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_mr_computation(
         start_values_zarr,
         us_zarr,
         Bs_zarr,
@@ -832,14 +902,7 @@ def run_task_with_pwc_mr(
     print()
 
 
-###############################################################################
-#
-# internal methods
-#
-###############################################################################
-
-
-def _load_model_structure():
+def load_model_structure():
     # labile, leaf, root, wood, litter, and soil
 
     pool_structure = [
@@ -889,13 +952,20 @@ def _load_model_structure():
     return model_structure
 
 
-def _load_mdo(ds_dict, time_step): # time step in days
-    ms = _load_model_structure()
+###############################################################################
+#
+# internal methods
+#
+###############################################################################
+
+
+def _load_mdo(ds_dict, time_step_in_days): # time step in days
+    ms = load_model_structure()
 
     # no unit support for dictionary version
     time = Variable(
         name="time",
-        data=np.arange(len(ds_dict['time'])) * time_step,
+        data=np.arange(len(ds_dict['time'])) * time_step_in_days,
 #        unit="d"
         unit="1"
     )
