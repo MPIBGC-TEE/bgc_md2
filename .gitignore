@@ -136,3 +136,11 @@ prototypes/exclude-models.txt
 
 # Jupyter notebooks
 *.ipynb
+
+# dask
+dask-worker-space
+
+# temporary files
+*.bak
+*.swp
+*.swo

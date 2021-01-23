@@ -1,5 +1,6 @@
 import dask
 import time
+import traceback
 import zarr 
 
 import dask.array as da
@@ -265,6 +266,7 @@ def func_for_map_blocks(*args):
         error_msg = "Timeout after %2.2f min" % duration
         print(error_msg, flush=True)
     except Exception as e:
+        print(tb, flush=True)
         res = np.nan * np.ones(return_shape)
         error_msg = str(e)
         print(error_msg, flush=True)
@@ -311,6 +313,7 @@ def func_for_map_blocks_with_mr(*args):
                                                                                         
     log_msg = ""
     res = -np.inf * np.ones(return_shape)
+    start_time = time.time()
     try:
         time_symbol = symbols('t')
 
@@ -340,17 +343,23 @@ def func_for_map_blocks_with_mr(*args):
         else:
             raise(ValueError("model_type not recognized"))
 
-        print('Computing', computation, flush=True)
+        print("computing", computation, lat, lon, prob, flush=True)
         res = custom_timeout(
             time_limit_in_min*60,
             func,
             mr,
             **func_args
         )           
-        print("done", flush=True)
+        print("done", lat, lon, prob, flush=True)
+    except TimeoutError:
+        duration = (time.time() - start_time) / 60
+        log_msg = "Timeout after %2.2f min" % duration
+        print(log_msg, flush=True)
     except Exception as e:
+        tb = traceback.format_exc()
         res = np.nan * np.ones_like(res)
         print(str(e), flush=True)
+        print(tb, flush=True)
         log_msg = str(e)
 
     write_to_logfile(
@@ -450,55 +459,137 @@ def compute_age_moment_vector_up_to(mr, nr_time_steps, up_to_order):
     return res
 
 
+def compute_pool_age_quantile(mr, nr_time_steps, q):
+    if isinstance(mr, PWCModelRunFD):
+        F0 = mr.fake_cumulative_start_age_distribution(nr_time_steps)
+
+        mr.initialize_state_transition_operator_cache(
+            None,
+            size=len(mr.times)
+        )
+
+        pool_age_quantiles = mr.pool_age_distributions_quantiles(
+            quantile=q,
+            F0=F0
+        )
+        return pool_age_quantiles
+#    elif isinstance(mr, DMR):
+#        P0_fake_eq = mr.fake_cumulative_start_age_masses(nr_time_steps)
+#        fake_xss = mr.fake_xss(nr_time_steps)
+#        renorm_vector = mr.start_values / fake_xss 
+#        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
+#
+#        mr.initialize_state_transition_operator_matrix_cache(
+#            None
+#        )
+#
+#        data = np.nan * np.ones(len(mr.times))
+#        btt_quantiles = mr.backward_transit_time_quantiles(
+#            q,
+#            P0
+#        )
+#        del mr
+#        data[:-1] = btt_quantiles
+#        return data
+    else:
+        raise(TypeError("wrong type of model run"))
+
+
+def compute_system_age_quantile(mr, nr_time_steps, q):
+    if isinstance(mr, PWCModelRunFD):
+        F0 = mr.fake_cumulative_start_age_distribution(nr_time_steps)
+
+        mr.initialize_state_transition_operator_cache(
+            None,
+            size=len(mr.times)
+        )
+
+        system_age_quantiles = mr.system_age_distribution_quantiles(
+            quantile=q,
+            F0=F0
+        )
+        return system_age_quantiles
+#    elif isinstance(mr, DMR):
+#        P0_fake_eq = mr.fake_cumulative_start_age_masses(nr_time_steps)
+#        fake_xss = mr.fake_xss(nr_time_steps)
+#        renorm_vector = mr.start_values / fake_xss 
+#        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
+#
+#        mr.initialize_state_transition_operator_matrix_cache(
+#            None
+#        )
+#
+#        data = np.nan * np.ones(len(mr.times))
+#        btt_quantiles = mr.backward_transit_time_quantiles(
+#            q,
+#            P0
+#        )
+#        del mr
+#        data[:-1] = btt_quantiles
+#        return data
+    else:
+        raise(TypeError("wrong type of model run"))
+
+
 # needed because propert object PWCModelRunFD.external_output_vector cannot be pickled
-def compute_external_output_vector(mr):
-    return mr.external_output_vector
+def compute_external_output_vector(pwc_mr_fd):
+    if not isinstance(pwc_mr_fd, PWCModelRunFD):
+        raise(TypeError("wrong type of model run"))
+
+    return pwc_mr_fd.external_output_vector
 
 
 def compute_acc_net_external_output_vector(dmr):
+    if not isinstance(dmr, DMR):
+        raise(TypeError("wrong type of model run"))
+
     data = np.nan * np.ones((len(dmr.times), dmr.nr_pools))
     data[:-1] = dmr.acc_net_external_output_vector()
     return data
 
 
 def compute_backward_transit_time_moment(pwc_mr_fd, nr_time_steps, order):
+    if not isinstance(pwc_mr_fd, PWCModelRunFD):
+        raise(TypeError("wrong type of model run"))
+
     start_age_moments = compute_start_age_moments(pwc_mr_fd, nr_time_steps, order)
     return pwc_mr_fd.backward_transit_time_moment(order, start_age_moments)
 
 
-def compute_backward_transit_time_quantile(pwc_mr_fd, nr_time_steps, q):
-    eq_model = compute_fake_eq_model(pwc_mr_fd, nr_time_steps)
+def compute_backward_transit_time_quantile(mr, nr_time_steps, q):
+    if isinstance(mr, PWCModelRunFD):
+        F0 = mr.fake_cumulative_start_age_distribution(nr_time_steps)
 
-    F0_normalized = lambda a: np.array(eq_model.a_cum_dist_func(a), dtype=np.float64).reshape((-1,))
-    F0 = lambda a: F0_normalized(a) * pwc_mr_fd.start_values
+        mr.initialize_state_transition_operator_cache(
+            None,
+            size=len(mr.times)
+        )
 
-    pwc_mr_fd.initialize_state_transition_operator_cache(
-        None,
-        size=len(pwc_mr_fd.times)
-    )
+        btt_quantiles = mr.backward_transit_time_quantiles(
+            q,
+            F0
+        )
+        return btt_quantiles
+    elif isinstance(mr, DMR):
+        P0_fake_eq = mr.fake_cumulative_start_age_masses(nr_time_steps)
+        fake_xss = mr.fake_xss(nr_time_steps)
+        renorm_vector = mr.start_values / fake_xss 
+        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
 
-    btt_quantile = pwc_mr_fd.backward_transit_time_quantiles(
-        q,
-        F0
-    )
+        mr.initialize_state_transition_operator_matrix_cache(
+            None
+        )
 
-    return btt_quantile
-
-
-def convert_sliced_linear_coords_to_global_coords_tuples(lats, lons, probs, slices):
-    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
-    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
-    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
-
-    coords_z_lat = [f_lat(x) for x in lats]
-    coords_z_lon = [f_lon(x) for x in lons]
-    coords_z_prob = [f_prob(x) for x in probs]
-
-    coord_tuples = [
-        (c[0], c[1], c[2]) for c in zip(coords_z_lat, coords_z_lon, coords_z_prob)
-    ]
-
-    return coord_tuples
+        data = np.nan * np.ones(len(mr.times))
+        btt_quantiles = mr.backward_transit_time_quantiles(
+            q,
+            P0
+        )
+        del mr
+        data[:-1] = btt_quantiles
+        return data
+    else:
+        raise(TypeError("wrong type of model run"))
 
 
 def get_complete_sites(z, slices):
@@ -530,7 +621,7 @@ def get_complete_non_nan_sites(z, slices):
         (arr != -np.inf) & (~np.isnan(arr))
     )[:3]
     
-    complete_non_nan_coords_tuples = convert_sliced_linear_coords_to_global_coords_tuples(
+    complete_non_nan_coords_tuples = _convert_sliced_linear_coords_to_global_coords_tuples(
         *complete_sliced_non_nan_coords_linear, # *(lat, lon, prob)
         slices
     )
@@ -551,7 +642,7 @@ def get_nan_sites(z, slices):
     arr = sliced_da.compute()
     nan_sliced_coords_linear = np.where(np.isnan(arr))[:3]
 
-    nan_coords_tuples = convert_sliced_linear_coords_to_global_coords_tuples(
+    nan_coords_tuples = _convert_sliced_linear_coords_to_global_coords_tuples(
         *nan_sliced_coords_linear, # *(lat, lon, prob)
         slices
     )
@@ -571,7 +662,7 @@ def get_incomplete_sites(z, slices):
 
     incomplete_sliced_coords_linear = np.where(sliced_da.compute() == -np.inf)[:3]
 
-    incomplete_coords_tuples = convert_sliced_linear_coords_to_global_coords_tuples(
+    incomplete_coords_tuples = _convert_sliced_linear_coords_to_global_coords_tuples(
         *incomplete_sliced_coords_linear, # *(lat, lon, prob)
         slices
     )
@@ -979,6 +1070,22 @@ def _load_mdo(ds_dict, time_step_in_days): # time step in days
     )
 
     return mdo_dict
+
+
+def _convert_sliced_linear_coords_to_global_coords_tuples(lats, lons, probs, slices):
+    f_lat = lambda x: slices['lat'].start + x * slices['lat'].step
+    f_lon = lambda x: slices['lon'].start + x * slices['lon'].step
+    f_prob = lambda x: slices['prob'].start + x * slices['prob'].step
+
+    coords_z_lat = [f_lat(x) for x in lats]
+    coords_z_lon = [f_lon(x) for x in lons]
+    coords_z_prob = [f_prob(x) for x in probs]
+
+    coord_tuples = [
+        (c[0], c[1], c[2]) for c in zip(coords_z_lat, coords_z_lon, coords_z_prob)
+    ]
+
+    return coord_tuples
 
 
 
