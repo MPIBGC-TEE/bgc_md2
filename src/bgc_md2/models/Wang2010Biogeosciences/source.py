@@ -1,5 +1,5 @@
 #import numpy as np
-from sympy import var, symbols, Symbol, ImmutableMatrix, diag, Min#, Rational
+from sympy import var, symbols, Symbol, ImmutableMatrix, Min#, Rational
 #from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -17,9 +17,15 @@ from ..BibInfo import BibInfo
 from bgc_md2.helper import MVarSet
 
 sym_dict={
-        'C_leaf': 'Plant (carbon) pool Leaf'
-        ,'C_root': 'Plant (carbon) pool Root'
-        ,'C_wood': 'Plant (carbon) pool Wood'
+        'C_leaf': 'Plant (carbon) pool Leaf' #unit: "gC*m^{-2}" 
+        ,'C_root': 'Plant (carbon) pool Root' #unit: "gC*m^{-2}" 
+        ,'C_wood': 'Plant (carbon) pool Wood' #unit: "gC*m^{-2}" 
+        ,'C_j1': 'Amount of carbon in metabolic litter' #unit: "gC*m^{-2}" 
+        ,'C_j2': 'Amount of carbon in structural litter' #unit: "gC*m^{-2}" 
+        ,'C_j3': 'Amount of carbon in coarse woody debris (cwd) litter' #unit: "gC*m^{-2}" 
+        ,'C_k1': 'Amount of carbon in microbial soil' #unit: "gC*m^{-2}" 
+        ,'C_k2': 'Amount of carbon in slow soil' #unit: "gC*m^{-2}" 
+        ,'C_k3': 'Amount of carbon in passive soil' #unit: "gC*m^{-2}" 
         ,'Delta_t': 'Time step of model integration' #FixMe: is it the same as TimeSymbol in this case?
         ,'N_min': 'Amount of mineral N in soil' #unit: "gN*m^{-2}"
         ,'P_lab': 'Amount of labile P in soil' #unit: "gP*m^{-2}"
@@ -43,10 +49,36 @@ sym_dict={
         ,'mu_leaf': 'Turnover rate of plant pool Leaf' #unit: "year^{-1}" # In table with parameter values. In Appendix B the unit is "d^{-1}" 
         ,'mu_root': 'Turnover rate of plant pool Root' #unit: "year^{-1}" # In table with parameter values. In Appendix B the unit is "d^{-1}" 
         ,'mu_wood': 'Turnover rate of plant pool Wood' #unit: "year^{-1}" # In table with parameter values. In Appendix B the unit is "d^{-1}" 
+        ,'m_n': 'N limitation on litter decomposition, varies from 0 to 1' 
+        ,'mu_j1': 'Metabolic litter turnover rate' #"d^{-1}"
+        ,'mu_j2': 'Structural litter turnover rate' #"d^{-1}"
+        ,'mu_j3': 'cwd litter turnover rate' #"d^{-1}"
+        ,'mu_k1': 'Microbial soil turnover rate' #"d^{-1}"
+        ,'mu_k2': 'Slow soil turnover rate' #"d^{-1}"
+        ,'mu_k3': 'Passive soil turnover rate' #"d^{-1}"
+        ,'b1l': 'Fraction of metabolic litter fall coming from leaves' 
+        ,'b1r': 'Fraction of metabolic litter fall coming from root' 
+        ,'b2l': 'Fraction of structural litter fall coming from leaves' 
+        ,'b2r': 'Fraction of structural litter fall coming from root' 
+        ,'b3w': 'Fraction of cwd litter fall coming from wood' 
+        ,'c11': 'Fraction of microbial soil coming from metabolic litter' 
+        ,'c12': 'Fraction of microbial soil coming from structural litter' 
+        ,'c21': 'Fraction of slow soil fall coming from metabolic litter' 
+        ,'c22': 'Fraction of slow soil coming from structural litter' 
+        ,'c23': 'Fraction of slow soil coming from cwd litter' 
+        ,'c33': 'Fraction of passive soil coming from cwd litter' 
+        ,'d12': 'Fraction of microbial soil coming from slow soil' 
+        ,'d13': 'Fraction of microbial soil coming from passive soil' 
+        ,'d21': 'Fraction of slow soil coming from microbial soil' 
+        ,'d23': 'Fraction of slow soil coming from passive soil' 
+        ,'d31': 'Fraction of passive soil coming from microbial soil' 
+        ,'d32': 'Fraction of passive soil coming from slow soil' 
 }
 for name in sym_dict.keys():
     var(name)
-
+#a_leaf + a_root + a_wood = 1
+#b1l + b2l = 1
+#b1r + b2r = 1
 x_nup = Min(1,(N_min/(F_nupmin*Delta_t)))
 x_pup = Min(1,(P_lab/(F_pupmin*Delta_t)))
 x_npup = Min(x_nup,x_pup)
@@ -55,14 +87,22 @@ x_pleaf = (p_leaf/(p_leaf+k_p))
 x_npleaf = Min(x_nleaf,x_pleaf)
 F_c = x_npleaf*x_npup*F_cmax #unit: "gC*m^{-2}*d^{-1}" 
 u = F_c
-x = StateVariableTuple((C_leaf, C_root, C_wood))
+x = StateVariableTuple((C_leaf, C_root, C_wood, C_j1, C_j2, C_j3, C_k1, C_k2, C_k3))
 b = (a_leaf, a_root, a_wood)
-Input = InputTuple(u * ImmutableMatrix(b))
-A = CompartmentalMatrix(
-    diag(-mu_leaf, -mu_root, -mu_wood)
-)
-t = TimeSymbol("t") #'day'
-#        timeResolution = daily # or yearly? incongruent turnover units
+Input = InputTuple((u * ImmutableMatrix(b),0,0,0,0,0,0))
+A = CompartmentalMatrix([
+ [-mu_leaf*(b1l+b2l),         0        ,      0     ,          0         ,          0         ,           0        ,        0       ,        0       ,        0       ]
+,[         0        ,-mu_root*(b1r+b2r),      0     ,          0         ,          0         ,           0        ,        0       ,        0       ,        0       ]
+,[         0        ,         0        ,-mu_wood*b3w,          0         ,          0         ,           0        ,        0       ,        0       ,        0       ]
+,[    mu_leaf*b1l   ,    mu_root*b1r   ,      0     ,-mu_j1*m_n*(c11+c21),          0         ,           0        ,        0       ,        0       ,        0       ]
+,[    mu_leaf*b2l   ,    mu_root*b2r   ,      0     ,          0         ,-mu_j2*m_n*(c12+c22),           0        ,        0       ,        0       ,        0       ]
+,[         0        ,         0        , mu_wood*b3w,          0         ,          0         ,-mu_j3*m_n*(c23+c33),        0       ,        0       ,        0       ]
+,[         0        ,         0        ,      0     ,    mu_j1*m_n*c11   ,    mu_j2*m_n*c12   ,           0        ,-mu_k1*(d21+d31),    mu_k2*d12   ,    mu_k3*d13   ]
+,[         0        ,         0        ,      0     ,    mu_j1*m_n*c21   ,    mu_j2*m_n*c22   ,    mu_j3*m_n*c23   ,    mu_k1*d21   ,-mu_k2*(d12+d32),    mu_k3*d23   ]
+,[         0        ,         0        ,      0     ,          0         ,          0         ,    mu_j3*m_n*c33   ,    mu_k1*d31   ,    mu_k2*d32   ,-mu_k3*(d13+d23)]
+])
+### When not explicit in equations B1, B2, B3 (Appendix B), followed the fluxes from Fig 1. However, the soil fluxes are not clear.
+t = TimeSymbol("t") #'day' # or 'year'? incongruent turnover units
 
 # Commented out the following lines because original publication only has 3 parameter values
 # In original publication: 
