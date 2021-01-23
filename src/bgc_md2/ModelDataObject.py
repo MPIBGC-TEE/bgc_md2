@@ -8,7 +8,11 @@ from CompartmentalSystems.discrete_model_run_with_gross_fluxes import (
     DiscreteModelRunWithGrossFluxes as DMRWGF,
 )
 
-from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD as PWCMRFD
+from CompartmentalSystems.pwc_model_run_fd import (
+    PWCModelRunFD as PWCMRFD,
+    PWCModelRunFDError
+)
+
 from bgc_md2.Variable import FixDumbUnits, Variable, StockVariable, FluxVariable
 
 
@@ -30,7 +34,7 @@ def readVariable(**keywords):
     try:
         if ReturnClass == StockVariable:
             if var.cell_methods != "time: instantaneous":
-                pass
+#                pass
                 raise(
                     ModelDataObjectException(
                         "Stock data " + variable_name + " is not instantaneous"
@@ -39,7 +43,7 @@ def readVariable(**keywords):
 
         if ReturnClass == FluxVariable:
             if var.cell_methods != "time: mean":
-                pass
+#                pass
                 raise(
                     ModelDataObjectException(
                         "Flux data " + variable_name + " is not a mean"
@@ -61,9 +65,11 @@ def readVariable(**keywords):
         # add artificial depth axis
         data = np.expand_dims(data, axis=1)
     else:
+        print(var)
         raise (ModelDataObjectException("Data structure not understood"))
 
     sdv = ReturnClass(data=data, unit=var.units)
+#    sdv = ReturnClass(data=data, unit='1')
     return sdv
 
 
@@ -147,10 +153,8 @@ class ModelDataObject(object):
     def __init__(self, **keywords):
         self.model_structure = keywords["model_structure"]
 
-        ds_filename = keywords.get("ds_filename", None)
-        self.dataset = (
-            Dataset(ds_filename) if ds_filename is not None else keywords["dataset"]
-        )
+        # now actually a dictionary containing dask.arrays
+        self.dataset = keywords["dataset"]
         stock_unit = keywords["stock_unit"]
         self.stock_unit = FixDumbUnits(stock_unit)
         self.nstep = keywords.get("nstep", 1)
@@ -158,6 +162,13 @@ class ModelDataObject(object):
 
         self.time = keywords["time"]
         self.time_agg = self.time.aggregateInTime(self.nstep)
+
+    @classmethod
+    def from_dataset(cls, ds, **keywords):
+        d = {name: variable for name, variable in ds.variables}
+        keywords["dataset"] = d
+
+        return cls(keywords)
 
     def get_dz(self, pool_name):
         ms = self.model_structure
@@ -179,7 +190,8 @@ class ModelDataObject(object):
         return dz
 
     def load_stocks(self, **keywords):
-        func = keywords["func"]
+        func = keywords.get("func", getStockVariable_from_Density)
+        keywords["data_shift"] = keywords.get("data_shift", 0)
 
         ms = self.model_structure
         time_agg = self.time_agg
@@ -188,7 +200,6 @@ class ModelDataObject(object):
         xs_data = np.ma.masked_array(
             data=np.zeros((len(time_agg.data), ms.nr_pools)), mask=False
         )
-
         for item in ms.pool_structure:
             pool_name = item["pool_name"]
             variable_name = item["stock_var"]
@@ -203,7 +214,6 @@ class ModelDataObject(object):
                 dz=dz,
                 **keywords
             )
-
             for ly in range(nr_layers):
                 pool_nr = ms.get_pool_nr(pool_name, ly)
                 data = sv_pool_agg.data[:, ly, ...]
@@ -502,11 +512,81 @@ class ModelDataObject(object):
 
         return abs_err, rel_err
 
+    def load_us(self):
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
+        times = self.time_agg.data.filled()
+        nr_pools = self.model_structure.nr_pools
+
+        data = np.nan * np.ones((len(times), nr_pools))
+        try:
+            us = PWCMRFD.reconstruct_us(
+                times,
+                Us.data.filled(),
+            )
+                
+            data[:-1, ...] = us
+
+        except (PWCModelRunFDError, ValueError, OverflowError) as e:
+            error = str(e)
+            print(error, flush=True)
+
+        return data
+
+    def load_Bs(
+        self,
+        integration_method='solve_ivp',
+        nr_nodes=None,
+        check_success=True
+    ):
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
+        times = self.time_agg.data.filled()
+        nr_pools = self.model_structure.nr_pools
+
+        data = np.nan * np.ones((len(times), nr_pools, nr_pools))
+#
+#        try:
+        Bs = PWCMRFD.reconstruct_Bs(
+            times,
+            xs.data.filled()[0],
+            Us.data.filled(),
+            Fs.data.filled(),
+            Rs.data.filled(),
+            integration_method,
+            nr_nodes,
+            check_success
+        )
+        
+        data[:-1, ...] = Bs
+#        except (PWCModelRunFDError, ValueError, OverflowError) as e:
+#            error = str(e)
+#            print(error, flush=True)
+
+        return data
+
+    def check_data_consistency(self):
+        out = self.load_xs_Us_Fs_Rs()
+        xs, Us, Fs, Rs = out
+
+        xs_data_save = xs.data
+        xs.data = xs.data[:-1, ...]
+        
+        rhs = (xs + Us + Fs.sum(axis=2) - Fs.sum(axis=1) - Rs)
+        rhs.name = 'Data consistency'
+        xs.data = xs_data_save[1:, ...]
+
+        abs_err = rhs.absolute_error(xs).max()
+        rel_err = rhs.relative_error(xs).max()
+
+        return abs_err, rel_err
+
     def create_model_run(
         self, 
         integration_method='solve_ivp',
         nr_nodes=None,
-        errors=False
+        errors=False,
+        check_success=True
     ):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
@@ -536,10 +616,12 @@ class ModelDataObject(object):
                 Rs.data.filled(),
 #                xs.data.filled()
                 integration_method,
-                nr_nodes
+                nr_nodes,
+                check_success
             )
         else:
-            raise(ModelDataObjectException('Masked data discovered'))
+            pwc_mr_fd = None
+        
 
         if errors:
 #            print('Computing reconstruction errors')
@@ -555,8 +637,8 @@ class ModelDataObject(object):
             abs_err = soln_pwc_mr_fd.absolute_error(xs)
             rel_err = soln_pwc_mr_fd.relative_error(xs)
             err_dict["stocks"] = {
-                "abs_err": abs_err,#.max(),
-                "rel_err": rel_err#.max()
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max()
             }
 
 #            print('  input fluxes error')
@@ -568,8 +650,8 @@ class ModelDataObject(object):
             abs_err = Us_pwc_mr_fd.absolute_error(Us)
             rel_err = Us_pwc_mr_fd.relative_error(Us)
             err_dict["acc_gross_external_inputs"] = {
-                "abs_err": abs_err,#.max(),
-                "rel_err": rel_err#.max(),
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max(),
             }
 
 #            print('  output fluxes error')
@@ -581,8 +663,8 @@ class ModelDataObject(object):
             abs_err = Rs_pwc_mr_fd.absolute_error(Rs)
             rel_err = Rs_pwc_mr_fd.relative_error(Rs)
             err_dict["acc_gross_external_outputs"] = {
-                "abs_err": abs_err,#.max(),
-                "rel_err": rel_err#.max(),
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max(),
             }
 
 #            print('  internal fluxes error')
@@ -594,14 +676,13 @@ class ModelDataObject(object):
             abs_err = Fs_pwc_mr_fd.absolute_error(Fs)
             rel_err = Fs_pwc_mr_fd.relative_error(Fs)
             err_dict["acc_gross_internal_fluxes"] = {
-                "abs_err": abs_err,#.max(),
-                "rel_err": rel_err#.max(),
+                "abs_err": abs_err.max(),
+                "rel_err": rel_err.max(),
             }
-#            abs_err.argmax()
-#            rel_err.argmax()
+            abs_err.argmax()
+            rel_err.argmax()
 
-#            print('done computing errors')
-
+#            print('done')
             return pwc_mr_fd, err_dict
         else:
             return pwc_mr_fd, dict()

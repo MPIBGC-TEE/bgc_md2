@@ -16,8 +16,7 @@ from getpass import getuser
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
-from bgc_md2.ModelDataObject import ModelDataObject as ModelDataObject_ds
-from bgc_md2.ModelDataObject_dict import ModelDataObject_dict
+from bgc_md2.ModelDataObject
 from bgc_md2.Variable import Variable
 from bgc_md2.notebook_helpers import (
     write_to_logfile,
@@ -102,14 +101,14 @@ def check_data_consistency(ds, time_step_in_days):
         unit="d"
     )
 
-    mdo_ds = ModelDataObject_ds(
+    mdo = ModelDataObject(
         model_structure=ms,
         dataset=ds, 
         stock_unit="gC/m2", 
         time=time
     )
 
-    abs_err, rel_err = mdo_ds.check_data_consistency()
+    abs_err, rel_err = mdo.check_data_consistency()
     return abs_err, rel_err
 
 
@@ -403,7 +402,7 @@ def compute_Bs(
     time_step_in_days,
     integration_method='solve_ivp',
     nr_nodes=None,
-    check_success=False
+    check_success=True
 ):
     mdo = _load_mdo(single_site_dict, time_step_in_days)
     Bs = mdo.load_Bs(
@@ -1057,15 +1056,15 @@ def _load_mdo(ds_dict, time_step_in_days): # time step in days
     time = Variable(
         name="time",
         data=np.arange(len(ds_dict['time'])) * time_step_in_days,
-#        unit="d"
-        unit="1"
+        unit="d"
+#        unit="1"
     )
 
     mdo_dict = ModelDataObject_dict(
         model_structure=ms,
         dataset=ds_dict, 
-#        stock_unit="gC/m2", 
-        stock_unit="1", 
+        stock_unit="gC/m2", 
+#        stock_unit="1", 
         time=time
     )
 
