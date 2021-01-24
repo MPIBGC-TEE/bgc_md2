@@ -1,6 +1,6 @@
 from IPython.display import Math
 from IPython.display import display
-from typing import Dict, List, Set, TypeVar
+from typing import  Tuple, Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
 import ipywidgets as widgets
@@ -11,7 +11,7 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 from . import models
 # from .models.helpers import computable_mvars, get_single_mvar_value
-from .resolve.mvars import CompartmentalMatrix
+from .resolve.mvars import CompartmentalMatrix, StateVariableTuple
 from .resolve.MVarSet import MVarSet
 from .resolve.graph_helpers import (
     sparse_powerset_graph,
@@ -24,22 +24,22 @@ from .resolve.graph_helpers import (
 
 def batchSlices(nland, nproc):
     return [
-        slice(i*nproc,min((i+1)*nproc,nland)) 
+        slice(i*nproc,min((i+1)*nproc,nland))
         for i in range(int(nland/nproc)+1)
     ]
 
     # fixme mm:
 
 # As an intermediate solution I created the following subclass to account for model specific stuff.
-# I abandoned this because it complicated the user interface. (The MVarsSets are now explicitly created in the 
+# I abandoned this because it complicated the user interface. (The MVarsSets are now explicitly created in the
 # source.py files and ONE MVarSet class is enough to worry the user about...
 # @Thomas
-# If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense) 
+# If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense)
 # feel free to add it. It is probably not the commented one below anyway...
 #
 # class ModelMVarSet(MVarSet):
 #     '''This class adds some methods for displaying MVarSets that are specific
-#     to MVarSets that describe compartmental systems. 
+#     to MVarSets that describe compartmental systems.
 #     It is used in the notebooks to display summaries of models or collections of models.
 #     It also contains some convenient ways to collect the models in the package.
 #     '''
@@ -51,18 +51,18 @@ def batchSlices(nland, nproc):
 #         """
 #         s=provided_mvar_values(name)
 #         return cls(s)
-# 
+#
 #     def render(self, var):
 #         res = self._get_single_mvar_value(var)
 #         display(Math("\\text{" + var.__name__ + "} =" + latex(res)))
 #         # The latex could be filtered to display subscripts better
 #         # display(res)
-# 
+#
 #     def graph(self):
 #         target_var = SmoothReservoirModel
 #         if target_var not in self.computable_mvar_types():
 #             return
-# 
+#
 #         srm = self._get_single_mvar_value(target_var)
 #         fig = plt.figure()
 #         rect = (0, 0, 0.8, 1.2)  # l, b, w, h
@@ -81,7 +81,36 @@ def batchSlices(nland, nproc):
 #             return out
 #         else:
 #             display(out)
-    
+
+
+def list_target_models(
+    target_classes=frozenset({CompartmentalMatrix,StateVariableTuple})
+) -> bool:
+    # fixme:
+    # we could implement a more general function that takes
+    # a predicate (a boolean function) to apply to a model
+
+    exclude_path = Path("./exclude-models.txt")
+    if exclude_path.exists():
+        exclude_lines = set(line.strip() for line in open(exclude_path))
+        exclude_models = set(
+            name for name in exclude_lines if name and not name.startswith("#")
+        )
+    else:
+        exclude_models = set()
+    sub_mod_pkgs = [
+        tup[1]
+        for tup in pkgutil.iter_modules(models.__path__)
+        if tup[2] and tup[1] not in exclude_models
+    ]
+
+    def pred(mn):
+        mvs = MVarSet.from_model_name(mn)
+        return (target_classes.issubset(mvs.computable_mvar_types()))
+
+    hits = [mod for mod in sub_mod_pkgs if pred(mod)]
+    return hits
+
 
 def list_models():
     exclude_path = Path("./exclude-models.txt")
@@ -211,7 +240,10 @@ def modelVBox(model_name):
             ),
         ]
         + pictlist
-        + [mvs.render(var, capture=True) for var in mvs.computable_mvar_types()]
+        + [
+            mvs.render(var, capture=True)
+            for var in mvs.computable_mvar_types()
+          ]
     )
     b = widgets.Button(
         layout=widgets.Layout(width="auto", height="auto"),
@@ -222,7 +254,7 @@ def modelVBox(model_name):
     return box
 
 
-#################################################################################
+##############################################################################
 
 
 def button_callback(function, *args):
@@ -232,9 +264,10 @@ def button_callback(function, *args):
     return callback
 
 
-class MvarSetListGridBox(widgets.GridspecLayout):
+class ModelListGridBox(widgets.GridspecLayout):
     def __init__(self, inspection_box):
         self.inspection_box = inspection_box
+        #self.names = list_target_models(frozenset((CompartmentalMatrix,)))
         self.names = list_models()
         super().__init__(len(self.names), 10)
         self.populate()
@@ -245,14 +278,55 @@ class MvarSetListGridBox(widgets.GridspecLayout):
     def populate(self):
         for i, name in enumerate(self.names):
             button_inspect_mvs = widgets.Button(description=name,)
-            button_inspect_mvs.on_click(button_callback(self.inspect_mvs, name))
+            button_inspect_mvs.on_click(
+                button_callback(self.inspect_mvs, name)
+            )
             self[i, 0] = button_inspect_mvs
             mvs = MVarSet.from_model_name(name)
-            res = mvs._get_single_mvar_value(CompartmentalMatrix)
+            target_class = CompartmentalMatrix
+            if target_class in mvs.computable_mvar_types():
+                res = mvs._get_single_mvar_value(target_class)
+            else:
+                res = f"can not compute {target_class}" 
             out = widgets.Output()
             with out:
                 display(res)
             self[i, 1:9] = out
+
+class GeneralMvarSetListGridBox(widgets.GridspecLayout):
+
+    def __init__(
+            self,
+            inspection_box: 'MvarSetInspectionBox',
+            target_classes: Tuple = (CompartmentalMatrix,StateVariableTuple),
+    ):
+        self.inspection_box = inspection_box
+        self.target_classes = target_classes
+        self.names = list_target_models(frozenset(target_classes))
+        super().__init__(len(self.names), 10)
+        self.populate()
+
+    def inspect_mvs(self, name):
+        self.inspection_box.update(name)
+
+    def populate(self):
+        for i, name in enumerate(self.names):
+            button_inspect_mvs = widgets.Button(description=name,)
+            button_inspect_mvs.on_click(
+                button_callback(self.inspect_mvs, name)
+            )
+            self[i, 0] = button_inspect_mvs
+            mvs = MVarSet.from_model_name(name)
+            results = [ 
+                mvs._get_single_mvar_value(target_class)
+                for target_class in self.target_classes
+            ]
+            out = widgets.Output()
+            with out:
+                for res in results:
+                    display(res)
+            self[i, 1:9] = out
+
 
 
 class MvarSetInspectionBox(widgets.VBox):
@@ -300,7 +374,6 @@ class MvarSetInspectionBox(widgets.VBox):
 
         rendered_vars = widgets.Output()
         with rendered_vars:
-            #for var in mvs.mvars:
             for var in mvs.computable_mvar_types():
                 mvs.render(var)
         self.children += (rendered_vars,)
