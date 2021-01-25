@@ -67,7 +67,6 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "Gu2010EcologicalComplexity"
 #        self.mn = "King1993TreePhysiol"
 #        self.mn = "Murty2000EcolModell"
-#        self.mn = "Wang2010Biogeosciences"
 #        self.mn = "DeAngelis2012TheorEcol"
 #        self.mn = "Luo2012TE"
 #        self.mn = "Potter1993GlobalBiogeochemicalCycles"
