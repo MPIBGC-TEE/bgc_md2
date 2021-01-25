@@ -15,7 +15,7 @@
 
 # # Convert CARDAMOM zarr data and to daily time steps
 #
-# This notebook loads the zarr data files and saves the rechunked data as zarr versions in daily time steps.
+# This notebook loads the zarr data files and saves the rechunked data as zarr versions in daily time steps. The flux values are just repeated 31 timper per month since they are given as daily average fluxes. Stock values for days between two firsts of the months re simply linearly interpolated.
 
 # +
 import shutil
@@ -34,11 +34,14 @@ from bgc_md2.models.CARDAMOM import CARDAMOMlib
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
+my_cluster = CARDAMOMlib.prepare_cluster(
+    n_workers=48,
+    alternative_dashboard_port=8791
+)
 Client(my_cluster)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-source_path = data_path.joinpath("rechunked_zarr")
+source_path = data_path.joinpath("monthly_rechunked_zarr")
 target_path = data_path.joinpath("daily_rechunked_zarr")
 ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
 ds
@@ -68,6 +71,9 @@ def compute_target(variable_name, z_target_sliced, z_source_sliced):
 # convert variable to daily data
 def convert_variable(variable_name, variable):   
     source_zarr_path = source_path.joinpath(variable_name)
+    if not source_zarr_path.exists():
+        raise(OSError("source zarr archive" + str(source_zarr_path) + "not found"))
+        
     z_source = zarr.open(str(source_zarr_path))
 
     target_zarr_path = target_path.joinpath(variable_name)
@@ -126,13 +132,11 @@ for variable_name in ["lat", "lon", "prob"]:
     da.asarray(variable.data).to_zarr(str(zarr_path))
 
 variable_name = "time"
-time = ds["time"]
+time = ds[variable_name]
 time_in_days = np.array(time[0], dtype="datetime64[D]") + np.arange((len(time)-1) * days_per_month + 1)
 time_in_days.shape
 
-zarr_path = target_path.joinpath("time")
+zarr_path = target_path.joinpath(variable_name)
 if zarr_path.exists():
     shutil.rmtree(zarr_path)
 da.from_array(time_in_days).to_zarr(str(zarr_path))
-
-

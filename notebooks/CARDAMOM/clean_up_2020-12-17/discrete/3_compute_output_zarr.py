@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# # Compute solution, ages moments, backward transit time moments, and backward transit time quantiles
+# # Compute solution, age, and backward transit time moments and quantiles
 #
 # The computed data are intermediately stored in zarr archives.
 
@@ -28,13 +28,15 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
-#from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
+my_cluster = CARDAMOMlib.prepare_cluster(
+    n_workers=48,
+    alternative_dashboard_port=8791
+)
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -63,6 +65,7 @@ Client(my_cluster)
 # and open link given above.
 
 time_resolution = "daily"
+model_type = "discrete"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution)
@@ -70,7 +73,7 @@ params = CARDAMOMlib.load_params(time_resolution)
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 output_path = data_path.joinpath(params["output_folder"])
 
-project_path = output_path.joinpath("solve_ivp_0000-0003_discrete")
+project_path = output_path.joinpath(model_type)
 # -
 
 lats_da = da.from_zarr(str(project_path.joinpath("lat")))
@@ -95,11 +98,11 @@ nr_pools = 6
 nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 
 # +
-# use all "lat", all "lon", the first four "prob", all "time"
+# use all "lat", all "lon" and 1 "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 4, 1),
+    "prob": slice(0, 1, 1),
 #    "lat": slice(28, 32, 1),
 #    "lon": slice(48, 52, 1),
 #    "prob": slice(0, 2, 1),
@@ -123,7 +126,7 @@ nr_lats, nr_lons, nr_probs, nr_times
 task_list = [
     {#0:
         "computation": "age_moment_vectors_up_to_2",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_age_moment_vector_up_to,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "up_to_order": 2}, # nr_months for fake eq_model, up_to_order
         "timeouts": [np.inf],
@@ -136,6 +139,90 @@ task_list = [
         "new_axis": [2, 3] # add one moment axis and one pool axis
     },
     {#1:
+        "computation": "pool_age_median",
+        "overwrite": False,
+        "func": CARDAMOMlib.compute_pool_age_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # nr_time_steps for faking eq model 0.5 for the median
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+        "return_shape": (1, nr_times, nr_pools),
+        "meta_shape": (1, nr_times, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": 2 # add pool axis
+    },
+    {#2:
+        "computation": "pool_age_quantile_05",
+        "overwrite": False,
+        "func": CARDAMOMlib.compute_pool_age_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # nr_time_steps for faking eq model 0.5 for the median
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+        "return_shape": (1, nr_times, nr_pools),
+        "meta_shape": (1, nr_times, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": 2 # add pool axis
+    },
+    {#3:
+        "computation": "pool_age_quantile_95",
+        "overwrite": False,
+        "func": CARDAMOMlib.compute_pool_age_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # nr_time_steps for faking eq model 0.5 for the median
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+        "return_shape": (1, nr_times, nr_pools),
+        "meta_shape": (1, nr_times, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": 2 # add pool axis
+    },
+    {#4:
+        "computation": "system_age_median",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_system_age_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # nr_time_steps for faking eq model 0.5 for the median
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
+        "result_chunks": (1, 1, 1, nr_times_total),
+        "return_shape": (1, nr_times),
+        "meta_shape": (1, nr_times),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": []
+    },
+    {#5:
+        "computation": "system_age_quantile_05",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_system_age_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # nr_time_steps for faking eq model 0.5 for the median
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
+        "result_chunks": (1, 1, 1, nr_times_total),
+        "return_shape": (1, nr_times),
+        "meta_shape": (1, nr_times),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": []
+    },
+    {#6:
+        "computation": "system_age_quantile_95",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_system_age_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # nr_time_steps for faking eq model 0.5 for the median
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
+        "result_chunks": (1, 1, 1, nr_times_total),
+        "return_shape": (1, nr_times),
+        "meta_shape": (1, nr_times),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": []
+    },
+    {#7:
         "computation": "acc_net_external_output_vector",
         "overwrite": True,
         "func": CARDAMOMlib.compute_acc_net_external_output_vector,
@@ -149,7 +236,7 @@ task_list = [
         "drop_axis": [2, 3], # drop two pool axes of B
         "new_axis": 2 # add one pool axis
     },
-    {#2:
+    {#8:
         "computation": "btt_median",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
@@ -163,7 +250,7 @@ task_list = [
         "drop_axis": [2, 3], # drop two pool axes of B
         "new_axis": []
     },
-    {#3:
+    {#9:
         "computation": "btt_quantile_05",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
@@ -177,7 +264,7 @@ task_list = [
         "drop_axis": [2, 3], # drop two pool axes of B
         "new_axis": []
     },
-    {#4:
+    {#10:
         "computation": "btt_quantile_95",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
@@ -194,14 +281,17 @@ task_list = [
 ]
 
 for task in task_list:
-    task["model_type"] = "discrete"
+    task["model_type"] = model_type
 # -
 
 # ## Computing
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list[2:]:
+# +
+# %%time
+
+for task in task_list:
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -213,92 +303,10 @@ for task in task_list[2:]:
         Bs_zarr,
         slices
     )
-
-
-# # Plot reconstruction accuracy
-
-# +
-def get_non_nan_sites(z, drop_dims):
-    fill_tup = (slice(0, 1, 1), ) * drop_dims
-    tup = (slice(0, None,1),) * 3 + fill_tup
-    cut_z = z[tup]
-    non_nan_coords = np.where(~np.isnan(cut_z))[:3]
-    
-    return len(non_nan_coords[0]), non_nan_coords
-
-def get_nan_sites(z, drop_dims):
-    fill_tup = (slice(0, 1, 1), ) * drop_dims
-    tup = (slice(0, None,1),) * 3 + fill_tup
-    cut_z = z[tup]
-    non_nan_coords = np.where(np.isnan(cut_z))[:3]
-    
-    return len(non_nan_coords[0]), non_nan_coords
-
-
-# +
-xs_zarr = zarr.open(str(project_path.joinpath("xs")))[slices["lat"], slices["lon"], slices["prob"]]
-soln_zarr = zarr.open(str(project_path.joinpath("solution")))[slices["lat"], slices["lon"], slices["prob"]]
-
-nr_sites = np.prod(xs_zarr.shape[:3])
-nr_non_nan_sites_xs, _ = get_non_nan_sites(xs_zarr)
-xs_pct = nr_non_nan_sites_xs/nr_sites*100
-nr_non_nan_sites_soln, _ = get_non_nan_sites(soln_zarr)
-soln_pct = nr_non_nan_sites_soln/nr_sites*100
-
-print("Number of selected sites:", nr_sites)
-print("Number of xs sites      :", nr_non_nan_sites_xs, "(%2.2f%%)" % xs_pct)
-print("Number of solved sites  :", nr_non_nan_sites_soln, "(%2.2f%%)" % soln_pct)
-
-# +
-fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12,6))
-
-var = xs_err_ds.xs_abs_err
-var.mean(dim=["time", "prob", "pool"]).plot(
-    ax=ax1,
-    cbar_kwargs={"label": var.attrs["units"]},
-    robust=True
-)
-ax1.set_title("Mean absolute error")
-
-var = xs_err_ds.xs_rel_err
-var.mean(dim=["time", "prob", "pool"]).plot(
-    ax=ax2,
-    cbar_kwargs={"label": var.attrs["units"]},
-    robust=True
-)
-ax1.set_title("Mean relative error")
-
-plt.suptitle('CARDAMOM - reconstruction error (robust version)')
-plt.tight_layout()
-plt.draw()
 # -
 
-v1 = da.from_zarr(str(project_path.joinpath("solution")))[slices["lat"], slices["lon"], slices["prob"]].compute()
-v2 = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_1")))[slices["lat"], slices["lon"], slices["prob"], :, 0].compute()
-v3 = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_2")))[slices["lat"], slices["lon"], slices["prob"], :, 0].compute()
-v4 = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_1")))[slices["lat"], slices["lon"], slices["prob"], :, 1].compute()
-v5 = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_2")))[slices["lat"], slices["lon"], slices["prob"], :, 1].compute()
 
-print(np.nanmax(np.abs(v1 - v2)))
-print(np.nanmax(np.abs(v1 - v2)/v1*100))
-print(np.nanmax(np.abs(v1 - v3)))
-print(np.nanmax(np.abs(v1 - v3)/v1*100))
-print(np.nanmax(np.abs(v4 - v5)))
-print(np.nanmax(np.abs(v4 - v5)/v4*100))
 
-v1 = mean_btt_da[slices["lat"], slices["lon"], slices["prob"]].compute()
-v2 = da.from_zarr(str(project_path.joinpath("mean_btt")))[slices["lat"], slices["lon"], slices["prob"]].compute()
 
-get_non_nan_sites(v1, drop_dims=1)[0], get_non_nan_sites(v2, drop_dims=1)[0]
-
-# +
-Bs_zarr = zarr.open(str(project_path.joinpath("Bs")))
-Bs_sliced = Bs_zarr[slices["lat"], slices["lon"], slices["prob"]]
-z = zarr.ones((nr_lats, nr_lons, nr_probs, nr_times, nr_pools))
-print(get_non_nan_sites(Bs_sliced, drop_dims=3)[0])
-#z[np.isnan(Bs_sliced[..., 0, 0, 0]), ...] = np.nan
-print(get_nan_sites(z, drop_dims=2)[0])
-# zarr.create?
-# -
 
 

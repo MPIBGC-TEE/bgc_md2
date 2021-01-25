@@ -16,7 +16,7 @@ from getpass import getuser
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
-from bgc_md2.ModelDataObject
+from bgc_md2.ModelDataObject import ModelDataObject
 from bgc_md2.Variable import Variable
 from bgc_md2.notebook_helpers import (
     write_to_logfile,
@@ -265,6 +265,7 @@ def func_for_map_blocks(*args):
         error_msg = "Timeout after %2.2f min" % duration
         print(error_msg, flush=True)
     except Exception as e:
+        tb = traceback.format_exc()
         print(tb, flush=True)
         res = np.nan * np.ones(return_shape)
         error_msg = str(e)
@@ -374,7 +375,7 @@ def func_for_map_blocks_with_mr(*args):
 
 
 def compute_xs(single_site_dict, time_step_in_days):
-    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
     xs = mdo.load_stocks()
     del mdo
 
@@ -382,7 +383,7 @@ def compute_xs(single_site_dict, time_step_in_days):
 
 
 def compute_start_values(single_site_dict, time_step_in_days):
-    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
     xs = mdo.load_stocks()
     del mdo
 
@@ -390,7 +391,7 @@ def compute_start_values(single_site_dict, time_step_in_days):
 
 
 def compute_us(single_site_dict, time_step_in_days):
-    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
     us = mdo.load_us()
     del mdo
 
@@ -404,7 +405,7 @@ def compute_Bs(
     nr_nodes=None,
     check_success=True
 ):
-    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
     Bs = mdo.load_Bs(
         integration_method,
         nr_nodes,
@@ -416,7 +417,7 @@ def compute_Bs(
 
 
 def compute_Us(single_site_dict, time_step_in_days):
-    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
     _, Us, _, _ = mdo.load_xs_Us_Fs_Rs()
 
     nr_times = len(mdo.time_agg.data)
@@ -428,7 +429,7 @@ def compute_Us(single_site_dict, time_step_in_days):
 
 
 def compute_Bs_discrete(single_site_dict, time_step_in_days):
-    mdo = _load_mdo(single_site_dict, time_step_in_days)
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
 
     out = mdo.load_xs_Us_Fs_Rs()
     xs, Us, Fs, Rs = out
@@ -472,24 +473,18 @@ def compute_pool_age_quantile(mr, nr_time_steps, q):
             F0=F0
         )
         return pool_age_quantiles
-#    elif isinstance(mr, DMR):
-#        P0_fake_eq = mr.fake_cumulative_start_age_masses(nr_time_steps)
-#        fake_xss = mr.fake_xss(nr_time_steps)
-#        renorm_vector = mr.start_values / fake_xss 
-#        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
-#
-#        mr.initialize_state_transition_operator_matrix_cache(
-#            None
-#        )
-#
-#        data = np.nan * np.ones(len(mr.times))
-#        btt_quantiles = mr.backward_transit_time_quantiles(
-#            q,
-#            P0
-#        )
-#        del mr
-#        data[:-1] = btt_quantiles
-#        return data
+    elif isinstance(mr, DMR):
+        P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
+
+        mr.initialize_state_transition_operator_matrix_cache(
+            None
+        )
+
+        pool_age_quantiles = mr.pool_age_quantiles(
+            q,
+            P0
+        )
+        return pool_age_quantiles
     else:
         raise(TypeError("wrong type of model run"))
 
@@ -508,24 +503,18 @@ def compute_system_age_quantile(mr, nr_time_steps, q):
             F0=F0
         )
         return system_age_quantiles
-#    elif isinstance(mr, DMR):
-#        P0_fake_eq = mr.fake_cumulative_start_age_masses(nr_time_steps)
-#        fake_xss = mr.fake_xss(nr_time_steps)
-#        renorm_vector = mr.start_values / fake_xss 
-#        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
-#
-#        mr.initialize_state_transition_operator_matrix_cache(
-#            None
-#        )
-#
-#        data = np.nan * np.ones(len(mr.times))
-#        btt_quantiles = mr.backward_transit_time_quantiles(
-#            q,
-#            P0
-#        )
-#        del mr
-#        data[:-1] = btt_quantiles
-#        return data
+    elif isinstance(mr, DMR):
+        P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
+
+        mr.initialize_state_transition_operator_matrix_cache(
+            maxsize=1152
+        )
+
+        system_age_quantiles = mr.system_age_quantiles(
+            q,
+            P0
+        )
+        return system_age_quantiles
     else:
         raise(TypeError("wrong type of model run"))
 
@@ -570,10 +559,7 @@ def compute_backward_transit_time_quantile(mr, nr_time_steps, q):
         )
         return btt_quantiles
     elif isinstance(mr, DMR):
-        P0_fake_eq = mr.fake_cumulative_start_age_masses(nr_time_steps)
-        fake_xss = mr.fake_xss(nr_time_steps)
-        renorm_vector = mr.start_values / fake_xss 
-        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
+        P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
 
         mr.initialize_state_transition_operator_matrix_cache(
             None
@@ -742,7 +728,7 @@ def compute_incomplete_sites(
         if name not in non_data_variables:
             v_stack_list = []
             for coords in incomplete_coords_tuples:
-                v_stack_list.append(v[lat, lon, prob])
+                v_stack_list.append(v[coords])
 
             incomplete_variables.append(da.stack(v_stack_list))
 
@@ -751,21 +737,21 @@ def compute_incomplete_sites(
     incomplete_variables.append(
         da.from_array(
             np.array([c[0] for c in incomplete_coords_tuples]).reshape(-1, 1),
-            chunks(1, 1)
+            chunks=(1, 1)
         )
     )
 #    incomplete_variables.append(da.from_array(incomplete_coords[1].reshape(-1, 1), chunks=(1, 1))) # lon
     incomplete_variables.append(
         da.from_array(
             np.array([c[1] for c in incomplete_coords_tuples]).reshape(-1, 1),
-            chunks(1, 1)
+            chunks=(1, 1)
         )
     )
 #    incomplete_variables.append(da.from_array(incomplete_coords[2].reshape(-1, 1), chunks=(1, 1))) # prob
     incomplete_variables.append(
         da.from_array(
             np.array([c[2] for c in incomplete_coords_tuples]).reshape(-1, 1),
-            chunks(1, 1)
+            chunks=(1, 1)
         )
     )
     time_da = variables[variable_names.index('time')].reshape(1, -1).rechunk((1, nr_times))
@@ -1049,7 +1035,7 @@ def load_model_structure():
 ###############################################################################
 
 
-def _load_mdo(ds_dict, time_step_in_days): # time step in days
+def _load_mdo(ds_dict, time_step_in_days, check_units=True): # time step in days
     ms = load_model_structure()
 
     # no unit support for dictionary version
@@ -1060,15 +1046,16 @@ def _load_mdo(ds_dict, time_step_in_days): # time step in days
 #        unit="1"
     )
 
-    mdo_dict = ModelDataObject_dict(
+    mdo = ModelDataObject(
         model_structure=ms,
         dataset=ds_dict, 
         stock_unit="gC/m2", 
 #        stock_unit="1", 
-        time=time
+        time=time,
+        check_units=check_units
     )
 
-    return mdo_dict
+    return mdo
 
 
 def _convert_sliced_linear_coords_to_global_coords_tuples(lats, lons, probs, slices):

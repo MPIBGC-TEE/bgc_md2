@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# # Compute solution, ages moments, backward transit time moments, and backward transit time quantiles
+# # Compute solution, age, and backward transit times moments and quantiles
 #
 # The computed data are intermediately stored in zarr archives.
 
@@ -61,7 +61,8 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution = "yearly"
+time_resolution = "monthly"
+model_type = "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution)
@@ -69,7 +70,7 @@ params = CARDAMOMlib.load_params(time_resolution)
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 output_path = data_path.joinpath(params["output_folder"])
 
-project_path = output_path.joinpath("solve_ivp_0000-0003_check_success")
+project_path = output_path.joinpath(model_type)
 # -
 
 lats_da = da.from_zarr(str(project_path.joinpath("lat")))
@@ -94,14 +95,14 @@ nr_pools = 6
 nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 
 # +
-# use all "lat", all "lon", the first four "prob", all "time"
+# use all "lat", all "lon", the first 1 "prob", all "time"
 slices = {
-#    "lat": slice(0, None, 1),
-#    "lon": slice(0, None, 1),
-#    "prob": slice(0, 4, 1),
-    "lat": slice(28, 32, 1),
-    "lon": slice(48, 52, 1),
-    "prob": slice(0, 2, 1),
+    "lat": slice(0, None, 1),
+    "lon": slice(0, None, 1),
+    "prob": slice(0, 1, 1),
+#    "lat": slice(28, 32, 1),
+#    "lon": slice(48, 52, 1),
+#    "prob": slice(0, 2, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -134,55 +135,55 @@ task_list = [
         "drop_axis": [2, 3], # drop two pool axes of B
         "new_axis": [2, 3] # add one moment axis and one pool axis
     },
-    {#1:
-        "computation": "pool_age_median",
-        "overwrite": True,
-        "func": CARDAMOMlib.compute_pool_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
-        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
-        "return_shape": (1, nr_times, nr_pools),
-        "meta_shape": (1, nr_times, nr_pools),
-        "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": 2 # add pool axis
-    },
-    {#2:
-        "computation": "pool_age_quantile_05",
-        "overwrite": True,
-        "func": CARDAMOMlib.compute_pool_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
-        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
-        "return_shape": (1, nr_times, nr_pools),
-        "meta_shape": (1, nr_times, nr_pools),
-        "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": 2 # add pool axis
-    },
-    {#3:
-        "computation": "pool_age_quantile_95",
-        "overwrite": True,
-        "func": CARDAMOMlib.compute_pool_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
-        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
-        "return_shape": (1, nr_times, nr_pools),
-        "meta_shape": (1, nr_times, nr_pools),
-        "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": 2 # add pool axis
-    },
+#    {#1:
+#        "computation": "pool_age_median",
+#        "overwrite": True,
+#        "func": CARDAMOMlib.compute_pool_age_quantile,
+#        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model
+#        "timeouts": [70, 500, np.inf],
+#        "batch_size": 500,
+#        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+#        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+#        "return_shape": (1, nr_times, nr_pools),
+#        "meta_shape": (1, nr_times, nr_pools),
+#        "drop_axis": [2, 3], # drop two pool axes of B
+#        "new_axis": 2 # add pool axis
+#    },
+#    {#2:
+#        "computation": "pool_age_quantile_05",
+#        "overwrite": True,
+#        "func": CARDAMOMlib.compute_pool_age_quantile,
+#        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
+#        "timeouts": [70, 500, np.inf],
+#        "batch_size": 500,
+#        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+#        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+#        "return_shape": (1, nr_times, nr_pools),
+#        "meta_shape": (1, nr_times, nr_pools),
+#        "drop_axis": [2, 3], # drop two pool axes of B
+#        "new_axis": 2 # add pool axis
+#    },
+#    {#3:
+#        "computation": "pool_age_quantile_95",
+#        "overwrite": True,
+#        "func": CARDAMOMlib.compute_pool_age_quantile,
+#        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
+#        "timeouts": [70,500, np.inf],
+#        "batch_size": 500,
+#        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+#        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+#        "return_shape": (1, nr_times, nr_pools),
+#        "meta_shape": (1, nr_times, nr_pools),
+#        "drop_axis": [2, 3], # drop two pool axes of B
+#        "new_axis": 2 # add pool axis
+#    },
     {#4:
         "computation": "system_age_median",
         "overwrite": True,
         "func": CARDAMOMlib.compute_system_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "timeouts": [180, 500, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -195,8 +196,8 @@ task_list = [
         "overwrite": True,
         "func": CARDAMOMlib.compute_system_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "timeouts": [180, 500,np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -209,50 +210,8 @@ task_list = [
         "overwrite": True,
         "func": CARDAMOMlib.compute_system_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
-        "result_chunks": (1, 1, 1, nr_times_total),
-        "return_shape": (1, nr_times),
-        "meta_shape": (1, nr_times),
-        "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": []
-    },
-    {#4:
-        "computation": "external_output_vector",
-        "overwrite": False,
-        "func": CARDAMOMlib.compute_external_output_vector,
-        "func_args": dict(),
-        "timeouts": [np.inf],
-        "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
-        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
-        "return_shape": (1, nr_times, nr_pools),
-        "meta_shape": (1, nr_times, nr_pools),
-        "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": 2 # add one pool axis
-    },
-    {#5:
-        "computation": "btt_median",
-        "overwrite": False,
-        "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model, 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
-        "result_chunks": (1, 1, 1, nr_times_total),
-        "return_shape": (1, nr_times),
-        "meta_shape": (1, nr_times),
-        "drop_axis": [2, 3], # drop two pool axes of B
-        "new_axis": []
-    },
-    {#6:
-        "computation": "btt_quantile_05",
-        "overwrite": True,
-        "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "timeouts": [180, 500, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -261,12 +220,54 @@ task_list = [
         "new_axis": []
     },
     {#7:
+        "computation": "external_output_vector",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_external_output_vector,
+        "func_args": dict(),
+        "timeouts": [np.inf],
+        "batch_size": 120,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+        "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+        "return_shape": (1, nr_times, nr_pools),
+        "meta_shape": (1, nr_times, nr_pools),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": 2 # add one pool axis
+    },
+    {#8:
+        "computation": "btt_median",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_backward_transit_time_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model, 0.5 for the median
+        "timeouts": [180, 500, np.inf],
+        "batch_size": 120,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
+        "result_chunks": (1, 1, 1, nr_times_total),
+        "return_shape": (1, nr_times),
+        "meta_shape": (1, nr_times),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": []
+    },
+    {#9:
+        "computation": "btt_quantile_05",
+        "overwrite": True,
+        "func": CARDAMOMlib.compute_backward_transit_time_quantile,
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
+        "timeouts": [180, 500, np.inf],
+        "batch_size": 120,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
+        "result_chunks": (1, 1, 1, nr_times_total),
+        "return_shape": (1, nr_times),
+        "meta_shape": (1, nr_times),
+        "drop_axis": [2, 3], # drop two pool axes of B
+        "new_axis": []
+    },
+    {#10:
         "computation": "btt_quantile_95",
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "timeouts": [180, 500, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -277,14 +278,14 @@ task_list = [
 ]
 
 for task in task_list:
-    task["model_type"] = "continuous"
+    task["model_type"] = model_type
 # -
 
 # ## Computing
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list[4:7]:
+for task in task_list:
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,

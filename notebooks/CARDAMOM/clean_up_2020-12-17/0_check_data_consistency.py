@@ -32,7 +32,7 @@ from bgc_md2.notebook_helpers import nested_groupby_apply
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
+my_cluster = CARDAMOMlib.prepare_cluster(n_workers=24)
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -61,10 +61,24 @@ Client(my_cluster)
 # and open link given above.
 
 # +
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-output_path = data_path.joinpath("output")
+# works with "monhtly" and "yearly"
+# daily data is not stored in an xarray dataset but in zarr archives only
 
-ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
+time_resolution = "monthly"
+
+# +
+params = CARDAMOMlib.load_params(time_resolution)
+
+data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+output_path = data_path.joinpath(params["output_folder"])
+output_file_path = output_path.joinpath("data_consistency.nc")
+
+if time_resolution == "monthly":
+    ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
+elif time_resolution == "yearly":
+    ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
+else:
+    raise(ValueError("only 'monthly' and 'yearly' data can be checked for consistency by now"))
 ds
 
 
@@ -76,7 +90,8 @@ def func_data_consistency(ds_single):
 #    abs_err, rel_err = mdo.check_data_consistency()
 
     abs_err, rel_err = CARDAMOMlib.check_data_consistency(
-        ds_single
+        ds_single,
+        params["time_step_in_days"]
     )
     data_vars = dict()
     data_vars['abs_err'] = xr.DataArray(
@@ -111,7 +126,7 @@ def func_chunk(chunk_ds):
 
 
 # +
-chunk_dict = {"lat": 1, "lon"}#: 1, "prob": 1}
+chunk_dict = {"lat": 1, "lon": 1} #, "prob": 1}
 #ds_sub = ds.isel(
 #    lat=slice(0, None, 1),
 #    lon=slice(0, None, 1),
@@ -152,8 +167,11 @@ fake_ds
 # create delayed data consistency dataset object
 
 ds_data_consistency = xr.map_blocks(func_chunk, ds_sub, template=fake_ds)
+
+# unfortunately, xr.map_blocks ignores 'attrs', set we have to set them here manually
 ds_data_consistency.data_vars['abs_err'].attrs = {'units': 'g/m^2'}
 ds_data_consistency.data_vars['rel_err'].attrs = {'units': '%'}
+
 ds_data_consistency
 
 # +
@@ -161,15 +179,15 @@ ds_data_consistency
 
 # compute and write to disk
 ds_data_consistency.to_netcdf(
-    output_path.joinpath("data_consistency.nc"),
+    output_file_path,
     compute=True
 )
 # -
 
 # ## Visualization of data consistency
 
-ds = xr.open_dataset(output_path.joinpath("data_consistency.nc"))
-ds.compute()
+ds = xr.open_dataset(output_file_path)
+#ds.compute()
 
 # Now we show how many of the 34 x 71 x 50 = 120,700 (lat x lon x prob) single sites actually DO have data (presumably then land areas).
 

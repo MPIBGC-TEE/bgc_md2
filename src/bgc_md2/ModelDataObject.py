@@ -28,12 +28,13 @@ def readVariable(**keywords):
     nr_layers = keywords["nr_layers"]
     data_shift = keywords["data_shift"]
 
-    var = dataset[variable_name]
+    check_units = keywords.get("check_units", True)
 
+    var = dataset[variable_name]
     ## check right output format of data
     try:
         if ReturnClass == StockVariable:
-            if var.cell_methods != "time: instantaneous":
+            if check_units and var.cell_methods != "time: instantaneous":
 #                pass
                 raise(
                     ModelDataObjectException(
@@ -42,7 +43,7 @@ def readVariable(**keywords):
                 )
 
         if ReturnClass == FluxVariable:
-            if var.cell_methods != "time: mean":
+            if check_units and var.cell_methods != "time: mean":
 #                pass
                 raise(
                     ModelDataObjectException(
@@ -50,9 +51,12 @@ def readVariable(**keywords):
                     )
                 )
     except AttributeError:
-        pass
-        s = "'cell_methods' not specified"
-        raise (ModelDataObjectException(s))
+#        pass
+        if check_units:
+            s = "'cell_methods' not specified"
+            raise (ModelDataObjectException(s))
+        else:
+            pass
 
     ## read variable depending on dimensions
     ndim = var.ndim
@@ -68,8 +72,11 @@ def readVariable(**keywords):
         print(var)
         raise (ModelDataObjectException("Data structure not understood"))
 
-    sdv = ReturnClass(data=data, unit=var.units)
-#    sdv = ReturnClass(data=data, unit='1')
+    if check_units:
+        sdv = ReturnClass(data=data, unit=var.units)
+    else:
+        sdv = ReturnClass(data=data, unit='1')
+
     return sdv
 
 
@@ -83,16 +90,19 @@ def StockDensityVariable2StockVariable(sdv, dz):
 def getStockVariable_from_Density(**keywords):
     mdo = keywords["mdo"]
     dz = keywords["dz"]
-
+    
     dataset = mdo.dataset
     nstep = mdo.nstep
     stock_unit = mdo.stock_unit
+    check_units = mdo.check_units
 
     sdv = readVariable(ReturnClass=StockVariable, dataset=dataset, **keywords)
     sv = StockDensityVariable2StockVariable(sdv, dz)
 
     sv_agg = sv.aggregateInTime(nstep)
-    sv_agg.convert(stock_unit)
+    if check_units:
+        sv_agg.convert(stock_unit)
+
     return sv_agg
 
 
@@ -120,13 +130,16 @@ def getFluxVariable_from_DensityRate(**keywords):
     time = mdo.time
     nstep = mdo.nstep
     stock_unit = mdo.stock_unit
+    check_units = mdo.check_units
 
     frdv = readVariable(ReturnClass=FluxVariable, dataset=dataset, **keywords)
     frv = FluxRateDensityVariable2FluxRateVariable(frdv, dz)
     fv = FluxRateVariable2FluxVariable(frv, time)
 
     fv_agg = fv.aggregateInTime(nstep)
-    fv_agg.convert(stock_unit)
+    if check_units:
+        fv_agg.convert(stock_unit)
+
     return fv_agg
 
 
@@ -137,12 +150,15 @@ def getFluxVariable_from_Rate(**keywords):
     time = mdo.time
     nstep = mdo.nstep
     stock_unit = mdo.stock_unit
+    check_units = mdo.check_units
 
     frv = readVariable(ReturnClass=FluxVariable, dataset=dataset, **keywords)
     fv = FluxRateVariable2FluxVariable(frv, time)
 
     fv_agg = fv.aggregateInTime(nstep)
-    fv_agg.convert(stock_unit)
+    if check_units:
+        fv_agg.convert(stock_unit)
+    
     return fv_agg
 
 
@@ -162,6 +178,8 @@ class ModelDataObject(object):
 
         self.time = keywords["time"]
         self.time_agg = self.time.aggregateInTime(self.nstep)
+
+        self.check_units = keywords.get("check_units", True)
 
     @classmethod
     def from_dataset(cls, ds, **keywords):
@@ -192,6 +210,7 @@ class ModelDataObject(object):
     def load_stocks(self, **keywords):
         func = keywords.get("func", getStockVariable_from_Density)
         keywords["data_shift"] = keywords.get("data_shift", 0)
+        keywords["check_units"] = self.check_units
 
         ms = self.model_structure
         time_agg = self.time_agg
@@ -225,6 +244,7 @@ class ModelDataObject(object):
     def _load_external_fluxes(self, **keywords):
         func = keywords["func"]
         flux_structure = keywords["flux_structure"]
+        keywords["check_units"] = self.check_units
 
         ms = self.model_structure
         time_agg = self.time_agg
@@ -272,6 +292,7 @@ class ModelDataObject(object):
 
     def load_horizontal_fluxes(self, **keywords):
         func = keywords["func"]
+        keywords["check_units"] = self.check_units
 
         ms = self.model_structure
         time_agg = self.time_agg
@@ -353,6 +374,7 @@ class ModelDataObject(object):
 
     def load_vertical_fluxes(self, **keywords):
         func = keywords["func"]
+        keywords["check_units"] = self.check_units
 
         ms = self.model_structure
         time_agg = self.time_agg
@@ -422,7 +444,8 @@ class ModelDataObject(object):
         return VFs, runoffs_up, runoffs_down
 
     def load_xs_Us_Fs_Rs(self):
-        xs = self.load_stocks(func=getStockVariable_from_Density, data_shift=0)
+        xs = self.load_stocks(
+            func=getStockVariable_from_Density, data_shift=0)
 
         Us = self.load_external_input_fluxes(
             func=getFluxVariable_from_DensityRate, data_shift=1

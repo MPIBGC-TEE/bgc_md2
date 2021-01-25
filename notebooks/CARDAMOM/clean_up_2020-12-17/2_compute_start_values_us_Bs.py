@@ -13,9 +13,9 @@
 #     name: python3
 # ---
 
-# # Compute CARDAMOM start_values, us, and Bs
+# # Compute CARDAMOM xs, start_values, us, and Bs
 #
-# This notebook computes the start_values, us, and Bs from the rechunked zarr archive (Step 1), and saves them as zarr archives. One can set a timeout to prevent compuations to get stuck.
+# This notebook computes stock values from th data (xs, basically joining the stock variables to a vector), the start_values, us, and Bs from the rechunked zarr archive (Step 1), and saves them as zarr archives. One can set a sequence of timeouts to prevent compuations to get stuck.
 
 # +
 import zarr
@@ -62,16 +62,20 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution = "yearly"
+# +
+time_resolution = "monthly"
+#time_resolution = "yearly"
+
+model_type = "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-zarr_data_path = data_path.joinpath("yearly_rechunked_zarr")
+zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
 output_path = data_path.joinpath(params["output_folder"])
 
-project_path = output_path.joinpath("solve_ivp_0000-0003_check_success")
+project_path = output_path.joinpath(model_type)
 
 # +
 # load variables from zarr archive
@@ -105,11 +109,11 @@ for name in ["lat", "lon", "prob", "time"]:
 
 # We decide in which values of which dimensions we are interested (maybe to save computation time).
 
-# use all "lat", all "lon", the first 4 "prob", all "time"
+# use all "lat", all "lon", the first 1 "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 4, 1),
+    "prob": slice(0, 1, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -191,10 +195,14 @@ task_list = [
         "computation": "Bs",
         "overwrite": False,
         "func": CARDAMOMlib.compute_Bs,
-        "func_args": {"time_step_in_days": params["time_step_in_days"], "check_success": True},
-#        "timeouts": [30, 300, 2000],
-        "timeouts": [np.inf],
-        "batch_size": 50,
+        "func_args": {
+            "time_step_in_days": params["time_step_in_days"],
+            "integration_method": "solve_ivp", # default = "solve_ivp"
+            "check_success": True # default = "true"
+        },
+        "timeouts": [45, 400, 2000],
+#        "timeouts": [np.inf],
+        "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools, nr_pools),
         "return_shape": (1, nr_times, nr_pools, nr_pools),
@@ -244,16 +252,7 @@ for task in task_list:
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
 
-# +
-## do a single-site single-time-step inverstigation for a failing site
-
-## try with trapezoidal rule OR without success check and see results
-
-## check timout settings
-
-## try to compute new B with given xs
-
-# try different starting B0
-# -
+# check "cannot convert float infinity to integer" sites
+# "number of function calls has reached maxfev = 2600"
 
 

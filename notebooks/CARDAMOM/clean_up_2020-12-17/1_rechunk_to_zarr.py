@@ -31,7 +31,7 @@ from bgc_md2.models.CARDAMOM import CARDAMOMlib
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
+my_cluster = CARDAMOMlib.prepare_cluster(n_workers=12)
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -65,12 +65,14 @@ time_resolution = "monthly"
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 target_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
 
+# daily zarr archives can be created by "convert_to_daily_time_step.ipynb"
+# yearly xarray.Dataset data can be created by "convert_to_yearly_time_step.ipynb"
 if time_resolution == "monthly":
     ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
-
-if time_resolution == "yearly":
+elif time_resolution == "yearly":
     ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
-    
+else:
+    raise(ValueError("data can only be rechunked to monthly and yearly zarr archives by now"))
 ds
 # -
 
@@ -81,8 +83,10 @@ ds_rechunked
 # +
 # overwite potentially existing zarr files?
 
-overwrite = False # if False, raises zarr.errors.ContainsArrayError if zarr archive already exists
-# -
+overwrite = True # if False, raises zarr.errors.ContainsArrayError if zarr archive already exists
+
+# +
+# stupid nanny and worker messages: just wait, computations are running (see dashboard for status)
 
 results = []
 for variable_name, variable in tqdm(ds_rechunked.variables.items()):
@@ -95,5 +99,6 @@ for variable_name, variable in tqdm(ds_rechunked.variables.items()):
         shutil.rmtree(zarr_dir_path)
 
     da.asarray(variable.data).to_zarr(zarr_dir_name)
+# -
 
 

@@ -34,7 +34,10 @@ from bgc_md2.notebook_helpers import (
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
+my_cluster = CARDAMOMlib.prepare_cluster(
+    n_workers=48,
+    alternative_dashboard_port=8791
+)
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -63,6 +66,7 @@ Client(my_cluster)
 # and open link given above.
 
 time_resolution = "daily"
+model_type = "discrete"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution)
@@ -71,7 +75,7 @@ data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
 output_path = data_path.joinpath(params["output_folder"])
 
-project_path = output_path.joinpath("solve_ivp_0000-0003_discrete")
+project_path = output_path.joinpath(model_type)
 
 # +
 # load variables from zarr archive
@@ -106,11 +110,11 @@ for name in ["lat", "lon", "prob", "time"]:
 
 # We decide in which values of which dimensions we are interested (maybe to save computation time).
 
-# use all "lat", all "lon", the first 4 "prob", all "time"
+# use all "lat", all "lon", the first 1 "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 4, 1),
+    "prob": slice(0, 1, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -209,6 +213,9 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
+# +
+# %%time
+
 for task in task_list:
     print("task: computing", task["computation"])
     print()
@@ -244,17 +251,7 @@ for task in task_list:
     write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
-
-# +
-## do a single-site single-time-step inverstigation for a failing site
-
-## try with trapezoidal rule OR without success check and see results
-
-## check timout settings
-
-## try to compute new B with given xs
-
-# try different starting B0
 # -
+
 
 
