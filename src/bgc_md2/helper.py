@@ -85,24 +85,9 @@ def batchSlices(nland, nproc):
 
 def list_target_models(
     target_classes=frozenset({CompartmentalMatrix,StateVariableTuple})
-) -> bool:
-    # fixme:
-    # we could implement a more general function that takes
-    # a predicate (a boolean function) to apply to a model
-
-    exclude_path = Path("./exclude-models.txt")
-    if exclude_path.exists():
-        exclude_lines = set(line.strip() for line in open(exclude_path))
-        exclude_models = set(
-            name for name in exclude_lines if name and not name.startswith("#")
-        )
-    else:
-        exclude_models = set()
-    sub_mod_pkgs = [
-        tup[1]
-        for tup in pkgutil.iter_modules(models.__path__)
-        if tup[2] and tup[1] not in exclude_models
-    ]
+) ->List[MVarSet]:
+    sub_mod_pkgs = list_models()
+    print(sub_mod_pkgs)
 
     def pred(mn):
         mvs = MVarSet.from_model_name(mn)

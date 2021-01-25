@@ -49,23 +49,26 @@ from testinfrastructure.helpers import pp
 class TestModels(InDirTest):
 
     def test_list_target_models(self):
-        l = h.list_target_models()
-        print(l)
-        l = h.list_target_models(
-            target_classes=frozenset(
-                    (CompartmentalMatrix,StateVariableTuple)
-                )
-            )
-        print(l)
+        li = h.list_target_models()
+        print(li)
+        #li = h.list_target_models(
+        #    target_classes=frozenset(
+        #            (
+        #                CompartmentalMatrix,
+        #                StateVariableTuple
+        #            )
+        #        )
+        #    )
+        #print(li)
 
     def test_list_models(self):
-        l = h.list_models()
+        li = h.list_models()
         widgets.HTML(
             value="Hello <b>World</b>",
             placeholder="Some HTML",
             description="Some HTML",
         )
-        print(l)
+        print(li)
 
     def test_graph(self):
         # for debugging we draw the sparse_powerset_graph of the actually present computers and mvars
