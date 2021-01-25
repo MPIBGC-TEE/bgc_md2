@@ -25,7 +25,11 @@ model_inspection = h.MvarSetInspectionBox()
 
 from bgc_md2.resolve.mvars import CompartmentalMatrix,StateVariableTuple
 
-model_list = h.GeneralMvarSetListGridBox(inspection_box=model_inspection,target_classes=(CompartmentalMatrix,StateVariableTuple))
+model_list = h.GeneralMvarSetListGridBox(
+    inspection_box=model_inspection,
+    target_classes=(CompartmentalMatrix,StateVariableTuple),
+    explicit_exclude_models=frozenset({'CARDAMOM'})
+)
 model_list
 
 model_inspection

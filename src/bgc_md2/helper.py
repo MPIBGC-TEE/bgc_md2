@@ -84,9 +84,10 @@ def batchSlices(nland, nproc):
 
 
 def list_target_models(
-    target_classes=frozenset({CompartmentalMatrix,StateVariableTuple})
-) ->List[MVarSet]:
-    sub_mod_pkgs = list_models()
+    target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
+    explicit_exclude_models: Set[str] = frozenset()
+) -> List[MVarSet]:
+    sub_mod_pkgs = list_models(explicit_exclude_models)
     print(sub_mod_pkgs)
 
     def pred(mn):
@@ -97,15 +98,18 @@ def list_target_models(
     return hits
 
 
-def list_models():
+def list_models(explicit_exclude_models: Set[str] = frozenset()):
     exclude_path = Path("./exclude-models.txt")
     if exclude_path.exists():
         exclude_lines = set(line.strip() for line in open(exclude_path))
-        exclude_models = set(
+        exclude_models_from_file = set(
             name for name in exclude_lines if name and not name.startswith("#")
         )
+        exclude_models = exclude_models_from_file.union(
+                explicit_exclude_models
+        )
     else:
-        exclude_models = set()
+        exclude_models = explicit_exclude_models
     sub_mod_pkgs = [
         tup[1]
         for tup in pkgutil.iter_modules(models.__path__)
@@ -250,10 +254,14 @@ def button_callback(function, *args):
 
 
 class ModelListGridBox(widgets.GridspecLayout):
-    def __init__(self, inspection_box):
+    def __init__(
+        self,
+        inspection_box,
+        explicit_exclude_models: Set[str] = frozenset()
+    ):
         self.inspection_box = inspection_box
         #self.names = list_target_models(frozenset((CompartmentalMatrix,)))
-        self.names = list_models()
+        self.names = list_models(explicit_exclude_models)
         super().__init__(len(self.names), 10)
         self.populate()
 

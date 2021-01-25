@@ -49,25 +49,24 @@ from testinfrastructure.helpers import pp
 class TestModels(InDirTest):
 
     def test_list_target_models(self):
-        li = h.list_target_models()
+        li = h.list_target_models(
+            explicit_exclude_models=frozenset({'CARDAMOM'})
+        )
         print(li)
-        #li = h.list_target_models(
-        #    target_classes=frozenset(
-        #            (
-        #                CompartmentalMatrix,
-        #                StateVariableTuple
-        #            )
-        #        )
-        #    )
-        #print(li)
+        
+        li = h.list_target_models(
+            target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
+            explicit_exclude_models=frozenset({'CARDAMOM'})
+        )
+        print(li)
 
     def test_list_models(self):
         li = h.list_models()
-        widgets.HTML(
-            value="Hello <b>World</b>",
-            placeholder="Some HTML",
-            description="Some HTML",
-        )
+        #widgets.HTML(
+        #    value="Hello <b>World</b>",
+        #    placeholder="Some HTML",
+        #    description="Some HTML",
+        #)
         print(li)
 
     def test_graph(self):
