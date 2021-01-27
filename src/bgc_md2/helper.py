@@ -262,10 +262,6 @@ class ModelListGridBox(widgets.GridspecLayout):
         self.inspection_box = inspection_box
         #self.names = list_target_models(frozenset((CompartmentalMatrix,)))
         self.names = list_models(explicit_exclude_models)
-    def __init__(self, inspection_box):
-        self.inspection_box = inspection_box
-        #self.names = list_target_models(frozenset((CompartmentalMatrix,)))
-        self.names = list_models()
         super().__init__(len(self.names), 10)
         self.populate()
 
@@ -293,9 +289,10 @@ class ModelListGridBox(widgets.GridspecLayout):
 class GeneralMvarSetListGridBox(widgets.GridspecLayout):
 
     def __init__(
-            self,
-            inspection_box: 'MvarSetInspectionBox',
-            target_classes: Tuple = (CompartmentalMatrix,StateVariableTuple),
+        self,
+        inspection_box: 'MvarSetInspectionBox',
+        target_classes: Tuple = (CompartmentalMatrix,StateVariableTuple),
+        explicit_exclude_models: Set[str] = frozenset()
     ):
         self.inspection_box = inspection_box
         self.target_classes = target_classes

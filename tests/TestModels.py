@@ -47,7 +47,6 @@ from testinfrastructure.helpers import pp
 
 
 class TestModels(InDirTest):
-
     def test_list_target_models(self):
         li = h.list_target_models(
             explicit_exclude_models=frozenset({'CARDAMOM'})
