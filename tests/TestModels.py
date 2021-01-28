@@ -93,7 +93,8 @@ class TestModels(InDirTest):
              # "Williams2005GCB",
              # "Luo2012TE",
              # "Allison2010NG",
-             "Andren1997EA",
+             # "Andren1997EA",
+             "CARDAMOM",
         ]:
             with self.subTest(mn=mn):
                 mvs = MVarSet.from_model_name(mn)
