@@ -2,7 +2,7 @@ import unittest
 import matplotlib.pyplot as plt
 
 import ipywidgets as widgets
-from bgc_md2.helper import list_models
+import bgc_md2.helper as h 
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
@@ -47,25 +47,35 @@ from testinfrastructure.helpers import pp
 
 
 class TestModels(InDirTest):
+    def test_list_target_models(self):
+        li = h.list_target_models(
+            explicit_exclude_models=frozenset({'CARDAMOM'})
+        )
+        print(li)
+
+        li = h.list_target_models(
+            target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
+            explicit_exclude_models=frozenset({'CARDAMOM'})
+        )
+        print(li)
 
     def test_list_models(self):
-        l = list_models()
-        widgets.HTML(
-            value="Hello <b>World</b>",
-            placeholder="Some HTML",
-            description="Some HTML",
-        )
-        print(l)
+        li = h.list_models(explicit_exclude_models=frozenset({'CARDAMOM'}))
+        print(li)
 
-    def test_computable_mvars(self):
+    def test_list_models(self):
+        li = h.list_models()
+        print(li)
+
+    def test_graph(self):
         # for debugging we draw the sparse_powerset_graph of the actually present computers and mvars
-        spsg=sparse_powerset_graph(bgc_md2_computers())
+        spsg = sparse_powerset_graph(bgc_md2_computers())
         f = plt.figure()
-        ax = f.add_subplot(1,1,1)
+        ax = f.add_subplot(1, 1, 1)
         draw_ComputerSetMultiDiGraph_matplotlib(
                 ax,
-                spsg, 
-                bgc_md2_mvar_aliases(), 
+                spsg,
+                bgc_md2_mvar_aliases(),
                 bgc_md2_computer_aliases(),
                 targetNode=frozenset({SmoothModelRun})
         )
@@ -73,12 +83,19 @@ class TestModels(InDirTest):
         fig = plt.figure()
         draw_update_sequence(bgc_md2_computers(), max_it=8, fig=fig)
         fig.savefig("c1.pdf")
+
+    def test_computable_mvars(self):
         # https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests
         for mn in [
-             "Potter1993GlobalBiogeochemicalCycles",
-             "testVectorFree", 
-             "Williams2005GCB", # just uncomment the one model you are working on and comment the others
-        ]: 
+             # just uncomment the one model you are working on and comment the others
+             # "Potter1993GlobalBiogeochemicalCycles",
+             # "testVectorFree",
+             # "Williams2005GCB",
+             # "Luo2012TE",
+             # "Allison2010NG",
+             # "Andren1997EA",
+             "CARDAMOM",
+        ]:
             with self.subTest(mn=mn):
                 mvs = MVarSet.from_model_name(mn)
                 mvars = mvs.computable_mvar_types()

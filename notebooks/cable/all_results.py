@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.6.0
+#       jupytext_version: 1.9.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -35,18 +35,23 @@ from time import time
 # %load_ext autoreload 
 # %autoreload 2
 
-# The next linke is only for the jena group
-from bgc_md2.sitespecificHelpers import get_client, getCluster
-
-
-
 if __name__ == '__main__':
-    # for reapeated %loadin in ipython we
-    # first check if a cluster is already running
+    import dask.array
+    from dask.distributed import LocalCluster,Client 
     if 'cluster' not in dir():
-        cluster = getCluster()
-        client = Client(cluster)
+        cluster = LocalCluster()
+
+    client = Client(cluster)
+
+# +
+try:
+    from ports.server_helpers import print_commands
+    print_commands(cluster,local_port=8880)
     
+except ImportError as e:
+    pass  # module doesn't exist,dont make a fuss 
+# -
+
     # chose the cable output directory you want to work with
     out_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/output/new4'
     out_path = Path(out_dir)
@@ -227,3 +232,5 @@ if __name__ == '__main__':
     #futures = client.map(sol_arr_from_tup,val_tups[s],batch_size=8)
     #for s in slices:
     #    arr.list = client
+
+
