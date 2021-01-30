@@ -68,7 +68,6 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "King1993TreePhysiol"
 #        self.mn = "Murty2000EcolModell"
 #        self.mn = "DeAngelis2012TheorEcol"
-#        self.mn = "Luo2012TE"
 #        self.mn = "Potter1993GlobalBiogeochemicalCycles"
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
