@@ -56,19 +56,19 @@ from bgc_md2.resolve.MVarSet import MVarSet
 class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
-#        self.mn = ""
-        self.mn = "Scheiter2009GlobalChangeBiol"
-#        self.mn = "Turgman2018EcologyLetters"
-#        self.mn = "Haverd2016Biogeosciences"
+        self.mn = ""
 #        self.mn = "Thomas2014GeosciModelDev"
 #        self.mn = "ElMasri2013AgricForMeteorol"
 #        self.mn = "Pavlick2013Biogeosciences"
-#        self.mn = "Foley1996GBC"
-#        self.mn = "Gu2010EcologicalComplexity"
-#        self.mn = "King1993TreePhysiol"
 #        self.mn = "Murty2000EcolModell"
-#        self.mn = "DeAngelis2012TheorEcol"
-#        self.mn = "Potter1993GlobalBiogeochemicalCycles"
+#        self.mn = "Scheiter2009GlobalChangeBiol" #No soil compartments
+#        self.mn = "Turgman2018EcologyLetters" #No soil compartments
+#        self.mn = "Haverd2016Biogeosciences" #No soil compartments
+#        self.mn = "Foley1996GBC" #No equations for litter and soil, but the figure has those compartments
+#        self.mn = "Gu2010EcologicalComplexity" #No equations for litter and soil, but the model description (CEVSA) metions them
+#        self.mn = "King1993TreePhysiol" #No soil compartments
+#        self.mn = "DeAngelis2012TheorEcol" #No soil compartments (model based on G’Day, but removed litter and soil compartments)
+#        self.mn = "Potter1993GlobalBiogeochemicalCycles" #No equations for litter and soil, but the model description (CEVSA) metions them
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
