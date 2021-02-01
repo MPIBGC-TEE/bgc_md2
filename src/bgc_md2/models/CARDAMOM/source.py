@@ -11,6 +11,9 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
+    InFluxesBySymbol,
+    OutFluxesBySymbol,
+    InternalFluxesBySymbol,
 )
 from bgc_md2.helper import MVarSet
 # dataset = xr.open_dataset('~/Desktop/CARDAMOM/cardamom_for_holger.nc')
@@ -36,16 +39,19 @@ def create_pwc_model_run_fd(ens, lat, lon):
 
 t = TimeSymbol('t')
 ms = load_model_structure()
-x = StateVariableTuple(ms.pool_names)
-def make_input_flux(sv_name):
-    sv = Symbol(sv_name)
-    fluxrate_densities = [ Symbol(name) for name in ms.external_input_structure]
-    if sv in fluxrate_densities:
-        fl = sum(fluxrate_densities)*sv
-    else:
-        fl = 0
-    return fl
-u = InputTuple((make_input_flux(key) for key in ms.pool_names))
+x = StateVariableTuple(tuple(Symbol(name) for name in ms.pool_names))
+gpp = Symbol('gpp')
+
+
+def make_internal_flux(sv_name_tup):
+    source, target = map(Symbol,sv_name_tup)
+    fluxrate_densities = [
+        Symbol(var_name)
+        for var_name in ms.horizontal_structure[sv_name_tup]
+    ]
+    return sum(fluxrate_densities) * source
+
+
 mvs = MVarSet({
     #BibInfo(# Bibliographical Information
     #    name="CARDAMOM",
@@ -59,7 +65,25 @@ mvs = MVarSet({
     #    sym_dict=sym_dict
     #),
     #A,  # the overall compartmental matrix
-    u,  # imput tuple
+    #u,  # imput tuple
+    InFluxesBySymbol(
+        {
+            Symbol(name): gpp * Symbol(val[0]) 
+            for name, val in ms.external_input_structure.items()
+        }
+    ),
+    OutFluxesBySymbol(
+        {
+            Symbol(name): Symbol(name) * sum([Symbol(rate) for rate in val])
+            for name, val in ms.external_output_structure.items()
+        }
+    ),
+    InternalFluxesBySymbol(
+        {
+            (Symbol(name_tup[0]),Symbol(name_tup[1])): make_internal_flux(name_tup)
+            for name_tup in ms.horizontal_structure.keys()
+        }
+    ),
     t,  # time symbol 
     x,  # state vector of the complete system
     #VegetationCarbonInputScalar(u),
