@@ -70,6 +70,8 @@ sym_dict = {
     'litter_to_som':            'internal flux rate',
 }
 
+# created from the mo
+# to be able to use symbols directly 
 for name in sym_dict.keys():
     var(name)
 
@@ -121,7 +123,7 @@ mvs = MVarSet({
     ),
     t,  # time symbol
     x,  # state vector of the complete system
-    # VegetationCarbonInputScalar(u),
+    # VegetationCarbonInputScalar(gpp), # ? not sure see ticket
     # vegetation carbon partitioning.
     # VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((Labile, Leaf, Root, Wood)),

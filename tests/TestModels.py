@@ -53,10 +53,12 @@ class TestModels(InDirTest):
         #)
         #print(li)
 
-        #li = h.list_target_models(
-        #    target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
-        #    explicit_exclude_models=frozenset({'CARDAMOM'})
-        #)
+        # li = h.list_target_models(
+        #     target_classes=frozenset(
+        #        {CompartmentalMatrix, StateVariableTuple}
+        #     ),
+        #     explicit_exclude_models=frozenset({'CARDAMOM'})
+        # )
         #print(li)
         li = h.list_target_models(
             target_classes=frozenset(
@@ -66,7 +68,7 @@ class TestModels(InDirTest):
                     VegetationCarbonInputTuple
                 }
             ),
-            #explicit_exclude_models=frozenset({'CARDAMOM'})
+            # explicit_exclude_models=frozenset({'CARDAMOM'})
         )
         print(li)
 
