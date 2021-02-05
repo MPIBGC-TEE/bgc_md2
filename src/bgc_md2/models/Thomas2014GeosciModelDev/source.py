@@ -1,4 +1,4 @@
-from sympy import var, ImmutableMatrix
+from sympy import var, ImmutableMatrix, Piecewise
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -31,6 +31,11 @@ sym_dict = {
 #        ,'N_root': ''
 #        ,'N_labile': ''
 #        ,'N_bud': ''
+#        ,'N_litter': ''
+#        ,'N_soil': ''
+#        ,'N_cwd': ''
+#        ,'N_NH4': ''
+#        ,'N_NO3': ''
         ,'GPP': 'Photosynthesis; based on ACM model (see article for description)' # "gC*day^{-1}"
         ,'a_budC2leaf': 'Allocation from bud C pool to leaf C' # "gC*m^{-2}*day^{-1}"
         ,'a_woodC': 'Allocation from labile C to wood C' # "gC*m^{-2}*day^{-1}"
@@ -49,16 +54,22 @@ sym_dict = {
 #        ,'U_NO3': '"Uptake of NO$_3^-$ from mineral soil NO$_3^-$"' # "gN*m^{-2}*day^{-1}"
 #        ,'  doi: 10.1007/BF00015315
 #        ,'U_Nfix': '"Fixation of N from N$_2$; function of Ra$_excess$ flux, temperature, N demand, and C cost"' # "gN*m^{-2}*day^{-1}"
+        ,'DOY': 'Day Of Year' # "day"
+        ,'DOY_senesc': 'Day Of Year that growth ends and leaf fall begins' # "day"
         ,'tau_leaf': 'Turnover of leaf (C and N)' # "day^{-1}"
         ,'tau_wood': 'Turnover of wood (C and N)' # "day^{-1}"
         ,'tau_root': 'Turnover of root (C and N)' # "day^{-1}"
         ,'tau_excessC': 'Turnover of labile C when pool exceeds the maximum size of the labile C pool' # "day^{-1}"
-        ,'tau_cwd': 'Turnover of coarse woody debris (C and N)' # "day^{-1}"
+        ,'tau_litter': 'Litter turnover rate' # "day^{-1}"
+        ,'tau_cwd': 'Coarse woody debris turnover rate' # "day^{-1}"
+        ,'tau_soil': 'Soil turnover rate' # "day^{-1}"
         ,'t_leafC': 'Turnover of leaf C to litter C; constant over year in humid tropics; seasonal otherwise' # "gC*m^{-2}*day^{-1}"
         ,'t_woodC': 'Turnover of wood C to CWDC pool; occurs throughout year' # "gC*m^{-2}*day^{-1}"
         ,'t_rootC': 'Turnover of root C to litter C; occurs throughout year' # "gC*m^{-2}*day^{-1}"
         ,'t_CWDC': 'Turnover of coarse woody debris into litter C pool' # "gC*m^{-2}*day^{-1}"
+        ,'Pot_litterC_soilC': 'Potential turnover of litter C with flux to soil'
         ,'t_litterC_soilC': 'Turnover of litter C pool to soil C pool' # "gC*m^{-2}*day^{-1}"
+        ,'Pot_litterC_atm': 'Potential turnover of litter C with flux to soil'
         ,'t_litterC_atm': 'Turnover of litter C pool released as heterotrophic respiration' # "gC*m^{-2}*day^{-1}"
         ,'t_soilC_atm': 'Turnover of litter C pool released as heterotrophic respiration' # "gC*m^{-2}*day^{-1}"
 #        ,'t_retransN': 'Reabsorption of N from leaves to labile N' # "gN*m^{-2}*day^{-1}"
@@ -68,16 +79,25 @@ sym_dict = {
         ,'Ra_growth': 'Growth respiration that occurs when tissue is allocated; a constant fraction of carbon allocated to tissue' # "gC*m^{-2}*day^{-1}"
         ,'Ra_excess': 'Respiration that occurs when labile C exceeds a maximum labile C store; used for N fixation' # "gC*m^{-2}*day^{-1}"
         ,'Ra_main': 'Respiration of living tissues; a function of N content and temperature' # "gC*m^{-2}*day^{-1}"
-        ,'g_T': ''
+        ,'m_resp_frac': 'Proportion of litter C turnover respired' #unitless
+        ,'Q_h': 'Soil respiration Q_10' #unitless
+        ,'T_a': 'Daily air temperature' # ◦C
+        ,'fx_N': 'Ratio of actual to potential immobilizations (process whereby mineral N is incorporated into organic, soil N  by microbial action), fx_N = (NH_4immob + NH_3immob)/total_immob' #See page 14, equations 66-70
 }
 
 for name in sym_dict.keys():
     var(name)
 
-t_leafC = C_leaf*tau_leaf # if Day Of the Year (DOY) > DOY_senesc. t_leafC = 0, otherwise. # "gC*m^{-2}*day^{-1}"
+t_leafC = (Piecewise((C_leaf*tau_leaf, DOY>DOY_senesc), (0, DOY<=DOY_senesc)))### Otherwise, so < or = !!! # "gC*m^{-2}*day^{-1}"
 t_woodC = C_wood*tau_wood # "gC*m^{-2}*day^{-1}"
 t_rootC = C_root*tau_root # "gC*m^{-2}*day^{-1}"
+g_T = Q_h**((T_a-20)/10)
 t_CWDC = C_cwd*tau_cwd*g_T # See equation 61, page 13
+Pot_litterC_soilC = C_litter * tau_litter * g_T * (1 - m_resp_frac)
+Pot_litterC_atm = C_litter * tau_litter * g_T * m_resp_frac
+t_litterC_soilC = Pot_litterC_soilC * fx_N
+t_litterC_atm = Pot_litterC_atm * fx_N
+#t_CWDN = N_cwd*tau_cwd*g_T
 #t_rootN = N_root*tau_root # "gN*m^{-2}*day^{-1}"
 #t_woodN = N_wood*tau_wood # "gN*m^{-2}*day^{-1}"
 
@@ -90,11 +110,11 @@ Input = InputTuple((u*ImmutableMatrix(b),0,0,0))
 A = CompartmentalMatrix(
 [[-(a_budC+a_rootC+a_woodC+a_labileRamain+Ra_growth+Ra_excess)/C_labile,0,0,0,0,0,0,0,0],
 [                            a_budC/C_labile                           ,-(a_budC2leaf+a_budC2Ramain)/C_bud,0,0,0,0,0,0,0],
-[                                   0                                  ,         a_budC2leaf/C_bud        ,-tau_leaf,0,0,0,0,0,0],
+[                                   0                                  ,         a_budC2leaf/C_bud        ,-t_leafC/C_leaf,0,0,0,0,0,0],
 [                            a_woodC/C_labile                          ,                  0               ,    0    ,-tau_wood,0,0,0,0,0],
 [                            a_rootC/C_labile                          ,                  0               ,    0    ,    0    ,-tau_root,0,0,0,0],
 [                            a_labileRamain/C_labile                   ,         a_budC2Ramain/C_bud      ,    0    ,    0    ,    0    ,-Ra_main/C_labileRa,0,0,0],
-[                                   0                                  ,                  0               , tau_leaf,    0    , tau_root,          0        ,-(t_litterC_soilC+t_litterC_atm)/C_litter,0,t_CWDC/C_cwd],
+[                                   0                                  ,                  0               , t_leafC/C_leaf,    0    , tau_root,          0        ,-(t_litterC_soilC+t_litterC_atm)/C_litter,0,t_CWDC/C_cwd],
 [                                   0                                  ,                  0               ,    0    ,    0    ,    0    ,          0        ,          t_litterC_soilC/C_litter       ,-t_soilC_atm/C_soil,0],
 [                                   0                                  ,                  0               ,    0    , tau_wood,    0    ,          0        ,                      0                  ,0,-t_CWDC/C_cwd]
 ])
@@ -103,9 +123,14 @@ t = TimeSymbol("t")
 np1 = NumericParameterization(
     par_dict={
     tau_leaf: 0.0027 
-    ,tau_wood: 5*10^-5
+    ,tau_wood: 5e-05
     ,tau_root: 0.002
     ,tau_excessC: 0.05
+    ,tau_litter: 0.029
+    ,tau_cwd: 0.001
+    ,tau_soil: 1e-04
+    ,Q_h: 1.4
+    ,m_resp_frac: 0.5
 },
     func_dict=frozendict({})
     # state_var_units=gram/kilometer**2,
