@@ -34,6 +34,12 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 
+#def vegetation_carbon_compartmental_matrix_1(
+#    out_fluxes: OutFluxesBySymbol,
+#    internal_fluxes: InternalFluxesBySymbol,
+#    vcsv: VegetationCarbonStateVariableTuple
+#) -> VegetationCarbonCompartmentalMatrix:
+
 def smooth_reservoir_model_from_fluxes(
     in_fluxes: InFluxesBySymbol,
     out_fluxes: OutFluxesBySymbol,
@@ -83,13 +89,6 @@ def vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tupl
 ) -> VegetationCarbonInputTuple:
     return VegetationCarbonInputTuple(ImmutableMatrix(b) * u)
 
-
-# def vegetation_carbon_compartmental_matrix_from_compartmental_matrix_and_vegetation_carbon_state_variable_tuple(
-#       B:       CompartmentalMatrix,
-#       svt:     StateVariableTuple,
-#       vcsvt:   VegetationCarbonStateVariableTuple
-#    ) ->
-#    return CompartmentalMatrix(smr.compartmental_matrix)
 
 
 def numeric_model_run_1(
