@@ -25,7 +25,6 @@ model_inspection = h.MvarSetInspectionBox()
 
 model_list = h.ModelListGridBox(
     inspection_box=model_inspection,
-    explicit_exclude_models=frozenset({'CARDAMOM'})
 )
 model_list
 
