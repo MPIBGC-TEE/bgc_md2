@@ -1,4 +1,4 @@
-from sympy import var, ImmutableMatrix, exp, Max 
+from sympy import var, ImmutableMatrix, exp, Max, Piecewise 
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -58,8 +58,14 @@ sym_dict = {
         ,'A_R': 'Allocation fraction to fine roots'
         ,'A_WL': 'Allocation fraction to aboveground wood'
         ,'A_WR': 'Allocation fraction to belowground wood'
+        ,'tau_A': 'Stored assimilates turnover rate' #days 
+        ,'tau_SEN': 'Time constant'
+        ,'tau_NPP': 'Time constant'
+        ,'f_SEN': 'Senescence'
+        ,'f_NPP': 'Time-averaged NPP'
+        ,'tau_L0': 'Base turnover time for leaf and fine root pools' #days 
+        ,'tau_L': 'Leaves turnover rate' #days 
         ,'tau_S': 'Seeds turnover rate' #days 
-        ,'tau_L': 'Stem turnover rate' #days 
         ,'tau_R': 'Fine roots turnover rate' #days 
         ,'tau_WL': 'Aboveground wood turnover rate' #days 
         ,'tau_WR': 'Belowground wood turnover rate' #days 
@@ -84,6 +90,8 @@ sym_dict = {
         ,'DEC_LIT': 'Decomposition flux'
         ,'DEC_CWD': 'Decomposition flux'
         ,'DEC_SOIL': 'Decomposition flux'
+        ,'t': 'Time symbol'
+        ,'delta_t': 'time step' #fixme?
 }
 
 for name in sym_dict.keys():
@@ -102,6 +110,18 @@ A_WL = f_GROW*f_VEG*t_9*(t_6/(t_5+t_6+t_7+t_8))
 A_WR = f_GROW*f_VEG*t_10*(t_7/(t_5+t_6+t_7+t_8)) #sum of A_S:A_WR < 1
 tau_WL = tau_WR
 tau_WR = 365*((79*t_11)+1)
+tau_L0 = (365/12)*10**(2*t_12)
+tau_NPP = 10**((5*t_13)-2)
+f_NPP = (NPP + tau_NPP * f_NPP * (t - delta_t))/(1+tau_NPP)
+f_SEN = Piecewise((0,(f_NPP >= 0) | (NPP >= 0)),(1, (f_NPP < 0) & (NPP < 0)))
+tau_L = ((1/tau_L0)+((f_SEN*t_14)/tau_SEN))**-1
+tau_R = ((1/tau_L0)+((f_SEN*(1-t_14))/tau_SEN))**-1
+LIT_L = C_L/tau_L # See equation A24 (page 25). This model includes plant biodiversity, so each grid cell has different traits (k). The LIT_ equations actually are community aggregated fluxes from the turnover of the various vegetation tissue pools according to the relative abundance of each trait
+LIT_R = C_R/tau_R 
+LIT_A = C_A/tau_A 
+LIT_WL = C_WL/tau_WL 
+LIT_WR = C_WR/tau_WR 
+LIT_S = C_S/tau_S
 DEC_LIT = (Q_10h**((T-20)/10)) * C_LIT / tau_LIT
 DEC_CWD = (Q_10h**((T-20)/10)) * C_CWD / tau_CWD
 DEC_SOIL = (Q_10h**((T-20)/10)) * C_SOIL / tau_SOIL

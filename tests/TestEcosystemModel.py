@@ -57,7 +57,7 @@ class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
 #        self.mn = ""
-        self.mn = "Pavlick2013Biogeosciences"
+        self.mn = "Pavlick2013Biogeosciences" # Ecosystem/Community model with equations and descriptions of fluxes and symbols. However, it can be ambiguous and some implementations are not fully compatible with the compartmental model
 #        self.mn = "Thomas2014GeosciModelDev"
 #        self.mn = "Luo2012TE"
 #        self.mn = "Wang2010Biogeosciences"
