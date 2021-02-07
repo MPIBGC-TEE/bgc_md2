@@ -1,4 +1,5 @@
 from sympy import var, ImmutableMatrix, diag, exp, Piecewise
+from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
     InputTuple,
@@ -7,6 +8,9 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
+    NumericParameterization,
+#    NumericStartValueDict,
+#    NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
 #from bgc_md2.resolve.MVarSet import MVarSet
@@ -20,6 +24,14 @@ sym_dict={
         ,'C_r': 'Root carbon' #unit: "kgC*m^{-2}"
         ,'C_w': 'Carbon in woody tissue' #unit: "kgC*m^{-2}"
         ,'C_sw': 'Sapwood carbon content' #unit: "kgC*m^{-2}"
+        ,'C_wl': 'Carbon content of woody litter' #unit: "kgC*m^{-2}"
+        ,'C_a': 'Carbon in active SOM' # See Fig. 1
+        ,'C_s': 'Carbon content of slow SOM' #unit: "kgC*m^{-2}"
+        ,'C_p': 'Carbon content of passive SOM' #unit: "kgC*m^{-2}"
+        ,'C_u': 'Carbon in surface structural litter' # See Fig. 1
+        ,'C_v': 'Carbon in soil structural litter' # See Fig. 1
+        ,'C_m': 'Carbon in surface metabolic litter' # See Fig. 1
+        ,'C_n': 'Carbon in soil metabolic litter' # See Fig. 1
         ,'N_f': 'Nitrogen content of foliage' #unit: "kgC*m^{-2}"
         ,'N_r': 'Nitrogen content of fine roots'
         ,'n_f': 'Foliar N:C ratio'
@@ -46,9 +58,34 @@ sym_dict={
         ,'a_f': 'Allocation fraction to foliar biomass'
         ,'a_r': 'Allocation fraction to roots biomass'
         ,'a_w': 'Allocation fraction to wood (in stem, branches and large structurl roots) biomass'
-        ,'gamma_f': 'Foliage senescence rate' #unit: "yr^{-1}" 
-        ,'gamma_r': 'Roots senescence rate' #unit: "yr^{-1}" 
-        ,'gamma_w': 'Wood senescence rate' #unit: "yr^{-1}" 
+        ,'buf': 'Fraction of C released from foliage entering surface structural litter'
+        ,'bvr': 'Fraction of C released from foliage entering soil structural litter'
+        ,'bmf': 'Fraction of C released from foliage entering surface metabolic litter'
+        ,'bmr': 'Fraction of C released from fine roots entering surface metabolic litter'
+        ,'bam': 'Fraction of C released from surface metabolic litter entering active SOM'
+        ,'ban': 'Fraction of C released from soil metabolic litter entering active SOM'
+        ,'bau': 'Fraction of C released from surface structural litter entering active SOM'
+        ,'bav': 'Fraction of C released from soil structural litter entering active SOM'
+        ,'baw': 'Fraction of C released from woody tissue entering active SOM'
+        ,'bas': 'Fraction of C released from slow SOM entering active SOM'
+        ,'bsa': 'Fraction of C released from active SOM entering slow SOM'
+        ,'bsu': 'Fraction of C released from surface structural litter entering slow SOM'
+        ,'bsv': 'Fraction of C released from soil structural litter entering slow SOM'
+        ,'bsw': 'Fraction of C released from woody tissue entering slow SOM'
+        ,'bps': 'Fraction of C released from slow SOM entering passive SOM'
+        ,'bpa': 'Fraction of C released from active SOM entering passive SOM'
+        ,'bap': 'Fraction of C released from passive SOM entering active SOM'
+        ,'s_f': 'Foliage senescence rate' #unit: "yr^{-1}" 
+        ,'s_r': 'Roots senescence rate' #unit: "yr^{-1}" 
+        ,'s_w': 'Wood senescence rate' #unit: "yr^{-1}" 
+        ,'d_a': 'Intrinsic decomposition rate of active SOM'
+        ,'d_s': 'Intrinsic decomposition rate of slow SOM'
+        ,'d_p': 'Intrinsic decomposition rate of passive SOM'
+        ,'d_wl': 'Intrinsic decomposition rate of woody litter'
+        ,'d_u': 'Intrinsic decomposition rate of surface structural litter'
+        ,'d_v': 'Intrinsic decomposition rate of soil structural litter'
+        ,'d_m': 'Intrinsic decomposition rate of surface metabolic litter'
+        ,'d_n': 'Intrinsic decomposition rate of soil metabolic litter'
 }
 
 for name in sym_dict.keys():
@@ -65,14 +102,54 @@ epsilon_0 = Piecewise((epsilon_young,age<=t_1),(Piecewise(((epsilon_young - ((ep
 GPP = epsilon_0*E_nf*APAR
 NPP = GPP -(R_c+R_m)
 a_w = 1-a_f-a_r
-x = StateVariableTuple((C_f, C_r, C_w))
+x = StateVariableTuple((C_f, C_r, C_w, C_wl, C_u, C_m, C_v, C_n, C_a, C_s, C_p))
 u = NPP
 b = (a_f, a_r, a_w)
-Input = InputTuple(u*ImmutableMatrix(b))
+Input = InputTuple((u*ImmutableMatrix(b),0,0,0,0,0,0,0,0))
 A = CompartmentalMatrix(
-    diag(-gamma_f, -gamma_r, -gamma_w)
-)
+[[   -s_f,      0,   0,       0,      0,      0,      0,      0,      0,      0,      0]
+,[      0,   -s_r,   0,       0,      0,      0,      0,      0,      0,      0,      0]
+,[      0,      0,-s_w,       0,      0,      0,      0,      0,      0,      0,      0]
+,[      0,      0, s_w,   -d_wl,      0,      0,      0,      0,      0,      0,      0]
+,[buf*s_f,      0,   0,       0,   -d_u,      0,      0,      0,      0,      0,      0]
+,[bmf*s_f,bmr*s_r,   0,       0,      0,   -d_m,      0,      0,      0,      0,      0]
+,[      0,bvr*s_r,   0,       0,      0,      0,   -d_v,      0,      0,      0,      0]
+,[      0,      0,   0,       0,      0,      0,      0,   -d_n,      0,      0,      0]
+,[      0,      0,   0,baw*d_wl,bau*d_u,bam*d_m,bav*d_v,ban*d_n,   -d_a,bas*d_s,bap*d_p]
+,[      0,      0,   0,bsw*d_wl,bsu*d_u,      0,bsv*d_v,      0,bsa*d_a,   -d_s,      0]
+,[      0,      0,   0,       0,      0,      0,      0,      0,bpa*d_a,bps*d_s,   -d_p]
+])
 t = TimeSymbol("t")
+
+np1 = NumericParameterization(
+    par_dict={
+    a_f: 0.16
+#    ,buf: 
+#    ,bvr: 
+#    ,bmf: 
+#    ,bmr: 
+#    ,bam: 
+#    ,ban: 
+#    ,bau: 
+#    ,bav: 
+    ,baw: 0.413 
+    ,bas: 0.42
+    ,bsa: 0.35
+#    ,bsu: 
+#    ,bsv: 
+    ,bsw: 0.175
+    ,bps: 0.032
+    ,bpa: 0.004
+    ,bap: 0.45
+    ,s_f: 0.12 #"year^{-1}"
+    ,s_r: 1.0 #"year^{-1}"
+    ,s_w: 0.0069 #"year^{-1}"
+},
+    func_dict=frozendict({})
+    # state_var_units=kgC*m^{-2}
+    # time_unit=year
+)
+
 
 # Parameter sets not working because some of the symbols have 2 values.
 #model_run_data:

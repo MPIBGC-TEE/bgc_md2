@@ -57,7 +57,6 @@ class TestCurrentModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
         self.mn = "CARDAMOM"
-#        self.mn = "Murty2000EcolModell"
 #        self.mn = "ElMasri2013AgricForMeteorol" #Paper shows results for soil carbon, and fig. 1 has litter and C pools, but the equations on table A2 (although very detailed) don't include them
 #        self.mn = "Scheiter2009GlobalChangeBiol" #No soil compartments
 #        self.mn = "Turgman2018EcologyLetters" #No soil compartments
