@@ -133,7 +133,7 @@ np1 = NumericParameterization(
     ,m_resp_frac: 0.5
 },
     func_dict=frozendict({})
-    # state_var_units=gram/kilometer**2,
+    # state_var_units= gC*m^{-2}
     # time_unit=day
 )
 
