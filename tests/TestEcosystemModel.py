@@ -53,7 +53,7 @@ from testinfrastructure.helpers import pp
 from bgc_md2.resolve.MVarSet import MVarSet
 
 
-class TestCurrentModel(InDirTest):
+class TestEcosystemModel(InDirTest):
 #class TestLuo(InDirTest):
     def setUp(self):
 #        self.mn = ""
@@ -79,7 +79,7 @@ class TestCurrentModel(InDirTest):
 #        self.mn = "Parton1987SoilSciSocAmJ"
 #        self.mn = "Henin1945AA"
 #        self.mn = "TECO"
-	#        self.mn = "Emanuel1981"
+#        self.mn = "Emanuel1981"
 #        self.mn = "Rasmussen2016JMB"
 #        self.mn = "Hilbert1991AnnBot"
         self.mvs = MVarSet.from_model_name(self.mn)
