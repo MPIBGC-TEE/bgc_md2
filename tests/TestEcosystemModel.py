@@ -65,6 +65,12 @@ class TestEcosystemModel(InDirTest):
 #        self.mn = "Arora2005GCB-1"
 #        self.mn = "Comins1993EA"
 #        self.mn = "Running1988EcolModel"
+#        self.mn = "TECO" # Was Luo's model based on this one? 
+#        self.mn = "Emanuel1981"
+#        self.mn = "Rasmussen2016JMB"
+######################################################################
+########### SOIL MODELS: 
+###### #  *: Models with compartmental matrix = T*N, "can not compute <class 'bgc_md2.resolve.mvars.CompartmentalMatrix'>"
 #        self.mn = "Fontaine2005Ecologyletters_4_2"
 #        self.mn = "Fontaine2005Ecologyletters_4_1"
 #        self.mn = "Fontaine2005Ecologyletters_3_2"
@@ -72,20 +78,22 @@ class TestEcosystemModel(InDirTest):
 #        self.mn = "Fontaine2005Ecologyletters_2"
 #        self.mn = "Fontaine2005Ecologyletters_1"
 #        self.mn = "Fontaine2005Ecologyletters"
-#        self.mn = "sixPairsModel"
+#        self.mn = "sixPairsModel" #  *
 #        self.mn = "Wang2014BG3p"
 #        self.mn = "Wang2014BG2p"
-#        self.mn = "Wang2013EcologicalApplications"
-#        self.mn = "Andren1997EA"
-#        self.mn = "Jenkinson1977SoilScience"
-#        self.mn = "Zelenev2000MicrobialEcology"
-#        self.mn = "Allison2010NG"
-#        self.mn = "Parton1987SoilSciSocAmJ"
+#        self.mn = "Wang2013EcologicalApplications" #  *
+#        self.mn = "Andren1997EA" #  *
+#        self.mn = "Jenkinson1977SoilScience" #  *
+#        self.mn = "Zelenev2000MicrobialEcology" #  *
+#        self.mn = "Allison2010NG" #  *
+#        self.mn = "Parton1987SoilSciSocAmJ" #  *
 #        self.mn = "Henin1945AA"
-#        self.mn = "TECO"
-#        self.mn = "Emanuel1981"
-#        self.mn = "Rasmussen2016JMB"
+######################################################################
+########### VEGETATION MODEL WITHOUT VegetationCarbonInputPartitioningTuple & VegetationCarbonInputScalar
 #        self.mn = "Hilbert1991AnnBot"
+######################################################################
+######################################################################
+######################################################################
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [
