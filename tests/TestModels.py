@@ -45,7 +45,6 @@ from bgc_md2.resolve.graph_plotting import (
 from bgc_md2.resolve.MVarSet import MVarSet
 from testinfrastructure.helpers import pp
 
-
 class TestModels(InDirTest):
     def test_list_target_models(self):
         #li = h.list_target_models(
@@ -93,18 +92,13 @@ class TestModels(InDirTest):
         draw_update_sequence(bgc_md2_computers(), max_it=8, fig=fig)
         fig.savefig("c1.pdf")
 
-    def test_computable_mvars(self):
+
+    def test_all_computable_mvars_for_all_models(self):
         # https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests
-        for mn in [
-             # just uncomment the one model you are working on and comment the others
-             # "Potter1993GlobalBiogeochemicalCycles",
-             # "testVectorFree",
-             # "Williams2005GCB",
-             # "Luo2012TE",
-             # "Allison2010NG",
-             # "Andren1997EA",
-             "CARDAMOM",
-        ]:
+        model_names = h.list_models(
+                #explicit_exclude_models=frozenset({'CARDAMOM'})
+        )
+        for mn in model_names:
             with self.subTest(mn=mn):
                 mvs = MVarSet.from_model_name(mn)
                 mvars = mvs.computable_mvar_types()
