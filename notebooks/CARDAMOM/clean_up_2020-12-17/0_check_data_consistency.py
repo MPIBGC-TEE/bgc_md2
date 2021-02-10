@@ -80,6 +80,11 @@ elif time_resolution == "yearly":
 else:
     raise(ValueError("only 'monthly' and 'yearly' data can be checked for consistency by now"))
 ds
+# -
+
+t = ds.time
+t.data
+
 
 
 # +

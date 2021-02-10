@@ -69,26 +69,27 @@ def prepare_cluster(n_workers, alternative_dashboard_port=None):
 
     return my_cluster
 
-def load_params(time_resolution):
-    all_params = {
-        "daily": {
+def load_params(time_resolution, delay_in_months):
+    if time_resolution == "daily":
+        return {
             "output_folder": "daily_output",
             "time_step_in_days": 1,
             "nr_time_steps": 10*12*31
-        },
-        "monthly": {
+        }
+    elif time_resolution == "monthly":
+        return {
             "output_folder": "monthly_output",
             "time_step_in_days": 31,
             "nr_time_steps": 10*12
-        },
-        "yearly": {
-            "output_folder": "yearly_output",
+        }
+    elif time_resolution == "yearly":
+        return {
+            "output_folder": "yearly_%02d_output" % delay_in_months,
             "time_step_in_days": 12*31,
             "nr_time_steps": 10
-            }
         }
-
-    return all_params[time_resolution]
+    else:
+        raise(ValueError("Unknown time resolution"))
 
     
 def check_data_consistency(ds, time_step_in_days):
@@ -459,12 +460,12 @@ def compute_age_moment_vector_up_to(mr, nr_time_steps, up_to_order):
     return res
 
 
-def compute_pool_age_quantile(mr, nr_time_steps, q):
+def compute_pool_age_quantile(mr, nr_time_steps, q, maxsize=None):
     if isinstance(mr, PWCModelRunFD):
         F0 = mr.fake_cumulative_start_age_distribution(nr_time_steps)
 
         mr.initialize_state_transition_operator_cache(
-            None,
+            maxsize,
             size=len(mr.times)
         )
 
@@ -477,7 +478,7 @@ def compute_pool_age_quantile(mr, nr_time_steps, q):
         P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
 
         mr.initialize_state_transition_operator_matrix_cache(
-            None
+            maxsize
         )
 
         pool_age_quantiles = mr.pool_age_quantiles(
@@ -489,12 +490,12 @@ def compute_pool_age_quantile(mr, nr_time_steps, q):
         raise(TypeError("wrong type of model run"))
 
 
-def compute_system_age_quantile(mr, nr_time_steps, q):
+def compute_system_age_quantile(mr, nr_time_steps, q, maxsize=None):
     if isinstance(mr, PWCModelRunFD):
         F0 = mr.fake_cumulative_start_age_distribution(nr_time_steps)
 
         mr.initialize_state_transition_operator_cache(
-            None,
+            maxsize,
             size=len(mr.times)
         )
 
@@ -507,7 +508,7 @@ def compute_system_age_quantile(mr, nr_time_steps, q):
         P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
 
         mr.initialize_state_transition_operator_matrix_cache(
-            maxsize=1152
+            maxsize
         )
 
         system_age_quantiles = mr.system_age_quantiles(
@@ -544,12 +545,12 @@ def compute_backward_transit_time_moment(pwc_mr_fd, nr_time_steps, order):
     return pwc_mr_fd.backward_transit_time_moment(order, start_age_moments)
 
 
-def compute_backward_transit_time_quantile(mr, nr_time_steps, q):
+def compute_backward_transit_time_quantile(mr, nr_time_steps, q, maxsize=None):
     if isinstance(mr, PWCModelRunFD):
         F0 = mr.fake_cumulative_start_age_distribution(nr_time_steps)
 
         mr.initialize_state_transition_operator_cache(
-            None,
+            maxsize,
             size=len(mr.times)
         )
 
@@ -562,7 +563,7 @@ def compute_backward_transit_time_quantile(mr, nr_time_steps, q):
         P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
 
         mr.initialize_state_transition_operator_matrix_cache(
-            None
+            maxsize
         )
 
         data = np.nan * np.ones(len(mr.times))
@@ -783,7 +784,7 @@ def compute_incomplete_sites(
 
     # write header to logfile
     print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
-    print("starting", flush=True)
+    print('starting, timeout (min) = ', time_limit_in_min, flush=True)
 
     # do the computation
     linear_batchwise_to_zarr(
@@ -901,7 +902,7 @@ def compute_incomplete_sites_with_mr(
 
     # write header to logfile
     print(write_header_to_logfile(logfile_name, res_da, time_limit_in_min))
-    print("starting", flush=True)
+    print('starting, timeout (min) = ', time_limit_in_min, flush=True)
 
     # do the computation
     linear_batchwise_to_zarr(

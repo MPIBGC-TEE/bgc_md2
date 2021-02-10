@@ -62,20 +62,22 @@ Client(my_cluster)
 #
 # and open link given above.
 
-# +
-time_resolution = "monthly"
-#time_resolution = "yearly"
-
-model_type = "continuous"
+#time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
+time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
-params = CARDAMOMlib.load_params(time_resolution)
+params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
-output_path = data_path.joinpath(params["output_folder"])
 
+zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
+if time_resolution == "yearly":
+    zarr_data_path = data_path.joinpath(time_resolution + "_%02d_rechunked_zarr" % delay_in_months)
+
+output_path = data_path.joinpath(params["output_folder"])
 project_path = output_path.joinpath(model_type)
+project_path
 
 # +
 # load variables from zarr archive
@@ -252,7 +254,9 @@ for task in task_list:
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
 
-# check "cannot convert float infinity to integer" sites
-# "number of function calls has reached maxfev = 2600"
+# # check 
+#
+# - "cannot convert float infinity to integer" sites
+# - "number of function calls has reached maxfev = 2600"
 
 
