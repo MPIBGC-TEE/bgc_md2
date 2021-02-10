@@ -24,6 +24,7 @@ import bgc_md2.helper as h
 model_inspection = h.MvarSetInspectionBox()
 
 from bgc_md2.resolve.mvars import CompartmentalMatrix, StateVariableTuple, VegetationCarbonInputPartitioningTuple,VegetationCarbonInputTuple
+from bgc_md2.resolve.MVarSet import MVarSet
 
 # This time we are only interested in Vegetation models and Carbon input partitioning. Therefore we look for models for which the variable
 # `VegetationCarbonInputPartitioningTuple` is defined or computable.
@@ -43,21 +44,12 @@ li = h.list_target_models(
 li    
 
 
-from bgc_md2.resolve.MVarSet import MVarSet
-for mn in li:
-    mvs = MVarSet.from_model_name(mn)
-    print('######################')
-    print(mn)
-    display(mvs._get_single_mvar_value(VegetationCarbonInputTuple))
-    display(mvs._get_single_mvar_value(VegetationCarbonInputPartitioningTuple))
+# From these we chose two models to investigate more thoroughly.
+#
 
-model_list = h.GeneralMvarSetListGridBox(
-    inspection_box=model_inspection,
-    target_classes=(CompartmentalMatrix,StateVariableTuple,VegetationCarbonInputPartitioningTuple),
-    #explicit_exclude_models=frozenset({'CARDAMOM'})
-)
-model_list
+mvs1 =  MVarSet.from_model_name('Luo2012TE')
+mvs2 =  MVarSet.from_model_name('TECO')
 
-model_inspection
+
 
 
