@@ -1,15 +1,10 @@
-import numpy as np
-from sympy import var, ImmutableMatrix, exp
-from frozendict import frozendict
+from sympy import var, exp
 from bgc_md2.resolve.mvars import (
-    CompartmentalMatrix,
-    InputTuple,
+#    InFluxesBySymbol,
+#    OutFluxesBySymbol,
+    InternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
-    VegetationCarbonStateVariableTuple,
-    NumericParameterization,
-    NumericStartValueDict,
-    NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
 #from bgc_md2.resolve.MVarSet import MVarSet
@@ -27,11 +22,36 @@ sym_dict = {
         ,'Vmax_r2': ''
         ,'Vmax_r3': ''
         ,'Vmax_r4': ''
+        ,'Vmax_k1': ''
+        ,'Vmax_k2': ''
+        ,'Vmax_k3': ''
+        ,'Vmax_k4': ''
         ,'Km': ''
         ,'Km_r1': ''
         ,'Km_r2': ''
         ,'Km_r3': ''
         ,'Km_r4': ''
+        ,'Km_k1': ''
+        ,'Km_k2': ''
+        ,'Km_k3': ''
+        ,'Km_k4': ''
+        ,'K_slope': ''
+        ,'V_slope': ''
+        ,'V_int': ''
+        ,'K_int': ''
+        ,'av': ''
+        ,'ak': ''
+        ,'T': ''
+        ,'Vmod_r1': ''
+        ,'Vmod_r2': ''
+        ,'Vmod_r3': ''
+        ,'Vmod_r4': ''
+        ,'Kmod_1': ''
+        ,'Kmod_2': ''
+        ,'Kmod_3': ''
+        ,'Kmod_4': ''
+        ,'tau_r': ''
+        ,'tau_k': ''
         ,'F1': 'Flux from LIT_m to MIC_r'
         ,'F2': 'Flux from LIT_s to MIC_r'
         ,'F3': 'Flux from SOM_p to MIC_r'
@@ -67,20 +87,7 @@ F7 = MIC_k * Vmax_k2 * LIT_s /(Km_k2 + LIT_s)
 F8 = MIC_k * Vmax_k3 * SOM_p /(Km_k3 + SOM_p)
 F9 = MIC_k * Vmax_k4 * SOM_c /(Km_k4 + SOM_c)
 F10 = MIC_k * tau_k
-t = TimeSymbol("t") # unit: "hour"
-x = StateVariableTuple(())
-u = InputTuple(())
-B = CompartmentalMatrix(
-)
-np1 = NumericParameterization(
-    par_dict={
-},
-    func_dict=frozendict({})
-)
-
-nsv1 = NumericStartValueDict({
-})
-ntimes = NumericSimulationTimes(np.arange())
+x = StateVariableTuple((LIT_m,LIT_s,MIC_r,MIC_k,SOM_p,SOM_c))
 
 mvs = MVarSet({
     BibInfo(# Bibliographical Information
@@ -93,13 +100,9 @@ mvs = MVarSet({
         doi="10.5194/bg-11-3899-2014",
         sym_dict=sym_dict
     ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
+    TimeSymbol("t"), # unit: "hour"
     x,  # state vector of the complete system
-    VegetationCarbonStateVariableTuple(()),
-    np1,
-    nsv1,
-    ntimes
+#    InFluxesBySymbol({})
+#    OutFluxesBySymbol({})
+    InternalFluxesBySymbol({(LIT_m, MIC_r): F1, (LIT_s, MIC_r): F2, (SOM_p, MIC_r): F3, (SOM_c, MIC_r): F4, (MIC_r, SOM_p): F5, (LIT_m, MIC_k): F6, (LIT_s, MIC_k): F7, (SOM_p, MIC_k): F8, (SOM_c, MIC_k): F9, (MIC_k, SOM_c): F10})
 })
-
