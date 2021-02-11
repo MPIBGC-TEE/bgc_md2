@@ -275,16 +275,21 @@ class ModelListGridBox(widgets.GridspecLayout):
                 button_callback(self.inspect_mvs, name)
             )
             self[i, 0] = button_inspect_mvs
-            mvs = MVarSet.from_model_name(name)
-            target_class = CompartmentalMatrix
-            if target_class in mvs.computable_mvar_types():
-                res = mvs._get_single_mvar_value(target_class)
-            else:
-                res = f"can not compute {target_class}" 
-            out = widgets.Output()
-            with out:
-                display(res)
-            self[i, 1:9] = out
+            # fixme mm:
+            # Just temporarily disabled the output of any real model parameters.
+            # the overview takes way too lang to appear in the notebook
+            # The design is also flawed (ticket) by the fact that 
+            # the rows are all equally tall, which creates a lot of whitespace
+            #mvs = MVarSet.from_model_name(name)
+            #target_class = CompartmentalMatrix
+            #if target_class in mvs.computable_mvar_types():
+            #    res = mvs._get_single_mvar_value(target_class)
+            #else:
+            #    res = f"can not compute {target_class}" 
+            #out = widgets.Output()
+            #with out:
+            #    display(res)
+            #self[i, 1:9] = out
 
 class GeneralMvarSetListGridBox(widgets.GridspecLayout):
 

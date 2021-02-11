@@ -63,7 +63,7 @@ N = ImmutableMatrix([[V*E/(K+S),             0,       0,   0],
            [         0, V_U*B/(K_U+D),       0,   0],
            [         0,             0, r_B+r_E,   0],
            [         0,             0,       0, r_L]])
-B = CompartmentalMatrix(T_M * N)
+B = CompartmentalMatrix((T_M * N))
 #np1 = NumericParameterization(
 #    par_dict={
 #},

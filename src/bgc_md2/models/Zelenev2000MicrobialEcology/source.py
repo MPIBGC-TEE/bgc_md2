@@ -1,5 +1,5 @@
 import numpy as np
-from sympy import var, ImmutableMatrix, exp
+from sympy import var, Symbol, ImmutableMatrix, exp
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -10,33 +10,38 @@ from bgc_md2.resolve.mvars import (
     NumericStartValueDict,
     NumericSimulationTimes,
 )
-from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ..BibInfo import BibInfo
+from bgc_md2.resolve.MVarSet import MVarSet
 
 sym_dict = {
-        'X': 'microbial biomass pool' # "\\mu gC cm^{-3}"
-        ,'S': 'substrate pool' # "\\mu gC cm^{-3}"
-        ,'mu_max': 'maximal relative growth rate of bacteria' # "hr^{-1}"
-        ,'D_max': 'maximal relative death rate of bacteria' # "hr^{-1}"
-        ,'K_s': 'substrate constant for growth' # "\\mu gC cm^{-3}"
-        ,'K_d': 'substrate constant for death of bacteria' # "\\mu gC cm^{-3}"
-        ,'K_r': 'fraction of dead biomass recycling to substrate'
-        ,'theta': 'soil water content' # "ml\\text{ solution }cm^{-3}\\text{ soil}"
-        ,'Y': 'yield coefficient for bacteria'
-        ,'ExuM': 'maximal exudation rate' # "\\mu gC hr^{-1}cm^{-3}"
-        ,'ExuT': 'time constant for exudation, responsible for duration of exudation' # "hr^{-1}"
-        ,'BGF': 'constant background flux of substrate' # "\\mu g C cm^{-3}hr^{-1}"
-        ,'mu_S': 'relative growth rate of bacteria (dependent on substrate concentration)'
-        ,'Exu': 'exudation rate (dependent on time)'
-        ,'t': 'TimeSymbol("t")' # unit: "hour"
+        'X': 'microbial biomass pool',  # "\\mu gC cm^{-3}"
+        'S': 'substrate pool',  # "\\mu gC cm^{-3}"
+        'mu_max': 'maximal relative growth rate of bacteria',  # "hr^{-1}"
+        'D_max': 'maximal relative death rate of bacteria',  # "hr^{-1}"
+        'K_s': 'substrate constant for growth',  # "\\mu gC cm^{-3}"
+        'K_d': 'substrate constant for death of bacteria',  # "\\mu gC cm^{-3}"
+        'K_r': 'fraction of dead biomass recycling to substrate',
+        'theta': 'soil water content',
+        # "ml\\text{ solution }cm^{-3}\\text{ soil}"
+        #
+        'Y': 'yield coefficient for bacteria',
+        'ExuM': 'maximal exudation rate',  # "\\mu gC hr^{-1}cm^{-3}"
+        'ExuT': """time constant for exudation, 
+                responsible for duration of exudation""",  # "hr^{-1}"
+        'BGF': 'constant background flux of substrate',  # "\\mu g C cm^{-3}hr^{-1}"
+        'mu_S': 'relative growth rate of bacteria (dependent on substrate concentration)',
+        'Exu': 'exudation rate (dependent on time)',
 }
-
 for name in sym_dict.keys():
     var(name)
-mu_S = mu_max * S/(K_s*theta+S) # "hr^{-1}"
-Exu = ExuM * exp(-ExuT*t) # "hr^{-1}"
-t = TimeSymbol("t") # unit: "hour"
+
+# t is not an instance of  symbol but of TimeSymbol, Therefore it can not
+# created along with the other symbols but hast to be created before it appears
+# in  any expressions.
+t = TimeSymbol('t')  # in the original pub unit: "hour"
+
+mu_S = mu_max * S/(K_s*theta+S)  # "hr^{-1}"
+Exu = ExuM * exp(-ExuT*t)  # "hr^{-1}"
 x = StateVariableTuple((X, S))
 u = InputTuple((0, BGF + Exu))
 T = ImmutableMatrix([[ -1,  Y],

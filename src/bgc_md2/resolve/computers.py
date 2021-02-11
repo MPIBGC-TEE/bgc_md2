@@ -13,6 +13,7 @@ from .mvars import (
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonInputTuple,
+    VegetationCarbonStateVariableTuple,
     VegetationCarbonCompartmentalMatrix,
     NumericSimulationTimes,
     NumericParameterization,
@@ -32,6 +33,12 @@ from .mvars import (
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
+
+#def vegetation_carbon_compartmental_matrix_1(
+#    out_fluxes: OutFluxesBySymbol,
+#    internal_fluxes: InternalFluxesBySymbol,
+#    vcsv: VegetationCarbonStateVariableTuple
+#) -> VegetationCarbonCompartmentalMatrix:
 
 def smooth_reservoir_model_from_fluxes(
     in_fluxes: InFluxesBySymbol,
@@ -69,18 +76,19 @@ def compartmental_matrix_from_smooth_reservoir_model(
     return CompartmentalMatrix(smr.compartmental_matrix)
 
 
+def vegetation_carbon_input_tuple2(
+    u: InFluxesBySymbol,
+    vcsv: VegetationCarbonStateVariableTuple
+
+) -> VegetationCarbonInputTuple:
+    return VegetationCarbonInputTuple( (u[sv] for sv in vcsv))
+
+
 def vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar(
     u: VegetationCarbonInputScalar, b: VegetationCarbonInputPartitioningTuple
 ) -> VegetationCarbonInputTuple:
     return VegetationCarbonInputTuple(ImmutableMatrix(b) * u)
 
-
-# def vegetation_carbon_compartmental_matrix_from_compartmental_matrix_and_vegetation_carbon_state_variable_tuple(
-#       B:       CompartmentalMatrix,
-#       svt:     StateVariableTuple,
-#       vcsvt:   VegetationCarbonStateVariableTuple
-#    ) ->
-#    return CompartmentalMatrix(smr.compartmental_matrix)
 
 
 def numeric_model_run_1(
@@ -102,6 +110,7 @@ def numeric_parameterized_smooth_reservoir_model_1(
 ) -> NumericParameterizedSmoothReservoirModel:
     return NumericParameterizedSmoothReservoirModel(srm, para_num)
 
+
 def numeric_start_value_array_1(
     nsvd: NumericStartValueDict,
     svt: StateVariableTuple
@@ -109,11 +118,12 @@ def numeric_start_value_array_1(
     tup = tuple(nsvd[k] for k in svt)
     return NumericStartValueArray(tup)
 
+
 def numeric_start_value_array_2(
     smr: SmoothModelRun
 ) -> NumericStartValueArray:
-    tup = tuple(nsvd[k] for k in svt)
     return NumericStartValueArray(smr.start_values)
+
 
 def numeric_start_value_dict(
     nsva: NumericStartValueArray,
@@ -121,22 +131,25 @@ def numeric_start_value_dict(
 ) -> NumericStartValueDict:
     return NumericStartValueDict({sv:nsva[i]  for i,sv in enumerate(svt)})
 
+
 def numeric_solution_array_1(
     smr: SmoothModelRun
-    )->NumericSolutionArray:
+) -> NumericSolutionArray:
     return NumericSolutionArray(smr.solve())
 
+
 def quantity_parameterization_1(
-        np: NumericParameterization,
-        state_var_units: StateVarUnitTuple,
-        time_unit: Quantity
-    ) -> QuantityParameterization:
+    npar: NumericParameterization,
+    state_var_units: StateVarUnitTuple,
+    time_unit: Quantity
+) -> QuantityParameterization:
     return QuantityParameterization(
-        np.par_dict, 
-        np.func_dict,
+        npar.par_dict,
+        npar.func_dict,
         state_var_units,
         time_unit
     )
+
 
 def quantity_parameterized_smooth_reservoir_model_1(
     srm: SmoothReservoirModel,
@@ -144,12 +157,14 @@ def quantity_parameterized_smooth_reservoir_model_1(
 ) -> QuantityParameterizedSmoothReservoirModel:
     return QuantityParameterizedSmoothReservoirModel(srm, para_q)
 
+
 def quantity_start_value_array_1(
     qsvd: QuantityStartValueDict,
     svt: StateVariableTuple
 ) -> QuantityStartValueArray:
     tup = tuple(qsvd[k] for k in svt)
     return QuantityStartValueArray(tup)
+
 
 def quantity_model_run_1(
     qpsrm: QuantityParameterizedSmoothReservoirModel,
@@ -162,13 +177,15 @@ def quantity_model_run_1(
         times_q,
     )
 
+
 def quantity_solution_array_1(
     qmr: QuantityModelRun
-    )->QuantitySolutionArray:
+) -> QuantitySolutionArray:
     return QuantitySolutionArray(qmr.solve())
+
 
 def smooth_reservoir_model_2(
     smr: SmoothModelRun
-    )-> SmoothReservoirModel:
+) -> SmoothReservoirModel:
     return smr.model
 
