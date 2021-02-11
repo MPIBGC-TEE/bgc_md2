@@ -135,6 +135,7 @@ mvs = MVarSet({
         entryAuthorOrcid="0000-0003-0009-4169",
         entryCreationDate="12/4/2018",
         doi="",
+        sym_dict=sym_dict
 #        bibtex= "@incollection{Luo2012TE,
 #                 Address = {Berkeley},
 #                 Author = {Yiqi Luo and Ensheng Weng and Yuanhe Yang},

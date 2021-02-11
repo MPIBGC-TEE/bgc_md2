@@ -81,6 +81,39 @@ class InputTuple(tuple):
     the pool denoted by the nth state variable"""
     pass
 
+class CompartmentalMatrixStructure(ImmutableMatrix, MatrixExpr):
+    # Fixme mm 2/11/2021
+    # This class is merely defined as a RESULT of a cumputation
+    # and the only argument is likely to be an instance of
+    # CompartmentalMatrix.
+    # Nearly nothing can be computed FROM it.
+    # In the computability graph it is a dead end.
+    # In this light it seems a bit odd to provide
+    # the whole plethora of sympy ways to construct such a thing.
+    # This might be a recurring theme for other computations 
+    # that are merely projections, since they loose information.
+
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
+            if not(set(flat_list).issubset([1,0])):
+                raise TypeError('Adjacency matrices consist of zeros and ones only')
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
 
 class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
     """Create a CompartmentalMatrix (which is immutable).
@@ -133,42 +166,42 @@ class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
         obj._mat = flat_list
         return obj
 
-    def _entry(self, i, j, **kwargs):
-        return DenseMatrix.__getitem__(self, (i, j))
+    #def _entry(self, i, j, **kwargs):
+    #    return DenseMatrix.__getitem__(self, (i, j))
 
-    def __setitem__(self, *args):
-        raise TypeError("Cannot set values of {}".format(self.__class__))
+    #def __setitem__(self, *args):
+    #    raise TypeError("Cannot set values of {}".format(self.__class__))
 
-    def _eval_extract(self, rowsList, colsList):
-        # self._mat is a Tuple.  It is slightly faster to index a
-        # tuple over a Tuple, so grab the internal tuple directly
-        mat = self._mat
-        cols = self.cols
-        indices = (i * cols + j for i in rowsList for j in colsList)
-        return self._new(len(rowsList), len(colsList),
-                         Tuple(*(mat[i] for i in indices), sympify=False), copy=False)
+    #def _eval_extract(self, rowsList, colsList):
+    #    # self._mat is a Tuple.  It is slightly faster to index a
+    #    # tuple over a Tuple, so grab the internal tuple directly
+    #    mat = self._mat
+    #    cols = self.cols
+    #    indices = (i * cols + j for i in rowsList for j in colsList)
+    #    return self._new(len(rowsList), len(colsList),
+    #                     Tuple(*(mat[i] for i in indices), sympify=False), copy=False)
 
-    @property
-    def cols(self):
-        return self._cols
+    #@property
+    #def cols(self):
+    #    return self._cols
 
-    @property
-    def rows(self):
-        return self._rows
+    #@property
+    #def rows(self):
+    #    return self._rows
 
-    @property
-    def shape(self):
-        return self._rows, self._cols
+    #@property
+    #def shape(self):
+    #    return self._rows, self._cols
 
-    def as_immutable(self):
-        return self
+    #def as_immutable(self):
+    #    return self
 
-    def is_diagonalizable(self, reals_only=False, **kwargs):
-        return super().is_diagonalizable(
-            reals_only=reals_only, **kwargs)
+    #def is_diagonalizable(self, reals_only=False, **kwargs):
+    #    return super().is_diagonalizable(
+    #        reals_only=reals_only, **kwargs)
 
-    is_diagonalizable.__doc__ = DenseMatrix.is_diagonalizable.__doc__
-    is_diagonalizable = cacheit(is_diagonalizable)
+    #is_diagonalizable.__doc__ = DenseMatrix.is_diagonalizable.__doc__
+    #is_diagonalizable = cacheit(is_diagonalizable)
 
 
 

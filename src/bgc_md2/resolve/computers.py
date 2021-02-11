@@ -9,6 +9,7 @@ from .mvars import (
     TimeSymbol,
     StateVariableTuple,
     CompartmentalMatrix,
+    CompartmentalMatrixStructure,
     InputTuple,
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
@@ -55,7 +56,15 @@ def smooth_reservoir_model_from_fluxes(
         internal_fluxes=internal_fluxes,
     )
 
-
+def compartmental_matrix_structure_1(
+    c: CompartmentalMatrix,
+    ) -> CompartmentalMatrixStructure:
+    return CompartmentalMatrixStructure(
+            c.rows,
+            c.cols,
+            lambda i, j: c[i,j]!=0
+    )
+    
 def smooth_reservoir_model_from_input_tuple_and_matrix(
     u: InputTuple,
     B: CompartmentalMatrix,

@@ -17,7 +17,7 @@ from IPython.display import HTML
 
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# %load_ext autoreload
+# #%load_ext autoreload
 # %autoreload 2
 import bgc_md2.helper as h
 
@@ -50,6 +50,50 @@ li
 mvs1 =  MVarSet.from_model_name('Luo2012TE')
 mvs2 =  MVarSet.from_model_name('TECO')
 
+mvs1.get_InputTuple()
+
+mvs2.get_InputTuple()
+
+B1 = mvs1.get_CompartmentalMatrix();B1
+
+B2 = mvs2.get_CompartmentalMatrix();B2
 
 
+# The matrices look structurally similar. Lets check if this is really the case.
 
+# +
+from sympy import Matrix
+def MatrixStructure(M):
+    return Matrix(M.rows,M.cols,lambda i, j : 1 if M[i,j]!=0 else 0)
+
+S1 = MatrixStructure(B1)
+S2 = MatrixStructure(B2)
+for x in (S1,S2,S1 == S2):
+    display(x)
+
+# -
+
+# So the two matrices look very similar.
+# However this could still be very misleading since  the statevariables behind this discription could be very different.  
+# Lets look at the statevariables and their order as represented by the StatevariableTuple
+
+mvs1.get_StateVariableTuple()
+
+mvs2.get_StateVariableTuple()
+
+# Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
+
+bib1=mvs1.get_BibInfo();bib1.sym_dict
+
+
+bib2=mvs2.get_BibInfo();bib2.sym_dict
+
+
+# We can see that although the matrices are identical the ordering of the state variables differs between the two models!
+
+[bib1.sym_dict[str(sym)] for sym in mvs1.get_StateVariableTuple()]
+
+
+[bib2.sym_dict[str(sym)] for sym in mvs2.get_StateVariableTuple()]
+
+# So the positions of roots and woods is exchanged
