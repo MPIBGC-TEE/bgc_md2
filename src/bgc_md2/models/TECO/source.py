@@ -148,7 +148,6 @@ mvs = MVarSet({
 #                 Title = {Ecosystem Ecology},
 #                 Year = {2012}}
 #                 abstract = {"Ecosystem ecology is a subdiscipline of ecology that focuses on exchange of energy and materials between organisms and the environment. The materials that are commonly studied in ecosystem ecology include water, carbon, nitrogen, phosphorus, and other elements that organisms use as nutrients. The source of energy for most ecosystems is solar radiation. In this entry, material cy-cling and energy exchange are generally described before the carbon cycle is used as an example to illustrate our quantitative and theoretical understanding of ecosystem ecology."}",
-#        sym_dict=sym_dict
     ),
     B,  # the overall compartmental matrix
     Input,  # the overall input

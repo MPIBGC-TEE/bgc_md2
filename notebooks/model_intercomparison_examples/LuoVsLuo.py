@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -97,3 +97,7 @@ bib2=mvs2.get_BibInfo();bib2.sym_dict
 [bib2.sym_dict[str(sym)] for sym in mvs2.get_StateVariableTuple()]
 
 # So the positions of roots and woods is exchanged
+
+mvs1.
+
+

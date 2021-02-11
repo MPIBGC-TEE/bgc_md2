@@ -88,8 +88,8 @@ x_npleaf = Min(x_nleaf,x_pleaf)
 F_c = x_npleaf*x_npup*F_cmax #unit: "gC*m^{-2}*d^{-1}" 
 u = F_c
 x = StateVariableTuple((C_leaf, C_root, C_wood, C_j1, C_j2, C_j3, C_k1, C_k2, C_k3))
-b = (a_leaf, a_root, a_wood)
-Input = InputTuple((u * ImmutableMatrix(b),0,0,0,0,0,0))
+b = ImmutableMatrix((a_leaf, a_root, a_wood))
+Input = InputTuple(tuple(u*b)+(0,0,0,0,0,0))
 A = CompartmentalMatrix([
  [-mu_leaf*(b1l+b2l),         0        ,      0     ,          0         ,          0         ,           0        ,        0       ,        0       ,        0       ]
 ,[         0        ,-mu_root*(b1r+b2r),      0     ,          0         ,          0         ,           0        ,        0       ,        0       ,        0       ]
