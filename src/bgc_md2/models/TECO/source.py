@@ -105,8 +105,8 @@ xi = f_W*f_T
 t = TimeSymbol("t") # unit: "day"
 x = StateVariableTuple((x_1, x_2, x_3, x_4, x_5, x_6, x_7, x_8))
 u = GPP
-b = (b_1, b_2, b_3, 0, 0, 0, 0, 0)
-Input = InputTuple(u * ImmutableMatrix(b))
+b = ImmutableMatrix((b_1, b_2, b_3))
+Input = InputTuple(tuple(u*b)+(0, 0, 0, 0, 0))
 B = CompartmentalMatrix(
 [[  -c_1,     0,     0,     0,     0,     0,     0,     0],
 [   0,    -c_2,     0,     0,     0,     0,     0,     0],

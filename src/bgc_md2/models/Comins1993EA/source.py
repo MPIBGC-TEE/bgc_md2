@@ -90,9 +90,9 @@ d_7 = 0.00013*AT_soil
 AT_soil = 0.0326 + 0.00351*(T_soil)**(1.652) - (T_soil/41.748)**7.19
 x = StateVariableTuple((C_f, C_w, C_r, C_u, C_m, C_v, C_n, C_a, C_s, C_p))
 u = G
-b = (eta_f, eta_w, eta_r)
+b = ImmutableMatrix((eta_f, eta_w, eta_r))
 t = TimeSymbol("t") #'yr'
-Input = InputTuple((u * ImmutableMatrix(b),0,0,0,0,0,0,0))
+Input = InputTuple(tuple(u*b)+(0,0,0,0,0,0,0))
 A = CompartmentalMatrix(
 [[  -gamma_f  ,    0   ,      0     ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ]
 ,[      0     ,-gamma_w,      0     ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ,    0   ]

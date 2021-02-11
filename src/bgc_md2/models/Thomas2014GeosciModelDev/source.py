@@ -105,8 +105,8 @@ x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_l
 #x = StateVariableTuple((C_leaf, C_wood, C_root, C_labile, C_bud, C_labileRa, N_leaf, N_wood, N_root, N_labile, N_bud))
 u = GPP
 #            exprs: "u = Matrix(11,1,[, , , GPP, , + , a_budN2leaf, a_woodN, a_rootN, U_NH4+U_NO3+U_Nfix+t_retransN+a_budN2Ramain, a_budN2leaf])"
-b = (1,0,0,0,0,0)
-Input = InputTuple((u*ImmutableMatrix(b),0,0,0))
+b = ImmutableMatrix((1,0,0,0,0,0))
+Input = InputTuple(tuple(u*b)+(0,0,0))
 A = CompartmentalMatrix(
 [[-(a_budC+a_rootC+a_woodC+a_labileRamain+Ra_growth+Ra_excess)/C_labile,0,0,0,0,0,0,0,0],
 [                            a_budC/C_labile                           ,-(a_budC2leaf+a_budC2Ramain)/C_bud,0,0,0,0,0,0,0],

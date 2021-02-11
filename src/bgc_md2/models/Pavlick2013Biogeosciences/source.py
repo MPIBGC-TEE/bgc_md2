@@ -128,8 +128,8 @@ DEC_SOIL = (Q_10h**((T-20)/10)) * C_SOIL / tau_SOIL
 
 x = StateVariableTuple((C_A, C_S, C_L, C_R, C_WL, C_WR, C_LIT, C_CWD, C_SOIL))
 u = NPP
-b = (1,0,0,0,0,0)
-Input = InputTuple((u*ImmutableMatrix(b),0,0,0))
+b = ImmutableMatrix((1,0,0,0,0,0))
+Input = InputTuple(tuple(u*b)+(0,0,0))
 A = CompartmentalMatrix(
 [[-((A_S*(1-C_RES_S))+(A_L*(1-C_RES_L))+(A_R*(1-C_RES_R))+(A_WL*(1-C_RES_WL))+(A_WR*(1-C_RES_WR))),f_GERM*gamma_GERM*(1/Max(p,k_GERM)),0,0,0,0,0,0,0]
 ,[(A_S*(1-C_RES_S)),-(f_GERM*gamma_GERM*(1/Max(p,k_GERM)))-(1/tau_S),0,0,0,0,0,0,0]

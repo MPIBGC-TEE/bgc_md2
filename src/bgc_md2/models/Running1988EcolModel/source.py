@@ -41,10 +41,8 @@ for name in sym_dict.keys():
 #Model based on Fig. 1 in page 127 (3 in the PDF) of doi= "10.1016/0304-3800(88)90112-3", no ODEs in publication
 t = TimeSymbol("t") #"the model has a daily and a yearly component. Allocation occurs yearly"
 x = StateVariableTuple((C_f, C_r, C_w,C_frl,C_s))
-u 
-b = (eta_f, eta_w, eta_r)
-#Input = InputTuple(u * ImmutableMatrix(b))
-Input = InputTuple((u * ImmutableMatrix(b),0,0))
+b = ImmutableMatrix((eta_f, eta_w, eta_r))
+Input = InputTuple(tuple(u * b)+(0,0))
 A = CompartmentalMatrix(
 [[-gamma_f,    0   ,    0   ,   (l_p*eta_f)  ,(s_p*eta_f)],
  [    0   ,-gamma_r,    0   ,   (l_p*eta_r)  ,(s_p*eta_r)],
