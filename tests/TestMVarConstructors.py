@@ -14,7 +14,7 @@ class TestInputTuple(unittest.TestCase):
         I = InputTuple((1, 1))
         print(I, type(I))
     def test_creation_from_matrix(self):
-        I = InputTuple((ImmutableMatrix((1,1))))
+        I = InputTuple(ImmutableMatrix((1,1)))
         print(I, type(I))
 
 class TestCompartmentalMatrix(unittest.TestCase):
