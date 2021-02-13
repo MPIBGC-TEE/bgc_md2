@@ -142,9 +142,13 @@ task_list = [
         "computation": "pool_age_median",
         "overwrite": False,
         "func": CARDAMOMlib.compute_pool_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.5, # median
+            "maxsize": nr_times # maximum cache size
+        },
+        "timeouts": [20, 30, 60, 80, 100, 120, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -156,9 +160,13 @@ task_list = [
         "computation": "pool_age_quantile_05",
         "overwrite": False,
         "func": CARDAMOMlib.compute_pool_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.05,
+            "maxsize": nr_times # maximum cache size
+        },
+        "timeouts": [20, 30, 60, 80, 100, 120, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -170,8 +178,12 @@ task_list = [
         "computation": "pool_age_quantile_95",
         "overwrite": False,
         "func": CARDAMOMlib.compute_pool_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.95,
+            "maxsize": nr_times # maximum cache size
+        },
+        "timeouts": [20, 30, 60, 80, 100, 120, np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -182,11 +194,15 @@ task_list = [
     },
     {#4:
         "computation": "system_age_median",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_system_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.5,
+            "maxsize": 3*nr_times # maximum cache size
+        },
+        "timeouts": [20, 60, 120, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -196,11 +212,15 @@ task_list = [
     },
     {#5:
         "computation": "system_age_quantile_05",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_system_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.05,
+            "maxsize": 3*nr_times # maximum cache size
+        },
+        "timeouts": [20, 60, 120, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -210,11 +230,15 @@ task_list = [
     },
     {#6:
         "computation": "system_age_quantile_95",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_system_age_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.95,
+            "maxsize": 3*nr_times # maximum cache size
+        },
+        "timeouts": [90, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -224,7 +248,7 @@ task_list = [
     },
     {#7:
         "computation": "acc_net_external_output_vector",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_acc_net_external_output_vector,
         "func_args": dict(),
         "timeouts": [np.inf],
@@ -238,11 +262,15 @@ task_list = [
     },
     {#8:
         "computation": "btt_median",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # nr_time_steps for faking eq model 0.5 for the median
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.5,
+            "maxsize": nr_times # maximum cache size
+        },
+        "timeouts": [10, 20, 30, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -252,11 +280,15 @@ task_list = [
     },
     {#9:
         "computation": "btt_quantile_05",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05},
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.05,
+            "maxsize": 3*nr_times # maximum cache size
+        },
+        "timeouts": [20, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -266,11 +298,15 @@ task_list = [
     },
     {#10:
         "computation": "btt_quantile_95",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95},
-        "timeouts": [np.inf],
-        "batch_size": 500,
+        "func_args": {
+            "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
+            "q": 0.95,
+            "maxsize": 3*nr_times # maximum cache size
+        },
+        "timeouts": [30, np.inf],
+        "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -291,7 +327,9 @@ for task in task_list:
 # +
 # %%time
 
-for task in task_list:
+for task in task_list[9:]:
+#for task_index in [6]:
+#    task = task_list[task_index]
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -304,6 +342,15 @@ for task in task_list:
         slices
     )
 # -
+
+
+
+
+
+
+
+
+
 
 
 

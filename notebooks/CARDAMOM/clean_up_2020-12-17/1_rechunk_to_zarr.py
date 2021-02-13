@@ -31,7 +31,10 @@ from bgc_md2.models.CARDAMOM import CARDAMOMlib
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=12)
+my_cluster = CARDAMOMlib.prepare_cluster(
+    n_workers=12,
+#    alternative_dashboard_port=8792
+)
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -59,18 +62,24 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution = "monthly"
+#time_resolution, delay_in_months = "monthly", None
+time_resolution, delay_in_months = "yearly", 0
+#time_resolution, delay_in_months = "yearly", 6
 
 # +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+
 target_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
+if time_resolution == "yearly":
+    target_path = data_path.joinpath(time_resolution + "_%02d_rechunked_zarr" % delay_in_months)
+print("target_path:", target_path)
 
 # daily zarr archives can be created by "convert_to_daily_time_step.ipynb"
 # yearly xarray.Dataset data can be created by "convert_to_yearly_time_step.ipynb"
 if time_resolution == "monthly":
     ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
 elif time_resolution == "yearly":
-    ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
+    ds = xr.open_dataset(data_path.joinpath("yearly_%02d_ds.nc" % delay_in_months))
 else:
     raise(ValueError("data can only be rechunked to monthly and yearly zarr archives by now"))
 ds

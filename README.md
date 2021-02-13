@@ -74,7 +74,17 @@ In the second case the same assistance is required for queries, which are best d
 * Compute the maximum set of `Mvars` we can compute for a given set of models
 * ...
 
+# Contribution
+We try to keep the master green and develop new features or bug fixes in short lived branches that are then 
+merged back into the master https://nvie.com/posts/a-successful-git-branching-model/
+See also https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell
+https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependencies.
 
+* Example workflow to work on a feature branch `iss26-non-importable-models` you are asked to review 
+  * `git branch -a` (shows all branches including remotes)
+  * `git checkout --track origin/iss26-non-importable-models` (creates a local copy that you can test)
+* Example to create your own feature branch (here to fix an issue )
+  * `git checkout -b iss53`
 
 ## various notes on implementation
 

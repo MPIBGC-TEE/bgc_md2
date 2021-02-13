@@ -29,24 +29,24 @@ data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 netCDF_file = "sol_acc_age_btt.nc"
 
 data_combinations = [
-    ("discrete", "monthly"), # the only one available by now, only 1st ensemble member (prob=11)
-#    ("discrete", "daily"),
-#    ("continuous", "monthly"),
-#    ("continuous", "yearly")
+    ("monthly", None, "discrete"),
+    ("monthly", None, "continuous")
 ]
 
 datasets = dict()
 for dc in data_combinations:
-    model_type, time_resolution = dc
-    params = CARDAMOMlib.load_params(time_resolution)
+    time_resolution, delay_in_months, model_type = dc
+    params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
     output_path = data_path.joinpath(data_path.joinpath(params["output_folder"]))
     project_path = output_path.joinpath(model_type)
 
     ds_path = project_path.joinpath(netCDF_file)
     print(dc, ds_path)
     datasets[dc] = xr.open_dataset(ds_path)
-# -
-ds = datasets[("discrete", "monthly")]
+# +
+#ds = datasets[("monthly", None, "discrete")]
+ds = datasets[("monthly", None, "continuous")]
+
 ds
 
 
@@ -85,7 +85,7 @@ plt.tight_layout()
 plt.draw()
 # -
 
-# This plot shows that we have outliers. The easy way to visualize the data without the outliers is to pass the parameter robust=True. This will use the 2nd and 98th percentiles of the data to compute the color limits.
+# This plot shows that we have outliers. The easiest way to visualize the data without the outliers is to pass the parameter robust=True. This will use the 2nd and 98th percentiles of the data to compute the color limits.
 
 # +
 fig, axes = plt.subplots(ncols=2, figsize=(12,6))
@@ -137,9 +137,9 @@ pool_names = ["Soil", "Litter"]
 
 var_names = [
     "mean_pool_age_vector",
-    "pool_age_median",
-    "pool_age_quantile_05",
-    "pool_age_quantile_95",
+#    "pool_age_median",
+#    "pool_age_quantile_05",
+#    "pool_age_quantile_95",
     "pool_age_sd_vector"
 ]
 
