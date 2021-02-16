@@ -64,8 +64,33 @@ class TimeSymbol(Symbol):
     # should become a quantity with dimension time
     pass
 
+class MatrixLike(ImmutableMatrix):
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
 
-class StateVariableTuple(ImmutableMatrix):
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
+
+class ColumnVectorLike(MatrixLike):
+    # fixme add some check that there is only one column...
+    pass
+
+class StateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
     """Defines the ordering of the state variables.
@@ -75,28 +100,9 @@ class StateVariableTuple(ImmutableMatrix):
     level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
     on the ordering and have to be consistent."""
 
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
+    pass
 
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
-
-class VegetationCarbonStateVariableTuple(ImmutableMatrix):
+class VegetationCarbonStateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
     """Defines the ordering of the vegetation carbon state variables.
@@ -105,83 +111,25 @@ class VegetationCarbonStateVariableTuple(ImmutableMatrix):
     Although two models with identical vegetation carbon fluxes between their pools are identical on a physical
     level the coordinate based variables like the VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend 
     on the ordering and have to be consistent."""
+    pass
 
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
 
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
-
-class InputTuple(ImmutableMatrix):
+class InputTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
     """The coordinates of the input flux vector
     The interpretation requires the statevector since the nth entry is interpreted as input to 
     the pool denoted by the nth state variable"""
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
-
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
-
+    pass
 
 # vegetation specific variables
-class VegetationCarbonInputTuple(ImmutableMatrix):
+class VegetationCarbonInputTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
     """The coordinates of the vegetation part of the the Carbon input flux vector
     Note that this will affect 
     """
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
-
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
+    pass
 
 
 class VegetationCarbonInputScalar(Expr):
@@ -189,7 +137,7 @@ class VegetationCarbonInputScalar(Expr):
 
 
 #class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
-class CompartmentalMatrix(ImmutableMatrix):
+class CompartmentalMatrix(MatrixLike):
     """Create a CompartmentalMatrix (which is immutable).
 
     Examples
@@ -208,71 +156,25 @@ class CompartmentalMatrix(ImmutableMatrix):
     TypeError: Cannot set values of CompartmentalMatrix
     """
 
-#    # MatrixExpr is set as NotIterable, but we want explicit matrices to be
-#    # iterable
-#    _iterable = True
-#    _class_priority = 8
-#    _op_priority = 10.001
-#
-#    def __new__(cls, *args, **kwargs):
-#        return cls._new(*args, **kwargs)
-#
-#    __hash__ = MatrixExpr.__hash__
-
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], CompartmentalMatrix):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
-
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
 
 
-class VegetationCarbonInputPartitioningTuple(ImmutableMatrix):
+#class VegetationCarbonInputPartitioningTuple(ImmutableMatrix):
+class VegetationCarbonInputPartitioningTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
     """The partitioning components vector
     The order will affect the VegetationCarbonInput"""
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
-
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
     pass
 
 
-class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
+#class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
+class VegetationCarbonCompartmentalMatrix(MatrixLike):  # cycling matrix
     """Create a CompartmentalMatrix (which is immutable) for the vegetation part only.
     Note that for the same physical model this matrix can take different shapes, depending
     on the order of the vegetation state variables (as defined via the VegetationStateVariableTuple)
+    
+    It is more likely that you will not create this matrix itself since it can easily be computed
+    from the VegetationCarbonStateVariables and the CompartmentalMatrix for the whole system. (or the carbon cycle)
 
     Examples
     ========
@@ -289,38 +191,6 @@ class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
     ...
     TypeError: Cannot set values of ImmutableDenseMatrix
     """
-
-    # MatrixExpr is set as NotIterable, but we want explicit matrices to be
-    # iterable
-    _iterable = True
-    _class_priority = 8
-    _op_priority = 10.001
-
-    def __new__(cls, *args, **kwargs):
-        return cls._new(*args, **kwargs)
-
-    __hash__ = MatrixExpr.__hash__
-
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
-
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
     pass
 
 
@@ -395,8 +265,10 @@ class QuantityStartValueArray(np.ndarray):
     def __hash__(self):
         return hash(tuple(self))
 
+
 class QuantityStartValueDict(frozendict):
     pass
+
 
 class QuantitySimulationTimes(np.ndarray):
     def __new__(cls, input_array):

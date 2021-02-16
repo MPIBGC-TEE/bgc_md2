@@ -78,6 +78,11 @@ def smooth_reservoir_model_from_input_tuple_and_matrix(
         u=ImmutableMatrix(u),
     )
 
+#def influxes_by_symbol_1(
+#    u: InputTuple,
+#    svt: StateVariableTuple
+#) -> InFluxesBySymbol:
+#    InFluxesBySymbol({ key:val for 
 
 def compartmental_matrix_from_smooth_reservoir_model(
     smr: SmoothReservoirModel,
