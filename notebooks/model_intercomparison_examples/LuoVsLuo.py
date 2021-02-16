@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.6.0
+#       jupytext_version: 1.7.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -29,34 +29,36 @@ from bgc_md2.resolve.MVarSet import MVarSet
 # This time we are only interested in Vegetation models and Carbon input partitioning. Therefore we look for models for which the variable
 # `VegetationCarbonInputPartitioningTuple` is defined or computable.
 
-li = h.list_target_models(
-    target_classes=frozenset(
-        {
-            CompartmentalMatrix,
-            StateVariableTuple,
-            VegetationCarbonInputPartitioningTuple,
-            VegetationCarbonInputTuple
-            
-        }
-    ),
-    # explicit_exclude_models=frozenset({'CARDAMOM'})
-)
-li    
+# +
+#li = h.list_target_models(
+#    target_classes=frozenset(
+#        {
+#            CompartmentalMatrix,
+#            StateVariableTuple,
+#            VegetationCarbonInputPartitioningTuple,
+#            VegetationCarbonInputTuple
+#            
+#        }
+#    ),
+#    # explicit_exclude_models=frozenset({'CARDAMOM'})
+#)
+#li    
+# -
 
 
 # From these we chose two models to investigate more thoroughly.
 #
 
-mvs1 =  MVarSet.from_model_name('Luo2012TE')
-mvs2 =  MVarSet.from_model_name('TECO')
+mvs_Luo =  MVarSet.from_model_name('Luo2012TE')
+mvs_TECO =  MVarSet.from_model_name('TECO')
 
-mvs1.get_InputTuple()
+mvs_Luo.get_InputTuple()
 
-mvs2.get_InputTuple()
+mvs_TECO.get_InputTuple()
 
-B1 = mvs1.get_CompartmentalMatrix();B1
+B_Luo = mvs_Luo.get_CompartmentalMatrix();B_Luo
 
-B2 = mvs2.get_CompartmentalMatrix();B2
+B_TECO = mvs_TECO.get_CompartmentalMatrix();B_TECO
 
 
 # The matrices look structurally similar. Lets check if this is really the case.
@@ -66,38 +68,95 @@ from sympy import Matrix
 def MatrixStructure(M):
     return Matrix(M.rows,M.cols,lambda i, j : 1 if M[i,j]!=0 else 0)
 
-S1 = MatrixStructure(B1)
-S2 = MatrixStructure(B2)
-for x in (S1,S2,S1 == S2):
+S_Luo = MatrixStructure(B_Luo)
+S_TECO = MatrixStructure(B_TECO)
+for x in (S_Luo,S_TECO,S_Luo == S_TECO):
     display(x)
 
 # -
 
 # So the two matrices look very similar.
-# However this could still be very misleading since  the statevariables behind this discription could be very different.  
-# Lets look at the statevariables and their order as represented by the StatevariableTuple
+# However this could still be  misleading since  the state variables behind this description could be different.  
+# Lets look at the state variables and their order as represented by the `StatevariableTuple`
 
-mvs1.get_StateVariableTuple()
+mvs_Luo.get_StateVariableTuple()
 
-mvs2.get_StateVariableTuple()
+mvs_TECO.get_StateVariableTuple()
 
-# Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
+# Ok not very informative. Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
 
-bib1=mvs1.get_BibInfo();bib1.sym_dict
-
-
-bib2=mvs2.get_BibInfo();bib2.sym_dict
+bib_Luo=mvs_Luo.get_BibInfo();bib_Luo.sym_dict
 
 
-# We can see that although the matrices are identical the ordering of the state variables differs between the two models!
-
-[bib1.sym_dict[str(sym)] for sym in mvs1.get_StateVariableTuple()]
+bib_TECO=mvs_TECO.get_BibInfo();bib_TECO.sym_dict
 
 
-[bib2.sym_dict[str(sym)] for sym in mvs2.get_StateVariableTuple()]
+# We can see that although the matrix structures are identical the meaning of the state variables differs between the two models!
 
-# So the positions of roots and woods is exchanged
-
-mvs1.
+[bib_Luo.sym_dict[str(sym)] for sym in mvs_Luo.get_StateVariableTuple()]
 
 
+[bib_TECO.sym_dict[str(sym)] for sym in mvs_TECO.get_StateVariableTuple()]
+
+# So the positions of **root**  and **wood** carbon pools is exchanged in the state vectors. 
+# To check more easily what is going on, we choose more descriptive names for the state variables that are not related to a specific indexing scheme.
+# The names are chosen to reflect the meaning as recorded in bib_TECO.sym_dict (as printed above).
+
+
+rename_dict = {
+        "x_1":    "C_foliage",
+        "x_2":    "C_roots",
+        "x_3":    "C_wood",
+        "x_4":    "C_metlit",
+        "x_5":    "C_stlit",
+        "x_6":    "C_fastsom",
+        "x_7":    "C_slowsom",
+        "x_8":    "C_passsom",
+        "b_1":    "b_foliage",
+        "b_2":    "b_roots",
+        "b_3":    "b_wood",
+        "c_1":    "cr_foliage",
+        "c_2":    "cr_wood",
+        "c_3":    "cr_fineroot",
+        "c_4":    "cr_metlit",
+        "c_5":    "cr_stlit",
+        "c_6":    "cr_fastsom",
+        "c_7":    "cr_slowsom",
+        "c_8":    "cr_passsom",
+        "f_41":   "f_foliage2metlit",
+        "f_51":   "f_foliage2stlit",
+        "f_52":   "f_wood2stlit",
+        "f_43":   "f_fineroots2metlit",
+        "f_53":   "f_fineroots2stlit",
+        "f_64":   "f_metlit2fastsom",
+        "f_65":   "f_stlit2fastsom",
+        "f_75":   "f_stlit2slowsom",
+        "f_76":   "f_fastsom2slowsom",
+        "f_86":   "f_fastsom2passsom",
+        "f_67":   "f_slowsom2fastsom",
+        "f_87":   "f_slowsom2passsom",
+        "f_68":   "f_passsom2fastsom",
+}
+from sympy import var, Symbol
+for old, new in rename_dict.items():
+    var(old)
+    var(new)
+subs_dict = { 
+    Symbol(old): Symbol(new)
+    for old, new in rename_dict.items()
+}
+# We want to compute the fluxes with renamed symbols.
+# We first check what we have to substitute.
+# +
+
+mvs_TECO.provided_mvar_types
+
+
+# -
+
+
+mvs_TECO.get_StateVariableTuple().subs(subs_dict)
+
+display(mvs_TECO.get_CompartmentalMatrix().subs(subs_dict),mvs_TECO.get_StateVariableTuple().subs(subs_dict))
+
+This description makes obvious that the matrix and Statevector are probably not consistent.
