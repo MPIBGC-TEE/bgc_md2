@@ -1,21 +1,87 @@
 import unittest
-from sympy import Matrix,ImmutableMatrix
+from sympy import Matrix, ImmutableMatrix, symbols, Symbol
 from bgc_md2.resolve.mvars import (
     TimeSymbol,
     StateVariableTuple,
     InputTuple,
+    VegetationCarbonInputPartitioningTuple,
+    VegetationCarbonInputScalar,
+    VegetationCarbonInputTuple,
     CompartmentalMatrix,
-    CompartmentalMatrixStructure,
+    # CompartmentalMatrixStructure,
 )
+
+class TestStateVariableTuple(unittest.TestCase):
+    def test_creation(self):
+        a,b,c = symbols('a b c')
+        X = StateVariableTuple((a, b))
+        self.assertEqual(type(X), StateVariableTuple)
+        print(X, type(X))
+        Y = X.subs({b:c})
+        print(Y, type(Y))
+        self.assertEqual(type(Y), StateVariableTuple)
+
+
+class TestVegetationCarbonInputScalar(unittest.TestCase):
+    def test_creation(self):
+        a,b,c = symbols('a b c')
+
+        u = VegetationCarbonInputScalar(a)
+        self.assertEqual(type(u), VegetationCarbonInputScalar)
+
+        v = u.subs({a:b})
+        self.assertEqual(type(v), VegetationCarbonInputScalar)
+
+        u = VegetationCarbonInputScalar(1)
+        self.assertEqual(type(u), VegetationCarbonInputScalar)
 
 
 class TestInputTuple(unittest.TestCase):
-    def test_shape(self):
+    def test_creation(self):
+        a,b,c = symbols('a b c')
+        I = InputTuple((a, b))
+        self.assertEqual(type(I), InputTuple)
+        
+        J = I.subs({b:c})
+        self.assertEqual(type(J), InputTuple)
+
         I = InputTuple((1, 1))
-        print(I, type(I))
-    def test_creation_from_matrix(self):
-        I = InputTuple(ImmutableMatrix((1,1)))
-        print(I, type(I))
+        self.assertEqual(type(I), InputTuple)
+
+        M = Matrix((1, 1))
+        I = InputTuple(M)
+        self.assertEqual(type(I), InputTuple)
+
+        I1 = ImmutableMatrix(2,1,[1,3])
+        I2 = ImmutableMatrix(2,1,[1,3])
+        I = InputTuple(I1+I2)
+        self.assertEqual(type(I),InputTuple)
+        self.assertEqual(I[0,0],2)
+        self.assertEqual(I[1,0],6)
+
+class TestVegetationCarbonInputPartitioningTuple(unittest.TestCase):
+    def test_creation(self):
+        a,b,c = symbols('a b c')
+        I = VegetationCarbonInputPartitioningTuple((a, b))
+        self.assertEqual(type(I), VegetationCarbonInputPartitioningTuple)
+        
+        J = I.subs({b:c})
+        self.assertEqual(type(J), VegetationCarbonInputPartitioningTuple)
+
+        I = VegetationCarbonInputPartitioningTuple((1, 1))
+        self.assertEqual(type(I), VegetationCarbonInputPartitioningTuple)
+
+        M = Matrix((1, 1))
+        I = VegetationCarbonInputPartitioningTuple(M)
+        self.assertEqual(type(I), VegetationCarbonInputPartitioningTuple)
+
+        I1 = ImmutableMatrix(2,1,[1,3])
+        I2 = ImmutableMatrix(2,1,[1,3])
+        I = VegetationCarbonInputPartitioningTuple(I1+I2)
+        self.assertEqual(type(I),VegetationCarbonInputPartitioningTuple)
+        self.assertEqual(I[0,0],2)
+        self.assertEqual(I[1,0],6)
+
 
 class TestCompartmentalMatrix(unittest.TestCase):
     # fixme mm 2/11/2021:
@@ -51,71 +117,7 @@ class TestCompartmentalMatrix(unittest.TestCase):
         self.assertEqual(type(C), CompartmentalMatrix)
 
     def test_immutability(self):
-        A = CompartmentalMatrixStructure(2, 2, [1, 0, 1, 0])
+        A = CompartmentalMatrix(2, 2, [1, 0, 1, 0])
         with self.assertRaises(TypeError):
             A[1, 1] = 1
 
-
-class TestCompartmentalMatrixStructure(unittest.TestCase):
-    # Fixme mm 2/11/2021
-    # This class is merely defined as a RESULT of a cumputation
-    # and the only argument is likely to be an instance of
-    # CompartmentalMatrix.
-    # Nearly nothing can be computed FROM it.
-    # In the computability graph it is a dead end.
-    # In this light it seems a bit odd to provide
-    # the whole plethora of sympy ways to construct such a thing.
-    # This might be a recurring theme for other computations 
-    # that are merely projections, since they loose information.
-
-    def test_creation_from_list(self):
-        C = CompartmentalMatrixStructure(2, 2, [1, 0, 1, 0])
-        print(C, type(C))
-        self.assertEqual(type(C), CompartmentalMatrixStructure)
-        
-        with self.assertRaises(TypeError):
-            # Adjacency Matrices contain only zeros and ones
-            C = CompartmentalMatrixStructure(2, 2, [2, 0, 1, 0])
-
-    def test_creation_from_index_function(self):
-        C = CompartmentalMatrixStructure(2, 2, lambda i, j: i * j)
-        print(C, type(C))
-        self.assertEqual(type(C), CompartmentalMatrixStructure)
-        with self.assertRaises(TypeError):
-            # Adjacency Matrices contain only zeros and ones
-            C = CompartmentalMatrixStructure(2, 2, lambda i, j: i + j)
-
-    def test_creation_from_matrix(self):
-        A = Matrix(1, 1, [1])
-        B = Matrix(1, 1, [1])
-        D = A*B
-        C = CompartmentalMatrixStructure(D)
-        print(C, type(C))
-        self.assertEqual(type(C), CompartmentalMatrixStructure)
-        with self.assertRaises(TypeError):
-            # Adjacency Matrices contain only zeros and ones
-            A = Matrix(1, 1, [1])
-            B = Matrix(1, 1, [2])
-            D = A*B
-            C = CompartmentalMatrixStructure(D)
-
-    def test_creation_from_expression(self):
-        A = Matrix(1, 1, [1])
-        B = Matrix(1, 1, [1])
-        C = CompartmentalMatrixStructure(A*B)
-        print(C, type(C))
-        self.assertEqual(type(C), CompartmentalMatrixStructure)
-
-    def test_immutability(self):
-        A = CompartmentalMatrixStructure(2, 2, [1, 0, 1, 0])
-        with self.assertRaises(TypeError):
-            A[1, 1] = 1
-
-
-class TestInputTuple(unittest.TestCase):
-    def test_creation(self):
-        I1 = ImmutableMatrix(2,1,[1,3])
-        I2 = ImmutableMatrix(2,1,[1,3])
-        I = InputTuple(I1+I2)
-        print(I, type(I))
-        self.assertEqual(type(I),InputTuple)

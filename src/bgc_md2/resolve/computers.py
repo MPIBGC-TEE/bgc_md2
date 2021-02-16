@@ -9,7 +9,7 @@ from .mvars import (
     TimeSymbol,
     StateVariableTuple,
     CompartmentalMatrix,
-    CompartmentalMatrixStructure,
+    # CompartmentalMatrixStructure,
     InputTuple,
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
@@ -56,15 +56,6 @@ def smooth_reservoir_model_from_fluxes(
         internal_fluxes=internal_fluxes,
     )
 
-def compartmental_matrix_structure_1(
-    c: CompartmentalMatrix,
-    ) -> CompartmentalMatrixStructure:
-    return CompartmentalMatrixStructure(
-            c.rows,
-            c.cols,
-            lambda i, j: c[i,j]!=0
-    )
-    
 def smooth_reservoir_model_from_input_tuple_and_matrix(
     u: InputTuple,
     B: CompartmentalMatrix,
@@ -85,19 +76,25 @@ def compartmental_matrix_from_smooth_reservoir_model(
     return CompartmentalMatrix(smr.compartmental_matrix)
 
 
-def vegetation_carbon_input_tuple2(
+def vegetation_carbon_input_tuple_1(
+    u: VegetationCarbonInputScalar, b: VegetationCarbonInputPartitioningTuple
+) -> VegetationCarbonInputTuple:
+    return VegetationCarbonInputTuple(b * u)
+
+def vegetation_carbon_state_partitining_tuple_1(
+    u: VegetationCarbonInputScalar,
+    t: VegetationCarbonInputTuple
+) -> VegetationCarbonInputPartitioningTuple:
+    return VegetationCarbonInputPartitioningTuple(
+        ( tc/u for tc in t )
+    )
+            
+def vegetation_carbon_input_tuple_2(
     u: InFluxesBySymbol,
     vcsv: VegetationCarbonStateVariableTuple
 
 ) -> VegetationCarbonInputTuple:
-    return VegetationCarbonInputTuple( (u[sv] for sv in vcsv))
-
-
-def vegetation_carbon_input_tuple_from_vegetation_carbon_input_partinioning_tuple_and_vegetation_carbon_input_scalar(
-    u: VegetationCarbonInputScalar, b: VegetationCarbonInputPartitioningTuple
-) -> VegetationCarbonInputTuple:
-    return VegetationCarbonInputTuple(ImmutableMatrix(b) * u)
-
+    return VegetationCarbonInputTuple( [[u[sv] for sv in vcsv]])
 
 
 def numeric_model_run_1(

@@ -2,6 +2,8 @@ import unittest
 from sympy import (
     Symbol,
     symbols,
+    var,
+    sympify,
     Function,
     prod,
     sin,
@@ -14,6 +16,11 @@ from sympy import (
 import numpy as np
 
 from bgc_md2.resolve.mvars import (
+    InFluxesBySymbol,
+    VegetationCarbonInputScalar,
+    VegetationCarbonInputPartitioningTuple,
+    VegetationCarbonStateVariableTuple,
+    VegetationCarbonInputTuple,
     NumericParameterization,
     NumericStartValueDict,
     NumericStartValueArray,
@@ -24,7 +31,11 @@ from bgc_md2.resolve.mvars import (
     QuantitySimulationTimes,
     QuantityModelRun,
 )
-from bgc_md2.resolve.computers import quantity_model_run_1
+from bgc_md2.resolve.computers import (
+        quantity_model_run_1,
+        vegetation_carbon_input_tuple_1,
+        vegetation_carbon_input_tuple_2
+)
 from sympy.physics.units import days, day, kilogram, gram
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -94,3 +105,38 @@ class TestBGCComputers(unittest.TestCase):
         qmr = quantity_model_run_1(qpm, start_values_quant, times_quant)
         #qmr = QuantityModelRun(qpm, start_values_quant, times_quant)
         print(qmr.solve())
+
+class TestVegetationCarbonComputers(unittest.TestCase):
+    def test_vegetation_carbon_input_tuple_1(self):
+        for name in ("a_L","a_S","a_R"):
+            var(name)
+        u = VegetationCarbonInputScalar(sympify(1))
+        b = VegetationCarbonInputPartitioningTuple((a_L,a_S,a_R))
+        res_1 = u*b
+        print(type(res_1))
+
+        #res_2 = VegetationCarbonInputTuple(res_1)
+        #print(type(res_2))
+
+        #res_3 = vegetation_carbon_input_tuple_1(u,b)
+    
+
+    def test_vegetation_carbon_input_tuple_2(self):
+        Labile = Symbol("Labile")
+        Leaf = Symbol("Leaf")
+        Root = Symbol("Root")
+        Wood = Symbol("Wood")
+        gpp_to_labile = Symbol("gpp_to_labile")
+        gpp_to_leaf = Symbol("gpp_to_leaf")
+        gpp_to_root = Symbol("gpp_to_root")
+        gpp_to_wood = Symbol("gpp_to_wood")
+        d = {
+                𝙻𝚊𝚋𝚒𝚕𝚎: gpp_to_labile,
+                Leaf: gpp_to_leaf,
+                𝚁𝚘𝚘𝚝: gpp_to_root,
+                𝚆𝚘𝚘𝚍: gpp_to_wood
+        }
+        u = InFluxesBySymbol(d)
+        vcsv = VegetationCarbonStateVariableTuple((Labile, Leaf, Root, Wood))
+        res = vegetation_carbon_input_tuple_2(u, vcsv)
+        self.assertEqual(type(res),VegetationCarbonInputTuple)

@@ -65,33 +65,15 @@ class TimeSymbol(Symbol):
     pass
 
 
-class StateVariableTuple(tuple):
+class StateVariableTuple(ImmutableMatrix):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
     """Defines the ordering of the state variables.
     This defines the coordinate system and thereby
     the interpretation of all tuple or matrix related variables.
     Although two models with identical fluxes between there pools are identical on a physical
     level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
     on the ordering and have to be consistent."""
-    pass
-
-
-class InputTuple(tuple):
-    """The coordinates of the input flux vector 
-    The interpretation requires the statevector since the nth entry is interpreted as input to 
-    the pool denoted by the nth state variable"""
-    pass
-
-class CompartmentalMatrixStructure(ImmutableMatrix, MatrixExpr):
-    # Fixme mm 2/11/2021
-    # This class is merely defined as a RESULT of a cumputation
-    # and the only argument is likely to be an instance of
-    # CompartmentalMatrix.
-    # Nearly nothing can be computed FROM it.
-    # In the computability graph it is a dead end.
-    # In this light it seems a bit odd to provide
-    # the whole plethora of sympy ways to construct such a thing.
-    # This might be a recurring theme for other computations 
-    # that are merely projections, since they loose information.
 
     @classmethod
     def _new(cls, *args, **kwargs):
@@ -104,8 +86,7 @@ class CompartmentalMatrixStructure(ImmutableMatrix, MatrixExpr):
         else:
             rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
             flat_list = list(flat_list) # create a shallow copy
-            if not(set(flat_list).issubset([1,0])):
-                raise TypeError('Adjacency matrices consist of zeros and ones only')
+
         obj = Basic.__new__(cls,
             Integer(rows),
             Integer(cols),
@@ -115,7 +96,100 @@ class CompartmentalMatrixStructure(ImmutableMatrix, MatrixExpr):
         obj._mat = flat_list
         return obj
 
-class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
+class VegetationCarbonStateVariableTuple(ImmutableMatrix):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the vegetation carbon state variables.
+    The order defines the order of the axes in a vegetation related coordinate system 
+    and thereby the interpretation of all tuple or matrix related carbon vegetation variables.
+    Although two models with identical vegetation carbon fluxes between their pools are identical on a physical
+    level the coordinate based variables like the VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend 
+    on the ordering and have to be consistent."""
+
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
+
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
+
+class InputTuple(ImmutableMatrix):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the input flux vector
+    The interpretation requires the statevector since the nth entry is interpreted as input to 
+    the pool denoted by the nth state variable"""
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
+
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
+
+
+# vegetation specific variables
+class VegetationCarbonInputTuple(ImmutableMatrix):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the vegetation part of the the Carbon input flux vector
+    Note that this will affect 
+    """
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
+
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
+
+
+class VegetationCarbonInputScalar(Expr):
+    pass
+
+
+#class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
+class CompartmentalMatrix(ImmutableMatrix):
     """Create a CompartmentalMatrix (which is immutable).
 
     Examples
@@ -124,6 +198,88 @@ class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
     >>> from sympy import eye
     >>> from bgc_md2.resolve.mvars import CompartmentalMatrix
     >>> CompartmentalMatrix(eye(3))
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]])
+    >>> _[0, 0] = 42
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot set values of CompartmentalMatrix
+    """
+
+#    # MatrixExpr is set as NotIterable, but we want explicit matrices to be
+#    # iterable
+#    _iterable = True
+#    _class_priority = 8
+#    _op_priority = 10.001
+#
+#    def __new__(cls, *args, **kwargs):
+#        return cls._new(*args, **kwargs)
+#
+#    __hash__ = MatrixExpr.__hash__
+
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], CompartmentalMatrix):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
+
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
+
+
+class VegetationCarbonInputPartitioningTuple(ImmutableMatrix):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The partitioning components vector
+    The order will affect the VegetationCarbonInput"""
+    @classmethod
+    def _new(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        if kwargs.get('copy', True) is False:
+            if len(args) != 3:
+                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
+            rows, cols, flat_list = args
+        else:
+            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
+            flat_list = list(flat_list) # create a shallow copy
+
+        obj = Basic.__new__(cls,
+            Integer(rows),
+            Integer(cols),
+            Tuple(*flat_list))
+        obj._rows = rows
+        obj._cols = cols
+        obj._mat = flat_list
+        return obj
+    pass
+
+
+class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
+    """Create a CompartmentalMatrix (which is immutable) for the vegetation part only.
+    Note that for the same physical model this matrix can take different shapes, depending
+    on the order of the vegetation state variables (as defined via the VegetationStateVariableTuple)
+
+    Examples
+    ========
+
+    >>> from sympy import eye
+    >>> from bgc_md2.resolve.mvars import VegetationCarbonCompartmentalMatrix
+    >>> VegetationCarbonCompartmentalMatrix(eye(3))
     Matrix([
     [1, 0, 0],
     [0, 1, 0],
@@ -147,7 +303,7 @@ class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
 
     @classmethod
     def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], CompartmentalMatrix):
+        if len(args) == 1 and isinstance(args[0], cls):
             return args[0]
         if kwargs.get('copy', True) is False:
             if len(args) != 3:
@@ -165,64 +321,6 @@ class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
         obj._cols = cols
         obj._mat = flat_list
         return obj
-
-    #def _entry(self, i, j, **kwargs):
-    #    return DenseMatrix.__getitem__(self, (i, j))
-
-    #def __setitem__(self, *args):
-    #    raise TypeError("Cannot set values of {}".format(self.__class__))
-
-    #def _eval_extract(self, rowsList, colsList):
-    #    # self._mat is a Tuple.  It is slightly faster to index a
-    #    # tuple over a Tuple, so grab the internal tuple directly
-    #    mat = self._mat
-    #    cols = self.cols
-    #    indices = (i * cols + j for i in rowsList for j in colsList)
-    #    return self._new(len(rowsList), len(colsList),
-    #                     Tuple(*(mat[i] for i in indices), sympify=False), copy=False)
-
-    #@property
-    #def cols(self):
-    #    return self._cols
-
-    #@property
-    #def rows(self):
-    #    return self._rows
-
-    #@property
-    #def shape(self):
-    #    return self._rows, self._cols
-
-    #def as_immutable(self):
-    #    return self
-
-    #def is_diagonalizable(self, reals_only=False, **kwargs):
-    #    return super().is_diagonalizable(
-    #        reals_only=reals_only, **kwargs)
-
-    #is_diagonalizable.__doc__ = DenseMatrix.is_diagonalizable.__doc__
-    #is_diagonalizable = cacheit(is_diagonalizable)
-
-
-
-# vegetation specific variables
-class VegetationCarbonInputTuple(tuple):
-    pass
-
-
-class VegetationCarbonInputScalar(Expr):
-    pass
-
-
-class VegetationCarbonInputPartitioningTuple(tuple):
-    pass
-
-
-class VegetationCarbonStateVariableTuple(tuple):
-    pass
-
-
-class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
     pass
 
 
