@@ -11,25 +11,26 @@ from bgc_md2.resolve.mvars import (
     # CompartmentalMatrixStructure,
 )
 
+
 class TestStateVariableTuple(unittest.TestCase):
     def test_creation(self):
-        a,b,c = symbols('a b c')
+        a, b, c = symbols('a b c')
         X = StateVariableTuple((a, b))
         self.assertEqual(type(X), StateVariableTuple)
         print(X, type(X))
-        Y = X.subs({b:c})
+        Y = X.subs({b: c})
         print(Y, type(Y))
         self.assertEqual(type(Y), StateVariableTuple)
 
 
 class TestVegetationCarbonInputScalar(unittest.TestCase):
     def test_creation(self):
-        a,b,c = symbols('a b c')
+        a, b, c = symbols('a b c')
 
         u = VegetationCarbonInputScalar(a)
         self.assertEqual(type(u), VegetationCarbonInputScalar)
 
-        v = u.subs({a:b})
+        v = u.subs({a: b})
         self.assertEqual(type(v), VegetationCarbonInputScalar)
 
         u = VegetationCarbonInputScalar(1)
@@ -38,49 +39,50 @@ class TestVegetationCarbonInputScalar(unittest.TestCase):
 
 class TestInputTuple(unittest.TestCase):
     def test_creation(self):
-        a,b,c = symbols('a b c')
-        I = InputTuple((a, b))
-        self.assertEqual(type(I), InputTuple)
-        
-        J = I.subs({b:c})
+        a, b, c = symbols('a b c')
+        In = InputTuple((a, b))
+        self.assertEqual(type(In), InputTuple)
+
+        J = In.subs({b: c})
         self.assertEqual(type(J), InputTuple)
 
-        I = InputTuple((1, 1))
-        self.assertEqual(type(I), InputTuple)
+        In = InputTuple((1, 1))
+        self.assertEqual(type(In), InputTuple)
 
         M = Matrix((1, 1))
-        I = InputTuple(M)
-        self.assertEqual(type(I), InputTuple)
+        In = InputTuple(M)
+        self.assertEqual(type(In), InputTuple)
 
-        I1 = ImmutableMatrix(2,1,[1,3])
-        I2 = ImmutableMatrix(2,1,[1,3])
-        I = InputTuple(I1+I2)
-        self.assertEqual(type(I),InputTuple)
-        self.assertEqual(I[0,0],2)
-        self.assertEqual(I[1,0],6)
+        I1 = ImmutableMatrix(2, 1, [1, 3])
+        I2 = ImmutableMatrix(2, 1, [1, 3])
+        In = InputTuple(I1+I2)
+        self.assertEqual(type(In), InputTuple)
+        self.assertEqual(In[0, 0], 2)
+        self.assertEqual(In[1, 0], 6)
+
 
 class TestVegetationCarbonInputPartitioningTuple(unittest.TestCase):
     def test_creation(self):
-        a,b,c = symbols('a b c')
-        I = VegetationCarbonInputPartitioningTuple((a, b))
-        self.assertEqual(type(I), VegetationCarbonInputPartitioningTuple)
-        
-        J = I.subs({b:c})
+        a, b, c = symbols('a b c')
+        In = VegetationCarbonInputPartitioningTuple((a, b))
+        self.assertEqual(type(In), VegetationCarbonInputPartitioningTuple)
+
+        J = In.subs({b: c})
         self.assertEqual(type(J), VegetationCarbonInputPartitioningTuple)
 
-        I = VegetationCarbonInputPartitioningTuple((1, 1))
-        self.assertEqual(type(I), VegetationCarbonInputPartitioningTuple)
+        In = VegetationCarbonInputPartitioningTuple((1, 1))
+        self.assertEqual(type(In), VegetationCarbonInputPartitioningTuple)
 
         M = Matrix((1, 1))
-        I = VegetationCarbonInputPartitioningTuple(M)
-        self.assertEqual(type(I), VegetationCarbonInputPartitioningTuple)
+        In = VegetationCarbonInputPartitioningTuple(M)
+        self.assertEqual(type(In), VegetationCarbonInputPartitioningTuple)
 
-        I1 = ImmutableMatrix(2,1,[1,3])
-        I2 = ImmutableMatrix(2,1,[1,3])
-        I = VegetationCarbonInputPartitioningTuple(I1+I2)
-        self.assertEqual(type(I),VegetationCarbonInputPartitioningTuple)
-        self.assertEqual(I[0,0],2)
-        self.assertEqual(I[1,0],6)
+        I1 = ImmutableMatrix(2, 1, [1, 3])
+        I2 = ImmutableMatrix(2, 1, [1, 3])
+        In = VegetationCarbonInputPartitioningTuple(I1+I2)
+        self.assertEqual(type(In), VegetationCarbonInputPartitioningTuple)
+        self.assertEqual(In[0, 0], 2)
+        self.assertEqual(In[1, 0], 6)
 
 
 class TestCompartmentalMatrix(unittest.TestCase):
@@ -120,4 +122,6 @@ class TestCompartmentalMatrix(unittest.TestCase):
         A = CompartmentalMatrix(2, 2, [1, 0, 1, 0])
         with self.assertRaises(TypeError):
             A[1, 1] = 1
+
+
 
