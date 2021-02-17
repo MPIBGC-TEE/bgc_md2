@@ -22,6 +22,12 @@ class TestStateVariableTuple(unittest.TestCase):
         print(Y, type(Y))
         self.assertEqual(type(Y), StateVariableTuple)
 
+    def test_immutability(self):
+        a, b, c = symbols('a b c')
+        T = StateVariableTuple((a, b, c))
+        with self.assertRaises(TypeError):
+            T[1] = 1
+
 
 class TestVegetationCarbonInputScalar(unittest.TestCase):
     def test_creation(self):
@@ -60,6 +66,40 @@ class TestInputTuple(unittest.TestCase):
         self.assertEqual(In[0, 0], 2)
         self.assertEqual(In[1, 0], 6)
 
+    def test_immutability(self):
+        T = InputTuple([1, 0, 1, 0])
+        with self.assertRaises(TypeError):
+            T[1] = 1
+
+
+class TestVegetationCarbonInputTuple(unittest.TestCase):
+    def test_creation(self):
+        a, b, c = symbols('a b c')
+        In = VegetationCarbonInputTuple((a, b))
+        self.assertEqual(type(In), VegetationCarbonInputTuple)
+
+        J = In.subs({b: c})
+        self.assertEqual(type(J), VegetationCarbonInputTuple)
+
+        In = VegetationCarbonInputTuple((1, 1))
+        self.assertEqual(type(In), VegetationCarbonInputTuple)
+
+        M = Matrix((1, 1))
+        In = VegetationCarbonInputTuple(M)
+        self.assertEqual(type(In), VegetationCarbonInputTuple)
+
+        I1 = ImmutableMatrix(2, 1, [1, 3])
+        I2 = ImmutableMatrix(2, 1, [1, 3])
+        In = VegetationCarbonInputTuple(I1+I2)
+        self.assertEqual(type(In), VegetationCarbonInputTuple)
+        self.assertEqual(In[0, 0], 2)
+        self.assertEqual(In[1, 0], 6)
+
+    def test_immutability(self):
+        T = VegetationCarbonInputTuple([1, 0, 1, 0])
+        with self.assertRaises(TypeError):
+            T[1] = 1
+
 
 class TestVegetationCarbonInputPartitioningTuple(unittest.TestCase):
     def test_creation(self):
@@ -83,6 +123,11 @@ class TestVegetationCarbonInputPartitioningTuple(unittest.TestCase):
         self.assertEqual(type(In), VegetationCarbonInputPartitioningTuple)
         self.assertEqual(In[0, 0], 2)
         self.assertEqual(In[1, 0], 6)
+
+    def test_immutability(self):
+        T = VegetationCarbonInputPartitioningTuple([1, 0, 1, 0])
+        with self.assertRaises(TypeError):
+            T[1] = 1
 
 
 class TestCompartmentalMatrix(unittest.TestCase):
@@ -122,6 +167,4 @@ class TestCompartmentalMatrix(unittest.TestCase):
         A = CompartmentalMatrix(2, 2, [1, 0, 1, 0])
         with self.assertRaises(TypeError):
             A[1, 1] = 1
-
-
 

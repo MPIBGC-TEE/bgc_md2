@@ -60,6 +60,9 @@ Allo_fact_leaf = 1 - Allo_fact_stem - Allo_fact_roots
 a_L = Piecewise((((GPP*Allo_fact_leaf)-R_leaf),NPP<0),((NPP*Allo_fact_leaf),NPP>=0))
 a_S = Piecewise((((GPP*Allo_fact_stem)-R_stem),NPP<0),((NPP*Allo_fact_stem),NPP>=0))
 a_R = Piecewise((((GPP*Allo_fact_roots)-R_roots),NPP<0),((NPP*Allo_fact_roots),NPP>=0))
+# a_L = Piecewise((((GPP*Allo_fact_leaf)-R_leaf),NPP<0),((NPP*Allo_fact_leaf),NPP>=0))
+# a_S = Piecewise((((GPP*Allo_fact_stem)-R_stem),NPP<0),((NPP*Allo_fact_stem),NPP>=0))
+# a_R = Piecewise((((GPP*Allo_fact_roots)-R_roots),NPP<0),((NPP*Allo_fact_roots),NPP>=0))
 # 
 # u = VegetationCarbonInputPartitioningTuple((a_L,a_S,a_R))
 # 
@@ -97,6 +100,18 @@ b= VegetationCarbonInputPartitioningTuple(
 )
 
 
+b=VegetationCarbonInputScalar(
+    Piecewise((GPP,NPP<0),(NPP,NPP>=0))
+)
+u = VegetationCarbonInputPartitioningTuple(
+    (
+        Piecewise((Allo_fact_leaf-R_leaf/GPP,NPP<0),(Allo_fact_leaf,NPP>=0)),
+        Piecewise((Allo_fact_stem-R_stem/GPP,NPP<0),(Allo_fact_stem,NPP>=0)), 
+        Piecewise((Allo_fact_roots-R_roots/GPP,NPP<0),(Allo_fact_roots,NPP>=0))
+    )
+)
+# 
+#Input = InputTuple(b*u)
 #"f_v = u + A*x"
 A = CompartmentalMatrix(
 [[-(1/Y_leaf),0,0],

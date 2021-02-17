@@ -70,6 +70,18 @@ def smooth_reservoir_model_from_input_tuple_and_matrix(
     )
 
 
+def influxes_by_symbol_1(
+    u: InputTuple,
+    svt: StateVariableTuple
+) -> InFluxesBySymbol:
+    return InFluxesBySymbol(
+        {
+            var: InputTuple[ind] 
+            for ind,var in enumerate(svt)
+        }
+    )
+
+
 def compartmental_matrix_from_smooth_reservoir_model(
     smr: SmoothReservoirModel,
 ) -> CompartmentalMatrix:
@@ -81,20 +93,22 @@ def vegetation_carbon_input_tuple_1(
 ) -> VegetationCarbonInputTuple:
     return VegetationCarbonInputTuple(b * u)
 
-def vegetation_carbon_state_partitining_tuple_1(
-    u: VegetationCarbonInputScalar,
-    t: VegetationCarbonInputTuple
-) -> VegetationCarbonInputPartitioningTuple:
-    return VegetationCarbonInputPartitioningTuple(
-        ( tc/u for tc in t )
-    )
-            
+
 def vegetation_carbon_input_tuple_2(
     u: InFluxesBySymbol,
     vcsv: VegetationCarbonStateVariableTuple
 
 ) -> VegetationCarbonInputTuple:
-    return VegetationCarbonInputTuple( [[u[sv] for sv in vcsv]])
+    return VegetationCarbonInputTuple([[u[sv] for sv in vcsv]])
+
+
+def vegetation_carbon_state_partitining_tuple_1(
+    u: VegetationCarbonInputScalar,
+    t: VegetationCarbonInputTuple
+) -> VegetationCarbonInputPartitioningTuple:
+    return VegetationCarbonInputPartitioningTuple(
+        (tc/u for tc in t)
+    )
 
 
 def numeric_model_run_1(
