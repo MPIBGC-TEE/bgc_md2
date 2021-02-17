@@ -22,6 +22,7 @@ import pandas as pd
 import xarray as xr
 
 from pathlib import Path
+from tqdm import tqdm
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
@@ -60,9 +61,10 @@ Client(my_cluster)
 # and open link given above.
 
 #time_resolution, delay_in_months, model_type = "daily", None, "discrete"
-time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
-#time_resolution, delay_in_months = "yearly", 6
-#model_type = "continuous"
+time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
+#time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
@@ -72,7 +74,7 @@ output_path = data_path.joinpath(data_path.joinpath(params["output_folder"]))
 
 project_path = output_path.joinpath(model_type)
 print(project_path)
-netCDF_file = "sol_acc_age_btt.nc"
+netCDF_filestem = "sol_acc_age_btt"
 # -
 
 lats_da = da.from_zarr(str(project_path.joinpath("lat")))
@@ -87,7 +89,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 1, 1),
+    "prob": slice(0, 5, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -122,9 +124,9 @@ system_age_moment_2_da = (solution_da * pool_age_moment_vector_2_da).sum(-1) / s
 system_age_sd_da = da.sqrt(system_age_moment_2_da)
 
 # pool age median and quantiles
-#pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
-#pool_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_05")))
-#pool_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_95")))
+pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
+pool_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_05")))
+pool_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_95")))
 
 # system age median and quantiles
 system_age_median_da = da.from_zarr(str(project_path.joinpath("system_age_median")))
@@ -195,9 +197,9 @@ variables = [
     {"name": "pool_age_moment_vector_2", "da": pool_age_moment_vector_2_da/(31*12)**2, "unit": "yr^2"},
     {"name": "pool_age_sd_vector", "da": pool_age_sd_vector_da/(31*12), "unit": "yr"},
 
-#    {"name": "pool_age_median", "da": pool_age_median_da/(31*12), "unit": "yr"},
-#    {"name": "pool_age_quantile_05", "da": pool_age_quantile_05_da/(31*12), "unit": "yr"},
-#    {"name": "pool_age_quantile_95", "da": pool_age_quantile_95_da/(31*12), "unit": "yr"},
+    {"name": "pool_age_median", "da": pool_age_median_da/(31*12), "unit": "yr"},
+    {"name": "pool_age_quantile_05", "da": pool_age_quantile_05_da/(31*12), "unit": "yr"},
+    {"name": "pool_age_quantile_95", "da": pool_age_quantile_95_da/(31*12), "unit": "yr"},
 
 ]
 if model_type == "continuous":
@@ -263,11 +265,18 @@ ds
 #comp_dict = {"zlib": True, "complevel": 9}
 #encoding = {var: comp_dict for var in ds.data_vars}
 
-print(project_path.joinpath(netCDF_file))
-ds.to_netcdf(
-    project_path.joinpath(netCDF_file),
-#    encoding=encoding,
-    compute=True
-)
+arr = np.arange(len(ds.prob))[slices["prob"]]
+for prob in tqdm(arr):
+    netCDF_filename = project_path.joinpath(netCDF_filestem + "_%02d.nc" % prob)
+    print(netCDF_filename)
+    ds.isel(prob=slice(prob, prob+1, 1)).to_netcdf(
+        netCDF_filename,
+#        encoding=encoding,
+        compute=True
+    )
 # -
+probs, datasets = zip(*ds.groupby("prob", squeeze=False))
+paths = [project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob) for prob in probs]
+xr.save_mfdataset(datasets, paths, compute=True)
+
 

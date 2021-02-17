@@ -30,8 +30,8 @@ data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 netCDF_file = "sol_acc_age_btt.nc"
 
 data_combinations = [
-    ("monthly", None, "discrete"),
-    ("monthly", None, "continuous"),
+#    ("monthly", None, "discrete"),
+#    ("monthly", None, "continuous"),
     ("yearly", 0, "continuous"),
     ("yearly", 6, "continuous")
 ]
@@ -163,9 +163,9 @@ pool_names = ["Soil", "Litter"]
 
 var_names = [
     "mean_pool_age_vector",
-#    "pool_age_median",
-#    "pool_age_quantile_05",
-#    "pool_age_quantile_95",
+    "pool_age_median",
+    "pool_age_quantile_05",
+    "pool_age_quantile_95",
     "pool_age_sd_vector"
 ]
 
@@ -189,9 +189,6 @@ for row, var_name in enumerate(var_names):
 plt.suptitle("Pool age (July minus January)")
 plt.tight_layout()
 plt.draw()
-# -
-
-# Now we grab two random pools.
 
 # +
 ncols = len(pool_names)
@@ -213,7 +210,7 @@ for row, var_name in enumerate(var_names):
         ax.set_title(pool_name + " " + var_name)
 
 plt.suptitle("Pool age (Jul-Jan)/Jul*100")
-plt.tight_layout()
+#plt.tight_layout()
 plt.draw()
 # -
 
@@ -233,7 +230,7 @@ var_name_pairs = [
 ]
 
 nrows = len(var_name_pairs) // 2 + len(var_name_pairs) % 2
-fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(12,6*nrows))
+fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(2*12,2*6*nrows))
 
 for var_name_pair, ax in zip(var_name_pairs, axes.flatten()):
     for var_name in var_name_pair:
@@ -274,19 +271,37 @@ for var_name, var in ds_area_lf_adapted.data_vars.items():
 ds_area_lf_adapted
 
 # +
-fig, ax = plt.subplots(figsize=(6, 6))
+fig, axes = plt.subplots(ncols=3, figsize=(18, 6))
+
+var = ds1["xs"].sum(dim="pool")
+var = var * ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac
+var = var.mean(dim=["prob", "time"])
+(var/1e15).plot(
+    ax=axes[0],
+    cbar_kwargs={"label": "PgC"},
+    robust=True
+)
+axes[0].set_title("Total C stocks (July)")
+
+var = ds2["xs"].sum(dim="pool")
+var = var * ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac
+var = var.mean(dim=["prob", "time"])
+(var/1e15).plot(
+    ax=axes[1],
+    cbar_kwargs={"label": "PgC"},
+    robust=True
+)
+axes[1].set_title("Total C stocks (January)")
 
 var = (ds1["xs"]-ds2["xs"]).sum(dim="pool")
 var = var * ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac
 var = var.mean(dim=["prob", "time"])
-    
-
 (var/1e15).plot(
-    ax=ax,
+    ax=axes[2],
     cbar_kwargs={"label": "PgC"},
     robust=True
 )
-ax.set_title("Total C stocks (July minus January)")
+axes[2].set_title("Total C stocks (July minus January)")
 
 plt.tight_layout()
 plt.draw()
@@ -387,5 +402,7 @@ print("----")
 print("Total C CARDAMOM            : %.2f PgC" % (total_C_xs *1e-15))
 print("Total C model reconstruction: %.2f PgC" % (total_C_solution*1e-15))
 print("Coverage                    :   %2.2f %%" % (total_C_solution/total_C_xs*100))
+
+# ## plot Soil age time series, plot CHANGES in age and transit time time series, maybe even as histogram (spatially, termporally)
 
 

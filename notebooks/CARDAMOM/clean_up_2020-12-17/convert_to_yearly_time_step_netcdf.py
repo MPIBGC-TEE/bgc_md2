@@ -31,7 +31,7 @@ my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
 Client(my_cluster)
 
 nr_months = 12 # coarseness
-delay_in_months = 0
+delay_in_months = 6
 
 # +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
@@ -78,10 +78,13 @@ yearly_ds.to_netcdf(target_path, compute=True)
 # -
 
 
+
+
 check_ds = xr.open_dataset(target_path)
 check_ds
 
-sub_ds = check_ds.isel(lat=9, lon=26, prob=0).compute()
+#sub_ds = check_ds.isel(lat=9, lon=26, prob=0).compute()
+sub_ds = check_ds.isel(lat=5, lon=23, prob=0).compute() # bad reconstruction
 sub_ds
 
 CARDAMOMlib.check_data_consistency(sub_ds.compute(), time_step_in_days=31*12)

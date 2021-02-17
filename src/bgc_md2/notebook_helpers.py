@@ -13,7 +13,7 @@ def write_to_logfile(logfilename, *args):
     current_time = time.strftime("%H:%M:%S", t)
     with open(logfilename, 'a') as f:
         t = (current_time,) + args
-        f.write(" ".join([str(s) for s in t]) + '\n')
+        f.write(", ".join([str(s) for s in t]) + '\n')
 
 
 def write_header_to_logfile(logfile_name, var_da, time_limit_in_min):
@@ -23,11 +23,8 @@ def write_header_to_logfile(logfile_name, var_da, time_limit_in_min):
     nr_singles = np.prod(var_da.shape[:1])
     write_to_logfile(
         logfile_name,
-        'starting',
-#        nr_chunks, "chunks, ",
-        nr_singles, "singles,",
-        "timeout (min) =",
-        time_limit_in_min
+        "starting %d singles" % nr_singles,
+        "timeout (min) = %.2f" % time_limit_in_min
     )
     
 #    s = "nr_singles: " + str(nr_singles) + "\n"

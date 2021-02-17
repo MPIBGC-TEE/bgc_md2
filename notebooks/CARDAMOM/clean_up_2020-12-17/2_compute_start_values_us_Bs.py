@@ -62,21 +62,24 @@ Client(my_cluster)
 #
 # and open link given above.
 
-#time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
-time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
+time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-
-zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
-if time_resolution == "yearly":
-    zarr_data_path = data_path.joinpath(time_resolution + "_%02d_rechunked_zarr" % delay_in_months)
-
 output_path = data_path.joinpath(params["output_folder"])
-project_path = output_path.joinpath(model_type)
+
+
+#zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
+zarr_data_path = output_path.joinpath("rechunked_zarr_clean")
+if time_resolution == "yearly":
+#    zarr_data_path = data_path.joinpath(time_resolution + "_%02d_rechunked_zarr" % delay_in_months)
+    zarr_data_path = output_path.joinpath("rechunked_zarr_clean")
+
+project_path = output_path.joinpath(model_type)# + "_debug")
 project_path
 
 # +
@@ -116,6 +119,9 @@ slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
     "prob": slice(0, 1, 1),
+#    "lat": slice(10, 11, 1),
+#    "lon": slice(22, 23, 1),
+#    "prob": slice(0, 1, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -153,7 +159,7 @@ nr_lats, nr_lons, nr_probs, nr_times, nr_pools
 task_list = [
     {# 0:
         "computation": "xs",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_xs,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -167,7 +173,7 @@ task_list = [
     },    
     {# 1:
         "computation": "start_values",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_start_values,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -181,7 +187,7 @@ task_list = [
     },
     {# 2:
         "computation": "us",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_us,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -195,13 +201,14 @@ task_list = [
     },
     {# 3:
         "computation": "Bs",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_Bs,
         "func_args": {
             "time_step_in_days": params["time_step_in_days"],
             "integration_method": "solve_ivp", # default = "solve_ivp"
             "check_success": True # default = "true"
         },
+#        "timeouts": [5, np.inf],
         "timeouts": [45, 400, 2000],
 #        "timeouts": [np.inf],
         "batch_size": 500,
@@ -218,6 +225,9 @@ task_list = [
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
+# +
+# %%time
+
 for task in task_list:
     print("task: computing", task["computation"])
     print()
@@ -231,7 +241,7 @@ for task in task_list:
         overwrite=task["overwrite"]
     )
 
-    nr_incomplete_sites, incomplete_coords = CARDAMOMlib.get_incomplete_sites(z, slices)
+    nr_incomplete_sites, _, _ = CARDAMOMlib.get_incomplete_sites(z, slices)
     print("Number of incomplete sites:", nr_incomplete_sites)
     logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
     print("Logfile:", logfile_name)
@@ -249,14 +259,25 @@ for task in task_list:
             logfile_name
         )
 
-    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_sites(z, slices)
+    nr_incomplete_sites, _, _ = CARDAMOMlib.get_incomplete_sites(z, slices)
     write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
+# -
 
-# # check 
-#
-# - "cannot convert float infinity to integer" sites
-# - "number of function calls has reached maxfev = 2600"
+
+
+# +
+import pandas as pd
+
+csv = pd.read_csv(logfile_name, sep=",", skiprows=1, skipfooter=2, names=["time", "lat", "lon", "prob", "msg", "max_abs_err", "max_rel_err"])
+csv
+# -
+
+clean_csv = csv[~pd.isnull(csv.max_abs_err)]
+clean_csv
+
+#clean_csv.reset_index().sort_values(by=["max_rel_err", "max_abs_err"], ascending=False).head(15)
+clean_csv.reset_index().sort_values(by=["max_abs_err", "max_rel_err"], ascending=False).head(15)
 
 

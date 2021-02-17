@@ -26,11 +26,13 @@ from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
 # +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-netCDF_file = "sol_acc_age_btt.nc"
+netCDF_filestem = "sol_acc_age_btt"
 
 data_combinations = [
     ("monthly", None, "discrete"),
-    ("monthly", None, "continuous")
+#    ("monthly", None, "continuous"),
+    ("yearly", 0, "continuous"),
+    ("yearly", 6, "continuous")
 ]
 
 datasets = dict()
@@ -40,12 +42,13 @@ for dc in data_combinations:
     output_path = data_path.joinpath(data_path.joinpath(params["output_folder"]))
     project_path = output_path.joinpath(model_type)
 
-    ds_path = project_path.joinpath(netCDF_file)
+    ds_path = project_path.joinpath(netCDF_filestem)
     print(dc, ds_path)
-    datasets[dc] = xr.open_dataset(ds_path)
+    datasets[dc] = xr.open_mfdataset(str(ds_path) + "*.nc")
 # +
-#ds = datasets[("monthly", None, "discrete")]
-ds = datasets[("monthly", None, "continuous")]
+ds = datasets[("monthly", None, "discrete")]
+#ds = datasets[("monthly", None, "continuous")]
+#ds = datasets[("yearly", 0, "continuous")]
 
 ds
 
@@ -137,9 +140,9 @@ pool_names = ["Soil", "Litter"]
 
 var_names = [
     "mean_pool_age_vector",
-#    "pool_age_median",
-#    "pool_age_quantile_05",
-#    "pool_age_quantile_95",
+    "pool_age_median",
+    "pool_age_quantile_05",
+    "pool_age_quantile_95",
     "pool_age_sd_vector"
 ]
 
@@ -150,8 +153,8 @@ fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12,6*nrows))
 for row, var_name in enumerate(var_names):
     for col, pool_name in enumerate(pool_names):
         ax = axes[row, col]
-        #var = ds[var_name].sel(pool=pool_name)
-        ds[var_name].sel(pool=pool_name).mean(dim=["prob", "time"]).plot(
+        var = ds[var_name].sel(pool=pool_name)
+        var.mean(dim=["prob", "time"]).plot(
             ax=ax,
             cbar_kwargs={"label": var.attrs["units"]},
             robust=True
@@ -210,6 +213,7 @@ ds_area_lf_adapted.coords["lon"] = np.float64(ds_area_lf_adapted.coords["lon"])
 for var_name, var in ds_area_lf_adapted.data_vars.items():
     ds_area_lf_adapted[var_name].coords["lat"] = np.float64(var.coords["lat"])
     ds_area_lf_adapted[var_name].coords["lon"] = np.float64(var.coords["lon"])
+    
 ds_area_lf_adapted
 
 # +
@@ -234,19 +238,34 @@ plt.draw()
 # We compute the global C mean age and transit time and an average of the system age and transit time medians weighted by C stocks.
 
 # +
+alpha = 0.2
+lw = 5
+colors = ["blue", "orange", "green", "red"]
+args = {"alpha": alpha, "lw": lw}#, "add_legend": False}
+
+fig, ax = plt.subplots(figsize=(12, 6))
+
 global_mean_system_age = ds["mean_system_age"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 global_avg_system_age_median = ds["system_age_median"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 global_mean_btt = ds["mean_btt"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 global_avg_btt_median = ds["btt_median"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 
-fig, ax = plt.subplots(figsize=(12, 6))
-global_mean_system_age.plot(ax = ax, label="Global C mean age")
-global_avg_system_age_median.plot(ax = ax, label="Global average system age median")
-global_mean_btt.plot(ax=ax, label="Global mean backward transit time")
-global_avg_btt_median.plot(ax=ax, label="Global average backward transit time median")
+labels = [
+    "Global C mean age",
+    "Global average system age median",
+    "Global mean backward transit time",
+    "Global average backward transit time median"
+]
+
+custom_lines = [
+    global_mean_system_age.plot.line(ax=ax, x="time", c=colors[0], **args)[0],
+    global_avg_system_age_median.plot.line(ax=ax, x="time", c=colors[1], **args)[0],
+    global_mean_btt.plot.line(ax=ax, x="time", c=colors[2], **args)[0],
+    global_avg_btt_median.plot.line(ax=ax, x="time", c=colors[3], **args)[0]
+]
 
 ax.set_ylabel("yr")
-ax.legend()
+ax.legend(custom_lines, labels)
 
 plt.tight_layout()
 plt.draw()
@@ -266,8 +285,9 @@ titles = [
     "Global average backward transit time median"
 ]
 
-for variable_name, ax, title in zip(variable_names, axes.flatten(), titles):
-    f(ds[variable_name]).plot(ax=ax)
+for variable_name, ax, title, color in zip(variable_names, axes.flatten(), titles, colors):
+    f(ds[variable_name]).plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
+
     ax.set_title(title)
     ax.set_ylabel("yr")
     

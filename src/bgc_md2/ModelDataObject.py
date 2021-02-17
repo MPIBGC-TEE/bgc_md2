@@ -564,29 +564,29 @@ class ModelDataObject(object):
     ):
         out = self.load_xs_Us_Fs_Rs()
         xs, Us, Fs, Rs = out
+
         times = self.time_agg.data.filled()
         nr_pools = self.model_structure.nr_pools
 
         data = np.nan * np.ones((len(times), nr_pools, nr_pools))
 #
 #        try:
-        Bs = PWCMRFD.reconstruct_Bs(
+#        Bs = PWCMRFD.reconstruct_Bs(
+        Bs, max_abs_err, max_rel_err = PWCMRFD.reconstruct_Bs(
             times,
             xs.data.filled()[0],
             Us.data.filled(),
             Fs.data.filled(),
             Rs.data.filled(),
+            xs.data.filled(),
             integration_method,
             nr_nodes,
             check_success
         )
         
         data[:-1, ...] = Bs
-#        except (PWCModelRunFDError, ValueError, OverflowError) as e:
-#            error = str(e)
-#            print(error, flush=True)
 
-        return data
+        return data, max_abs_err, max_rel_err
 
     def check_data_consistency(self):
         out = self.load_xs_Us_Fs_Rs()
@@ -633,11 +633,10 @@ class ModelDataObject(object):
                 symbols("t"),
                 times,
                 xs.data.filled()[0],
-                # xs.data.filled(),
                 Us.data.filled(),
                 Fs.data.filled(),
                 Rs.data.filled(),
-#                xs.data.filled()
+                xs.data.filled(),
                 integration_method,
                 nr_nodes,
                 check_success

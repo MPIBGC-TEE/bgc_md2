@@ -254,8 +254,9 @@ def func_for_map_blocks(*args):
     res = -np.inf * np.ones(return_shape)
     start_time = time.time()
     error_msg = ""
+    info = tuple()
     try:
-        res = custom_timeout(
+        res, info = custom_timeout(
             time_limit_in_min*60,
             func,
             d,
@@ -272,13 +273,16 @@ def func_for_map_blocks(*args):
         error_msg = str(e)
         print(error_msg, flush=True)
 
+    if error_msg == "":
+        error_msg = "done"
+
     write_to_logfile(
         logfile_name,
-        "finished single,",
-        "lat:", d["lat"],
-        "lon:", d["lon"],
-        "prob:", d["prob"],
-        error_msg
+        d["lat"],
+        d["lon"],
+        d["prob"],
+        error_msg,
+        *info
     )
 
     return res.reshape(return_shape)
@@ -312,7 +316,7 @@ def func_for_map_blocks_with_mr(*args):
     nr_times = len(times)
     data_times = np.arange(0, nr_times, 1) * time_step_in_days
                                                                                         
-    log_msg = ""
+    log_msg = "done"
     res = -np.inf * np.ones(return_shape)
     start_time = time.time()
     try:
@@ -365,10 +369,9 @@ def func_for_map_blocks_with_mr(*args):
 
     write_to_logfile(
           logfile_name,
-          "single finished,",
-          "lat:", lat,
-          "lon:", lon,
-          "prob:", prob,
+          lat,
+          lon,
+          prob,
           log_msg
     )
     
@@ -380,7 +383,8 @@ def compute_xs(single_site_dict, time_step_in_days):
     xs = mdo.load_stocks()
     del mdo
 
-    return xs.data.filled()
+    info = tuple()
+    return xs.data.filled(), info
 
 
 def compute_start_values(single_site_dict, time_step_in_days):
@@ -388,7 +392,8 @@ def compute_start_values(single_site_dict, time_step_in_days):
     xs = mdo.load_stocks()
     del mdo
 
-    return xs.data.filled()[0, ...]
+    info = tuple()
+    return xs.data.filled()[0, ...], info
 
 
 def compute_us(single_site_dict, time_step_in_days):
@@ -396,7 +401,8 @@ def compute_us(single_site_dict, time_step_in_days):
     us = mdo.load_us()
     del mdo
 
-    return us
+    info = tuple()
+    return us, info
 
 
 def compute_Bs(
@@ -407,14 +413,14 @@ def compute_Bs(
     check_success=True
 ):
     mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
-    Bs = mdo.load_Bs(
+    Bs, max_abs_err, max_rel_err = mdo.load_Bs(
         integration_method,
         nr_nodes,
         check_success
     )
     del mdo
 
-    return Bs
+    return Bs, (max_abs_err, max_rel_err)
 
 
 def compute_Us(single_site_dict, time_step_in_days):
@@ -426,7 +432,8 @@ def compute_Us(single_site_dict, time_step_in_days):
     data = np.nan * np.ones((nr_times, nr_pools))
 
     data[:-1, ...] = Us.data.filled()
-    return data
+    info = tuple()
+    return data, info
 
 
 def compute_Bs_discrete(single_site_dict, time_step_in_days):
@@ -451,7 +458,8 @@ def compute_Bs_discrete(single_site_dict, time_step_in_days):
 #            error = str(e)
 #            print(error, flush=True)
 
-    return data
+    info = tuple()
+    return data, info
 
 
 def compute_age_moment_vector_up_to(mr, nr_time_steps, up_to_order):
@@ -496,7 +504,7 @@ def compute_system_age_quantile(mr, nr_time_steps, q, maxsize=None):
 
         mr.initialize_state_transition_operator_cache(
             maxsize,
-            size=len(mr.times)
+            size=len(mr.times) // 2
         )
 
         system_age_quantiles = mr.system_age_distribution_quantiles(
@@ -607,13 +615,17 @@ def get_complete_non_nan_sites(z, slices):
         (arr != -np.inf) & (~np.isnan(arr))
     )[:3]
     
+    complete_sliced_non_nan_coords_tuples = _convert_sliced_linear_coords_to_sliced_coords_tuples(
+        *complete_sliced_non_nan_coords_linear
+    )
+    
     complete_non_nan_coords_tuples = _convert_sliced_linear_coords_to_global_coords_tuples(
         *complete_sliced_non_nan_coords_linear, # *(lat, lon, prob)
         slices
     )
     nr_complete_sites = len(complete_non_nan_coords_tuples)
 
-    return nr_complete_sites, complete_non_nan_coords_tuples
+    return nr_complete_sites, complete_non_nan_coords_tuples, complete_sliced_non_nan_coords_tuples
 
 
 def get_nan_sites(z, slices):
@@ -647,6 +659,9 @@ def get_incomplete_sites(z, slices):
         sliced_da = da.from_zarr(z)[tup]
 
     incomplete_sliced_coords_linear = np.where(sliced_da.compute() == -np.inf)[:3]
+    incomplete_sliced_coords_tuples = _convert_sliced_linear_coords_to_sliced_coords_tuples(
+        *incomplete_sliced_coords_linear, # *(lat, lon, prob)
+    )
 
     incomplete_coords_tuples = _convert_sliced_linear_coords_to_global_coords_tuples(
         *incomplete_sliced_coords_linear, # *(lat, lon, prob)
@@ -654,7 +669,7 @@ def get_incomplete_sites(z, slices):
     )
 
     nr_incomplete_sites = len(incomplete_coords_tuples)
-    return nr_incomplete_sites, incomplete_coords_tuples
+    return nr_incomplete_sites, incomplete_coords_tuples, incomplete_sliced_coords_tuples
 
 
 def get_incomplete_site_tuples_for_mr_computation(
@@ -664,10 +679,10 @@ def get_incomplete_site_tuples_for_mr_computation(
     z,
     slices
 ):
-    _, complete_coords_svs = get_complete_non_nan_sites(start_values_zarr, slices)
-    _, complete_coords_us = get_complete_non_nan_sites(us_zarr, slices)
-    _, complete_coords_Bs = get_complete_non_nan_sites(Bs_zarr, slices)
-    _, incomplete_coords_z = get_incomplete_sites(z, slices)
+    _, complete_coords_svs, complete_sliced_coords_svs = get_complete_non_nan_sites(start_values_zarr, slices)
+    _, complete_coords_us, complete_sliced_coords_us = get_complete_non_nan_sites(us_zarr, slices)
+    _, complete_coords_Bs, complete_sliced_coords_Bs = get_complete_non_nan_sites(Bs_zarr, slices)
+    _, incomplete_coords_z, incomplete_sliced_coords_z = get_incomplete_sites(z, slices)
     
     coords_tuples_list = [
         set(complete_coords_svs),
@@ -678,9 +693,18 @@ def get_incomplete_site_tuples_for_mr_computation(
                                             
     coords_tuples = list(set.intersection(*coords_tuples_list))
     coords_tuples.sort()
-#    incomplete_coords_tuples = incomplete_coords_tuples[:100]
 
-    return len(coords_tuples), coords_tuples
+    sliced_coords_tuples_list = [
+        set(complete_sliced_coords_svs),
+        set(complete_sliced_coords_us),
+        set(complete_sliced_coords_Bs),
+        set(incomplete_sliced_coords_z)
+    ]
+                                            
+    sliced_coords_tuples = list(set.intersection(*sliced_coords_tuples_list))
+    sliced_coords_tuples.sort()
+
+    return len(coords_tuples), coords_tuples, sliced_coords_tuples
 
 
 def get_nan_site_tuples_for_mr_computation(
@@ -715,7 +739,7 @@ def compute_incomplete_sites(
     task,
     logfile_name,
 ):
-    nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_sites(z, slices)
+    nr_incomplete_sites, incomplete_coords_tuples, incomplete_sliced_coords_tuples = get_incomplete_sites(z, slices)
 
     if nr_incomplete_sites > 0:
         print('number of incomplete sites:', nr_incomplete_sites)
@@ -728,7 +752,7 @@ def compute_incomplete_sites(
     for v, name in zip(variables, variable_names):
         if name not in non_data_variables:
             v_stack_list = []
-            for coords in incomplete_coords_tuples:
+            for coords in incomplete_sliced_coords_tuples:
                 v_stack_list.append(v[coords])
 
             incomplete_variables.append(da.stack(v_stack_list))
@@ -795,7 +819,7 @@ def compute_incomplete_sites(
         task["batch_size"]
     )
 
-    write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
+    write_to_logfile(logfile_name, 'done, timeout (min) = '+str(time_limit_in_min))
     print('done, timeout (min) = ', time_limit_in_min, flush=True)
 
 
@@ -828,7 +852,7 @@ def compute_incomplete_sites_with_mr(
 
     # identify non-nan computed sites in start_values, us, and Bs
     # combine with not yet computed sites in z
-    nr_incomplete_sites, incomplete_coords_tuples = get_incomplete_site_tuples_for_mr_computation(
+    nr_incomplete_sites, incomplete_coords_tuples, incomplete_sliced_coords_tuples = get_incomplete_site_tuples_for_mr_computation(
         start_values_zarr,
         us_zarr,
         Bs_zarr,
@@ -853,7 +877,7 @@ def compute_incomplete_sites_with_mr(
     ]
     for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
         v_stack_list = []
-        for ic in incomplete_coords_tuples:
+        for ic in incomplete_sliced_coords_tuples:
             v_stack_list.append(v[ic].reshape(shape))
 
         incomplete_variables.append(da.stack(v_stack_list))
@@ -967,7 +991,7 @@ def run_task_with_mr(
             logfile_name
         )
 
-    nr_incomplete_sites, _ = get_incomplete_site_tuples_for_mr_computation(
+    nr_incomplete_sites, _, _ = get_incomplete_site_tuples_for_mr_computation(
         start_values_zarr,
         us_zarr,
         Bs_zarr,
@@ -1057,6 +1081,13 @@ def _load_mdo(ds_dict, time_step_in_days, check_units=True): # time step in days
     )
 
     return mdo
+
+
+def _convert_sliced_linear_coords_to_sliced_coords_tuples(lats, lons, probs):
+    sliced_coord_tuples = [
+        (c[0], c[1], c[2]) for c in zip(lats, lons, probs)
+    ]
+    return sliced_coord_tuples
 
 
 def _convert_sliced_linear_coords_to_global_coords_tuples(lats, lons, probs, slices):

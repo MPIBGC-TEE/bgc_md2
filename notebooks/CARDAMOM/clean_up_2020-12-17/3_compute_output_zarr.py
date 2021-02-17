@@ -62,7 +62,8 @@ Client(my_cluster)
 # and open link given above.
 
 #time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
-time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
+time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
@@ -153,7 +154,7 @@ task_list = [
 #    },
     {#0:
         "computation": "age_moment_vectors_up_to_2",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_age_moment_vector_up_to,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "up_to_order": 2}, # nr_months for fake eq_model, up_to_order
         "timeouts": [np.inf],
@@ -167,10 +168,11 @@ task_list = [
     },
     {#1:
         "computation": "pool_age_median",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_pool_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model
-        "timeouts": [70, 500, np.inf],
+#        "timeouts": [70, 500, np.inf],
+        "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -181,10 +183,11 @@ task_list = [
     },
     {#2:
         "computation": "pool_age_quantile_05",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_pool_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
-        "timeouts": [70, 500, np.inf],
+#        "timeouts": [70, 500, np.inf],
+        "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -195,10 +198,11 @@ task_list = [
     },
     {#3:
         "computation": "pool_age_quantile_95",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_pool_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
-        "timeouts": [70,500, np.inf],
+#        "timeouts": [70,500, np.inf],
+        "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -209,10 +213,10 @@ task_list = [
     },
     {#4:
         "computation": "system_age_median",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_system_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model
-        "timeouts": [90, 500, np.inf],
+        "timeouts": [90, np.inf],
         "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
@@ -223,10 +227,10 @@ task_list = [
     },
     {#5:
         "computation": "system_age_quantile_05",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_system_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
-        "timeouts": [90, 500,np.inf],
+        "timeouts": [90,np.inf],
         "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
@@ -240,7 +244,7 @@ task_list = [
         "overwrite": True,
         "func": CARDAMOMlib.compute_system_age_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
-        "timeouts": [120, 500, np.inf],
+        "timeouts": [90, np.inf],
         "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
@@ -268,7 +272,7 @@ task_list = [
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.5}, # 120 months for faking equilibrium model, 0.5 for the median
-        "timeouts": [180, 500, np.inf],
+        "timeouts": [120, np.inf],
         "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
@@ -282,7 +286,7 @@ task_list = [
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.05}, # 120 months for faking equilibrium model
-        "timeouts": [180, 500, np.inf],
+        "timeouts": [120, np.inf],
         "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
@@ -296,7 +300,7 @@ task_list = [
         "overwrite": True,
         "func": CARDAMOMlib.compute_backward_transit_time_quantile,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "q": 0.95}, # 120 months for faking equilibrium model
-        "timeouts": [180, 500, np.inf],
+        "timeouts": [120, np.inf],
         "batch_size": 120,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
@@ -315,7 +319,10 @@ for task in task_list:
 #
 # *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
-for task in task_list[4:]:
+# +
+# %%time
+
+for task in task_list[6:]:
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -327,12 +334,7 @@ for task in task_list[4:]:
         Bs_zarr,
         slices
     )
-
-
-
-
-
-
+# -
 
 
 
