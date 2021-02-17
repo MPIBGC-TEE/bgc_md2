@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.9.1
+#       jupytext_version: 1.7.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -25,7 +25,6 @@ model_inspection = h.MvarSetInspectionBox()
 
 model_list = h.ModelListGridBox(
     inspection_box=model_inspection,
-    explicit_exclude_models=frozenset({'CARDAMOM'})
 )
 model_list
 
