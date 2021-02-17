@@ -62,24 +62,29 @@ Client(my_cluster)
 #
 # and open link given above.
 
-#time_resolution, delay_in_months = "monthly", None
-time_resolution, delay_in_months = "yearly", 0
+time_resolution, delay_in_months = "monthly", None
+#time_resolution, delay_in_months = "yearly", 0
 #time_resolution, delay_in_months = "yearly", 6
 
 # +
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-target_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
+data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+output_path = data_path.joinpath(params["output_folder"])
+
+target_path = data_path.joinpath(output_path.joinpath("rechunked_zarr_clean"))
 if time_resolution == "yearly":
-    target_path = data_path.joinpath(time_resolution + "_%02d_rechunked_zarr" % delay_in_months)
+    target_path = data_path.joinpath(output_path.joinpath("rechunked_zarr_clean"))
 print("target_path:", target_path)
 
 # daily zarr archives can be created by "convert_to_daily_time_step.ipynb"
 # yearly xarray.Dataset data can be created by "convert_to_yearly_time_step.ipynb"
 if time_resolution == "monthly":
-    ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
+    #ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
+    ds = xr.open_dataset(output_path.joinpath("clean_ds.nc"))
 elif time_resolution == "yearly":
-    ds = xr.open_dataset(data_path.joinpath("yearly_%02d_ds.nc" % delay_in_months))
+#    ds = xr.open_dataset(data_path.joinpath("yearly_%02d_ds.nc" % delay_in_months))
+    ds = xr.open_dataset(output_path.joinpath("clean_ds.nc"))
 else:
     raise(ValueError("data can only be rechunked to monthly and yearly zarr archives by now"))
 ds

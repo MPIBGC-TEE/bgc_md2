@@ -25,6 +25,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from pathlib import Path
+from tqdm import tqdm
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 from bgc_md2.notebook_helpers import nested_groupby_apply
@@ -64,10 +65,12 @@ Client(my_cluster)
 # works with "monhtly" and "yearly"
 # daily data is not stored in an xarray dataset but in zarr archives only
 
-time_resolution = "monthly"
+#time_resolution, delay_in_months = "monthly", None
+#time_resolution, delay_in_months = "yearly", 0
+time_resolution, delay_in_months = "yearly", 6
 
 # +
-params = CARDAMOMlib.load_params(time_resolution)
+params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 output_path = data_path.joinpath(params["output_folder"])
@@ -76,15 +79,14 @@ output_file_path = output_path.joinpath("data_consistency.nc")
 if time_resolution == "monthly":
     ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
 elif time_resolution == "yearly":
-    ds = xr.open_dataset(data_path.joinpath("yearly_ds.nc"))
+    ds = xr.open_dataset(data_path.joinpath("yearly_%02d_ds.nc" % delay_in_months))
 else:
     raise(ValueError("only 'monthly' and 'yearly' data can be checked for consistency by now"))
+
+clean_file_path = output_path.joinpath("clean_ds.nc")
+#ds = xr.open_dataset(clean_file_path)
+
 ds
-# -
-
-t = ds.time
-t.data
-
 
 
 # +
@@ -187,12 +189,13 @@ ds_data_consistency.to_netcdf(
     output_file_path,
     compute=True
 )
+output_file_path
 # -
 
 # ## Visualization of data consistency
 
-ds = xr.open_dataset(output_file_path)
-#ds.compute()
+print(output_file_path)
+ds_data_consistency = xr.open_dataset(output_file_path)
 
 # Now we show how many of the 34 x 71 x 50 = 120,700 (lat x lon x prob) single sites actually DO have data (presumably then land areas).
 
@@ -200,7 +203,7 @@ ds = xr.open_dataset(output_file_path)
 # find count of nonnull coordinates (land coordinates, basically)
 # (just an exercise here)
 
-da_stacked = ds.abs_err.stack(notnull=['lat', 'lon', 'prob'])
+da_stacked = ds_data_consistency.abs_err.stack(notnull=['lat', 'lon', 'prob'])
 notnull = da_stacked[da_stacked.notnull()].notnull()
 print(
     "(lat, lon, prob) with data:",
@@ -215,16 +218,16 @@ print(
 # +
 fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12,6))
 
-ds.abs_err.mean(dim='prob').plot(
+ds_data_consistency.abs_err.mean(dim='prob').plot(
     ax=ax1,
-    cbar_kwargs={"label": '$%s$' % ds.abs_err.attrs['units']},
+    cbar_kwargs={"label": '$%s$' % ds_data_consistency.abs_err.attrs['units']},
 #    robust=True
 )
 ax1.set_title('mean absolute error')
 
-ds.rel_err.mean(dim='prob').plot(
+ds_data_consistency.rel_err.mean(dim='prob').plot(
     ax=ax2,
-    cbar_kwargs={"label": '%s' % ds.rel_err.attrs['units']},
+    cbar_kwargs={"label": '%s' % ds_data_consistency.rel_err.attrs['units']},
 #    robust=True
 )
 ax2.set_title('mean relative error')
@@ -240,16 +243,16 @@ plt.draw()
 # +
 fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12,6))
 
-ds.abs_err.mean(dim='prob').plot(
+ds_data_consistency.abs_err.mean(dim='prob').plot(
     ax=ax1,
-    cbar_kwargs={"label": '$%s$' % ds.abs_err.attrs['units']},
+    cbar_kwargs={"label": '$%s$' % ds_data_consistency.abs_err.attrs['units']},
     robust=True
 )
 ax1.set_title('mean absolute error')
 
-ds.rel_err.mean(dim='prob').plot(
+ds_data_consistency.rel_err.mean(dim='prob').plot(
     ax=ax2,
-    cbar_kwargs={"label": '%s' % ds.rel_err.attrs['units']},
+    cbar_kwargs={"label": '%s' % ds_data_consistency.rel_err.attrs['units']},
     robust=True
 )
 ax2.set_title('mean relative error')
@@ -258,6 +261,35 @@ plt.suptitle('CARDAMOM - data consistency (robust version)')
 
 plt.tight_layout()
 plt.draw()
+# -
+# ## Now we throw out all nonzero error sites. 
+
+
+bad_idx = (ds_data_consistency.abs_err + ds_data_consistency.rel_err > 0.1)
+nr_sites = len(ds.lat)*len(ds.lon)*len(ds.prob)
+print("Throw out %d sites of %d: %.2f%%" % (np.sum(bad_idx), nr_sites, np.sum(bad_idx)/nr_sites*100))
+
+# +
+data_vars = dict()
+for name, var in tqdm(ds.data_vars.items()):
+    data = np.asarray(var)
+    data[bad_idx] = np.nan
+    data_vars[name] = xr.DataArray(
+        data=data,
+        dims=var.dims,
+        coords=var.coords,
+        attrs=var.attrs
+    )
+    #print(var.attrs)
+    
+clean_ds = xr.Dataset(data_vars=data_vars)
+clean_ds
+
+# +
+# %%time
+
+clean_ds.to_netcdf(clean_file_path)
+clean_file_path
 # -
 
 

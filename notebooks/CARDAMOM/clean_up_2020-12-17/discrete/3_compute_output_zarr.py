@@ -64,16 +64,16 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution = "daily"
-model_type = "discrete"
+time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 
 # +
-params = CARDAMOMlib.load_params(time_resolution)
+params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
 output_path = data_path.joinpath(params["output_folder"])
 
 project_path = output_path.joinpath(model_type)
+project_path
 # -
 
 lats_da = da.from_zarr(str(project_path.joinpath("lat")))
@@ -102,7 +102,7 @@ nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 1, 1),
+    "prob": slice(0, , 1),
 #    "lat": slice(28, 32, 1),
 #    "lon": slice(48, 52, 1),
 #    "prob": slice(0, 2, 1),
@@ -327,7 +327,7 @@ for task in task_list:
 # +
 # %%time
 
-for task in task_list[9:]:
+for task in task_list:
 #for task_index in [6]:
 #    task = task_list[task_index]
     CARDAMOMlib.run_task_with_mr(
@@ -342,16 +342,6 @@ for task in task_list[9:]:
         slices
     )
 # -
-
-
-
-
-
-
-
-
-
-
 
 
 

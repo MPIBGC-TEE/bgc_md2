@@ -65,17 +65,17 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution, delay_in_months = "monthly", None
-model_type = "discrete"
+time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-zarr_data_path = data_path.joinpath(time_resolution + "_rechunked_zarr")
 output_path = data_path.joinpath(params["output_folder"])
+zarr_data_path = output_path.joinpath("rechunked_zarr_clean")
 
 project_path = output_path.joinpath(model_type)
+project_path
 
 # +
 # load variables from zarr archive
@@ -114,7 +114,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, None, 1),
+    "prob": slice(25, 40, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -216,7 +216,7 @@ task_list = [
 # +
 # %%time
 
-for task in task_list:
+for task in task_list[3:]:
     print("task: computing", task["computation"])
     print()
     
@@ -229,7 +229,7 @@ for task in task_list:
         overwrite=task["overwrite"]
     )
 
-    nr_incomplete_sites, incomplete_coords = CARDAMOMlib.get_incomplete_sites(z, slices)
+    nr_incomplete_sites, _, _= CARDAMOMlib.get_incomplete_sites(z, slices)
     print("Number of incomplete sites:", nr_incomplete_sites)
     logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
     print("Logfile:", logfile_name)
@@ -247,17 +247,11 @@ for task in task_list:
             logfile_name
         )
 
-    nr_incomplete_sites, _ = CARDAMOMlib.get_incomplete_sites(z, slices)
+    nr_incomplete_sites, _, _ = CARDAMOMlib.get_incomplete_sites(z, slices)
     write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
 # -
-
-
-
-
-
-
-
+# # Check diag < 0
 
 
