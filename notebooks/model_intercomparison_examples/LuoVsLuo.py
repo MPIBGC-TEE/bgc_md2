@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.10.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -157,6 +157,15 @@ mvs_TECO.provided_mvar_types
 
 mvs_TECO.get_StateVariableTuple().subs(subs_dict)
 
-display(mvs_TECO.get_CompartmentalMatrix().subs(subs_dict),mvs_TECO.get_StateVariableTuple().subs(subs_dict))
+mvs_subs=MVarSet({var.subs(subs_dict) for var in {mvs_TECO.get_CompartmentalMatrix(),mvs_TECO.get_StateVariableTuple(),mvs_TECO.get_InputTuple()} })
 
-This description makes obvious that the matrix and Statevector are probably not consistent.
+for v in mvs_subs.computable_mvar_types():
+    display(mvs_subs._get_single_mvar_value(v))
+    
+
+# This description makes obvious that the matrix and Statevector are probably not consistent.
+
+for key,val in mvs_TECO.get_InFluxesBySymbol().items():
+    display(key),display(val)
+
+

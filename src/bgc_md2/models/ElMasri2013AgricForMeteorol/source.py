@@ -83,9 +83,11 @@ a_R = Piecewise((((GPP*Allo_fact_roots)-R_roots),NPP<0),((NPP*Allo_fact_roots),N
 # framework computes
 #Input = InputTuple(b*u)
 Input = InputTuple(
-    a_L,
-    a_S,
-    a_R
+    (
+        a_L,
+        a_S,
+        a_R
+    )
 )
 
 vcsvt = VegetationCarbonStateVariableTuple((C_leaf, C_stem, C_roots)),

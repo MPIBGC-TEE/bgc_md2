@@ -76,11 +76,22 @@ def influxes_by_symbol_1(
 ) -> InFluxesBySymbol:
     return InFluxesBySymbol(
         {
-            var: InputTuple[ind] 
-            for ind,var in enumerate(svt)
+            svt[ind]: u[ind] 
+            for ind in range(svt.rows)
         }
     )
 
+#def internal_fluxes_by_symbol_1(
+#    cm: CompartmentalMatrix,
+#    svt: StateVariableTuple
+#) -> InFluxesBySymbol:
+#    return InFluxesBySymbol(
+#        {
+#            svt[ind]: u[ind] 
+#            for ind in range(svt.rows)
+#        }
+#    )
+#
 
 def compartmental_matrix_from_smooth_reservoir_model(
     smr: SmoothReservoirModel,
