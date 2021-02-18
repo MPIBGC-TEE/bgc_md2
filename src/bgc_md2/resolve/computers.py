@@ -32,6 +32,7 @@ from .mvars import (
     StateVarUnitTuple,
 )
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 
@@ -70,28 +71,24 @@ def smooth_reservoir_model_from_input_tuple_and_matrix(
     )
 
 
-def influxes_by_symbol_1(
-    u: InputTuple,
+def in_fluxes_by_symbol_1(
+    cm: CompartmentalMatrix,
     svt: StateVariableTuple
 ) -> InFluxesBySymbol:
-    return InFluxesBySymbol(
-        {
-            svt[ind]: u[ind] 
-            for ind in range(svt.rows)
-        }
-    )
+    return InFluxesBySymbol(hr.in_fluxes_by_symbol(svt,cm))
 
-#def internal_fluxes_by_symbol_1(
-#    cm: CompartmentalMatrix,
-#    svt: StateVariableTuple
-#) -> InFluxesBySymbol:
-#    return InFluxesBySymbol(
-#        {
-#            svt[ind]: u[ind] 
-#            for ind in range(svt.rows)
-#        }
-#    )
-#
+def internal_fluxes_by_symbol_1(
+    cm: CompartmentalMatrix,
+    svt: StateVariableTuple
+) -> InternalFluxesBySymbol:
+    return InternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt,cm))
+
+def out_fluxes_by_symbol_1(
+    cm: CompartmentalMatrix,
+    svt: StateVariableTuple
+) -> OutFluxesBySymbol:
+    return OutFluxesBySymbol(hr.out_fluxes_by_symbol(svt,cm))
+
 
 def compartmental_matrix_from_smooth_reservoir_model(
     smr: SmoothReservoirModel,

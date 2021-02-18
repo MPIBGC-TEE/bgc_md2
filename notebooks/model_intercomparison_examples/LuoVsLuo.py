@@ -163,9 +163,14 @@ for v in mvs_subs.computable_mvar_types():
     display(mvs_subs._get_single_mvar_value(v))
     
 
-# This description makes obvious that the matrix and Statevector are probably not consistent.
+# This description already that the CompartmentalMatrix and Statevector are probably not consistent.
+# We can make this even more obvious by computing the outflux from the `C_root` pool.
 
-for key,val in mvs_TECO.get_InFluxesBySymbol().items():
-    display(key),display(val)
+ mvs_subs.get_OutFluxesBySymbol()[C_roots]
+
+# and the internal flux from `C_roots` to `C_stlit`.
+
+mvs_subs.get_InternalFluxesBySymbol()[(C_roots,C_stlit)]
+    
 
 
