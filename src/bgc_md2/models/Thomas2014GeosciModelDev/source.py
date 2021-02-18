@@ -95,12 +95,15 @@ sym_dict = {
         ,'L_NO3': '"Leaching of NO$_3^-$"'
         ,'t_soilN': '"Mineralization of soil N to NH$_4^+$"' # see eq 72, pg 14 # "gN*m^{-2}*day^{-1}"
         ,'nitr': 'Nitrification ratio' # see equation 74 (pg 14)
+        ,'Retrans_frac': 'Proportion of foliar N retranslocated to labile plant N pool'
+        ,'leach_rate': 'NO$_3^-$ leaching rate'
+        ,'nitr_rate': 'Nitrification rate'
 }
 
 for name in sym_dict.keys():
     var(name)
 
-t_leafC = (Piecewise((C_leaf*tau_leaf, DOY>DOY_senesc), (0, DOY<=DOY_senesc)))### Otherwise, so < or = !!! # "gC*m^{-2}*day^{-1}"
+t_leafC = Piecewise((C_leaf*tau_leaf, DOY>DOY_senesc), (0, DOY<=DOY_senesc)) # "gC*m^{-2}*day^{-1}"
 t_woodC = C_wood*tau_wood # "gC*m^{-2}*day^{-1}"
 t_rootC = C_root*tau_root # "gC*m^{-2}*day^{-1}"
 g_T = Q_h**((T_a-20)/10)
@@ -109,10 +112,15 @@ Pot_litterC_soilC = C_litter * tau_litter * g_T * (1 - m_resp_frac)
 Pot_litterC_atm = C_litter * tau_litter * g_T * m_resp_frac
 t_litterC_soilC = Pot_litterC_soilC * fx_N
 t_litterC_atm = Pot_litterC_atm * fx_N
+t_leafN = Piecewise((N_leaf*tau_leaf*(1-Retrans_frac), DOY>DOY_senesc), (0, DOY<=DOY_senesc))
+t_retransN = Piecewise((N_leaf*tau_leaf*Retrans_frac, DOY>DOY_senesc), (0, DOY<=DOY_senesc))
 t_CWDN = N_cwd*tau_cwd*g_T
+t_litterN = N_litter*tau_litter*g_T # "gN*m^{-2}*day^{-1}"
 t_rootN = N_root*tau_root # "gN*m^{-2}*day^{-1}"
 t_woodN = N_wood*tau_wood # "gN*m^{-2}*day^{-1}"
 t_soilN = N_soil*tau_soil*g_T*(1-DON_leach_prop)
+nitr = N_NH4*nitr_rate*g_T #In equation <nitr_ratio>, in table 6 <nitr_rate>
+L_NO3 = N_NO3*leach_rate
 L_DON = N_soil*tau_soil*g_T*DON_leach_prop
 
 x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd))
@@ -146,6 +154,8 @@ np1 = NumericParameterization(
     ,Q_h: 1.4
     ,m_resp_frac: 0.5
     ,DON_leach_prop: 0.0015
+    ,leach_rate: 0.00001 # day^{-1}
+    ,nitr_rate: 0.0001 # day^{-1}
 },
     func_dict=frozendict({})
     # state_var_units= gC*m^{-2}

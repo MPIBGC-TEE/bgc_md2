@@ -38,8 +38,10 @@ model_names=[
     ####### VEGETATION MODEL WITHOUT VegetationCarbonInputPartitioningTuple & VegetationCarbonInputScalar
     ######################################################################
     ######################################################################
-    ######################################################################
     # "Hilbert1991AnnBot",
+    ######################################################################
+    ####### VEGETATION MODELS
+    ######################################################################
     # "ElMasri2013AgricForMeteorol", #Paper shows results for soil carbon, and fig. 1 has litter and C pools, but the equations on table A2 (although very detailed) don't include them
     # "Scheiter2009GlobalChangeBiol", #No soil compartments
     # "Turgman2018EcologyLetters", #No soil compartments
