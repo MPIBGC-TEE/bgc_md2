@@ -60,6 +60,29 @@ class InternalFluxesBySymbol(frozendict):
     pass
 
 
+class CarbonInFluxesBySymbol(frozendict):
+    pass
+
+
+class CarbonOutFluxesBySymbol(frozendict):
+    pass
+
+
+class CarbonInternalFluxesBySymbol(frozendict):
+    pass
+
+
+class NitrogenInFluxesBySymbol(frozendict):
+    pass
+
+
+class NitrogenOutFluxesBySymbol(frozendict):
+    pass
+
+
+class NitrogenInternalFluxesBySymbol(frozendict):
+    pass
+
 class TimeSymbol(Symbol):
     # should become a quantity with dimension time
     pass
@@ -99,17 +122,43 @@ class StateVariableTuple(ColumnVectorLike):
     Although two models with identical fluxes between there pools are identical on a physical
     level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
     on the ordering and have to be consistent."""
-
     pass
 
 class VegetationCarbonStateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
-    """Defines the ordering of the vegetation carbon state variables.
-    The order defines the order of the axes in a vegetation related coordinate system 
-    and thereby the interpretation of all tuple or matrix related carbon vegetation variables.
-    Although two models with identical vegetation carbon fluxes between their pools are identical on a physical
-    level the coordinate based variables like the VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend 
+    """Defines the ordering of the vegetation carbon state variables.  The
+    order defines the order of the axes in a vegetation related coordinate
+    system and thereby the interpretation of all tuple or matrix related carbon
+    vegetation variables.  Although two models with identical vegetation carbon
+    fluxes between their pools are identical on a physical level the coordinate
+    based variables like the VegetationInputTuple or the
+    VegetationInputTupleCompartmentalMatrix depend on the ordering and have to
+    be consistent."""
+    pass
+
+class CarbonStateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the carbon state variables.  The order defines
+    the order of the axes in a carbon related coordinate system and thereby the
+    interpretation of all tuple or matrix related carbon variables.  Although
+    two models with identical carbon fluxes between their pools are identical
+    on a physical level the coordinate based variables like the
+    VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend
+    on the ordering and have to be consistent."""
+    pass
+
+
+class NitrogenStateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the nitrogen state variables.  The order defines
+    the order of the axes in a nitrogen related coordinate system and thereby the
+    interpretation of all tuple or matrix related nitrogen variables.  Although
+    two models with identical nitrogen fluxes between their pools are identical
+    on a physical level the coordinate based variables like the
+    VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend
     on the ordering and have to be consistent."""
     pass
 
@@ -120,6 +169,23 @@ class InputTuple(ColumnVectorLike):
     """The coordinates of the input flux vector
     The interpretation requires the statevector since the nth entry is interpreted as input to 
     the pool denoted by the nth state variable"""
+    pass
+ 
+
+class CarbonInputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the carbon input flux vector
+    The interpretation requires the carbon statevector since the nth entry is interpreted as input to 
+    the pool denoted by the nth carbon state variable"""
+    pass
+
+class NitrogenInputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the nitrogen input flux vector
+    The interpretation requires the nitrogen statevector since the nth entry is interpreted as input to 
+    the pool denoted by the nth nitrogen state variable"""
     pass
 
 # vegetation specific variables
@@ -155,26 +221,18 @@ class CompartmentalMatrix(MatrixLike):
     ...
     TypeError: Cannot set values of CompartmentalMatrix
     """
-
-class VegetationCarbonInputPartitioningTuple(ColumnVectorLike):
-    # fixme mm 02/14/2021
-    # Check that we only allow column vectors
-    """The partitioning components vector
-    The order will affect the VegetationCarbonInput"""
     pass
 
 
-class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
-    """Create a CompartmentalMatrix (which is immutable) for the vegetation part only.
-    Note that for the same physical model this matrix can take different shapes, depending
-    on the order of the vegetation state variables (as defined via the VegetationStateVariableTuple)
+class CarbonCompartmentalMatrix(MatrixLike):
+    """Create a CompartmentalMatrix (which is immutable).
 
     Examples
     ========
 
     >>> from sympy import eye
-    >>> from bgc_md2.resolve.mvars import VegetationCarbonCompartmentalMatrix
-    >>> VegetationCarbonCompartmentalMatrix(eye(3))
+    >>> from bgc_md2.resolve.mvars import CarbonCompartmentalMatrix
+    >>> CarbonCompartmentalMatrix(eye(3))
     Matrix([
     [1, 0, 0],
     [0, 1, 0],
@@ -182,9 +240,35 @@ class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
     >>> _[0, 0] = 42
     Traceback (most recent call last):
     ...
-    TypeError: Cannot set values of ImmutableDenseMatrix
+    TypeError: Cannot set values of CompartmentalMatrix
     """
+    pass
 
+class NitrogenCompartmentalMatrix(MatrixLike):
+    """Create a CompartmentalMatrix (which is immutable).
+
+    Examples
+    ========
+
+    >>> from sympy import eye
+    >>> from bgc_md2.resolve.mvars import NitrogenCompartmentalMatrix
+    >>> NitrogenCompartmentalMatrix(eye(3))
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]])
+    >>> _[0, 0] = 42
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot set values of CompartmentalMatrix
+    """
+    pass
+
+class VegetationCarbonInputPartitioningTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The partitioning components vector
+    The order will affect the VegetationCarbonInput"""
     pass
 
 

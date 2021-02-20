@@ -30,8 +30,8 @@ k_vl, k_vw = symbols("k_vl k_vw")
 # )
 
 
-#specialVars = {
-mvs=MVarSet({
+# specialVars = {
+mvs = MVarSet({
     InFluxesBySymbol({vl: I_vl, vw: I_vw}),
     OutFluxesBySymbol({vl: k_vl * vl, vw: k_vw * vw}),
     InternalFluxesBySymbol({(vl, vw): k_vl * vl, (vw, vl): k_vw * vw}),

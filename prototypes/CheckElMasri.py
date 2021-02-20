@@ -17,20 +17,38 @@
 
 import bgc_md2.helper as h
 import importlib 
+from bgc_md2.resolve.mvars import VegetationCarbonInputScalar,VegetationCarbonInputPartitioningTuple
 
 importlib.invalidate_caches()
 mod = importlib.import_module('bgc_md2.models.ElMasri2013AgricForMeteorol.source')
 mvs = mod.mvs
 
-mvs.graph()
-
-mvs.computable_mvar_names
+# +
+#mvs.graph()
+# -
 
 mvs.get_InputTuple()
-mvs.get_VegetationCarbonInputScalar()
-mvs.get_VegetationCarbonInputPartitioningTuple()
-mvs.get_VegetationCarbonInputTuple()
-for var in mvs.computable_mvar_types():
-    mvs.render(var)
+
+mvs.computable_mvar_types()
+
+b=mvs.get_VegetationCarbonInputScalar()
+u=mvs.get_VegetationCarbonInputPartitioningTuple()
 
 
+from sympy import simplify
+simplify(b)
+
+it=mvs.get_VegetationCarbonInputTuple()
+#mvs.get_InFluxesBySymbol()
+#VegetationCarbonInputPartitioningTuple([tc/b for tc in it])
+
+# +
+
+VegetationCarbonInputScalar(sum(it))
+# -
+
+[t for t in mvs.provided_mvar_types]
+
+# +
+#for var in mvs.computable_mvar_types():
+#    mvs.render(var)
