@@ -33,4 +33,16 @@ mvs.get_VegetationCarbonInputTuple()
 for var in mvs.computable_mvar_types():
     mvs.render(var)
 
+mvs.computable_mvar_types()
+
+mvs.get_OutFluxesBySymbol()
+
+importlib.invalidate_caches()
+mod2 = importlib.import_module('bgc_md2.models.Haverd2016Biogeosciences.source')
+mvs2 = mod2.mvs
+
+mvs2.computable_mvar_names
+
+mvs2.get_VegetationCarbonInputPartitioningTuple()
+
 
