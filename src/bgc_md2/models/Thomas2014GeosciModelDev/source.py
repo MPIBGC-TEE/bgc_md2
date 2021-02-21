@@ -6,6 +6,7 @@ from bgc_md2.resolve.mvars import (
     TimeSymbol,
     StateVariableTuple,
     CarbonStateVariableTuple,
+    NitrogenStateVariableTuple,
     # VegetationCarbonInputScalar,
     # VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
@@ -142,7 +143,12 @@ L_NO3 = N_NO3*leach_rate
 L_DON = N_soil*tau_soil*g_T*DON_leach_prop
 
 xc = CarbonStateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd))
-x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd, N_leaf, N_wood, N_root, N_labile, N_bud, N_litter, N_soil, N_cwd, N_NH4, N_NO3))
+xn = NitrogenStateVariableTuple((N_leaf, N_wood, N_root, N_labile, N_bud, N_litter, N_soil, N_cwd, N_NH4, N_NO3))
+# here we just stick the two parts together
+x = StateVariableTuple(list(xc)+list(xn)) 
+# but we could also use any other ordering and also more variables for the global state vector 
+# e.g. (same but manually put together)
+# x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd, N_leaf, N_wood, N_root, N_labile, N_bud, N_litter, N_soil, N_cwd, N_NH4, N_NO3))
 u = GPP
 b = ImmutableMatrix((1,0,0,0,0,0))
 c_in_t= CarbonInputTuple(tuple(u*b)+(0,0,0))
@@ -183,9 +189,9 @@ in_fl_c = carbon_in_fluxes_by_symbol_1(c_in_t, xc)
 internal_fl_c = carbon_internal_fluxes_by_symbol_1(A_c, xc)
 out_fl_c = carbon_out_fluxes_by_symbol_1(A_c, xc)
 
-in_fl_n = NitrogenInFluxesBySymbol({N_labile: U_Nfix, N_NH4: Ndep_NH4, N_NO3: Ndep_NO3})
-out_fl_n = NitrogenOutFluxesBySymbol({N_soil: L_DON, N_NH4: U_NH4, N_NO3: U_NO3+L_NO3})
-internal_fl_n = NitrogenInternalFluxesBySymbol({
+in_fl_n = {N_labile: U_Nfix, N_NH4: Ndep_NH4, N_NO3: Ndep_NO3}
+out_fl_n = {N_soil: L_DON, N_NH4: U_NH4, N_NO3: U_NO3+L_NO3}
+internal_fl_n = {
     (N_bud, N_leaf): a_budN2leaf,
     (N_bud, N_labile): a_budN2Ramain,
     (N_labile, N_bud): a_budN,
@@ -201,7 +207,7 @@ internal_fl_n = NitrogenInternalFluxesBySymbol({
     (N_NO3, N_soil): U_NO3_immob,
     (N_soil, N_NH4): t_soilN,
     (N_NH4, N_NO3): nitr
-})
+}
 mvs = MVarSet({
     BibInfo(# Bibliographical Information
         name="ACONITE",
@@ -216,22 +222,26 @@ mvs = MVarSet({
     InFluxesBySymbol(h.combine(in_fl_c, in_fl_n)),
     OutFluxesBySymbol(h.combine(out_fl_c, out_fl_n)),
     InternalFluxesBySymbol(h.combine(internal_fl_c, internal_fl_n)), 
-    in_fl_n,
-    out_fl_n,
-    internal_fl_n,
-    # I,
-    # O,
-    # Int,
-    #Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    xc, # state vector of the carbon sub system
-    
-    A_c,  # the carbon compartmental matrix
+    t,   # time for the complete system
+    x,   # state vector of the complete system
+    xc,  # state vector of the carbon sub system
+    # from which the carbon fluxes and hence 
+    # the CarbonCompartMentalMatrix can be derived
+    # (even though in this case it is given)
+    # A_c,  # the carbon compartmental matrix
     # in_fl_c, #alternatively to the CarbonCompartmentalMatrix
     # out_fl_c,# 
-    internal_fl_c,
-    VegetationCarbonStateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa)),
+    # internal_fl_c,
+    xn,  # state vector of the nitrogen sub system
+    # from which the nitrogenfluxes and hence the nitrogen compartmental
+    # matrix could be derived whence the computers for extraction the
+    # nitrogen fluxes from the global fluxes have been implemented 
+    # NitrogenInFluxesBySymbol(in_fl_n),
+    # NitrogenOutFluxesBySymbol(out_fl_n),
+    # NitrogenInternalFluxesBySymbol(internal_fl_n),
+    VegetationCarbonStateVariableTuple(
+        (C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa)
+    ),
     # the following can be computed automatically
     # VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
