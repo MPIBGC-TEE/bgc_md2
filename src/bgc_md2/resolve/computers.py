@@ -6,11 +6,23 @@ from .mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
     InternalFluxesBySymbol,
+    CarbonInFluxesBySymbol,
+    CarbonOutFluxesBySymbol,
+    CarbonInternalFluxesBySymbol,
+    NitrogenInFluxesBySymbol,
+    NitrogenOutFluxesBySymbol,
+    NitrogenInternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    CarbonStateVariableTuple,
+    NitrogenStateVariableTuple,
     CompartmentalMatrix,
+    CarbonCompartmentalMatrix,
+    NitrogenCompartmentalMatrix,
     # CompartmentalMatrixStructure,
     InputTuple,
+    CarbonInputTuple,
+    NitrogenInputTuple,
     VegetationCarbonInputScalar,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonInputTuple,
@@ -72,16 +84,18 @@ def smooth_reservoir_model_from_input_tuple_and_matrix(
 
 
 def in_fluxes_by_symbol_1(
-    cm: CompartmentalMatrix,
+    u: InputTuple,
     svt: StateVariableTuple
 ) -> InFluxesBySymbol:
-    return InFluxesBySymbol(hr.in_fluxes_by_symbol(svt,cm))
+    return InFluxesBySymbol(hr.in_fluxes_by_symbol(svt,u))
+
 
 def internal_fluxes_by_symbol_1(
     cm: CompartmentalMatrix,
     svt: StateVariableTuple
 ) -> InternalFluxesBySymbol:
     return InternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt,cm))
+
 
 def out_fluxes_by_symbol_1(
     cm: CompartmentalMatrix,
@@ -90,11 +104,122 @@ def out_fluxes_by_symbol_1(
     return OutFluxesBySymbol(hr.out_fluxes_by_symbol(svt,cm))
 
 
+def carbon_in_fluxes_by_symbol_1(
+    u: CarbonInputTuple,
+    svt: CarbonStateVariableTuple
+) -> CarbonInFluxesBySymbol:
+    return CarbonInFluxesBySymbol(hr.in_fluxes_by_symbol(svt,u))
+
+
+def carbon_internal_fluxes_by_symbol_1(
+    cm: CarbonCompartmentalMatrix,
+    svt: CarbonStateVariableTuple
+) -> CarbonInternalFluxesBySymbol:
+    return CarbonInternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt,cm))
+
+
+def nitrogen_out_fluxes_by_symbol_1(
+    cm: NitrogenCompartmentalMatrix,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenOutFluxesBySymbol:
+    return NitrogenOutFluxesBySymbol(hr.out_fluxes_by_symbol(svt,cm))
+
+def nitrogen_in_fluxes_by_symbol_1(
+    u: NitrogenInputTuple,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenInFluxesBySymbol:
+    return NitrogenInFluxesBySymbol(hr.in_fluxes_by_symbol(svt,u))
+
+def nitrogen_in_fluxes_by_symbol_2(
+    fl: InFluxesBySymbol,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenInFluxesBySymbol:
+    return NitrogenInFluxesBySymbol(
+        {v: f for v, f in fl.items() if v in svt}
+    )
+
+def nitrogen_out_fluxes_by_symbol_2(
+    fl: OutFluxesBySymbol,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenOutFluxesBySymbol:
+    return NitrogenOutFluxesBySymbol(
+        {v: f for v, f in fl.items() if v in svt}
+    )
+
+def nitrogen_internal_fluxes_by_symbol_2(
+    fl: InternalFluxesBySymbol,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenInternalFluxesBySymbol:
+    return NitrogenInternalFluxesBySymbol(
+        {t: f for t, f in fl.items() if set(t).issubset(svt)}
+    )
+
+def carbon_in_fluxes_by_symbol_2(
+    fl: InFluxesBySymbol,
+    svt: CarbonStateVariableTuple
+) -> CarbonInFluxesBySymbol:
+    return CarbonInFluxesBySymbol(
+        {v: f for v, f in fl.items() if v in svt}
+    )
+
+def carbon_out_fluxes_by_symbol_2(
+    fl: OutFluxesBySymbol,
+    svt: CarbonStateVariableTuple
+) -> CarbonOutFluxesBySymbol:
+    return CarbonOutFluxesBySymbol(
+        {v: f for v, f in fl.items() if v in svt}
+    )
+
+def carbon_internal_fluxes_by_symbol_2(
+    fl: InternalFluxesBySymbol,
+    svt: CarbonStateVariableTuple
+) -> CarbonInternalFluxesBySymbol:
+    return CarbonInternalFluxesBySymbol(
+        {t: f for t, f in fl.items() if set(t).issubset(svt)}
+    )
+
+def nitrogen_internal_fluxes_by_symbol_1(
+    cm: NitrogenCompartmentalMatrix,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenInternalFluxesBySymbol:
+    return NitrogenInternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt,cm))
+
+def carbon_out_fluxes_by_symbol_1(
+    cm: CarbonCompartmentalMatrix,
+    svt: CarbonStateVariableTuple
+) -> CarbonOutFluxesBySymbol:
+    return CarbonOutFluxesBySymbol(hr.out_fluxes_by_symbol(svt,cm))
+
 def compartmental_matrix_from_smooth_reservoir_model(
     smr: SmoothReservoirModel,
 ) -> CompartmentalMatrix:
     return CompartmentalMatrix(smr.compartmental_matrix)
 
+def compartmental_matrix_2(
+    ofl: OutFluxesBySymbol,
+    ifl: InternalFluxesBySymbol,
+    svt: StateVariableTuple
+) -> CompartmentalMatrix:
+    return CompartmentalMatrix(
+        hr.compartmental_matrix_2(
+            ofl,
+            ifl,
+            svt
+        )
+    )
+
+def nitrogen_compartmental_matrix_2(
+    ofl: NitrogenOutFluxesBySymbol,
+    ifl: NitrogenInternalFluxesBySymbol,
+    svt: NitrogenStateVariableTuple
+) -> NitrogenCompartmentalMatrix:
+    return NitrogenCompartmentalMatrix(
+        hr.compartmental_matrix_2(
+            ofl,
+            ifl,
+            svt
+        )
+    )
 
 def vegetation_carbon_input_tuple_1(
     u: VegetationCarbonInputScalar, b: VegetationCarbonInputPartitioningTuple
@@ -107,15 +232,21 @@ def vegetation_carbon_input_tuple_2(
     vcsv: VegetationCarbonStateVariableTuple
 
 ) -> VegetationCarbonInputTuple:
-    return VegetationCarbonInputTuple([[u[sv] for sv in vcsv]])
+    return VegetationCarbonInputTuple(hr.in_or_out_flux_tuple(vcsv, u))
 
 
-def vegetation_carbon_state_partitining_tuple_1(
+def vegetation_carbon_input_scalar_1(
+    t: VegetationCarbonInputTuple
+) -> VegetationCarbonInputScalar:
+    return VegetationCarbonInputScalar(sum(t))
+
+
+def vegetation_carbon_input_partitioning_tuple_1(
     u: VegetationCarbonInputScalar,
     t: VegetationCarbonInputTuple
 ) -> VegetationCarbonInputPartitioningTuple:
     return VegetationCarbonInputPartitioningTuple(
-        (tc/u for tc in t)
+        [tc/u for tc in t]
     )
 
 

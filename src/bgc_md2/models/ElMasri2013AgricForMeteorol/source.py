@@ -90,28 +90,28 @@ Input = InputTuple(
     )
 )
 
-vcsvt = VegetationCarbonStateVariableTuple((C_leaf, C_stem, C_roots)),
+vcsvt = VegetationCarbonStateVariableTuple((C_leaf, C_stem, C_roots))
 # from Input and vcsvt we could compute
-u = a_L + a_S + a_R
-b= VegetationCarbonInputPartitioningTuple(
-    (
-        a_L/u,
-        a_S/u,
-        a_R/u
-    )
-)
-
-
-b=VegetationCarbonInputScalar(
-    Piecewise((GPP,NPP<0),(NPP,NPP>=0))
-)
-u = VegetationCarbonInputPartitioningTuple(
-    (
-        Piecewise((Allo_fact_leaf-R_leaf/GPP,NPP<0),(Allo_fact_leaf,NPP>=0)),
-        Piecewise((Allo_fact_stem-R_stem/GPP,NPP<0),(Allo_fact_stem,NPP>=0)), 
-        Piecewise((Allo_fact_roots-R_roots/GPP,NPP<0),(Allo_fact_roots,NPP>=0))
-    )
-)
+#u = a_L + a_S + a_R
+#b= VegetationCarbonInputPartitioningTuple(
+#    (
+#        a_L/u,
+#        a_S/u,
+#        a_R/u
+#    )
+#)
+#
+#
+#b=VegetationCarbonInputScalar(
+#    Piecewise((GPP,NPP<0),(NPP,NPP>=0))
+#)
+#u = VegetationCarbonInputPartitioningTuple(
+#    (
+#        Piecewise((Allo_fact_leaf-R_leaf/GPP,NPP<0),(Allo_fact_leaf,NPP>=0)),
+#        Piecewise((Allo_fact_stem-R_stem/GPP,NPP<0),(Allo_fact_stem,NPP>=0)), 
+#        Piecewise((Allo_fact_roots-R_roots/GPP,NPP<0),(Allo_fact_roots,NPP>=0))
+#    )
+#)
 # 
 #Input = InputTuple(b*u)
 #"f_v = u + A*x"
@@ -138,7 +138,7 @@ mvs = MVarSet({
     t,  # time for the complete system
     x,  # state vector of the complete system
     # vegetation carbon partitioning.
-    b,
-    u,
+    #b,
+    #u,
     vcsvt
 })

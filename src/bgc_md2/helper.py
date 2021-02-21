@@ -3,6 +3,7 @@ from IPython.display import display
 from typing import  Tuple, Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
+from frozendict import frozendict
 import ipywidgets as widgets
 import nbformat as nbf
 import pkgutil
@@ -20,6 +21,20 @@ from .resolve.graph_helpers import (
     node_2_string,
     nodes_2_string,
 )
+
+
+def combine(
+        d1: frozendict,
+        d2: frozendict
+    ) -> frozendict:
+    return {
+        t[0]: t[1] 
+        for t in (
+            [(k, v) for k, v in d1.items()]
+            +
+            [(k, v) for k, v in d2.items()]
+        )
+    }
 
 
 def batchSlices(nland, nproc):

@@ -1,12 +1,14 @@
 from sympy import var, ImmutableMatrix, Piecewise
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
-    CompartmentalMatrix,
-    InputTuple,
+    CarbonCompartmentalMatrix,
+    CarbonInputTuple,
     TimeSymbol,
     StateVariableTuple,
-    VegetationCarbonInputScalar,
-    VegetationCarbonInputPartitioningTuple,
+    CarbonStateVariableTuple,
+    NitrogenStateVariableTuple,
+    # VegetationCarbonInputScalar,
+    # VegetationCarbonInputPartitioningTuple,
     VegetationCarbonStateVariableTuple,
     NumericParameterization,
 #    NumericStartValueDict,
@@ -14,10 +16,27 @@ from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
     InternalFluxesBySymbol,
+    NitrogenInFluxesBySymbol,
+    NitrogenOutFluxesBySymbol,
+    NitrogenInternalFluxesBySymbol,
+    CarbonInFluxesBySymbol,
+    CarbonOutFluxesBySymbol,
+    CarbonInternalFluxesBySymbol,
 )
+
+# the next lines are unusual but possible
+# since we use the conversion capabilities 
+# explicitly, while they usually are applied
+# by the framework
+from bgc_md2.resolve.computers import (
+    carbon_in_fluxes_by_symbol_1,
+    carbon_out_fluxes_by_symbol_1,
+    carbon_internal_fluxes_by_symbol_1
+)
+
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ...  import helper as h
+from bgc_md2.resolve.MVarSet import MVarSet
 
 sym_dict = {
         'C_leaf': 'Carbon in foliage'
@@ -123,13 +142,18 @@ nitr = N_NH4*nitr_rate*g_T #In equation <nitr_ratio>, in table 6 <nitr_rate>
 L_NO3 = N_NO3*leach_rate
 L_DON = N_soil*tau_soil*g_T*DON_leach_prop
 
-x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd))
-#x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd, N_leaf, N_wood, N_root, N_labile, N_bud, N_litter, N_soil, N_cwd, N_NH4, N_NO3))
+xc = CarbonStateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd))
+xn = NitrogenStateVariableTuple((N_leaf, N_wood, N_root, N_labile, N_bud, N_litter, N_soil, N_cwd, N_NH4, N_NO3))
+# here we just stick the two parts together
+x = StateVariableTuple(list(xc)+list(xn)) 
+# but we could also use any other ordering and also more variables for the global state vector 
+# e.g. (same but manually put together)
+# x = StateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa, C_litter, C_soil, C_cwd, N_leaf, N_wood, N_root, N_labile, N_bud, N_litter, N_soil, N_cwd, N_NH4, N_NO3))
 u = GPP
 b = ImmutableMatrix((1,0,0,0,0,0))
-Input = InputTuple(tuple(u*b)+(0,0,0))
+c_in_t= CarbonInputTuple(tuple(u*b)+(0,0,0))
 #Input = InputTuple(tuple(u*b)+(0,0,0,0,0,0,0,0,0,0,0,0,0))
-A = CompartmentalMatrix(
+A_c = CarbonCompartmentalMatrix(
 [[-(a_budC+a_rootC+a_woodC+a_labileRamain+Ra_growth+Ra_excess)/C_labile,0,0,0,0,0,0,0,0],
 [                            a_budC/C_labile                           ,-(a_budC2leaf+a_budC2Ramain)/C_bud,0,0,0,0,0,0,0],
 [                                   0                                  ,         a_budC2leaf/C_bud        ,-t_leafC/C_leaf,0,0,0,0,0,0],
@@ -161,7 +185,29 @@ np1 = NumericParameterization(
     # state_var_units= gC*m^{-2}
     # time_unit=day
 )
+in_fl_c = carbon_in_fluxes_by_symbol_1(c_in_t, xc)
+internal_fl_c = carbon_internal_fluxes_by_symbol_1(A_c, xc)
+out_fl_c = carbon_out_fluxes_by_symbol_1(A_c, xc)
 
+in_fl_n = {N_labile: U_Nfix, N_NH4: Ndep_NH4, N_NO3: Ndep_NO3}
+out_fl_n = {N_soil: L_DON, N_NH4: U_NH4, N_NO3: U_NO3+L_NO3}
+internal_fl_n = {
+    (N_bud, N_leaf): a_budN2leaf,
+    (N_bud, N_labile): a_budN2Ramain,
+    (N_labile, N_bud): a_budN,
+    (N_leaf, N_litter): t_leafN,
+    (N_leaf, N_labile): t_retransN,
+    (N_labile, N_wood): a_woodN,
+    (N_wood, N_cwd): t_woodN,
+    (N_root, N_labile): a_rootN,
+    (N_root, N_litter): t_rootN,
+    (N_cwd, N_litter): t_CWDN,
+    (N_litter, N_soil): t_litterN,
+    (N_NH4, N_soil): U_NH4_immob,
+    (N_NO3, N_soil): U_NO3_immob,
+    (N_soil, N_NH4): t_soilN,
+    (N_NH4, N_NO3): nitr
+}
 mvs = MVarSet({
     BibInfo(# Bibliographical Information
         name="ACONITE",
@@ -173,30 +219,31 @@ mvs = MVarSet({
         doi="10.5194/gmd-7-2015-2014",
         sym_dict=sym_dict
     ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
+    InFluxesBySymbol(h.combine(in_fl_c, in_fl_n)),
+    OutFluxesBySymbol(h.combine(out_fl_c, out_fl_n)),
+    InternalFluxesBySymbol(h.combine(internal_fl_c, internal_fl_n)), 
+    t,   # time for the complete system
+    x,   # state vector of the complete system
+    xc,  # state vector of the carbon sub system
+    # from which the carbon fluxes and hence 
+    # the CarbonCompartMentalMatrix can be derived
+    # (even though in this case it is given)
+    # A_c,  # the carbon compartmental matrix
+    # in_fl_c, #alternatively to the CarbonCompartmentalMatrix
+    # out_fl_c,# 
+    # internal_fl_c,
+    xn,  # state vector of the nitrogen sub system
+    # from which the nitrogenfluxes and hence the nitrogen compartmental
+    # matrix could be derived whence the computers for extraction the
+    # nitrogen fluxes from the global fluxes have been implemented 
+    # NitrogenInFluxesBySymbol(in_fl_n),
+    # NitrogenOutFluxesBySymbol(out_fl_n),
+    # NitrogenInternalFluxesBySymbol(internal_fl_n),
+    VegetationCarbonStateVariableTuple(
+        (C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa)
+    ),
+    # the following can be computed automatically
+    # VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa)),
-#    InFluxesBySymbol({N_labile: U_Nfix, N_NH4: Ndep_NH4, N_NO3: Ndep_NO3}),
-#    OutFluxesBySymbol({N_soil: L_DON, N_NH4: U_NH4, N_NO3: U_NO3+L_NO3}),
-#    InternalFluxesBySymbol({
-#    (N_bud,N_leaf): a_budN2leaf, 
-#    (N_bud,N_labile): a_budN2Ramain, 
-#    (N_labile,N_bud): a_budN,
-#    (N_leaf,N_litter): t_leafN, 
-#    (N_leaf,N_labile): t_retransN, 
-#    (N_labile,N_wood): a_woodN, 
-#    (N_wood,N_cwd): t_woodN, 
-#    (N_root,N_labile): a_rootN, 
-#    (N_root,N_litter): t_rootN, 
-#    (N_cwd,N_litter): t_CWDN, 
-#    (N_litter,N_soil): t_litterN, 
-#    (N_NH4,N_soil): U_NH4_immob, 
-#    (N_NO3,N_soil): U_NO3_immob, 
-#    (N_soil,N_NH4): t_soilN, 
-#    (N_NH4,N_NO3): nitr})
+    # VegetationCarbonInputPartitioningTuple(b),
 })
