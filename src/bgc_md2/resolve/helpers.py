@@ -1,5 +1,6 @@
 from string import ascii_lowercase, ascii_uppercase
 from frozendict import frozendict
+from functools import _lru_cache_wrapper
 import inspect
 from . import computers as cmod
 from . import non_graph_helpers as ngh
@@ -23,11 +24,13 @@ def bgc_md2_computers():
     #sep = "."
     #pkg_name = __name__.split(sep)[0]
     #cmod = importlib.import_module(".resolve.computers", package=pkg_name)
+    def pred(a):
+        return inspect.isfunction(a) or isinstance(a,_lru_cache_wrapper)
     return frozenset(
         [
             getattr(cmod, c)
             for c in cmod.__dir__()
-            if inspect.isfunction(getattr(cmod, c))
+            if pred(getattr(cmod, c)) 
         ]
     )
 
