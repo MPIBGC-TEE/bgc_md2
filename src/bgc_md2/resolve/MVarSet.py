@@ -1,4 +1,5 @@
 from typing import Dict, List, Set, TypeVar
+from functools import lru_cache
 from frozendict import frozendict
 import networkx as nx
 import inspect
@@ -79,6 +80,7 @@ class MVarSet:
                     return lambda: self._get_single_mvar_value(var)
         return super().__getattr__(name)
 
+    @lru_cache
     def path_dict_to_single_mvar(
             self,
             mvar: type
@@ -135,7 +137,7 @@ class MVarSet:
             # check if the given path is among the possible paths
             start_node = path[0]
             if start_node not in path_dict.keys():
-                raise (Exception("There are no path to the target with this startnode"))
+                raise (Exception("There are no paths to the target with this startnode"))
             starting_here = path_dict[start_node]
             if not path in starting_here:
                 raise (Exception("the given path is not possible"))
@@ -147,7 +149,7 @@ class MVarSet:
         for i in range(1, len(path)):
             computers = rg.get_edge_data(path[i - 1], path[i])[0][
                 "computers"
-            ]  # if we have more
+            ]  # [0] if we have more than one computerset take the first one
     
             def apply(comp):
                 arg_classes = [p.annotation for p in inspect.signature(comp).parameters.values()]
