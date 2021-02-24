@@ -46,7 +46,7 @@ model_names=[
     # "Scheiter2009GlobalChangeBiol", #No soil compartments
     # "Turgman2018EcologyLetters", #No soil compartments
     # "Haverd2016Biogeosciences", #No soil compartments
-    # "Foley1996GBC", #No equations for litter and soil, but the figure has those compartments
+    # "Foley1996GBC", #No equations for litter and soil, but the figure has those compartments. See Markus’ Ibis.yaml?
     # "Gu2010EcologicalComplexity", #No equations for litter and soil, but the model description (CEVSA) mentions them
     # "King1993TreePhysiol", #No soil compartments
     # "DeAngelis2012TheorEcol", #No soil compartments (model based on G’Day, but removed litter and soil compartments)
@@ -55,6 +55,14 @@ model_names=[
     # "Williams2005GCB",
     "CARDAMOM",
 ]
+######################################################################
+####### MODELS NOT TRANSLATED FROM .YAML TO SOURCE.PY
+# Sitch2003GlobChangBiol: Not included because allocation (see pg 8) has no ODEs; biomass increment is allocated to the tissue pools while satisfying the functional balance difference equations...
+# VanDerWerf1993PlantSoil: this model has no compartment for wood. It is used to simulate effect of nitrogen on growth of a grass (Dactylis glomerata L.).
+# ICBM: same as Andren1997EA but less parameter sets
+# Schimel2003SoilBiologyandBiochemistry.yaml, Schimel2003SoilBiologyandBiochemistry_rMM.yaml, Schimel2003SoilBiologyandBiochemistry_rMM_improved.yaml: Original model has no outputs, corrected by Holger 
+# Ibis: includes soil, no metadata -added by Markus. Vero’s version: Foley
+######################################################################
 for mn in model_names:
     mvs = MVarSet.from_model_name(mn)
     mvars = mvs.computable_mvar_types()
