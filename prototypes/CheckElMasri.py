@@ -49,6 +49,8 @@ VegetationCarbonInputScalar(sum(it))
 #    mvs.render(var)
 # -
 
+mvs.get_VegetationCarbonInputPartitioningTuple()
+
 importlib.invalidate_caches()
 mod2 = importlib.import_module('bgc_md2.models.Haverd2016Biogeosciences.source')
 mvs2 = mod2.mvs
@@ -65,5 +67,10 @@ b
 mvs2.get_VegetationCarbonInputScalar()
 
 mvs2.get_CompartmentalMatrix()
+
+importlib.invalidate_caches()
+mod3 = importlib.import_module('bgc_md2.models.Running1988EcolModel.source')
+mvs3 = mod3.mvs
+mvs3.get_VegetationCarbonInputPartitioningTuple()
 
 

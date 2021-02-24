@@ -11,12 +11,12 @@ model_names=[
     # "Arora2005GCB-1",
     # "Comins1993EA",
     # "Running1988EcolModel",
-    # "TECO", # Was Luo's model based on this one? 
+    # "TECO", #Same as Luo2012TE (comes from the same paper)
     # "Emanuel1981",
     # "Rasmussen2016JMB",
     ##################################################################
     ####### SOIL MODELS: 
-    ## #  *: Models with compartmental matrix = T*N, "can not compute <class 'bgc_md2.resolve.mvars.CompartmentalMatrix'>"
+    ## #  *: Models with compartmental matrix = T*N 
     # "Fontaine2005Ecologyletters_4_2",
     # "Fontaine2005Ecologyletters_4_1",
     # "Fontaine2005Ecologyletters_3_2",
@@ -42,15 +42,15 @@ model_names=[
     ######################################################################
     ####### VEGETATION MODELS
     ######################################################################
-    # "ElMasri2013AgricForMeteorol", #Paper shows results for soil carbon, and fig. 1 has litter and C pools, but the equations on table A2 (although very detailed) don't include them
+    # "ElMasri2013AgricForMeteorol", #Paper shows results for soil carbon, and fig. 1 has litter and C pools, but the equations on table A2 (although very detailed) don't include them. There are also equations for Phenology, but they were not included in the source.py
     # "Scheiter2009GlobalChangeBiol", #No soil compartments
     # "Turgman2018EcologyLetters", #No soil compartments
     # "Haverd2016Biogeosciences", #No soil compartments
     # "Foley1996GBC", #No equations for litter and soil, but the figure has those compartments
-    # "Gu2010EcologicalComplexity", #No equations for litter and soil, but the model description (CEVSA) metions them
+    # "Gu2010EcologicalComplexity", #No equations for litter and soil, but the model description (CEVSA) mentions them
     # "King1993TreePhysiol", #No soil compartments
     # "DeAngelis2012TheorEcol", #No soil compartments (model based on G’Day, but removed litter and soil compartments)
-    # "Potter1993GlobalBiogeochemicalCycles",
+    # "Potter1993GlobalBiogeochemicalCycles", #No equations for litter and soil, but the model description mentions them
     # "testVectorFree",
     # "Williams2005GCB",
     "CARDAMOM",
