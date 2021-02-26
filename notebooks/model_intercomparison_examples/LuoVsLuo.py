@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.10.0
+#       jupytext_version: 1.10.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -161,7 +161,7 @@ mvs_subs=MVarSet({var.subs(subs_dict) for var in {mvs_TECO.get_CompartmentalMatr
 
 for v in mvs_subs.computable_mvar_types():
     display(mvs_subs._get_single_mvar_value(v))
-    
+
 
 # This description already that the CompartmentalMatrix and Statevector are probably not consistent.
 # We can make this even more obvious by computing the outflux from the `C_root` pool.
@@ -171,6 +171,107 @@ for v in mvs_subs.computable_mvar_types():
 # and the internal flux from `C_roots` to `C_stlit`.
 
 mvs_subs.get_InternalFluxesBySymbol()[(C_roots,C_stlit)]
-    
+
+# We can probably repair this by exchanging the positions of `C_roots` and `C_woods` as has been done in the following version of the model
 
 
+mvs_mm =  MVarSet.from_model_name('TECOmm')
+
+for key,fl in mvs_mm.get_InternalFluxesBySymbol().items():
+    print(key);display(fl) 
+
+in_fluxes, internal_fluxes, out_fluxes = mvs_mm.get_InFluxesBySymbol(),mvs_mm.get_InternalFluxesBySymbol(),mvs_mm.get_OutFluxesBySymbol()
+
+
+in_flux_targets, out_flux_sources, internal_connections = [[k for k in d.keys()] for d in (in_fluxes, out_fluxes, internal_fluxes)]                                                                
+
+internal_connections
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
+
+# +
+virtual_in_flux_sources=["virtual_in_" + str(t) for t in in_flux_targets]
+virtual_in_flux_sources
+GVI=nx.DiGraph()
+for n in virtual_in_flux_sources:
+    GVI.add_node(n,virtual=True)
+for n in in_flux_targets:
+    GVI.add_nodes_from(in_flux_targets)
+for i in range(len(in_flux_targets)):
+    GVI.add_edge(virtual_in_flux_sources[i],in_flux_targets[i])
+
+GVI.nodes,GVI.edges
+
+# +
+virtual_out_flux_targets=["virtual_out_" + str(t) for t in out_flux_sources]
+GVO=nx.DiGraph()
+for n in virtual_out_flux_targets:
+    GVO.add_node(n,virtual=True)
+for n in out_flux_sources:
+    GVO.add_nodes_from(out_flux_sources)
+for i in range(len(out_flux_sources)):
+    GVO.add_edge(out_flux_sources[i], virtual_out_flux_targets[i])
+
+GVO.nodes,GVO.edges
+# -
+
+GINT=nx.DiGraph()
+for c in internal_connections:
+    GINT.add_edge(c[0],c[1])
+GINT.edges
+GINT.nodes
+
+
+# +
+set(GVI.nodes).intersection(GINT.nodes)
+G1=nx.compose(GVI,GINT)
+G=nx.compose(G1,GVO)
+
+
+# -
+
+import CompartmentalSystems.helpers_reservoir as hr
+G, GVI, GINT, GVO = hr.nxgraphs(mvs_mm.get_StateVariableTuple,in_fluxes,internal_fluxes,out_fluxes)
+
+# # matplotlib plotting
+
+# +
+ax = plt.axes()
+#pos=nx.spiral_layout(G)
+pos=nx.circular_layout(G)
+#pos=nx.spring_layout(G)
+#pos=nx.kamada_kawai_layout(G)
+#pos=nx.planar_layout(G)
+#pos=nx.shell_layout(G)
+#pos=nx.spectral_layout(G)
+virtual_node_options={
+    'node_size': 10,
+}
+real_node_options={
+    'node_color': 'black',
+    'node_size': 100,
+}
+ax=plt.axes()
+nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=virtual_in_flux_sources,**virtual_node_options,node_color='blue')
+nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=in_flux_targets,**real_node_options)
+
+nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=GINT.nodes,**real_node_options)
+nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=virtual_out_flux_targets,**virtual_node_options,node_color='red')
+
+nx.draw_networkx_edges(ax=ax,pos=pos,G=G)
+# -
+
+# # cytoscape without finetuning
+
+import ipycytoscape
+import ipywidgets as widgets
+
+nx.cytoscape_graph
+
+directed = ipycytoscape.CytoscapeWidget()
+directed.graph.add_graph_from_networkx(G, directed=True)
+directed
+
+directed.

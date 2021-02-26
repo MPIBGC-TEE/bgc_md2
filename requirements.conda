@@ -36,3 +36,5 @@ pygraphviz
 sphinx
 pip
 zarr
+py2cytoscape
+ipycytoscape
