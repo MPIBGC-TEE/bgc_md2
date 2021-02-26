@@ -50,6 +50,8 @@ ds = datasets[("monthly", None, "discrete")]
 #ds = datasets[("monthly", None, "continuous")]
 #ds = datasets[("yearly", 0, "continuous")]
 
+#ds_path = "/home/data/CARDAMOM/Greg_2020_10_26/monthly_output/discrete/archive_2021-02-18/sol_acc_age_btt"
+#ds = xr.open_mfdataset(ds_path + "_*.nc").isel(prob=slice(20, 25, 1))
 ds
 
 
@@ -237,12 +239,12 @@ plt.draw()
 
 # We compute the global C mean age and transit time and an average of the system age and transit time medians weighted by C stocks.
 
-# +
-alpha = 0.2
+alpha = 0.05
 lw = 5
 colors = ["blue", "orange", "green", "red"]
 args = {"alpha": alpha, "lw": lw}#, "add_legend": False}
 
+# +
 fig, ax = plt.subplots(figsize=(12, 6))
 
 global_mean_system_age = ds["mean_system_age"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
@@ -251,7 +253,7 @@ global_mean_btt = ds["mean_btt"].weighted(ds_area_lf.area_sphere * ds_area_lf.la
 global_avg_btt_median = ds["btt_median"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 
 labels = [
-    "Global C mean age",
+    "Global C mean system age",
     "Global average system age median",
     "Global mean backward transit time",
     "Global average backward transit time median"
@@ -271,7 +273,7 @@ plt.tight_layout()
 plt.draw()
 # -
 
-# We have a closer look at each of such graphs.
+# We have a closer look at each of such graphs, now as rolling mean over 1 year.
 
 # +
 fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(12, 12))
@@ -286,8 +288,34 @@ titles = [
 ]
 
 for variable_name, ax, title, color in zip(variable_names, axes.flatten(), titles, colors):
-    f(ds[variable_name]).plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
+    f(ds[variable_name]).rolling(time=12).mean().plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
 
+#    ax.set_ylim([0, ax.get_ylim()[1]])
+    ax.set_title(title)
+    ax.set_ylabel("yr")
+    
+plt.tight_layout()
+plt.draw()
+# -
+
+# Now we plot differences per time step with a rolling mean over 10 years.
+
+# +
+fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(12, 12))
+
+f = lambda x: x.diff(dim="time").weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
+variable_names = ["mean_system_age", "system_age_median", "mean_btt", "btt_median"]
+titles = [
+    "Global C mean age",
+    "Global average system age median",
+    "Global mean backward transit time",
+    "Global average backward transit time median"
+]
+
+for variable_name, ax, title, color in zip(variable_names, axes.flatten(), titles, colors):
+    f(ds)[variable_name].rolling(time=12*10).mean().plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
+
+#    ax.set_ylim([0, ax.get_ylim()[1]])
     ax.set_title(title)
     ax.set_ylabel("yr")
     
@@ -308,7 +336,7 @@ total_C_solution = total_C_solution.mean(dim=["prob", "time"]).sum()
 #
 # This leads to the following figures:
 
-print("Total C CARDAMOM            : %.2f PgC" % (total_C_xs *1e-15))
+print("Total C CARDAMOM            : %.2f PgC" % (total_C_xs*1e-15))
 print("Total C model reconstruction: %.2f PgC" % (total_C_solution*1e-15))
 print("Coverage                    :   %2.2f %%" % (total_C_solution/total_C_xs*100))
 

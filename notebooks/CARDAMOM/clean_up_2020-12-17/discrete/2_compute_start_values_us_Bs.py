@@ -110,11 +110,11 @@ for name in ["lat", "lon", "prob", "time"]:
 
 # We decide in which values of which dimensions we are interested (maybe to save computation time).
 
-# use all "lat", all "lon", the first 10 "prob", all "time"
+# use all "lat", all "lon", all "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(25, 40, 1),
+    "prob": slice(0, 50, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 

@@ -312,7 +312,7 @@ def func_for_map_blocks_with_mr(*args):
     lon = args[4].reshape(-1)
     prob = args[5].reshape(-1)
     times = args[6].reshape(-1)
-                                                                                
+
     nr_times = len(times)
     data_times = np.arange(0, nr_times, 1) * time_step_in_days
                                                                                         
@@ -365,14 +365,14 @@ def func_for_map_blocks_with_mr(*args):
         res = np.nan * np.ones_like(res)
         print(str(e), flush=True)
         print(tb, flush=True)
-        log_msg = str(e)
+        log_msg = str(e) + str(tb)
 
     write_to_logfile(
-          logfile_name,
-          lat,
-          lon,
-          prob,
-          log_msg
+        logfile_name,
+        lat,
+        lon,
+        prob,
+        log_msg
     )
     
     return res.reshape(return_shape)
@@ -474,6 +474,7 @@ def compute_pool_age_quantile(mr, nr_time_steps, q, maxsize=None):
 
         mr.initialize_state_transition_operator_cache(
             maxsize,
+            lru_stats=True,
             size=len(mr.times)
         )
 
@@ -481,6 +482,10 @@ def compute_pool_age_quantile(mr, nr_time_steps, q, maxsize=None):
             quantile=q,
             F0=F0
         )
+
+        cache_stats = mr._state_transition_operator_cache._cached_phi_tmax.cache_stats()
+        print([tp[-1] for tp in cache_stats])
+
         return pool_age_quantiles
     elif isinstance(mr, DMR):
         P0 = mr.fake_cumulative_start_age_masses(nr_time_steps)
@@ -839,6 +844,8 @@ def compute_incomplete_sites_with_mr(
     start_values_da = da.from_zarr(start_values_zarr)
     us_da = da.from_zarr(us_zarr)
     Bs_da = da.from_zarr(Bs_zarr)
+#    B = Bs_da[7, 60, 10].compute()
+#    print(B[:120].mean(axis=0))
     
     # copy nans from start_values, us, or Bs tu z
     nr_nan_sites, nan_coords_tuples = get_nan_site_tuples_for_mr_computation(
@@ -847,12 +854,13 @@ def compute_incomplete_sites_with_mr(
         Bs_zarr,
         slices
     )
+
     for nan_coords in nan_coords_tuples:
         z[nan_coords] = np.nan
 
     # identify non-nan computed sites in start_values, us, and Bs
     # combine with not yet computed sites in z
-    nr_incomplete_sites, incomplete_coords_tuples, incomplete_sliced_coords_tuples = get_incomplete_site_tuples_for_mr_computation(
+    nr_incomplete_sites, incomplete_coords_tuples, _ = get_incomplete_site_tuples_for_mr_computation(
         start_values_zarr,
         us_zarr,
         Bs_zarr,
@@ -864,7 +872,7 @@ def compute_incomplete_sites_with_mr(
         print('number of incomplete sites:', nr_incomplete_sites)
     else:
         print('no incomplete sites remaining')
-        return
+        return True
 
     # select incomplete sites from variables
     incomplete_variables = []
@@ -877,7 +885,7 @@ def compute_incomplete_sites_with_mr(
     ]
     for v, shape in zip([Bs_da, start_values_da, us_da], shapes):
         v_stack_list = []
-        for ic in incomplete_sliced_coords_tuples:
+        for ic in incomplete_coords_tuples:
             v_stack_list.append(v[ic].reshape(shape))
 
         incomplete_variables.append(da.stack(v_stack_list))
@@ -937,8 +945,9 @@ def compute_incomplete_sites_with_mr(
         task["batch_size"]
     )
 
-    write_to_logfile(logfile_name, 'done, timeout (min) =', time_limit_in_min)
+    write_to_logfile(logfile_name, 'done, timeout (min) = ' + str(time_limit_in_min))
     print('done, timeout (min) =', time_limit_in_min, flush=True)
+    return False
 
 
 def run_task_with_mr(
@@ -976,8 +985,9 @@ def run_task_with_mr(
     logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
     print("Logfile:", logfile_name)
 
-    for timeout in task["timeouts"]:        
-        compute_incomplete_sites_with_mr(
+    for timeout in task["timeouts"]:
+        done = False
+        done = compute_incomplete_sites_with_mr(
             timeout,
             z,
             nr_pools,
@@ -990,14 +1000,20 @@ def run_task_with_mr(
             task,
             logfile_name
         )
+        if done:
+            break
 
-    nr_incomplete_sites, _, _ = get_incomplete_site_tuples_for_mr_computation(
-        start_values_zarr,
-        us_zarr,
-        Bs_zarr,
-        z,
-        slices
-    )
+    if done:
+        nr_incomplete_sites = 0
+    else:
+        nr_incomplete_sites, _, _ = get_incomplete_site_tuples_for_mr_computation(
+            start_values_zarr,
+            us_zarr,
+            Bs_zarr,
+            z,
+            slices
+        )
+
     write_to_logfile(logfile_name, nr_incomplete_sites, "incomplete sites remaining")
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()

@@ -118,7 +118,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 1, 1),
+    "prob": slice(0, 10, 1),
 #    "lat": slice(10, 11, 1),
 #    "lon": slice(22, 23, 1),
 #    "prob": slice(0, 1, 1),
@@ -159,7 +159,7 @@ nr_lats, nr_lons, nr_probs, nr_times, nr_pools
 task_list = [
     {# 0:
         "computation": "xs",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_xs,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -173,7 +173,7 @@ task_list = [
     },    
     {# 1:
         "computation": "start_values",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_start_values,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -187,7 +187,7 @@ task_list = [
     },
     {# 2:
         "computation": "us",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_us,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -201,7 +201,7 @@ task_list = [
     },
     {# 3:
         "computation": "Bs",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_Bs,
         "func_args": {
             "time_step_in_days": params["time_step_in_days"],
@@ -228,7 +228,7 @@ task_list = [
 # +
 # %%time
 
-for task in task_list:
+for task in task_list[3:]: # Bs not yet complete to 10
     print("task: computing", task["computation"])
     print()
     

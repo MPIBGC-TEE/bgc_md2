@@ -27,11 +27,13 @@ from tqdm import tqdm
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
 from dask.distributed import Client
+from dask import delayed
 # -
 
+# for monthly discrete data, each worker needs about 10GB
 my_cluster = CARDAMOMlib.prepare_cluster(
-    n_workers=48,
-#    alternative_dashboard_port=8792
+    n_workers=10,
+    alternative_dashboard_port=8792
 )
 Client(my_cluster)
 
@@ -89,7 +91,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 5, 1),
+    "prob": slice(30, 32, 1), # (0, 30) done (discrete, monthly)
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -141,7 +143,7 @@ if model_type == "continuous":
 elif model_type == "discrete":
     acc_net_external_output_vector_da = da.from_zarr(str(project_path.joinpath("acc_net_external_output_vector")))
     mean_btt_da = (acc_net_external_output_vector_da * mean_pool_age_vector_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
-    btt_moment_2_da = (acc_net_external_output_vector_da * pool_age_moment_vector_2_da).sum(-1) /acc_net_external_output_vector_da.sum(-1)
+    btt_moment_2_da = (acc_net_external_output_vector_da * pool_age_moment_vector_2_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
 else:
     raise(TypeError("unknown model type '%s'" % model_type))
 btt_sd_da = np.sqrt(btt_moment_2_da)
@@ -257,26 +259,36 @@ ds = xr.Dataset(
 )
 ds
 
+
 # +
-# %%time
-
-# compression takes forever, better zip it "manually" afterwards
-
-#comp_dict = {"zlib": True, "complevel": 9}
-#encoding = {var: comp_dict for var in ds.data_vars}
-
-arr = np.arange(len(ds.prob))[slices["prob"]]
-for prob in tqdm(arr):
-    netCDF_filename = project_path.joinpath(netCDF_filestem + "_%02d.nc" % prob)
-    print(netCDF_filename)
-    ds.isel(prob=slice(prob, prob+1, 1)).to_netcdf(
+## compression takes forever, better zip it "manually" afterwards
+#
+##comp_dict = {"zlib": True, "complevel": 9}
+##encoding = {var: comp_dict for var in ds.data_vars}
+#
+def delayed_to_netcdf(prob, netCDF_filename, compute):
+    ds_sub = ds.sel(prob=[prob])
+    ds_sub.to_netcdf(
         netCDF_filename,
+#        mode="w",
 #        encoding=encoding,
-        compute=True
+        compute=compute
     )
+    del ds_sub
+
+arr = ds.prob
+print(arr)
 # -
+for prob in tqdm(arr):
+    netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
+    print(netCDF_filename)
+    delayed_to_netcdf(prob, netCDF_filename, True)
+#  # OR
 probs, datasets = zip(*ds.groupby("prob", squeeze=False))
 paths = [project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob) for prob in probs]
-xr.save_mfdataset(datasets, paths, compute=True)
+del_obj = xr.save_mfdataset(datasets, paths, compute=False)
+del_obj
+# %%time
+del_obj.compute()
 
 
