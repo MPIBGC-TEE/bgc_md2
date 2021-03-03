@@ -180,12 +180,14 @@ mvs_mm =  MVarSet.from_model_name('TECOmm')
 for key,fl in mvs_mm.get_InternalFluxesBySymbol().items():
     print(key);display(fl) 
 
+# +
 in_fluxes, internal_fluxes, out_fluxes = mvs_mm.get_InFluxesBySymbol(),mvs_mm.get_InternalFluxesBySymbol(),mvs_mm.get_OutFluxesBySymbol()
-
 
 in_flux_targets, out_flux_sources = [[str(k) for k in d.keys()] for d in (in_fluxes, out_fluxes)] 
 
 internal_connections = [(str(s),str(t)) for s,t in internal_fluxes.keys()]                                                                
+# -
+
 
 internal_connections
 
@@ -193,55 +195,18 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-# +
-virtual_in_flux_sources=["virtual_in_" + str(t) for t in in_flux_targets]
-virtual_in_flux_sources
-GVI=nx.DiGraph()
-for n in virtual_in_flux_sources:
-    GVI.add_node(n,virtual=True)
-for n in in_flux_targets:
-    GVI.add_nodes_from(in_flux_targets)
-for i in range(len(in_flux_targets)):
-    GVI.add_edge(virtual_in_flux_sources[i],in_flux_targets[i])
-
-GVI.nodes,GVI.edges
-
-# +
-virtual_out_flux_targets=["virtual_out_" + str(t) for t in out_flux_sources]
-GVO=nx.DiGraph()
-for n in virtual_out_flux_targets:
-    GVO.add_node(n,virtual=True)
-for n in out_flux_sources:
-    GVO.add_nodes_from(out_flux_sources)
-for i in range(len(out_flux_sources)):
-    GVO.add_edge(out_flux_sources[i], virtual_out_flux_targets[i])
-
-GVO.nodes,GVO.edges
-# -
-
-GINT=nx.DiGraph()
-for c in internal_connections:
-    GINT.add_edge(c[0],c[1])
-GINT.edges
-GINT.nodes
-
-
-set(GVI.nodes).intersection(GINT.nodes)
-G1=nx.compose(GVI,GINT)
-G=nx.compose(G1,GVO)
 
 
 
 
-# +
-#import CompartmentalSystems.helpers_reservoir as hr
-#G, GVI, GINT, GVO = hr.nxgraphs(mvs_mm.get_StateVariableTuple,in_fluxes,internal_fluxes,out_fluxes)
-# -
+
+
+import CompartmentalSystems.helpers_reservoir as hr
+G, GVI, GINT, GVO = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
 
 # # matplotlib plotting
 
 # +
-ax = plt.axes()
 #pos=nx.spiral_layout(G)
 #pos=nx.circular_layout(G)
 #pos=nx.spring_layout(G)
@@ -267,97 +232,5 @@ nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=virtual_out_flux_targets,**vir
 
 nx.draw_networkx_edges(ax=ax,pos=pos,G=G)
 # -
-
-list(G.nodes());G.nodes['virtual_in_C_foliage']
-
-# +
- 
-from bokeh.io import output_file, show
-from bokeh.models import (BoxSelectTool, Circle, Text, EdgesAndLinkedNodes, HoverTool,
-                          MultiLine, ArrowHead, NodesAndLinkedEdges, Plot, Range1d, TapTool,)
-from bokeh.palettes import Spectral4
-from bokeh.plotting import from_networkx
-
-#G = nx.karate_club_graph()
-
-
-plot = Plot(plot_width=400, plot_height=400,
-            x_range=Range1d(-1.1,1.1), y_range=Range1d(-1.1,1.1))
-plot.title.text = "Graph Interaction Demonstration"
-
-plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
-
-graph_renderer = from_networkx(G, nx.circular_layout, scale=1, center=(0,0))
-
-graph_renderer.node_renderer.glyph = Circle(size=15, fill_color=Spectral4[0])
-#graph_renderer.node_renderer.glyph = Text()
-graph_renderer.node_renderer.selection_glyph = Circle(size=15, fill_color=Spectral4[2])
-graph_renderer.node_renderer.hover_glyph = Circle(size=15, fill_color=Spectral4[1])
-
-graph_renderer.edge_renderer.glyph = MultiLine(line_color="#CCCCCC", line_alpha=0.8, line_width=5)
-graph_renderer.edge_renderer.selection_glyph = MultiLine(line_color=Spectral4[2], line_width=5)
-graph_renderer.edge_renderer.hover_glyph = MultiLine(line_color=Spectral4[1], line_width=5)
-
-graph_renderer.selection_policy = NodesAndLinkedEdges()
-graph_renderer.inspection_policy = EdgesAndLinkedNodes()
-
-
-plot.renderers.append(graph_renderer)
-
-output_file("networkx_graph.html")
-show(plot)
-
-
-# +
-VC, RC = "black", "red"
-
-G.nodes.data()
-# -
-
-node_attrs = {}
-for n,y in G.nodes(data=True):
-    #print(n)
-    #print(y)
-    if 'virtual' in y.keys():
-        node_attrs[n]=VC
-    #edge_color = SAME_CLUB_COLOR if G.nodes[start_node]["club"] == G.nodes[end_node]["club"] else DIFFERENT_CLUB_COLOR
-    #edge_attrs[(start_node, end_node)] = edge_color
-node_attrs
-nx.set_node_attributes(G,node_attrs,'node_color')
-
-# +
-plot = Plot(plot_width=400, plot_height=400,
-            x_range=Range1d(-1.1,1.1), y_range=Range1d(-1.1,1.1))
-plot.title.text = "Graph Interaction Demonstration"
-
-plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
-
-graph_renderer = from_networkx(G, nx.spring_layout, scale=1, center=(0,0))
-
-graph_renderer.node_renderer.glyph = Circle(size=15, fill_color="node_color")
-#graph_renderer.node_renderer.glyph = Text()
-graph_renderer.node_renderer.selection_glyph = Circle(size=15, fill_color=Spectral4[2])
-graph_renderer.node_renderer.hover_glyph = Circle(size=15, fill_color=Spectral4[1])
-
-graph_renderer.edge_renderer.glyph = MultiLine(line_color="#CCCCCC", line_alpha=0.8, line_width=5)
-
-
-graph_renderer.edge_renderer.selection_glyph = MultiLine(line_color=Spectral4[2], line_width=5) 
-graph_renderer.edge_renderer.hover_glyph = MultiLine(line_color=Spectral4[1], line_width=5)
-
-graph_renderer.selection_policy = NodesAndLinkedEdges()
-graph_renderer.inspection_policy = EdgesAndLinkedNodes()
-
-
-plot.renderers.append(graph_renderer)
-
-output_file("networkx_graph.html")
-show(plot)
-# -
-
-graph_renderer.edge_renderer
-
-# To do:
-#     implement an edge_renderer.glyph that can draw arrows instead of lines (directed graphs)
 
 
