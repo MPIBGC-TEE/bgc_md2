@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.10.0
+#       jupytext_version: 1.10.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -93,16 +93,18 @@ custom_inherited.set_style([
                         }])
 custom_inherited
 # -
+# Fully customized using a dictionary (that we would have to build from our graph)
+
 data = {
     'nodes': [
-        { 'data': { 'id': 'desktop', 'name': 'Cytoscape', 'href': 'http://cytoscape.org' } },
-        { 'data': { 'id': 'a', 'name': 'Grid', 'href': 'http://cytoscape.org' } },
-        { 'data': { 'id': 'b', 'name': 'Cola', 'href': 'http://cytoscape.org' } },
-        { 'data': { 'id': 'c', 'name': 'Popper', 'href': 'http://cytoscape.org' } },
-        { 'data': { 'id': 'js', 'name': 'Cytoscape.js', 'href': 'http://js.cytoscape.org' } }
+        { 'data': { 'id': 'desktop', 'name': 'C_leaf', 'href': 'http://cytoscape.org' } },
+        { 'data': { 'id': 'a', 'name': 'C_root', 'href': 'http://cytoscape.org' } },
+        { 'data': { 'id': 'b', 'name': 'C_wood', 'href': 'http://cytoscape.org' } },
+        { 'data': { 'id': 'c', 'name': 'C_fast_soil', 'href': 'http://cytoscape.org' } },
+        { 'data': { 'id': 'js', 'name': 'C_slow_soil', 'href': 'http://js.cytoscape.org' } }
     ],
     'edges': [
-        {'data': { 'source': 'desktop', 'target': 'js' }},
+        {'data': { 'source': 'desktop', 'target': 'js' ,'name': 'my edge'}},
         {'data': { 'source': 'a', 'target': 'b' }},
         {'data': { 'source': 'a', 'target': 'c' }},
         {'data': { 'source': 'b', 'target': 'c' }},
@@ -111,12 +113,14 @@ data = {
 }
 
 
+
+
 cytoscapeobj = ipycytoscape.CytoscapeWidget()
 cytoscapeobj.graph.add_graph_from_json(data)
 
 
-# +
-cytoscapeobj.set_style([{
+cytoscapeobj.set_style([
+    {
                         'selector': 'node',
                         'css': {
                             'content': 'data(name)',
@@ -126,8 +130,21 @@ cytoscapeobj.set_style([{
                             'text-outline-color': 'green',
                             'background-color': 'green'
                         }
-                        },
-                        {
+    },
+    {
+                        'selector': 'edge',
+                        'css': {
+                            'content': 'data(name)',
+                            'text-valign': 'center',
+                            'target-arrow-shape': 'triangle',
+                            'target-arrow-color': 'black',
+                            'source-arrow-color': 'black',
+                            'line-color': '#333',
+                            'width': 1.5,
+                            'curve-style': 'bezier'
+                        }
+    },
+    {
                         'selector': ':selected',
                         'css': {
                             'background-color': 'black',
@@ -135,45 +152,17 @@ cytoscapeobj.set_style([{
                             'target-arrow-color': 'black',
                             'source-arrow-color': 'black',
                             'text-outline-color': 'black'
-                        }}
-                        ])
-
-
-# -
-
+    }
+    }
+])
 cytoscapeobj
 
+# To do:
+#  - How to plot subgraphs **INTO** the existing graph?
+#  - How to use latex in edge or node descriptions.
+#  
 
-# Without py2cytoscape (raw cyREST API call)
 
-# +
-# HTTP Client for Python
-import requests
 
-# Standard JSON library
-import json
-
-# Basic Setup
-PORT_NUMBER = 1234
-BASE = 'http://localhost:' + str(PORT_NUMBER) + '/v1/'
-
-# Header for posting data to the server as JSON
-HEADERS = {'Content-Type': 'application/json'}
-
-# Define dictionary of empty network
-empty_network = {
-        'data': {
-            'name': 'I\'m empty!'
-        },
-        'elements': {
-            'nodes':[],
-            'edges':[]
-        }
-}
-
-res = requests.post(BASE + 'networks?collection=My%20Collection', data=json.dumps(empty_network), headers=HEADERS)
-new_network_id = res.json()['networkSUID']
-print('Empty network created: SUID = ' + str(new_network_id))
-# -
 
 
