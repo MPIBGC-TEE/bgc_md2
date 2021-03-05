@@ -32,6 +32,7 @@ t = TimeSymbol("t") # unit: "day"
 x = StateVariableTuple((C_L,C_R,C_stem))
 u = F_Cgrowth
 beta = (alpha_L,alpha_R,alpha_stem)
+alpha_L = 1 - (alpha_R + alpha_stem)
 Input = InputTuple(u*ImmutableMatrix(beta))
 B = CompartmentalMatrix(
                         [[-(k_L+(m_stem/C_stem)),0,0],
@@ -53,8 +54,8 @@ mvs = MVarSet({
     Input,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
+#    VegetationCarbonInputScalar(u),
     # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(beta),
+#    VegetationCarbonInputPartitioningTuple(beta),
     VegetationCarbonStateVariableTuple((C_L,C_R,C_stem)),
 })

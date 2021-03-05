@@ -1,5 +1,5 @@
 import numpy as np
-from sympy import var, symbols, Symbol, ImmutableMatrix
+from sympy import var, symbols, Symbol, ImmutableMatrix, Rational
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -41,10 +41,8 @@ for name in sym_dict.keys():
 #Model based on Fig. 1 in page 127 (3 in the PDF) of doi= "10.1016/0304-3800(88)90112-3", no ODEs in publication
 t = TimeSymbol("t") #"the model has a daily and a yearly component. Allocation occurs yearly"
 x = StateVariableTuple((C_f, C_r, C_w,C_frl,C_s))
-u 
-b = (eta_f, eta_w, eta_r)
-#Input = InputTuple(u * ImmutableMatrix(b))
-Input = InputTuple((u * ImmutableMatrix(b),0,0))
+b = ImmutableMatrix((eta_f, eta_w, eta_r))
+Input = InputTuple(tuple(u * b)+(0,0))
 A = CompartmentalMatrix(
 [[-gamma_f,    0   ,    0   ,   (l_p*eta_f)  ,(s_p*eta_f)],
  [    0   ,-gamma_r,    0   ,   (l_p*eta_r)  ,(s_p*eta_r)],
@@ -52,16 +50,6 @@ A = CompartmentalMatrix(
  [ gamma_f, gamma_r, gamma_w, -(l_p+l_s+l_dr),      0    ],
  [    0   ,    0   ,    0   ,       l_s      ,-(s_p+s_dr)]
 ])
-
-#        - "Original dataset of the publication":
-#            values: {eta_f: 'Rational(25,100)', eta_r: 'Rational(40,100)', eta_w: 'Rational(35,100)', gamma_r: 'Rational(40,100)', gamma_f: 'Rational(33,100)', gamma_w: 'Rational(0,100)'}
-#            doi: 10.1016/0304-3800(88)90112-3
-#        - "Additional set 1":
-#            values: {eta_f: 'Rational(20,100)', eta_r: 'Rational(55,100)', eta_w: 'Rational(25,100)', gamma_r: 'Rational(75,100)'}
-#            doi: 10.1093/treephys/9.1-2.161 # Hunt1991TreePhysiol
-#        - "Additional set 2":
-#            values: {eta_f: 'Rational(48,100)', eta_r: 'Rational(37,100)',eta_w: 'Rational(15,100)', gamma_r: 'Rational(75,100)'}
-#            doi: "10.1139/x91-151" # Korol1991CanJForRes
 
 ## The following are default values suggested by this entry's creator only to be able to run the model:
 np1 = NumericParameterization(
@@ -76,6 +64,27 @@ nsv1 = NumericStartValueDict({
 })
 
 ntimes = NumericSimulationTimes(np.arange(0, 20000, 0.01))
+
+#    doi: 10.1016/0304-3800(88)90112-3
+np2 = NumericParameterization(
+    par_dict={
+    eta_f: Rational(25,100), eta_r: Rational(40,100), eta_w: Rational(35,100), gamma_r: Rational(40,100), gamma_f: Rational(33,100), gamma_w: Rational(0,100)},
+    func_dict=frozendict({})
+)
+
+#    doi: 10.1093/treephys/9.1-2.161 # Hunt1991TreePhysiol
+np3 = NumericParameterization(
+    par_dict={
+    eta_f: Rational(20,100), eta_r: Rational(55,100), eta_w: Rational(25,100), gamma_r: Rational(75,100)},
+    func_dict=frozendict({})
+)
+
+#    doi: "10.1139/x91-151" # Korol1991CanJForRes
+np4 = NumericParameterization(
+    par_dict={
+    eta_f: Rational(48,100), eta_r: Rational(37,100),eta_w: Rational(15,100), gamma_r: Rational(75,100)},
+    func_dict=frozendict({})
+)
 
 mvs=MVarSet({
     BibInfo(# Bibliographical Information
@@ -92,9 +101,8 @@ mvs=MVarSet({
     Input,  # the overall input
     t,  # time for the complete system
     x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
+#    VegetationCarbonInputScalar(u),
+#    VegetationCarbonInputPartitioningTuple(b),
     VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
 #    np1
 })

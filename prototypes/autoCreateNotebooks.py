@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.10.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -29,5 +29,6 @@ model_list = h.ModelListGridBox(
 model_list
 
 model_inspection
+
 
 model_list.inspect_mvs(model_list.names[0])

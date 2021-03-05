@@ -104,8 +104,8 @@ NPP = GPP -(R_c+R_m)
 a_w = 1-a_f-a_r
 x = StateVariableTuple((C_f, C_r, C_w, C_wl, C_u, C_m, C_v, C_n, C_a, C_s, C_p))
 u = NPP
-b = (a_f, a_r, a_w)
-Input = InputTuple((u*ImmutableMatrix(b),0,0,0,0,0,0,0,0))
+b = ImmutableMatrix((a_f, a_r, a_w))
+Input = InputTuple(tuple(u*b)+(0,0,0,0,0,0,0,0))
 A = CompartmentalMatrix(
 [[   -s_f,      0,   0,       0,      0,      0,      0,      0,      0,      0,      0]
 ,[      0,   -s_r,   0,       0,      0,      0,      0,      0,      0,      0,      0]

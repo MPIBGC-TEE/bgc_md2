@@ -47,7 +47,7 @@ from bgc_md2.resolve.graph_plotting import (
 from testinfrastructure.helpers import pp
 from bgc_md2.resolve.MVarSet import MVarSet
 
-
+@unittest.skip # This is just an example how to work on a single model  
 class TestWilliams(InDirTest):
     def setUp(self):
         self.mn = "Williams2005GCB"

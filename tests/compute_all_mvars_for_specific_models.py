@@ -11,12 +11,12 @@ model_names=[
     # "Arora2005GCB-1",
     # "Comins1993EA",
     # "Running1988EcolModel",
-    # "TECO", # Was Luo's model based on this one? 
+    # "TECO", #Same as Luo2012TE (comes from the same paper)
     # "Emanuel1981",
     # "Rasmussen2016JMB",
     ##################################################################
     ####### SOIL MODELS: 
-    ## #  *: Models with compartmental matrix = T*N, "can not compute <class 'bgc_md2.resolve.mvars.CompartmentalMatrix'>"
+    ## #  *: Models with compartmental matrix = T*N 
     # "Fontaine2005Ecologyletters_4_2",
     # "Fontaine2005Ecologyletters_4_1",
     # "Fontaine2005Ecologyletters_3_2",
@@ -38,21 +38,31 @@ model_names=[
     ####### VEGETATION MODEL WITHOUT VegetationCarbonInputPartitioningTuple & VegetationCarbonInputScalar
     ######################################################################
     ######################################################################
-    ######################################################################
     # "Hilbert1991AnnBot",
-    # "ElMasri2013AgricForMeteorol", #Paper shows results for soil carbon, and fig. 1 has litter and C pools, but the equations on table A2 (although very detailed) don't include them
+    ######################################################################
+    ####### VEGETATION MODELS
+    ######################################################################
+    # "ElMasri2013AgricForMeteorol", #Paper shows results for soil carbon, and fig. 1 has litter and C pools, but the equations on table A2 (although very detailed) don't include them. There are also equations for Phenology, but they were not included in the source.py
     # "Scheiter2009GlobalChangeBiol", #No soil compartments
     # "Turgman2018EcologyLetters", #No soil compartments
     # "Haverd2016Biogeosciences", #No soil compartments
-    # "Foley1996GBC", #No equations for litter and soil, but the figure has those compartments
-    # "Gu2010EcologicalComplexity", #No equations for litter and soil, but the model description (CEVSA) metions them
+    # "Foley1996GBC", #No equations for litter and soil, but the figure has those compartments. See Markus’ Ibis.yaml?
+    # "Gu2010EcologicalComplexity", #No equations for litter and soil, but the model description (CEVSA) mentions them
     # "King1993TreePhysiol", #No soil compartments
     # "DeAngelis2012TheorEcol", #No soil compartments (model based on G’Day, but removed litter and soil compartments)
-    # "Potter1993GlobalBiogeochemicalCycles",
+    # "Potter1993GlobalBiogeochemicalCycles", #No equations for litter and soil, but the model description mentions them
     # "testVectorFree",
     # "Williams2005GCB",
     "CARDAMOM",
 ]
+######################################################################
+####### MODELS NOT TRANSLATED FROM .YAML TO SOURCE.PY
+# Sitch2003GlobChangBiol: Not included because allocation (see pg 8) has no ODEs; biomass increment is allocated to the tissue pools while satisfying the functional balance difference equations...
+# VanDerWerf1993PlantSoil: this model has no compartment for wood. It is used to simulate effect of nitrogen on growth of a grass (Dactylis glomerata L.).
+# ICBM: same as Andren1997EA but less parameter sets
+# Schimel2003SoilBiologyandBiochemistry.yaml, Schimel2003SoilBiologyandBiochemistry_rMM.yaml, Schimel2003SoilBiologyandBiochemistry_rMM_improved.yaml: Original model has no outputs, corrected by Holger 
+# Ibis: includes soil, no metadata -added by Markus. Vero’s version: Foley
+######################################################################
 for mn in model_names:
     mvs = MVarSet.from_model_name(mn)
     mvars = mvs.computable_mvar_types()
