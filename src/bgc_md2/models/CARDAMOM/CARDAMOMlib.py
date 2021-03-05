@@ -270,7 +270,7 @@ def func_for_map_blocks(*args):
         tb = traceback.format_exc()
         print(tb, flush=True)
         res = np.nan * np.ones(return_shape)
-        error_msg = str(e)
+        error_msg = "Error: " + str(e)
         print(error_msg, flush=True)
 
     if error_msg == "":
@@ -365,7 +365,7 @@ def func_for_map_blocks_with_mr(*args):
         res = np.nan * np.ones_like(res)
         print(str(e), flush=True)
         print(tb, flush=True)
-        log_msg = str(e) + str(tb)
+        log_msg = "Error: " + str(e) + str(tb)
 
     write_to_logfile(
         logfile_name,

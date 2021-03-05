@@ -98,14 +98,14 @@ nr_pools = 6
 nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 
 # +
-# use all "lat", all "lon" and 25 "prob", all "time"
+# use all "lat", all "lon" and 1 "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(30, 40, 1),
-#    "lat": slice(7, 8, 1),
-#    "lon": slice(60, 61, 1),
-#    "prob": slice(10, 11, 1),
+    "prob": slice(45, 50, 1), # done (0, 50, 1)
+#    "lat": slice(28, 32, 1),
+#    "lon": slice(48, 52, 1),
+#    "prob": slice(0, 2, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -145,9 +145,9 @@ task_list = [
         "func_args": {
             "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
             "q": 0.5, # median
-            "maxsize": 10*nr_times # maximum cache size
+            "maxsize": 10 * nr_times # maximum cache size
         },
-        "timeouts": [20, 30, 60, 80, 100, 120, np.inf],
+        "timeouts": [20, np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -163,9 +163,9 @@ task_list = [
         "func_args": {
             "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
             "q": 0.05,
-            "maxsize": 10*nr_times # maximum cache size
+            "maxsize": 10 * nr_times # maximum cache size
         },
-        "timeouts": [20, 30, 60, 80, 100, 120, np.inf],
+        "timeouts": [20, np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -181,9 +181,9 @@ task_list = [
         "func_args": {
             "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
             "q": 0.95,
-            "maxsize": 10*nr_times # maximum cache size
+            "maxsize": 10 * nr_times # maximum cache size
         },
-        "timeouts": [20, 30, 60, 80, 100, 120, np.inf],
+        "timeouts": [20, np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
@@ -235,7 +235,7 @@ task_list = [
         "func_args": {
             "nr_time_steps": params["nr_time_steps"], # for faking equilibrium
             "q": 0.95,
-            "maxsize": 3*nr_times # maximum cache size
+            "maxsize": 10*nr_times # maximum cache size
         },
         "timeouts": [90, np.inf],
         "batch_size": 500,
@@ -327,7 +327,7 @@ for task in task_list:
 # +
 # %%time
 
-for task in task_list[1:]:
+for task in task_list:
 #for task_index in [6]:
 #    task = task_list[task_index]
     CARDAMOMlib.run_task_with_mr(
@@ -342,10 +342,6 @@ for task in task_list[1:]:
         slices
     )
 # -
-
-
-
-
 
 
 

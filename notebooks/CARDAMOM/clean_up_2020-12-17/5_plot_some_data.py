@@ -23,6 +23,11 @@ import xarray as xr
 from pathlib import Path
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
+# -
+
+# ignore nan/nan warnings
+import warnings
+warnings.simplefilter("ignore")
 
 # +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
@@ -50,13 +55,13 @@ ds = datasets[("monthly", None, "discrete")]
 #ds = datasets[("monthly", None, "continuous")]
 #ds = datasets[("yearly", 0, "continuous")]
 
-#ds_path = "/home/data/CARDAMOM/Greg_2020_10_26/monthly_output/discrete/archive_2021-02-18/sol_acc_age_btt"
-#ds = xr.open_mfdataset(ds_path + "_*.nc").isel(prob=slice(20, 25, 1))
+#ds = xr.open_dataset("/home/data/CARDAMOM/Greg_2020_10_26/monthly_output/discrete/sol_acc_age_btt_00011.nc")
+
 ds
 
 
 # +
-fig, axes = plt.subplots(ncols=2, figsize=(12,6))
+fig, axes = plt.subplots(ncols=2, figsize=(12, 6))
 
 var_names = ["xs", "solution"]
 for var_name, ax in zip(var_names, axes):
@@ -71,9 +76,29 @@ for var_name, ax in zip(var_names, axes):
 plt.suptitle("CARDAMOM output (xs) vs model reconstruction (solution)")
 plt.tight_layout()
 plt.draw()
+# -
+
+# We might get a better view if we ignore very large values by using the parameter `robust=True`. This will use the 2nd and 98th percentiles of the data to compute the color limits.
 
 # +
-fig, axes = plt.subplots(ncols=2, figsize=(12,6))
+fig, axes = plt.subplots(ncols=2, figsize=(12, 6))
+
+var_names = ["xs", "solution"]
+for var_name, ax in zip(var_names, axes):
+    var = ds[var_name]
+    var.mean(dim=["prob", "time", "pool"]).plot(
+        ax=ax,
+        cbar_kwargs={"label": var.attrs["units"]},
+        robust=True
+    )
+    ax.set_title(var_name)
+
+plt.suptitle("CARDAMOM output (xs) vs model reconstruction (solution)")
+plt.tight_layout()
+plt.draw()
+
+# +
+fig, axes = plt.subplots(ncols=2, figsize=(12, 6))
 
 var_names = ["xs_abs_err", "xs_rel_err"]
 for var_name, ax in zip(var_names, axes):
@@ -90,24 +115,7 @@ plt.tight_layout()
 plt.draw()
 # -
 
-# This plot shows that we have outliers. The easiest way to visualize the data without the outliers is to pass the parameter robust=True. This will use the 2nd and 98th percentiles of the data to compute the color limits.
-
-# +
-fig, axes = plt.subplots(ncols=2, figsize=(12,6))
-
-var_names = ["xs_abs_err", "xs_rel_err"]
-for var_name, ax in zip(var_names, axes):
-    var = ds[var_name]
-    var.mean(dim=["prob", "time", "pool"]).plot(
-        ax=ax,
-        cbar_kwargs={"label": var.attrs["units"]},
-        robust=True
-    )
-    ax.set_title(var_name)
-
-plt.suptitle("Absolute and relative reconstruction error")
-plt.tight_layout()
-plt.draw()
+# This plot shows that we have very nicely reconstructed the stocks of CARDAMOM.
 
 # +
 var_names = [
@@ -119,7 +127,7 @@ var_names = [
 ]
 
 nrows = len(var_names) // 2 + len(var_names) % 2
-fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(12,6*nrows))
+fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(12, 6*nrows))
 
 for var_name, ax in zip(var_names, axes.flatten()):
     var = ds[var_name]
@@ -131,7 +139,7 @@ for var_name, ax in zip(var_names, axes.flatten()):
     ax.set_title(var_name)
 
 plt.suptitle("System age vs backward transit time")
-plt.tight_layout()
+#plt.tight_layout()
 plt.draw()
 # -
 
@@ -150,7 +158,7 @@ var_names = [
 
 ncols = len(pool_names)
 nrows = len(var_names)
-fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12,6*nrows))
+fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 6*nrows))
 
 for row, var_name in enumerate(var_names):
     for col, pool_name in enumerate(pool_names):
@@ -171,7 +179,7 @@ plt.draw()
 # We can also grab a random site.
 
 # +
-(lat, lon, prob) = (28, 52, 0)
+(lat, lon) = (28, 52)
 
 var_name_pairs = [
     ("mean_system_age", "mean_btt"),
@@ -182,14 +190,14 @@ var_name_pairs = [
 ]
 
 nrows = len(var_name_pairs) // 2 + len(var_name_pairs) % 2
-fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(12,6*nrows))
+fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(12, 6*nrows))
 
 for var_name_pair, ax in zip(var_name_pairs, axes.flatten()):
     for var_name in var_name_pair:
         var = ds[var_name]
-        var.isel(lat=lat, lon=lon, prob=prob).plot(
+        var.isel(lat=lat, lon=lon).mean(dim="prob").plot(
             ax=ax,
-            label=var_name
+            label=var_name,
         )
     ax.legend()
 
@@ -239,12 +247,12 @@ plt.draw()
 
 # We compute the global C mean age and transit time and an average of the system age and transit time medians weighted by C stocks.
 
-alpha = 0.05
+# +
+alpha = 0.1
 lw = 5
 colors = ["blue", "orange", "green", "red"]
 args = {"alpha": alpha, "lw": lw}#, "add_legend": False}
 
-# +
 fig, ax = plt.subplots(figsize=(12, 6))
 
 global_mean_system_age = ds["mean_system_age"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
@@ -253,7 +261,7 @@ global_mean_btt = ds["mean_btt"].weighted(ds_area_lf.area_sphere * ds_area_lf.la
 global_avg_btt_median = ds["btt_median"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 
 labels = [
-    "Global C mean system age",
+    "Global C mean age",
     "Global average system age median",
     "Global mean backward transit time",
     "Global average backward transit time median"
@@ -273,7 +281,7 @@ plt.tight_layout()
 plt.draw()
 # -
 
-# We have a closer look at each of such graphs, now as rolling mean over 1 year.
+# We have a closer look at each of such graphs and use a rolling average of 12 months.
 
 # +
 fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(12, 12))
@@ -290,7 +298,6 @@ titles = [
 for variable_name, ax, title, color in zip(variable_names, axes.flatten(), titles, colors):
     f(ds[variable_name]).rolling(time=12).mean().plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
 
-#    ax.set_ylim([0, ax.get_ylim()[1]])
     ax.set_title(title)
     ax.set_ylabel("yr")
     
@@ -298,27 +305,40 @@ plt.tight_layout()
 plt.draw()
 # -
 
-# Now we plot differences per time step with a rolling mean over 10 years.
+# Why does the transit time decrease so rapidly torwards the end? Are specific pools the reason?
 
 # +
-fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(12, 12))
+pool_names = ["Soil", "Wood"]
 
-f = lambda x: x.diff(dim="time").weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
-variable_names = ["mean_system_age", "system_age_median", "mean_btt", "btt_median"]
-titles = [
-    "Global C mean age",
-    "Global average system age median",
-    "Global mean backward transit time",
-    "Global average backward transit time median"
+var_names = [
+    "mean_pool_age_vector",
+    "pool_age_median",
+#    "pool_age_quantile_05",
+#    "pool_age_quantile_95",
+#    "pool_age_sd_vector"
 ]
 
-for variable_name, ax, title, color in zip(variable_names, axes.flatten(), titles, colors):
-    f(ds)[variable_name].rolling(time=12*10).mean().plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
+ncols = len(pool_names)
+nrows = len(var_names)
+fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 6*nrows))
 
-#    ax.set_ylim([0, ax.get_ylim()[1]])
-    ax.set_title(title)
-    ax.set_ylabel("yr")
-    
+f = lambda x: x.weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
+
+for row, var_name in enumerate(var_names):
+    for col, pool_name in enumerate(pool_names):
+        ax = axes[row, col]
+        var = ds[var_name].sel(pool=pool_name)
+        f(var).rolling(time=12).mean().plot.line(
+            ax=ax,
+            x="time",
+            alpha=alpha,
+            lw=lw,
+            color="blue",
+            add_legend=False
+        )
+        ax.set_title(pool_name + " " + var_name)
+
+plt.suptitle("Pool age")
 plt.tight_layout()
 plt.draw()
 
@@ -332,11 +352,11 @@ total_C_solution = total_C_solution * ds_area_lf_adapted.area_sphere * ds_area_l
 total_C_solution = total_C_solution.mean(dim=["prob", "time"]).sum()
 # -
 
-# Because of problems in the reconstruction of the compartmental matrices from CARDAMOM data, some sites are left out in the reconstructed data. For discrete models the time step can be too large, for continuous models the root finding algorithm might not have converged (this is still to be identified for some small number of sites). Furthermore, the ODE solver for the mean age system complains sometimes when the scales between solution, mean, and second moment are too different.
+# Because of problems in the reconstruction of the compartmental matrices from CARDAMOM data, some sites are left out in the reconstructed data. For discrete models the time step can be too large, for continuous models the root finding algorithm might not have converged. Furthermore, for three sites the CARDAMOM model output itself is inconsistents
 #
 # This leads to the following figures:
 
-print("Total C CARDAMOM            : %.2f PgC" % (total_C_xs*1e-15))
+print("Total C CARDAMOM            : %.2f PgC" % (total_C_xs *1e-15))
 print("Total C model reconstruction: %.2f PgC" % (total_C_solution*1e-15))
 print("Coverage                    :   %2.2f %%" % (total_C_solution/total_C_xs*100))
 

@@ -32,7 +32,7 @@ from dask import delayed
 
 # for monthly discrete data, each worker needs about 10GB
 my_cluster = CARDAMOMlib.prepare_cluster(
-    n_workers=10,
+    n_workers=1,
     alternative_dashboard_port=8792
 )
 Client(my_cluster)
@@ -91,7 +91,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(30, 32, 1), # (0, 30) done (discrete, monthly)
+    "prob": slice(45, 50, 1), # done: (0, 45, 1) discrete, (0, 1, 1) continuous
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -266,7 +266,7 @@ ds
 ##comp_dict = {"zlib": True, "complevel": 9}
 ##encoding = {var: comp_dict for var in ds.data_vars}
 #
-def delayed_to_netcdf(prob, netCDF_filename, compute):
+def delayed_to_netcdf(prob, netCDF_filename, compute=False):
     ds_sub = ds.sel(prob=[prob])
     ds_sub.to_netcdf(
         netCDF_filename,
@@ -278,17 +278,19 @@ def delayed_to_netcdf(prob, netCDF_filename, compute):
 
 arr = ds.prob
 print(arr)
-# -
+# +
+# %%time
+
 for prob in tqdm(arr):
     netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
     print(netCDF_filename)
-    delayed_to_netcdf(prob, netCDF_filename, True)
-#  # OR
+    delayed_to_netcdf(prob, netCDF_filename, compute=True)
+    
+# -
+# # OR
 probs, datasets = zip(*ds.groupby("prob", squeeze=False))
 paths = [project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob) for prob in probs]
 del_obj = xr.save_mfdataset(datasets, paths, compute=False)
 del_obj
 # %%time
 del_obj.compute()
-
-
