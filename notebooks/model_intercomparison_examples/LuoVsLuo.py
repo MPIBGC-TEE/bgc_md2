@@ -83,8 +83,9 @@ mvs_Luo.get_StateVariableTuple()
 
 mvs_TECO.get_StateVariableTuple()
 
-# Ok not very informative. Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
+# Ok, not very informative. Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
 
+# this could be displayed much nicer...
 bib_Luo=mvs_Luo.get_BibInfo();bib_Luo.sym_dict
 
 
@@ -191,46 +192,76 @@ internal_connections = [(str(s),str(t)) for s,t in internal_fluxes.keys()]
 
 internal_connections
 
-import networkx as nx
-import matplotlib.pyplot as plt
-
-
-
-
-
-
-
-
-import CompartmentalSystems.helpers_reservoir as hr
-G, GVI, GINT, GVO = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
-
-# # matplotlib plotting
-
 # +
-#pos=nx.spiral_layout(G)
-#pos=nx.circular_layout(G)
-#pos=nx.spring_layout(G)
-#pos=nx.kamada_kawai_layout(G)
-
-#pos=nx.planar_layout(G)
-#pos=nx.shell_layout(G)
-#pos=nx.spectral_layout(G)
-pos=nx.spring_layout(G)
-virtual_node_options={
-    'node_size': 10,
-}
-real_node_options={
-    'node_color': 'black',
-    'node_size': 100,
-}
-ax=plt.axes()
-nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=virtual_in_flux_sources,**virtual_node_options,node_color='blue')
-nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=in_flux_targets,**real_node_options)
-
-nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=GINT.nodes,**real_node_options)
-nx.draw_networkx_nodes(ax=ax,pos=pos,G=G,nodelist=virtual_out_flux_targets,**virtual_node_options,node_color='red')
-
-nx.draw_networkx_edges(ax=ax,pos=pos,G=G)
+#import networkx as nx
+#import matplotlib.pyplot as plt
 # -
 
 
+import CompartmentalSystems.helpers_reservoir as hr
+Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
+#[Gnx.get_edge_data(s,t) for s,t in Gnx.edges]
+
+hr.igraph_plot(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
+
+# # Let's inspect the vegetation part 
+
+mvs_mm.get_VegetationCarbonStateVariableTuple()
+
+mvs_mm.get_VegetationCarbonCompartmentalMatrix()
+
+# what was formerly send to a soil pool is considered an output of the vegetation subsystem...
+for k,v in mvs_mm.get_VegetationCarbonOutFluxesBySymbol().items():
+    display(k,v)
+
+for k,v in mvs_mm.get_VegetationCarbonInFluxesBySymbol().items():
+    display(k,v)
+
+for k,v in mvs_mm.get_VegetationCarbonInternalFluxesBySymbol().items():
+    display(k,v)
+
+combined = (
+    set(mvs_mm.get_StateVariableTuple()),
+    mvs_mm.get_InFluxesBySymbol(),
+    mvs_mm.get_OutFluxesBySymbol(),
+    mvs_mm.get_InternalFluxesBySymbol()
+)
+sv_set_veg = frozenset(mvs_mm.get_VegetationCarbonStateVariableTuple())
+
+state_vector_soil = Matrix([C_fastsom,C_slowsom,C_passsom])
+# Probably the litter pools would be also  considered to be part of the soil subsystem.
+# I just wanted to show that the division does not have tp be complete
+# state_vector_soil = Matrix([C_metlit,C_stlit,C_fastsom,C_slowsom,C_passsom])
+sv_set_soil = frozenset({sv for sv in state_vector_soil})
+
+
+_,in_fluxes_veg,out_fluxes_veg,internal_fluxes_veg=hr.extract(combined,sv_set_veg) #obviously we do not need to return sv_set_veg, since it is an argument
+_,in_fluxes_soil,out_fluxes_soil,internal_fluxes_soil=hr.extract(combined,sv_set_soil)
+
+internal_fluxes_veg, in_fluxes_soil
+
+part_dict =  {
+    sv_set_veg:'green',
+    sv_set_soil:'brown',
+}
+hr.igraph_part_plot(
+    mvs_mm.get_StateVariableTuple(),
+    in_fluxes,
+    internal_fluxes,
+    out_fluxes,
+    part_dict
+)
+
+#Now we can compute the vegetation cycling matrix
+hr.compartmental_matrix_2(
+    out_fluxes_veg,
+    internal_fluxes_veg,
+    mvs_mm.get_VegetationCarbonStateVariableTuple()
+)
+
+#Now we can compute the soil cycling matrix
+hr.compartmental_matrix_2(
+    out_fluxes_soil,
+    internal_fluxes_soil,
+    state_vector_soil
+)

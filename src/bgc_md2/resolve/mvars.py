@@ -68,6 +68,18 @@ class CarbonOutFluxesBySymbol(frozendict):
     pass
 
 
+class VegetationCarbonInFluxesBySymbol(frozendict):
+    pass
+
+
+class VegetationCarbonOutFluxesBySymbol(frozendict):
+    pass
+
+
+class VegetationCarbonInternalFluxesBySymbol(frozendict):
+    pass
+
+
 class CarbonInternalFluxesBySymbol(frozendict):
     pass
 

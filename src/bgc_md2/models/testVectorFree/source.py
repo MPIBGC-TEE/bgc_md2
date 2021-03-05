@@ -37,5 +37,5 @@ mvs = MVarSet({
     InternalFluxesBySymbol({(vl, vw): k_vl * vl, (vw, vl): k_vw * vw}),
     TimeSymbol("t"),
     StateVariableTuple((vl, vw))
-    # ,'SmoothReservoirModel':srm
+    # srm
 })

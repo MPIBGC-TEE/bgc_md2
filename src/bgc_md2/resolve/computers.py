@@ -29,6 +29,9 @@ from .mvars import (
     VegetationCarbonInputTuple,
     VegetationCarbonStateVariableTuple,
     VegetationCarbonCompartmentalMatrix,
+    VegetationCarbonInFluxesBySymbol,
+    VegetationCarbonOutFluxesBySymbol,
+    VegetationCarbonInternalFluxesBySymbol,
     NumericSimulationTimes,
     NumericParameterization,
     NumericStartValueArray,
@@ -48,12 +51,93 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
+@lru_cache
+def vegetation_carbon_in_fluxes_by_symbol_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple
+) -> VegetationCarbonInFluxesBySymbol:
+    svt_set=frozenset({v for v in svt})
+    vcsvt_set=frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
 
-#def vegetation_carbon_compartmental_matrix_1(
-#    out_fluxes: OutFluxesBySymbol,
-#    internal_fluxes: InternalFluxesBySymbol,
-#    vcsv: VegetationCarbonStateVariableTuple
-#) -> VegetationCarbonCompartmentalMatrix:
+    _,in_fluxes_veg,out_fluxes_veg,internal_fluxes_veg=hr.extract(combined,vcsvt_set)
+    
+    return VegetationCarbonInFluxesBySymbol( in_fluxes_veg)
+
+@lru_cache
+def vegetation_carbon_out_fluxes_by_symbol_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple
+) -> VegetationCarbonOutFluxesBySymbol:
+    svt_set=frozenset({v for v in svt})
+    vcsvt_set=frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _,in_fluxes_veg,out_fluxes_veg,internal_fluxes_veg=hr.extract(combined,vcsvt_set)
+    
+    return VegetationCarbonOutFluxesBySymbol( out_fluxes_veg)
+
+@lru_cache
+def vegetation_carbon_internal_fluxes_by_symbol_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple
+) -> VegetationCarbonInternalFluxesBySymbol:
+    svt_set=frozenset({v for v in svt})
+    vcsvt_set=frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _,in_fluxes_veg,out_fluxes_veg,internal_fluxes_veg=hr.extract(combined,vcsvt_set)
+    
+    return VegetationCarbonInternalFluxesBySymbol( internal_fluxes_veg)
+
+@lru_cache
+def vegetation_carbon_compartmental_matrix_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple
+) -> VegetationCarbonCompartmentalMatrix:
+    svt_set=frozenset({v for v in svt})
+    vcsvt_set=frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _,in_fluxes_veg,out_fluxes_veg,internal_fluxes_veg=hr.extract(combined,vcsvt_set)
+    cm=hr.compartmental_matrix_2(
+        out_fluxes_veg,
+        internal_fluxes_veg,
+        vcsvt
+    )
+    return VegetationCarbonCompartmentalMatrix(cm)
 
 @lru_cache
 def smooth_reservoir_model_from_fluxes(
@@ -251,11 +335,11 @@ def vegetation_carbon_input_tuple_1(
 
 @lru_cache
 def vegetation_carbon_input_tuple_2(
-    u: InFluxesBySymbol,
+    ifls: VegetationCarbonInFluxesBySymbol,
     vcsv: VegetationCarbonStateVariableTuple
 
 ) -> VegetationCarbonInputTuple:
-    return VegetationCarbonInputTuple(hr.in_or_out_flux_tuple(vcsv, u))
+    return VegetationCarbonInputTuple(hr.in_or_out_flux_tuple(vcsv, ifls))
 
 
 @lru_cache

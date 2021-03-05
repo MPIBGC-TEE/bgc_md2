@@ -51,6 +51,7 @@ from bgc_md2.resolve.non_graph_helpers import (
     input_mvars,
     pretty_name,
 )
+from bgc_md2.resolve.mvars import CompartmentalMatrix
 
 # for easier debugging in ipython
 computers = frozenset(
@@ -91,7 +92,7 @@ def computer_color_func(allComputers):
     return cf
 
 
-class TestGraphVizualization(InDirTest):
+class TestGraphVisualization(InDirTest):
     def setUp(self):
         # fixme mm 02-03-2020:
         # assemble this set from a file of class definitions
@@ -128,12 +129,19 @@ class TestGraphVizualization(InDirTest):
         ax = fig.add_subplot(1, 1, 1)
         draw_ComputerSetMultiDiGraph_matplotlib(ax, self.spsg)
         fig.savefig("SetMultiGraph.pdf")
+        
+        fig = plt.figure(figsize=(20, 20))
+        ax = fig.add_subplot(1, 1, 1)
+        print(list(self.spsg.nodes))
+        draw_ComputerSetMultiDiGraph_matplotlib(ax, self.spsg,targetNode=frozenset({C,D}))
+        fig.savefig("SetMultiGraphWithTargetNode.pdf")
 
     def test_update_generator(self):
         fig = plt.figure()
         draw_update_sequence(self.computers, max_it=8, fig=fig)
         fig.savefig("c1.pdf")
 
+    @skip
     def test_ComputerSetMultiGraph_matplotlib_bgc_md2(self):
         # The direct visualization of networkx (using matplotlib)
         # is very rudimentary.
@@ -147,7 +155,20 @@ class TestGraphVizualization(InDirTest):
             bgc_md2_computer_aliases(),
         )
         fig.savefig("SetMultiGraph.pdf")
+        
+        fig = plt.figure(figsize=(20, 20))
+        ax = fig.add_subplot(1, 1, 1)
+        draw_ComputerSetMultiDiGraph_matplotlib(
+            ax,
+            spsg,
+            bgc_md2_mvar_aliases(), 
+            bgc_md2_computer_aliases(),
+            targetNode=frozenset({CompartmentalMatrix})
+        )
+        fig.savefig("SetMultiGraphWithTargetNodes.pdf")
 
+
+    @skip
     def test_update_generator_bgc_md2(self):
         fig = plt.figure()
         draw_update_sequence(
