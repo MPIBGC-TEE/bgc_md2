@@ -53,9 +53,9 @@ from testinfrastructure.helpers import pp
 from bgc_md2.resolve.MVarSet import MVarSet
 
 
-class TestCastanho(InDirTest):
+class TestThomas2014GeosciModelDev(InDirTest):
     def setUp(self):
-        self.mn = "Castanho2013Biogeosciences"
+        self.mn = "Thomas2014GeosciModelDev"
         self.mvs = MVarSet.from_model_name(self.mn)
         self.ref_provided_mvars = frozenset(
             [

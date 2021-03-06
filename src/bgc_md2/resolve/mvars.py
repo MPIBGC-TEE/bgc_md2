@@ -60,61 +60,49 @@ class InternalFluxesBySymbol(frozendict):
     pass
 
 
+class CarbonInFluxesBySymbol(frozendict):
+    pass
+
+
+class CarbonOutFluxesBySymbol(frozendict):
+    pass
+
+
+class VegetationCarbonInFluxesBySymbol(frozendict):
+    pass
+
+
+class VegetationCarbonOutFluxesBySymbol(frozendict):
+    pass
+
+
+class VegetationCarbonInternalFluxesBySymbol(frozendict):
+    pass
+
+
+class CarbonInternalFluxesBySymbol(frozendict):
+    pass
+
+
+class NitrogenInFluxesBySymbol(frozendict):
+    pass
+
+
+class NitrogenOutFluxesBySymbol(frozendict):
+    pass
+
+
+class NitrogenInternalFluxesBySymbol(frozendict):
+    pass
+
 class TimeSymbol(Symbol):
     # should become a quantity with dimension time
     pass
 
-
-class StateVariableTuple(tuple):
-    """Defines the ordering of the state variables.
-    This defines the coordinate system and thereby
-    the interpretation of all tuple or matrix related variables.
-    Although two models with identical fluxes between there pools are identical on a physical
-    level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
-    on the ordering and have to be consistent."""
-    pass
-
-
-class InputTuple(tuple):
-    """The coordinates of the input flux vector 
-    The interpretation requires the statevector since the nth entry is interpreted as input to 
-    the pool denoted by the nth state variable"""
-    pass
-
-
-class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
-    """Create a CompartmentalMatrix (which is immutable).
-
-    Examples
-    ========
-
-    >>> from sympy import eye
-    >>> from bgc_md2.resolve.mvars import CompartmentalMatrix
-    >>> CompartmentalMatrix(eye(3))
-    Matrix([
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1]])
-    >>> _[0, 0] = 42
-    Traceback (most recent call last):
-    ...
-    TypeError: Cannot set values of ImmutableDenseMatrix
-    """
-
-    # MatrixExpr is set as NotIterable, but we want explicit matrices to be
-    # iterable
-    _iterable = True
-    _class_priority = 8
-    _op_priority = 10.001
-
-    def __new__(cls, *args, **kwargs):
-        return cls._new(*args, **kwargs)
-
-    __hash__ = MatrixExpr.__hash__
-
+class MatrixLike(ImmutableMatrix):
     @classmethod
     def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], CompartmentalMatrix):
+        if len(args) == 1 and isinstance(args[0], cls):
             return args[0]
         if kwargs.get('copy', True) is False:
             if len(args) != 3:
@@ -133,47 +121,92 @@ class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
         obj._mat = flat_list
         return obj
 
-    def _entry(self, i, j, **kwargs):
-        return DenseMatrix.__getitem__(self, (i, j))
+class ColumnVectorLike(MatrixLike):
+    # fixme add some check that there is only one column...
+    pass
 
-    def __setitem__(self, *args):
-        raise TypeError("Cannot set values of {}".format(self.__class__))
+class StateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the state variables.
+    This defines the coordinate system and thereby
+    the interpretation of all tuple or matrix related variables.
+    Although two models with identical fluxes between there pools are identical on a physical
+    level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
+    on the ordering and have to be consistent."""
+    pass
 
-    def _eval_extract(self, rowsList, colsList):
-        # self._mat is a Tuple.  It is slightly faster to index a
-        # tuple over a Tuple, so grab the internal tuple directly
-        mat = self._mat
-        cols = self.cols
-        indices = (i * cols + j for i in rowsList for j in colsList)
-        return self._new(len(rowsList), len(colsList),
-                         Tuple(*(mat[i] for i in indices), sympify=False), copy=False)
+class VegetationCarbonStateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the vegetation carbon state variables.  The
+    order defines the order of the axes in a vegetation related coordinate
+    system and thereby the interpretation of all tuple or matrix related carbon
+    vegetation variables.  Although two models with identical vegetation carbon
+    fluxes between their pools are identical on a physical level the coordinate
+    based variables like the VegetationInputTuple or the
+    VegetationInputTupleCompartmentalMatrix depend on the ordering and have to
+    be consistent."""
+    pass
 
-    @property
-    def cols(self):
-        return self._cols
-
-    @property
-    def rows(self):
-        return self._rows
-
-    @property
-    def shape(self):
-        return self._rows, self._cols
-
-    def as_immutable(self):
-        return self
-
-    def is_diagonalizable(self, reals_only=False, **kwargs):
-        return super().is_diagonalizable(
-            reals_only=reals_only, **kwargs)
-
-    is_diagonalizable.__doc__ = DenseMatrix.is_diagonalizable.__doc__
-    is_diagonalizable = cacheit(is_diagonalizable)
+class CarbonStateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the carbon state variables.  The order defines
+    the order of the axes in a carbon related coordinate system and thereby the
+    interpretation of all tuple or matrix related carbon variables.  Although
+    two models with identical carbon fluxes between their pools are identical
+    on a physical level the coordinate based variables like the
+    VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend
+    on the ordering and have to be consistent."""
+    pass
 
 
+class NitrogenStateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the ordering of the nitrogen state variables.  The order defines
+    the order of the axes in a nitrogen related coordinate system and thereby the
+    interpretation of all tuple or matrix related nitrogen variables.  Although
+    two models with identical nitrogen fluxes between their pools are identical
+    on a physical level the coordinate based variables like the
+    VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend
+    on the ordering and have to be consistent."""
+    pass
+
+
+class InputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the input flux vector
+    The interpretation requires the statevector since the nth entry is interpreted as input to 
+    the pool denoted by the nth state variable"""
+    pass
+ 
+
+class CarbonInputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the carbon input flux vector
+    The interpretation requires the carbon statevector since the nth entry is interpreted as input to 
+    the pool denoted by the nth carbon state variable"""
+    pass
+
+class NitrogenInputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the nitrogen input flux vector
+    The interpretation requires the nitrogen statevector since the nth entry is interpreted as input to 
+    the pool denoted by the nth nitrogen state variable"""
+    pass
 
 # vegetation specific variables
-class VegetationCarbonInputTuple(tuple):
+class VegetationCarbonInputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The coordinates of the vegetation part of the the Carbon input flux vector
+    Note that this will affect 
+    """
     pass
 
 
@@ -181,15 +214,99 @@ class VegetationCarbonInputScalar(Expr):
     pass
 
 
-class VegetationCarbonInputPartitioningTuple(tuple):
+#class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
+class CompartmentalMatrix(MatrixLike):
+    """Create a CompartmentalMatrix (which is immutable).
+
+    Examples
+    ========
+
+    >>> from sympy import eye
+    >>> from bgc_md2.resolve.mvars import CompartmentalMatrix
+    >>> CompartmentalMatrix(eye(3))
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]])
+    >>> _[0, 0] = 42
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot set values of CompartmentalMatrix
+    """
     pass
 
 
-class VegetationCarbonStateVariableTuple(tuple):
+class CarbonCompartmentalMatrix(MatrixLike):
+    """Create a CompartmentalMatrix (which is immutable).
+
+    Examples
+    ========
+
+    >>> from sympy import eye
+    >>> from bgc_md2.resolve.mvars import CarbonCompartmentalMatrix
+    >>> CarbonCompartmentalMatrix(eye(3))
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]])
+    >>> _[0, 0] = 42
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot set values of CompartmentalMatrix
+    """
+    pass
+
+class NitrogenCompartmentalMatrix(MatrixLike):
+    """Create a CompartmentalMatrix (which is immutable).
+
+    Examples
+    ========
+
+    >>> from sympy import eye
+    >>> from bgc_md2.resolve.mvars import NitrogenCompartmentalMatrix
+    >>> NitrogenCompartmentalMatrix(eye(3))
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]])
+    >>> _[0, 0] = 42
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot set values of CompartmentalMatrix
+    """
+    pass
+
+class VegetationCarbonInputPartitioningTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The partitioning components vector
+    The order will affect the VegetationCarbonInput"""
     pass
 
 
-class VegetationCarbonCompartmentalMatrix(ImmutableMatrix):  # cycling matrix
+class VegetationCarbonCompartmentalMatrix(MatrixLike):  # cycling matrix
+    """Create a CompartmentalMatrix (which is immutable) for the vegetation part only.
+    Note that for the same physical model this matrix can take different shapes, depending
+    on the order of the vegetation state variables (as defined via the VegetationStateVariableTuple)
+    
+    It is more likely that you will not create this matrix itself since it can easily be computed
+    from the VegetationCarbonStateVariables and the CompartmentalMatrix for the whole system. (or the carbon cycle)
+
+    Examples
+    ========
+
+    >>> from sympy import eye
+    >>> from bgc_md2.resolve.mvars import VegetationCarbonCompartmentalMatrix
+    >>> VegetationCarbonCompartmentalMatrix(eye(3))
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]])
+    >>> _[0, 0] = 42
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot set values of ImmutableDenseMatrix
+    """
     pass
 
 
@@ -264,8 +381,10 @@ class QuantityStartValueArray(np.ndarray):
     def __hash__(self):
         return hash(tuple(self))
 
+
 class QuantityStartValueDict(frozendict):
     pass
+
 
 class QuantitySimulationTimes(np.ndarray):
     def __new__(cls, input_array):

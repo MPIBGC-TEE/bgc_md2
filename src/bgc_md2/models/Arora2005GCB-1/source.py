@@ -84,7 +84,7 @@ D_R=gamma_R*C_R
 
 x = StateVariableTuple((C_L, C_S, C_R, C_D, C_H))
 u = (G, 0, 0, 0, 0)
-Input = InputTuple((ImmutableMatrix(u))) #f_v = u + A*x
+Input = InputTuple(u) #f_v = u + A*x
 A = CompartmentalMatrix([
 [-(gamma_N+gamma_W+gamma_T+(A_R+A_S+((R_gL+R_mL)/C_L))),          0       ,          0       ,        0     ,  0  ],
 [                      A_S                     ,-gamma_S-((R_gS-R_mS)/C_S),          0       ,        0     ,  0  ],

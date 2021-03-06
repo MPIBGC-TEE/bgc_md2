@@ -154,7 +154,7 @@ def update_step(spsg: nx.MultiDiGraph, computers: Set[Callable]) -> nx.MultiDiGr
 
     return new
 
-
+@lru_cache
 def sparse_powerset_graph(computers: Set[Callable]) -> nx.MultiDiGraph:
     old = initial_sparse_powerset_graph(computers)
     new = update_step(old, computers)

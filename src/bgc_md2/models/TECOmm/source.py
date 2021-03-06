@@ -18,14 +18,14 @@ from ..BibInfo import BibInfo
 from bgc_md2.helper import MVarSet
 
 sym_dict = {
-        'x_1': 'Carbon in foliage'
-        ,'x_2': 'Carbon in roots'
-        ,'x_3': 'Carbon in woody tissue'
-        ,'x_4': 'Carbon in metabolic litter'
-        ,'x_5': 'Carbon in structural litter'
-        ,'x_6': 'Carbon in fast SOM'
-        ,'x_7': 'Carbon in slow SOM'
-        ,'x_8': 'Carbon in passive SOM'
+        'C_foliage': 'Carbon in foliage'
+        ,'C_roots': 'Carbon in roots'
+        ,'C_wood': 'Carbon in woody tissue'
+        ,'C_metlit': 'Carbon in metabolic litter'
+        ,'C_stlit': 'Carbon in structural litter'
+        ,'C_fastsom': 'Carbon in fast SOM'
+        ,'C_slowsom': 'Carbon in slow SOM'
+        ,'C_passsom': 'Carbon in passive SOM'
         ,'T_k': 'Canopy temperature in Kelvin'
         ,'R': 'Universal gas constant'
         ,'E_p': 'Activation energy' # It may differ for each parameter
@@ -60,30 +60,30 @@ sym_dict = {
         ,'f_W': 'Function of W'
         ,'f_T': 'Function of T'
         ,'xi': 'Environmental scalar'
-        ,'b_1': 'Fixed partitioning ratio (fraction) of available carbon allocated to foliage'
-        ,'b_2': 'Fixed partitioning ratio (fraction) of available carbon allocated to roots'
-        ,'b_3': 'Fixed partitioning ratio (fraction) of available carbon allocated to wood'
-        ,'c_1': 'Foliage cycling rate' # "day^{-1}"
-        ,'c_2': 'Woody cycling rate' # "day^{-1}"
-        ,'c_3': 'Fine roots cycling rate' # "day^{-1}"
-        ,'c_4': 'Metabolic litter cycling rate' # "day^{-1}"
-        ,'c_5': 'Structural litter cycling rate' # "day^{-1}"
-        ,'c_6': 'Fast SOM cycling rate' # "day^{-1}"
-        ,'c_7': 'Slow SOM cycling rate' # "day^{-1}"
-        ,'c_8': 'Passive SOM cycling rate' # "day^{-1}"
-        ,'f_41': 'Transfer coefficient from Foliage to Metabilic Litter'
-        ,'f_51': 'Transfer coefficient from Foliage to Structural Litter'
-        ,'f_52': 'Transfer coefficient from Wood to Structural Litter'
-        ,'f_43': 'Transfer coefficient from Fine Roots to Metabolic Litter'
-        ,'f_53': 'Transfer coefficient from Fine Roots to Structural Litter'
-        ,'f_64': 'Transfer coefficient from Metabolic Litter to Fast SOM'
-        ,'f_65': 'Transfer coefficient from Structural Litter to Fast SOM'
-        ,'f_75': 'Transfer coefficient from Structural Litter to Slow SOM'
-        ,'f_76': 'Transfer coefficient from Fast to Slow SOM'
-        ,'f_86': 'Transfer coefficient from Fast to Passive SOM'
-        ,'f_67': 'Transfer coefficient from Slow to Fast SOM'
-        ,'f_87': 'Transfer coefficient from Slow to Passive SOM'
-        ,'f_68': 'Transfer coefficient from Passive to Fast SOM'
+        ,'b_foliage': 'Fixed partitioning ratio (fraction) of available carbon allocated to foliage'
+        ,'b_roots': 'Fixed partitioning ratio (fraction) of available carbon allocated to roots'
+        ,'b_wood': 'Fixed partitioning ratio (fraction) of available carbon allocated to wood'
+        ,'cr_foliage': 'Foliage cycling rate' # "day^{-1}"
+        ,'cr_wood': 'Woody cycling rate' # "day^{-1}"
+        ,'cr_fineroot': 'Fine roots cycling rate' # "day^{-1}"
+        ,'cr_metlit': 'Metabolic litter cycling rate' # "day^{-1}"
+        ,'cr_stlit': 'Structural litter cycling rate' # "day^{-1}"
+        ,'cr_fastsom': 'Fast SOM cycling rate' # "day^{-1}"
+        ,'cr_slowsom': 'Slow SOM cycling rate' # "day^{-1}"
+        ,'cr_passsom': 'Passive SOM cycling rate' # "day^{-1}"
+        ,'f_foliage2metlit': 'Transfer coefficient from Foliage to Metabilic Litter'
+        ,'f_foliage2stlit': 'Transfer coefficient from Foliage to Structural Litter'
+        ,'f_wood2stlit': 'Transfer coefficient from Wood to Structural Litter'
+        ,'f_fineroots2metlit': 'Transfer coefficient from Fine Roots to Metabolic Litter'
+        ,'f_fineroots2stlit': 'Transfer coefficient from Fine Roots to Structural Litter'
+        ,'f_metlit2fastsom': 'Transfer coefficient from Metabolic Litter to Fast SOM'
+        ,'f_stlit2fastsom': 'Transfer coefficient from Structural Litter to Fast SOM'
+        ,'f_stlit2slowsom': 'Transfer coefficient from Structural Litter to Slow SOM'
+        ,'f_fastsom2slowsom': 'Transfer coefficient from Fast to Slow SOM'
+        ,'f_fastsom2passsom': 'Transfer coefficient from Fast to Passive SOM'
+        ,'f_slowsom2fastsom': 'Transfer coefficient from Slow to Fast SOM'
+        ,'f_slowsom2passsom': 'Transfer coefficient from Slow to Passive SOM'
+        ,'f_passsom2fastsom': 'Transfer coefficient from Passive to Fast SOM'
 }
 
 for name in sym_dict.keys():
@@ -95,34 +95,35 @@ I = I_0 * exp(-k * L)
 J_e = 1#((alpha_q * I * J_m)/(sqrt((J_m)^2 * (alpha_q)^2 * I^2))) * ((C_i - Gamma)/(4*(C_i + 2 * Gamma))) #Fixme: had to set J_e to 1 because problem with sqrt AttributeError: 'Not' object has no attribute '_eval_power'
 J_c = (V_m * (C_i - Gamma))/(C_i + K_c *( 1 + (O_x/K_o) ))
 A = Min(J_c, J_e) - R_d
-g_l * A /((C_i - Gamma) *(1+(D/D_0)))
+g_l * A / ((C_i - Gamma) * (1 + (D / D_0)))
 A_n = G_s*(C_a - C_i)
-A_c = A_n *(1-exp(-k*L))/k
+A_c = A_n * (1 - exp(- k * L)) / k
 GPP = A_c*3600*12/1000000 # Scaling expression from TECO fortran code, line 667.' # gC*day^{-1} 
-f_W = Min((0.5*W),1)
+f_W = Min((0.5*W), 1)
 f_T = Q_10*((T-10)/10)
-xi = f_W*f_T 
-t = TimeSymbol("t") # unit: "day"
-x = StateVariableTuple((x_1, x_2, x_3, x_4, x_5, x_6, x_7, x_8))
+xi = f_W*f_T
+t = TimeSymbol("t")  # unit: "day"
+#x = StateVariableTuple((C_foliage, C_roots, C_wood, C_metlit, C_stlit, C_fastsom, C_slowsom, C_passsom))
+x = StateVariableTuple((C_foliage, C_wood, C_roots, C_metlit, C_stlit, C_fastsom, C_slowsom, C_passsom))
 u = GPP
-b = ImmutableMatrix((b_1, b_2, b_3))
-Input = InputTuple(tuple(u*b)+(0, 0, 0, 0, 0))
-B = CompartmentalMatrix(
-[[  -c_1,     0,     0,     0,     0,     0,     0,     0],
-[   0,    -c_2,     0,     0,     0,     0,     0,     0],
-[   0,     0,    -c_3,     0,     0,     0,     0,     0],
-[f_41,     0,  f_43,    -c_4,     0,     0,     0,     0],
-[f_51,  f_52,  f_53,     0,    -c_5,     0,     0,     0],
-[   0,     0,     0,  f_64,  f_65,    -c_6,  f_67,  f_68],
-[   0,     0,     0,     0,  f_75,  f_76,    -c_7,     0],
-[   0,     0,     0,     0,     0,  f_86,  f_87,    -c_8]])
+b = (b_foliage, b_roots, b_wood, 0, 0, 0, 0, 0)
+Input = InputTuple(u * ImmutableMatrix(b))
+B = CompartmentalMatrix([
+[  -cr_foliage,     0,     0,     0,     0,     0,     0,     0],
+[   0,    -cr_wood,     0,     0,     0,     0,     0,     0],
+[   0,     0,    -cr_fineroot,     0,     0,     0,     0,     0],
+[f_foliage2metlit,     0,  f_fineroots2metlit,    -cr_metlit,     0,     0,     0,     0],
+[f_foliage2stlit,  f_wood2stlit,  f_fineroots2stlit,     0,    -cr_stlit,     0,     0,     0],
+[   0,     0,     0,  f_metlit2fastsom,  f_stlit2fastsom,    -cr_fastsom,  f_slowsom2fastsom,  f_passsom2fastsom],
+[   0,     0,     0,     0,  f_stlit2slowsom,  f_fastsom2slowsom,    -cr_slowsom,     0],
+[   0,     0,     0,     0,     0,  f_fastsom2passsom,  f_slowsom2passsom,    -cr_passsom]])
 np1 = NumericParameterization(
-    par_dict={GPP: 3.370, b_1: 0.14, b_2: 0.26, b_3: 0.14, f_41: 0.9, f_51: 0.1, f_52: 1, f_43: 0.2, f_53: 0.8, f_64: 0.45, f_65: 0.275, f_75: 0.275, f_76: 0.296, f_86: 0.004, f_67: 0.42, f_87: 0.01, f_68: 0.45, c_1: 0.00258, c_2: 0.0000586, c_3: 0.002390, c_4: 0.0109, c_5: 0.00095, c_6: 0.0105, c_7: 0.0000995,c_8: 0.0000115
+    par_dict={GPP: 3.370, b_foliage: 0.14, b_roots: 0.26, b_wood: 0.14, f_foliage2metlit: 0.9, f_foliage2stlit: 0.1, f_wood2stlit: 1, f_fineroots2metlit: 0.2, f_fineroots2stlit: 0.8, f_metlit2fastsom: 0.45, f_stlit2fastsom: 0.275, f_stlit2slowsom: 0.275, f_fastsom2slowsom: 0.296, f_fastsom2passsom: 0.004, f_slowsom2fastsom: 0.42, f_slowsom2passsom: 0.01, f_passsom2fastsom: 0.45, cr_foliage: 0.00258, cr_wood: 0.0000586, cr_fineroot: 0.002390, cr_metlit: 0.0109, cr_stlit: 0.00095, cr_fastsom: 0.0105, cr_slowsom: 0.0000995,cr_passsom: 0.0000115
 },
     func_dict=frozendict({})
 )
 # "Initial values as in Wang and Luo"
-nsv1 = NumericStartValueDict({x_1: 250, x_2: 4145, x_3: 192, x_4: 93, x_5: 545, x_6: 146, x_7: 1585, x_8: 300
+nsv1 = NumericStartValueDict({C_foliage: 250, C_roots: 4145, C_wood: 192, C_metlit: 93, C_stlit: 545, C_fastsom: 146, C_slowsom: 1585, C_passsom: 300
 })
 ntimes = NumericSimulationTimes(np.arange(0,200,1))
 
@@ -155,7 +156,7 @@ mvs = MVarSet({
     x,  # state vector of the complete system
     VegetationCarbonInputScalar(u),
     VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((x_1, x_2, x_3)),
+    VegetationCarbonStateVariableTuple((C_foliage, C_roots, C_wood)),
     np1,
     nsv1,
     ntimes
