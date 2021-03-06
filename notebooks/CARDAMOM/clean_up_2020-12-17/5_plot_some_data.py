@@ -341,6 +341,30 @@ for row, var_name in enumerate(var_names):
 plt.suptitle("Pool age")
 plt.tight_layout()
 plt.draw()
+# -
+
+# We can also look at the change in differences.
+
+# +
+fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(12, 12))
+
+f = lambda x: x.weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
+variable_names = ["mean_system_age", "system_age_median", "mean_btt", "btt_median"]
+titles = [
+    "Global C mean age change",
+    "Global average system age median change",
+    "Global mean backward transit time change",
+    "Global average backward transit time median change"
+]
+
+for variable_name, ax, title, color in zip(variable_names, axes.flatten(), titles, colors):
+    f(ds[variable_name]).rolling(time=12).mean().diff("time").plot.line(ax=ax, x="time", alpha=alpha, lw=lw, c=color, add_legend=False)
+
+    ax.set_title(title)
+    ax.set_ylabel("yr")
+    
+plt.tight_layout()
+plt.draw()
 
 # +
 total_C_xs = ds["xs"].sum(dim="pool")
