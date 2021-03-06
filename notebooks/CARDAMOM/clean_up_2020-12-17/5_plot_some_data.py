@@ -361,3 +361,7 @@ print("Total C model reconstruction: %.2f PgC" % (total_C_solution*1e-15))
 print("Coverage                    :   %2.2f %%" % (total_C_solution/total_C_xs*100))
 
 
+
+# ## plot CHANGES in age and transit time time series, maybe even as histogram (spatially, termporally)
+
+
