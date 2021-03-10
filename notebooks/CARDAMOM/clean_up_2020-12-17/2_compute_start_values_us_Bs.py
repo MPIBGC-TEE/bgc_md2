@@ -208,8 +208,8 @@ task_list = [
             "integration_method": "solve_ivp", # default = "solve_ivp"
             "check_success": True # default = "true"
         },
-#        "timeouts": [5, np.inf],
-        "timeouts": [45, 400, 2000],
+        "timeouts": [np.inf],
+#        "timeouts": [45, 400, 2000],
 #        "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools, nr_pools),
