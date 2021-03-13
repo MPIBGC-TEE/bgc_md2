@@ -118,7 +118,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 10, 1),
+    "prob": slice(10, 20, 1), # done (0, 20, 1)
 #    "lat": slice(10, 11, 1),
 #    "lon": slice(22, 23, 1),
 #    "prob": slice(0, 1, 1),
