@@ -7,6 +7,7 @@ import dask.array as da
 import numpy as np
 
 from pathlib import Path
+from scipy.interpolate import interp1d
 from sympy import symbols, Matrix
 from tqdm import tqdm
 
@@ -14,6 +15,7 @@ from dask.distributed import LocalCluster
 from getpass import getuser
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_DAILY
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject import ModelDataObject
@@ -394,6 +396,61 @@ def compute_start_values(single_site_dict, time_step_in_days):
 
     info = tuple()
     return xs.data.filled()[0, ...], info
+
+
+def compute_start_values_14C(mr, time_step_in_days, nr_time_steps):
+#    CARDAMOM_path = Path("/home/data/CARDAMOM/")
+    CARDAMOM_path = Path("/home/hmetzler/Desktop/CARDAMOM/")
+    intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
+
+    intcal20 = np.loadtxt(
+        intcal20_path,
+        delimiter=" ",
+        skiprows=1,
+        usecols=(1, 2)
+    ).transpose()
+
+    left_val = intcal20[1][np.argmin(intcal20[0])]
+    F_atm_raw = interp1d(
+        intcal20[0],
+        intcal20[1],
+#        kind="cubic",
+        bounds_error=False,
+        fill_value=(left_val, -1000.0) # no 14C oustide of dataset
+    )
+
+    t0 = 1920 * (365.25/time_step_in_days)
+    lim = t0 + np.max(-intcal20[0]) * 365.25/time_step_in_days
+    lim = lim * 2 # we can, because we extrapolate to the left in interp1d
+
+    F_atm = lambda a: F_atm_raw((t0-a) / (365.25/time_step_in_days))
+    def F_atm(a):
+        return F_atm_raw((t0-a) / (365.25/time_step_in_days))
+
+    if isinstance(mr, PWCModelRunFD):
+        start_values_14C = mr.fake_eq_14C(
+            nr_time_steps,
+            F_atm,
+            DECAY_RATE_14C_DAILY,
+            lim=lim
+        )
+    elif isinstance(mr, DMR):
+        def F_atm_ai(ai):
+            a = ai * time_step_in_days
+            return F_atm_raw((t0-a) / (365.25/time_step_in_days))
+
+        lim_ai = lim
+        decay_rate = DECAY_RATE_14C_DAILY * time_step_in_days
+        start_values_14C = mr.fake_eq_14C(
+            nr_time_steps,
+            F_atm_ai,
+            decay_rate,
+            lim_ai
+        )
+    else:
+        raise(TypeError("wrong type of model run"))
+
+    return start_values_14C
 
 
 def compute_us(single_site_dict, time_step_in_days):
