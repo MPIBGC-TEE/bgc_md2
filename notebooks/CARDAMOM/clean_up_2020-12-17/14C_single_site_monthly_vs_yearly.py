@@ -48,8 +48,8 @@ Delta14C_atm_path = CARDAMOM_path.joinpath("C14Atm_NH.csv")
 data_combinations = [
     ("monthly", None, "discrete"),
     ("monthly", None, "continuous"), # only first prob computed so far
-    ("yearly", 0, "continuous"),
-    ("yearly", 6, "continuous")
+#    ("yearly", 0, "continuous"),
+#    ("yearly", 6, "continuous")
 ]
 
 datasets = dict()
@@ -62,21 +62,18 @@ for dc in data_combinations:
     ds_path = project_path.joinpath(netCDF_filestem)
     print(dc, ds_path)
     datasets[dc] = xr.open_mfdataset(str(ds_path) + "*.nc")
+# -
 
-# +
 ds_m = datasets[("monthly", None, "continuous")]
-ds_y0 = datasets[("yearly", 0, "continuous")]
-ds_y6 = datasets[("yearly", 6, "continuous")]
-
+#ds_y0 = datasets[("yearly", 0, "continuous")]
+#ds_y6 = datasets[("yearly", 6, "continuous")]
 ds_dmr = datasets[("monthly", None, "discrete")]
 
-# +
 # choose a site in northern Sweden, ensemble member prob=0
 (lat, lon, prob) = (28, 52, 0)
 sub_ds_m = ds_m.isel(lat=lat, lon=lon, prob=prob)
-sub_ds_y0 = ds_y0.isel(lat=lat, lon=lon, prob=prob)
-sub_ds_y6 = ds_y6.isel(lat=lat, lon=lon, prob=prob)
-
+#sub_ds_y0 = ds_y0.isel(lat=lat, lon=lon, prob=prob)
+#sub_ds_y6 = ds_y6.isel(lat=lat, lon=lon, prob=prob)
 sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
 
 # +
@@ -84,9 +81,10 @@ sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
 
 # convert monthly time steps to daily time steps, each month comprising 31 days
 data_times_m = np.arange(len(sub_ds_m["time"])) * 31
-data_times_y0 = np.arange(len(sub_ds_y0["time"])) * 31 * 12
-data_times_y6 = np.arange(len(sub_ds_y6["time"])) * 31 * 12
+#data_times_y0 = np.arange(len(sub_ds_y0["time"])) * 31 * 12
+#data_times_y6 = np.arange(len(sub_ds_y6["time"])) * 31 * 12
 
+# +
 # monthly
 start_values_m = sub_ds_m["start_values"]
 us_m = sub_ds_m["us"]
@@ -214,7 +212,7 @@ for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
     ax.plot(ages, pool_age_density_y6(ages), c="green", label="yearly (Jul)")
 
     pool_age_density_disc = np.vectorize(lambda a: p0_disc(a*31*12)[nr])
-    ax.plot(ages, pool_age_density_disc(ages), c="red", label="monthly", ls="--")
+    ax.plot(ages, pool_age_density_disc(ages), c="red", label="monthly (discrete)", ls="--")
 
     ax.set_title(pool_name)
     ax.set_xlabel("age (yr)")
@@ -376,7 +374,6 @@ dmr_14C = DMR_14C(
 soln_m_14C = pwc_mr_m_14C.solve()
 soln_y0_14C = pwc_mr_y0_14C.solve()
 soln_y6_14C = pwc_mr_y6_14C.solve()
-
 soln_dmr_14C = dmr_14C.solve()
 
 # +
@@ -395,7 +392,7 @@ for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
 
     ax.set_title(pool_name)
     ax.set_xlabel("year")
-    ax.set_xlim([sub_ds_m.time[0], sub_ds_m.time[-1]])
+    ax.set_xlim([sub_ds_m.time[0], sub_ds_m.time[:cut_index_x]])
     ax.set_ylabel(r"$\Delta^{14}$C (‰)")
     ax.legend()
     
@@ -403,8 +400,116 @@ plt.suptitle(r"CARDAMOM $\Delta^{14}$C")
 plt.tight_layout()
 # -
 
-# ## Now run 20 ensemble members 
-#
-# in new notebook, show also semi-transparent plots for age densities.
+# ## Now run all ensemble members on the chosen site
+
+# +
+nr_time_steps_m = 12 *10
+
+fig, ax = plt.subplots(figsize=(18, 6))
+
+nr, pool_name = 5, "Soil"
+for prob in range(50):
+    sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
+    
+    start_values_dmr = sub_ds_dmr["start_values"]
+    Us = sub_ds_dmr["Us"]
+    Bs_dmr = sub_ds_dmr["Bs"]
+
+    dmr = DMR.from_Bs_and_net_Us(
+        start_values_dmr.values,
+        data_times_m,
+        Bs_dmr[:-1].values,
+        Us[:-1].values
+    )
+    
+    p0_disc_ai = dmr.fake_start_age_masses(nr_time_steps_m) 
+    p0_disc = lambda a: p0_disc_ai(int(a/dmr.dt)) / dmr.dt # make a density from masses
+    age_moments_disc = dmr.fake_start_age_moments(nr_time_steps_m, 2)
+    mean_age_vector_disc = age_moments_disc[0, :] / 31 / 12 # convert from days to years
+    age_sd_vector_disc = np.sqrt(age_moments_disc[1, :]) / 31 / 12
+
+    ages = np.linspace(0, age_sd_vector_disc[nr]*2, 100)
+
+    pool_age_density_disc = np.vectorize(lambda a: p0_disc(a*31*12)[nr])
+    ax.plot(ages, pool_age_density_disc(ages), c="red", label="monthly", alpha=0.2, lw=4)
+
+ax.set_title(pool_name)
+ax.set_xlabel("age (yr)")
+ax.set_xlim([ages[0], ages[-1]])
+ax.set_ylabel(r"density ($g/m^2/yr$)")
+ax.set_ylim([0, ax.get_ylim()[-1]])
+    
+plt.suptitle("(Fake) equilibrium age distributions")
+plt.tight_layout()
+
+# +
+fig, ax = plt.subplots(figsize=(18, 6))
+
+#F_Delta_14Cx = lambda x, y: y
+F_Delta_14Cx = F_Delta_14C
+
+NH_Delta_14C = np.loadtxt(Delta14C_atm_path, delimiter=",", skiprows=1).transpose()
+
+F_atm_NH = interp1d(
+    NH_Delta_14C[0],
+    NH_Delta_14C[1],
+#    kind="cubic",
+#    bounds_error=False,
+#    fill_value=(left_val, -1000.0) # no 14C oustide of dataset
+#    fill_value="extrapolate"
+)
+
+F_frac = lambda t: (F_atm_NH(t)/1000+1)*ALPHA_14C
+
+# rescale F_frac to model run time
+t0 = 1920
+F_frac_model = lambda t: F_frac(t0 + t/(31*12))
+
+
+from tqdm import tqdm
+for prob in tqdm(range(50)):
+    sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
+    
+    start_values_dmr = sub_ds_dmr["start_values"]
+    Us = sub_ds_dmr["Us"]
+    Bs_dmr = sub_ds_dmr["Bs"]
+
+    dmr = DMR.from_Bs_and_net_Us(
+        start_values_dmr.values,
+        data_times_m,
+        Bs_dmr[:-1].values,
+        Us[:-1].values
+    )
+    soln_dmr = dmr.solve()
+    start_values_14C_dmr = CARDAMOMlib.compute_start_values_14C(dmr, nr_time_steps_m)
+
+    x = dmr.times[dmr.times / (31*12) < 2009 - 1920]
+    
+    dmr.times = x
+    dmr.Bs = dmr.Bs[:len(x)-1]
+    net_Us_14C = np.array([F_frac_model(dmr.times[ti]) * Us[ti] * np.exp(-DECAY_RATE_14C_DAILY * dmr.dt) for ti in range(len(dmr.times))])
+
+    # construct a 14C model run from the 12C model run
+    dmr_14C = DMR_14C(
+        dmr,
+        start_values_14C_dmr,
+        net_Us_14C[:-1],
+        DECAY_RATE_14C_DAILY
+    )
+
+    cut_index_x = len(dmr_14C.times)
+
+    soln_dmr_14C = dmr_14C.solve()
+    ax.plot(sub_ds_dmr.time[:cut_index_x], F_Delta_14Cx(soln_dmr[:cut_index_x, nr], soln_dmr_14C[:, nr]), alpha=0.2, c="red", lw=4)
+
+ax.set_title(pool_name)
+ax.set_xlabel("year")
+ax.set_xlim([sub_ds_dmr.time[0], sub_ds_dmr.time[cut_index_x]])
+ax.set_ylabel(r"$\Delta^{14}$C (‰)")
+#ax.set_ylim([0, ax.get_ylim()[-1]])
+
+plt.suptitle(r"CARDAMOM $\Delta^{14}$C")
+plt.tight_layout()
+# -
 
 
