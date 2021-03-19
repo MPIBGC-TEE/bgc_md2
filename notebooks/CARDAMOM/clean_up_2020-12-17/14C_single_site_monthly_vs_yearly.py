@@ -16,7 +16,7 @@
 
 # # Compute 14C for a single site in northern Sweden based on CARDAMOM output data
 #
-# We use monthly data, yearly data starting in January, and yearly data starting in July.
+# We use monthly data (continuous + discrete), yearly data starting in January, and yearly data starting in July.
 
 # +
 import matplotlib.pyplot as plt
@@ -33,6 +33,7 @@ from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_YEARLY, ALPHA_
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
@@ -61,17 +62,22 @@ for dc in data_combinations:
     ds_path = project_path.joinpath(netCDF_filestem)
     print(dc, ds_path)
     datasets[dc] = xr.open_mfdataset(str(ds_path) + "*.nc")
-# -
 
+# +
 ds_m = datasets[("monthly", None, "continuous")]
 ds_y0 = datasets[("yearly", 0, "continuous")]
 ds_y6 = datasets[("yearly", 6, "continuous")]
 
+ds_dmr = datasets[("monthly", None, "discrete")]
+
+# +
 # choose a site in northern Sweden, ensemble member prob=0
 (lat, lon, prob) = (28, 52, 0)
 sub_ds_m = ds_m.isel(lat=lat, lon=lon, prob=prob)
 sub_ds_y0 = ds_y0.isel(lat=lat, lon=lon, prob=prob)
 sub_ds_y6 = ds_y6.isel(lat=lat, lon=lon, prob=prob)
+
+sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
 
 # +
 # load the corresponding model runs
@@ -122,6 +128,18 @@ pwc_mr_y6 = PWCModelRunFD.from_Bs_and_us(
     us_y6[:-1],
     state_variables=sub_ds_y6.pool.values
 )
+
+# monthly, discrete
+start_values_dmr = sub_ds_dmr["start_values"]
+Us = sub_ds_dmr["Us"]
+Bs_dmr = sub_ds_dmr["Bs"]
+
+dmr = DMR.from_Bs_and_net_Us(
+    start_values_dmr.values,
+    data_times_m,
+    Bs_dmr[:-1].values,
+    Us[:-1].values
+)
 # -
 
 fig, ax = plt.subplots(figsize=(8, 8))
@@ -133,6 +151,7 @@ _ = ax.set_title("CARDAMOM")
 soln_m = sub_ds_m["solution"].values
 soln_y0 = sub_ds_y0["solution"].values
 soln_y6 = sub_ds_y6["solution"].values
+soln_dmr = sub_ds_dmr["solution"].values
 
 # +
 fig, axes = plt.subplots(ncols=2, nrows=3, figsize=(18, 12))
@@ -141,6 +160,7 @@ for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
     ax.plot(sub_ds_m.time, soln_m[:, nr], label="monthly")
     ax.plot(sub_ds_y0.time, soln_y0[:, nr], label="yearly (Jan)")
     ax.plot(sub_ds_y6.time, soln_y6[:, nr], label="yearly (Jul)")
+    ax.plot(sub_ds_dmr.time, soln_dmr[:, nr], label="monthly (discrete)", alpha=0.5)
 
     ax.set_title(pool_name)
     ax.set_xlabel("year")
@@ -173,6 +193,12 @@ age_moments_y6 = pwc_mr_y6.fake_start_age_moments(nr_time_steps_y, 2)
 mean_age_vector_y6 = age_moments_y6[0, :] / 31 / 12 # convert from days to years
 age_sd_vector_y6 = np.sqrt(age_moments_y6[1, :]) / 31 / 12
 
+p0_disc_ai = dmr.fake_start_age_masses(nr_time_steps_m) 
+p0_disc = lambda a: p0_disc_ai(int(a/dmr.dt)) / dmr.dt # make a density from masses
+age_moments_disc = dmr.fake_start_age_moments(nr_time_steps_m, 2)
+mean_age_vector_disc = age_moments_disc[0, :] / 31 / 12 # convert from days to years
+age_sd_vector_disc = np.sqrt(age_moments_disc[1, :]) / 31 / 12
+
 # +
 fig, axes = plt.subplots(ncols=2, nrows=3, figsize=(18, 12))
 for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
@@ -187,6 +213,9 @@ for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
     pool_age_density_y6 = np.vectorize(lambda a: p0_y6(a*31*12)[nr])
     ax.plot(ages, pool_age_density_y6(ages), c="green", label="yearly (Jul)")
 
+    pool_age_density_disc = np.vectorize(lambda a: p0_disc(a*31*12)[nr])
+    ax.plot(ages, pool_age_density_disc(ages), c="red", label="monthly", ls="--")
+
     ax.set_title(pool_name)
     ax.set_xlabel("age (yr)")
     ax.set_xlim([ages[0], ages[-1]])
@@ -196,6 +225,7 @@ for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
     ax.axvline(mean_age_vector_m[nr], ymax=pool_age_density_m(mean_age_vector_m[nr]) / ax.get_ylim()[-1], ls="--", c="blue")
     ax.axvline(mean_age_vector_y0[nr], ymax=pool_age_density_y0(mean_age_vector_y0[nr]) / ax.get_ylim()[-1], ls="--", c="orange")
     ax.axvline(mean_age_vector_y6[nr], ymax=pool_age_density_y6(mean_age_vector_y6[nr]) / ax.get_ylim()[-1], ls="--", c="green")
+    ax.axvline(mean_age_vector_disc[nr], ymax=pool_age_density_disc(mean_age_vector_disc[nr]) / ax.get_ylim()[-1], ls="--", c="red")
     
     ax.legend()
     
@@ -234,6 +264,16 @@ with np.printoptions(precision=2, suppress=True):
     print(pwc_mr_y6.model.state_variables)
     print(start_values_Delta_14C_y6, "‰")
     print("System (1920): %2.2f ‰" % system_Delta_14C_y6)
+
+print("\n")
+start_values_14C_dmr = CARDAMOMlib.compute_start_values_14C(dmr, nr_time_steps_m)
+start_values_Delta_14C_dmr = (start_values_14C_dmr / start_values_dmr.values / ALPHA_14C - 1) * 1000
+system_Delta_14C_dmr = (start_values_14C_dmr.sum() / start_values_dmr.values.sum() / ALPHA_14C - 1 ) * 1000
+with np.printoptions(precision=2, suppress=True):
+    print("Monthly (discrete) initial Delta14C (t0 = 1920)\n")
+    print(pwc_mr_y6.model.state_variables)
+    print(start_values_Delta_14C_dmr, "‰")
+    print("System (1920): %2.2f ‰" % system_Delta_14C_dmr)
 # -
 
 # ## Construct a 14C model run and make a transient run from 1920 to 2009
@@ -316,21 +356,42 @@ pwc_mr_y6_14C = PWCModelRun_14C(
 )
 
 # +
+# discrete
+
+dmr.times = x
+dmr.Bs = dmr.Bs[:len(x)-1]
+net_Us_14C = np.array([F_frac_model(dmr.times[ti]) * Us[ti] * np.exp(-DECAY_RATE_14C_DAILY * dmr.dt) for ti in range(len(dmr.times))])
+
+# construct a 14C model run from the 12C model run
+dmr_14C = DMR_14C(
+    dmr,
+    start_values_14C_dmr,
+    net_Us_14C[:-1],
+    DECAY_RATE_14C_DAILY
+)
+
+# +
 # %%time
 
 soln_m_14C = pwc_mr_m_14C.solve()
 soln_y0_14C = pwc_mr_y0_14C.solve()
 soln_y6_14C = pwc_mr_y6_14C.solve()
 
+soln_dmr_14C = dmr_14C.solve()
+
 # +
 fig, axes = plt.subplots(ncols=2, nrows=3, figsize=(18, 12))
+
+#F_Delta_14Cx = lambda x, y: y
+F_Delta_14Cx = F_Delta_14C
 
 cut_index_x = len(pwc_mr_m_14C.times)
 cut_index_y = len(pwc_mr_y0_14C.times)
 for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
-    ax.plot(sub_ds_m.time[:cut_index_x], F_Delta_14C(soln_m[:cut_index_x, nr], soln_m_14C[:, nr]), label="monthly")
-    ax.plot(sub_ds_y0.time[:cut_index_y], F_Delta_14C(soln_y0[:cut_index_y, nr], soln_y0_14C[:, nr]), label="yearly (Jan)")
-    ax.plot(sub_ds_y6.time[:cut_index_y], F_Delta_14C(soln_y6[:cut_index_y, nr], soln_y6_14C[:, nr]), label="yearly (Jul)")
+    ax.plot(sub_ds_m.time[:cut_index_x], F_Delta_14Cx(soln_m[:cut_index_x, nr], soln_m_14C[:, nr]), label="monthly")
+    ax.plot(sub_ds_y0.time[:cut_index_y], F_Delta_14Cx(soln_y0[:cut_index_y, nr], soln_y0_14C[:, nr]), label="yearly (Jan)")
+    ax.plot(sub_ds_y6.time[:cut_index_y], F_Delta_14Cx(soln_y6[:cut_index_y, nr], soln_y6_14C[:, nr]), label="yearly (Jul)")
+    ax.plot(sub_ds_dmr.time[:cut_index_x], F_Delta_14Cx(soln_dmr[:cut_index_x, nr], soln_dmr_14C[:, nr]), label="monthly (discrete)",)
 
     ax.set_title(pool_name)
     ax.set_xlabel("year")

@@ -62,8 +62,8 @@ Client(my_cluster)
 #
 # and open link given above.
 
-time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
-#time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
+#time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
+time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
@@ -118,7 +118,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(10, 20, 1), # done monthly (0, 20, 1)
+    "prob": slice(0, 5, 1), # done: monthly (0, 20, 1)
 #    "lat": slice(10, 11, 1),
 #    "lon": slice(22, 23, 1),
 #    "prob": slice(0, 1, 1),
@@ -159,7 +159,7 @@ nr_lats, nr_lons, nr_probs, nr_times, nr_pools
 task_list = [
     {# 0:
         "computation": "xs",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_xs,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -173,7 +173,7 @@ task_list = [
     },    
     {# 1:
         "computation": "start_values",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_start_values,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -187,7 +187,7 @@ task_list = [
     },
     {# 2:
         "computation": "us",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_us,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -201,7 +201,7 @@ task_list = [
     },
     {# 3:
         "computation": "Bs",
-        "overwrite": False,
+        "overwrite": True,
         "func": CARDAMOMlib.compute_Bs,
         "func_args": {
             "time_step_in_days": params["time_step_in_days"],
