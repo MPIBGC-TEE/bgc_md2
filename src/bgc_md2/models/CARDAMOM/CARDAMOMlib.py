@@ -398,9 +398,9 @@ def compute_start_values(single_site_dict, time_step_in_days):
     return xs.data.filled()[0, ...], info
 
 
-def compute_start_values_14C(mr, time_step_in_days, nr_time_steps):
-#    CARDAMOM_path = Path("/home/data/CARDAMOM/")
-    CARDAMOM_path = Path("/home/hmetzler/Desktop/CARDAMOM/")
+def compute_start_values_14C(mr, nr_time_steps):
+    CARDAMOM_path = Path("/home/data/CARDAMOM/")
+#    CARDAMOM_path = Path("/home/hmetzler/Desktop/CARDAMOM/")
     intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
 
     intcal20 = np.loadtxt(
@@ -419,36 +419,23 @@ def compute_start_values_14C(mr, time_step_in_days, nr_time_steps):
         fill_value=(left_val, -1000.0) # no 14C oustide of dataset
     )
 
-    t0 = 1920 * (365.25/time_step_in_days)
-    lim = t0 + np.max(-intcal20[0]) * 365.25/time_step_in_days
-    lim = lim * 2 # we can, because we extrapolate to the left in interp1d
+    t0 = 1920 # years AD
+    lim = t0 + np.max(-intcal20[0]) # max. age rechable by intcal in years
 
-    F_atm = lambda a: F_atm_raw((t0-a) / (365.25/time_step_in_days))
+    # input comes in days before t0 (age)
+    # F_atm_raw input needs to be years AD 
     def F_atm(a):
-        return F_atm_raw((t0-a) / (365.25/time_step_in_days))
+        y = a / 31 / 12 # years before t0
+        y = t0 - y # years AD
 
-    if isinstance(mr, PWCModelRunFD):
-        start_values_14C = mr.fake_eq_14C(
-            nr_time_steps,
-            F_atm,
-            DECAY_RATE_14C_DAILY,
-            lim=lim
-        )
-    elif isinstance(mr, DMR):
-        def F_atm_ai(ai):
-            a = ai * time_step_in_days
-            return F_atm_raw((t0-a) / (365.25/time_step_in_days))
+        return F_atm_raw(y)
 
-        lim_ai = lim
-        decay_rate = DECAY_RATE_14C_DAILY * time_step_in_days
-        start_values_14C = mr.fake_eq_14C(
-            nr_time_steps,
-            F_atm_ai,
-            decay_rate,
-            lim_ai
-        )
-    else:
-        raise(TypeError("wrong type of model run"))
+    start_values_14C = mr.fake_eq_14C(
+        nr_time_steps,
+        F_atm,
+        DECAY_RATE_14C_DAILY,
+        lim * 31 * 12 * 2 # integration limit in days
+    )
 
     return start_values_14C
 
