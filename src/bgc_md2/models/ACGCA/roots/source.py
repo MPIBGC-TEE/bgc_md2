@@ -1,3 +1,7 @@
+from sympy import Matrix
+
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+
 from bgc_md2.resolve.MVarSet import MVarSet
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
@@ -8,6 +12,7 @@ from bgc_md2.resolve.mvars import (
 )
 
 from bgc_md2.models.ACGCA.__init__ import (
+    t,
     GPP,
     E, B_R, C_R,
     MR, GR,
@@ -35,6 +40,14 @@ roots_internal_fluxes = {
 
 roots = (
     roots_sv_set,
+    roots_in_fluxes,
+    roots_out_fluxes,
+    roots_internal_fluxes
+)
+
+srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
+    Matrix([E, B_R, C_R]),
+    t,
     roots_in_fluxes,
     roots_out_fluxes,
     roots_internal_fluxes

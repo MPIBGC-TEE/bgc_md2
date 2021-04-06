@@ -12,7 +12,8 @@ from bgc_md2.models.ACGCA.__init__ import (
     E, C_S, B_TH, B_TS, B_OS,
     MS, GS_T,
     f_T, C_gW, delta_W, eta_W, v_T,
-    zeta, zeta_dw, zeta_gluc
+    C_gHW,
+    zeta_dw, zeta_gluc
 )
 
 # trunk
@@ -32,7 +33,7 @@ trunk_internal_fluxes = {
     
     # trunk heartwood production
     (B_TS, B_TH): v_T * B_TS,
-    (C_S, B_TH): v_T * 1/zeta * B_TS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S
+    (C_S, B_TH): v_T * 1/C_gHW * B_TS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S
 }
 
 trunk = (
