@@ -1,3 +1,7 @@
+from sympy import Matrix
+
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+
 from bgc_md2.resolve.MVarSet import MVarSet
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
@@ -8,6 +12,7 @@ from bgc_md2.resolve.mvars import (
 )
 
 from bgc_md2.models.ACGCA.__init__ import (
+    t,
     GPP,
     E, B_L, C_L,
     ML, GL,
@@ -39,6 +44,15 @@ leaves = (
     leaves_out_fluxes,
     leaves_internal_fluxes
 )
+
+srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
+    Matrix([E, B_L, C_L]),
+    t,
+    leaves_in_fluxes,
+    leaves_out_fluxes,
+    leaves_internal_fluxes
+)
+
 
 mvs = MVarSet({
     InFluxesBySymbol(leaves[1]),

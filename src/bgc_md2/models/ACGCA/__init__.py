@@ -5,7 +5,7 @@ from sympy import symbols, Matrix
 t = symbols("t")
 
 # 1 g_gluc/g_dw, g_gluc_to_gC, g_dw_to_gC
-zeta, zeta_gluc, zeta_dw = symbols("zeta zeta_gluc zeta_dw")
+zeta_gluc, zeta_dw = symbols("zeta_gluc zeta_dw")
 
 # active carbon pool and GPP flux
 E = symbols("E")
@@ -19,10 +19,13 @@ B_OS, B_OH = symbols("B_OS B_OH")
 B_TS, B_TH = symbols("B_TS B_TH")
 
 # costs of growth for leaves, roots, wood
-# maintenance respration and senescence rates
+# maintenance respiration and senescence rates
 C_gL, delta_L, R_mL, S_L = symbols("C_gL delta_L R_mL S_L")
 C_gR, delta_R, R_mR, S_R = symbols("C_gR delta_R R_mR S_R")
 C_gW, delta_W, delta_S, R_mS, S_O = symbols("C_gW delta_W delta_S R_mS S_O")
+
+# costs for heartwood production
+C_gHW = symbols("C_gHW")
 
 # dynamic carbon allocation coefficients to leaves, coarse roots,
 # fine roots + branches, and trunk
