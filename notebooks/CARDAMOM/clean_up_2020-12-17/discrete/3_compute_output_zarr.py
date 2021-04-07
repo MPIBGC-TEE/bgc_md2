@@ -35,7 +35,7 @@ from dask.distributed import Client
 
 my_cluster = CARDAMOMlib.prepare_cluster(
     n_workers=48,
-    alternative_dashboard_port=8791
+#    alternative_dashboard_port=8791
 )
 Client(my_cluster)
 
@@ -102,7 +102,11 @@ nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(45, 50, 1), # done (0, 50, 1)
+    # no 14C
+    "prob": slice(0, 5, 1), # done (0, 50, 1)
+    # 14C start values only
+#    "prob": slice(0, None, 1), # done (0, 50, 1)
+    
 #    "lat": slice(28, 32, 1),
 #    "lon": slice(48, 52, 1),
 #    "prob": slice(0, 2, 1),
@@ -327,9 +331,7 @@ for task in task_list:
 # +
 # %%time
 
-for task in task_list:
-#for task_index in [6]:
-#    task = task_list[task_index]
+for task in task_list[8:]: 
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -342,8 +344,6 @@ for task in task_list:
         slices
     )
 # -
-
-
 
 
 

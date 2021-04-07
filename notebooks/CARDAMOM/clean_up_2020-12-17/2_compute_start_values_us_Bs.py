@@ -62,8 +62,8 @@ Client(my_cluster)
 #
 # and open link given above.
 
-#time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
-time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
+time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
@@ -118,7 +118,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 5, 1), # done: monthly (0, 20, 1)
+    "prob": slice(20, 25, 1), # done: monthly (0, 20, 1), yearly_00 (0, 5, 1), yearly_06 (0, 1, 1)
 #    "lat": slice(10, 11, 1),
 #    "lon": slice(22, 23, 1),
 #    "prob": slice(0, 1, 1),
@@ -159,7 +159,7 @@ nr_lats, nr_lons, nr_probs, nr_times, nr_pools
 task_list = [
     {# 0:
         "computation": "xs",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_xs,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -173,7 +173,7 @@ task_list = [
     },    
     {# 1:
         "computation": "start_values",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_start_values,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -187,7 +187,7 @@ task_list = [
     },
     {# 2:
         "computation": "us",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_us,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
@@ -201,7 +201,7 @@ task_list = [
     },
     {# 3:
         "computation": "Bs",
-        "overwrite": True,
+        "overwrite": False,
         "func": CARDAMOMlib.compute_Bs,
         "func_args": {
             "time_step_in_days": params["time_step_in_days"],
@@ -209,6 +209,7 @@ task_list = [
             "check_success": True # default = "true"
         },
         "timeouts": [45, 400, 2000],
+#        "timeouts": [20, 100, 1000],
 #        "timeouts": [np.inf],
         "batch_size": 500,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools, nr_pools),
@@ -227,7 +228,7 @@ task_list = [
 # +
 # %%time
 
-for task in task_list: # Bs not yet complete to 10
+for task in task_list: 
     print("task: computing", task["computation"])
     print()
     
@@ -269,6 +270,8 @@ for task in task_list: # Bs not yet complete to 10
 # +
 import pandas as pd
 
+task = task_list[-1]
+logfile_name = str(project_path.joinpath(task["computation"] + ".log"))
 csv = pd.read_csv(logfile_name, sep=",", skiprows=1, skipfooter=2, names=["time", "lat", "lon", "prob", "msg", "max_abs_err", "max_rel_err"])
 csv
 # -
@@ -276,7 +279,7 @@ csv
 clean_csv = csv[~pd.isnull(csv.max_abs_err)]
 clean_csv
 
-#clean_csv.reset_index().sort_values(by=["max_rel_err", "max_abs_err"], ascending=False).head(15)
-clean_csv.reset_index().sort_values(by=["max_abs_err", "max_rel_err"], ascending=False).head(15)
+clean_csv.reset_index().sort_values(by=["max_rel_err", "max_abs_err"], ascending=False).head(15)
+#clean_csv.reset_index().sort_values(by=["max_abs_err", "max_rel_err"], ascending=False).head(15)
 
 

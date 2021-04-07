@@ -15,7 +15,8 @@ from dask.distributed import LocalCluster
 from getpass import getuser
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
-from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_DAILY
+from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
+from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_DAILY, ALPHA_14C
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from bgc_md2.ModelStructure import ModelStructure
 from bgc_md2.ModelDataObject import ModelDataObject
@@ -230,7 +231,7 @@ def linear_batchwise_to_zarr(
     for batch in tqdm(batches):
         s = slice(batch[0], batch[-1]+1, 1)
         res_batch = res_da[s, ...].compute() # in parallel
-        
+       
         # update zarr file
         for nr, coords in enumerate(coords_tuples[s]):
             z[coords] = res_batch[nr, ...]
@@ -270,7 +271,7 @@ def func_for_map_blocks(*args):
         print(error_msg, flush=True)
     except Exception as e:
         tb = traceback.format_exc()
-        print(tb, flush=True)
+#        print(tb, flush=True)
         res = np.nan * np.ones(return_shape)
         error_msg = "Error: " + str(e)
         print(error_msg, flush=True)
@@ -398,8 +399,11 @@ def compute_start_values(single_site_dict, time_step_in_days):
     return xs.data.filled()[0, ...], info
 
 
-def compute_start_values_14C(mr, nr_time_steps):
-    CARDAMOM_path = Path("/home/data/CARDAMOM/")
+def compute_start_values_14C(
+    mr,
+    nr_time_steps,
+    CARDAMOM_path=Path("/home/data/CARDAMOM/")
+):
 #    CARDAMOM_path = Path("/home/hmetzler/Desktop/CARDAMOM/")
     intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
 
@@ -438,6 +442,50 @@ def compute_start_values_14C(mr, nr_time_steps):
     )
 
     return start_values_14C
+
+
+def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
+    if not isinstance(dmr, DMR):
+        raise(TypeError("wrong type of model run"))
+
+    t0 = 1920
+    Delta_14C = np.loadtxt(Delta14C_atm_path, delimiter=",", skiprows=1).transpose()
+
+    F_atm = interp1d(
+        Delta_14C[0],
+        Delta_14C[1],
+#        kind="cubic",
+        bounds_error=False,
+#       fill_value=(left_val, -1000.0) # no 14C oustide of dataset
+        fill_value="extrapolate"
+    )
+
+    F_frac = lambda t: (F_atm(t)/1000+1)*ALPHA_14C
+    F_frac_model = lambda t: F_frac(t0 + t/(31*12))
+
+    # construct a 14C model run from the 12C model run
+
+    net_Us_14C = np.array(
+        [
+            F_frac_model(dmr.times[ti]) * dmr.net_Us[ti] * np.exp(-DECAY_RATE_14C_DAILY * dmr.dt)
+            for ti in range(len(dmr.times[:-1]))
+        ]
+    )
+
+    start_values_14C = compute_start_values_14C(
+        dmr,
+        nr_time_steps
+    )
+
+    dmr_14C = DMR_14C(
+        dmr,
+        start_values_14C,
+        net_Us_14C,
+        DECAY_RATE_14C_DAILY
+    )
+
+    soln_dmr_14C = dmr_14C.solve()
+    return soln_dmr_14C
 
 
 def compute_us(single_site_dict, time_step_in_days):

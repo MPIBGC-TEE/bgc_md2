@@ -63,10 +63,10 @@ Client(my_cluster)
 # and open link given above.
 
 #time_resolution, delay_in_months, model_type = "daily", None, "discrete"
-time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
+#time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 #time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
-#time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
+time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
@@ -91,7 +91,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(45, 50, 1), # done: (0, 45, 1) discrete, (0, 1, 1) continuous
+    "prob": slice(0, 1, 1), # done: (0, 50, 1) discrete (m), (0, 1, 1) continuous (m), (0, 1, 1) y00, (0, 1, 1) y06
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -287,7 +287,7 @@ for prob in tqdm(arr):
     delayed_to_netcdf(prob, netCDF_filename, compute=True)
     
 # -
-# # OR
+# ## OR (parallel, but seems not to be working for unknown reasons)
 probs, datasets = zip(*ds.groupby("prob", squeeze=False))
 paths = [project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob) for prob in probs]
 del_obj = xr.save_mfdataset(datasets, paths, compute=False)

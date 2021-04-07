@@ -36,8 +36,8 @@ netCDF_filestem = "sol_acc_age_btt"
 data_combinations = [
     ("monthly", None, "discrete"),
 #    ("monthly", None, "continuous"),
-    ("yearly", 0, "continuous"),
-    ("yearly", 6, "continuous")
+#    ("yearly", 0, "continuous"),
+#    ("yearly", 6, "continuous")
 ]
 
 datasets = dict()
@@ -180,6 +180,8 @@ plt.draw()
 
 # +
 (lat, lon) = (28, 52)
+#(lat, lon) = (1, 20)
+#(lat, lon) = (0, 21)
 
 var_name_pairs = [
     ("mean_system_age", "mean_btt"),
@@ -195,7 +197,8 @@ fig, axes = plt.subplots(nrows=nrows, ncols=2, figsize=(12, 6*nrows))
 for var_name_pair, ax in zip(var_name_pairs, axes.flatten()):
     for var_name in var_name_pair:
         var = ds[var_name]
-        var.isel(lat=lat, lon=lon).mean(dim="prob").plot(
+        var.isel(lat=lat, lon=lon).isel(prob=0).plot(
+        #.mean(dim="prob").plot(
             ax=ax,
             label=var_name,
         )
@@ -255,6 +258,10 @@ args = {"alpha": alpha, "lw": lw}#, "add_legend": False}
 
 fig, ax = plt.subplots(figsize=(12, 6))
 
+############# !!!!!! ########
+# The weights should also include mass or mass in outflux, because almost empty areas are relatively unimportant!
+#############################
+
 global_mean_system_age = ds["mean_system_age"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 global_avg_system_age_median = ds["system_age_median"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 global_mean_btt = ds["mean_btt"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
@@ -313,9 +320,9 @@ pool_names = ["Soil", "Wood"]
 var_names = [
     "mean_pool_age_vector",
     "pool_age_median",
-#    "pool_age_quantile_05",
-#    "pool_age_quantile_95",
-#    "pool_age_sd_vector"
+    "pool_age_quantile_05",
+    "pool_age_quantile_95",
+    "pool_age_sd_vector"
 ]
 
 ncols = len(pool_names)

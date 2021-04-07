@@ -62,9 +62,9 @@ Client(my_cluster)
 # and open link given above.
 
 #time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
-time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
+#time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
-#time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
+time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
@@ -102,7 +102,7 @@ nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 1, 1),
+    "prob": slice(0, 1, 1), # done (yearly_00) (0, 1, 1)
 #    "lat": slice(28, 32, 1),
 #    "lon": slice(48, 52, 1),
 #    "prob": slice(0, 2, 1),
@@ -332,7 +332,7 @@ for task in task_list:
 # +
 # %%time
 
-for task in task_list[3:4]:
+for task in task_list:
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -345,6 +345,14 @@ for task in task_list[3:4]:
         slices
     )
 # -
+
+
+
+
+
+
+
+
 
 
 

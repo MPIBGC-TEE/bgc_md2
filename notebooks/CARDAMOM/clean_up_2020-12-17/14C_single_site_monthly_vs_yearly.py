@@ -27,9 +27,9 @@ from pathlib import Path
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from sympy import symbols
+from tqdm import tqdm
 
 from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_YEARLY, ALPHA_14C, DECAY_RATE_14C_DAILY, F_Delta_14C
-
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
@@ -43,13 +43,13 @@ netCDF_filestem = "sol_acc_age_btt"
 
 CARDAMOM_path = Path("/home/data/CARDAMOM/")
 intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
-Delta14C_atm_path = CARDAMOM_path.joinpath("C14Atm_NH.csv")
+Delta14C_atm_path = CARDAMOM_path.joinpath("Delta_14C_NH.csv")
 
 data_combinations = [
     ("monthly", None, "discrete"),
     ("monthly", None, "continuous"), # only first prob computed so far
-#    ("yearly", 0, "continuous"),
-#    ("yearly", 6, "continuous")
+    ("yearly", 0, "continuous"),
+    ("yearly", 6, "continuous")
 ]
 
 datasets = dict()
@@ -65,15 +65,15 @@ for dc in data_combinations:
 # -
 
 ds_m = datasets[("monthly", None, "continuous")]
-#ds_y0 = datasets[("yearly", 0, "continuous")]
-#ds_y6 = datasets[("yearly", 6, "continuous")]
+ds_y0 = datasets[("yearly", 0, "continuous")]
+ds_y6 = datasets[("yearly", 6, "continuous")]
 ds_dmr = datasets[("monthly", None, "discrete")]
 
 # choose a site in northern Sweden, ensemble member prob=0
 (lat, lon, prob) = (28, 52, 0)
 sub_ds_m = ds_m.isel(lat=lat, lon=lon, prob=prob)
-#sub_ds_y0 = ds_y0.isel(lat=lat, lon=lon, prob=prob)
-#sub_ds_y6 = ds_y6.isel(lat=lat, lon=lon, prob=prob)
+sub_ds_y0 = ds_y0.isel(lat=lat, lon=lon, prob=prob)
+sub_ds_y6 = ds_y6.isel(lat=lat, lon=lon, prob=prob)
 sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
 
 # +
@@ -81,8 +81,8 @@ sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
 
 # convert monthly time steps to daily time steps, each month comprising 31 days
 data_times_m = np.arange(len(sub_ds_m["time"])) * 31
-#data_times_y0 = np.arange(len(sub_ds_y0["time"])) * 31 * 12
-#data_times_y6 = np.arange(len(sub_ds_y6["time"])) * 31 * 12
+data_times_y0 = np.arange(len(sub_ds_y0["time"])) * 31 * 12
+data_times_y6 = np.arange(len(sub_ds_y6["time"])) * 31 * 12
 
 # +
 # monthly
@@ -274,7 +274,7 @@ with np.printoptions(precision=2, suppress=True):
     print("System (1920): %2.2f ‰" % system_Delta_14C_dmr)
 # -
 
-# ## Construct a 14C model run and make a transient run from 1920 to 2009
+# ## Construct a 14C model run and make a transient run from 1920 to 2015
 
 # +
 # load NH Delta14C dataset
@@ -285,9 +285,9 @@ F_atm_NH = interp1d(
     NH_Delta_14C[0],
     NH_Delta_14C[1],
 #    kind="cubic",
-#    bounds_error=False,
+    bounds_error=False,
 #    fill_value=(left_val, -1000.0) # no 14C oustide of dataset
-#    fill_value="extrapolate"
+    fill_value="extrapolate"
 )
 
 times = np.arange(1920, np.max(NH_Delta_14C[0]), 1)
@@ -312,11 +312,14 @@ ax1.set_ylabel(r"${}^{14}$C fraction in ${}^{12}$C")
 # rescale F_frac to model run time
 t0 = 1920
 F_frac_model = lambda t: F_frac(t0 + t/(31*12))
-x = pwc_mr_m.times[pwc_mr_m.times / (31*12) < 2009 - 1920]
-y = pwc_mr_y0.times[pwc_mr_y0.times / (31*12) < 2009 -1920]
-ax2.plot(x, F_frac_model(x))
-ax2.plot(y, F_frac_model(y), ls="--")
-ax2.set_xlim([x[0], x[-1]])
+#x = pwc_mr_m.times[pwc_mr_m.times / (31*12) < 2009 - 1920]
+#y = pwc_mr_y0.times[pwc_mr_y0.times / (31*12) < 2009 -1920]
+#ax2.plot(x, F_frac_model(x))
+#ax2.plot(y, F_frac_model(y), ls="--")
+#ax2.set_xlim([x[0], x[-1]])
+ax2.plot(pwc_mr_m.times, F_frac_model(pwc_mr_m.times))
+ax2.plot(pwc_mr_y0.times, F_frac_model(pwc_mr_y0.times), ls="--")
+ax2.set_xlim([pwc_mr_m.times[0], pwc_mr_m.times[-1]])
 #ax.set_ylim([0, ax.get_ylim()[1]])
 ax2.set_ylabel(r"${}^{14}$C fraction in ${}^{12}$C")
 _ = ax2.set_title(r"Fraction of ${}^{14}$C in the atmosphere (model run time: days after 1920-01-01)")
@@ -325,7 +328,7 @@ _ = ax2.set_title(r"Fraction of ${}^{14}$C in the atmosphere (model run time: da
 # %%time
 
 # construct a 14C model run from the 12C model run
-pwc_mr_m.pwc_mr.times = x # cut off in 2009 because no 14C data later
+#pwc_mr_m.pwc_mr.times = x # cut off in 2009 because no 14C data later
 pwc_mr_m_14C = PWCModelRun_14C(
     pwc_mr_m.pwc_mr,
     start_values_14C_m,
@@ -335,7 +338,7 @@ pwc_mr_m_14C = PWCModelRun_14C(
 
 
 # construct a 14C model run from the 12C model run
-pwc_mr_y0.pwc_mr.times = y # cut off in 2009 because no 14C data later
+#pwc_mr_y0.pwc_mr.times = y # cut off in 2009 because no 14C data later
 pwc_mr_y0_14C = PWCModelRun_14C(
     pwc_mr_y0.pwc_mr,
     start_values_14C_y0,
@@ -345,7 +348,7 @@ pwc_mr_y0_14C = PWCModelRun_14C(
 
 
 # construct a 14C model run from the 12C model run
-pwc_mr_y6.pwc_mr.times = y # cut off in 2009 because no 14C data later
+#pwc_mr_y6.pwc_mr.times = y # cut off in 2009 because no 14C data later
 pwc_mr_y6_14C = PWCModelRun_14C(
     pwc_mr_y6.pwc_mr,
     start_values_14C_y6,
@@ -356,8 +359,8 @@ pwc_mr_y6_14C = PWCModelRun_14C(
 # +
 # discrete
 
-dmr.times = x
-dmr.Bs = dmr.Bs[:len(x)-1]
+#dmr.times = x
+#dmr.Bs = dmr.Bs[:len(x)-1] # cut off in 2009
 net_Us_14C = np.array([F_frac_model(dmr.times[ti]) * Us[ti] * np.exp(-DECAY_RATE_14C_DAILY * dmr.dt) for ti in range(len(dmr.times))])
 
 # construct a 14C model run from the 12C model run
@@ -382,17 +385,27 @@ fig, axes = plt.subplots(ncols=2, nrows=3, figsize=(18, 12))
 #F_Delta_14Cx = lambda x, y: y
 F_Delta_14Cx = F_Delta_14C
 
-cut_index_x = len(pwc_mr_m_14C.times)
-cut_index_y = len(pwc_mr_y0_14C.times)
+#cut_index_x = len(pwc_mr_m_14C.times)
+#cut_index_y = len(pwc_mr_y0_14C.times)
 for nr, (pool_name, ax) in enumerate(zip(sub_ds_m.pool.values, axes.flatten())):
-    ax.plot(sub_ds_m.time[:cut_index_x], F_Delta_14Cx(soln_m[:cut_index_x, nr], soln_m_14C[:, nr]), label="monthly")
-    ax.plot(sub_ds_y0.time[:cut_index_y], F_Delta_14Cx(soln_y0[:cut_index_y, nr], soln_y0_14C[:, nr]), label="yearly (Jan)")
-    ax.plot(sub_ds_y6.time[:cut_index_y], F_Delta_14Cx(soln_y6[:cut_index_y, nr], soln_y6_14C[:, nr]), label="yearly (Jul)")
-    ax.plot(sub_ds_dmr.time[:cut_index_x], F_Delta_14Cx(soln_dmr[:cut_index_x, nr], soln_dmr_14C[:, nr]), label="monthly (discrete)",)
+#    ax.plot(sub_ds_m.time[:cut_index_x], F_Delta_14Cx(soln_m[:cut_index_x, nr], soln_m_14C[:, nr]), label="monthly")
+#    ax.plot(sub_ds_y0.time[:cut_index_y], F_Delta_14Cx(soln_y0[:cut_index_y, nr], soln_y0_14C[:, nr]), label="yearly (Jan)")
+#    ax.plot(sub_ds_y6.time[:cut_index_y], F_Delta_14Cx(soln_y6[:cut_index_y, nr], soln_y6_14C[:, nr]), label="yearly (Jul)")
+#    ax.plot(sub_ds_dmr.time[:cut_index_x], F_Delta_14Cx(soln_dmr[:cut_index_x, nr], soln_dmr_14C[:, nr]), label="monthly (discrete)",)
+#
+#    ax.set_title(pool_name)
+#    ax.set_xlabel("year")
+#    ax.set_xlim([sub_ds_m.time[0], sub_ds_m.time[cut_index_x]])
+
+    ax.plot(sub_ds_m.time, F_Delta_14Cx(soln_m[:, nr], soln_m_14C[:, nr]), label="monthly")
+    ax.plot(sub_ds_y0.time, F_Delta_14Cx(soln_y0[:, nr], soln_y0_14C[:, nr]), label="yearly (Jan)")
+    ax.plot(sub_ds_y6.time, F_Delta_14Cx(soln_y6[:, nr], soln_y6_14C[:, nr]), label="yearly (Jul)")
+    ax.plot(sub_ds_dmr.time, F_Delta_14Cx(soln_dmr[:, nr], soln_dmr_14C[:, nr]), label="monthly (discrete)",)
 
     ax.set_title(pool_name)
     ax.set_xlabel("year")
-    ax.set_xlim([sub_ds_m.time[0], sub_ds_m.time[:cut_index_x]])
+    ax.set_xlim([sub_ds_m.time[0], sub_ds_m.time[-1]])
+    
     ax.set_ylabel(r"$\Delta^{14}$C (‰)")
     ax.legend()
     
@@ -403,7 +416,7 @@ plt.tight_layout()
 # ## Now run all ensemble members on the chosen site
 
 # +
-nr_time_steps_m = 12 *10
+nr_time_steps_m = 12 * 10
 
 fig, ax = plt.subplots(figsize=(18, 6))
 
@@ -454,9 +467,9 @@ F_atm_NH = interp1d(
     NH_Delta_14C[0],
     NH_Delta_14C[1],
 #    kind="cubic",
-#    bounds_error=False,
+    bounds_error=False,
 #    fill_value=(left_val, -1000.0) # no 14C oustide of dataset
-#    fill_value="extrapolate"
+    fill_value="extrapolate"
 )
 
 F_frac = lambda t: (F_atm_NH(t)/1000+1)*ALPHA_14C
@@ -466,7 +479,6 @@ t0 = 1920
 F_frac_model = lambda t: F_frac(t0 + t/(31*12))
 
 
-from tqdm import tqdm
 for prob in tqdm(range(50)):
     sub_ds_dmr = ds_dmr.isel(lat=lat, lon=lon, prob=prob)
     
@@ -483,10 +495,11 @@ for prob in tqdm(range(50)):
     soln_dmr = dmr.solve()
     start_values_14C_dmr = CARDAMOMlib.compute_start_values_14C(dmr, nr_time_steps_m)
 
-    x = dmr.times[dmr.times / (31*12) < 2009 - 1920]
+#    x = dmr.times[dmr.times / (31*12) < 2009 - 1920]
     
-    dmr.times = x
-    dmr.Bs = dmr.Bs[:len(x)-1]
+#    dmr.times = x
+#    dmr.Bs = dmr.Bs[:len(x)-1]
+#    dmr.Bs = dmr.Bs[:-1]
     net_Us_14C = np.array([F_frac_model(dmr.times[ti]) * Us[ti] * np.exp(-DECAY_RATE_14C_DAILY * dmr.dt) for ti in range(len(dmr.times))])
 
     # construct a 14C model run from the 12C model run
@@ -497,14 +510,16 @@ for prob in tqdm(range(50)):
         DECAY_RATE_14C_DAILY
     )
 
-    cut_index_x = len(dmr_14C.times)
+#    cut_index_x = len(dmr_14C.times)
 
     soln_dmr_14C = dmr_14C.solve()
-    ax.plot(sub_ds_dmr.time[:cut_index_x], F_Delta_14Cx(soln_dmr[:cut_index_x, nr], soln_dmr_14C[:, nr]), alpha=0.2, c="red", lw=4)
+#    ax.plot(sub_ds_dmr.time[:cut_index_x], F_Delta_14Cx(soln_dmr[:cut_index_x, nr], soln_dmr_14C[:, nr]), alpha=0.2, c="red", lw=4)
+    ax.plot(sub_ds_dmr.time, F_Delta_14Cx(soln_dmr[:, nr], soln_dmr_14C[:, nr]), alpha=0.2, c="red", lw=4)
 
 ax.set_title(pool_name)
 ax.set_xlabel("year")
-ax.set_xlim([sub_ds_dmr.time[0], sub_ds_dmr.time[cut_index_x]])
+#ax.set_xlim([sub_ds_dmr.time[0], sub_ds_dmr.time[cut_index_x]])
+ax.set_xlim([sub_ds_dmr.time[0], sub_ds_dmr.time[-1]])
 ax.set_ylabel(r"$\Delta^{14}$C (‰)")
 #ax.set_ylim([0, ax.get_ylim()[-1]])
 
