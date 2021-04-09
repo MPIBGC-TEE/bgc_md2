@@ -13,7 +13,7 @@ set -e
 # To make that easy we assume that there repositories have been checked
 # out under src/ComartmentalSystems src/LAPM and src/testinfrastructure 
 
-conda install -c conda-forge python=3.8 #should install the tested version of python3
+conda install -y -c conda-forge python=3.8 #should install the tested version of python3
 for dir in testinfrastructure LAPM CompartmentalSystems
 do 
   echo '#################'
@@ -22,5 +22,5 @@ do
   ./install_developer_conda.sh
   cd -
 done
-conda install -c conda-forge --file requirements.conda
+conda install -y -c conda-forge --file requirements.conda
 python setup.py develop
