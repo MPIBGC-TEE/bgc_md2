@@ -27,7 +27,7 @@ trunk_in_fluxes = {E: GPP}
 trunk_out_fluxes = {E: MS + GS_T}
 
 trunk_internal_fluxes = {
-    # sapwood production and senesence
+    # sapwood production
     (E, C_S): f_T * delta_W/(C_gW+delta_W) * E,
     (E, B_TS): f_T * C_gW/(C_gW+delta_W) * eta_W * E,
     
