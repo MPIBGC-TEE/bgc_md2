@@ -2,6 +2,15 @@ from sympy import Matrix, symbols
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
+from bgc_md2.resolve.MVarSet import MVarSet
+from bgc_md2.resolve.mvars import (
+    InFluxesBySymbol,
+    OutFluxesBySymbol,
+    InternalFluxesBySymbol,
+    TimeSymbol,
+    StateVariableTuple,
+)
+
 # two litter pools (maybe fast and slow)
 Litter_1, Litter_2 = symbols("Litter_1 Litter_2")
 
@@ -45,4 +54,12 @@ srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
     output_fluxes,
     internal_fluxes
 )
+
+mvs = MVarSet({
+    InFluxesBySymbol(input_fluxes),
+    OutFluxesBySymbol(output_fluxes),
+    InternalFluxesBySymbol(internal_fluxes),
+    TimeSymbol(t.name),
+    StateVariableTuple(state_vector)
+})
 
