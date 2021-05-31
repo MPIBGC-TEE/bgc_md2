@@ -233,9 +233,6 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
     )
     sub_ds.close()
 
-    print("done global")
-    print(res_ds)
-
     return res_ds
 
 
@@ -274,8 +271,6 @@ fake_ds
 
 def func_chunk(ds, func, **kwargs):
     res = ds.groupby("prob").apply(func, **kwargs)
-    print("done func_chunc")
-    print(res)
     return res
 
 
