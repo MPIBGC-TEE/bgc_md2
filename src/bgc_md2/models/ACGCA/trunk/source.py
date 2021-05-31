@@ -1,3 +1,7 @@
+from sympy import Matrix
+
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+
 from bgc_md2.resolve.MVarSet import MVarSet
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
@@ -8,6 +12,7 @@ from bgc_md2.resolve.mvars import (
 )
 
 from bgc_md2.models.ACGCA.__init__ import (
+    t,
     GPP,
     E, C_S, B_TH, B_TS, B_OS,
     MS, GS_T,
@@ -27,7 +32,7 @@ trunk_in_fluxes = {E: GPP}
 trunk_out_fluxes = {E: MS + GS_T}
 
 trunk_internal_fluxes = {
-    # sapwood production and senesence
+    # sapwood production
     (E, C_S): f_T * delta_W/(C_gW+delta_W) * E,
     (E, B_TS): f_T * C_gW/(C_gW+delta_W) * eta_W * E,
     
@@ -38,6 +43,14 @@ trunk_internal_fluxes = {
 
 trunk = (
     trunk_sv_set,
+    trunk_in_fluxes,
+    trunk_out_fluxes,
+    trunk_internal_fluxes
+)
+
+srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
+    Matrix([E, C_S, B_TH, B_TS]),
+    t,
     trunk_in_fluxes,
     trunk_out_fluxes,
     trunk_internal_fluxes

@@ -1,3 +1,7 @@
+from sympy import Matrix
+
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+
 from bgc_md2.resolve.MVarSet import MVarSet
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
@@ -8,6 +12,7 @@ from bgc_md2.resolve.mvars import (
 )
 
 from bgc_md2.models.ACGCA.__init__ import (
+    t,
     GPP,
     E, C_S, B_OH, B_OS, B_TS,
     MS, GS_O,
@@ -15,7 +20,6 @@ from bgc_md2.models.ACGCA.__init__ import (
     C_gHW,
     zeta_dw, zeta_gluc
 )
-
 
 # "other" means branches + coarse roots
 other_sv_set = set([
@@ -45,6 +49,14 @@ other_internal_fluxes = {
 
 other = (
     other_sv_set,
+    other_in_fluxes,
+    other_out_fluxes,
+    other_internal_fluxes
+)
+
+srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
+    Matrix([E, C_S, B_OH, B_OS]),
+    t,
     other_in_fluxes,
     other_out_fluxes,
     other_internal_fluxes
