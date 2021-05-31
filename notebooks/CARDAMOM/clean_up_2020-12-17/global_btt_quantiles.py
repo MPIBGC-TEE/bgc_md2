@@ -48,6 +48,8 @@ params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 output_path = data_path.joinpath(data_path.joinpath(params["output_folder"]))
 project_path = output_path.joinpath(model_type)
 
+correct_for_autotrophic_respiration = True
+
 ds_path = project_path.joinpath(netCDF_filestem)
 print(dc, ds_path)
 ds = xr.open_mfdataset(str(ds_path) + "*.nc")
@@ -62,11 +64,34 @@ data_vars = {
 #    "acc_net_external_output_vector": ds.acc_net_external_output_vector
 }
 
-small_ds = xr.Dataset(
+temp_small_ds = xr.Dataset(
     data_vars=data_vars,
     attrs=ds.attrs
 )
-small_ds
+temp_small_ds
+
+# +
+if not correct_for_autotrophic_respiration:
+    # create Ras = 0 with correct shape
+    Ras = 0 * temp_small_ds["Us"].sum(dim="pool")
+else:
+    gpp_filename = "SUMMARYSTAT1_selvec_globe_raw_timefulllist_cru004GCR006_1920_2015_nbe2002_gpp.nc"
+    ds_GPP = xr.open_dataset(data_path.joinpath(gpp_filename))
+    GPP = ds_GPP["gpp"] * 31.0 # 31 days per month
+    Ras = GPP - temp_small_ds["Us"].sum(dim="pool")
+
+    # following Greg's advice with the current data I ignore negatve Ra values
+    Ras = Ras.where(Ras>0, 0)
+    
+    #((GPP - small_ds["Us"].sum(dim="pool"))).min(dim=["time", "prob"]).plot()
+
+    # Ras/GPP is NOT constant in time (Greg said it would be)
+    (Ras/GPP).isel(prob=0).mean(dim=["lat", "lon"]).plot()
+
+# add Ras to dataset
+small_ds = temp_small_ds.assign({"Ras": Ras})  
+
+Ras
 
 
 # -
@@ -108,6 +133,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
 
     weights = np.nan * np.ones((nr_sites, nr_times-1))
     total_outflux_C = np.zeros(nr_times-1)
+    total_Ras = np.zeros(nr_times-1)
     times = np.arange(len(ds.time)) * time_step_in_days
 
     if nr_sites is None:
@@ -117,7 +143,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
         F0 = dmr.fake_cumulative_start_age_masses(nr_time_steps)
         F_sv = dmr.cumulative_pool_age_masses_single_value(F0)
         rho = 1 - dmr.Bs.sum(1)
-        F_btt_sv = lambda ai, ti: (rho[ti] * F_sv(ai, ti)).sum() 
+        F_btt_sv = lambda ai, ti: (rho[ti] * F_sv(ai, ti)).sum() + dmr.Ras[ti]
 
         return F_btt_sv
 
@@ -129,14 +155,17 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
         start_values = sub_ds["start_values"].values
         Bs = sub_ds["Bs"].values
         Us = sub_ds["Us"].values
-
+        Ras = sub_ds["Ras"].values
+        
         dmr = DMR.from_Bs_and_net_Us(
             start_values,
             times,
             Bs[:nr_times-1],
             Us[:nr_times-1]
         )
-
+        Ras = Ras[:nr_times-1]
+        dmr.Ras = Ras
+        
         # create cumulative BTT distribution single value
         F_btt_sv = func_maker(dmr)
 
@@ -151,6 +180,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
         weights[nr_coord, :] = weight
         R = dmr.acc_net_external_output_vector()
         total_outflux_C += weight * R.sum(axis=1)
+        total_Ras += weight * Ras
 
         # initialize a state transition operator cache for this dmr
         if sto_cache_size:
@@ -159,7 +189,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
             )
 
     # the global quantile function is a weighted average of the local quantile functions
-    # weights are the respective masses of outflux (are*landfrac*R.sum) in each time step
+    # weights are the respective masses of outflux (area*landfrac*R.sum) in each time step
     @lru_cache()
     def F_btt_sv_global(ai, ti):
         res = np.sum(
@@ -176,13 +206,14 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
 
     quantile_ai = 0
     for ti in tqdm(range(len(times)-1)):
+        critical_value = q * (total_outflux_C[ti] + total_Ras[ti])          
         quantile_ai = generalized_inverse_CDF(
             lambda ai: F_btt_sv_global(ai, ti),
-            q * total_outflux_C[ti],
+            critical_value,
             x1=quantile_ai
         )
 
-        if F_btt_sv_global(quantile_ai, ti) > q * total_outflux_C[ti]:
+        if F_btt_sv_global(quantile_ai, ti) > critical_value:
             if quantile_ai > 0:
                 quantile_ai = quantile_ai - 1
 
@@ -198,16 +229,17 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
     
     res_ds = xr.Dataset(
         data_vars=data_vars,
-        coords = {"time": ds.time.data}    
+        coords = {"time": ds.time.data}
     )
     sub_ds.close()
-    
+
     return res_ds
 
 
 # +
 chunk_dict = {"prob": 5}
 
+# for testing only 10 probs
 sub_ds = small_ds.isel(prob=slice(0, None, 1), time=slice(0, None, 1)).chunk(chunk_dict)
 #sub_ds = ds.chunk(chunk_dict)
 
@@ -232,6 +264,8 @@ fake_ds = xr.Dataset(
     coords=fake_coords
 ).chunk(chunk_dict)
 
+fake_ds
+
 
 # -
 
@@ -241,26 +275,26 @@ def func_chunk(ds, func, **kwargs):
 
 
 def compute_global_btt_quantile_complete_ensemble(sub_ds, name, q, nr_time_steps, sto_cache_size):
-    chunk_dict = {"prob": 5}
-
-    sub_ds = small_ds.isel(prob=slice(0, None, 1), time=slice(0, None, 1)).chunk(chunk_dict)
-
-    fake_data = np.zeros((len(sub_ds.prob), len(sub_ds.time)))
-
-    fake_array = xr.DataArray(
-        data=fake_data,
-        dims=['prob', "time"]
-    )
-
-    fake_coords = {
-        "prob": sub_ds.prob.data,
-        "time": sub_ds.time.data
-    }
-
-    fake_ds = xr.Dataset(
-        data_vars={name: fake_array},
-        coords=fake_coords
-    ).chunk(chunk_dict)
+#    chunk_dict = {"prob": 5}
+#
+#    sub_ds = small_ds.isel(prob=slice(0, None, 1), time=slice(0, None, 1)).chunk(chunk_dict)
+#
+#    fake_data = np.zeros((len(sub_ds.prob), len(sub_ds.time)))#
+#
+#    fake_array = xr.DataArray(
+#        data=fake_data,
+#        dims=['prob', "time"]
+#    )
+#
+#    fake_coords = {
+#        "prob": sub_ds.prob.data,
+#        "time": sub_ds.time.data
+#    }
+#
+#    fake_ds = xr.Dataset(
+#        data_vars={name: fake_array},
+#        coords=fake_coords
+#    ).chunk(chunk_dict)
     
     ds_res = xr.map_blocks(
         func_chunk,
@@ -280,6 +314,7 @@ def compute_global_btt_quantile_complete_ensemble(sub_ds, name, q, nr_time_steps
     return ds_res
 
 
+# +
 task_list = [
     {
         "name": "global_btt_median",
@@ -298,40 +333,47 @@ task_list = [
     },
 ]
 
+if correct_for_autotrophic_respiration:
+    correction_str = "_corrected"
+else:
+    correction_str = ""
+
 # +
 # %%time
 
 res_list = []
-for task in task_list[2:3]:
+for task in task_list[:]:
     print("starting", task)
     res = compute_global_btt_quantile_complete_ensemble(
-        small_ds,
+        sub_ds,
         task["name"],
         task["q"],
         nr_time_steps,
-        task["sto_cache_size"]
+        task["sto_cache_size"],
     )
     current_ds = res.compute()
     for name, var in current_ds.data_vars.items():
         current_ds[name] = var / 31 / 12 # convert age from days to years
-        
-    current_ds.to_netcdf(project_path.joinpath(task["name"]+".nc"))
+
+    filename = project_path.joinpath(task["name"]+correction_str+".nc")      
+    current_ds.to_netcdf(filename)
     res_list.append(current_ds)
     print("finished", task)
+    print(filename)
 # -
 
 res_ds = xr.merge(res_list)
 
-res_ds.to_netcdf(project_path.joinpath("global_btt_quantiles.nc"))
+res_ds.to_netcdf(project_path.joinpath("global_btt_quantiles"+correction_str+".nc"))
 
 # ## Load saved single datasets, merge them, and store the merged dataset
 
-res_list = [xr.open_dataset(project_path.joinpath(task["name"]+".nc")) for task in task_list]
-xr.merge(res_list).to_netcdf(project_path.joinpath("global_btt_quantiles.nc"))
+res_list = [xr.open_dataset(project_path.joinpath(task["name"]+correction_str+".nc")) for task in task_list]
+xr.merge(res_list).to_netcdf(project_path.joinpath("global_btt_quantiles"+correction_str+".nc"))
 
 # # Load merged dataset
 
-ds_btt = xr.open_dataset(project_path.joinpath("global_btt_quantiles.nc"))
+ds_btt = xr.open_dataset(project_path.joinpath("global_btt_quantiles"+correction_str+".nc"))
 
 # +
 fig, axes = plt.subplots(nrows=len(ds_btt.data_vars), figsize=(18, 8*len(ds_btt.data_vars)))
@@ -366,10 +408,14 @@ for var_name, var in ds_area_lf_adapted.data_vars.items():
 
 # +
 fig, ax = plt.subplots(figsize=(18, 8))
-global_mean_btt_wrong_weights = ds["mean_btt"].weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
+
+# correct mean btt for autotrophic respiration
+Rs = ds["acc_net_external_output_vector"].sum(dim="pool")
+mean_btt = (Ras * 0 + Rs * ds["mean_btt"]) / (Ras + Rs)
+global_mean_btt_wrong_weights = mean_btt.weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 
 weights = (ds_area_lf.area_sphere * ds_area_lf.landfrac * ds.acc_net_external_output_vector.sum(dim="pool")).fillna(0)
-global_mean_btt = ds["mean_btt"].weighted(weights).mean(dim=["lat", "lon"])
+global_mean_btt = mean_btt.weighted(weights).mean(dim=["lat", "lon"])
 
 global_mean_btt_wrong_weights.rolling(time=12).mean().plot.line(ax=ax, x="time", c="orange", add_legend=False, alpha=0.2)
 global_mean_btt.rolling(time=12).mean().plot.line(ax=ax, x="time", c="green", add_legend=False, alpha=0.2)
@@ -379,7 +425,8 @@ from matplotlib.lines import Line2D
 colors = ["orange", "green", "red"]
 lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='-') for c in colors]
 labels = ["mean BTT (weights missing outflux)", "mean BTT (corrected weights)", "global BTT median"]
-_ = ax.legend(lines, labels)
+ax.legend(lines, labels)
+_ = ax.set_title("Corrected for $R_a$: " + str(correct_for_autotrophic_respiration))
 # -
 
 fig, ax = plt.subplots(figsize=(18, 8))
