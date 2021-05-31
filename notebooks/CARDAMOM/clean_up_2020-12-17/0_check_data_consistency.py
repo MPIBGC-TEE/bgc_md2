@@ -65,9 +65,9 @@ Client(my_cluster)
 # works with "monhtly" and "yearly"
 # daily data is not stored in an xarray dataset but in zarr archives only
 
-#time_resolution, delay_in_months = "monthly", None
+time_resolution, delay_in_months = "monthly", None
 #time_resolution, delay_in_months = "yearly", 0
-time_resolution, delay_in_months = "yearly", 6
+#time_resolution, delay_in_months = "yearly", 6
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
@@ -268,6 +268,10 @@ plt.draw()
 bad_idx = (ds_data_consistency.abs_err + ds_data_consistency.rel_err > 0.1)
 nr_sites = len(ds.lat)*len(ds.lon)*len(ds.prob)
 print("Throw out %d sites of %d: %.2f%%" % (np.sum(bad_idx), nr_sites, np.sum(bad_idx)/nr_sites*100))
+np.where(bad_idx)
+print(ds.lat[3], ds.lon[20])
+print(ds.lat[21], ds.lon[12])
+print(ds.lat[27], ds.lon[54])
 
 # +
 data_vars = dict()
