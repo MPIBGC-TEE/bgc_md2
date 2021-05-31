@@ -53,7 +53,6 @@ srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
     leaves_internal_fluxes
 )
 
-
 mvs = MVarSet({
     InFluxesBySymbol(leaves[1]),
     OutFluxesBySymbol(leaves[2]),
