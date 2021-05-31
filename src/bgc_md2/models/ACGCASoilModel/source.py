@@ -28,8 +28,11 @@ internal_fluxes = {
 #    (Soil_2, Soil_1): alpha_S2S1 * Soil_2
 }
 
+alpha_L1, alpha_L2 = symbols("alpha_L1, alpha_L2")
 alpha_S1, alpha_S2 = symbols("alpha_S1, alpha_S2")
 output_fluxes = {
+    Litter_1: alpha_L1,
+    Litter_2: alpha_L2,
     Soil_1: alpha_S1,
     Soil_2: alpha_S2
 }
