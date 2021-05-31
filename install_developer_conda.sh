@@ -14,7 +14,8 @@ set -e
 # out under src/ComartmentalSystems src/LAPM and src/testinfrastructure 
 
 conda install -y -c conda-forge python=3.8 #should install the tested version of python3
-for dir in testinfrastructure LAPM CompartmentalSystems
+#for dir in testinfrastructure LAPM CompartmentalSystems
+for dir in CompartmentalSystems LAPM testinfrastructure
 do 
   echo '#################'
   echo $dir
