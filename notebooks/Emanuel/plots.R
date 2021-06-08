@@ -69,6 +69,7 @@ pdf('Figures/medianBackwardTransitTime.pdf')
 plot(bttmeans$Year, bttmeans$medianBTT, type="l", xlab="Calenday year", ylab="Median backward transit time (yr)", bty="n")
 dev.off()
 
+plot(bttmeans$Year, bttmeans$meanBTT-bttmeans$medianBTT, type="l")
 
 pdf('Figures/meanMedianBTT.pdf')
 par(mar=c(4,4,0,0))
@@ -122,3 +123,5 @@ wireframe(value~time*age, data=sysAge, shade=TRUE, xlab="Calendar year", ylab="A
 dev.off()
 
 longftt=as.vector(ftt)          
+
+plot(calyr, bttmeans$meanBTT/meanAges$System.Age, type="l", ylim=c(0.1,0.3))

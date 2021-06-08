@@ -219,9 +219,9 @@ tol = 1e-1
 btt_density = smr.backward_transit_time_density(pool_age_densities)
 btt_dens = pd.DataFrame(btt_density, columns=times)
 btt_mean = smr.backward_transit_time_moment(1, start_age_moments)
-F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value(F0=F0)
-btt_median = smr.distribution_quantiles(0.5, 
-                                            F_btt_sv, 
+F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value_func(F0=F0)
+btt_median = smr.distribution_quantiles(mr = smr, quantile = 0.5, 
+                                            F_sv = F_btt_sv, 
                                             norm_consts = smr.external_output_vector.sum(1), 
                                             start_values = btt_mean, 
                                             method = 'brentq', 
