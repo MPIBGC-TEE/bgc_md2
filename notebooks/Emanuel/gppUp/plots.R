@@ -26,7 +26,7 @@ difTCS=max(TCS)-min(TCS)
 
 pdf("Figures/totalStocks.pdf")
 par(mar=c(4,4,1,0))
-plot(calyr,TCS, type="l", lwd=2, ylim=c(1500,2000), xlim=c(1850, 2020),xlab="Calendar year", ylab="Carbon stock (PgC)", bty="n")
+plot(calyr,TCS, type="l", lwd=2, ylim=c(1500,2500), xlim=c(1850, 2020),xlab="Calendar year", ylab="Carbon stock (PgC)", bty="n")
 arrows(2016, head(TCS, 1), 2016, tail(TCS,1), angle=90, code=3, length=0.05)
 text(2020,min(TCS)+(difTCS/2), labels=round(difTCS, 1))
 dev.off()

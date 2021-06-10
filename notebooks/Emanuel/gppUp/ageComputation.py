@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from plotly.offline import init_notebook_mode, iplot
-from sympy import Matrix, symbols, Symbol, Function, latex
+from sympy import Matrix, symbols, Symbol, Function, latex, exp, log
 from scipy.interpolate import interp1d
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -72,19 +72,38 @@ ages = np.arange(0, max_age + 1, 1)
 G_emanuel = 113.0
 
 # GPP data
-gpp_mean = pd.read_csv("~/cmip6stop/esm-hist/timeSeries/multimodGPPannual.csv")
-gpp_anomaly = (
-    gpp_mean.GPPmean - gpp_mean.GPPmean[0]
-)  # Anomaly with respect to 1850 value
-gpp_industrial = G_emanuel + gpp_anomaly
+#gpp_mean = pd.read_csv("~/Repos/cmip6stop/esm-hist/timeSeries/multimodGPPannual.csv")
+#gpp_anomaly = (
+#    gpp_mean.GPPmean - gpp_mean.GPPmean[0]
+#)  # Anomaly with respect to 1850 value
+#gpp_industrial = G_emanuel + gpp_anomaly
+#
+#print(gpp_industrial)
+
+# Time dependent GPP from Rasmussen et al. (2016, JMB). We assume that proportional increase in GPP is equal for both pools
+T_s0 = 15
+s_0 = 1
+sigma = 4.5
+alpha = 1
+rho = 0.65
+f_i = 1
+x_a = start_year*exp(0.0305*time_symbol)/(start_year+exp(0.0305*time_symbol)-1)+284 
+T_s = T_s0 + sigma/log(2)*log(x_a/285)
+Gamma = 42.7 + 1.68*(T_s-25) + 0.012*(T_s-25)**2
+beta = 3*rho*x_a*Gamma/((rho*x_a-Gamma)*(rho*x_a+2*Gamma))
+s_i = f_i*alpha*s_0*(1+2.5*beta*log(x_a/285)) 
+
+gpp_industrial = G_emanuel * s_i
+
 
 # linear interpolation of the (nonnegative) data points
-u_interp = interp1d(gpp_mean.Year, gpp_industrial)
+#u_interp = interp1d(gpp_mean.Year, gpp_industrial)
 
 
 def u_func(t_val):
     # here we could do whatever we want to compute the input function
-    return u_interp(t_val)
+#    return u_interp(t_val)
+    return gpp_industrial.evalf(subs={time_symbol:t_val})
 
 
 # define a dictionary to connect the symbols with the according functions
