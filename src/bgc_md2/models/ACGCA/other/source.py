@@ -15,7 +15,7 @@ from bgc_md2.models.ACGCA.__init__ import (
     t,
     GPP,
     E, C_S, B_OH, B_OS, B_TS,
-    MS, GS_O,
+    MS, G_OS,
     S_O, f_O, C_gW, delta_W, eta_W, v_O,
     C_gHW,
     zeta_dw, zeta_gluc
@@ -31,7 +31,7 @@ other_sv_set = set([
 other_in_fluxes = {E: GPP}
 
 other_out_fluxes = {
-    E: MS + GS_O,
+    E: MS + G_OS,
     B_OS: S_O * B_OS,
     B_OH: S_O * B_OH
 }

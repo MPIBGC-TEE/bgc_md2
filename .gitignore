@@ -144,3 +144,4 @@ dask-worker-space
 *.bak
 *.swp
 *.swo
+tests/tmp

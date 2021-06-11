@@ -15,7 +15,7 @@ from bgc_md2.models.ACGCA.__init__ import (
     t,
     GPP,
     E, C_S, B_TH, B_TS, B_OS,
-    MS, GS_T,
+    MS, G_TS,
     f_T, C_gW, delta_W, eta_W, v_T,
     C_gHW,
     zeta_dw, zeta_gluc
@@ -29,7 +29,7 @@ trunk_sv_set = set([
 ])
 
 trunk_in_fluxes = {E: GPP}
-trunk_out_fluxes = {E: MS + GS_T}
+trunk_out_fluxes = {E: MS + G_TS}
 
 trunk_internal_fluxes = {
     # sapwood production

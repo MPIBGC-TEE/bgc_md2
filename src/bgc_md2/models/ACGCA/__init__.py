@@ -50,13 +50,9 @@ GL = f_L * C_gL/(C_gL+delta_L) * (1-eta_L) * E
 GR = f_R * C_gR/(C_gR+delta_R) * (1-eta_R) * E
 GS = (f_O+f_T) * C_gW/(C_gW+delta_W) * (1-eta_W) * E
 
-# growth respiration fluxes for leaves, roots, sapwood
-GS_O = f_O * C_gW/(C_gW+delta_W) * (1-eta_W) * E
-GS_T = f_T * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+# growth respiration fluxes sapwood, separated
+G_OS = f_O * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+G_TS = f_T * C_gW/(C_gW+delta_W) * (1-eta_W) * E
     
 # heartwood production rates from sapwood
-v_O, v_T = symbols("v_O v_T") 
-
-
-
-
+v_O, v_T = symbols("v_O v_T")
