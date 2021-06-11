@@ -13,6 +13,9 @@ from scipy.interpolate import interp1d
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.helpers_reservoir import (
+    numerical_function_from_expression
+)
 
 
 ########## symbol definitions ##########
@@ -100,15 +103,21 @@ gpp_industrial = G_emanuel * s_i
 #u_interp = interp1d(gpp_mean.Year, gpp_industrial)
 
 
-def u_func(t_val):
-    # here we could do whatever we want to compute the input function
-#    return u_interp(t_val)
-    return gpp_industrial.evalf(subs={time_symbol:t_val})
+#def u_func(t_val):
+#    # here we could do whatever we want to compute the input function
+##    return u_interp(t_val)
+#    return gpp_industrial.evalf(subs={time_symbol:t_val})
 
+u_func_numerical = numerical_function_from_expression(
+    gpp_industrial, # sympy expression
+    (time_symbol,), # tuple of symbols to be replaced by numerical values
+    {}, # parameter dict
+    {} # func dict
+)
 
 # define a dictionary to connect the symbols with the according functions
-func_set = {G: u_func}
-
+#func_set = {G: u_func}
+func_set = {G: u_func_numerical}
 
 # the system starts in equilibrium
 start_values = np.array([x_1e, x_2e, x_3e, x_4e, x_5e])
