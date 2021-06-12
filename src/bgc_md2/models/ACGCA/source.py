@@ -22,7 +22,7 @@ from bgc_md2.models.ACGCA.__init__ import (
     GPP,
     E, B_L, C_L, B_OS, B_OH, C_S, B_TH, B_TS, C_R, B_R,
     ML, GL, MR, GR,
-    MS, GS_O, GS_T
+    MS, G_OS, G_TS
 )
 
 # system leaves + roots
@@ -35,7 +35,7 @@ LR = hr.combine(leaves, roots, {}, {}, intersect)
 # other + trunk
 intersect = (
     {E: GPP, C_S: 0},
-    {E: MS + GS_O + GS_T, C_S: 0}
+    {E: MS + G_OS + G_TS, C_S: 0}
 )
 
 OT = hr.combine(other, trunk, {}, {}, intersect)
@@ -43,7 +43,7 @@ OT = hr.combine(other, trunk, {}, {}, intersect)
 # complete model
 intersect = (
     {E: GPP, C_S: 0},
-    {E: ML + GL + MR + GR + MS + GS_O + GS_T, C_S: 0}
+    {E: ML + GL + MR + GR + MS + G_OS + G_TS, C_S: 0}
 )
 
 LROT = hr.combine(LR, OT, {}, {}, intersect)
