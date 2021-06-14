@@ -8,11 +8,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from plotly.offline import init_notebook_mode, iplot
-from sympy import Matrix, symbols, Symbol, Function, latex
+from sympy import Matrix, symbols, Symbol, Function, latex, exp, log
 from scipy.interpolate import interp1d
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.helpers_reservoir import (
+    numerical_function_from_expression
+)
 
 
 ########## symbol definitions ##########
@@ -26,9 +29,11 @@ x_1, x_2, x_3, x_4, x_5 = symbols("x_1 x_2 x_3 x_4 x_5")
 # GPP inputs
 G = Function("G")(time_symbol)
 
+# Time-dependet modifier for matrix B
+xi = Function("xi")(time_symbol)
+
 # Parameters
 G_eq = symbols("G_eq")
-
 
 ########## model structure: equilibrium values and fluxes ##########
 pool_names = [
@@ -44,7 +49,7 @@ x_1e, x_2e, x_3e, x_4e, x_5e = (37.0, 452.0, 69.0, 81.0, 1121.0)
 
 state_vector = Matrix([x_1, x_2, x_3, x_4, x_5])
 
-B = Matrix(
+B_eq = Matrix(
     [
         [-(25 + 21 + 31) / 37, 0, 0, 0, 0],
         [31 / 37, -(14 + 15 + 2) / 452, 0, 0, 0],
@@ -53,6 +58,8 @@ B = Matrix(
         [0, 2 / 452, 6 / 69, 3 / 81, -11 / 1121],
     ]
 )
+
+B = xi * B_eq
 
 u = G * Matrix(5, 1, [77 / G_eq, 0, 36 / G_eq, 0, 0])
 
@@ -71,25 +78,41 @@ ages = np.arange(0, max_age + 1, 1)
 # Constant GPP
 G_emanuel = 113.0
 
-# GPP data
-gpp_mean = pd.read_csv("~/cmip6stop/esm-hist/timeSeries/multimodGPPannual.csv")
-gpp_anomaly = (
-    gpp_mean.GPPmean - gpp_mean.GPPmean[0]
-)  # Anomaly with respect to 1850 value
-gpp_industrial = G_emanuel + gpp_anomaly
+# Time dependent GPP from Rasmussen et al. (2016, JMB). We assume that proportional increase in GPP is equal for both pools
+T_s0 = 15
+s_0 = 1
+sigma = 4.5
+alpha = 1
+rho = 0.65
+f_i = 1
+x_a = start_year*exp(0.0305*time_symbol)/(start_year+exp(0.0305*time_symbol)-1)+284 
+T_s = T_s0 + sigma/log(2)*log(x_a/285)
+Gamma = 42.7 + 1.68*(T_s-25) + 0.012*(T_s-25)**2
+beta = 3*rho*x_a*Gamma/((rho*x_a-Gamma)*(rho*x_a+2*Gamma))
+s_i = f_i*alpha*s_0*(1+2.5*beta*log(x_a/285)) 
 
-# linear interpolation of the (nonnegative) data points
-u_interp = interp1d(gpp_mean.Year, gpp_industrial)
+gpp_industrial = G_emanuel * s_i
 
+u_func_numerical = numerical_function_from_expression(
+    gpp_industrial, # sympy expression
+    (time_symbol,), # tuple of symbols to be replaced by numerical values
+    {}, # parameter dict
+    {} # func dict
+)
 
-def u_func(t_val):
-    # here we could do whatever we want to compute the input function
-    return u_interp(t_val)
+xi_b = 2
+xi_t = xi_b**(0.1*T_s-1.5)
 
+xi_func_numerical = numerical_function_from_expression(
+    xi_t, # sympy expression
+    (time_symbol,), # tuple of symbols to be replaced by numerical values
+    {}, # parameter dict
+    {} # func dict
+)
 
 # define a dictionary to connect the symbols with the according functions
-func_set = {G: u_func}
-
+func_set = {xi: xi_func_numerical,
+             G: u_func_numerical}
 
 # the system starts in equilibrium
 start_values = np.array([x_1e, x_2e, x_3e, x_4e, x_5e])
@@ -104,7 +127,6 @@ smr = SmoothModelRun(srm, par_dict, start_values, times, func_set)
 smr.initialize_state_transition_operator_cache(lru_maxsize=5000, size=100)
 smrs.append(smr)
 
-
 soln = smr.solve()
 cstocks = pd.DataFrame(soln, columns=pool_names)
 stocks = cstocks.join(pd.DataFrame({"Time": times}))
@@ -118,7 +140,7 @@ u_eq = Matrix(5, 1, [77, 0, 36, 0, 0])
 
 # force purely numerical treatment of the LAPM
 # symbolic treatment would be too slow here
-LM = LinearAutonomousPoolModel(u_eq, B, force_numerical=True)
+LM = LinearAutonomousPoolModel(u_eq, B_eq, force_numerical=True)
 
 ## load equilibrium age densities ##
 
@@ -189,11 +211,11 @@ def F0(a):
 pool_age_medians = []
 system_age_medians = []
 
-pool_age_median = smr.pool_age_distributions_quantiles_by_ode(
-    0.5, start_age_densities, F0=F0, max_step=0.5
+pool_age_median = smr.pool_age_distributions_quantiles(
+    quantile=0.5, start_age_densities=start_age_densities, F0=F0 #, max_step=0.5
 )
-system_age_median = smr.system_age_distribution_quantiles_by_ode(
-    0.5, start_age_densities, F0=F0, max_step=0.5
+system_age_median = smr.system_age_distribution_quantiles(
+    quantile=0.5, start_age_densities=start_age_densities #F0=F0
 )
 
 median_pool_age = pd.DataFrame(pool_age_median, columns=pool_names)
