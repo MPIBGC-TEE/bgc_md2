@@ -86,8 +86,10 @@ else:
     #((GPP - small_ds["Us"].sum(dim="pool"))).min(dim=["time", "prob"]).plot()
 
     # Ras/GPP is NOT constant in time (Greg said it would be)
-    (Ras/GPP).isel(prob=0).mean(dim=["lat", "lon"]).plot()
-
+    fig, ax = plt.subplots()
+    (Ras/GPP).mean(dim="prob").mean(dim=["lat", "lon"]).plot(ax=ax)
+    ax.set_title("Autotrophic respiration rate")
+    
 # add Ras to dataset
 small_ds = temp_small_ds.assign({"Ras": Ras})  
 
@@ -237,9 +239,10 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
 
 
 # +
+## obsolete
+
 chunk_dict = {"prob": 5}
 
-# for testing only 10 probs
 sub_ds = small_ds.isel(prob=slice(0, None, 1), time=slice(0, None, 1)).chunk(chunk_dict)
 #sub_ds = ds.chunk(chunk_dict)
 
@@ -275,26 +278,26 @@ def func_chunk(ds, func, **kwargs):
 
 
 def compute_global_btt_quantile_complete_ensemble(sub_ds, name, q, nr_time_steps, sto_cache_size):
-#    chunk_dict = {"prob": 5}
-#
-#    sub_ds = small_ds.isel(prob=slice(0, None, 1), time=slice(0, None, 1)).chunk(chunk_dict)
-#
-#    fake_data = np.zeros((len(sub_ds.prob), len(sub_ds.time)))#
-#
-#    fake_array = xr.DataArray(
-#        data=fake_data,
-#        dims=['prob', "time"]
-#    )
-#
-#    fake_coords = {
-#        "prob": sub_ds.prob.data,
-#        "time": sub_ds.time.data
-#    }
-#
-#    fake_ds = xr.Dataset(
-#        data_vars={name: fake_array},
-#        coords=fake_coords
-#    ).chunk(chunk_dict)
+    chunk_dict = {"prob": 5}
+
+    sub_ds = sub_ds.chunk(chunk_dict)
+
+    fake_data = np.zeros((len(sub_ds.prob), len(sub_ds.time)))#
+
+    fake_array = xr.DataArray(
+        data=fake_data,
+        dims=['prob', "time"]
+    )
+
+    fake_coords = {
+        "prob": sub_ds.prob.data,
+        "time": sub_ds.time.data
+    }
+
+    fake_ds = xr.Dataset(
+        data_vars={name: fake_array},
+        coords=fake_coords
+    ).chunk(chunk_dict)
     
     ds_res = xr.map_blocks(
         func_chunk,
@@ -324,7 +327,7 @@ task_list = [
     {
         "name": "global_btt_quantile_05",
         "q": 0.05,
-        "sto_cache_size": 10_500
+        "sto_cache_size": 7_500
     },
     {
         "name": "global_btt_quantile_95",
@@ -341,11 +344,13 @@ else:
 # +
 # %%time
 
+nr_time_steps = 10 * 12
+
 res_list = []
-for task in task_list[:]:
+for task in task_list[1:2]:
     print("starting", task)
     res = compute_global_btt_quantile_complete_ensemble(
-        sub_ds,
+        small_ds,
         task["name"],
         task["q"],
         nr_time_steps,
@@ -374,6 +379,7 @@ xr.merge(res_list).to_netcdf(project_path.joinpath("global_btt_quantiles"+correc
 # # Load merged dataset
 
 ds_btt = xr.open_dataset(project_path.joinpath("global_btt_quantiles"+correction_str+".nc"))
+ds_btt
 
 # +
 fig, axes = plt.subplots(nrows=len(ds_btt.data_vars), figsize=(18, 8*len(ds_btt.data_vars)))
@@ -412,26 +418,61 @@ fig, ax = plt.subplots(figsize=(18, 8))
 # correct mean btt for autotrophic respiration
 Rs = ds["acc_net_external_output_vector"].sum(dim="pool")
 mean_btt = (Ras * 0 + Rs * ds["mean_btt"]) / (Ras + Rs)
-global_mean_btt_wrong_weights = mean_btt.weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
+#global_mean_btt_wrong_weights = mean_btt.weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
 
-weights = (ds_area_lf.area_sphere * ds_area_lf.landfrac * ds.acc_net_external_output_vector.sum(dim="pool")).fillna(0)
-global_mean_btt = mean_btt.weighted(weights).mean(dim=["lat", "lon"])
+age_weights = (ds_area_lf.area_sphere * ds_area_lf.landfrac * ds.solution.sum(dim="pool")).fillna(0)
+global_mean_age = ds["mean_system_age"].weighted(age_weights).mean(dim=["lat", "lon"])
 
-global_mean_btt_wrong_weights.rolling(time=12).mean().plot.line(ax=ax, x="time", c="orange", add_legend=False, alpha=0.2)
+btt_weights = (ds_area_lf.area_sphere * ds_area_lf.landfrac * ds.acc_net_external_output_vector.sum(dim="pool")).fillna(0)
+global_mean_btt = mean_btt.weighted(btt_weights).mean(dim=["lat", "lon"])
+
+#global_mean_btt_wrong_weights.rolling(time=12).mean().plot.line(ax=ax, x="time", c="orange", add_legend=False, alpha=0.2)
+global_mean_age.rolling(time=12).mean().plot.line(ax=ax, x="time", c="orange", add_legend=False, alpha=0.2)
 global_mean_btt.rolling(time=12).mean().plot.line(ax=ax, x="time", c="green", add_legend=False, alpha=0.2)
 ds_btt.global_btt_median.rolling(time=12).mean().plot.line(ax=ax, x="time", c="red", add_legend=False, alpha=0.2)
 
 from matplotlib.lines import Line2D
 colors = ["orange", "green", "red"]
 lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='-') for c in colors]
-labels = ["mean BTT (weights missing outflux)", "mean BTT (corrected weights)", "global BTT median"]
+labels = ["mean system age", "mean BTT", "global BTT median"]
 ax.legend(lines, labels)
 _ = ax.set_title("Corrected for $R_a$: " + str(correct_for_autotrophic_respiration))
-# -
 
+# +
 fig, ax = plt.subplots(figsize=(18, 8))
 var = np.log(2)*global_mean_btt - ds_btt.global_btt_median
 var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2)
-_ = ax.set_title("[log(2) * (Global mean BTT)] - global btt median")
+var2 = np.log(2)*global_mean_btt
+var2.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="red", alpha=0.2)
+
+from matplotlib.lines import Line2D
+colors = ["blue", "red"]
+lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='-') for c in colors]
+labels = ["log(2) * mean - median", "log(2) * mean"]
+_ = ax.legend(lines, labels)
+#_ = ax.set_title("[log(2) * (Global mean BTT)] - global btt median")
+
+# +
+fig, ax = plt.subplots(figsize=(18, 8))
+var = ds_btt.global_btt_median / (np.log(2)*global_mean_btt)
+var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2)
+
+var2 = global_mean_btt / global_mean_age
+var2.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="red", alpha=0.2)
+
+from matplotlib.lines import Line2D
+colors = ["blue", "red"]
+lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='-') for c in colors]
+labels = ["median / [log(2) * mean]", "global mean transit time / global mean age"]
+_ = ax.legend(lines, labels)
+#_ = ax.set_title("global btt median / [log(2) * Global mean BTT]")
+# -
+
+# # Add mean transit time and mean age to quantile dataset
+
+filename = project_path.joinpath("global_btt_quantiles_mean"+correction_str+".nc")
+ds_btt.assign({"global_mean_btt": global_mean_btt}).to_netcdf(filename)
+ds_btt.assign({"global_mean_age": global_mean_age}).to_netcdf(filename)
+filename
 
 

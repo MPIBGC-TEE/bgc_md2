@@ -118,7 +118,7 @@ def init_B_chunk(
     # numpy arrays elements can be assigned values, but dask arrays are immutable
     # and consequently can not be assigned values
     # Therefore we create the numpy variants of the chunks
-    print(bc.shape)
+    print(121, bc.shape)
     bn = np.array(bc)
     # valid
 
@@ -598,6 +598,7 @@ def batchwise_to_zarr(
         batch_size: int=16
     ):
     dir_p = Path(zarr_dir_name)
+    print(dir_p)
     if  dir_p.exists():
         if rm :
             print("##########################################")
@@ -625,8 +626,12 @@ def batchwise_to_zarr(
         z = zr.open(zarr_dir_name, mode="w", shape=arr.shape, chunks=arr.chunksize)
         ncores = 32
         slices = batchSlices(arr.shape[-1], ncores)
-        for s in slices:
-            print(s)
+        print(628, arr.shape)
+#        print(629, slices)
+#        for s in slices: 
+        from tqdm import tqdm # Holger
+        for s in tqdm(slices): # Holger
+            print(633, s)
             z[..., s] = arr[..., s].compute()
 
 
@@ -790,25 +795,36 @@ def load_or_make_B_u_x0_from_zarr(
         batch_size: int=16
     ):
     zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
+    print(798, zarr_dir_path)
     names = ("B","u","x0")
     sub_dir_paths = [
-        zarr_dir_path.joinpath(name) for name in names
+#        zarr_dir_path.joinpath(name) for name in val_names
+        zarr_dir_path.joinpath(name) for name in names # Holger
     ]
-
+    print(804, sub_dir_paths)
     if all((p.exists() for p in sub_dir_paths)):
         B,u,x0 = (
             dask.array.from_zarr(str(p))
             for p in sub_dir_paths
         )
+        print(810)
         return B,u,x0
 
     else:
-        B,u,x0 = reconstruct_B_u_x0_from_zarr(out_dir)
+        print(813)
+#        B,u,x0 = reconstruct_B_u_x0_from_zarr(out_dir)
+        B,u,x0 = reconstruct_B_u_x0_from_zarr(out_path) # Holger
 
-        for tup in zip((B,u_,x0),names):
+#        for tup in zip((B,u_,x0),names):
+        for tup in zip((B,u,x0),names): # Holger
             arr,name = tup
-            cH.batchwise_to_zarr(
-                arr[...,sl],
+            sl = slice(0, None) # Holger
+#            suffix = "_Holger" # Holger
+#            suffix = '_slice_' + str(sl.start) + '_' + str(sl.stop) # Holger
+            print(824)
+            suffix = "" # Holger
+            batchwise_to_zarr(
+                arr[..., sl],
                 str(
                     zarr_dir_path.joinpath(
                         name + suffix
@@ -836,7 +852,7 @@ def load_or_make_valid_B_u_x0(
 
     zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
     sub_dir_paths = [
-        zarr_dir_path.joinpath(name) for name in val_names
+        zarr_dir_path.joinpath(name) for name in names
     ]
 
     if all((p.exists() for p in sub_dir_paths)):
@@ -844,9 +860,11 @@ def load_or_make_valid_B_u_x0(
             dask.array.from_zarr(str(p))
             for p in sub_dir_paths
         )
+        print(863)
         return B_val,u_val,x0_val
 
     else:
+        print(867)
         syds=single_year_ds(
             out_path.joinpath('out_ncar_1901_ndep.nc')
         )
@@ -868,7 +886,7 @@ def load_or_make_valid_B_u_x0(
             valid_combies_parallel(nz,arr)
             for arr in (B,u,x0)
         )
-
+        print(887)
         for tup in zip([B_val,u_val,x0_val],sub_dir_paths):
             arr,p = tup
             batchwise_to_zarr(
@@ -876,10 +894,11 @@ def load_or_make_valid_B_u_x0(
                 str(p),
                 rm=rm
             )
+        print(895)
         return load_or_make_valid_B_u_x0(
             out_path,
             zarr_sub_dir_name,
-            name=names,
+            names=names,
             rm=rm,
             batch_size=batch_size
         )
@@ -904,6 +923,7 @@ def load_or_make_valid_B_u_x0_slice(
             dask.array.from_zarr(str(p))
             for p in sub_dir_paths
         )
+        print(922, "all exist")
         return B_val,u_val,x0_val
 
     else:
@@ -916,6 +936,7 @@ def load_or_make_valid_B_u_x0_slice(
         dad=cable_dask_array_dict(zarr_dir_path)
 
         iveg = dad['iveg']
+        print(934)
         B, u, x0 = load_or_make_B_u_x0_from_zarr(
             out_path,
             zarr_sub_dir_name
@@ -924,22 +945,27 @@ def load_or_make_valid_B_u_x0_slice(
         cond_2=(dad['Csoil'][0,0,:,:]!=0).compute()
         nz = dask.array.nonzero(cond_1*cond_2)
 
+        print(943)
         B_val,u_val,x0_val=(
             valid_combies_parallel(nz,arr)
             for arr in (B,u,x0)
         )
 
+        print(949)
         for tup in zip([B_val,u_val,x0_val],sub_dir_paths):
-            arr,p = tup
+            arr, p = tup
+            print(952, sl, p)
             batchwise_to_zarr(
-                arr[...,sl],
+                arr[..., sl],
                 str(p),
                 rm=rm
             )
+
+        print(959)
         return load_or_make_valid_B_u_x0(
             out_path,
             zarr_sub_dir_name,
-            sl,
+            names,
             rm=rm,
             batch_size=batch_size
         )
