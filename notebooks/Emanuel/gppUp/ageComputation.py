@@ -220,8 +220,8 @@ system_age_medians = []
 pool_age_median = smr.pool_age_distributions_quantiles_by_ode(
     0.5, start_age_densities, F0=F0, max_step=0.5
 )
-system_age_median = smr.system_age_distribution_quantiles_by_ode(
-    0.5, start_age_densities, F0=F0, max_step=0.5
+system_age_median = smr.system_age_distribution_quantiles(
+    quantile=0.5, start_age_densities=start_age_densities #F0=F0
 )
 
 median_pool_age = pd.DataFrame(pool_age_median, columns=pool_names)

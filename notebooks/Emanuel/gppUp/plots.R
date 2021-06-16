@@ -66,10 +66,13 @@ plot(bttmeans$Year, bttmeans$meanBTT, type="l", xlab="Calendar year", ylab="Mean
 dev.off()
 
 pdf('Figures/medianBackwardTransitTime.pdf')
-plot(bttmeans$Year, bttmeans$medianBTT, type="l", xlab="Calenday year", ylab="Median backward transit time (yr)", bty="n")
+plot(bttmeans$Year, bttmeans$medianBTT, type="l", xlab="Calendar year", ylab="Median backward transit time (yr)", bty="n")
 dev.off()
 
-plot(bttmeans$Year, bttmeans$meanBTT-bttmeans$medianBTT, type="l")
+pdf('Figures/mean-medianBTT.pdf')
+plot(bttmeans$Year, bttmeans$meanBTT-bttmeans$medianBTT, type="l", xlab="Calendar year", 
+     ylab="Mean - Median backward transit time (yr)", bty="n")
+dev.off()
 
 pdf('Figures/meanMedianBTT.pdf')
 par(mar=c(4,4,0,0))
@@ -124,4 +127,7 @@ dev.off()
 
 longftt=as.vector(ftt)          
 
-plot(calyr, bttmeans$meanBTT/meanAges$System.Age, type="l", ylim=c(0.1,0.3))
+pdf('Figures/BTTAge.pdf')
+plot(calyr, bttmeans$meanBTT/meanAges$System.Age, type="l", xlab="Calendar year",
+     ylab="Mean BTT:Mean Age ratio", ylim=c(0.1,0.3), bty="n")
+dev.off()
