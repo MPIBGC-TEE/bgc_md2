@@ -13,24 +13,27 @@
 #     name: python3
 # ---
 
+# +
 #import sys
 #from getpass import getuser
 #import xarray as xr
 import numpy as np
 import zarr
 import matplotlib.pyplot as plt
-#import dask.array
-#import zarr as zr
+import dask.array
+
 from dask.distributed import Client, LocalCluster
 from pathlib import Path
-#import shutil
+import shutil
 #import matplotlib.pyplot as plt
 import bgc_md2.models.cable_all.cableHelpers as cH
 #from bgc_md2.helper import batchSlices
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run import DMRError
 #from time import time
 # %load_ext autoreload 
 # %autoreload 2
+# -
 
 if __name__ == '__main__':
     if 'cluster' not in dir():
@@ -48,18 +51,21 @@ except ImportError as e:
     pass  # module doesn't exist,dont make a fuss 
 
 # +
+nr_days = 1
+
+
 # chose the cable output directory you want to work with
 out_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/output/new4'
 out_path = Path(out_dir)
 zarr_sub_dir_name = 'zarr'
+zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
 
-nr_days = 2
-#aggregated_path = outpath.joinpath(f"aggregated_{nr_days}_days")
-aggregated_path = out_path.joinpath(f"aggregated")
+#aggregated_path = out_path.joinpath(f"zarr_agg_{nr_days}")
+aggregated_path = out_path.joinpath(f"zarr_agg_repair_diag_{nr_days}")
 aggregated_path.mkdir(parents=False, exist_ok=True)
 print(aggregated_path)
+# -
 
-# +
 B_val, u_val, x0_val = cH.load_or_make_valid_B_u_x0(
     out_path,
     zarr_sub_dir_name,
@@ -68,15 +74,158 @@ B_val, u_val, x0_val = cH.load_or_make_valid_B_u_x0(
     batch_size=32 #  
 )
 
-#B_val, u_val, x0_val = cH.load_or_make_valid_B_u_x0_slice(
-#    out_path,
-#    zarr_sub_dir_name,
-#    slice(0, 32, 1),
-##    names=['B_val','u_val','x0_val'],
-#    rm=False,
-#    batch_size=32 #  
-#)
-B_val
+# +
+times = zarr.open(str(zarr_dir_path.joinpath("time")), mode="r")
+
+times_agg = times[:][np.arange(0, len(times), nr_days)]
+#from bgc_md2.notebook_helpers import load_zarr_archive
+
+p = aggregated_path.joinpath("times")
+if p.exists():
+    shutil.rmtree(p)
+    print("removed", p)
+    
+z = zarr.create(
+    times_agg.shape,
+    (len(times_agg),),
+    dtype=np.float64,
+    fill_value=-np.inf,
+    store=str(p)
+)
+z[:] = times_agg
+print("created", p)
+z
+
+
+# +
+def aggregate_xs(args, nr_days):
+    xs = args[0]
+    xs_agg = xs[np.arange(0, len(xs), nr_days)]
+    return xs_agg
+
+xs = dask.array.from_zarr(str(zarr_dir_path.joinpath("SOL_val")))
+
+p = aggregated_path.joinpath("xs_agg")
+try:
+    xs_agg = dask.array.from_zarr(str(p))
+except: # FileNotFoundError
+    xs_agg = dask.array.blockwise(aggregate_xs,'ijk', xs, 'ljk', nr_days=nr_days, dtype='f8', new_axes={"i": len(times_agg)})
+    p = aggregated_path.joinpath("xs_agg")
+    cH.batchwise_to_zarr(xs_agg, str(p), rm=False, batch_size=320)
+    print(p)
+
+
+# -
+
+def aggregate_fluxes(args, nr_days):
+    fluxes = args[0]
+    split_indices = np.arange(0, len(fluxes), nr_days)[1:]
+    fluxes_list = np.split(fluxes, split_indices, axis=0)
+    fluxes_aggregated = np.array([flux.sum(axis=0) for flux in fluxes_list])
+    
+    return fluxes_aggregated
+
+
+p = aggregated_path.joinpath("Us_agg")
+try:
+    Us_agg = dask.array.from_zarr(str(p))
+except: # FileNotFoundError
+    Us_agg = dask.array.blockwise(aggregate_fluxes,'ijk', u_val, 'ljk', nr_days=nr_days, dtype='f8', new_axes={"i": len(times_agg)})
+    cH.batchwise_to_zarr(Us_agg, str(p), rm=False, batch_size=320)
+    print(p)
+
+
+def aggregate_Bs(xs_agg, xs, Bs, Us, nr_days):
+    xs_agg = xs_agg[..., 0]
+    xs = xs[0][..., 0]
+    Bs = Bs[0][..., 0]
+    Us = Us[0][..., 0]
+    
+    nr_pools = Bs.shape[1]
+    times = np.arange(xs.shape[0])
+    
+    # add identity to cable Bs (for whatever reason this is necessary)
+    Bs = Bs + np.repeat(np.eye(nr_pools)[np.newaxis, ...], len(times), axis=0)
+    
+    try:
+        dmr = DMR.from_Bs_and_net_Us(xs[0].reshape(-1), times, Bs[:-1], Us[:-1])
+        Fs, Rs = DMR.reconstruct_Fs_and_Rs(xs, Bs)
+    
+        Us_agg = aggregate_fluxes([Us], nr_days)
+        Rs_agg = aggregate_fluxes([Rs], nr_days)
+        Fs_agg = aggregate_fluxes([Fs], nr_days)
+        Bs_agg = DMR.reconstruct_Bs(xs_agg, Fs_agg, Rs_agg)
+    except DMRError as e:
+        print(e, flush=True)
+        Bs_agg = -np.inf * np.ones((xs_agg.shape[0], nr_pools, nr_pools))
+        
+    return Bs_agg[..., np.newaxis]
+
+
+Bs_agg = dask.array.blockwise(
+    aggregate_Bs, "ijzk",
+    xs_agg, "ijk",
+    xs, "ljk",
+    B_val, "ljzk",
+    u_val, "ljk",
+    nr_days=nr_days,
+    dtype='f8'
+)
+
+p = aggregated_path.joinpath("Bs_agg")
+try:
+    Bs_agg = dask.array.from_zarr(str(p))
+except: # FileNotFoundError
+    cH.batchwise_to_zarr(Bs_agg, str(p), rm=False, batch_size=320)
+    print(p)
+
+# +
+p = aggregated_path.joinpath("Bs_agg")
+Bs_agg = dask.array.from_zarr(str(p))
+
+p = aggregated_path.joinpath("neg_diag_agg")
+try:
+    neg_diag_agg = dask.array.from_zarr(str(p))
+except: # FileNotFoundError
+    neg_diag_agg = Bs_agg[0, 0, 0, :] == -np.inf
+    cH.batchwise_to_zarr(neg_diag_agg, str(p), rm=False, batch_size=320)
+    print(p)
+
+neg_diag_agg_c = neg_diag_agg.compute()
+print(neg_diag_agg_c.sum())
+# -
+neg_xs = xs < 0
+neg_xs_c = neg_xs.compute()
+neg_xs_c.sum() / neg_xs.shape[0]
+
+
+
+
+
+
+
+s = np.sum(neg_xs_c, axis=(0, 1))
+s
+
+
+xs_min = xs.min(axis=(0, 1))
+xs_min_c = xs_min.compute()
+
+np.min(xs_min_c)
+
+xs_min_pool = xs.min(axis=(0, 2))
+xs_min_pool_c = xs_min_pool.compute()
+
+xs_min_pool_c
+
+xs_min_pool0 = xs[:, 0, :].min(axis=1)
+xs_min_pool0_c = xs_min_pool0.compute()
+
+xs_min_pool0_c[:10]
+
+
+
+
 
 # +
 patch_nr = 1000
@@ -111,20 +260,7 @@ plt.plot(data_convolved[365:-365])
 data_convolved = np.convolve(mean_age, kernel, mode='same')
 plt.plot(data_convolved[365:-365])
 
-# +
-nr_days = 31
 
-def aggregate_fluxes(fluxes, nr_days):
-    split_indices = np.arange(0, len(fluxes), nr_days)[1:]
-    fluxes_list = np.split(fluxes, split_indices, axis=0)
-    fluxes_aggregated = np.array([flux.sum(axis=0) for flux in fluxes_list])
-    
-    return fluxes_aggregated
-
-
-# -
-
-Fs, Rs = DMR.reconstruct_Fs_and_Rs(xs, Bs)
 
 np.max(np.abs(xs[1:] - (xs[:-1] + Fs[:-1].sum(axis=2) - Fs[:-1].sum(axis=1) + Us[:-1] - Rs[:-1])))
 
@@ -186,7 +322,7 @@ NPPs[0]
     # avoids issues with variables that do not fit into memory.
     # options:
     zarr_sub_dir_name = 'zarr'
-    zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
+    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
     dad=cH.load_or_make_cable_dask_array_dict(
             out_path,
             zarr_dir_path,
@@ -263,12 +399,15 @@ NPPs[0]
     # The result is not too large to be stored and can be used to check how
     # close the reconstruction actually is.
     SOL_val = dask.array.blockwise(cH.valid_trajectory,'ijk',x0_val,'jk', times, 'i', B_rt, 'ijjk',u_rt,'ijk',dtype='f8')
+
     cH.batchwise_to_zarr(
         SOL_val,
         str( zarr_dir_path.joinpath( 'SOL_val')),
         rm=False,
         batch_size=32 #  
     )
+
+# +
 #
 #    #SOL_val[...,0].compute()
 #    dt=(times[1]-times[0]).compute()
@@ -345,6 +484,7 @@ NPPs[0]
     #futures = client.map(sol_arr_from_tup,val_tups[s],batch_size=8)
     #for s in slices:
     #    arr.list = client
+# -
 
 
 
