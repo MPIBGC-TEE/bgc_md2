@@ -177,7 +177,11 @@ cH.batchwise_to_zarr(
         batch_size=32 #  
     )
 
+min_pool_contents_repr[0,0].compute()
 
+dad.keys()
+
+dad['Csoil']
 
 # +
 #
