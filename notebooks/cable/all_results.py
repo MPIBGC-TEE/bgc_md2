@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.9.1
+#       jupytext_version: 1.11.3
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -156,6 +156,30 @@ except ImportError as e:
         rm=False,
         batch_size=32 #  
     )
+
+
+SOL_val
+
+# We can now check the solutions for consistency by
+# 1.) plotting the solutions
+# 1.) comparing them to the solutions computed directly by cable
+# 1.) filtering for negative pool values
+#
+
+import matplotlib.pyplot as plt
+plt.plot(SOL_val[:,1,1])
+
+min_pool_contents_repr = dask.array.min(SOL_val,0)
+cH.batchwise_to_zarr(
+        min_pool_contents_repr,
+        str( zarr_dir_path.joinpath( 'min_pool_contents_repr')),
+        rm=False,
+        batch_size=32 #  
+    )
+
+
+
+# +
 #
 #    #SOL_val[...,0].compute()
 #    dt=(times[1]-times[0]).compute()
@@ -232,5 +256,9 @@ except ImportError as e:
     #futures = client.map(sol_arr_from_tup,val_tups[s],batch_size=8)
     #for s in slices:
     #    arr.list = client
+# -
+
+# dad
+#
 
 
