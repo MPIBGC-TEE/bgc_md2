@@ -598,7 +598,6 @@ def batchwise_to_zarr(
         batch_size: int=16
     ):
     dir_p = Path(zarr_dir_name)
-    print(dir_p)
     if  dir_p.exists():
         if rm :
             print("##########################################")
@@ -626,12 +625,11 @@ def batchwise_to_zarr(
         z = zr.open(zarr_dir_name, mode="w", shape=arr.shape, chunks=arr.chunksize)
         ncores = 32
         slices = batchSlices(arr.shape[-1], ncores)
-        print(628, arr.shape)
+        print("result shape:", arr.shape)
 #        print(629, slices)
 #        for s in slices: 
         from tqdm import tqdm # Holger
         for s in tqdm(slices): # Holger
-            print(633, s)
             z[..., s] = arr[..., s].compute()
 
 
@@ -767,7 +765,7 @@ def pool_age_density_val(
 
 
 
-def valid_trajectory(x0_c,times,B_c,U_c):
+def valid_trajectory(x0_c, times, B_c, U_c):
     # Note that the chunksize is supposed to be one
     # We have only one startvector 
     print('###########')
@@ -781,9 +779,33 @@ def valid_trajectory(x0_c,times,B_c,U_c):
     x0=x0_c[:,0]#.reshape(9)
     Bs=[B_c[i,:,:,0]+np.eye(9) for i in range(it_max)]
     Us=[U_c[i,:,0] for i in range(it_max)]
-    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
-    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+#    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
+#    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1]) # Holger
+    sol=dmr.solve().reshape(U_c.shape) # Holger
     return sol
+
+
+def aggregate_xs(xs, nr_days):
+    # Note that the chunksize is supposed to be one
+    # We have only one startvector 
+    print('###########')
+    print(x0_c.shape ,type(x0_c))
+    print(times.shape)
+    #print(ages.shape)
+    print(B_c.shape)
+    print(U_c.shape)
+    it_max=len(times)
+    print(it_max)
+    x0=x0_c[:,0]#.reshape(9)
+    Bs=[B_c[i,:,:,0]+np.eye(9) for i in range(it_max)]
+    Us=[U_c[i,:,0] for i in range(it_max)]
+#    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
+#    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1]) # Holger
+    sol=dmr.solve().reshape(U_c.shape) # Holger
+    return sol
+
 
 
 # fixme mm 12-18-2020
@@ -860,7 +882,7 @@ def load_or_make_valid_B_u_x0(
             dask.array.from_zarr(str(p))
             for p in sub_dir_paths
         )
-        print(863)
+        print("loaded")
         return B_val,u_val,x0_val
 
     else:
