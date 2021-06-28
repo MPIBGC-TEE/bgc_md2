@@ -43,7 +43,7 @@ eta_W = zeta_dw / (zeta_gluc * C_gW)
 ML = zeta_gluc/zeta_dw * R_mL * B_L
 MR = zeta_gluc/zeta_dw * R_mR * B_R
 B_S_star = symbols("B_S_star")
-MS = R_mS * B_S_star
+MS = zeta_gluc/zeta_dw * R_mS * B_S_star
 
 # growth respiration fluxes for leaves, roots, sapwood
 GL = f_L * C_gL/(C_gL+delta_L) * (1-eta_L) * E
