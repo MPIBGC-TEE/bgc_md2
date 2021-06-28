@@ -80,6 +80,7 @@ if time_resolution == "monthly":
     ds = xr.open_mfdataset(str(data_path) + "/SUM*.nc")
 elif time_resolution == "yearly":
     ds = xr.open_dataset(data_path.joinpath("yearly_%02d_ds.nc" % delay_in_months))
+    print(data_path.joinpath("yearly_%02d_ds.nc" % delay_in_months))
 else:
     raise(ValueError("only 'monthly' and 'yearly' data can be checked for consistency by now"))
 

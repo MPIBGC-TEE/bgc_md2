@@ -528,6 +528,34 @@ def compute_Us(single_site_dict, time_step_in_days):
     return data, info
 
 
+def compute_GPPs_discrete(single_site_dict, time_step_in_days):
+    mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
+    ms = mdo.model_structure
+
+    from bgc_md2.ModelDataObject import getFluxVariable_from_DensityRate
+    from bgc_md2.Variable import FluxVariable
+
+    keywords = {
+        "check_units": mdo.check_units,
+        "data_shift": 1
+    }
+    GPPs = getFluxVariable_from_DensityRate( 
+        mdo=mdo,
+        variable_name="gpp",
+        nr_layers=ms.get_nr_layers("Labile"),
+        dz=mdo.get_dz("Labile"),
+        **keywords
+    )
+    
+    nr_times = len(mdo.time_agg.data)
+    nr_pools = mdo.model_structure.nr_pools
+    data = np.nan * np.ones(nr_times)
+
+    data[:-1] = GPPs.data.filled().reshape(-1)
+    info = tuple()
+    return data, info
+
+
 def compute_Bs_discrete(single_site_dict, time_step_in_days):
     mdo = _load_mdo(single_site_dict, time_step_in_days, check_units=False)
 

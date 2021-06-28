@@ -34,7 +34,7 @@ from dask.distributed import Client
 
 my_cluster = CARDAMOMlib.prepare_cluster(
     n_workers=10,
-    alternative_dashboard_port=8792
+    alternative_dashboard_port=8790
 )
 Client(my_cluster)
 
@@ -59,7 +59,8 @@ ds
 data_vars = {
     "start_values": ds.start_values,
     "Us": ds.Us,
-    "Bs": ds.Bs
+    "Bs": ds.Bs,
+    "GPP": ds.GPP
 #    "solution": ds.solution,
 #    "acc_net_external_output_vector": ds.acc_net_external_output_vector
 }
@@ -75,9 +76,11 @@ if not correct_for_autotrophic_respiration:
     # create Ras = 0 with correct shape
     Ras = 0 * temp_small_ds["Us"].sum(dim="pool")
 else:
-    gpp_filename = "SUMMARYSTAT1_selvec_globe_raw_timefulllist_cru004GCR006_1920_2015_nbe2002_gpp.nc"
-    ds_GPP = xr.open_dataset(data_path.joinpath(gpp_filename))
-    GPP = ds_GPP["gpp"] * 31.0 # 31 days per month
+#    gpp_filename = "SUMMARYSTAT1_selvec_globe_raw_timefulllist_cru004GCR006_1920_2015_nbe2002_gpp.nc"
+#    ds_GPP = xr.open_dataset(data_path.joinpath(gpp_filename))
+#    GPP = ds_GPP["gpp"] * 31.0 # 31 days per month
+
+    GPP = ds.GPP
     Ras = GPP - temp_small_ds["Us"].sum(dim="pool")
 
     # following Greg's advice with the current data I ignore negatve Ra values
@@ -87,7 +90,14 @@ else:
 
     # Ras/GPP is NOT constant in time (Greg said it would be)
     fig, ax = plt.subplots()
-    (Ras/GPP).mean(dim="prob").mean(dim=["lat", "lon"]).plot(ax=ax)
+#    (Ras/GPP).mean(dim="prob").mean(dim=["lat", "lon"]).plot(ax=ax)
+
+
+    ####### Just for testing if autotrophic respiration fraction is constant
+    (Ras/GPP).isel(lat=28, lon=52, prob=0).plot(ax=ax)
+    ########
+    
+    
     ax.set_title("Autotrophic respiration rate")
     
 # add Ras to dataset
@@ -347,7 +357,7 @@ else:
 nr_time_steps = 10 * 12
 
 res_list = []
-for task in task_list[1:2]:
+for task in task_list[2:3]:
     print("starting", task)
     res = compute_global_btt_quantile_complete_ensemble(
         small_ds,
@@ -454,16 +464,18 @@ _ = ax.legend(lines, labels)
 
 # +
 fig, ax = plt.subplots(figsize=(18, 8))
-var = ds_btt.global_btt_median / (np.log(2)*global_mean_btt)
-var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2)
+#var = ds_btt.global_btt_median / (np.log(2)*global_mean_btt)
+#var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2)
 
-var2 = global_mean_btt / global_mean_age
+#var2 = global_mean_btt / global_mean_age
+var2 = global_mean_age / global_mean_btt
 var2.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="red", alpha=0.2)
 
 from matplotlib.lines import Line2D
 colors = ["blue", "red"]
 lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='-') for c in colors]
-labels = ["median / [log(2) * mean]", "global mean transit time / global mean age"]
+#labels = ["median / [log(2) * mean]", "global mean transit time / global mean age"]
+labels = ["-", "global mean age / global mean transit time"]
 _ = ax.legend(lines, labels)
 #_ = ax.set_title("global btt median / [log(2) * Global mean BTT]")
 # -

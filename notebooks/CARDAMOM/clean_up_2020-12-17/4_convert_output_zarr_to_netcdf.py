@@ -33,7 +33,7 @@ from dask import delayed
 # for monthly discrete data, each worker needs about 10GB
 my_cluster = CARDAMOMlib.prepare_cluster(
     n_workers=1,
-    alternative_dashboard_port=8792
+    alternative_dashboard_port=8790
 )
 Client(my_cluster)
 
@@ -63,10 +63,10 @@ Client(my_cluster)
 # and open link given above.
 
 #time_resolution, delay_in_months, model_type = "daily", None, "discrete"
-#time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
+time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 #time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
-time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
@@ -91,7 +91,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 1, 1), # done: (0, 50, 1) discrete (m), (0, 1, 1) continuous (m), (0, 1, 1) y00, (0, 1, 1) y06
+    "prob": slice(1, 3, 1), # done: (0, 50, 1) discrete (m), (0, 1, 1) continuous (m), (0, 1, 1) y00, (0, 1, 1) y06
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -110,6 +110,8 @@ Bs_da = da.from_zarr(str(project_path.joinpath("Bs")))
 xs_da = da.from_zarr(str(project_path.joinpath("xs")))
 data_da = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_2")))
 solution_da = data_da[:, :, :, :, 0, :]
+
+GPPs_da = da.from_zarr(str(project_path.joinpath("GPPs")))
 
 # compute absolute and relative errors of reconstructed solutions
 xs_abs_err_da = np.abs(xs_da-solution_da)
@@ -240,6 +242,8 @@ variables = [
     {"name": "btt_median", "da": btt_median_da/(31*12), "unit": "yr"},
     {"name": "btt_quantile_05", "da": btt_quantile_05_da/(31*12), "unit": "yr"},
     {"name": "btt_quantile_95", "da": btt_quantile_95_da/(31*12), "unit": "yr"},
+    
+    {"name": "GPP", "da": GPPs_da, "unit": "g/m^2"},
 ]
 for d in variables:
     data_vars[d["name"]] = xr.DataArray(
@@ -277,7 +281,7 @@ def delayed_to_netcdf(prob, netCDF_filename, compute=False):
     del ds_sub
 
 arr = ds.prob
-print(arr)
+arr
 # +
 # %%time
 
@@ -294,3 +298,20 @@ del_obj = xr.save_mfdataset(datasets, paths, compute=False)
 del_obj
 # %%time
 del_obj.compute()
+
+
+
+# ## Add GPP to files afterwards
+
+for prob in tqdm(arr[4:]):
+    old_netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
+    old_ds = xr.open_dataset(old_netCDF_filename)
+
+    new_ds = old_ds.assign({"GPP": ds["GPP"].sel(prob=[prob])})
+    new_netCDF_filename = project_path.joinpath("tmp").joinpath(netCDF_filestem + "_%05d.nc" % prob)
+    new_ds.to_netcdf(new_netCDF_filename, mode="w")
+    old_ds.close()
+    new_ds.close()
+    print("written", new_netCDF_filename)
+
+

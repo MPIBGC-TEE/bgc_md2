@@ -31,7 +31,8 @@ my_cluster = CARDAMOMlib.prepare_cluster(n_workers=48)
 Client(my_cluster)
 
 nr_months = 12 # coarseness
-delay_in_months = 6
+delay_in_months = 0
+#delay_in_months = 6
 
 # +
 data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")

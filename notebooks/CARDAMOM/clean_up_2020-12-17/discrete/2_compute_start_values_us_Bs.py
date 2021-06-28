@@ -114,7 +114,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 50, 1),
+    "prob": slice(40, 50, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -206,7 +206,21 @@ task_list = [
         "meta_shape": (1, nr_times, nr_pools, nr_pools),
         "drop_axis": 1, # drop time axis
         "new_axis": [1, 2, 3] # add time axis and two pool axes
-    }
+    },
+    {# 4:
+        "computation": "GPPs",
+        "overwrite": False,
+        "func": CARDAMOMlib.compute_GPPs_discrete,
+        "func_args": {"time_step_in_days": params["time_step_in_days"]},
+        "timeouts": [np.inf],
+        "batch_size": 500,
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
+        "result_chunks": (1, 1, 1, nr_times_total),
+        "return_shape": (1, nr_times),
+        "meta_shape": (1, nr_times),
+        "drop_axis": 1, # drop time axis
+        "new_axis": [1] # add time axis
+    },
 ]
 
 # ## Computing
@@ -216,7 +230,7 @@ task_list = [
 # +
 # %%time
 
-for task in task_list[3:]:
+for task in task_list[4:]:
     print("task: computing", task["computation"])
     print()
     
@@ -252,6 +266,4 @@ for task in task_list[3:]:
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
 # -
-# # Check diag < 0
-
 

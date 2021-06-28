@@ -97,7 +97,7 @@ ds_rechunked
 # +
 # overwite potentially existing zarr files?
 
-overwrite = True # if False, raises zarr.errors.ContainsArrayError if zarr archive already exists
+overwrite = False # if False, raises zarr.errors.ContainsArrayError if zarr archive already exists
 
 # +
 # stupid nanny and worker messages: just wait, computations are running (see dashboard for status)
