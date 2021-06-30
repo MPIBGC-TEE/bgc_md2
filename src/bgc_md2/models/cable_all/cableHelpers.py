@@ -864,6 +864,62 @@ def load_or_make_B_u_x0_from_zarr(
                )
 
 
+def load_or_make_valid_cable_vars(
+        out_path: Path,
+        zarr_sub_dir_name: str,
+        names: List[str] = ['B_val', 'u_val', 'x0_val'],
+        rm: bool = False,
+        batch_size: int = 16
+)->Tuple[dask.array.core.Array]:
+
+    zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
+    sub_dir_paths = [
+        zarr_dir_path.joinpath(name) for name in names
+    ]
+    def load():
+        B_val,u_val,x0_val = (
+            dask.array.from_zarr(str(p))
+            for p in sub_dir_paths
+        )
+        print("loaded")
+        return B_val,u_val,x0_val
+
+    if all((p.exists() for p in sub_dir_paths)):
+        return load()
+
+    else:
+        # to investigate which fillvalue has been unse
+        syds=single_year_ds(
+            out_path.joinpath('out_ncar_1901_ndep.nc')
+        )
+        tk = '_FillValue'
+        ifv = syds.iveg.attrs[tk]
+        ffv = syds.Cplant.attrs[tk]
+        dad = cable_dask_array_dict(zarr_dir_path)
+
+        iveg = dad['iveg']
+        B, u, x0 = load_or_make_B_u_x0_from_zarr(
+            out_path,
+            zarr_sub_dir_name
+        )
+        cond_1 = (iveg != ifv).compute()
+        cond_2 = (dad['Csoil'][0, 0, :, :] != 0).compute()
+        nz = dask.array.nonzero(cond_1*cond_2)
+
+        B_val, u_val, x0_val = (
+            valid_combies_parallel(nz, arr)
+            for arr in (B, u, x0)
+        )
+        for tup in zip([B_val,u_val,x0_val],sub_dir_paths):
+            arr,p = tup
+            batchwise_to_zarr(
+                arr,
+                str(p),
+                rm=rm
+            )
+        return load()
+
+
 def load_or_make_valid_B_u_x0(
         out_path: Path,
         zarr_sub_dir_name: str,

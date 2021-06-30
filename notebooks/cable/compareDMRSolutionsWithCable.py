@@ -15,7 +15,7 @@
 
 # The original ncl script `mm_mkinitialmatrices_A_C_1901_to_2004.ncl`
 # only uses data of the first day of each year to create only one A per year.
-# We produce a completely time dependent A that changes daily but do not
+# We produce a completely time dependent A that changes daily but do not 
 # store it but use it directly in the computation of B.
 import sys
 from getpass import getuser
@@ -32,12 +32,12 @@ import bgc_md2.models.cable_all.cableHelpers as cH
 from bgc_md2.helper import batchSlices
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from time import time
-# %load_ext autoreload
+# %load_ext autoreload 
 # %autoreload 2
 
 if __name__ == '__main__':
     import dask.array
-    from dask.distributed import LocalCluster,Client
+    from dask.distributed import LocalCluster,Client 
     if 'cluster' not in dir():
         cluster = LocalCluster()
 
@@ -47,20 +47,20 @@ if __name__ == '__main__':
 try:
     from ports.server_helpers import print_commands
     print_commands(cluster,local_port=8880)
-
+    
 except ImportError as e:
-    pass  # module doesn't exist,dont make a fuss
+    pass  # module doesn't exist,dont make a fuss 
 # -
 
     # chose the cable output directory you want to work with
     out_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/output/new4'
     out_path = Path(out_dir)
-
+    
     # option:
     # for plotting purposese of the original cable output
     # you could load a singe file
     # syds=cH.single_year_ds(out_path.joinpath('out_ncar_1901_ndep.nc'))
-
+   
     # A dictionary of DaskArrays of all the cable output variables.
     # If the directory 'zarr_dir_path' already exists (for instance
     # because this function call has been made before) The containing
@@ -98,7 +98,7 @@ except ImportError as e:
     # and reorganize the arrays for B,u,x0 with one dimension enumerating
     # the combinations.
     # We chunk and write these arrays as zarr and can later use them
-    # to distribute the work efficiently.
+    # to distribute the work efficiently. 
     #
     #
     #
@@ -107,7 +107,7 @@ except ImportError as e:
     #
     # options:
     # - It is possible to use only a part of the valid combinations (a slice)
-    #   This is much faster and especially useful for testing purposes.
+    #   This is much faster and especially useful for testing purposes. 
     #   (The whole grid contains about 20000 valid combinations)
     #   sl=slice(0,320)
     #   sl=slice(0,32)
@@ -118,9 +118,9 @@ except ImportError as e:
     #       rm=False
     #   )
     # - The number of chunks processed in parallel is governed by
-    #   the parameter 'batch_size'. It is usually the number of cores or
+    #   the parameter 'batch_size'. It is usually the number of cores or 
     #   threads. However if a single chunk needs a lot of memory it
-    #   might have to be reduced on computers with low memory
+    #   might have to be reduced on computers with low memory 
     #   (reference for this task: matagorda:32 / antakya: 128)
 
     B_val, u_val ,x0_val = cH.load_or_make_valid_B_u_x0(
@@ -128,7 +128,7 @@ except ImportError as e:
         zarr_sub_dir_name,
         names=['B_val','u_val','x0_val'],
         rm=False,
-        batch_size=32 #
+        batch_size=32 #  
     )
 
     # We now compute dependent varaibles on the grid:
@@ -138,7 +138,7 @@ except ImportError as e:
     # scope of the computations to a time slice (0,it_max) This will speed up
     # the computations and is usefull for testing The number of timestep of
     # the complete run is about 37500 it_max  = 2000
-    it_max  = B_val.shape[0]
+    it_max  = B_val.shape[0] 
     time_slice=slice(0,it_max)
     B_rt,u_rt=(
         arr[time_slice,...]
@@ -154,7 +154,7 @@ except ImportError as e:
         SOL_val,
         str( zarr_dir_path.joinpath( 'SOL_val')),
         rm=False,
-        batch_size=32 #
+        batch_size=32 #  
     )
 
 
@@ -174,7 +174,7 @@ cH.batchwise_to_zarr(
         min_pool_contents_repr,
         str( zarr_dir_path.joinpath( 'min_pool_contents_repr')),
         rm=False,
-        batch_size=32 #
+        batch_size=32 #  
     )
 
 min_pool_contents_repr[0,0].compute()
@@ -217,7 +217,7 @@ We have to filter the valid chunks for the pool values.
 #    #    start_age_densities_of_x0_and_a=start_age_densities,
 #    #    dtype='f8'
 #    #)
-#    #res = pool_age_density_val[...,0].compute()
+#    #res = pool_age_density_val[...,0].compute() 
 #    suffix = '_slice_' + str(sl.start) + '_' + str(sl.stop)
 #    #for tup in zip((SOL_val, pool_age_density_val),('SOL_val','pool_age_density_val')):
 #    for tup in zip((pool_age_density_val,),('pool_age_density_val',)):
