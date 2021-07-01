@@ -58,22 +58,58 @@ nr_days = 1
 out_dir= '/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/output/new4'
 out_path = Path(out_dir)
 zarr_sub_dir_name = 'zarr'
-zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
+zarr_dir_path = cP.zarr_path(out_path)
+vcsp = cP.zarr_valid_landpoint_patch_combis_slice_path(out_path)
 
+syds = cH.single_year_ds(cable_out_path.joinpath("out_ncar_1901_ndep.nc"))
+tk = "_FillValue"
+ifv = syds.iveg.attrs[tk]
+ffv = syds.Cplant.attrs[tk]
+
+it_max = syds.Cplant.shape[0] 
+#time_slice=slice(0,it_max) 
+time_slice=slice(0,100) #could be used to significantly shorten the reconstruction times 
+
+sl = slice(0, 32)
 #aggregated_path = out_path.joinpath(f"zarr_agg_{nr_days}")
 aggregated_path = out_path.joinpath(f"zarr_agg_repair_diag_{nr_days}")
 aggregated_path.mkdir(parents=False, exist_ok=True)
 print(aggregated_path)
 # -
 
-B_val, u_val, x0_val = cH.load_or_make_valid_B_u_x0(
-    out_path,
-    zarr_sub_dir_name,
-    names=['B_val','u_val','x0_val'],
-    rm=False,
-    batch_size=32 #  
+# mm
+# deprecated the old cH.load_or_make_valid_B_u_x0 function that had been there 
+# as a placeholder that I had forgotten to clean... 
+# It had way too many hidden assumptions about paths
+# The newer functions have an obvious zarr directory path as arguments and 
+# 
+B,u,x=cH.load_or_make_B_u_x(
+    dad,
+    ifv,
+    ffv,
+    zp= zarr_dir_path
+)
+# mm :to find the valid combis we need to interpret some information we 
+# already have
+iveg = dad["iveg"]
+cond_1 = (iveg != ifv).compute()
+cond_2 = (dad["Csoil"][0, 0, :, :] != 0).compute()
+nz = dask.array.nonzero(cond_1 * cond_2)
+B_val, u_val ,x_val = cH.load_or_make_valid_B_u_x(
+    B,
+    u,
+    x,
+    nz,
+    vcsp = cP.zarr_valid_landpoint_patch_combis_slice_path(out_path)
 )
 
+#B_val, u_val, x0_val = cH.load_or_make_valid_B_u_x0(
+#    out_path,
+#    zarr_sub_dir_name,
+#    names=['B_val','u_val','x0_val'],
+#    rm=False,
+#    batch_size=32 #  
+#)
 # +
 times = zarr.open(str(zarr_dir_path.joinpath("time")), mode="r")
 
@@ -372,13 +408,20 @@ NPPs[0]
     #   might have to be reduced on computers with low memory 
     #   (reference for this task: matagorda:32 / antakya: 128)
 
-    B_val, u_val ,x0_val = cH.load_or_make_valid_B_u_x0(
-        out_path,
-        zarr_sub_dir_name,
-        names=['B_val','u_val','x0_val'],
-        rm=False,
-        batch_size=32 #  
-    )
+    # mm
+    # deprecated the old cH.load_or_make_valid_B_u_x0 function that had been there 
+    # as a placeholder that I had forgotten to clean... 
+    # It had way too many hidden assumptions about paths
+    # The newer functions have an obvious zarr directory path as arguments and 
+    # 
+        
+    #B_val, u_val ,x0_val = cH.load_or_make_valid_B_u_x0(
+    #    out_path,
+    #    zarr_sub_dir_name,
+    #    names=['B_val','u_val','x0_val'],
+    #    rm=False,
+    #    batch_size=32 #  
+    #)
 
     # We now compute dependent varaibles on the grid:
     #

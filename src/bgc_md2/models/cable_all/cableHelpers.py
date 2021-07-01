@@ -2,13 +2,14 @@ import dask
 import shutil
 import xarray as xr
 import zarr as zr
+from tqdm import tqdm  # Holger
 from pathlib import Path
-from sympy import Symbol,var
+from sympy import Symbol, var
 import numpy as np
 import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from bgc_md2.helper import batchSlices
-from typing import Callable, Tuple, List, Union
+from typing import Callable, Tuple, List, Union, Dict
 
 # fixme mm 10-14-2020
 # This module contains hardcoded paths which will ultimately have to go.
@@ -241,6 +242,7 @@ def init_B_chunk(
     # return dask.array.from_array(bn)
     return bn
 
+
 def reconstruct_B(
     ifv,
     ffv,
@@ -255,20 +257,19 @@ def reconstruct_B(
     fromSOMtoSOM,
     xktemp,
     xkwater,
-    xkNlimiting
+    xkNlimiting,
 ) -> dask.array.core.Array:
     npool = 9
-    ntime,_,npatch,nland=kplant.shape
-    C_d=dask.array.from_array(
-        c_diag_from_iveg(np.array(iveg),ifv),
-        chunks=(npool,npatch,1)
+    ntime, _, npatch, nland = kplant.shape
+    C_d = dask.array.from_array(
+        c_diag_from_iveg(np.array(iveg), ifv), chunks=(npool, npatch, 1)
     )
-    B_chunk = (ntime,npool,npool,npatch)
-    B_shape = B_chunk+(nland,)
-    B_temp=dask.array.where(
-        dask.array.isnan(iveg==ifv),
-        dask.array.full(B_shape,ffv,chunks=B_chunk+(1,)),
-        dask.array.zeros(B_shape,chunks=B_chunk+(1,)),
+    B_chunk = (ntime, npool, npool, npatch)
+    B_shape = B_chunk + (nland,)
+    B_temp = dask.array.where(
+        dask.array.isnan(iveg == ifv),
+        dask.array.full(B_shape, ffv, chunks=B_chunk + (1,)),
+        dask.array.zeros(B_shape, chunks=B_chunk + (1,)),
     )
     return B_temp.map_blocks(
         init_B_chunk,
@@ -284,33 +285,140 @@ def reconstruct_B(
         xktemp,
         xkwater,
         xkNlimiting,
-        dtype=np.float64
+        dtype=np.float64,
     )
 
-def reconstruct_B_u_x0_from_zarr(out:str):
-    outpath = Path(out)
-    # Allthough we will later use zarr arrays
-    # we open one of the original netcdf output files
-    # to get the meta information about fill values 
-    # Since the file is small this is  fast
-    syds=single_year_ds(outpath.joinpath('out_ncar_1901_ndep.nc'))
-    tk='_FillValue'
-    ifv=syds.iveg.attrs[tk]
-    ffv=syds.Cplant.attrs[tk]
 
-    zarr_dir_path= outpath.joinpath('zarr')
-    dad=cable_dask_array_dict(zarr_dir_path)
+def cache(
+    zarr_dir_path: Path,
+    name: str,
+    arr: dask.array,
+    rm: bool = False,
+):
+    ''' 
+    A wrapper to laod the desired result from a cache dir or
+    compute it by calling the function with the given arguments
+    '''
+    zarr_dir_path.mkdir(exist_ok=True,parents=True)
+    sub_dir_path = zarr_dir_path.joinpath(name)
+    batchwise_to_zarr(arr, str(sub_dir_path), rm=rm)  # will do nothing if rm is False
+    return dask.array.from_zarr(str(sub_dir_path))
 
-    npool = sum([dad[name].shape[1] for name in ['Cplant','Csoil','Clitter']])
-    s=dad['Cplant'].shape
-    npatch =s[2]
-    nland  =s[3]
-    ntime  =s[0]
 
-    for s in ('leaf','wood','fine_root','metabolic_lit','structural_lit','cwd','fast_soil','slow_soil','passive_soil'):
+
+# should be obsolete
+#def reconstruct_B_u_x0_from_zarr(out: str):
+#    outpath = Path(out)
+#    # Allthough we will later use zarr arrays
+#    # we open one of the original netcdf output files
+#    # to get the meta information about fill values
+#    # Since the file is small this is  fast
+#    syds = single_year_ds(outpath.joinpath("out_ncar_1901_ndep.nc"))
+#    tk = "_FillValue"
+#    ifv = syds.iveg.attrs[tk]
+#    ffv = syds.Cplant.attrs[tk]
+#
+#    zarr_dir_path = outpath.joinpath("zarr")
+#    dad = cable_dask_array_dict(zarr_dir_path)
+#
+#    npool = sum([dad[name].shape[1] for name in ["Cplant", "Csoil", "Clitter"]])
+#    s = dad["Cplant"].shape
+#    npatch = s[2]
+#    nland = s[3]
+#    ntime = s[0]
+#
+#    for s in (
+#        "leaf",
+#        "wood",
+#        "fine_root",
+#        "metabolic_lit",
+#        "structural_lit",
+#        "cwd",
+#        "fast_soil",
+#        "slow_soil",
+#        "passive_soil",
+#    ):
+#        var(s)
+#
+#    stateVariableTuple = (
+#        leaf,
+#        fine_root,
+#        wood,
+#        metabolic_lit,
+#        structural_lit,
+#        cwd,
+#        fast_soil,
+#        slow_soil,
+#        passive_soil,
+#    )
+#    npool = len(stateVariableTuple)
+#    var_arr_dict = {
+#        leaf: dad["Cplant"][:, 0, :, :],
+#        fine_root: dad["Cplant"][:, 2, :, :],
+#        wood: dad["Cplant"][:, 1, :, :],
+#        metabolic_lit: dad["Clitter"][:, 0, :, :],
+#        structural_lit: dad["Clitter"][:, 1, :, :],
+#        cwd: dad["Clitter"][:, 2, :, :],
+#        fast_soil: dad["Csoil"][:, 0, :, :],
+#        slow_soil: dad["Csoil"][:, 1, :, :],
+#        passive_soil: dad["Csoil"][:, 2, :, :],
+#    }
+#    X = dask.array.stack([var_arr_dict[var] for var in stateVariableTuple], 1).rechunk(
+#        (ntime, npool, npatch, 1)
+#    )
+#
+#    X0 = X[0, ...]
+#
+#    B_res = reconstruct_B(
+#        ifv,
+#        ffv,
+#        dad["iveg"],
+#        dad["kplant"],
+#        dad["fromLeaftoL"],
+#        dad["fromRoottoL"],
+#        dad["fromWoodtoL"],
+#        dad["fromMettoS"],
+#        dad["fromStrtoS"],
+#        dad["fromCWDtoS"],
+#        dad["fromSOMtoSOM"],
+#        dad["xktemp"],
+#        dad["xkwater"],
+#        dad["xkNlimiting"],
+#    )
+#    u_res = reconstruct_u(ifv, ffv, dad["iveg"], dad["NPP"], dad["fracCalloc"])
+#    return (B_res, u_res, X0)
+
+def reconstruct_x(
+    Cplant,
+    Clitter,
+    Csoil
+) -> dask.array:
+    # fixme mm:
+    # obviosly the state variable tuple is fixed here
+    # the reason that it is created here (and causes duplication)
+    # is that the sister functions reconstruct_B and reconstruct_u
+    # are not able to rearrange the variables yet.
+    # and rely on the order of the state variables fixed.
+    # actually the model description should get its variables from here
+    npool = sum([var.shape[1] for var in [Cplant, Csoil, Clitter]])
+    s = Cplant.shape
+    npatch = s[2]
+    nland = s[3]
+    ntime = s[0]
+    for s in (
+        "leaf",
+        "wood",
+        "fine_root",
+        "metabolic_lit",
+        "structural_lit",
+        "cwd",
+        "fast_soil",
+        "slow_soil",
+        "passive_soil",
+    ):
         var(s)
 
-    stateVariableTuple=(
+    stateVariableTuple = (
         leaf,
         fine_root,
         wood,
@@ -319,54 +427,25 @@ def reconstruct_B_u_x0_from_zarr(out:str):
         cwd,
         fast_soil,
         slow_soil,
-        passive_soil
+        passive_soil,
     )
-    npool=len(stateVariableTuple)
-    var_arr_dict={
-        leaf:dad['Cplant'][:,0,:,:],
-        fine_root:dad['Cplant'][:,2,:,:],
-        wood:dad['Cplant'][:,1,:,:],
-        metabolic_lit : dad['Clitter'][:,0,:,:],
-        structural_lit : dad['Clitter'][:,1,:,:],
-        cwd : dad['Clitter'][:,2,:,:],
-        fast_soil : dad['Csoil'][:,0,:,:],
-        slow_soil : dad['Csoil'][:,1,:,:],
-        passive_soil : dad['Csoil'][:,2,:,:]
+    assert(npool == len(stateVariableTuple))
+    var_arr_dict = {
+        leaf: Cplant[:, 0, :, :],
+        fine_root: Cplant[:, 2, :, :],
+        wood: Cplant[:, 1, :, :],
+        metabolic_lit: Clitter[:, 0, :, :],
+        structural_lit: Clitter[:, 1, :, :],
+        cwd: Clitter[:, 2, :, :],
+        fast_soil: Csoil[:, 0, :, :],
+        slow_soil: Csoil[:, 1, :, :],
+        passive_soil: Csoil[:, 2, :, :],
     }
-    X=dask.array.stack(
-        [
-            var_arr_dict[var]
-            for var in stateVariableTuple
-        ]
-        ,1
-    ).rechunk((ntime,npool,npatch,1)) 
-
-    X0=X[0,...]
-
-    B_res = reconstruct_B(
-        ifv,
-        ffv,
-        dad['iveg'],
-        dad['kplant'],
-        dad['fromLeaftoL'],
-        dad['fromRoottoL'],
-        dad['fromWoodtoL'],
-        dad['fromMettoS'],
-        dad['fromStrtoS'],
-        dad['fromCWDtoS'],
-        dad['fromSOMtoSOM'],
-        dad['xktemp'],
-        dad['xkwater'],
-        dad['xkNlimiting']
+    X = dask.array.stack([var_arr_dict[var] for var in stateVariableTuple], 1).rechunk(
+        (ntime, npool, npatch, 1)
     )
-    u_res = reconstruct_u(
-        ifv,
-        ffv,
-        dad['iveg'],
-        dad['NPP'],
-        dad['fracCalloc']
-    )
-    return (B_res,u_res,X0)
+    return X
+
 
 def reconstruct_C(fn: str) -> np.ndarray:
     ds = single_year_ds(fn)
@@ -547,34 +626,23 @@ def reconstruct_C_diag(fn: str) -> np.ndarray:
     ds = single_year_ds(fn)
     return c_diag_from_iveg(ds.iveg.data, ds.iveg.attrs["_FillValue"])
 
-def reconstruct_u(
-    ifv,
-    ffv,
-    iveg,
-    NPP,
-    fracCalloc
-)->dask.array.core.Array:
-    npool = 9
-    ntime,npatch,nland=NPP.shape
-    I_chunk = (ntime,npool,npatch)
-    I_shape = I_chunk+(nland,)
-    I_temp = dask.array.where(
-        dask.array.isnan(iveg==ifv),# this works since the last two dimensions of iveg and I match
-        dask.array.full(I_shape,ffv,chunks=I_chunk+(1,)),
-        dask.array.zeros(I_shape,chunks=I_chunk+(1,))
-    )
-    return  I_temp.map_blocks(
-        init_I_chunk,
-        NPP,
-        fracCalloc,
-        dtype=np.float64
-    )
 
-def write_vars_as_zarr(
-        ds: xr.Dataset,
-        dir_name: str,
-        batch_size: int=16
-):
+def reconstruct_u(ifv, ffv, iveg, NPP, fracCalloc) -> dask.array.core.Array:
+    npool = 9
+    ntime, npatch, nland = NPP.shape
+    I_chunk = (ntime, npool, npatch)
+    I_shape = I_chunk + (nland,)
+    I_temp = dask.array.where(
+        dask.array.isnan(
+            iveg == ifv
+        ),  # this works since the last two dimensions of iveg and I match
+        dask.array.full(I_shape, ffv, chunks=I_chunk + (1,)),
+        dask.array.zeros(I_shape, chunks=I_chunk + (1,)),
+    )
+    return I_temp.map_blocks(init_I_chunk, NPP, fracCalloc, dtype=np.float64)
+
+
+def write_vars_as_zarr(ds: xr.Dataset, dir_name: str, batch_size: int = 16):
     dir_p = Path(dir_name)
 
     dir_p.mkdir(parents=True, exist_ok=True)
@@ -584,33 +652,29 @@ def write_vars_as_zarr(
         zarr_dir_name = str(zarr_dir_path)
         if not (zarr_dir_path.exists()):
             arr = dask.array.asarray(v.data)
-            batchwise_to_zarr(
-                arr,
-                zarr_dir_name,
-                batch_size
-            )
+            batchwise_to_zarr(arr, zarr_dir_name, batch_size)
 
 
 def batchwise_to_zarr(
-        arr: dask.array.core.Array,
-        zarr_dir_name: str,
-        rm: bool=False,
-        batch_size: int=16
-    ):
+    arr: dask.array.core.Array,
+    zarr_dir_name: str,
+    rm: bool = False,
+    batch_size: int = 1,
+):
     dir_p = Path(zarr_dir_name)
-    if  dir_p.exists():
-        if rm :
+    if dir_p.exists():
+        if rm:
             print("##########################################")
             print("")
-            print("removing "+str(dir_p))
+            print("removing " + str(dir_p))
             shutil.rmtree(dir_p)
         else:
             print("##########################################")
             print("")
-            print(str(dir_p) + ' already exists')
+            print(str(dir_p) + " already exists")
             return
 
-    if False: #arr.nbytes < 8 * 1024 ** 3:
+    if False:  # arr.nbytes < 8 * 1024 ** 3:
         # if the array fits into memory
         # the direct call of the to_zarr method
         # is possible (allthough it seems to imply a compute()
@@ -626,10 +690,10 @@ def batchwise_to_zarr(
         ncores = 32
         slices = batchSlices(arr.shape[-1], ncores)
         print("result shape:", arr.shape)
-#        print(629, slices)
-#        for s in slices: 
-        from tqdm import tqdm # Holger
-        for s in tqdm(slices): # Holger
+        #        print(629, slices)
+        #        for s in slices:
+
+        for s in tqdm(slices):  # Holger
             z[..., s] = arr[..., s].compute()
 
 
@@ -639,22 +703,23 @@ def cable_dask_array_dict(dirpath_str):
     var_dict = {p.name: dask.array.from_zarr(str(p)) for p in paths}
     return var_dict
 
+
 def load_or_make_cable_dask_array_dict(
-        cable_run_output_dir: Union[str,Path],
-        zarr_dir_path: Union[str,Path], 
-        rm: bool=False,
-        batch_size: int=16
-    ):
+    cable_run_output_dir: Union[str, Path],
+    zarr_dir_path: Union[str, Path],
+    rm: bool = False,
+    batch_size: int = 16,
+):
     ds = cable_ds(cable_run_output_dir)
 
-    if  not zarr_dir_path.exists():
+    if not zarr_dir_path.exists():
         zarr_dir_path.mkdir()
 
     for var_name, v in ds.variables.items():
         sub_dir_path = zarr_dir_path.joinpath(var_name)
         zarr_dir_name = str(sub_dir_path)
         arr = dask.array.asarray(v.data)
-        batchwise_to_zarr(arr, zarr_dir_name,rm=rm,batch_size=batch_size)
+        batchwise_to_zarr(arr, zarr_dir_name, rm=rm, batch_size=batch_size)
 
     return cable_dask_array_dict(zarr_dir_path)
 
@@ -717,334 +782,295 @@ def valid_combies(nz, mat):
         )
     return mat_new
 
-def pool_age_density_val(
-        x0_c: np.ndarray,
-        times: np.ndarray,
-        age_bin_indices: np.ndarray, #integer
-        B_c: np.ndarray,
-        U_c: np.ndarray,
-        start_age_densities_of_x0_and_a: Callable[[np.ndarray,float],np.ndarray]
-    ):
-    # Note that the chunksize is supposed to be one
-    # We have only one startvector 
-    npools,_=x0_c.shape
-    it_max=len(times)
-    print(it_max)
-    x0=x0_c[:,0]#.reshape(9)
 
-    Bs=[B_c[i,:,:,0]+np.eye(9) for i in range(it_max)]
-    Us=[U_c[i,:,0] for i in range(it_max)]
-    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
+def pool_age_density_val(
+    x0_c: np.ndarray,
+    times: np.ndarray,
+    age_bin_indices: np.ndarray,  # integer
+    B_c: np.ndarray,
+    U_c: np.ndarray,
+    start_age_densities_of_x0_and_a: Callable[[np.ndarray, float], np.ndarray],
+):
+    # Note that the chunksize is supposed to be one
+    # We have only one startvector
+    npools, _ = x0_c.shape
+    it_max = len(times)
+    print(it_max)
+    x0 = x0_c[:, 0]  # .reshape(9)
+
+    Bs = [B_c[i, :, :, 0] + np.eye(9) for i in range(it_max)]
+    Us = [U_c[i, :, 0] for i in range(it_max)]
+    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs, Us)
+
     def start_age_densities(a):
-        return start_age_densities_of_x0_and_a(x0,a)
-    
-    start_age_densities_of_bin_index = \
-    hr.pool_wise_bin_densities_from_smooth_densities_and_index(
-        start_age_densities,
-        npools,
-        dmr.dt
+        return start_age_densities_of_x0_and_a(x0, a)
+
+    start_age_densities_of_bin_index = hr.pool_wise_bin_densities_from_smooth_densities_and_index(
+        start_age_densities, npools, dmr.dt
     )
 
-    # 
-    res=np.zeros((len(age_bin_indices),len(times),npools,1))
-    
+    #
+    res = np.zeros((len(age_bin_indices), len(times), npools, 1))
+
     p_dmr = dmr.pool_age_densities_func(start_age_densities_of_bin_index)
     pad = p_dmr(age_bin_indices)
-    res[:,1:,:,0]=pad
-    #sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
-    #return sol
+    res[:, 1:, :, 0] = pad
+    # sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+    # return sol
     return res
-
-
-
-
-
-
-
-
-
 
 
 def valid_trajectory(x0_c, times, B_c, U_c):
     # Note that the chunksize is supposed to be one
-    # We have only one startvector 
-    print('###########')
-    print(x0_c.shape ,type(x0_c))
+    # We have only one startvector
+    print("###########")
+    print(x0_c.shape, type(x0_c))
     print(times.shape)
-    #print(ages.shape)
+    # print(ages.shape)
     print(B_c.shape)
     print(U_c.shape)
-    it_max=len(times)
+    it_max = len(times)
     print(it_max)
-    x0=x0_c[:,0]#.reshape(9)
-    Bs=[B_c[i,:,:,0]+np.eye(9) for i in range(it_max)]
-    Us=[U_c[i,:,0] for i in range(it_max)]
-#    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
-#    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
-    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1]) # Holger
-    sol=dmr.solve().reshape(U_c.shape) # Holger
+    x0 = x0_c[:, 0]  # .reshape(9)
+    Bs = [B_c[i, :, :, 0] + np.eye(9) for i in range(it_max)]
+    Us = [U_c[i, :, 0] for i in range(it_max)]
+    #    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
+    #    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1])  # Holger
+    sol = dmr.solve().reshape(U_c.shape)  # Holger
     return sol
 
 
 def aggregate_xs(xs, nr_days):
     # Note that the chunksize is supposed to be one
-    # We have only one startvector 
-    print('###########')
-    print(x0_c.shape ,type(x0_c))
+    # We have only one startvector
+    print("###########")
+    print(x0_c.shape, type(x0_c))
     print(times.shape)
-    #print(ages.shape)
+    # print(ages.shape)
     print(B_c.shape)
     print(U_c.shape)
-    it_max=len(times)
+    it_max = len(times)
     print(it_max)
-    x0=x0_c[:,0]#.reshape(9)
-    Bs=[B_c[i,:,:,0]+np.eye(9) for i in range(it_max)]
-    Us=[U_c[i,:,0] for i in range(it_max)]
-#    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
-#    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
-    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1]) # Holger
-    sol=dmr.solve().reshape(U_c.shape) # Holger
+    x0 = x0_c[:, 0]  # .reshape(9)
+    Bs = [B_c[i, :, :, 0] + np.eye(9) for i in range(it_max)]
+    Us = [U_c[i, :, 0] for i in range(it_max)]
+    #    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
+    #    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1])  # Holger
+    sol = dmr.solve().reshape(U_c.shape)  # Holger
     return sol
-
 
 
 # fixme mm 12-18-2020
 # this function should not be necessarry any more
-def load_or_make_B_u_x0_from_zarr(
-        out_path,
-        zarr_sub_dir_name,
-        rm=False,
-        batch_size: int=16
-    ):
-    zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
-    print(798, zarr_dir_path)
-    names = ("B","u","x0")
-    sub_dir_paths = [
-#        zarr_dir_path.joinpath(name) for name in val_names
-        zarr_dir_path.joinpath(name) for name in names # Holger
-    ]
-    print(804, sub_dir_paths)
-    if all((p.exists() for p in sub_dir_paths)):
-        B,u,x0 = (
-            dask.array.from_zarr(str(p))
-            for p in sub_dir_paths
-        )
-        print(810)
-        return B,u,x0
+# fixme 6-30-2021
+# deprecated dont use
+#def load_or_make_B_u_x0_from_zarr(
+#    out_path, zarr_sub_dir_name, rm=False, batch_size: int = 16
+#):
+#    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
+#    print(798, zarr_dir_path)
+#    names = ("B", "u", "x0")
+#    sub_dir_paths = [
+#        #        zarr_dir_path.joinpath(name) for name in val_names
+#        zarr_dir_path.joinpath(name)
+#        for name in names  # Holger
+#    ]
+#    print(804, sub_dir_paths)
+#    if all((p.exists() for p in sub_dir_paths)):
+#        B, u, x0 = (dask.array.from_zarr(str(p)) for p in sub_dir_paths)
+#        print(810)
+#        return B, u, x0
+#
+#    else:
+#        print(813)
+#        #        B,u,x0 = reconstruct_B_u_x0_from_zarr(out_dir)
+#        B, u, x0 = reconstruct_B_u_x0_from_zarr(out_path)  # Holger
+#
+#        #        for tup in zip((B,u_,x0),names):
+#        for tup in zip((B, u, x0), names):  # Holger
+#            arr, name = tup
+#            sl = slice(0, None)  # Holger
+#            #            suffix = "_Holger" # Holger
+#            #            suffix = '_slice_' + str(sl.start) + '_' + str(sl.stop) # Holger
+#            print(824)
+#            suffix = ""  # Holger
+#            batchwise_to_zarr(
+#                arr[..., sl],
+#                str(zarr_dir_path.joinpath(name + suffix)),
+#                rm=rm,
+#                batch_size=batch_size,
+#            )
+#        # redefine as based on the just written zarr array
+#        # which is faster (due to better chunking)
+#        # than the delayed object
+#        # from which the zarr arrays are created
+#        return load_or_make_B_u_x0_from_zarr(out_path, zarr_sub_dir_name)
+#
+## fixme mm
+## this function is replaced by a
+## deprecated
+#def load_or_make_valid_B_u_x0(
+#    out_path: Path,
+#    zarr_sub_dir_name: str,
+#    names: List[str] = ["B_val", "u_val", "x0_val"],
+#    rm: bool = False,
+#    batch_size: int = 16,
+#) -> Tuple[dask.array.core.Array]:
+#
+#    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
+#    sub_dir_paths = [zarr_dir_path.joinpath(name) for name in names]
+#
+#    if all((p.exists() for p in sub_dir_paths)):
+#        B_val, u_val, x0_val = (dask.array.from_zarr(str(p)) for p in sub_dir_paths)
+#        print("loaded")
+#        return B_val, u_val, x0_val
+#
+#    else:
+#        print(867)
+#        syds = single_year_ds(out_path.joinpath("out_ncar_1901_ndep.nc"))
+#        tk = "_FillValue"
+#        ifv = syds.iveg.attrs[tk]
+#        ffv = syds.Cplant.attrs[tk]
+#        dad = cable_dask_array_dict(zarr_dir_path)
+#
+#        iveg = dad["iveg"]
+#        B, u, x0 = load_or_make_B_u_x0_from_zarr(out_path, zarr_sub_dir_name)
+#        cond_1 = (iveg != ifv).compute()
+#        cond_2 = (dad["Csoil"][0, 0, :, :] != 0).compute()
+#        nz = dask.array.nonzero(cond_1 * cond_2)
+#
+#        B_val, u_val, x0_val = (valid_combies_parallel(nz, arr) for arr in (B, u, x0))
+#        print(887)
+#        for tup in zip([B_val, u_val, x0_val], sub_dir_paths):
+#            arr, p = tup
+#            batchwise_to_zarr(arr, str(p), rm=rm)
+#        print(895)
+#        return load_or_make_valid_B_u_x0(
+#            out_path, zarr_sub_dir_name, names=names, rm=rm, batch_size=batch_size
+#        )
+#
+# deprecated
+#def load_or_make_valid_B_u_x0_slice(
+#    out_path: Path, zarr_sub_dir_name: str, sl: slice, rm=False, batch_size: int = 16
+#) -> Tuple[dask.array.core.Array]:
+#
+#    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
+#    suffix = "_slice_" + str(sl.start) + "_" + str(sl.stop)
+#    names = ["B_val", "u_val", "x0_val"]
+#    sub_dir_paths = [zarr_dir_path.joinpath(name + suffix) for name in names]
+#
+#    def load():
+#        B_val, u_val, x0_val = (dask.array.from_zarr(str(p)) for p in sub_dir_paths)
+#        print(922, "all exist")
+#        return B_val, u_val, x0_val
+#
+#    if all((p.exists() for p in sub_dir_paths)):
+#        return load()
+#
+#    else:
+#        syds = single_year_ds(out_path.joinpath("out_ncar_1901_ndep.nc"))
+#        tk = "_FillValue"
+#        ifv = syds.iveg.attrs[tk]
+#        ffv = syds.Cplant.attrs[tk]
+#        dad = cable_dask_array_dict(zarr_dir_path)
+#
+#        iveg = dad["iveg"]
+#        print(934)
+#        B, u, x0 = load_or_make_B_u_x0_from_zarr(out_path, zarr_sub_dir_name)
+#        cond_1 = (iveg != ifv).compute()
+#        cond_2 = (dad["Csoil"][0, 0, :, :] != 0).compute()
+#        nz = dask.array.nonzero(cond_1 * cond_2)
+#
+#        print(943)
+#        B_val, u_val, x0_val = (valid_combies_parallel(nz, arr) for arr in (B, u, x0))
+#
+#        print(949)
+#        for tup in zip([B_val, u_val, x0_val], sub_dir_paths):
+#            arr, p = tup
+#            print(952, sl, p)
+#            batchwise_to_zarr(arr[..., sl], str(p), rm=rm)
+#
+#        print(959)
+#        return load()
+#
+#
 
-    else:
-        print(813)
-#        B,u,x0 = reconstruct_B_u_x0_from_zarr(out_dir)
-        B,u,x0 = reconstruct_B_u_x0_from_zarr(out_path) # Holger
+# fixme mm 6-30-2021
+# never copy this function rather use parts
+def load_or_make_B_u_x(
+        dad: Dict,
+        ifv,
+        ffv,
+        zp: Path,
+        rm : bool = False
+):
+    B = cache(
+        zarr_dir_path=zp,
+        name='B',
+        arr=reconstruct_B(
+            ifv,
+            ffv,
+            dad["iveg"],
+            dad["kplant"],
+            dad["fromLeaftoL"],
+            dad["fromRoottoL"],
+            dad["fromWoodtoL"],
+            dad["fromMettoS"],
+            dad["fromStrtoS"],
+            dad["fromCWDtoS"],
+            dad["fromSOMtoSOM"],
+            dad["xktemp"],
+            dad["xkwater"],
+            dad["xkNlimiting"],
+        ),
+        rm=rm
+    )
+    u = cache(
+        zarr_dir_path=zp,
+        name='u',
+        arr=reconstruct_u( ifv, ffv, dad["iveg"], dad["NPP"], dad["fracCalloc"]),
+        rm=rm
+    )
+    
+    x = cache(
+        zarr_dir_path=zp,
+        name='x',
+        arr=reconstruct_x(
+            dad["Cplant"],
+            dad["Clitter"],
+            dad["Csoil"]
+        ),
+        rm=rm
+    )
+    return (B,u,x)
 
-#        for tup in zip((B,u_,x0),names):
-        for tup in zip((B,u,x0),names): # Holger
-            arr,name = tup
-            sl = slice(0, None) # Holger
-#            suffix = "_Holger" # Holger
-#            suffix = '_slice_' + str(sl.start) + '_' + str(sl.stop) # Holger
-            print(824)
-            suffix = "" # Holger
-            batchwise_to_zarr(
-                arr[..., sl],
-                str(
-                    zarr_dir_path.joinpath(
-                        name + suffix
-                    )
-                 ),
-                rm=rm,
-                batch_size=batch_size
-            )
-        # redefine as based on the just written zarr array
-        # which is faster (due to better chunking) 
-        # than the delayed object
-        # from which the zarr arrays are created
-        return load_or_make_B_u_x0_from_zarr(
-                     out_path,zarr_sub_dir_name
-               )
-
-
-def load_or_make_valid_cable_vars(
-        out_path: Path,
-        zarr_sub_dir_name: str,
-        names: List[str] = ['B_val', 'u_val', 'x0_val'],
-        rm: bool = False,
-        batch_size: int = 16
-)->Tuple[dask.array.core.Array]:
-
-    zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
-    sub_dir_paths = [
-        zarr_dir_path.joinpath(name) for name in names
-    ]
-    def load():
-        B_val,u_val,x0_val = (
-            dask.array.from_zarr(str(p))
-            for p in sub_dir_paths
-        )
-        print("loaded")
-        return B_val,u_val,x0_val
-
-    if all((p.exists() for p in sub_dir_paths)):
-        return load()
-
-    else:
-        # to investigate which fillvalue has been unse
-        syds=single_year_ds(
-            out_path.joinpath('out_ncar_1901_ndep.nc')
-        )
-        tk = '_FillValue'
-        ifv = syds.iveg.attrs[tk]
-        ffv = syds.Cplant.attrs[tk]
-        dad = cable_dask_array_dict(zarr_dir_path)
-
-        iveg = dad['iveg']
-        B, u, x0 = load_or_make_B_u_x0_from_zarr(
-            out_path,
-            zarr_sub_dir_name
-        )
-        cond_1 = (iveg != ifv).compute()
-        cond_2 = (dad['Csoil'][0, 0, :, :] != 0).compute()
-        nz = dask.array.nonzero(cond_1*cond_2)
-
-        B_val, u_val, x0_val = (
-            valid_combies_parallel(nz, arr)
-            for arr in (B, u, x0)
-        )
-        for tup in zip([B_val,u_val,x0_val],sub_dir_paths):
-            arr,p = tup
-            batchwise_to_zarr(
-                arr,
-                str(p),
-                rm=rm
-            )
-        return load()
-
-
-def load_or_make_valid_B_u_x0(
-        out_path: Path,
-        zarr_sub_dir_name: str,
-        names: List[str]=['B_val','u_val','x0_val'],
-        rm: bool=False,
-        batch_size: int=16
-)->Tuple[dask.array.core.Array]:
-
-    zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
-    sub_dir_paths = [
-        zarr_dir_path.joinpath(name) for name in names
-    ]
-
-    if all((p.exists() for p in sub_dir_paths)):
-        B_val,u_val,x0_val = (
-            dask.array.from_zarr(str(p))
-            for p in sub_dir_paths
-        )
-        print("loaded")
-        return B_val,u_val,x0_val
-
-    else:
-        print(867)
-        syds=single_year_ds(
-            out_path.joinpath('out_ncar_1901_ndep.nc')
-        )
-        tk='_FillValue'
-        ifv=syds.iveg.attrs[tk]
-        ffv=syds.Cplant.attrs[tk]
-        dad=cable_dask_array_dict(zarr_dir_path)
-
-        iveg = dad['iveg']
-        B, u, x0 = load_or_make_B_u_x0_from_zarr(
-            out_path,
-            zarr_sub_dir_name
-        )
-        cond_1=(iveg!=ifv).compute()
-        cond_2=(dad['Csoil'][0,0,:,:]!=0).compute()
-        nz = dask.array.nonzero(cond_1*cond_2)
-
-        B_val,u_val,x0_val=(
-            valid_combies_parallel(nz,arr)
-            for arr in (B,u,x0)
-        )
-        print(887)
-        for tup in zip([B_val,u_val,x0_val],sub_dir_paths):
-            arr,p = tup
-            batchwise_to_zarr(
-                arr,
-                str(p),
-                rm=rm
-            )
-        print(895)
-        return load_or_make_valid_B_u_x0(
-            out_path,
-            zarr_sub_dir_name,
-            names=names,
-            rm=rm,
-            batch_size=batch_size
-        )
-
-def load_or_make_valid_B_u_x0_slice(
-        out_path: Path,
-        zarr_sub_dir_name: str,
-        sl: slice,
-        rm=False,
-        batch_size: int=16
-)->Tuple[dask.array.core.Array]:
-
-    zarr_dir_path= out_path.joinpath(zarr_sub_dir_name)
-    suffix = '_slice_' + str(sl.start) + '_' + str(sl.stop)
-    names= ['B_val','u_val','x0_val']
-    sub_dir_paths = [
-        zarr_dir_path.joinpath(name + suffix) for name in names
-    ]
-
-    if all((p.exists() for p in sub_dir_paths)):
-        B_val,u_val,x0_val = (
-            dask.array.from_zarr(str(p))
-            for p in sub_dir_paths
-        )
-        print(922, "all exist")
-        return B_val,u_val,x0_val
-
-    else:
-        syds=single_year_ds(
-            out_path.joinpath('out_ncar_1901_ndep.nc')
-        )
-        tk='_FillValue'
-        ifv=syds.iveg.attrs[tk]
-        ffv=syds.Cplant.attrs[tk]
-        dad=cable_dask_array_dict(zarr_dir_path)
-
-        iveg = dad['iveg']
-        print(934)
-        B, u, x0 = load_or_make_B_u_x0_from_zarr(
-            out_path,
-            zarr_sub_dir_name
-        )
-        cond_1=(iveg!=ifv).compute()
-        cond_2=(dad['Csoil'][0,0,:,:]!=0).compute()
-        nz = dask.array.nonzero(cond_1*cond_2)
-
-        print(943)
-        B_val,u_val,x0_val=(
-            valid_combies_parallel(nz,arr)
-            for arr in (B,u,x0)
-        )
-
-        print(949)
-        for tup in zip([B_val,u_val,x0_val],sub_dir_paths):
-            arr, p = tup
-            print(952, sl, p)
-            batchwise_to_zarr(
-                arr[..., sl],
-                str(p),
-                rm=rm
-            )
-
-        print(959)
-        return load_or_make_valid_B_u_x0(
-            out_path,
-            zarr_sub_dir_name,
-            names,
-            rm=rm,
-            batch_size=batch_size
-        )
+def load_or_make_valid_B_u_x(
+    B,
+    u,
+    x,
+    nz,
+    sl: slice = slice(None,None,None),
+    vcsp: Path,
+    rm: bool = False
+):    
+    B_val = cache(
+        zarr_dir_path=vcsp,
+        name='B',
+        arr=valid_combies_parallel(nz, B)[...,sl], 
+        rm=rm
+    )
+    u_val = cache(
+        zarr_dir_path=vcsp,
+        name='u',
+        arr=valid_combies_parallel(nz, u)[...,sl],
+        rm=rm
+    )
+    x_val = cache(
+        zarr_dir_path=vcsp,
+        name='x',
+        arr=valid_combies_parallel(nz, x)[...,sl],
+        rm=rm
+    )
 
