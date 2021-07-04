@@ -14,6 +14,12 @@ from typing import Callable, Tuple, List, Union, Dict
 # fixme mm 10-14-2020
 # This module contains hardcoded paths which will ultimately have to go.
 
+import inspect
+
+def whoami(): 
+    frame = inspect.currentframe()
+    return inspect.getframeinfo(frame).function
+
 
 def cable_ds(out_dir_path, first_yr=1901, last_yr=2004):
     """This version of the dataset leaves the fillvalues in place
@@ -294,6 +300,7 @@ def cache(
     name: str,
     arr: dask.array,
     rm: bool = False,
+    batch_size: int = 1
 ):
     ''' 
     A wrapper to laod the desired result from a cache dir or
@@ -301,7 +308,12 @@ def cache(
     '''
     zarr_dir_path.mkdir(exist_ok=True,parents=True)
     sub_dir_path = zarr_dir_path.joinpath(name)
-    batchwise_to_zarr(arr, str(sub_dir_path), rm=rm)  # will do nothing if rm is False
+    batchwise_to_zarr(
+        arr,
+        str(sub_dir_path),
+        rm=rm,
+        batch_size=batch_size
+    )  # will do nothing if rm is False
     return dask.array.from_zarr(str(sub_dir_path))
 
 
@@ -642,24 +654,24 @@ def reconstruct_u(ifv, ffv, iveg, NPP, fracCalloc) -> dask.array.core.Array:
     return I_temp.map_blocks(init_I_chunk, NPP, fracCalloc, dtype=np.float64)
 
 
-def write_vars_as_zarr(ds: xr.Dataset, dir_name: str, batch_size: int = 16):
-    dir_p = Path(dir_name)
-
-    dir_p.mkdir(parents=True, exist_ok=True)
-
-    for var_name, v in ds.variables.items():
-        zarr_dir_path = dir_p.joinpath(var_name)
-        zarr_dir_name = str(zarr_dir_path)
-        if not (zarr_dir_path.exists()):
-            arr = dask.array.asarray(v.data)
-            batchwise_to_zarr(arr, zarr_dir_name, batch_size)
+#def write_vars_as_zarr(ds: xr.Dataset, dir_name: str, batch_size: int = 16):
+#    dir_p = Path(dir_name)
+#
+#    dir_p.mkdir(parents=True, exist_ok=True)
+#
+#    for var_name, v in ds.variables.items():
+#        zarr_dir_path = dir_p.joinpath(var_name)
+#        zarr_dir_name = str(zarr_dir_path)
+#        if not (zarr_dir_path.exists()):
+#            arr = dask.array.asarray(v.data)
+#            batchwise_to_zarr(arr, zarr_dir_name, batch_size)
 
 
 def batchwise_to_zarr(
     arr: dask.array.core.Array,
     zarr_dir_name: str,
     rm: bool = False,
-    batch_size: int = 1,
+    batch_size: int = 1
 ):
     dir_p = Path(zarr_dir_name)
     if dir_p.exists():
@@ -687,8 +699,8 @@ def batchwise_to_zarr(
         # This takes longer but gives us control over the
         # memory usage
         z = zr.open(zarr_dir_name, mode="w", shape=arr.shape, chunks=arr.chunksize)
-        ncores = 32
-        slices = batchSlices(arr.shape[-1], ncores)
+        #ncores = 32
+        slices = batchSlices(arr.shape[-1], batch_size)
         print("result shape:", arr.shape)
         #        print(629, slices)
         #        for s in slices:
@@ -704,25 +716,45 @@ def cable_dask_array_dict(dirpath_str):
     return var_dict
 
 
-def load_or_make_cable_dask_array_dict(
-    cable_run_output_dir: Union[str, Path],
-    zarr_dir_path: Union[str, Path],
-    rm: bool = False,
-    batch_size: int = 16,
-):
-    ds = cable_ds(cable_run_output_dir)
-
-    if not zarr_dir_path.exists():
-        zarr_dir_path.mkdir()
-
-    for var_name, v in ds.variables.items():
-        sub_dir_path = zarr_dir_path.joinpath(var_name)
-        zarr_dir_name = str(sub_dir_path)
-        arr = dask.array.asarray(v.data)
-        batchwise_to_zarr(arr, zarr_dir_name, rm=rm, batch_size=batch_size)
-
-    return cable_dask_array_dict(zarr_dir_path)
-
+#def load_or_make_cable_dask_array_dict(
+#    cable_run_output_dir: Union[str, Path],
+#    zarr_dir_path: Union[str, Path],
+#    names: List[str] = [
+#		"iveg",
+#		"kplant",
+#		"fromLeaftoL",
+#		"fromRoottoL",
+#		"fromWoodtoL",
+#		"fromMettoS",
+#		"fromStrtoS",
+#		"fromCWDtoS",
+#		"fromSOMtoSOM",
+#		"xktemp",
+#		"xkwater",
+#		"xkNlimiting",
+#		"iveg",
+#		"NPP",
+#		"fracCalloc",
+#		"Cplant",
+#		"Clitter",
+#		"Csoil"
+#
+#    rm: bool = False,
+#    batch_size: int = 16,
+#):
+#    ds = cable_ds(cable_run_output_dir)
+#
+#    if not zarr_dir_path.exists():
+#        zarr_dir_path.mkdir()
+#
+#    for var_name, v in ds.variables.items():
+#        sub_dir_path = zarr_dir_path.joinpath(var_name)
+#        zarr_dir_name = str(sub_dir_path)
+#        arr = dask.array.asarray(v.data)
+#        batchwise_to_zarr(arr, zarr_dir_name, rm=rm, batch_size=batch_size)
+#
+#    return cable_dask_array_dict(zarr_dir_path)
+#
 
 def reform(combi):
     return combi.map_blocks(
@@ -1003,12 +1035,14 @@ def load_or_make_B_u_x(
         dad: Dict,
         ifv,
         ffv,
-        zp: Path,
-        rm : bool = False
+        zarr_dir_path: Path,
+        names: Tuple[str], 
+        rm : bool = False,
+        batch_size: int =1
 ):
     B = cache(
-        zarr_dir_path=zp,
-        name='B',
+        zarr_dir_path=zarr_dir_path,
+        name=names[0],
         arr=reconstruct_B(
             ifv,
             ffv,
@@ -1025,24 +1059,27 @@ def load_or_make_B_u_x(
             dad["xkwater"],
             dad["xkNlimiting"],
         ),
-        rm=rm
+        rm=rm,
+        batch_size=batch_size
     )
     u = cache(
-        zarr_dir_path=zp,
-        name='u',
+        zarr_dir_path=zarr_dir_path,
+        name=names[1],
         arr=reconstruct_u( ifv, ffv, dad["iveg"], dad["NPP"], dad["fracCalloc"]),
-        rm=rm
+        rm=rm,
+        batch_size=batch_size
     )
     
     x = cache(
-        zarr_dir_path=zp,
-        name='x',
+        zarr_dir_path=zarr_dir_path,
+        name=names[2],
         arr=reconstruct_x(
             dad["Cplant"],
             dad["Clitter"],
             dad["Csoil"]
         ),
-        rm=rm
+        rm=rm,
+        batch_size=batch_size
     )
     return (B,u,x)
 
@@ -1051,26 +1088,32 @@ def load_or_make_valid_B_u_x(
     u,
     x,
     nz,
-    sl: slice = slice(None,None,None),
     vcsp: Path,
-    rm: bool = False
+    names: Tuple[str], 
+    sl: slice = slice(None,None,None),
+    rm: bool = False,
+    batch_size: int =1
 ):    
     B_val = cache(
         zarr_dir_path=vcsp,
-        name='B',
+        name=names[0],
         arr=valid_combies_parallel(nz, B)[...,sl], 
-        rm=rm
+        rm=rm,
+        batch_size=batch_size
     )
     u_val = cache(
         zarr_dir_path=vcsp,
-        name='u',
+        name=names[1],
         arr=valid_combies_parallel(nz, u)[...,sl],
-        rm=rm
+        rm=rm,
+        batch_size=batch_size
     )
     x_val = cache(
         zarr_dir_path=vcsp,
-        name='x',
+        name=names[2],
         arr=valid_combies_parallel(nz, x)[...,sl],
-        rm=rm
+        rm=rm,
+        batch_size=batch_size
     )
+    return (B_val, u_val, x_val)
 
