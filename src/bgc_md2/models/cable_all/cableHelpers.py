@@ -10,6 +10,7 @@ import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from bgc_md2.helper import batchSlices
 from typing import Callable, Tuple, List, Union, Dict
+from copy import copy, deepcopy
 
 # fixme mm 10-14-2020
 # This module contains hardcoded paths which will ultimately have to go.
@@ -1117,3 +1118,63 @@ def load_or_make_valid_B_u_x(
     )
     return (B_val, u_val, x_val)
 
+
+def module_functions(cmod):
+    def pred(a):
+        return inspect.isfunction(a) or isinstance(a,_lru_cache_wrapper)
+    return frozenset(
+        [
+            getattr(cmod, c)
+            for c in cmod.__dir__()
+            if pred(getattr(cmod, c))
+        ]
+    )
+
+def cacheWrapper(func,cable_out_path, zarr_cache_path):
+    name = func.__name__
+    sub_dir_path = zarr_cache_path.joinpath(name)
+    if sub_dir_path.exists():
+        return dask.array.from_zarr(str(sub_dir_path))
+    else:
+        arr = func(cable_out_path, zarr_cache_path)
+        batchwise_to_zarr(
+            arr,
+            str(sub_dir_path)
+            # rm=rm,
+            # batch_size=batch_size
+        )   # will do nothing if rm is False
+    return arr
+
+def fromCachedArgsMaker(org_func,cmod):
+    """This function takes an original function from module cmod.  org_func
+    does not look up the cache neither for its own value nor for its arguments
+    The function  returned by this function does:
+    - look up its arguments in the cache 
+    - and is compatible to be called in cacheWrapper to be cached itself 
+    """
+    
+    s = inspect.signature(org_func)
+    arg_names = [ name for name in s.parameters.keys()]  
+    if arg_names == ['cable_out_path']:
+        # non recursive edge case:
+        # we have a variable that we can compute directly,:
+        # to use the cache_wrapper we create a function that takes the two arguments
+        def cachable(cable_out_path, zarr_dir_path):
+            return org_func(cable_out_path)
+
+
+    else:
+        print("##################")
+        print(arg_names)
+        arg_funcs = [getattr(cmod,name) for name in arg_names] 
+        funcs = [fromCachedArgsMaker(f,cmod) for f in arg_funcs]
+
+        def cachable(cable_out_path, zarr_cache_path):
+            def get_res(func):
+                return cacheWrapper(func, cable_out_path, zarr_cache_path)
+
+            ress = map(get_res, funcs)
+            return org_func(*ress)
+
+    cachable.__name__ = org_func.__name__
+    return cachable
