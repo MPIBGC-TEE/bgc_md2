@@ -678,12 +678,10 @@ def batchwise_to_zarr(
     if dir_p.exists():
         if rm:
             print("##########################################")
-            print("")
             print("removing " + str(dir_p))
             shutil.rmtree(dir_p)
         else:
             print("##########################################")
-            print("")
             print(str(dir_p) + " already exists")
             return
 
@@ -1130,51 +1128,134 @@ def module_functions(cmod):
         ]
     )
 
-def cacheWrapper(func,cable_out_path, zarr_cache_path):
+def cacheWrapper(
+        func,cable_out_path: Path,
+        zarr_cache_path: Path,
+        rm: bool = False,
+        rec_rm: bool = False,
+        landpoint_slice: slice = slice(None,None,None),
+        batch_size : int = 1
+    ):
     name = func.__name__
     sub_dir_path = zarr_cache_path.joinpath(name)
-    if sub_dir_path.exists():
-        return dask.array.from_zarr(str(sub_dir_path))
-    else:
-        arr = func(cable_out_path, zarr_cache_path)
-        batchwise_to_zarr(
-            arr,
-            str(sub_dir_path)
-            # rm=rm,
-            # batch_size=batch_size
-        )   # will do nothing if rm is False
+    rm_pass = rm or rec_rm
+    arr = func(
+            cable_out_path,
+            zarr_cache_path,
+            rec_rm=rec_rm,
+            landpoint_slice=landpoint_slice,
+            batch_size=batch_size
+    )
+    batchwise_to_zarr(
+        arr,
+        str(sub_dir_path),
+        rm=rm_pass,
+        batch_size=batch_size
+    ) 
     return arr
 
-def fromCachedArgsMaker(org_func,cmod):
-    """This function takes an original function from module cmod.  org_func
-    does not look up the cache neither for its own value nor for its arguments
+def fromCachedArgsMaker(org_func, cmod):
+    """This function takes an original function org_func from module cmod. 
+    Function org_func does not look up the cache neither for its own value nor
+    for its arguments.
     The function  returned by this function does:
-    - look up its arguments in the cache 
-    - and is compatible to be called in cacheWrapper to be cached itself 
+    - look up its arguments in the cache
+    - and is compatible to be called in cacheWrapper to be cached itself
+    Note:
+    The functions in cmod have to follow the convention that
+    The names of the parameters in the signature are equal to the
+    function in cmod that computes them.
+    So:
+    def C(A,B):
+        ...
+    in cmod implies that there are 
+    functions wiht name A and B in cmod
     """
-    
+
     s = inspect.signature(org_func)
-    arg_names = [ name for name in s.parameters.keys()]  
-    if arg_names == ['cable_out_path']:
+    arg_names = frozenset([ name for name in s.parameters.keys()])  
+    if arg_names == frozenset(['cable_out_path','landpoint_slice']):
         # non recursive edge case:
         # we have a variable that we can compute directly,:
-        # to use the cache_wrapper we create a function that takes the two arguments
-        def cachable(cable_out_path, zarr_dir_path):
-            return org_func(cable_out_path)
-
+        # to use the cache_wrapper we create a function that takes 
+        # the arguments that cacheWrapper will use in its call
+        # but ingores them
+        def cachable(
+                cable_out_path,
+                zarr_dir_path,
+                rec_rm,
+                landpoint_slice,
+                batch_size
+            ):
+            return org_func(cable_out_path,landpoint_slice)
 
     else:
-        print("##################")
-        print(arg_names)
         arg_funcs = [getattr(cmod,name) for name in arg_names] 
         funcs = [fromCachedArgsMaker(f,cmod) for f in arg_funcs]
 
-        def cachable(cable_out_path, zarr_cache_path):
+        def cachable(
+                cable_out_path,
+                zarr_cache_path,
+                rec_rm,
+                landpoint_slice,
+                batch_size
+            ):
             def get_res(func):
-                return cacheWrapper(func, cable_out_path, zarr_cache_path)
+                return cacheWrapper(
+                    func,
+                    cable_out_path,
+                    zarr_cache_path,
+                    rec_rm=rec_rm,
+                    landpoint_slice=landpoint_slice,
+                    batch_size=batch_size
+                )
 
             ress = map(get_res, funcs)
             return org_func(*ress)
 
     cachable.__name__ = org_func.__name__
     return cachable
+
+
+def cachedFromCachedArgsMaker(org_func, cmod):
+    """This function takes an original function org_func from module cmod.
+    Function org_func does not look up the cache neither for its own value nor
+    for its arguments.
+    The function  returned by this function does:
+    - loos up its own value in the cache
+    - look up its arguments in the cache
+
+    It looks for its dependencies in cmod. 
+    
+    Note:
+    The functions in cmod have to follow the convention that
+    The names of the parameters in the signature are equal to the
+    function in cmod that computes them.
+    So:
+    def C(A,B):
+        ...
+    in cmod implies that there are 
+    functions wiht name A and B in cmod
+    """
+
+    cachable = fromCachedArgsMaker(org_func, cmod)
+
+    def cached(
+            cable_out_path,
+            zarr_cache_path,
+            rm=False,
+            rec_rm=False,
+            landpoint_slice: slice = slice(None,None,None),
+            batch_size=1
+        ):
+        return cacheWrapper(
+                cachable,
+                cable_out_path,
+                zarr_cache_path,
+                rm=rm,
+                rec_rm=rec_rm,
+                landpoint_slice=landpoint_slice,
+                batch_size=batch_size
+        )
+
+    return cached
