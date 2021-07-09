@@ -1,21 +1,22 @@
 import dask
 import shutil
+import inspect
 import xarray as xr
 import zarr as zr
+import numpy as np
 from tqdm import tqdm  # Holger
 from pathlib import Path
 from sympy import Symbol, var
-import numpy as np
 import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from bgc_md2.helper import batchSlices
 from typing import Callable, Tuple, List, Union, Dict
 from copy import copy, deepcopy
+from functools import _lru_cache_wrapper
 
 # fixme mm 10-14-2020
 # This module contains hardcoded paths which will ultimately have to go.
 
-import inspect
 
 def whoami(): 
     frame = inspect.currentframe()
@@ -1117,145 +1118,35 @@ def load_or_make_valid_B_u_x(
     return (B_val, u_val, x_val)
 
 
-def module_functions(cmod):
-    def pred(a):
-        return inspect.isfunction(a) or isinstance(a,_lru_cache_wrapper)
-    return frozenset(
-        [
-            getattr(cmod, c)
-            for c in cmod.__dir__()
-            if pred(getattr(cmod, c))
-        ]
-    )
+def val_or_default(
+        d: dict
+        ,key
+        ,default 
+    ):
+    return d[key] if key in d.keys() else default
 
 def cacheWrapper(
-        func,cable_out_path: Path,
-        zarr_cache_path: Path,
-        rm: bool = False,
-        rec_rm: bool = False,
-        landpoint_slice: slice = slice(None,None,None),
-        batch_size : int = 1
+        cachable_func,
+        **kwargs
     ):
-    name = func.__name__
+    zarr_cache_path = kwargs['zarr_cache_path']
+    name = cachable_func.__name__
     sub_dir_path = zarr_cache_path.joinpath(name)
+
+    rm = val_or_default(kwargs,'rm',False) 
+    rec_rm = val_or_default(kwargs,'rec_rm',False) 
     rm_pass = rm or rec_rm
-    arr = func(
-            cable_out_path,
-            zarr_cache_path,
-            rec_rm=rec_rm,
-            landpoint_slice=landpoint_slice,
-            batch_size=batch_size
-    )
-    batchwise_to_zarr(
-        arr,
-        str(sub_dir_path),
-        rm=rm_pass,
-        batch_size=batch_size
-    ) 
-    return arr
-
-def fromCachedArgsMaker(org_func, cmod):
-    """This function takes an original function org_func from module cmod. 
-    Function org_func does not look up the cache neither for its own value nor
-    for its arguments.
-    The function  returned by this function does:
-    - look up its arguments in the cache
-    - and is compatible to be called in cacheWrapper to be cached itself
-    Note:
-    The functions in cmod have to follow the convention that
-    The names of the parameters in the signature are equal to the
-    function in cmod that computes them.
-    So:
-    def C(A,B):
-        ...
-    in cmod implies that there are 
-    functions wiht name A and B in cmod
-    """
-
-    s = inspect.signature(org_func)
-    arg_names = frozenset([ name for name in s.parameters.keys()])  
-    if arg_names == frozenset(['cable_out_path','landpoint_slice']):
-        # non recursive edge case:
-        # we have a variable that we can compute directly,:
-        # to use the cache_wrapper we create a function that takes 
-        # the arguments that cacheWrapper will use in its call
-        # but ingores them
-        def cachable(
-                cable_out_path,
-                zarr_dir_path,
-                rec_rm,
-                landpoint_slice,
-                batch_size
-            ):
-            return org_func(cable_out_path,landpoint_slice)
-
-    else:
-        arg_funcs = [getattr(cmod,name) for name in arg_names] 
-        funcs = [fromCachedArgsMaker(f,cmod) for f in arg_funcs]
-
-        def cachable(
-                cable_out_path,
-                zarr_cache_path,
-                rec_rm,
-                landpoint_slice,
-                batch_size
-            ):
-            def get_res(func):
-                return cacheWrapper(
-                    func,
-                    cable_out_path,
-                    zarr_cache_path,
-                    rec_rm=rec_rm,
-                    landpoint_slice=landpoint_slice,
-                    batch_size=batch_size
-                )
-
-            ress = map(get_res, funcs)
-            return org_func(*ress)
-
-    cachable.__name__ = org_func.__name__
-    return cachable
-
-
-def cachedFromCachedArgsMaker(org_func, cmod):
-    """This function takes an original function org_func from module cmod.
-    Function org_func does not look up the cache neither for its own value nor
-    for its arguments.
-    The function  returned by this function does:
-    - loos up its own value in the cache
-    - look up its arguments in the cache
-
-    It looks for its dependencies in cmod. 
-    
-    Note:
-    The functions in cmod have to follow the convention that
-    The names of the parameters in the signature are equal to the
-    function in cmod that computes them.
-    So:
-    def C(A,B):
-        ...
-    in cmod implies that there are 
-    functions wiht name A and B in cmod
-    """
-
-    cachable = fromCachedArgsMaker(org_func, cmod)
-
-    def cached(
-            cable_out_path,
-            zarr_cache_path,
-            rm=False,
-            rec_rm=False,
-            landpoint_slice: slice = slice(None,None,None),
-            batch_size=1
-        ):
-        return cacheWrapper(
-                cachable,
-                cable_out_path,
-                zarr_cache_path,
-                rm=rm,
-                rec_rm=rec_rm,
-                landpoint_slice=landpoint_slice,
-                batch_size=batch_size
-        )
-
-    return cached
+    batch_size_pass = val_or_default(kwargs,'batch_size',1) 
+    # remove the rm flag since from the passed on kwargs
+    # since we only want it to take effect on the highest level
+    # which is here
+    rec_kw_args={k:v for k,v in kwargs.items() if k != 'rm'}
+    res = cachable_func(**rec_kw_args)
+    if isinstance(res,dask.array.core.Array):
+        batchwise_to_zarr(
+            res,
+            str(sub_dir_path),
+            rm=rm_pass,
+            batch_size=batch_size_pass
+        ) 
+    return res 

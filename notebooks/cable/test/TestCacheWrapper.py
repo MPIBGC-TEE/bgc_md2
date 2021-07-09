@@ -1,95 +1,85 @@
 import dask.array
 from pathlib import Path
+from testinfrastructure.InDirTest import InDirTest
 
 from bgc_md2.models.cable_all.cableHelpers import (
         cacheWrapper,
-        fromCachedArgsMaker,
-        cachedFromCachedArgsMaker
+        val_or_default
 )
-from TestCache import TestCache, time_dict
+#from TestCache import TestCache, time_dict
 
 ###################################################################
 # Example fucntions
-# These will be created automatically later
+# These could be created automatically later
 # from simpler functions that do not contain
 # cache specific arguments but this is how they look like
 # if created manually.
-# It becomes also obvious that the necessity to pass through
-# arguments is error prone and obscures the actual computation
+
 
 def A_from_raw(
         cable_out_path,
-        zarr_cache_path, # ignored, but has to be present for the caller
-        rec_rm: bool,   # ignored, but has to be present for the caller
-        landpoint_slice: slice = slice(None,None,None), 
-        batch_size: int = 1  # ignored, but has to be present for the caller
-):
-    # Example for a variable that does not depend on other cached vars but
+        landpoint_slice=slice(None,None,None),
+        **kwargs
+    ):
+    # Example for a cached variable that does not depend on other cached vars but
     # only on the original dataset which is hardcoded like 'iveg' or 'Cplant'
-    raw_data = dask.array.from_zarr('raw_data')[...,landpoint_slice,:]
+    url = str(cable_out_path.joinpath('raw_data'))
+    raw_data = dask.array.from_zarr(url)[..., landpoint_slice, :]
     A = dask.array.add(raw_data, raw_data)
     return A
 
 
 def B_from_raw(
-        cable_out_path,
-        zarr_cache_path, # ignored, but has to be present for the caller
-        rec_rm: bool,   # ignored, but has to be present for the caller
-        landpoint_slice: slice = slice(None, None, None), 
-        batch_size: int = 1 # ignored, but has to be present for the caller
-):
-
+        cable_out_path, 
+        landpoint_slice=slice(None,None,None),
+        **kwargs
+    ):
     # Example for a variable that does not depend on other cached vars but
     # only on the original dataset which is hardcoded like 'iveg' or 'Cplant'
-    raw_data = dask.array.from_zarr('raw_data')[...,landpoint_slice,:]
+    url = str(cable_out_path.joinpath('raw_data'))
+    raw_data = dask.array.from_zarr(url )[...,landpoint_slice,:]
     B = dask.array.add(raw_data, raw_data)
     return B
 
 
-def C_from_cached_args(
-        cable_out_path,
-        zarr_cache_path,
-        rec_rm: bool = False,
-        landpoint_slice: slice = slice(None,None,None),
-        batch_size: int = 1  # has to be passed through
-):
+def C_from_cached_args(**kwargs):
     # example for a dependent function
-    A = cacheWrapper(
-            A_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            rec_rm=rec_rm,
-            landpoint_slice=landpoint_slice,
-            batch_size=batch_size
-    )
-    B = cacheWrapper(
-            B_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            rec_rm=rec_rm,
-            landpoint_slice=landpoint_slice,
-            batch_size=batch_size
-        )
+    A = cacheWrapper(A_from_raw, **kwargs)
+    B = cacheWrapper(B_from_raw, **kwargs)
     return A+B
 
 
-def D_from_cached_args(
-    cable_out_path,
-    zarr_cache_path,
-    rec_rm: bool = False,  # has to be passed on
-    landpoint_slice: slice = slice(None, None, None),  # has to be passed on
-    batch_size: int = 1 # has to be passed on
-):
-    # example for an indirectly dependent function
-    C = cacheWrapper(
-            C_from_cached_args,
-            cable_out_path,
-            zarr_cache_path,
-            rec_rm=rec_rm,
-            landpoint_slice=landpoint_slice,
-            batch_size=batch_size
-    )
+def D_from_cached_args(**kwargs):
+    C = cacheWrapper(C_from_cached_args, **kwargs)
     return 5*C
+
+# helpers
+def time_dict(zarr_cache_path):
+    subPaths = zarr_cache_path.iterdir()
+    return {
+        p.name: (p.stat()).st_mtime
+        for p in subPaths
+    }
+
+class TestCache(InDirTest):
+    """helper class for the setUp method shared by all the childred classes"""
+    def setUp(self):
+        # simulate a cable data_set that we do not touch
+        # this is a placeholder for the fortran generated cable output dir
+
+        cable_out_path = Path(".").joinpath('org')
+        # create a file
+        cable_out_path.mkdir()
+        raw_data = dask.array.ones((3, 3, 100, 9))
+        dask.array.to_zarr(arr=raw_data, url=str(cable_out_path.joinpath('raw_data')))
+
+        # create a directory for the zarr files as cache for the computed
+        # variables
+        zarr_cache_path = Path(".").joinpath('cache')
+
+        self.cable_out_path = cable_out_path
+        self.zarr_cache_path = zarr_cache_path
+        self.raw_data = raw_data
 
 
 class TestCacheWrapper(TestCache):
@@ -100,11 +90,14 @@ class TestCacheWrapper(TestCache):
         raw_data = self.raw_data
 
         # compute variables directly from the original data
+        kwargs={
+            'cable_out_path': cable_out_path,
+            'zarr_cache_path': zarr_cache_path,
+            'batch_size': 32
+        }
         res_A = cacheWrapper(
             A_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            batch_size=32
+            **kwargs
         )
         self.assertTrue((res_A == 2 * raw_data).all().compute())
 
@@ -112,14 +105,12 @@ class TestCacheWrapper(TestCache):
         # with batchsize specified
         res_B = cacheWrapper(
             B_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            batch_size=32
+            **kwargs
         )
         self.assertTrue((res_B == 2 * raw_data).all().compute())
 
         # check if a zarr dir has been created
-        zarr_dirs = [f.name for f in zarr_cache_path.iterdir()]
+        zarr_dirs = [f.name for f in self.zarr_cache_path.iterdir()]
         for name in [
             'A_from_raw',
             'B_from_raw'
@@ -127,51 +118,58 @@ class TestCacheWrapper(TestCache):
             self.assertTrue(name in zarr_dirs)
     
     def test_root_sliced(self):
-        zarr_cache_path = self.zarr_cache_path
-        cable_out_path = self.cable_out_path
         raw_data = self.raw_data
 
         # compute variables directly from the original data
         landpoint_slice = slice(0,10)
+        kwargs={
+            'cable_out_path': self.cable_out_path,
+            'zarr_cache_path': self.zarr_cache_path,
+            'landpoint_slice': landpoint_slice
+        }
         raw_data_sliced = raw_data[...,landpoint_slice,:]
         res_A = cacheWrapper(
             A_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            landpoint_slice=landpoint_slice,
-            batch_size=32
+            **kwargs
         )
         self.assertTrue((res_A == 2 * raw_data_sliced).all().compute())
 
         # compute variables directly from the original data
         # with batchsize specified
+        kwargs={
+            'cable_out_path': self.cable_out_path,
+            'zarr_cache_path': self.zarr_cache_path,
+            'batch_size': 32,
+            'landpoint_slice': landpoint_slice,
+        }
         res_B = cacheWrapper(
             B_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            landpoint_slice=landpoint_slice,
-            batch_size=32
+            **kwargs
         )
         self.assertTrue((res_B == 2 * raw_data_sliced).all().compute())
-
+ 
         # check if a zarr dir has been created
-        zarr_dirs = [f.name for f in zarr_cache_path.iterdir()]
+        zarr_dirs = [f.name for f in self.zarr_cache_path.iterdir()]
         for name in [
             'A_from_raw',
             'B_from_raw'
         ]:
             self.assertTrue(name in zarr_dirs)
-
+ 
     def test_root_rm(self):
         zarr_cache_path = self.zarr_cache_path
         cable_out_path = self.cable_out_path
         raw_data = self.raw_data
+        kwargs={
+            'cable_out_path': cable_out_path,
+            'zarr_cache_path': zarr_cache_path,
+            'batch_size': 32
+        }
 
         # compute variables directly from the original data
         res_B = cacheWrapper(
             B_from_raw,
-            cable_out_path,
-            zarr_cache_path
+            **kwargs
         )
 
         # check the times the cache files have been touched
@@ -179,11 +177,10 @@ class TestCacheWrapper(TestCache):
         td_before = time_dict(zarr_cache_path)
 
         #now with rm flag
+        kwargs.update({'rm':True})
         res_B = cacheWrapper(
             B_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            rm=True
+            **kwargs
         )
         td_after_rm = time_dict(zarr_cache_path)
         key = 'B_from_raw'
@@ -194,12 +191,15 @@ class TestCacheWrapper(TestCache):
         zarr_cache_path = self.zarr_cache_path
         cable_out_path = self.cable_out_path
         raw_data = self.raw_data
+        kwargs={
+            'cable_out_path': cable_out_path,
+            'zarr_cache_path': zarr_cache_path
+        }
 
         # compute variables directly from the original data
         res_B = cacheWrapper(
             B_from_raw,
-            cable_out_path,
-            zarr_cache_path
+            **kwargs
         )
 
         # check the times the cache files have been touched
@@ -207,11 +207,10 @@ class TestCacheWrapper(TestCache):
 
         # now with rec_rm flag which in this case just implies rm
         # but has no other impact since there is no recursion
+        kwargs.update({'rec_rm':True})
         res_B = cacheWrapper(
             B_from_raw,
-            cable_out_path,
-            zarr_cache_path,
-            rec_rm=True
+            **kwargs
         )
         td_after_rm = time_dict(zarr_cache_path)
         key = 'B_from_raw'
@@ -223,12 +222,14 @@ class TestCacheWrapper(TestCache):
         zarr_cache_path = self.zarr_cache_path
         cable_out_path = self.cable_out_path
         raw_data = self.raw_data
+        kwargs = {
+            'cable_out_path': cable_out_path,
+            'zarr_cache_path': zarr_cache_path
+        }
 
-        # compute something that only
         res_D = cacheWrapper(
             D_from_cached_args,
-            cable_out_path,
-            zarr_cache_path
+            **kwargs
         )
         self.assertTrue((res_D == 20 * raw_data).all().compute())
 
@@ -246,8 +247,7 @@ class TestCacheWrapper(TestCache):
         td_before = time_dict(zarr_cache_path)
         res_D = cacheWrapper(
             D_from_cached_args,
-            cable_out_path,
-            zarr_cache_path
+            **kwargs
         )
 
         td_after = time_dict(zarr_cache_path)
@@ -258,11 +258,14 @@ class TestCacheWrapper(TestCache):
         cable_out_path = self.cable_out_path
         raw_data = self.raw_data
 
+        kwargs = {
+            'cable_out_path': cable_out_path,
+            'zarr_cache_path': zarr_cache_path
+        }
         # compute something that only
         res_D = cacheWrapper(
             D_from_cached_args,
-            cable_out_path,
-            zarr_cache_path
+            **kwargs
         )
         self.assertTrue((res_D == 20 * raw_data).all().compute())
 
@@ -270,11 +273,10 @@ class TestCacheWrapper(TestCache):
         # first show that they are untouched by the recent computation
         td_before = time_dict(zarr_cache_path)
         # now with rm flag
+        kwargs.update({'rm':True})
         res_D = cacheWrapper(
             D_from_cached_args,
-            cable_out_path,
-            zarr_cache_path,
-            rm=True
+            **kwargs
         )
         td_after_rm = time_dict(zarr_cache_path)
         # check that the newly created result is newer
@@ -293,12 +295,15 @@ class TestCacheWrapper(TestCache):
         zarr_cache_path = self.zarr_cache_path
         cable_out_path = self.cable_out_path
         raw_data = self.raw_data
+        kwargs = {
+            'cable_out_path': cable_out_path,
+            'zarr_cache_path': zarr_cache_path
+        }
 
         # compute something that only
         res_D = cacheWrapper(
             D_from_cached_args,
-            cable_out_path,
-            zarr_cache_path
+            **kwargs
         )
         self.assertTrue((res_D == 20 * raw_data).all().compute())
 
@@ -307,11 +312,10 @@ class TestCacheWrapper(TestCache):
         td_before = time_dict(zarr_cache_path)
 
         # now with rec_rm flag
+        kwargs.update({'rec_rm':True})
         res_D = cacheWrapper(
             D_from_cached_args,
-            cable_out_path,
-            zarr_cache_path,
-            rec_rm=True
+            **kwargs
         )
         # check that all dependencies have been recreated
         td_after_rec_rm = time_dict(zarr_cache_path)
