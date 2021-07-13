@@ -672,42 +672,30 @@ def reconstruct_u(ifv, ffv, iveg, NPP, fracCalloc) -> dask.array.core.Array:
 def batchwise_to_zarr(
     arr: dask.array.core.Array,
     zarr_dir_name: str,
-    rm: bool = False,
     batch_size: int = 1
 ):
+    in_p = Path(zarr_dir_name + '.in_progress')
     dir_p = Path(zarr_dir_name)
+
     if dir_p.exists():
-        if rm:
-            print("##########################################")
-            print("removing " + str(dir_p))
-            shutil.rmtree(dir_p)
-        else:
-            print("##########################################")
-            print(str(dir_p) + " already exists")
-            return
+        raise Exception("zarr cache directory: " + str(dir_p) + "already exists.") 
 
-    if False:  # arr.nbytes < 8 * 1024 ** 3:
-        # if the array fits into memory
-        # the direct call of the to_zarr method
-        # is possible (allthough it seems to imply a compute()
-        # for the whole array or at least a part that is too big
-        # to handle for bigger arrays
-        arr.to_zarr(zarr_dir_name)
-    else:
-        # if the array is bigger than memory we compute explicitly
-        # a part of it and write it to the zarr array.
-        # This takes longer but gives us control over the
-        # memory usage
-        z = zr.open(zarr_dir_name, mode="w", shape=arr.shape, chunks=arr.chunksize)
-        #ncores = 32
-        slices = batchSlices(arr.shape[-1], batch_size)
-        print("result shape:", arr.shape)
-        #        print(629, slices)
-        #        for s in slices:
+    if in_p.exists():  
+        #remove leftovers of previous attempts
+        print("removing unfiniched directory" + str(in_p))
+        shutil.rmtree(in_p)
 
-        for s in tqdm(slices):  # Holger
-            z[..., s] = arr[..., s].compute()
-
+    # We compute explicitly a part of the array  and write it to the zarr
+    # array.  This takes longer but gives us control over the memory usage
+    z = zr.open(str(in_p), mode="w", shape=arr.shape, chunks=arr.chunksize)
+    slices = batchSlices(arr.shape[-1], batch_size)
+    print("result shape:", arr.shape)
+    
+    for s in tqdm(slices):  # Holger
+             z[..., s] = arr[..., s].compute()
+    # after we have written everything we rename the directory to its p
+    # proper name
+    shutil.move(in_p,dir_p)
 
 def cable_dask_array_dict(dirpath_str):
     dir_p = Path(dirpath_str)
@@ -1119,16 +1107,17 @@ def load_or_make_valid_B_u_x(
 
 
 def val_or_default(
-        d: dict
-        ,key
-        ,default 
-    ):
+    d: dict,
+    key,
+    default
+):
     return d[key] if key in d.keys() else default
 
+
 def cacheWrapper(
-        cachable_func,
-        **kwargs
-    ):
+    cachable_func,
+    **kwargs
+):
     zarr_cache_path = kwargs['zarr_cache_path']
     name = cachable_func.__name__
     sub_dir_path = zarr_cache_path.joinpath(name)
@@ -1136,17 +1125,45 @@ def cacheWrapper(
     rm = val_or_default(kwargs,'rm',False) 
     rec_rm = val_or_default(kwargs,'rec_rm',False) 
     rm_pass = rm or rec_rm
-    batch_size_pass = val_or_default(kwargs,'batch_size',1) 
-    # remove the rm flag since from the passed on kwargs
-    # since we only want it to take effect on the highest level
-    # which is here
     rec_kw_args={k:v for k,v in kwargs.items() if k != 'rm'}
-    res = cachable_func(**rec_kw_args)
-    if isinstance(res,dask.array.core.Array):
-        batchwise_to_zarr(
-            res,
-            str(sub_dir_path),
-            rm=rm_pass,
-            batch_size=batch_size_pass
-        ) 
-    return res 
+    
+    def create_cache():
+        batch_size_pass = val_or_default(kwargs,'batch_size',1) 
+        res = cachable_func(**rec_kw_args)
+        # remove the rm flag since from the passed on kwargs
+        # since we only want it to take effect on the highest level
+        # which is here
+        if isinstance(res,dask.array.core.Array):
+            batchwise_to_zarr(
+                res,
+                str(sub_dir_path),
+                batch_size=batch_size_pass
+            )
+        return res
+
+    if sub_dir_path.exists():
+        if rm_pass:
+            print("##########################################")
+            print("removing " + str(sub_dir_path))
+            shutil.rmtree(sub_dir_path)
+            return create_cache()
+        else:
+            print("##########################################")
+            print("using existing zarr array "+ str(sub_dir_path))
+            return dask.array.from_zarr(str(sub_dir_path))
+        
+    else:
+        return create_cache()
+
+
+def get_integer_fill_value(
+        cable_data_set: xr.core.dataset.Dataset
+) -> int:
+    return cable_data_set['iveg'].attrs['_FillValue']
+
+
+def get_float_fill_value(
+        cable_data_set: xr.core.dataset.Dataset
+) -> float:
+    return cable_data_set['Cplant'].attrs['_FillValue']
+
