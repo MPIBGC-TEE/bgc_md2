@@ -1,4 +1,5 @@
 import dask.array
+from functools import reduce
 from . import cableHelpers as cH
 
 # iveg is not time dependent and so the function
@@ -170,13 +171,36 @@ def nz(**kwargs) -> dask.array.core.Array:
     res_ifv = cH.get_integer_fill_value(cable_data_set)
 
     res_iveg = cH.cacheWrapper(iveg, **kwargs)
-    res_Csoil = cH.cacheWrapper(Csoil, **kwargs)
-
+    res_x_org= cH.cacheWrapper(x_org, **kwargs)
+    n_pools = res_x_org.shape[1]
+    
+    # chose patch landpoint combinations where there is 
+    # vegetation
     cond_1 = (res_iveg != res_ifv).compute()
-    cond_2 = (res_Csoil[0, 0, :, :] != 0).compute()
+    
+    # chose patch landpoint combinations where the first
+    # soil pool is not empty at the start
+    # This is a bit arbitrary
+    # res_Csoil = cH.cacheWrapper(Csoil, **kwargs)
+    # cond_2 = (res_Csoil[0, 0, :, :] != 0).compute()
 
-    return dask.array.nonzero(cond_1 * cond_2)
+    # alternatively we could check all pools at the beginning
+    conds =[ (res_x_org[0, i, :, :] !=0).compute() for i in  range(n_pools) ]
+    # and ask them all to be nonepty
+    prod = reduce(lambda acc,el: acc*el,conds)
 
+    # or at least one of them
+    summ = reduce(lambda acc,el: acc+el,conds)
+    cond_2 = summ 
+    res = dask.array.nonzero(cond_1 * cond_2)
+    ps, lps = res
+    ps.compute_chunk_sizes()
+    lps.compute_chunk_sizes()
+    # we know the number of valid entries
+    l_new = len(ps)
+    if l_new == 0:
+        raise Exception("no valid combies found.")
+    return res
 
 def B_val(**kwargs) -> dask.array.core.Array:
     return cH.valid_combies_parallel(

@@ -48,7 +48,7 @@ def slice_dir_path(
     It is just a help for experimenting 
     """
     time_suff = "" if time_slice == slice(None, None, None) else "_time_" + slice_suffix(time_slice)
-    landpoint_suff = "" if landpoint_slice == slice(None, None, None) else "_landpoints_" + slice_suffix(time_slice)
+    landpoint_suff = "" if landpoint_slice == slice(None, None, None) else "_landpoints_" + slice_suffix(landpoint_slice)
     return cable_out_path.joinpath(sub_dir_trunk+time_suff+landpoint_suff)
 
 

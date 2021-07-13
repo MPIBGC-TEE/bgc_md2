@@ -761,6 +761,8 @@ def valid_combies_parallel(nz, mat):
 
     # we know the number of valid entries
     l_new = len(ps)
+    if l_new == 0:
+        raise Exception("no valid combies found.")
     # an so the shape of the new array.
     s_f = s[:-1][:-1]
     s_new = s_f + (l_new,)
