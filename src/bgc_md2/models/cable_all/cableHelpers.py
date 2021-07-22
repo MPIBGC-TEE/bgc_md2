@@ -127,7 +127,6 @@ def init_B_chunk(
     # numpy arrays elements can be assigned values, but dask arrays are immutable
     # and consequently can not be assigned values
     # Therefore we create the numpy variants of the chunks
-    print(121, bc.shape)
     bn = np.array(bc)
     # valid
 
@@ -682,7 +681,7 @@ def batchwise_to_zarr(
 
     if in_p.exists():  
         #remove leftovers of previous attempts
-        print("removing unfiniched directory" + str(in_p))
+        print("removing unfinished directory" + str(in_p))
         shutil.rmtree(in_p)
 
     # We compute explicitly a part of the array  and write it to the zarr

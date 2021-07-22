@@ -156,7 +156,7 @@ def u_org(**kwargs) -> dask.array.core.Array:
     res_ffv = cH.get_float_fill_value(cable_data_set)
 
 
-    return reconstruct_u(
+    return cH.reconstruct_u(
             res_ifv,
             res_ffv, 
     		cH.cacheWrapper(iveg, **kwargs),
@@ -232,7 +232,7 @@ def x0_val(**kwargs) -> dask.array.core.Array:
 
 def sol_val(**kwargs) -> dask.array.core.Array:
     res_x0_val = cH.cacheWrapper(x0_val, **kwargs)
-    res_times = cH.cacheWrapper(times_val, **kwargs)
+    res_times = cH.cacheWrapper(time, **kwargs)
     res_B_val = cH.cacheWrapper(B_val, **kwargs)
     res_u_val = cH.cacheWrapper(u_val, **kwargs)
 

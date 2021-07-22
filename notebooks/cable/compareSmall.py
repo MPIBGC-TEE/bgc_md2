@@ -10,7 +10,7 @@ if __name__ == '__main__':
     import dask.array
     from dask.distributed import LocalCluster,Client 
     if 'cluster' not in dir():
-        cluster = LocalCluster( n_workers=92)
+        cluster = LocalCluster()
 
     client = Client(cluster)
 
@@ -25,10 +25,10 @@ except ImportError as e:
 
 # chose the cable output directory you want to work with
 cable_out_path = Path('/home/data/cable-data/example_runs/parallel_1901_2004_with_spinup/output/new4')
-#time_slice=slice(0,1000)
-time_slice=slice(None,None,None)
-#landpoint_slice = slice(0,2028)
-landpoint_slice = slice(None,None)
+time_slice=slice(0,2000)
+#time_slice=slice(None,None,None)
+landpoint_slice = slice(0,2028)
+#landpoint_slice = slice(None,None)
 
 zarr_cache_path = cP.slice_dir_path(
     cable_out_path,
@@ -43,7 +43,7 @@ args={
     'zarr_cache_path': zarr_cache_path,
     'landpoint_slice': landpoint_slice,
     'time_slice': time_slice,
-    'batch_size': 128,
+    'batch_size': 32,
     #'rm': True
 }
 
