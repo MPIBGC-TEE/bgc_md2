@@ -81,6 +81,7 @@ class TestCableCache(InDirTest):
             cC.Clitter0,
             cC.Cplant0,
             cC.Csoil0,
+            cC.x0_org
         ]
         results = map(lambda func: cacheWrapper( func, **self.kwargs), funcs)
 

@@ -45,7 +45,7 @@ class MVarSet:
     # graph method (and would not implement the graph_method)
 
     def __init__(self, s):
-        self.provided_mvar_values=s
+        self.provided_mvar_values=frozenset(s)
 
 
 

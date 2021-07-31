@@ -18,14 +18,13 @@ from functools import _lru_cache_wrapper
 # This module contains hardcoded paths which will ultimately have to go.
 
 
-def whoami(): 
+def whoami():
     frame = inspect.currentframe()
     return inspect.getframeinfo(frame).function
 
 
 def cable_ds(out_dir_path, first_yr=1901, last_yr=2004):
-    """This version of the dataset leaves the fillvalues in place
-    """
+    """This version of the dataset leaves the fillvalues in place"""
     out_dir_path = Path(out_dir_path)
     fns = ["out_ncar_" + str(yr) + "_ndep.nc" for yr in range(first_yr, last_yr + 1)]
     ps = [out_dir_path.joinpath(fn) for fn in fns]
@@ -46,7 +45,8 @@ def cable_ds(out_dir_path, first_yr=1901, last_yr=2004):
         parallel=True,
     )
     dd = ds.dims
-    chunk_dict = {"time": dd["time"], "patch": dd["patch"], "land": 1}
+    # chunk_dict = {"time": dd["time"], "patch": dd["patch"], "land": 1}
+    chunk_dict = {"time": dd["time"], "patch": 1, "land": 1}
     # We can rechunk the whole dataset (or could have given a chunk argument to  xr.open_mfdataset)
     ds = ds.chunk(chunk_dict)
     return ds
@@ -80,17 +80,18 @@ def reconstruct__first_day_A(fn: str) -> np.ndarray:
     return A
 
 
-def single_year_ds(fn: str) -> xr.core.dataset.Dataset:
-    return xr.open_dataset(
-        fn,
-        # prevent the int32 iveg part to be automatically
-        mask_and_scale=False,
-        # translated to float32
-    )
+# def single_year_ds(fn: str) -> xr.core.dataset.Dataset:
+#    return xr.open_dataset(
+#        fn,
+#        # prevent the int32 iveg part to be automatically
+#        mask_and_scale=False,
+#        # translated to float32
+#    )
 
 
 def init_I_chunk(I, NPP, fracCalloc):
     # Input fluxes
+    # Note that we assumme compatible chunksizes
     # Note that there is an implicit ordering of state variables
     # (leaf,fine_root,wood,metabolic_lit,structural_lit,cwd,fast_soil,slow_soil,passive_soil)
 
@@ -269,8 +270,11 @@ def reconstruct_B(
     npool = 9
     ntime, _, npatch, nland = kplant.shape
     C_d = dask.array.from_array(
-        c_diag_from_iveg(np.array(iveg), ifv), chunks=(npool, npatch, 1)
+        # c_diag_from_iveg(np.array(iveg), ifv), chunks=(npool, npatch, 1)
+        c_diag_from_iveg(np.array(iveg), ifv),
+        chunks=(npool, 1, 1),
     )
+
     B_chunk = (ntime, npool, npool, npatch)
     B_shape = B_chunk + (nland,)
     B_temp = dask.array.where(
@@ -301,26 +305,22 @@ def cache(
     name: str,
     arr: dask.array,
     rm: bool = False,
-    batch_size: int = 1
+    batch_size: int = 1,
 ):
-    ''' 
+    """
     A wrapper to laod the desired result from a cache dir or
     compute it by calling the function with the given arguments
-    '''
-    zarr_dir_path.mkdir(exist_ok=True,parents=True)
+    """
+    zarr_dir_path.mkdir(exist_ok=True, parents=True)
     sub_dir_path = zarr_dir_path.joinpath(name)
     batchwise_to_zarr(
-        arr,
-        str(sub_dir_path),
-        rm=rm,
-        batch_size=batch_size
+        arr, str(sub_dir_path), rm=rm, batch_size=batch_size
     )  # will do nothing if rm is False
     return dask.array.from_zarr(str(sub_dir_path))
 
 
-
 # should be obsolete
-#def reconstruct_B_u_x0_from_zarr(out: str):
+# def reconstruct_B_u_x0_from_zarr(out: str):
 #    outpath = Path(out)
 #    # Allthough we will later use zarr arrays
 #    # we open one of the original netcdf output files
@@ -401,11 +401,8 @@ def cache(
 #    u_res = reconstruct_u(ifv, ffv, dad["iveg"], dad["NPP"], dad["fracCalloc"])
 #    return (B_res, u_res, X0)
 
-def reconstruct_x(
-    Cplant,
-    Clitter,
-    Csoil
-) -> dask.array:
+
+def reconstruct_x(Cplant, Clitter, Csoil) -> dask.array:
     # fixme mm:
     # obviosly the state variable tuple is fixed here
     # the reason that it is created here (and causes duplication)
@@ -414,10 +411,11 @@ def reconstruct_x(
     # and rely on the order of the state variables fixed.
     # actually the model description should get its variables from here
     npool = sum([var.shape[1] for var in [Cplant, Csoil, Clitter]])
+
     s = Cplant.shape
-    npatch = s[2]
-    nland = s[3]
     ntime = s[0]
+    npatch = s[-2]
+    nland = s[-1]
     for s in (
         "leaf",
         "wood",
@@ -442,7 +440,7 @@ def reconstruct_x(
         slow_soil,
         passive_soil,
     )
-    assert(npool == len(stateVariableTuple))
+    assert npool == len(stateVariableTuple)
     var_arr_dict = {
         leaf: Cplant[:, 0, :, :],
         fine_root: Cplant[:, 2, :, :],
@@ -455,22 +453,23 @@ def reconstruct_x(
         passive_soil: Csoil[:, 2, :, :],
     }
     X = dask.array.stack([var_arr_dict[var] for var in stateVariableTuple], 1).rechunk(
-        (ntime, npool, npatch, 1)
+        (ntime, npool, 1, 1)
     )
+
     return X
 
 
-def reconstruct_C(fn: str) -> np.ndarray:
-    ds = single_year_ds(fn)
-    ifv = ds.iveg.attrs["_FillValue"]
-    C_diag = reconstruct_C_diag(fn)
-    arr_shape = C_diag.shape
-    npool = arr_shape[0]
-    mat_shape = (npool,) + (arr_shape)
-    C = np.where(ds.iveg.data == ifv, np.nan, np.zeros(mat_shape, dtype="float32"))
-    for ipool in range(npool):
-        C[ipool, ipool, :, :] = C_diag[ipool, :, :]
-    return C
+# def reconstruct_C(fn: str) -> np.ndarray:
+#    ds = single_year_ds(fn)
+#    ifv = ds.iveg.attrs["_FillValue"]
+#    C_diag = reconstruct_C_diag(fn)
+#    arr_shape = C_diag.shape
+#    npool = arr_shape[0]
+#    mat_shape = (npool,) + (arr_shape)
+#    C = np.where(ds.iveg.data == ifv, np.nan, np.zeros(mat_shape, dtype="float32"))
+#    for ipool in range(npool):
+#        C[ipool, ipool, :, :] = C_diag[ipool, :, :]
+#    return C
 
 
 def c_diag_from_iveg(iveg_data: np.ndarray, ifv: np.int32) -> np.ndarray:
@@ -478,8 +477,8 @@ def c_diag_from_iveg(iveg_data: np.ndarray, ifv: np.int32) -> np.ndarray:
     `bgc_md2/src/bgc_md2/models/cable_all/cable_transit_time/postprocessing/scripts_org/mkinitialmatrix.ncl`
     The original algorithm supposedly unintentionally produces `inf` values
     where actually `NaN` are appropriate because no `iveg` value is available.
-    In the original script this happens by multiplying the (huge) fillValue and thereby 
-    causing an overflow.  
+    In the original script this happens by multiplying the (huge) fillValue and thereby
+    causing an overflow.
     This function implements the expected behaviour, where lookups with a non
     available index just return a nan for the looked up value.
     The function can also be called on a iveg_data_chunk
@@ -635,15 +634,16 @@ def c_diag_from_iveg(iveg_data: np.ndarray, ifv: np.int32) -> np.ndarray:
     return C
 
 
-def reconstruct_C_diag(fn: str) -> np.ndarray:
-    ds = single_year_ds(fn)
-    return c_diag_from_iveg(ds.iveg.data, ds.iveg.attrs["_FillValue"])
+# def reconstruct_C_diag(fn: str) -> np.ndarray:
+#    ds = single_year_ds(fn)
+#    return c_diag_from_iveg(ds.iveg.data, ds.iveg.attrs["_FillValue"])
 
 
 def reconstruct_u(ifv, ffv, iveg, NPP, fracCalloc) -> dask.array.core.Array:
     npool = 9
     ntime, npatch, nland = NPP.shape
-    I_chunk = (ntime, npool, npatch)
+    # I_chunk = (ntime, npool, npatch)
+    I_chunk = (ntime, npool, 1)
     I_shape = I_chunk + (nland,)
     I_temp = dask.array.where(
         dask.array.isnan(
@@ -655,7 +655,7 @@ def reconstruct_u(ifv, ffv, iveg, NPP, fracCalloc) -> dask.array.core.Array:
     return I_temp.map_blocks(init_I_chunk, NPP, fracCalloc, dtype=np.float64)
 
 
-#def write_vars_as_zarr(ds: xr.Dataset, dir_name: str, batch_size: int = 16):
+# def write_vars_as_zarr(ds: xr.Dataset, dir_name: str, batch_size: int = 16):
 #    dir_p = Path(dir_name)
 #
 #    dir_p.mkdir(parents=True, exist_ok=True)
@@ -669,32 +669,33 @@ def reconstruct_u(ifv, ffv, iveg, NPP, fracCalloc) -> dask.array.core.Array:
 
 
 def batchwise_to_zarr(
-    arr: dask.array.core.Array,
-    zarr_dir_name: str,
-    batch_size: int = 1
+    arr: dask.array.core.Array, zarr_dir_name: str, batch_size: int = 1
 ):
-    in_p = Path(zarr_dir_name + '.in_progress')
+    in_p = Path(zarr_dir_name + ".in_progress")
     dir_p = Path(zarr_dir_name)
 
     if dir_p.exists():
-        raise Exception("zarr cache directory: " + str(dir_p) + "already exists.") 
+        raise Exception("zarr cache directory: " + str(dir_p) + "already exists.")
 
-    if in_p.exists():  
-        #remove leftovers of previous attempts
+    if in_p.exists():
+        # remove leftovers of previous attempts
         print("removing unfinished directory" + str(in_p))
         shutil.rmtree(in_p)
 
     # We compute explicitly a part of the array  and write it to the zarr
     # array.  This takes longer but gives us control over the memory usage
-    z = zr.open(str(in_p), mode="w", shape=arr.shape, chunks=arr.chunksize)
+    z = zr.open(
+        str(in_p), mode="w", shape=arr.shape, chunks=arr.chunksize, dtype=arr.dtype
+    )
     slices = batchSlices(arr.shape[-1], batch_size)
     print("result shape:", arr.shape)
-    
+
     for s in tqdm(slices):  # Holger
-             z[..., s] = arr[..., s].compute()
+        z[..., s] = arr[..., s].compute()
     # after we have written everything we rename the directory to its p
     # proper name
-    shutil.move(in_p,dir_p)
+    shutil.move(in_p, dir_p)
+
 
 def cable_dask_array_dict(dirpath_str):
     dir_p = Path(dirpath_str)
@@ -703,32 +704,32 @@ def cable_dask_array_dict(dirpath_str):
     return var_dict
 
 
-#def load_or_make_cable_dask_array_dict(
+# def load_or_make_cable_dask_array_dict(
 #    cable_run_output_dir: Union[str, Path],
 #    zarr_dir_path: Union[str, Path],
 #    names: List[str] = [
-#		"iveg",
-#		"kplant",
-#		"fromLeaftoL",
-#		"fromRoottoL",
-#		"fromWoodtoL",
-#		"fromMettoS",
-#		"fromStrtoS",
-#		"fromCWDtoS",
-#		"fromSOMtoSOM",
-#		"xktemp",
-#		"xkwater",
-#		"xkNlimiting",
-#		"iveg",
-#		"NPP",
-#		"fracCalloc",
-#		"Cplant",
-#		"Clitter",
-#		"Csoil"
+# 		"iveg",
+# 		"kplant",
+# 		"fromLeaftoL",
+# 		"fromRoottoL",
+# 		"fromWoodtoL",
+# 		"fromMettoS",
+# 		"fromStrtoS",
+# 		"fromCWDtoS",
+# 		"fromSOMtoSOM",
+# 		"xktemp",
+# 		"xkwater",
+# 		"xkNlimiting",
+# 		"iveg",
+# 		"NPP",
+# 		"fracCalloc",
+# 		"Cplant",
+# 		"Clitter",
+# 		"Csoil"
 #
 #    rm: bool = False,
 #    batch_size: int = 16,
-#):
+# ):
 #    ds = cable_ds(cable_run_output_dir)
 #
 #    if not zarr_dir_path.exists():
@@ -743,6 +744,7 @@ def cable_dask_array_dict(dirpath_str):
 #    return cable_dask_array_dict(zarr_dir_path)
 #
 
+
 def reform(combi):
     return combi.map_blocks(
         lambda timeLine: np.expand_dims(timeLine, axis=-1), new_axis=len(combi.shape)
@@ -755,8 +757,12 @@ def valid_combies_parallel(nz, mat):
     ps, lps = nz
     ps.compute_chunk_sizes()
     lps.compute_chunk_sizes()
-    rps = ps.rechunk(1,)
-    rlps = lps.rechunk(1,)
+    rps = ps.rechunk(
+        1,
+    )
+    rlps = lps.rechunk(
+        1,
+    )
 
     # we know the number of valid entries
     l_new = len(ps)
@@ -826,8 +832,10 @@ def pool_age_density_val(
     def start_age_densities(a):
         return start_age_densities_of_x0_and_a(x0, a)
 
-    start_age_densities_of_bin_index = hr.pool_wise_bin_densities_from_smooth_densities_and_index(
-        start_age_densities, npools, dmr.dt
+    start_age_densities_of_bin_index = (
+        hr.pool_wise_bin_densities_from_smooth_densities_and_index(
+            start_age_densities, npools, dmr.dt
+        )
     )
 
     #
@@ -841,17 +849,24 @@ def pool_age_density_val(
     return res
 
 
+def trajectory_org(x0_c, times, B_c, U_c):
+    # Note that the chunksize is supposed to be 1,1
+    # We have only one startvector
+    it_max = len(times)
+    x0 = x0_c[:, 0, 0]  # .reshape(9)
+    Bs = [B_c[i, :, :, 0, 0] + np.eye(9) for i in range(it_max)]
+    Us = [U_c[i, :, 0, 0] for i in range(it_max)]
+    #    dmr = DMR.from_Bs_and_net_Us(x0,times,Bs,Us)
+    #    sol=dmr.solve()[:-1,:].reshape(U_c.shape) #remove the last value
+    dmr = DMR.from_Bs_and_net_Us(x0, times, Bs[:-1], Us[:-1])  # Holger
+    sol = dmr.solve().reshape(U_c.shape)  # Holger
+    return sol
+
+
 def valid_trajectory(x0_c, times, B_c, U_c):
     # Note that the chunksize is supposed to be one
     # We have only one startvector
-    print("###########")
-    print(x0_c.shape, type(x0_c))
-    print(times.shape)
-    # print(ages.shape)
-    print(B_c.shape)
-    print(U_c.shape)
     it_max = len(times)
-    print(it_max)
     x0 = x0_c[:, 0]  # .reshape(9)
     Bs = [B_c[i, :, :, 0] + np.eye(9) for i in range(it_max)]
     Us = [U_c[i, :, 0] for i in range(it_max)]
@@ -887,9 +902,9 @@ def aggregate_xs(xs, nr_days):
 # this function should not be necessarry any more
 # fixme 6-30-2021
 # deprecated dont use
-#def load_or_make_B_u_x0_from_zarr(
+# def load_or_make_B_u_x0_from_zarr(
 #    out_path, zarr_sub_dir_name, rm=False, batch_size: int = 16
-#):
+# ):
 #    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
 #    print(798, zarr_dir_path)
 #    names = ("B", "u", "x0")
@@ -932,13 +947,13 @@ def aggregate_xs(xs, nr_days):
 ## fixme mm
 ## this function is replaced by a
 ## deprecated
-#def load_or_make_valid_B_u_x0(
+# def load_or_make_valid_B_u_x0(
 #    out_path: Path,
 #    zarr_sub_dir_name: str,
 #    names: List[str] = ["B_val", "u_val", "x0_val"],
 #    rm: bool = False,
 #    batch_size: int = 16,
-#) -> Tuple[dask.array.core.Array]:
+# ) -> Tuple[dask.array.core.Array]:
 #
 #    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
 #    sub_dir_paths = [zarr_dir_path.joinpath(name) for name in names]
@@ -973,9 +988,9 @@ def aggregate_xs(xs, nr_days):
 #        )
 #
 # deprecated
-#def load_or_make_valid_B_u_x0_slice(
+# def load_or_make_valid_B_u_x0_slice(
 #    out_path: Path, zarr_sub_dir_name: str, sl: slice, rm=False, batch_size: int = 16
-#) -> Tuple[dask.array.core.Array]:
+# ) -> Tuple[dask.array.core.Array]:
 #
 #    zarr_dir_path = out_path.joinpath(zarr_sub_dir_name)
 #    suffix = "_slice_" + str(sl.start) + "_" + str(sl.stop)
@@ -1020,126 +1035,115 @@ def aggregate_xs(xs, nr_days):
 
 # fixme mm 6-30-2021
 # never copy this function rather use parts
-def load_or_make_B_u_x(
-        dad: Dict,
-        ifv,
-        ffv,
-        zarr_dir_path: Path,
-        names: Tuple[str], 
-        rm : bool = False,
-        batch_size: int =1
-):
-    B = cache(
-        zarr_dir_path=zarr_dir_path,
-        name=names[0],
-        arr=reconstruct_B(
-            ifv,
-            ffv,
-            dad["iveg"],
-            dad["kplant"],
-            dad["fromLeaftoL"],
-            dad["fromRoottoL"],
-            dad["fromWoodtoL"],
-            dad["fromMettoS"],
-            dad["fromStrtoS"],
-            dad["fromCWDtoS"],
-            dad["fromSOMtoSOM"],
-            dad["xktemp"],
-            dad["xkwater"],
-            dad["xkNlimiting"],
-        ),
-        rm=rm,
-        batch_size=batch_size
-    )
-    u = cache(
-        zarr_dir_path=zarr_dir_path,
-        name=names[1],
-        arr=reconstruct_u( ifv, ffv, dad["iveg"], dad["NPP"], dad["fracCalloc"]),
-        rm=rm,
-        batch_size=batch_size
-    )
-    
-    x = cache(
-        zarr_dir_path=zarr_dir_path,
-        name=names[2],
-        arr=reconstruct_x(
-            dad["Cplant"],
-            dad["Clitter"],
-            dad["Csoil"]
-        ),
-        rm=rm,
-        batch_size=batch_size
-    )
-    return (B,u,x)
+# def load_or_make_B_u_x(
+#        dad: Dict,
+#        ifv,
+#        ffv,
+#        zarr_dir_path: Path,
+#        names: Tuple[str],
+#        rm : bool = False,
+#        batch_size: int =1
+# ):
+#    B = cache(
+#        zarr_dir_path=zarr_dir_path,
+#        name=names[0],
+#        arr=reconstruct_B(
+#            ifv,
+#            ffv,
+#            dad["iveg"],
+#            dad["kplant"],
+#            dad["fromLeaftoL"],
+#            dad["fromRoottoL"],
+#            dad["fromWoodtoL"],
+#            dad["fromMettoS"],
+#            dad["fromStrtoS"],
+#            dad["fromCWDtoS"],
+#            dad["fromSOMtoSOM"],
+#            dad["xktemp"],
+#            dad["xkwater"],
+#            dad["xkNlimiting"],
+#        ),
+#        rm=rm,
+#        batch_size=batch_size
+#    )
+#    u = cache(
+#        zarr_dir_path=zarr_dir_path,
+#        name=names[1],
+#        arr=reconstruct_u( ifv, ffv, dad["iveg"], dad["NPP"], dad["fracCalloc"]),
+#        rm=rm,
+#        batch_size=batch_size
+#    )
+#
+#    x = cache(
+#        zarr_dir_path=zarr_dir_path,
+#        name=names[2],
+#        arr=reconstruct_x(
+#            dad["Cplant"],
+#            dad["Clitter"],
+#            dad["Csoil"]
+#        ),
+#        rm=rm,
+#        batch_size=batch_size
+#    )
+#    return (B,u,x)
+#
+# def load_or_make_valid_B_u_x(
+#    B,
+#    u,
+#    x,
+#    nz,
+#    vcsp: Path,
+#    names: Tuple[str],
+#    sl: slice = slice(None,None,None),
+#    rm: bool = False,
+#    batch_size: int =1
+# ):
+#    B_val = cache(
+#        zarr_dir_path=vcsp,
+#        name=names[0],
+#        arr=valid_combies_parallel(nz, B)[...,sl],
+#        rm=rm,
+#        batch_size=batch_size
+#    )
+#    u_val = cache(
+#        zarr_dir_path=vcsp,
+#        name=names[1],
+#        arr=valid_combies_parallel(nz, u)[...,sl],
+#        rm=rm,
+#        batch_size=batch_size
+#    )
+#    x_val = cache(
+#        zarr_dir_path=vcsp,
+#        name=names[2],
+#        arr=valid_combies_parallel(nz, x)[...,sl],
+#        rm=rm,
+#        batch_size=batch_size
+#    )
+#    return (B_val, u_val, x_val)
 
-def load_or_make_valid_B_u_x(
-    B,
-    u,
-    x,
-    nz,
-    vcsp: Path,
-    names: Tuple[str], 
-    sl: slice = slice(None,None,None),
-    rm: bool = False,
-    batch_size: int =1
-):    
-    B_val = cache(
-        zarr_dir_path=vcsp,
-        name=names[0],
-        arr=valid_combies_parallel(nz, B)[...,sl], 
-        rm=rm,
-        batch_size=batch_size
-    )
-    u_val = cache(
-        zarr_dir_path=vcsp,
-        name=names[1],
-        arr=valid_combies_parallel(nz, u)[...,sl],
-        rm=rm,
-        batch_size=batch_size
-    )
-    x_val = cache(
-        zarr_dir_path=vcsp,
-        name=names[2],
-        arr=valid_combies_parallel(nz, x)[...,sl],
-        rm=rm,
-        batch_size=batch_size
-    )
-    return (B_val, u_val, x_val)
 
-
-def val_or_default(
-    d: dict,
-    key,
-    default
-):
+def val_or_default(d: dict, key, default):
     return d[key] if key in d.keys() else default
 
 
-def cacheWrapper(
-    cachable_func,
-    **kwargs
-):
-    zarr_cache_path = kwargs['zarr_cache_path']
+def cacheWrapper(cachable_func, **kwargs):
+    zarr_cache_path = kwargs["zarr_cache_path"]
     name = cachable_func.__name__
     sub_dir_path = zarr_cache_path.joinpath(name)
 
-    rm = val_or_default(kwargs,'rm',False) 
-    rec_rm = val_or_default(kwargs,'rec_rm',False) 
+    rm = val_or_default(kwargs, "rm", False)
+    rec_rm = val_or_default(kwargs, "rec_rm", False)
     rm_pass = rm or rec_rm
-    rec_kw_args={k:v for k,v in kwargs.items() if k != 'rm'}
-    
+    rec_kw_args = {k: v for k, v in kwargs.items() if k != "rm"}
+
     def create_cache():
-        batch_size_pass = val_or_default(kwargs,'batch_size',1) 
+        batch_size_pass = val_or_default(kwargs, "batch_size", 1)
         res = cachable_func(**rec_kw_args)
         # remove the rm flag since from the passed on kwargs
         # since we only want it to take effect on the highest level
         # which is here
-        if isinstance(res,dask.array.core.Array):
-            batchwise_to_zarr(
-                res,
-                str(sub_dir_path),
-                batch_size=batch_size_pass
-            )
+        if isinstance(res, dask.array.core.Array):
+            batchwise_to_zarr(res, str(sub_dir_path), batch_size=batch_size_pass)
         return res
 
     if sub_dir_path.exists():
@@ -1150,21 +1154,16 @@ def cacheWrapper(
             return create_cache()
         else:
             print("##########################################")
-            print("using existing zarr array "+ str(sub_dir_path))
+            print("using existing zarr array " + str(sub_dir_path))
             return dask.array.from_zarr(str(sub_dir_path))
-        
+
     else:
         return create_cache()
 
 
-def get_integer_fill_value(
-        cable_data_set: xr.core.dataset.Dataset
-) -> int:
-    return cable_data_set['iveg'].attrs['_FillValue']
+def get_integer_fill_value(cable_data_set: xr.core.dataset.Dataset) -> int:
+    return cable_data_set["iveg"].attrs["_FillValue"]
 
 
-def get_float_fill_value(
-        cable_data_set: xr.core.dataset.Dataset
-) -> float:
-    return cable_data_set['Cplant'].attrs['_FillValue']
-
+def get_float_fill_value(cable_data_set: xr.core.dataset.Dataset) -> float:
+    return cable_data_set["Cplant"].attrs["_FillValue"]
