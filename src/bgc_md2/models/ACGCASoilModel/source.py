@@ -30,8 +30,8 @@ alpha_L2S1, alpha_L2S2 = symbols("alpha_L2S1, alpha_L2S2")
 alpha_S1S2, alpha_S2S1 = symbols("alpha_S1S2, alpha_S2S1")
 internal_fluxes = {
     (Litter_1, Soil_1): alpha_L1S1 * Litter_1,
-#    (Litter_1, Soil_2): alpha_L1S2 * Litter_2,
-    (Litter_2, Soil_1): alpha_L2S1 * Litter_1,
+#    (Litter_1, Soil_2): alpha_L1S2 * Litter_1,
+    (Litter_2, Soil_1): alpha_L2S1 * Litter_2,
 #    (Litter_2, Soil_2): alpha_L2S2 * Litter_2,
     (Soil_1, Soil_2): alpha_S1S2 * Soil_1,
 #    (Soil_2, Soil_1): alpha_S2S1 * Soil_2
@@ -43,7 +43,7 @@ output_fluxes = {
     Litter_1: alpha_L1 * Litter_1,
     Litter_2: alpha_L2 * Litter_2,
     Soil_1: alpha_S1 * Soil_1,
-    Soil_2: alpha_S2 * Soil_1
+    Soil_2: alpha_S2 * Soil_2
 }
 
 t = symbols("t")
