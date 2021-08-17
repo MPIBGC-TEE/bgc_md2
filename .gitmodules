@@ -7,3 +7,6 @@
 [submodule "src/CompartmentalSystems"]
 	path = src/CompartmentalSystems
 	url = https://github.com/MPIBGC-TEE/CompartmentalSystems.git
+[submodule "src/ComputabilityGraphs"]
+	path = src/ComputabilityGraphs
+	url = https://github.com/MPIBGC-TEE/ComputabilityGraphs.git
