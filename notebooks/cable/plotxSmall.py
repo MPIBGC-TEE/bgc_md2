@@ -9,7 +9,10 @@ import bgc_md2.models.cable_all.cableHelpers as cH
 
 if __name__ == "__main__":
     if "cluster" not in dir():
-        cluster = LocalCluster(n_workers=2)
+        cluster = LocalCluster(
+            n_workers=1, 
+            memory_limit="14GB"
+        )
         # cluster = LocalCluster()
 
     client = Client(cluster)
