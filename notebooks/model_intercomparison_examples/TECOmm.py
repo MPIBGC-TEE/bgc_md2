@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.11.4
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -17,7 +17,7 @@ from IPython.display import HTML
 
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# #%load_ext autoreload
+# %load_ext autoreload
 # %autoreload 2
 import bgc_md2.helper as h
 
@@ -80,8 +80,6 @@ mvs_TECO.provided_mvar_types
 # -
 
 
-mvs_TECO.get_StateVariableTuple().subs(subs_dict)
-
 mvs_mm =  MVarSet.from_model_name('TECOmm')
 
 for key,fl in mvs_mm.get_InternalFluxesBySymbol().items():
@@ -108,7 +106,9 @@ import CompartmentalSystems.helpers_reservoir as hr
 Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
 #[Gnx.get_edge_data(s,t) for s,t in Gnx.edges]
 
-hr.igraph_plot(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
+# +
+# hr.igraph_plot(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
+# -
 
 # # Let's inspect the vegetation part 
 

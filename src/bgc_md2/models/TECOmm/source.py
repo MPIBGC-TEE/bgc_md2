@@ -65,7 +65,7 @@ sym_dict = {
         ,'b_wood': 'Fixed partitioning ratio (fraction) of available carbon allocated to wood'
         ,'cr_foliage': 'Foliage cycling rate' # "day^{-1}"
         ,'cr_wood': 'Woody cycling rate' # "day^{-1}"
-        ,'cr_fineroot': 'Fine roots cycling rate' # "day^{-1}"
+        ,'cr_root': 'Fine roots cycling rate' # "day^{-1}"
         ,'cr_metlit': 'Metabolic litter cycling rate' # "day^{-1}"
         ,'cr_stlit': 'Structural litter cycling rate' # "day^{-1}"
         ,'cr_fastsom': 'Fast SOM cycling rate' # "day^{-1}"
@@ -74,8 +74,8 @@ sym_dict = {
         ,'f_foliage2metlit': 'Transfer coefficient from Foliage to Metabilic Litter'
         ,'f_foliage2stlit': 'Transfer coefficient from Foliage to Structural Litter'
         ,'f_wood2stlit': 'Transfer coefficient from Wood to Structural Litter'
-        ,'f_fineroots2metlit': 'Transfer coefficient from Fine Roots to Metabolic Litter'
-        ,'f_fineroots2stlit': 'Transfer coefficient from Fine Roots to Structural Litter'
+        ,'f_roots2metlit': 'Transfer coefficient from Fine Roots to Metabolic Litter'
+        ,'f_roots2stlit': 'Transfer coefficient from Fine Roots to Structural Litter'
         ,'f_metlit2fastsom': 'Transfer coefficient from Metabolic Litter to Fast SOM'
         ,'f_stlit2fastsom': 'Transfer coefficient from Structural Litter to Fast SOM'
         ,'f_stlit2slowsom': 'Transfer coefficient from Structural Litter to Slow SOM'
@@ -111,14 +111,14 @@ Input = InputTuple(u * ImmutableMatrix(b))
 B = CompartmentalMatrix([
 [  -cr_foliage,     0,     0,     0,     0,     0,     0,     0],
 [   0,    -cr_wood,     0,     0,     0,     0,     0,     0],
-[   0,     0,    -cr_fineroot,     0,     0,     0,     0,     0],
-[f_foliage2metlit,     0,  f_fineroots2metlit,    -cr_metlit,     0,     0,     0,     0],
-[f_foliage2stlit,  f_wood2stlit,  f_fineroots2stlit,     0,    -cr_stlit,     0,     0,     0],
+[   0,     0,    -cr_root,     0,     0,     0,     0,     0],
+[f_foliage2metlit,     0,  f_roots2metlit,    -cr_metlit,     0,     0,     0,     0],
+[f_foliage2stlit,  f_wood2stlit,  f_roots2stlit,     0,    -cr_stlit,     0,     0,     0],
 [   0,     0,     0,  f_metlit2fastsom,  f_stlit2fastsom,    -cr_fastsom,  f_slowsom2fastsom,  f_passsom2fastsom],
 [   0,     0,     0,     0,  f_stlit2slowsom,  f_fastsom2slowsom,    -cr_slowsom,     0],
 [   0,     0,     0,     0,     0,  f_fastsom2passsom,  f_slowsom2passsom,    -cr_passsom]])
 np1 = NumericParameterization(
-    par_dict={GPP: 3.370, b_foliage: 0.14, b_roots: 0.26, b_wood: 0.14, f_foliage2metlit: 0.9, f_foliage2stlit: 0.1, f_wood2stlit: 1, f_fineroots2metlit: 0.2, f_fineroots2stlit: 0.8, f_metlit2fastsom: 0.45, f_stlit2fastsom: 0.275, f_stlit2slowsom: 0.275, f_fastsom2slowsom: 0.296, f_fastsom2passsom: 0.004, f_slowsom2fastsom: 0.42, f_slowsom2passsom: 0.01, f_passsom2fastsom: 0.45, cr_foliage: 0.00258, cr_wood: 0.0000586, cr_fineroot: 0.002390, cr_metlit: 0.0109, cr_stlit: 0.00095, cr_fastsom: 0.0105, cr_slowsom: 0.0000995,cr_passsom: 0.0000115
+    par_dict={GPP: 3.370, b_foliage: 0.14, b_roots: 0.26, b_wood: 0.14, f_foliage2metlit: 0.9, f_foliage2stlit: 0.1, f_wood2stlit: 1, f_roots2metlit: 0.2, f_roots2stlit: 0.8, f_metlit2fastsom: 0.45, f_stlit2fastsom: 0.275, f_stlit2slowsom: 0.275, f_fastsom2slowsom: 0.296, f_fastsom2passsom: 0.004, f_slowsom2fastsom: 0.42, f_slowsom2passsom: 0.01, f_passsom2fastsom: 0.45, cr_foliage: 0.00258, cr_wood: 0.0000586, cr_root: 0.002390, cr_metlit: 0.0109, cr_stlit: 0.00095, cr_fastsom: 0.0105, cr_slowsom: 0.0000995,cr_passsom: 0.0000115
 },
     func_dict=frozendict({})
 )
