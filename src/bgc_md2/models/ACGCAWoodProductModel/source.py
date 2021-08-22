@@ -23,9 +23,9 @@ input_fluxes = {
 
 internal_fluxes = dict()
 
-alpha_WP = symbols("alpha_WP")
+r_WP = symbols("r_WP")
 output_fluxes = {
-    Wood_products: alpha_WP * Wood_products
+    Wood_products: r_WP * Wood_products
 }
 
 t = symbols("t")

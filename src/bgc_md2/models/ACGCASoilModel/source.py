@@ -12,38 +12,30 @@ from bgc_md2.resolve.mvars import (
 )
 
 # two litter pools (maybe fast and slow)
-Litter_1, Litter_2 = symbols("Litter_1 Litter_2")
+Litter, CWD = symbols("Litter CWD")
 
-# two SOM pools (maybe fast and slow)
-Soil_1, Soil_2 = symbols("Soil_1 Soil_2")
+# one SOM pool
+SOM = symbols("SOM")
 
-state_vector = Matrix([Litter_1, Litter_2, Soil_1, Soil_2])
+state_vector = Matrix([Litter, CWD, SOM])
 
 L1, L2 = symbols("L1 L2")
 input_fluxes = {
-    Litter_1: L1,
-    Litter_2: L2
+    Litter: L1,
+    CWD: L2
 }
 
-alpha_L1S1, alpha_L1S2 = symbols("alpha_L1S1, alpha_L1S2")
-alpha_L2S1, alpha_L2S2 = symbols("alpha_L2S1, alpha_L2S2")
-alpha_S1S2, alpha_S2S1 = symbols("alpha_S1S2, alpha_S2S1")
+alpha_1, alpha_2 = symbols("alpha_1 alpha_2")
 internal_fluxes = {
-    (Litter_1, Soil_1): alpha_L1S1 * Litter_1,
-#    (Litter_1, Soil_2): alpha_L1S2 * Litter_1,
-    (Litter_2, Soil_1): alpha_L2S1 * Litter_2,
-#    (Litter_2, Soil_2): alpha_L2S2 * Litter_2,
-    (Soil_1, Soil_2): alpha_S1S2 * Soil_1,
-#    (Soil_2, Soil_1): alpha_S2S1 * Soil_2
+    (Litter, SOM): alpha_1 * Litter,
+    (CWD, SOM): alpha_2 * CWD
 }
 
-alpha_L1, alpha_L2 = symbols("alpha_L1, alpha_L2")
-alpha_S1, alpha_S2 = symbols("alpha_S1, alpha_S2")
+r_Litter, r_CWD, r_SOM = symbols("r_Litter r_CWD r_SOM ")
 output_fluxes = {
-    Litter_1: alpha_L1 * Litter_1,
-    Litter_2: alpha_L2 * Litter_2,
-    Soil_1: alpha_S1 * Soil_1,
-    Soil_2: alpha_S2 * Soil_2
+    Litter: r_Litter * Litter,
+    CWD: r_CWD * CWD,
+    SOM: r_SOM * SOM
 }
 
 t = symbols("t")
