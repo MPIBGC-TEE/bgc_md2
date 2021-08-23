@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-          with:
+      with:
         repository: MPIBGC-TEE/bgc_md2
         token: ${{ secrets.ACCESS_TOKEN }}
 
