@@ -110,7 +110,15 @@ def one_step_matrix_simu(pa,X,npp_in):
     for i in range(0, 9):
         K[i][i] = temp[i]
       
-    # leaf, root , wood, metabolic, structural, CWD, microbial, slow, passive 
+    # 1 leaf
+    # 2 root 
+    # 3 wood
+    # 4 metabolic
+    # 5 structural
+    # 6 CWD
+    # 7 microbial
+    # 8 slow
+    # 9 passive 
     X=X + B*npp_in + np.array(A@K@X).reshape([9,1])
     co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
          

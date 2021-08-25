@@ -19,6 +19,10 @@ class TestMatrixSimul(InDirTest):
         x_init = np.array([cleaf[0],croot[0],cwood[0],pa[12],pa[13],clitter[0]-pa[12]-pa[13],pa[14],csoil[0]- pa[14] - pa[15], pa[15]]).reshape([9,1])   # Initial carbon pool size
         npp_in = npp[0]
         x, r = one_step_matrix_simu(pa=pa,X=x_init,npp_in=npp_in)
+    
+    def test_from_symbolic(self):
+        from bgc_md2.models.cable_yuanyuan.source import mvs 
+        print(mvs)
 
     def test_mcmc(self):
 
