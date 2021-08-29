@@ -1,12 +1,11 @@
+from bgc_md2.resolve.mvars import NumericStartValueDict
+from sympy import Symbol
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
-#pa1=[beta1,beta2, lig_leaf, f41,f42, kleaf,kroot,kwood,kmet,kmic, kslow,kpass, cmet_init, cstr_init, cmic_init, cpassive_init ]
-pa1=            [0.15,  0.2,0.15,0.28, 0.6,      1/365,  1/(365*5), 1/(365*40), 0.5/(365*0.1),  0.3/(365*0.137),  0.3/(365*5),  0.3/(222.22*365),          0.05,           0.1,           1,         5]
 
 def get_variables_from_files(dataPath):
-
-    
     # Read NetCDF data  ******************************************************************************************************************************
     path = dataPath.joinpath("npp_Lmon_ACCESS-ESM1-5_1pctCO2-bgc_r1i1p1f1_gn_010101-025012.nc")
     ds = nc.Dataset(str(path))
@@ -77,22 +76,29 @@ def get_example_site_vars(dataPath):
 
 def one_step_matrix_simu(pa,X,npp_in):
     clay = 0.2028
-    silt= 0.2808
-    lig_wood=0.4
-    print(pa)
+    silt = 0.2808
+    lig_wood = 0.4
     # Construct B matrix 
-    beta1=pa[0]; beta2=pa[1]; beta3= 1- beta1- beta2
+    beta1 = pa.beta_leaf
+    beta2 = pa.beta_root
+    beta3 = 1- beta1- beta2
     B = np.array([beta1, beta2, beta3, 0, 0, 0, 0,0,0]).reshape([9,1])   # allocation
     # Now construct A matrix
-    lig_leaf = pa[2]
+    lig_leaf = pa.lig_leaf
 
-    f41 = pa[3]; f42 = pa[4]; f51 = 1-f41; f52 = 1-f42; f63 = 1;
-    f74 = 0.45; f75 = 0.45*(1-lig_leaf); 
-    f85 = 0.7*lig_leaf; f86 = 0.4*(1-lig_wood);
-    f96 = 0.7*lig_wood;  
-    f87=(0.85 - 0.68 * (clay+silt))* (0.997 - 0.032*clay)
-    f97=(0.85 - 0.68 * (clay+silt))* (0.003 + 0.032*clay)
-    f98=0.45 * (0.003 + 0.009 *clay)
+    f41 = pa.f_leaf2metlit
+    f42 = pa.f_root2metlit
+    f51 = 1 - f41
+    f52 = 1 - f42
+    f63 = 1
+    f74 = 0.45
+    f75 = 0.45 * (1 - lig_leaf)
+    f85 = 0.7 * lig_leaf
+    f86 = 0.4 * (1 - lig_wood)
+    f96 = 0.7 * lig_wood
+    f87=(0.85 - 0.68 * (clay+silt)) * (0.997 - 0.032 * clay)
+    f97=(0.85 - 0.68 * (clay+silt)) * (0.003 + 0.032 * clay)
+    f98=0.45 * (0.003 + 0.009 * clay)
 
     A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
                      0,  -1,   0,   0,   0,   0,   0,   0,   0,
@@ -105,7 +111,17 @@ def one_step_matrix_simu(pa,X,npp_in):
                      0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
 
     #turnover rate per day of pools: 
-    temp = [pa[5],pa[6],pa[7], pa[8],pa[8]/(5.75*np.exp(-3*pa[2])), pa[8]/20.6, pa[9],pa[10], pa[11]]
+    temp = [
+        pa.k_leaf,
+        pa.k_root,
+        pa.k_wood,
+        pa.k_metlit,
+        pa.k_metlit/(5.75*np.exp(-3*pa.lig_leaf)),
+        pa.k_metlit/20.6,
+        pa.k_mic,
+        pa.k_slowsom,
+        pa.k_passsom
+    ]
     K = np.zeros(81).reshape([9, 9])
     for i in range(0, 9):
         K[i][i] = temp[i]
@@ -113,10 +129,10 @@ def one_step_matrix_simu(pa,X,npp_in):
     # 1 leaf
     # 2 root 
     # 3 wood
-    # 4 metabolic
+    # 4 metlit
     # 5 structural
     # 6 CWD
-    # 7 microbial
+    # 7 mic
     # 8 slow
     # 9 passive 
     X=X + B*npp_in + np.array(A@K@X).reshape([9,1])
@@ -222,3 +238,45 @@ def mcmc(data,start_pa, nyears):
     #df.index = ['all', 'ha', 'ar', 'sa','ds','hu'] 
     return df, df_j
      
+def matrix_simul_from_symbolic(pa,X0,npp_in):
+    from sympy import var
+    
+    from bgc_md2.models.cable_yuanyuan.source import mvs 
+    symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+    for name in symbol_names:
+        var(name)
+   
+    srm = mvs.get_SmoothReservoirModel()
+    # we create a parameterdict for the fixed values
+    # and extend it by the parameters provided 
+    parDict = {
+        clay: 0.2028,
+        silt: 0.2808,
+        lig_wood: 0.4,
+        f_wood2CWD: 1,
+        f_metlit2mic: 0.45,
+        NPP: npp_in
+    }
+    #from IPython import embed; embed()
+    model_params = {Symbol(k): v for k,v in pa._asdict().items()}
+
+    parDict.update(model_params)
+
+    nsv1 = {
+        Symbol(k): v 
+        for k,v in X0._asdict().items()
+    }
+    start_values=np.array(
+        [
+            nsv1[k] for k in mvs.get_StateVariableTuple()
+        ]
+    )
+    #from IPython import embed; embed()
+    smr = SmoothModelRun(
+            srm,
+            parameter_dict=parDict,
+            start_values=start_values,
+            times=np.array([0,1,2,3,4]),
+            func_set={}
+    )
+    smr.solve()
