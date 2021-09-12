@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Callable
+from typing import Callable, Tuple
 
 def make_uniform_proposer(
         c_max: np.ndarray,
@@ -25,3 +25,41 @@ def make_uniform_proposer(
         return c_new
 
     return GenerateParamValues
+
+def mcmc(
+        initial_parameters,
+        proposer,
+        forward_simulation: Callable[[Tuple], Tuple[np.ndarray, np.ndarray]],
+        costfunction: Callable[[np.ndarray],np.float64]
+    ) -> Tuple:
+    
+    np.random.seed(seed=10)
+    
+    paramNum=len(initial_parameters)
+    nsimu    = 20000
+    
+    upgraded=0;
+    J_last = 400
+    C_op = initial_parameters
+    
+    C_upgraded = np.zeros((paramNum, nsimu))
+    J_upgraded = np.zeros((1, nsimu))
+    
+    for simu in range(nsimu):
+        c_new = proposer(C_op)
+    
+        out_simu = forward_simulation(c_new)
+        J_new = costfunction(out_simu)
+    
+        delta_J =  J_last - J_new;
+        
+        randNum = np.random.uniform(0, 1)
+        if (min(1.0, np.exp(delta_J)) > randNum):
+                C_op=c_new;
+                J_last=J_new;
+                C_upgraded[:,upgraded]=C_op;
+                J_upgraded[:,upgraded]=J_last; 
+                upgraded=upgraded+1;
+    
+    return C_upgraded, J_upgraded
+

@@ -130,6 +130,76 @@ def make_weighted_cost_func(
         
         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
         return J_new
-    return costfunction    
+    return costfunction     
 
+def make_matrix_simu(
+            cleaf_0,
+            croot_0,
+            cwood_0,
+            clitter_0,
+            csoil_0,
+            npp,
+            nyears,
+            clay, 
+            silt,
+            lig_wood
+    ) -> Callable[[np.ndarray], np.ndarray]: 
+
+    def matrix_simu(pa):
+        tot_len = nyears*12
+        days=[31,28,31,30,31,30,31,31,30,31,30,31]
+        # Construct B matrix 
+        beta1=pa[0]; beta2=pa[1]; beta3= 1- beta1- beta2
+        B = np.array([beta1, beta2, beta3, 0, 0, 0, 0,0,0]).reshape([9,1])   # allocation
+        # Now construct A matrix
+        lig_leaf = pa[2]
     
+        f41 = pa[3]; f42 = pa[4]; f51 = 1-f41; f52 = 1-f42; f63 = 1;
+        f74 = 0.45; f75 = 0.45*(1-lig_leaf); 
+        f85 = 0.7*lig_leaf; f86 = 0.4*(1-lig_wood);
+        f96 = 0.7*lig_wood;  
+        f87=(0.85 - 0.68 * (clay+silt))* (0.997 - 0.032*clay)
+        f97=(0.85 - 0.68 * (clay+silt))* (0.003 + 0.032*clay)
+        f98=0.45 * (0.003 + 0.009 *clay)
+    
+        A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
+                         0,  -1,   0,   0,   0,   0,   0,   0,   0,
+                         0,   0,  -1,   0,   0,   0,   0,   0,   0,
+                       f41, f42,   0,  -1,   0,   0,   0,   0,   0,
+                       f51, f52,   0,   0,  -1,   0,   0,   0,   0,
+                         0,   0, f63,   0,   0,  -1,   0,   0,   0,
+                         0,   0,   0, f74, f75,   0,  -1,   0,   0,
+                         0,   0,   0,   0, f85, f86, f87,  -1,   0,
+                         0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
+    
+        #turnover rate per day of pools: 
+        temp = [pa[5],pa[6],pa[7], pa[8],pa[8]/(5.75*np.exp(-3*pa[2])), pa[8]/20.6, pa[9],pa[10], pa[11]]
+        K = np.zeros(81).reshape([9, 9])
+        for i in range(0, 9):
+            K[i][i] = temp[i]
+          
+        x_fin=np.zeros((tot_len,9))
+        rh_fin=np.zeros((tot_len,1))
+        # leaf, root , wood, metabolic, structural, CWD, microbial, slow, passive 
+        x_init = np.array([cleaf_0,croot_0,cwood_0,pa[12],pa[13],clitter_0-pa[12]-pa[13],pa[14],csoil_0- pa[14] - pa[15], pa[15]]).reshape([9,1])   # Initial carbon pool size
+        X=x_init   # initialize carbon pools 
+        jj=0
+        for y in np.arange(0,nyears):
+           for m in np.arange(0,12):
+             npp_in = npp[jj] 
+             co2_rh = 0  
+             for d in np.arange(0,days[m]):
+                 X=X + B*npp_in + np.array(A@K@X).reshape([9,1])
+                 co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
+                 co2=np.sum(co2_rate*X.reshape(1,9))
+                 co2_rh = co2_rh + co2/days[m]   # monthly average rh 
+             x_fin[jj,:]=X.reshape(1,9)
+             rh_fin[jj,0]=co2_rh
+             jj= jj+1
+             
+        # combine the output into one array which makes writing
+        # generalized costfunctions a bit easier
+        out_simu = np.concatenate([x_fin,rh_fin],axis=1)
+        return out_simu
+
+    return matrix_simu
