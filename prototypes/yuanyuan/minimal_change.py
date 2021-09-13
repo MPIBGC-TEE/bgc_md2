@@ -41,7 +41,8 @@ from yy_cable_specific_helpers import (
 
 from general_helpers import (
         make_uniform_proposer,
-        mcmc
+        mcmc,
+        make_feng_cost_func
 )
 
 # fixme: 
@@ -57,8 +58,9 @@ dataPath = pathlib.Path('/home/data/yuanyuan')
 npp, rh, clitter, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
 
 # combine them to a single array which we will later use as input to the costfunction
-# from IPython import embed; embed()
-obs = np.stack([cleaf, croot, cwood, clitter, csoil, rh], axis=1)
+nyears=140
+tot_len = 12*nyears
+obs = np.stack([cleaf, croot, cwood, clitter, csoil, rh], axis=1)[0:tot_len,:]
 
 
 
@@ -83,7 +85,7 @@ matrix_simu = make_matrix_simu(
     clitter_0=clitter[0],
     csoil_0=csoil[0],
     npp=npp,
-    nyears=140,
+    tot_len=tot_len,
     clay=0.2028,
     silt=0.2808,
     lig_wood=0.4
@@ -95,7 +97,8 @@ C_upgraded, J_upgraded = mcmc(
         initial_parameters=pa,
         proposer=GenerateParamValues,
         forward_simulation=matrix_simu,
-        costfunction=make_weighted_cost_func(obs)
+        #costfunction=make_weighted_cost_func(obs)
+        costfunction=make_feng_cost_func(obs)
 )
 
 

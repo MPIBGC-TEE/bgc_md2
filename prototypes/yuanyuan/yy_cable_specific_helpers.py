@@ -1,3 +1,4 @@
+from tqdm import tqdm
 from typing import Callable
 import netCDF4 as nc
 import numpy as np
@@ -102,35 +103,35 @@ def make_weighted_cost_func(
     def costfunction(out_simu: np.ndarray) ->np.float64:
         # fixme 
         #   as indicated by the fact that the function lives in this  
-        #   model-specific module it is not apropriate for other models 
-        #   It is determined by the relationship of the 6 observabal data streams
-        #   and the available computed results (e.g. the combination of the 
-        #   3 computed litter pools into one or the 3 computed soil pools into
-        #   one. 
-
-        # as well as the 
-        n_pools=9
+        #   model-specific module it is not apropriate for (all) other models.
+        #   There are model specific properties:
+        #   1.) The weight for the different observation streams
+        #   
         tot_len=out_simu.shape[0]
-        # we assume the x part to be in the first n_pools columns
+        # we assume the model output to be in the same shape and order 
+        # as the obeservation
         # this convention has to be honored by the forwar_simulation as well
-        x_simu = out_simu[:,0:n_pools] 
+        # which in this instance already compresses the 3 different litter pools
+        # to c_litter and the 3 different soil pools to one
+        c_simu = out_simu[:,0:5] 
         
         # we assume the rh  part to be in the remaining columns again
         # this convention has to be honored by the forwar_simulation as well
-        rh_simu = out_simu[:,n_pools:]
+        rh_simu = out_simu[:,5:]
         #from IPython import embed; embed()
 
-        J_obj1 = np.mean (( x_simu[:,0] - cleaf[0:tot_len] )**2)/(2*np.var(cleaf[0:tot_len]))
-        J_obj2 = np.mean (( x_simu[:,1] - croot[0:tot_len] )**2)/(2*np.var(croot[0:tot_len]))
-        J_obj3 = np.mean (( x_simu[:,2] - cwood[0:tot_len] )**2)/(2*np.var(cwood[0:tot_len]))
-        J_obj4 = np.mean (( np.sum(x_simu[:,3:6],axis=1)- clitter[0:tot_len] )**2)/(2*np.var(clitter[0:tot_len]))
-        J_obj5 = np.mean (( np.sum(x_simu[:,6:9],axis=1)- csoil[0:tot_len] )**2)/(2*np.var(csoil[0:tot_len]))
+        J_obj1 = np.mean (( c_simu[:,0] - cleaf[0:tot_len] )**2)/(2*np.var(cleaf[0:tot_len]))
+        J_obj2 = np.mean (( c_simu[:,1] - croot[0:tot_len] )**2)/(2*np.var(croot[0:tot_len]))
+        J_obj3 = np.mean (( c_simu[:,2] - cwood[0:tot_len] )**2)/(2*np.var(cwood[0:tot_len]))
+        J_obj4 = np.mean (( c_simu[:,3]-  clitter[0:tot_len] )**2)/(2*np.var(clitter[0:tot_len]))
+        J_obj5 = np.mean (( c_simu[:,4]-  csoil[0:tot_len] )**2)/(2*np.var(csoil[0:tot_len]))
         
         J_obj6 = np.mean (( rh_simu[:,0] - rh[0:tot_len] )**2)/(2*np.var(rh[0:tot_len]))
         
         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
         return J_new
     return costfunction     
+
 
 def make_matrix_simu(
             cleaf_0,
@@ -139,14 +140,13 @@ def make_matrix_simu(
             clitter_0,
             csoil_0,
             npp,
-            nyears,
+            tot_len,
             clay, 
             silt,
             lig_wood
     ) -> Callable[[np.ndarray], np.ndarray]: 
 
     def matrix_simu(pa):
-        tot_len = nyears*12
         days=[31,28,31,30,31,30,31,31,30,31,30,31]
         # Construct B matrix 
         beta1=pa[0]; beta2=pa[1]; beta3= 1- beta1- beta2
@@ -184,22 +184,35 @@ def make_matrix_simu(
         x_init = np.array([cleaf_0,croot_0,cwood_0,pa[12],pa[13],clitter_0-pa[12]-pa[13],pa[14],csoil_0- pa[14] - pa[15], pa[15]]).reshape([9,1])   # Initial carbon pool size
         X=x_init   # initialize carbon pools 
         jj=0
-        for y in np.arange(0,nyears):
-           for m in np.arange(0,12):
-             npp_in = npp[jj] 
-             co2_rh = 0  
-             for d in np.arange(0,days[m]):
-                 X=X + B*npp_in + np.array(A@K@X).reshape([9,1])
-                 co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
-                 co2=np.sum(co2_rate*X.reshape(1,9))
-                 co2_rh = co2_rh + co2/days[m]   # monthly average rh 
-             x_fin[jj,:]=X.reshape(1,9)
-             rh_fin[jj,0]=co2_rh
-             jj= jj+1
+        for m in tqdm(np.arange(0,tot_len)):
+          npp_in = npp[jj] 
+          co2_rh = 0  
+          for d in np.arange(0,days[m%12]):
+              X=X + B*npp_in + np.array(A@K@X).reshape([9,1])
+              co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
+              co2=np.sum(co2_rate*X.reshape(1,9))
+              co2_rh = co2_rh + co2/days[m%12]   # monthly average rh 
+          x_fin[jj,:]=X.reshape(1,9)
+          rh_fin[jj,0]=co2_rh
+          jj= jj+1
              
-        # combine the output into one array which makes writing
-        # generalized costfunctions a bit easier
-        out_simu = np.concatenate([x_fin,rh_fin],axis=1)
+        # We create an output that has the same shape
+        # as the obvervations to make the costfunctions 
+        # easier. 
+        # To this end we project our 10 output variables
+        # onto the 6 data streams
+        c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(tot_len,1)
+        c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(tot_len,1)
+        #from IPython import embed; embed()
+        out_simu = np.concatenate(
+            [
+                x_fin[:,0:3], # the first 3 pools are used as they are
+                c_litter,
+                c_soil,
+                rh_fin
+            ]
+            ,axis=1
+        )
         return out_simu
 
     return matrix_simu

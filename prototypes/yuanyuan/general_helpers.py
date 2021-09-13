@@ -63,3 +63,23 @@ def mcmc(
     
     return C_upgraded, J_upgraded
 
+def make_feng_cost_func(
+        obs: np.ndarray
+    ) -> Callable[[np.ndarray],np.float64]:
+    # first unpack the observation array into its parts and estimate the mean
+    # and standard deviation of each observable which has to be done only once
+    # for a set of observables, hence we do it outside the actual costfunction
+    # which will be used
+    time_dim_ind = 0
+    means = np.mean(obs,axis=time_dim_ind)
+    sigmas = np.sqrt(np.sum((obs-means)**2,axis=time_dim_ind))
+
+    def costfunction(out_simu: np.ndarray) ->np.float64:
+        return np.sum(
+            np.sum(
+                ((out_simu - means)/sigmas - (obs-means)/sigmas)**2, 
+                axis=1
+            ),
+            axis=time_dim_ind
+        )
+    return costfunction     
