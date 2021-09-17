@@ -18,7 +18,7 @@ from ..BibInfo import BibInfo
 from bgc_md2.helper import MVarSet
 # questions 
 # 1.) (for yuanyuan) What do the following variables mean exactly?
-#     CWD, lig_leaf, lig_wood, clay, silt
+#     lig_leaf, lig_wood, clay, silt
 #
 # 2.) should the k_leaf ...k_passom be realy called k_ ?
 #     d(because they are NOT the diagonal terms in the K matrix)
@@ -34,12 +34,11 @@ sym_dict = {
         'C_wood': 'Carbon in woody tissue',
         'C_metlit': 'Carbon in metabolic litter',
         'C_stlit': 'Carbon in structural litter',
-        'CWD': 'Carbon ?',
+        'CWD': 'Corse woody debris Carbon ?',
         'C_mic': 'Carbon ?',
         'C_slowsom': 'Carbon in slow SOM',
         'C_passsom': 'Carbon in passive SOM',
         'NPP': 'Photosynthetic rate (Carbon input) at time t',
-        'xi': 'Environmental scalar',
         'beta_leaf': 'Fixed partitioning ratio (fraction) of available carbon allocated to foliage',
         'beta_root': 'Fixed partitioning ratio (fraction) of available carbon allocated to roots',
         'beta_wood': 'Fixed partitioning ratio (fraction) of available carbon allocated to wood',
@@ -86,8 +85,8 @@ f_mic2passsom = (0.85 - 0.68 * (clay+silt)) * (0.003 + 0.032 * clay)
 f_slowsom2passsom = 0.45 * (0.003 + 0.009 * clay)
 
 temp_leaf     = k_leaf
-temp_wood     = k_root
-temp_root     = k_wood
+temp_wood     = k_wood
+temp_root     = k_root
 temp_metlit   = k_metlit
 temp_stlit    = k_metlit / (5.75 * exp(-3.0 * lig_leaf))
 temp_CWD      = k_metlit / 20.6

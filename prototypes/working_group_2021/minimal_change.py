@@ -31,16 +31,23 @@ from matplotlib import pyplot as plt
 #   - 'jon_ybis_specific_helpers.py' or 
 #   - 'mm_cable_specific helpers' and so on. 
 #   All functions in module yy_cable_specific_helpers provide model specific results
-#   and can not be applied generally 
+#   and can not be applied directly but serve as examples.
+#   If you use the same naming convention inside the module you only have to
+#   change the name of the module in the next line
+
 from yy_cable_specific_helpers import (
     get_example_site_vars,
     make_param_filter_func,
     make_weighted_cost_func,
-    make_matrix_simu
+    make_param2res,
+    make_param2res_2,
+    UnEstimatedParameters,
+    EstimatedParameters
 )
 
 from general_helpers import (
         make_uniform_proposer,
+        make_multivariate_normal_proposer,
         mcmc,
         make_feng_cost_func
 )
@@ -58,54 +65,94 @@ dataPath = pathlib.Path('/home/data/yuanyuan')
 npp, rh, clitter, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
 
 # combine them to a single array which we will later use as input to the costfunction
-nyears=140
+#nyears=140
+nyears = 10
 tot_len = 12*nyears
 obs = np.stack([cleaf, croot, cwood, clitter, csoil, rh], axis=1)[0:tot_len,:]
-
 
 
 # leaf, root , wood, metabolic, structural, CWD, microbial, slow, passive 
 
 
 
-
+# fixme 
 c_min=np.array([0.09, 0.09,0.09,0.01,0.01,  1/(2*365), 1/(365*10), 1/(60*365), 0.1/(0.1*365), 0.06/(0.137*365), 0.06/(5*365), 0.06/(222.22*365),clitter[0]/100,clitter[0]/100,csoil[0]/100,csoil[0]/2])
 c_max=np.array([1   ,    1,0.21,   1,   1,1/(0.3*365),1/(0.8*365),      1/365,   1/(365*0.1),  0.6/(365*0.137),  0.6/(365*5),  0.6/(222.22*365),    clitter[0],    clitter[0],  csoil[0]/3,csoil[0]])
 
 # fixme
 #   this function is model specific: It discards parameter proposals
-#   where beta1 and beta2 
+#   where beta1 and beta2 add up to more than 0.99
 isQualified = make_param_filter_func(c_max,c_min)
-GenerateParamValues = make_uniform_proposer(c_min, c_max,filter_func=isQualified)
-
-matrix_simu = make_matrix_simu(
-    cleaf_0=cleaf[0],
-    croot_0=croot[0],
-    cwood_0=cwood[0],
-    clitter_0=clitter[0],
-    csoil_0=csoil[0],
-    npp=npp,
-    tot_len=tot_len,
-    clay=0.2028,
-    silt=0.2808,
-    lig_wood=0.4
-) 
-#pa=[beta1,beta2, lig_leaf, f41,f42, kleaf,kroot,kwood,kmet,kmic, kslow,kpass, cmet_init, cstr_init, cmic_init, cpassive_init ]
-pa=            [0.15,  0.2,0.15,0.28, 0.6,      1/365,  1/(365*5), 1/(365*40), 0.5/(365*0.1),  0.3/(365*0.137),  0.3/(365*5),  0.3/(222.22*365),          0.05,           0.1,           1,         5]
-    
-C_upgraded, J_upgraded = mcmc(
-        initial_parameters=pa,
-        proposer=GenerateParamValues,
-        forward_simulation=matrix_simu,
-        #costfunction=make_weighted_cost_func(obs)
-        costfunction=make_feng_cost_func(obs)
+uniform_prop = make_uniform_proposer(
+    c_min,
+    c_max,
+    D=10.0,
+    filter_func=isQualified
 )
 
+cpa = UnEstimatedParameters(
+    C_leaf_0=cleaf[0],
+    C_root_0=croot[0],
+    C_wood_0=cwood[0],
+    clitter_0=clitter[0],
+    csoil_0=csoil[0],
+    rh_0 = rh[0],
+    npp=npp,
+    number_of_months=tot_len,
+    clay=0.2028,
+    silt=0.2808,
+    lig_wood=0.4,
+    f_wood2CWD=1, 
+    f_metlit2mic=0.45
+)
+param2res = make_param2res(cpa) #pa=[beta1,beta2, lig_leaf, f41,f42, kleaf,kroot,kwood,kmet,kmic, kslow,kpass, cmet_init, cstr_init, cmic_init, cpassive_init ]
+pa=            [0.15,  0.2,0.15,0.28, 0.6,      1/365,  1/(365*5), 1/(365*40), 0.5/(365*0.1),  0.3/(365*0.137),  0.3/(365*5),  0.3/(222.22*365),          0.05,           0.1,           1,         5]
+epa_0 = EstimatedParameters(
+    beta_leaf=0.15,
+    beta_root=0.2,
+    lig_leaf=0.15,
+    f_leaf2metlit=0.28,
+    f_root2metlit=0.6,
+    k_leaf=1/365,
+    k_root=1/(365*5),
+    k_wood=1/(365*40),
+    k_metlit=0.5/(365*0.1),
+    k_mic=0.3/(365*0.137),
+    k_slowsom=0.3/(365*5),
+    k_passsom=0.3/(222.22*365),
+    C_metlit_0=0.05,
+    CWD_0=0.1,
+    C_mic_0=1,
+    C_passom_0=5,
+)
+nsimu_demo = 2000    
+C_demo, J_demo = mcmc(
+        initial_parameters=epa_0,
+        proposer=uniform_prop,
+        param2res=param2res,
+        #costfunction=make_weighted_cost_func(obs)
+        costfunction=make_feng_cost_func(obs),
+        nsimu=nsimu_demo
+)
+# save the parameters and costfunctionvalues for postprocessing 
+pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
+pd.DataFrame(J_demo).to_csv(dataPath.joinpath('cable_demo_da_j_aa.csv'),sep=',')
 
-df=pd.DataFrame(C_upgraded)
-df_j=pd.DataFrame(J_upgraded)
-#df.columns = ["std_tomcat","r_tomcat","std_lmdz","r_lmdz","std_jamstec","r_jamstec"]
-#df.index = ['all', 'ha', 'ar', 'sa','ds','hu'] 
- 
-df.to_csv('/home/599/yh4968/cable_demo_da_aa.csv',sep=',')
-df_j.to_csv('/home/599/yh4968/cable_demo_da_j_aa.csv',sep=',')
+# build a new proposer based on a multivariate_normal distribution using the estimated covariance of the previous run if available
+# parameter values of the previous run
+
+#from IPython import embed; embed()
+normal_prop = make_multivariate_normal_proposer(
+    covv = np.cov(C_demo[:, int(nsimu_demo/10):]), # the part of the demo run samples to use (here the last 90%) 
+    filter_func=isQualified
+)
+C_formal, J_formal = mcmc(
+        initial_parameters=epa_0,
+        proposer=normal_prop,
+        param2res=param2res,
+        #costfunction=make_weighted_cost_func(obs)
+        costfunction=make_feng_cost_func(obs),
+        #nsimu=20000
+        nsimu=2000
+)
+
