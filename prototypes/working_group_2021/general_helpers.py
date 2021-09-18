@@ -224,3 +224,45 @@ class TimeStepIterator2():
 def respiration_from_compartmental_matrix(B,X):
     """This function computes the combined respiration from all pools"""
     return -np.sum(B@X) 
+
+
+def plot_solutions(
+        fig,
+        times, 
+        var_names,
+        tup,
+        names=None
+    ):
+    if names is None:
+        names = tuple(str(i) for i in range(len(tup)))
+
+    assert(all([tup[0].shape == el.shape for el in tup]))
+
+    if tup[0].ndim == 1:
+        n_times = tup[0].shape[0]
+        ax = fig.subplots(1,1)
+        for i,sol in enumerate(tup):
+            ax.plot(
+                np.array(times).reshape(n_times,), 
+                sol,
+                marker="o",
+                label=names[i]
+            )
+            ax.set_title(var_names[0])
+            ax.legend()
+    else:
+        n_times, n_vars = tup[0].shape
+
+        fig.set_figheight(n_vars*fig.get_figwidth())
+        axs = fig.subplots(n_vars,1)
+        colors =('red','blue','green','organge')
+        for j in range(n_vars):
+            for i,sol in enumerate(tup):
+                axs[j].plot(
+                    np.array(times).reshape(n_times,), 
+                    sol[:, j],
+                    marker="o",
+                    label=names[i]
+                )
+                axs[j].set_title(var_names[j])
+                axs[j].legend()
