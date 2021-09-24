@@ -1,10 +1,7 @@
 library(raster)
+library(sp)
 library(ncdf4)
-  # identify script location (if using R-studio). If not working: input path manually into setwd()
-  library(rstudioapi)  
-  script_location<-normalizePath(rstudioapi::getActiveDocumentContext()$path)
-  script_location<-substr(script_location, 1, regexpr("model_specific_helpers.R",script_location)-1)
-setwd(script_location)
+library(dplyr)
 source ("../general_helpers.R") 
 
 # fixme:
@@ -28,15 +25,11 @@ UnEstimatedParameters = list(
     C_leaf_0=0,
     C_wood_0=0,
     C_root_0=0,
-    c_litter_above_0=0,
-    c_litter_below_0=0,
+    C_litter_above_0=0,
+    C_litter_below_0=0,
     C_fastsom_0=0,
     C_slowsom_0=0,
-    C_passom_0=0,
-#    rh_0=0,
-#    f_leaf2leaflit=1,
-#    f_root2rootlit=1,
-#    f_wood2woodlit=1,
+    C_passsom_0=0,
     npp=0,
     number_of_months=0,
     tsl=0, # soil temperature - for dynamic turnover rates
@@ -48,16 +41,16 @@ UnEstimatedParameters = list(
 # inside the mcmc
 EstimatedParameters = list(
     beta_leaf=0,    #  1 (indices uses in original code) 
-    beta_root=0,    #  2
+    beta_wood=0,    #  2
     f_leaflit2fastsom=0,  #  3
     f_leaflit2slowsom=0,#  4
-    f_leaflit2passom=0,#  5
+    f_leaflit2passsom=0,#  5
     f_woodlit2fastsom=0,  #  6
     f_woodlit2slowsom=0,#  7
-    f_woodlit2passom=0,#  8
+    f_woodlit2passsom=0,#  8
     f_rootlit2fastsom=0,  #  9
     f_rootlit2slowsom=0,#  10
-    f_rootlit2passom=0,#  11
+    f_rootlit2passsom=0,#  11
     k_leaf=0,       #  12
     k_wood=0,       #  13
     k_root=0,       #  14
@@ -75,14 +68,6 @@ EstimatedParameters = list(
 
 # This is the set off all 
 Parameters=c(EstimatedParameters,UnEstimatedParameters)
-#class Parameters(_Parameters):
-#  @classmethod
-#def from_EstimatedParametersAndUnEstimatedParameters(
-#  cls,
-#  epa :EstimatedParameters,
-#  cpa :UnEstimatedParameters
-#):
-#  return cls(*(epa + cpa))
 
 # This set defines the order of the c pools
 # The order is crucial for the compatibility
@@ -103,12 +88,12 @@ Observables = list(
     C_leaf=0,
     C_wood=0,
     C_root=0,
-    c_litter_above=0,
-    c_litter_below=0,    
-    c_fastsom=0,
-    c_slowsom=0,
-    c_passom=0,
-    respiration=0,
+    C_litter_above=0,
+    C_litter_below=0,    
+    C_fastsom=0,
+    C_slowsom=0,
+    C_passsom=0,
+    rh=0,
     f_veg2litter=0,
     f_litter2som=0
 )
@@ -123,11 +108,11 @@ ModelParameters = Parameters[!( names(Parameters) %in% list(
   'C_leaf_0',
   'C_root_0',
   'C_wood_0',
-  'c_litter_above_0',
-  'c_litter_below_0',
+  'C_litter_above_0',
+  'C_litter_below_0',
   'C_fastsom_0',
   'C_slowsom_0',
-  'C_passom_0',
+  'C_passsom_0',
   'rh_0',
   'C_leaflit_0',
   'number_of_months')                    
@@ -147,12 +132,13 @@ get_example_site_vars<-function(dataPath, lon, lat){
   files<-list.files(dataPath, pattern="..nc") # list all netCDF files in the folder
   (var_names<-substr(files, 0 ,regexpr("_",files)-1)) # derive variable names from file names
   dat<-data.frame(point)
+
   for (i in 1:length(var_names)){
-    r<-stack(files[i])
+    r<-stack(paste0(dataPath,"/",files[i]))
     r_dat<-extract(r,point)
     dat<-cbind(dat,r_dat[1,])
   }
-  (names(dat)<-c("lon","lat", var_names)) # assign variable names
+  names(dat)<-c("lon","lat", var_names) # assign variable names
   
   #calculate wood pool from veg, leaf and root
   dat$cWood=dat$cVeg-dat$cLeaf-dat$cRoot
@@ -167,30 +153,42 @@ get_example_site_vars<-function(dataPath, lon, lat){
   dat$rh<-dat$rh*86400
   
   # explore the data
-  summary(dat)
-  
+  print("Importing data:")
+  names(dat)
   #save the data to a file
-  write.csv(dat,paste0(dataPath,"/dat.csv"))
-  output=list(dat$npp,dat$nppLeaf,dat$nppWood,dat$nppRoot,dat$fVegLitter,dat$fLitterSoil,dat$fLitterSoil, dat$rh,
-              dat$cLeaf, dat$cVeg, dat$cRoot, dat$cLitterAbove, dat$cLitterBelow, dat$cSoilFast, dat$cSoilMedium, dat$cSoilSlow, 
-              dat$tsl, dat$mrso, dat$ts)
+
+  output=data.frame(
+    C_leaf=dat$cLeaf,
+    C_wood=dat$cWood,
+    C_root=dat$cRoot,
+    C_litter_above=dat$cLitterAbove,
+    C_litter_below=dat$cLitterBelow,
+    C_fastsom=dat$cSoilFast,
+    C_slowsom=dat$cSoilMedium,
+    C_passsom=dat$cSoilSlow,
+    npp=dat$npp,
+    rh=dat$rh,
+    f_veg2litter=dat$fVegLitter,
+    f_litter2som=dat$fLitterSoil,
+    tsl=dat$tsl, # soil temperature - for dynamic turnover rates
+    mrso=dat$mrsos, # soil moisture - for dynamic turnover rates
+    ts=dat$ts # air temperature - for dynamic turnover rates
+      )
+  write.csv(output,paste0(dataPath,"/dat.csv"))
   return(output)
 
 }  
 # read data from a csv file if previously saved  
 get_data_from_file<-function(dataPath){
   dat<-read.csv(paste0(dataPath,"/dat.csv")) 
-  output=list(dat$npp,dat$nppLeaf,dat$nppWood,dat$nppRoot,dat$fVegLitter,dat$fLitterSoil,dat$fLitterSoil, dat$rh,
-              dat$cLeaf, dat$cVeg, dat$cRoot, dat$cLitterAbove, dat$cLitterBelow, dat$cSoilFast, dat$cSoilMedium, dat$cSoilSlow, 
-              dat$tsl, dat$mrso, dat$ts)
-  return(output)
+  #output=list(dat$npp,dat$nppLeaf,dat$nppWood,dat$nppRoot,dat$fVegLitter,dat$fLitterSoil,dat$fLitterSoil, dat$rh,
+  #            dat$cLeaf, dat$cVeg, dat$cRoot, dat$cLitterAbove, dat$cLitterBelow, dat$cSoilFast, dat$cSoilMedium, dat$cSoilSlow, 
+  #            dat$tsl, dat$mrso, dat$ts)
+  return(dat)
 }
 
-#r<-get_example_site_vars("D:/Work/NAU/WG_CMIP6/MIROC/Outputs/pct1CO2bgs")   
-#r2<-get_data_from_file("D:/Work/NAU/WG_CMIP6/MIROC/Outputs/pct1CO2bgs")  
-
 # function to check if mcmc-generated parameters can be accepted
-make_param_filter_func<-function(c_max, c_min) {
+make_param_filter_func<-function(C_max, C_min) {
   
   isQualified<-function(c){
   # fixme
@@ -200,7 +198,7 @@ make_param_filter_func<-function(c_max, c_min) {
     paramNum = length(c)
     flag = T
     for (i in 1:paramNum){
-      if(c[i] > c_max[i] || c[i] < c_min[i]) {flag = False; break}
+      if(c[i] > C_max[i] || c[i] < C_min[i]) {flag = F; break}
       if(c[1] + c[2] > 1){flag = F; break}
       if(c[3] + c[4] + c[5] > 1){flag = F; break}
       if(c[6] + c[7] + c[8] > 1){flag = F; break}
@@ -225,17 +223,17 @@ make_weighted_cost_func<-function(obs) {
   # as the observation
   # this convention has to be honored by the forward_simulation as well
   # which in this instance already compresses the 3 different litter pools
-  # to c_litter and the 3 different soil pools to one
+  # to C_litter and the 3 different soil pools to one
 
   J_obj1 = mean (( out_simu$C_leaf - obs$C_leaf)**2)/(2*var(obs$C_leaf))
-  J_obj2 = mean (( out_simu$C_wood - obs$C_leaf$C_wood )**2)/(2*var(obs$C_wood))
+  J_obj2 = mean (( out_simu$C_wood - obs$C_wood )**2)/(2*var(obs$C_wood))
   J_obj3 = mean (( out_simu$C_root - obs$C_root )**2)/(2*var(obs$C_root))
-  J_obj4 = mean (( out_simu$c_litter_above - obs$c_litter_above )**2)/(2*var(obs$c_litter_above))
-  J_obj5 = mean (( out_simu$c_litter_below - obs$c_litter_below )**2)/(2*var(obs$c_litter_below))
-  J_obj6 = mean (( out_simu$c_fastsom - obs$c_fastsom )**2)/(2*var(obs$c_fastsom))
-  J_obj7 = mean (( out_simu$c_slowsom - obs$c_slowsom )**2)/(2*var(obs$c_slowsom))
-  J_obj8 = mean (( out_simu$c_passom - obs$c_passom )**2)/(2*var(obs$c_passom))
-  J_obj9 = mean (( out_simu$respiration - obs$respiration )**2)/(2*var(obs$respiration))
+  J_obj4 = mean (( out_simu$C_litter_above - obs$C_litter_above )**2)/(2*var(obs$C_litter_above))
+  J_obj5 = mean (( out_simu$C_litter_below - obs$C_litter_below )**2)/(2*var(obs$C_litter_below))
+  J_obj6 = mean (( out_simu$C_fastsom - obs$C_fastsom )**2)/(2*var(obs$C_fastsom))
+  J_obj7 = mean (( out_simu$C_slowsom - obs$C_slowsom )**2)/(2*var(obs$C_slowsom))
+  J_obj8 = mean (( out_simu$C_passsom - obs$C_passsom )**2)/(2*var(obs$C_passsom))
+  J_obj9 = mean (( out_simu$rh - obs$rh )**2)/(2*var(obs$rh))
   J_obj10 = mean (( out_simu$f_veg2litter - obs$f_veg2litter )**2)/(2*var(obs$f_veg2litter))
   J_obj11 = mean (( out_simu$f_litter2som - obs$f_litter2som )**2)/(2*var(obs$f_litter2som))
 
@@ -257,8 +255,8 @@ make_param2res<-function(cpa){
   #   tasks.
   #   -   use both sets of parameters 'pc' and 'pe' to build a forward model
   #   -   run the forward model to produce output for the times
-  #       when obeservations are available.(Here monthly)
-  #   -   project the output of the forward model to the obeserved variables.
+  #       when observations are available.(Here monthly)
+  #   -   project the output of the forward model to the observed variables.
   #       (here summation of all different soil-pools to compare to the single
   #       observed soil-pool and the same for the litter pools)
   # 
@@ -275,21 +273,21 @@ make_param2res<-function(cpa){
 # 3. the projection of the simulated pool values to observable variables
 #    (here summation of
 
-param2res<-function(pa){
+param2res<-function(epa){
   # pa is a numpy array when pa comes from the predictor
   # so we transform it to be able to use names instead of positions
-  epa=EstimatedParameters
+  #epa=EstimatedParameters
   days = c(31,28,31,30,31,30,31,31,30,31,30,31)# Construct b vector
  
   # leaf, root, wood
-  beta1=epa$beta_leaf; beta3=epa$beta_root 
-  beta2 = 1- beta1- beta3
+  beta1=epa$beta_leaf; beta2=epa$beta_wood 
+  beta3 = 1- beta1- beta2
   B = c(beta1, beta2, beta3, 0, 0, 0, 0,0,0)   # allocation
   # transfer coefficients
   f41=1; f52=1; f63=1
-  f74 = epa$f_leaflit2fastsom; f84=epa$f_leaflit2slowsom;  f94=epa$f_leaflit2passom;
-  f75=epa$f_woodlit2fastsom; f85=epa$f_woodlit2slowsom;  f86=epa$f_woodlit2passom;
-  f76=epa$f_rootlit2fastsom; f86=epa$f_rootlit2slowsom; f96=epa$f_rootlit2passom
+  f74 = epa$f_leaflit2fastsom; f84=epa$f_leaflit2slowsom;  f94=epa$f_leaflit2passsom;
+  f75=epa$f_woodlit2fastsom; f85=epa$f_woodlit2slowsom;  f95=epa$f_woodlit2passsom;
+  f76=epa$f_rootlit2fastsom; f86=epa$f_rootlit2slowsom; f96=epa$f_rootlit2passsom
   # A matrix
   A = c(-1,  0,   0,   0,   0,   0,   0,   0,   0,
         0,  -1,   0,   0,   0,   0,   0,   0,   0,
@@ -300,7 +298,7 @@ param2res<-function(pa){
         0,   0,   0, f74, f75,   f76, -1,   0,  0,
         0,   0,   0, f84, f85,   f86,  0,  -1,  0,
         0,   0,   0, f94, f95,   f96,  0,  0,  -1 )  
-
+  A = matrix(A, nrow = 9, byrow = TRUE)
 #turnover rate per day of pools:
 temp = c(epa$k_leaf,epa$k_wood,epa$k_root, epa$k_leaflit, epa$k_woodlit, epa$k_rootlit, epa$k_fastsom, epa$k_slowsom, epa$k_passsom)
 # K matrix
@@ -319,20 +317,20 @@ x_init = c(cpa$C_leaf_0, # leaf
            cpa$C_wood_0, # stem
            cpa$C_root_0, # root
            epa$C_leaflit_0, # leaf litter - unknown
-           cpa$c_litter_above_0[1]-epa$C_leaflit_0, # wood litter
-           cpa$c_litter_below_0, # root litter
+           cpa$C_litter_above_0[1]-epa$C_leaflit_0, # wood litter
+           cpa$C_litter_below_0, # root litter
            cpa$C_fastsom_0, # soil active
            cpa$C_slowsom_0, # soil intermediate
-           cpa$C_passom_0)  # soil passive  
+           cpa$C_passsom_0)  # soil passive  
 X=x_init   # initialize carbon pools 
 
 # initialize first respiration value
-co2_rh=cpa.rh_0
+#co2_rh=cpa.rh_0
 # fixme:
 # slight change to the original
 # I would like to start the solution with the initial values
 # m=0 means after 0 moths = in the initial step
-B=A@K
+#B=A@K
 #pa=Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
 #B=make_compartmental_matrix_func(pa)(0,X)
 
@@ -373,7 +371,7 @@ for (m in 1:cpa$number_of_months){
         rh_modifier, # slow soil
         rh_modifier) # passive soil
   
-  for (d in 1:days[m%%12]) {
+  for (d in 1:days[m%%12+1]) {
     
     # matrix equation with ksi (remove ksi if no environmental modifiers)
     X = X + B * npp_in + A %*% K %*% X * ksi
@@ -386,27 +384,27 @@ for (m in 1:cpa$number_of_months){
                  K[8,8]*ksi[8], 
                  K[9,9]*ksi[9])
     co2=sum(co2_rate*X)
-    co2_rh = co2_rh + co2/days[m%%12]   # monthly average rh
+    co2_rh = co2_rh + co2/days[m%%12+1]   # monthly average rh
     # deriving litterfall
     litterfall_rate = c(f41*K[1,1]*ksi[1],f52*K[2,2]*ksi[2],f63*K[3,3]*ksi[3],0,0,0,0,0,0)
     litterfall=sum(litterfall_rate*X)
-    f_veg_lit=f_veg_lit+litterfall/days[m%%12]
+    f_veg_lit=f_veg_lit+litterfall/days[m%%12+1]
     # deriving humus formation
     litter_to_soil_rate = c(0,0,0,f74*K[4,4]*ksi[4]+f84*K[4,4]*ksi[4]+f84*K[4,4]*ksi[4],
                           f75*K[5,5]*ksi[5]+ f85*K[5,5]*ksi[5]+ f95*K[5,5]*ksi[5],
                           f76*K[6,6]*ksi[6]+ f86*K[6,6]*ksi[6]+ f96*K[6,6]*ksi[6],
                           0,0,0)
     litter_to_soil=sum(litter_to_soil_rate*X)
-    f_lit_soil=f_lit_soil+litter_to_soil/days[m%%12]
+    f_lit_soil=f_lit_soil+litter_to_soil/days[m%%12+1]
   }
-  x_fin[jj,]=X
-  rh_fin[jj]=co2_rh
-  f_veg_lit_fin[jj]=f_veg_lit
-  f_lit_soil_fin[jj]=f_lit_soil
+  x_fin[m,]=X
+  rh_fin[m]=co2_rh
+  f_veg_lit_fin[m]=f_veg_lit
+  f_lit_soil_fin[m]=f_lit_soil
 }
 
 # We create an output that has the same shape
-# as the obvervations to make the costfunctions
+# as the observations to make the costfunctions
 # easier.
 # To this end we project our 10 output variables of the matrix simulation
 # onto the 6 data streams by summing up the 3 litter pools into one
@@ -415,14 +413,14 @@ out_simu = list(
   C_leaf=x_fin$leaf,
   C_wood=x_fin$wood,
   C_root=x_fin$root,
-  c_litter_above=x_fin$leaflit+x_fin$woodlit,
-  c_litter_below=x_fin$rootlit,
-  c_fastsom=x_fin$fastsom,
-  c_slowsom=x_fin$slowsom,
-  c_passom=xfin$passom,
+  C_litter_above=x_fin$leaflit+x_fin$woodlit,
+  C_litter_below=x_fin$rootlit,
+  C_fastsom=x_fin$fastsom,
+  C_slowsom=x_fin$slowsom,
+  C_passsom=x_fin$passsom,
   rh=rh_fin,
   f_veg2litter=f_veg_lit_fin,
-  f_litter2som=f_lit_soil_fin,
+  f_litter2som=f_lit_soil_fin
 )
 return (out_simu)
 }
