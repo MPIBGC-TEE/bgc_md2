@@ -11,10 +11,9 @@ make_uniform_proposer<-function(C_max, C_min, D, filter_func) {
     GenerateParamValues<-function(C_op){
         paramNum = length(C_op)
         flag = T
-        C_op2<-unlist(C_op, use.names=FALSE)
         while (flag) {
-            C_new = C_op2 + (runif((paramNum)) - 0.5)*(C_max - C_min)/10.0
-            #C_new = C_op + (runif((paramNum)) - 0.5)*(C_max - C_min)/15.0
+            C_new = as.data.frame(C_op) + (runif((paramNum)) - 0.5)*(C_max - C_min)/10.0
+            #C_new = as.data.frame(C_op) + (runif((paramNum)) - 0.5)*(C_max - C_min)/15.0
             if (filter_func(C_new)){flag = F}
         }
         names(C_new)=names(C_op)
@@ -30,9 +29,9 @@ make_multivariate_normal_proposer<-function(covv, filter_func){
     # """
     GenerateParamValues<-function(C_op){
         flag = T
-        C_op2<-unlist(C_op, use.names=FALSE)
+        #C_op2<-unlist(C_op, use.names=FALSE)
         while (flag){
-            C_new = C_op2 + rmvnorm(1,mean = rep(0, length(C_op2)),sigma=covv)
+            C_new = as.data.frame(C_op) + rmvnorm(1,mean = rep(0, length(C_op)),sigma=covv)
             if (filter_func(C_new)) {flag = F}
         }
         names(C_new)=names(C_op)
@@ -57,8 +56,8 @@ mcmc<-function(initial_parameters, proposer, param2res, costfunction, nsimu) {
     set.seed(10)
 
     paramNum=length(initial_parameters)
-
-    upgraded=0;
+    upgraded=0
+    
     C_op = initial_parameters
     first_out = param2res(C_op)
     J_last = costfunction(first_out)
@@ -69,7 +68,7 @@ mcmc<-function(initial_parameters, proposer, param2res, costfunction, nsimu) {
     J_upgraded = rep(0, nsimu)
 
     for (simu in 1:nsimu) {
-        print (paste0("simulation ",simu, " out of ", nsimu)) 
+if (simu%%100==0) {print (paste0("simulation ",simu, " out of ", nsimu))} 
         C_new = proposer(C_op)
 
         out_simu = param2res(C_new)
@@ -78,14 +77,21 @@ mcmc<-function(initial_parameters, proposer, param2res, costfunction, nsimu) {
         delta_J =  J_last - J_new;
 
         randNum = runif(1)
+  
         if (min(1.0, exp(delta_J)) > randNum) {
             C_op=C_new;
             J_last=J_new;
             C_upgraded[upgraded,]=unlist(C_op, use.names=FALSE);
             J_upgraded[upgraded]=J_last; 
-            upgraded=upgraded+1 }
-        }
-        output<-list(C_upgraded, J_upgraded)
+            upgraded=upgraded+1 
+            }
+    }
+        # select only rows with upgraded parameters, discard 0s at the end
+        C_upgraded<-C_upgraded[1:upgraded,]
+        J_upgraded<-J_upgraded[1:upgraded] 
+        acceptance_rate<-upgraded/nsimu
+        
+        output<-list(C_upgraded, J_upgraded, acceptance_rate)
 return (output)
 }
 make_feng_cost_func<-function(obs){
