@@ -41,7 +41,7 @@ make_multivariate_normal_proposer<-function(covv, filter_func){
 return (GenerateParamValues)
 }
 
-mcmc<-function(initial_parameters, proposer, param2res, costfunction, nsimu) {
+mcmc<-function(initial_parameters, proposer, param2res, costfunction, nsimu, K_accept=1) { # K_accept - coefficient to modify acceptance rate
     # """
     # perform the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
     # 
@@ -78,7 +78,7 @@ if (simu%%100==0) {print (paste0("simulation ",simu, " out of ", nsimu))}
 
         randNum = runif(1)
   
-        if (min(1.0, exp(delta_J)) > randNum) {
+        if (min(1.0, exp(delta_J)) > randNum/K_accept) {
             C_op=C_new;
             J_last=J_new;
             C_upgraded[upgraded,]=unlist(C_op, use.names=FALSE);
