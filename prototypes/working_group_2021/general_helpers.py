@@ -3,6 +3,7 @@ from tqdm import tqdm
 from typing import Callable, Tuple, Iterable
 from functools import reduce, lru_cache
 from copy import copy
+from time import time
 
 def make_uniform_proposer(
         c_max: Iterable,
@@ -23,7 +24,7 @@ def make_uniform_proposer(
         paramNum = len(c_op)
         flag = True
         while (flag):
-           c_new = c_op + (np.random.random((paramNum)) - 0.5)*(c_max - c_min)/10.0
+           c_new = c_op + (np.random.random((paramNum)) - 0.5)*(c_max - c_min)/D
            #c_new = c_op + (np.random.normal(0, 1, paramNum))*(c_max - c_min)/15.0
            if (filter_func(c_new)):
               flag = False
@@ -59,7 +60,7 @@ def mcmc(
         nsimu: int 
     ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    perform the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
+    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
 
     :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
     :param proposer: A function that proposes a new parameter(tuple) from a given parameter (tuple).
@@ -79,10 +80,15 @@ def mcmc(
     J_last = costfunction(first_out)
     #J_last = 400 # original code
     
+    # intialize the result arrays to the maximum length
+    # Depending on many of the parameters will be accepted only 
+    # a part of them will be filled with real values
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((1, nsimu))
     
-    for simu in tqdm(range(nsimu)):
+    #for simu in tqdm(range(nsimu)):
+    st =time() 
+    for simu in range(nsimu):
         c_new = proposer(C_op)
 
 
@@ -98,8 +104,32 @@ def mcmc(
                 C_upgraded[:,upgraded]=C_op;
                 J_upgraded[:,upgraded]=J_last; 
                 upgraded=upgraded+1;
-    
-    return C_upgraded, J_upgraded
+        # print some metadata 
+        # (This could be added to the outputfile later)
+        
+        if simu%10==0 or simu == (nsimu-1):
+            print(
+ """ 
+#(upgraded): {n}
+over all acceptance ratio till now: {r}% 
+progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+time elapsed: {minutes:02d}:{sec:02d}.
+""".format(
+                n=upgraded,
+                r=int(upgraded/(simu+1)*100),
+                simu=simu,
+                nsimu=nsimu,
+                pbs='|'+int(50*simu/(nsimu-1))*'#'+int((1-simu/(nsimu-1))*50)*' '+'|',
+                p=int(simu/(nsimu-1)*100),
+                minutes=int((time()-st)/60),
+                sec=int((time()-st)%60)
+            ),
+            end='\033[5A' # print alway on the same spot of the screen...
+            )
+
+    #remove the part of the arryas that is still filled with zeros
+    useful_slice = slice(0,upgraded)
+    return C_upgraded[:,useful_slice], J_upgraded[:,useful_slice]
 
 def make_feng_cost_func(
         obs: np.ndarray
@@ -261,7 +291,7 @@ def plot_solutions(
                 axs[j].plot(
                     np.array(times).reshape(n_times,), 
                     sol[:, j],
-                    marker="o",
+                    marker="+",
                     label=names[i]
                 )
                 axs[j].set_title(var_names[j])
