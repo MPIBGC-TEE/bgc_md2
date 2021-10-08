@@ -262,10 +262,7 @@ def make_weighted_cost_func(
         J_obj6 = np.mean (( rh_simu[:,0] - rh[0:tot_len] )**2)/(2*np.var(rh[0:tot_len]))
         
         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
-        # to make this special costfunction comparable (in its effect on the
-        # acceptance rate) to the general costfunction proposed by Feng we
-        # rescale it by a factor 
-        return J_new*50.0
+        return J_new
     return costfunction     
 
 

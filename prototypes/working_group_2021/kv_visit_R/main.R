@@ -1,4 +1,4 @@
-
+library(Metrics)
 # identify script location (if using R-studio). If not working: input path manually into setwd()
 library(rstudioapi)  
 script_location<-normalizePath(rstudioapi::getActiveDocumentContext()$path)
@@ -163,15 +163,15 @@ mcmc_demo = mcmc(
         initial_parameters=epa_0,
         proposer=uniform_prop,
         param2res=param2res,
-        costfunction=make_weighted_cost_func(obs),
-        #costfunction=make_feng_cost_func(obs),
-        nsimu=nsimu_demo
+        #costfunction=make_weighted_cost_func(obs),
+        costfunction=make_feng_cost_func(obs),
+        nsimu=nsimu_demo,
+        K_accept=0.5 # modifier to reduce acceptance rate
 )
 # save demo parameters and costfunction values for postprocessing 
 
 df=data.frame(mcmc_demo[[1]])
 df_j=data.frame(mcmc_demo[[2]])
-print(paste0("Acceptance rate: ",mcmc_demo[[3]]))
 
 write.csv(df,paste0(dataPath,'/visit_demo_da_aa.csv'))
 write.csv(df_j,paste0(dataPath,'/visit_demo_da_j_aa.csv'))
@@ -200,47 +200,96 @@ mcmc_formal = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs),
         costfunction=make_feng_cost_func(obs),
-        nsimu=nsimu_formal
+        nsimu=nsimu_formal,
+        K_accept=0.5 # modifier to reduce acceptance rate
 )
 
 # save the parameters and costfunction values for postprocessing 
 
 df=data.frame(mcmc_formal[[1]])
 df_j=data.frame(mcmc_formal[[2]])
-print(paste0("Acceptance rate: ",mcmc_formal[[3]]))
 
 write.csv(df,paste0(dataPath,'/visit_formal_da_aa.csv'))
 write.csv(df_j,paste0(dataPath,'/visit_formal_da_j_aa.csv'))
 
-######################################## explore optimized parameters ###################################################
-# visualize parameter distribution
+######################################## explore MCMC results ###################################################
+
+# calculate median of each parameter distribution
+epa_median=rep(0,length(epa_0))
+for (i in 1:length(epa_0)) {epa_median[i]=median(df[[i]])}
+names(epa_median)<-names(epa_0)
+epa_median<-as.list(epa_median)
+# calculate mode of each parameter distribution
+epa_mode=rep(0,length(epa_0))
+for (i in 1:length(epa_0)) {
+    uniqv <- unique(df[[i]])
+    epa_mode[i] <- uniqv[which.max(tabulate(match(df[[i]], uniqv)))]}
+names(epa_mode)<-names(epa_0)
+epa_mode<-as.list(epa_mode)
+# select parameters from a set with minimal cost function distribution
+epa_min_J<-as.list(df[df_j==min(df_j[df_j!=0])])
+names(epa_min_J)<-names(epa_0)
+
+# visualize parameter distributions with median, mode and min cost function
 {
-par(mfrow=c(4, 6)) # make 4x6 plots in 1 window
-for (i in 1:length(df)) {hist(df[[i]], breaks=20, main=names(df)[i])}
-par(mfrow=c(1, 1)) # return to single plot mode
+    par(mfrow=c(4, 6)) # make 4x6 plots in 1 window
+    for (i in 1:length(df)) {
+        hist(df[[i]], breaks=100, col="lightgray", border="lightgray", probability=T, main=names(epa_0)[i])
+        lines(stats::density(df[[i]]), col="black", lwd=2)
+        abline(v=epa_median[[i]],col="red",lwd=2)
+        abline(v=epa_mode[[i]],col="orange",lwd=2)
+        abline(v=epa_min_J[[i]],col="green",lwd=2)
+        }
+    par(mfrow=c(1, 1)) # return to single plot mode
 }
-epa_final=rep(0,length(epa_0))
-for (i in 1:length(epa_0)) {epa_final[i]=median(distr[[i]])}
-# compare original and optimized parameters
-names(epa_final)<-names(epa_0)
-epa_final<-as.list(epa_final)
-optimized = param2res(epa_final) # run the model with optimized parameters
-summary(as.data.frame(optimized))
+
+# run the model with optimized parameters
+optimized_median = param2res(epa_median)
+optimized_mode = param2res(epa_mode)
+optimized_min_J = param2res(epa_min_J)
 { # plot model output with optimized parameters
     par(mfrow=c(3, 4)) # make 3x4 plots in 1 window
+    N=tot_len # number of years to plot
     
-    for (i in 1:length(names(optimized))) {
-        plot(optimized[[i]], type="l", col="red", xlab="month",
-             ylim=c(min(min(optimized[[i]]),min(obs[[i]])),max(max(optimized[[i]]),max(obs[[i]]))), 
-             ylab=names(optimized)[i], main=names(optimized)[i])
+    # change number of years to plot for very dynamic pools and fluxes (optional)
+    for (i in 1:length(names(optimized_median))) {
+        if (names(optimized_median)[i]=="C_leaf" || names(optimized_median)[i]=="rh" || names(optimized_median)[i]=="f_veg2litter"
+            || names(optimized_median)[i]=="f_litter2som") {N=tot_len%/%10} else (N=tot_len)
+        
+        plot(optimized_median[[i]][1:N], type="l", col="red", xlab="month",
+             ylim=c(min(min(optimized_median[[i]]),min(obs[[i]])),max(max(optimized_median[[i]]),max(obs[[i]]))), 
+             ylab=names(optimized_median)[i], main=names(optimized_median)[i])
         lines(obs[[i]], col="blue")
+        lines(optimized_mode[[i]], col="orange")
+        lines(optimized_min_J[[i]], col="green")
     }
     plot(2, xlim=c(0,1), ylim=c(0,0.9), axes = F, main="legend", ylab="")
-    legend(0.1, 0.9, legend=c("CMIP-6 Output", "Modelled"),
-           col=c("blue", "red"), lty=1, cex=1)
+    legend(0.1, 0.9, legend=c("CMIP-6 Output", "Median", "Mode", "Min Cost Function"),
+           col=c("blue", "red", "orange", "green"), lty=1, cex=1)
     
     par(mfrow=c(1, 1)) # return to single plot mode
 }
 print(as.data.frame(epa_0))
-print(as.data.frame(epa_final))
+print(as.data.frame(epa_median))
+print(as.data.frame(epa_mode))
+print(as.data.frame(epa_min_J))
+print(paste0("Acceptance rate (demo): ",mcmc_demo[[3]]))
+print(paste0("Acceptance rate (formal): ",mcmc_formal[[3]]))
+# calculate RMSE for each observed/predicted variable
+RMSE_median<-data.frame (param=names(obs), RMSE=0)
+RMSE_mode<-data.frame (param=names(obs), RMSE=0)
+RMSE_min_J<-data.frame (param=names(obs), RMSE=0)
+for (i in 1:length(names(obs))){
+    RMSE_median[i,2]<-rmse(obs[[i]], optimized_median[[i]])
+    RMSE_mode[i,2]<-rmse(obs[[i]], optimized_mode[[i]])
+    RMSE_min_J[i,2]<-rmse(obs[[i]], optimized_min_J[[i]])
+}
+# best parameter values based on minimal RMSE
+for (i in 1:length(names(obs))){
+   print(names(obs)[i])
+   if (RMSE_median[i,2] < RMSE_mode[i,2] && RMSE_median[i,2] < RMSE_min_J[i,2])  {print("best value - median")}
+   if (RMSE_mode[i,2] < RMSE_median[i,2] && RMSE_mode[i,2] < RMSE_min_J[i,2])   {print("best value - mode")}
+   if (RMSE_min_J[i,2] < RMSE_mode[i,2] && RMSE_min_J[i,2] < RMSE_median[i,2])   {print("best value - min J")}
+}
+
 ####################################################################################################
