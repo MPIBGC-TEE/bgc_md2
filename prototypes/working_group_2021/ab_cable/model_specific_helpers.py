@@ -106,7 +106,6 @@ Observables = namedtuple(
         'C_leaf',
         'C_root',
         'C_wood',
-        'C_cwd',
         'c_litter',
         'c_soil',
         'respiration'

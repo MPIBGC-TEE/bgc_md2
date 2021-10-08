@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import paramiko
+from pathlib import Path
+import json
 
 
 # open a transport
@@ -9,10 +11,10 @@ port = 22
 transport = paramiko.Transport(host)
 
 
+with Path('config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
 # authentication
-username=""
-password=""
-transport.connect(None,username=username,password=password)
+transport.connect(None,username=conf_dict["username"],password=conf_dict["password"])
 
 
 sftp = paramiko.SFTPClient.from_transport(transport)
@@ -21,7 +23,7 @@ sftp = paramiko.SFTPClient.from_transport(transport)
 remote_path = "output"
 
 # FIXME please update to refer to data location in config.json instead of hardcoded path here.
-local_path  = "C:/Users/aliso/OneDrive - The University of Melbourne/A. Bennett - PhD/Analysis/Working Code/PhD/Other/data/test"
+local_path  = conf_dict["dataPath"]
 
 
 # Other models, "CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP","JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern",

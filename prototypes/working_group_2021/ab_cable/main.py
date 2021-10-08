@@ -57,11 +57,11 @@ from general_helpers import (
 
 # fixme: DONE
 #   put the (relative or asolute) location of your data into a small file called 'config.json' and
-#   in my case the content looks like this:
-#   {"dataPath": "/home/data/yuanyuan"}
 #   DO NOT add the file to the repository. It is not only model- but also site specific. 
 #   So you are likely to have one for every model on every computer
 #   you run this code on.
+#   in my case the content looks like this:
+#   {"dataPath": "/home/data/yuanyuan"}
 #   (this example uses an absolute path starting with a '/'
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
@@ -138,6 +138,7 @@ epa_0 = EstimatedParameters(
     C_mic_0=1,
     C_passom_0=10,
 )
+print("Here")
 nsimu_demo = 10
 C_demo, J_demo = mcmc(
         initial_parameters=epa_0,
