@@ -19,15 +19,14 @@ def make_uniform_proposer(
     filter_func will be applied to it to either accept or discard it.  So
     filter func must accept parameter array and return either True or False'''
     
-
+    g = np.random.default_rng()
     def GenerateParamValues(c_op):
         paramNum = len(c_op)
-        flag = True
-        while (flag):
-           c_new = c_op + (np.random.random((paramNum)) - 0.5)*(c_max - c_min)/D
-           #c_new = c_op + (np.random.normal(0, 1, paramNum))*(c_max - c_min)/15.0
-           if (filter_func(c_new)):
-              flag = False
+        keep_searching = True
+        while (keep_searching):
+            c_new = c_op + (g.random((paramNum)) - 0.5)*(c_max - c_min)/D
+            if (filter_func(c_new)):
+                keep_searching = False
         return c_new
 
     return GenerateParamValues
@@ -76,8 +75,10 @@ def mcmc(
     
     upgraded=0;
     C_op = initial_parameters
+    tb=time()
     first_out = param2res(C_op)
     J_last = costfunction(first_out)
+    print('first_iteration done after' + str(time()-tb))
     #J_last = 400 # original code
     
     # intialize the result arrays to the maximum length
@@ -90,8 +91,6 @@ def mcmc(
     st =time() 
     for simu in range(nsimu):
         c_new = proposer(C_op)
-
-
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
     

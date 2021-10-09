@@ -223,16 +223,11 @@ def make_param_filter_func(
         # fixme
         #   this function is model specific: It discards parameter proposals
         #   where beta1 and beta2 are >0.99
-        paramNum = len(c)
-        flag = True
-        for i in range(paramNum):
-           if(c[i] > c_max[i] or c[i] < c_min[i]):
-              flag = False
-              break
-           if(c[0] + c[1] > 0.99):
-              flag = False
-              break
-        return flag
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        cond3 = (c[0] + c[1]) < 1
+        return (cond1 and cond2 and cond3)
+        
     
     return isQualified
 
@@ -373,7 +368,6 @@ def make_param2res(
             rh_fin[m, 0]=co2_rh
             co2_rh = 0   
             for d in range(0,days[m%12]):
-                #X=X + b*npp_in + np.array(A@K@X).reshape([9,1])
                 X=X + b*npp_in + B@X
                 co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
                 co2=np.sum(co2_rate*X.reshape(1,9))

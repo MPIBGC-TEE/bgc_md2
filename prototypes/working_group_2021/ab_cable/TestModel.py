@@ -7,6 +7,7 @@ sys.path.insert(0,'..')
 import unittest
 import json
 from sympy import var, Symbol
+from time import time
 import numpy as np
 from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
@@ -44,10 +45,11 @@ with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
 
 class TestModel(InDirTest):
-    @unittest.skip
     def test_forward_simulation(self):
         # compare stored monthly timesteps (although the computation happens in daily steps)
+        t0=time()
         npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(Path(conf_dict['dataPath']))
+        print("data_loaded after",time()-t0)
         nyears = 10
         tot_len = 12*nyears
         obs_tup=Observables(
@@ -96,8 +98,9 @@ class TestModel(InDirTest):
             f_metlit2mic=0.45
         )
         param2res = make_param2res(cpa)
-        
+        t1=time()
         res = param2res(epa0)
+        print(time()-t1) 
         # the times have to be computed in days
         fig = plt.figure()
         plot_solutions(
