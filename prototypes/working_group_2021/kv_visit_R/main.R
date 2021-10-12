@@ -49,10 +49,12 @@ lat=50.0
 
 # read data from NetCDF if using the script for he 1st time
 #dat<-get_example_site_vars(dataPath, lon, lat)
+#dat<-get_global_mean_data(dataPath) # for the global data averaged in 1 pixel
 
 # read data from a csv file if previously saved
 dat<-get_data_from_file(dataPath)
-    
+#dat<-read.csv(paste0(dataPath,"/dat_global.csv"))  # for the global data averaged in 1 pixel   
+
 # combine them to a single array which we will later use as input to the costfunction
 nyears=150
 #nyears = 20
@@ -110,7 +112,7 @@ cpa = list(
 param2res = make_param2res(cpa) #pa=[beta1,beta2, lig_leaf, f41,f42, kleaf,kroot,kwood,kmet,kmic, kslow,kpass, cmet_init, cstr_init, cmiC_init, cpassive_init ]
 
 epa_0 = list(
-    beta_leaf=0.25,    #  1 (parameters used in original code) 
+    beta_leaf=0.25,    #  1 (parameters used in original code)
     beta_wood=0.2,    #  2
     f_leaflit2fastsom=0.41,  #  3
     f_leaflit2slowsom=0.07,#  4
@@ -136,6 +138,10 @@ epa_0 = list(
     KM=10  # 24
 )
 
+# modify initial parameters for a 1-pixel global run
+#epa_0$C_leaflit_0<-epa_0$C_leaflit_0*10000
+#C_min[21]<-C_min[21]*10000
+#C_max[21]<-C_max[21]*10000
 ########################## this is test of forward run and visualization of initial fit ################################3
 test = param2res(epa_0)
 summary(as.data.frame(test))
