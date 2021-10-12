@@ -100,26 +100,7 @@ class TimeSymbol(Symbol):
     pass
 
 class MatrixLike(ImmutableMatrix):
-    @classmethod
-    def _new(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], cls):
-            return args[0]
-        if kwargs.get('copy', True) is False:
-            if len(args) != 3:
-                raise TypeError("'copy=False' requires a matrix be initialized as rows,cols,[list]")
-            rows, cols, flat_list = args
-        else:
-            rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
-            flat_list = list(flat_list) # create a shallow copy
-
-        obj = Basic.__new__(cls,
-            Integer(rows),
-            Integer(cols),
-            Tuple(*flat_list))
-        obj._rows = rows
-        obj._cols = cols
-        obj._mat = flat_list
-        return obj
+    pass 
 
 class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...

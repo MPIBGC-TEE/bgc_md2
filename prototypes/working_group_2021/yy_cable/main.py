@@ -52,10 +52,11 @@ from model_specific_helpers import (
 from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
-        mcmc,
+        #mcmc,
         make_feng_cost_func,
         plot_solutions
 )
+from general_helpers import mcmc_parallel as mcmc
 
 # fixme: 
 #   put the (relative or asolute) location of your data into a small file called 'config.json' and
