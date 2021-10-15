@@ -28,19 +28,19 @@ difTCS=max(TCS)-min(TCS)
 
 pdf("Figures/totalStocks.pdf")
 par(mar=c(4,4,1,0))
-plot(calyr,TCS, type="l", lwd=2, ylim=c(1500,2500), xlim=c(1850, 2020),xlab="Calendar year", ylab="Carbon stock (PgC)", bty="n")
+plot(calyr,TCS, type="l", lwd=2, ylim=c(500,2000), xlim=c(1850, 2020),xlab="Calendar year", ylab="Carbon stock (PgC)", bty="n")
 arrows(2016, head(TCS, 1), 2016, tail(TCS,1), angle=90, code=3, length=0.05)
 text(2020,min(TCS)+(difTCS/2), labels=round(difTCS, 1))
 dev.off()
 
 pdf("Figures/meanPoolAges.pdf")
 matplot(calyr, meanAges[,-6], type="l", col=pal, lty=1, ylim=c(0,120),bty="n", xlab="Calendar year", ylab="Mean ages (yr)")
-legend(1950,80, pool_names,col=pal,lty=1,bty="n")
+legend("topright", pool_names,col=pal,lty=1,bty="n")
 dev.off()
 
 pdf("Figures/medianPoolAges.pdf")
 matplot(calyr, medianAges[,-6], type="l", col=pal, lty=1, bty="n", xlab="Calendar year", ylab="Median ages (yr)")
-legend(1850,60, pool_names,col=pal,lty=1,bty="n")
+legend("topright", pool_names,col=pal,lty=1,bty="n")
 dev.off()
 
 pdf("Figures/systemAges.pdf")
@@ -78,9 +78,9 @@ dev.off()
 
 pdf('Figures/meanMedianBTT.pdf')
 par(mar=c(4,4,0,0))
-plot(bttmeans$Year, bttmeans$meanBTT, type="l",ylim=c(0,18),col=2, xlab="Calendar year", ylab="Backward transit time (yr)", bty="n")
+plot(bttmeans$Year, bttmeans$meanBTT, type="l",ylim=c(0,20),col=2, xlab="Calendar year", ylab="Backward transit time (yr)", bty="n")
 lines(bttmeans$Year, bttmeans$medianBTT,col=4)
-legend("bottomleft", c("Mean transit time", "Median transit time"), lty=1, col=c(2,4), bty="n")
+legend("topright", c("Mean transit time", "Median transit time"), lty=1, col=c(2,4), bty="n")
 dev.off()
 
 
@@ -140,14 +140,20 @@ Ra=rowSums(re[,1:3])
 Rh=rowSums(re[,4:5])
 Re=rowSums(re)
 
+pdf("Figures/RaGPP.pdf")
+plot(calyr,GPP, col=4,type="l", ylim=c(0,200), xlab="Calendar year", ylab=expression(paste("GPP or Ra (Pg C y", r^-1, ")")), bty="n")
+lines(calyr, Ra,col=2)
+legend("bottomleft", c("GPP", "Ra"), lty=1,col=c(4,2),bty="n")
+dev.off()
+
 pdf("Figures/corRaGPP.pdf")
-ccf(Ra,GPP, ylab="Correlation coefficient", xlab="Lag (years)")
+ccf(Ra,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()
 
 pdf("Figures/corRhGPP.pdf")
-ccf(Rh,GPP, ylab="Correlation coefficient", xlab="Lag (years)")
+ccf(Rh,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()
 
 pdf("Figures/corReGPP.pdf")
-ccf(Re,GPP, ylab="Correlation coefficient", xlab="Lag (years)")
+ccf(Re,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()

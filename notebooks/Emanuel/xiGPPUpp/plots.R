@@ -140,14 +140,20 @@ Ra=rowSums(re[,1:3])
 Rh=rowSums(re[,4:5])
 Re=rowSums(re)
 
+pdf("Figures/RaGPP.pdf")
+plot(calyr,GPP, col=4,type="l", ylim=c(0,200), xlab="Calendar year", ylab=expression(paste("GPP or Ra (Pg C y", r^-1, ")")), bty="n")
+lines(calyr, Ra,col=2)
+legend("bottomleft", c("GPP", "Ra"), lty=1,col=c(4,2),bty="n")
+dev.off()
+
 pdf("Figures/corRaGPP.pdf")
-ccf(Ra,GPP, ylab="Correlation coefficient", xlab="Lag (years)")
+ccf(Ra,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()
 
 pdf("Figures/corRhGPP.pdf")
-ccf(Rh,GPP, ylab="Correlation coefficient", xlab="Lag (years)")
+ccf(Rh,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()
 
 pdf("Figures/corReGPP.pdf")
-ccf(Re,GPP, ylab="Correlation coefficient", xlab="Lag (years)")
+ccf(Re,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()
