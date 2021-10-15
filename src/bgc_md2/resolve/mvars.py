@@ -99,6 +99,19 @@ class TimeSymbol(Symbol):
     # should become a quantity with dimension time
     pass
 
+from mpmath.matrices.matrices import _matrix
+
+from sympy.core import Basic, Dict, Tuple
+from sympy.core.numbers import Integer
+from sympy.core.cache import cacheit
+from sympy.core.sympify import converter as sympify_converter, _sympify
+from sympy.matrices.dense import DenseMatrix
+from sympy.matrices.expressions import MatrixExpr
+from sympy.matrices.matrices import MatrixBase
+from sympy.matrices.repmatrix import RepMatrix
+from sympy.matrices.sparse import SparseMatrix
+from sympy.multipledispatch import dispatch
+
 class MatrixLike(ImmutableMatrix):
     @classmethod
     def _new(cls, *args, **kwargs):
@@ -112,14 +125,24 @@ class MatrixLike(ImmutableMatrix):
             rows, cols, flat_list = cls._handle_creation_inputs(*args, **kwargs)
             flat_list = list(flat_list) # create a shallow copy
 
+        rep = cls._flat_list_to_DomainMatrix(rows, cols, flat_list)
+
+        return cls._fromrep(rep)
+
+    @classmethod
+    def _fromrep(cls, rep):
+        rows, cols = rep.shape
+        flat_list = rep.to_sympy().to_list_flat()
         obj = Basic.__new__(cls,
             Integer(rows),
             Integer(cols),
-            Tuple(*flat_list))
+            Tuple(*flat_list, sympify=False))
         obj._rows = rows
         obj._cols = cols
-        obj._mat = flat_list
+        obj._rep = rep
         return obj
+
+    pass 
 
 class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...

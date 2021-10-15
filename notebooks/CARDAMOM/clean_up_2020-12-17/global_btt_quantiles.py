@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -249,7 +249,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
 
 
 # +
-## obsolete
+## obsolete, DO NOT EXECUTE
 
 chunk_dict = {"prob": 5}
 
@@ -410,6 +410,7 @@ plt.draw()
 # ## Load area and landfrac data
 
 ds_area_lf = xr.open_dataset(data_path.joinpath("LSFRAC2.nc"))
+ds_area_lf
 
 # +
 ds_area_lf_adapted = ds_area_lf.sel(lat=ds.lat, lon=ds.lon)
@@ -428,12 +429,12 @@ fig, ax = plt.subplots(figsize=(18, 8))
 # correct mean btt for autotrophic respiration
 Rs = ds["acc_net_external_output_vector"].sum(dim="pool")
 mean_btt = (Ras * 0 + Rs * ds["mean_btt"]) / (Ras + Rs)
-#global_mean_btt_wrong_weights = mean_btt.weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"])
+#global_mean_btt_wrong_weights = mean_btt.weighted(ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac).mean(dim=["lat", "lon"])
 
-age_weights = (ds_area_lf.area_sphere * ds_area_lf.landfrac * ds.solution.sum(dim="pool")).fillna(0)
+age_weights = (ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac * ds.solution.sum(dim="pool")).fillna(0)
 global_mean_age = ds["mean_system_age"].weighted(age_weights).mean(dim=["lat", "lon"])
 
-btt_weights = (ds_area_lf.area_sphere * ds_area_lf.landfrac * ds.acc_net_external_output_vector.sum(dim="pool")).fillna(0)
+btt_weights = (ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac * ds.acc_net_external_output_vector.sum(dim="pool")).fillna(0)
 global_mean_btt = mean_btt.weighted(btt_weights).mean(dim=["lat", "lon"])
 
 #global_mean_btt_wrong_weights.rolling(time=12).mean().plot.line(ax=ax, x="time", c="orange", add_legend=False, alpha=0.2)

@@ -12,20 +12,22 @@ from bgc_md2.resolve.mvars import (
 )
 
 # one wood product pool
-Wood_products = symbols("Wood-products")
+WP_S, WP_L = symbols("WP_S WP_L")
 
-state_vector = Matrix([Wood_products])
+state_vector = Matrix([WP_S, WP_L])
 
-WP_input = symbols("WP_input")
+WP_S_input, WP_L_input = symbols("WP_S_input WP_L_input")
 input_fluxes = {
-    Wood_products: WP_input
+    WP_S: WP_S_input,
+    WP_L: WP_L_input
 }
 
 internal_fluxes = dict()
 
-r_WP = symbols("r_WP")
+r_S, r_L = symbols("r_S r_L")
 output_fluxes = {
-    Wood_products: r_WP * Wood_products
+    WP_S: r_S * WP_S,
+    WP_L: r_L * WP_L
 }
 
 t = symbols("t")

@@ -54,6 +54,21 @@ In my case the files reside in `/home/data/yuanyuan` and the content of `config.
 ### Adapt the code to your own needs
 1. copy and rename the folder 
 1. start adapting the code to your own model
+   There are several ways how to do this depending on your workflow.
+   I what follows I describe a how I went about adapting Alisons code.
+   I use automated tests to get one part after the other to work and conserver the progress.
+
+  To do this it step by step
+	1. run the TestSuite in the newly created folder by 
+           ```bash
+           python -m unittest TestModel.py 
+	   '''
+           To make sure that you start with an example that works.
+
+	1. Open the files  `TestModel.py' and `model_specific_helpers.py'
+	   and change the names and values of the `UnEstimatedParameters' and `EstimatedParameters'
+	   in the definition of `model_specific_helpers.py' 
+
 
 ### General Remarks and Additional information
 

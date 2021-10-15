@@ -85,7 +85,8 @@ sigma = 4.5
 alpha = 1
 rho = 0.65
 f_i = 1
-x_a = start_year*exp(0.0305*time_symbol)/(start_year+exp(0.0305*time_symbol)-1)+284 
+#x_a = start_year*exp(0.0305*time_symbol)/(start_year+exp(0.0305*time_symbol)-1)+284 
+x_a = start_year*exp(0.0305*(time_symbol-start_year))/(start_year+exp(0.0305*(time_symbol-start_year))-1)+284
 T_s = T_s0 + sigma/log(2)*log(x_a/285)
 Gamma = 42.7 + 1.68*(T_s-25) + 0.012*(T_s-25)**2
 beta = 3*rho*x_a*Gamma/((rho*x_a-Gamma)*(rho*x_a+2*Gamma))
@@ -133,6 +134,10 @@ cstocks = pd.DataFrame(soln, columns=pool_names)
 stocks = cstocks.join(pd.DataFrame({"Time": times}))
 stocks.to_csv("stocks.csv", index=False)
 
+GPP=pd.DataFrame(smr.external_input_vector, columns=pool_names)
+Re=pd.DataFrame(smr.external_output_vector, columns=pool_names)
+GPP.to_csv("GPP.csv", index=False)
+Re.to_csv("Re.csv", index=False)
 
 ##### load linear autonomous pool model in steady state #####
 
