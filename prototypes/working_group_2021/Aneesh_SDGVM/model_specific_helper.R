@@ -1,3 +1,5 @@
+## Aneesh SDGVM model specific helper file
+
 rm(list=ls())
 library(raster)
 library(sp)
@@ -28,7 +30,7 @@ source ("./general_helpers.R")
 UnEstimatedParameters = list(
   C_leaf_wood_0=0,
   C_root_0=0,
-  C_soil_passive_0,
+  C_soil_passive_0=0,
   npp=0,
   number_of_months=0
 )
@@ -77,17 +79,6 @@ Parameters=c(EstimatedParameters,UnEstimatedParameters)
 # The order is crucial for the compatibility
 # with the matrices (B and b) If you change it
 # the matrix changes
-# StateVariables = list(
-#   C_leaf=0,
-#   C_wood=0,
-#   C_root=0,
-#   C_leaflit=0,
-#   C_woodlit=0,
-#   C_rootlit=0,
-#   C_fastsom=0,
-#   C_slowsom=0,
-#   C_passsom=0
-# )
 
 #Carbon pools in the model available from trendy output
 Statevariables = list(
@@ -96,20 +87,6 @@ Statevariables = list(
   C_litter=0,
   C_soil=0
 )
-
-# Observables = list(
-#   C_leaf=0,
-#   C_wood=0,
-#   C_root=0,
-#   C_litter_above=0,
-#   C_litter_below=0,    
-#   C_fastsom=0,
-#   C_slowsom=0,
-#   C_passsom=0,
-#   rh=0,
-#   f_veg2litter=0,
-#   f_litter2som=0
-# )
 
 #carbon pools in your model
 Observables = list(
@@ -130,19 +107,6 @@ Observables = list(
 # but does not include start values and hyperparameters like the 'number_of_months'
 # This distinction is helpful for the forward simulation where the
 # distinction between estimated and constant is irrelevant.
-# ModelParameters = Parameters[!( names(Parameters) %in% list(
-#   'C_leaf_0',
-#   'C_root_0',
-#   'C_wood_0',
-#   'C_litter_above_0',
-#   'C_litter_below_0',
-#   'C_fastsom_0',
-#   'C_slowsom_0',
-#   'C_passsom_0',
-#   'rh_0',
-#   'C_leaflit_0',
-#   'number_of_months')                    
-# )] 
 
 ModelParameters = Parameters[!( names(Parameters) %in% list(
   'C_leaf_wood_0',
@@ -179,7 +143,7 @@ ModelParameters = Parameters[!( names(Parameters) %in% list(
 #   }
 #   names(dat)<-c("lon","lat", var_names) # assign variable names
 
-setwd("/Users/aneeshchandel/Desktop/Working_group/S1")  
+# setwd("/Users/aneeshchandel/Desktop/Working_group/S1")  
 npp<-stack("npp.nc")
 clitter <- stack("cLitter.nc")
 cRoot<-stack("cRoot.nc")
@@ -200,16 +164,18 @@ rh_data<-extract(rh, point)
 
 dat <- data.frame(
   npp=npp_data[1,c(1:1400)],    #for reduced datapoints to make it uniform with other Trendy outputs from 1900 to 2014
-  rh = rh_data[1,c(1:1400)]     #npp and rh are yearly
+  rh = rh_data[1,c(1:1400)]     #npp and rh are monthly
 )
 
 dat2 <- data.frame(
   litter  =clitter_data[1,c(204:320)],   #from 1900 to 2014
-  root    =cRoot_data[1,c(204:320)],     #monthly
+  root    =cRoot_data[1,c(204:320)],     #yearly
   soil    =cSoil_data[1,c(204:320)],
-  Veg     =cVeg_data[1,c(204:320)],
-  leaf_wood = dat2$Veg - dat2$root
+  Veg     =cVeg_data[1,c(204:320)]
 )
+
+leaf_wood = dat2$Veg - dat2$root
+dat2$leaf_wood <- leaf_wood
 
   # correct fluxes from per second to per day
 dat$npp<-dat$npp*86400
@@ -228,10 +194,10 @@ make_param_filter_func<-function(C_max, C_min) {
     flag = T
     for (i in 1:paramNum){
       if(c[i] > C_max[i] || c[i] < C_min[i]) {flag = F; break}
-      if(c[1] + c[2] > 1){flag = F; break}
-      if(c[3] + c[4] + c[5] > 1){flag = F; break}
-      if(c[6] + c[7] + c[8] > 1){flag = F; break}
-      if(c[9] + c[10] + c[11] > 1){flag = F; break}
+      if(c[6] + c[7] > 1){flag = F; break}
+      if(c[10] + c[11] > 1){flag = F; break}
+      if(c[12] + c[13] > 1){flag = F; break}
+      #if(c[9] + c[10] + c[11] > 1){flag = F; break}
     }
     return (flag)
   }
@@ -254,20 +220,13 @@ make_weighted_cost_func<-function(obs) {
     # which in this instance already compresses the 3 different litter pools
     # to C_litter and the 3 different soil pools to one
     
-    # J_obj1 = mean (( out_simu$C_leaf - obs$C_leaf)**2)/(2*var(obs$C_leaf))
-    # J_obj2 = mean (( out_simu$C_wood - obs$C_wood )**2)/(2*var(obs$C_wood))
-    J_obj1 = mean (( out_simu$C_leaf_wood - obs$C_leaf_wood)**2)/(2*var(obs$C_leaf_wood))
-    J_obj3 = mean (( out_simu$C_root - obs$C_root )**2)/(2*var(obs$C_root))
-    # J_obj4 = mean (( out_simu$C_litter_above - obs$C_litter_above )**2)/(2*var(obs$C_litter_above))
-    # J_obj5 = mean (( out_simu$C_litter_below - obs$C_litter_below )**2)/(2*var(obs$C_litter_below))
-    # J_obj6 = mean (( out_simu$C_fastsom - obs$C_fastsom )**2)/(2*var(obs$C_fastsom))
-    # J_obj7 = mean (( out_simu$C_slowsom - obs$C_slowsom )**2)/(2*var(obs$C_slowsom))
-    # J_obj8 = mean (( out_simu$C_passsom - obs$C_passsom )**2)/(2*var(obs$C_passsom))
-    J_obj9 = mean (( out_simu$rh - obs$rh )**2)/(2*var(obs$rh))
-    # J_obj10 = mean (( out_simu$f_veg2litter - obs$f_veg2litter )**2)/(2*var(obs$f_veg2litter))
-    # J_obj11 = mean (( out_simu$f_litter2som - obs$f_litter2som )**2)/(2*var(obs$f_litter2som))
-    # 
-    J_new= (J_obj1 + J_obj3 + J_obj9)/200
+    #this J_obj should represent the exact output pools from the Trendy output
+    J_obj1 = mean (( out_simu$pools$C_leaf_wood - obs$C_leaf_wood)**2)/(2*var(obs$C_leaf_wood))
+    J_obj3 = mean (( out_simu$pools$C_root - obs$C_root )**2)/(2*var(obs$C_root))
+    J_obj4 = mean (( out_simu$pools$C_litter - obs$C_litter )**2)/(2*var(obs$C_litter))
+    J_obj5 = mean (( out_simu$rh - obs$rh )**2)/(2*var(obs$rh))
+     
+    J_new= (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5)/200
     
     return (J_new)
   }
@@ -307,6 +266,8 @@ make_param2res<-function(cpa){
     # pa is a numpy array when pa comes from the predictor
     # so we transform it to be able to use names instead of positions
     #epa=EstimatedParameters
+    
+    #SDGVM records observation on ervery 30 days so all months are considered to be 30 days
     days = c(30,30,30,30,30,30,30,30,30,30,30,30)# Construct b vector
     
     # leaf, root, wood
@@ -350,6 +311,7 @@ make_param2res<-function(cpa){
     rh_fin=rep(0,cpa$number_of_months);   f_veg_lit_fin=rep(0,cpa$number_of_months);   f_lit_soil_fin=rep(0,cpa$number_of_months)
     
     # "leaf_wood","root","leaf_wood_str_lit","leaf_wood_met_lit","root_str_lit","root_met_lit","surface_microbe", "fastsom","slowsom","passsom"
+    #this represent the number of pools in your model i.e SDGVM in my case
     x_init = c(cpa$C_leaf_wood_0, # leaf & wood
                cpa$C_root_0, # root
                epa$C_agb_stru_litter_0, # leaf and wood structural litter
@@ -375,69 +337,72 @@ make_param2res<-function(cpa){
     ############################ Additional functions specific for VISITe ##############
     
     # modifier for leaf pool turnover rate for deciduous forest depending on air temp
-    leaf_fall<-function (TA)
-    {
-      lf=0
-      if (TA<281) {lf<-1}
-      return (lf)
-    }
-    # modifier for soil pools turnover rate to implement time-dependent soil respiration
-    Rh_calc<-function (TS, M, T0, E, KM)
-    {
-      TS<-TS-273.15
-      if (TS>T0) {rh_out=exp(E*(1/(10-T0)-1/(TS-T0))) *M/(KM+M)}  else {rh_out=0}
-      return(rh_out)
-    }
+    # leaf_fall<-function (TA)
+    # {
+    #   lf=0
+    #   if (TA<281) {lf<-1}
+    #   return (lf)
+    # }
+    # # modifier for soil pools turnover rate to implement time-dependent soil respiration
+    # Rh_calc<-function (TS, M, T0, E, KM)
+    # {
+    #   TS<-TS-273.15
+    #   if (TS>T0) {rh_out=exp(E*(1/(10-T0)-1/(TS-T0))) *M/(KM+M)}  else {rh_out=0}
+    #   return(rh_out)
+    # }
     ######################################################################################
     
     for (m in 1:cpa$number_of_months){
       npp_in = cpa$npp[m] 
-      co2_rh = 0; f_veg_lit = 0; f_lit_soil = 0  
+      co2_rh = 0; #f_veg_lit = 0; f_lit_soil = 0  
       
       # environmental factor ksi: modifies leaf fall and turnover rates / respiration 
       # depending on monthly surface t "ts", soil t "tsl" and soil moisture data "mrso"
       # rh_modifier - VISIT-specific - remove if not relevant for your model
-      rh_modifier=Rh_calc(cpa$tsl[m], cpa$mrso[m], epa$T0, epa$E, epa$KM)
+      #rh_modifier=Rh_calc(cpa$tsl[m], cpa$mrso[m], epa$T0, epa$E, epa$KM)
       # ksi vector (remove if no environmental modifiers)
-      ksi=c(leaf_fall(cpa$ts[m]), # leaf pool
-            1, # wood pool
-            1, # root pool
-            rh_modifier, # leaf liter
-            rh_modifier, # wood litter
-            rh_modifier, # root litter
-            rh_modifier, # fast soil
-            rh_modifier, # slow soil
-            rh_modifier) # passive soil
+      #ksi=c(leaf_fall(cpa$ts[m]), # leaf pool
+      #      1, # wood pool
+      #      1, # root pool
+      #      rh_modifier, # leaf liter
+      #      rh_modifier, # wood litter
+      #      rh_modifier, # root litter
+      #      rh_modifier, # fast soil
+      #      rh_modifier, # slow soil
+      #      rh_modifier) # passive soil
       
-      for (d in 1:days[m%%12+1]) {
+      for (d in 1:30) {
         
         # matrix equation with ksi (remove ksi if no environmental modifiers)
         X = X + B * npp_in + A %*% K %*% X #* ksi
         # deriving rh from each litter and soil pool as 1 - sum of transfer coefficients 
-        co2_rate = c(0,0,0, 
-                     (1-f74-f84-f94)*K[4,4]*ksi[4],
-                     (1-f75-f85-f95)*K[5,5]*ksi[5],
-                     (1-f76-f86-f96)*K[6,6]*ksi[6], 
-                     K[7,7]*ksi[7], 
-                     K[8,8]*ksi[8], 
-                     K[9,9]*ksi[9])
+        co2_rate = c(0,
+                     0, 
+                     (1-f73)*K[3,3],#*ksi[4],
+                     (1-f74)*K[4,4],#*ksi[5],
+                     (1-f85-f95)*K[5,5],#*ksi[6], 
+                     (1-f86)*K[6,6],#*ksi[7], 
+                     (1-f97)*K[7,7],#*ksi[8], 
+                     (1-f98-f108)*K[8,8],
+                     (1-f89-f109)*K[9,9],
+                     (1-f810)*K[10,10])#*ksi[9])
         co2=sum(co2_rate*X)
-        co2_rh = co2_rh + co2/days[m%%12+1]   # monthly average rh
+        #co2_rh = co2_rh + co2/days[m%%12+1]   # monthly average rh
+        co2_rh = co2_rh + co2/30   # monthly average rh
         # deriving litterfall
-        litterfall_rate = c(f41*K[1,1]*ksi[1],f52*K[2,2]*ksi[2],f63*K[3,3]*ksi[3],0,0,0,0,0,0)
+        
+        litterfall_rate = c((f31 + f41)*K[1,1],(f52+f62)*K[2,2],0,0,0,0,0,0,0,0)
         litterfall=sum(litterfall_rate*X)
-        f_veg_lit=f_veg_lit+litterfall/days[m%%12+1]
+        #f_veg_lit=f_veg_lit+litterfall/days[m%%12]
+        #f_veg_lit=f_veg_lit+litterfall/30
         # deriving humus formation
-        litter_to_soil_rate = c(0,0,0,f74*K[4,4]*ksi[4]+f84*K[4,4]*ksi[4]+f84*K[4,4]*ksi[4],
-                                f75*K[5,5]*ksi[5]+ f85*K[5,5]*ksi[5]+ f95*K[5,5]*ksi[5],
-                                f76*K[6,6]*ksi[6]+ f86*K[6,6]*ksi[6]+ f96*K[6,6]*ksi[6],
-                                0,0,0)
+        litter_to_soil_rate = c(0,0,f73*K[3,3],f74*K[4,4],(f85+f95)*K[5,5],f86*K[6,6],0,0,0,0)
         litter_to_soil=sum(litter_to_soil_rate*X)
-        f_lit_soil=f_lit_soil+litter_to_soil/days[m%%12+1]
+        f_lit_soil=f_lit_soil+litter_to_soil/30
       }
       x_fin[m,]=X
       rh_fin[m]=co2_rh
-      f_veg_lit_fin[m]=f_veg_lit
+      #f_veg_lit_fin[m]=f_veg_lit
       f_lit_soil_fin[m]=f_lit_soil
     }
     
@@ -460,19 +425,19 @@ make_param2res<-function(cpa){
     #   f_veg2litter=f_veg_lit_fin,
     #   f_litter2som=f_lit_soil_fin
     # )
-    out_simu = list(
+    names(x_fin)=c("leaf_wood","root","leaf_wood_str_lit","leaf_wood_met_lit","root_str_lit","root_met_lit","surface_microbe", "fastsom","slowsom","passsom")
+    pools = list(
       C_leaf_wood=x_fin$leaf_wood,
-      #C_wood=x_fin$wood,
       C_root=x_fin$root,
-      C_litter_above=x_fin$leaflit+x_fin$woodlit,
-      C_litter_below=x_fin$rootlit,
-      C_fastsom=x_fin$fastsom,
-      C_slowsom=x_fin$slowsom,
-      C_passsom=x_fin$passsom,
-      rh=rh_fin,
+      C_litter = x_fin$leaf_wood_str_lit + x_fin$leaf_wood_met_lit + x_fin$root_str_lit +
+        x_fin$root_met_lit + x_fin$surface_microbe,
+      C_soil = x_fin$fastsom + x_fin$slowsom + x_fin$passsom,
       f_veg2litter=f_veg_lit_fin,
       f_litter2som=f_lit_soil_fin
     )
+    rh = rh_fin
+    out_simu = list (pools, rh)
+    
     return (out_simu)
   }
   return (param2res)

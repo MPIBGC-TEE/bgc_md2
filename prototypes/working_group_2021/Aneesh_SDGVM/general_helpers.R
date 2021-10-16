@@ -12,7 +12,7 @@ make_uniform_proposer<-function(C_max, C_min, D, filter_func) {
     paramNum = length(C_op)
     flag = T
     while (flag) {
-      C_new = as.data.frame(C_op) + (runif((paramNum)) - 0.5)*(C_max - C_min)/10.0
+      C_new = as.data.frame(C_op) + (runif((paramNum)) - 0.5)*(C_max - C_min)/D
       #C_new = as.data.frame(C_op) + (runif((paramNum)) - 0.5)*(C_max - C_min)/15.0
       if (filter_func(C_new)){flag = F}
     }
