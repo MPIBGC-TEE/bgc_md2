@@ -30,7 +30,6 @@ UnEstimatedParameters = namedtuple(
         'C_root_0',
         'C_wood_0',
         'c_litter_0',
-        'C_cwd_0',
         'c_soil_0',
         'rh_0',
         'clay',
@@ -214,6 +213,21 @@ def get_example_site_vars(dataPath):
     cwood = cveg - cleaf - croot; 
     return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
 
+
+def get_global_sum_vars(dataPath):
+    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd = get_variables_from_files(dataPath)
+
+    npp= var_npp.sum((1,2))* 86400   #   kg/m2/s kg/m2/day;
+    rh= var_rh.sum((1,2))*86400;   # per s to per day
+    clitter = var_clitter.sum((1,2));
+    csoil = var_csoil.sum((1,2));
+    cveg = var_cveg.sum((1,2));
+    cleaf = var_cleaf.sum((1,2));
+    croot = var_croot.sum((1,2));
+    ccwd = var_ccwd.sum((1,2));
+    cwood = cveg - cleaf - croot;
+    return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
+
 def make_param_filter_func(
         c_max: np.ndarray,
         c_min: np.ndarray
@@ -343,7 +357,8 @@ def make_param2res(
                 cpa.C_wood_0,
                 epa.C_metlit_0,
                 epa.C_strlit_0,
-                cpa.C_cwd_0,
+                cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
+                #cpa.C_cwd_0,
                 epa.C_mic_0,
                 cpa.c_soil_0- epa.C_mic_0 - epa.C_passom_0,
                 epa.C_passom_0
@@ -653,7 +668,7 @@ def construct_V0(
         C_wood=cpa.C_wood_0,
         C_metlit=epa.C_metlit_0,
         C_strlit=epa.C_strlit_0,
-        C_cwd=C_cwd_0,
+        C_cwd=cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
         C_mic=epa.C_mic_0,
         C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
         C_passsom=epa.C_passom_0

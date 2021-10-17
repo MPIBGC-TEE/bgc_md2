@@ -11,6 +11,7 @@ import json
 
 from model_specific_helpers import (
     get_example_site_vars,
+    get_global_sum_vars,
     make_param_filter_func,
     make_weighted_cost_func,
     make_param2res,
@@ -33,7 +34,8 @@ with Path('config.json').open(mode='r') as f:
 
 dataPath = Path(conf_dict['dataPath'])
 
-npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
+#npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
+npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_global_sum_vars(dataPath)
 
 #nyears=320
 nyears = 10
@@ -52,7 +54,6 @@ cpa = UnEstimatedParameters(
     C_leaf_0=cleaf[0],
     C_root_0=croot[0],
     C_wood_0=cwood[0],
-    C_cwd_0=ccwd[0],
     c_litter_0=clitter[0],
     c_soil_0=csoil[0],
     rh_0 = rh[0],
