@@ -69,18 +69,18 @@ param2res = make_param2res(cpa)
 
 c_min = np.array(
     EstimatedParameters(
-        beta_leaf=0.09,
-        beta_root=0.09,
-        lig_leaf=0.09,
+        beta_leaf=0.15,  #0.15
+        beta_root=0.3,  #0.2
+        lig_leaf=0.05,  #0.09
         f_leaf2metlit=0.01,
         f_root2metlit=0.01,
-        k_leaf=1/(2*365),
-        k_root=1/(365*10),
-        k_wood=1/(60*365),
-        k_metlit=0.1/(0.1*365),
+        k_leaf=1/(5*365), #3
+        k_root=1/(15*365), #10
+        k_wood=1/(80*365), #60
+        k_metlit=0.1/(0.2*365), #0.1
         k_mic=0.06/(0.137*365),
         k_slowsom=0.06/(5*365),
-        k_passsom=0.06/(222.22*365),
+        k_passsom=0.07/(222.22*365), #0.06
         C_metlit_0=clitter[0]/100,
         C_strlit_0=clitter[0]/100,
         C_mic_0=csoil[0]/100,
@@ -90,20 +90,20 @@ c_min = np.array(
 
 c_max = np.array(
     EstimatedParameters(
-        beta_leaf=1,               
-        beta_root=1,		    
+        beta_leaf=0.4,   #1
+        beta_root=0.8,   #1
         lig_leaf=0.21,		    
         f_leaf2metlit=1,		    
         f_root2metlit=1,		    
-        k_leaf=1/(0.3*365),	    
-        k_root=1/(0.8*365),	    
-        k_wood=1/365,		    
-        k_metlit=1/(365*0.1),	    
-        k_mic=0.6/(365*0.137),    
-        k_slowsom=0.6/(365*5),	    
-        k_passsom=0.6/(222.22*365),   
-        C_metlit_0=clitter[0],	    
-        C_strlit_0=clitter[0],	    
+        k_leaf=1/(2*365), #0.8
+        k_root=1/(2*365), #0.6
+        k_wood=1/(10*365),  #10
+        k_metlit=1/(0.2*365), #0.1
+        k_mic=0.6/(0.137*365),
+        k_slowsom=0.6/(5*365),
+        k_passsom=0.7/(222.22*365), #0.6
+        C_metlit_0=clitter[0]/5,  #1
+        C_strlit_0=clitter[0]/5,  #1
         C_mic_0=csoil[0]/3,	    
         C_passom_0=csoil[0]/2
     )
@@ -131,11 +131,11 @@ c_max = np.array(
 epa_0 = EstimatedParameters._make( 
         np.concatenate(
             [   
-                # we dont want to use the average for 
-                # the betas since their sum will immidiately
+                # we don't want to use the average for
+                # the betas since their sum will immediately
                 # violate our filter condition 3
-                np.array((0.15, 0.2)), 
-                # but for the rest it se
+                np.array((0.3, 0.4)),
+                # but for the rest it is
                 (c_min+c_max)[2:] / 2.0
             ]
         )
@@ -160,7 +160,7 @@ C_demo, J_demo = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
-        nsimu=100
+        nsimu=1000
 )
 # save the parameters and costfunctionvalues for postprocessing 
 pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
@@ -180,7 +180,7 @@ C_formal, J_formal = mcmc(
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
         #nsimu=20000
-        nsimu=100
+        nsimu=1000
 )
 formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
 formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
@@ -192,10 +192,10 @@ pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
 # The 'solution' of the inverse problem is actually the (joint) posterior
 # probability distribution of the parameters, which we approximate by the
 # histogram consisting of the mcmc generated samples.  
-# This joint distribution contains as much information as all its (infinitly
+# This joint distribution contains as much information as all its (infinitely
 # many) projections to curves through the parameter space combined.
 # Unfortunately, for this very reason, a joint distribution of more than two
-# parameters is very difficult to visualize in its entirity. 
+# parameters is very difficult to visualize in its entirety.
 # to do: 
 #   a) make a movie of color coded samples  of the a priori distribution of the parameters.
 #   b) -"-                                  of the a posteriory distribution -'- 
@@ -204,7 +204,7 @@ pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
 # 1.
 # The (usual) histograms of the values of a SINGLE parameters can be very
 # misleading since e.g. we can not see that certain parameter combination only
-# occure together. In fact this decomposition is only appropriate for
+# occur together. In fact this decomposition is only appropriate for
 # INDEPENDENT distributions of parameters in which case the joint distribution
 # would be the product of the distributions of the single parameters.  This is
 # however not even to be expected if our prior probability distribution can be

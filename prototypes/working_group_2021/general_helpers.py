@@ -144,7 +144,7 @@ def make_feng_cost_func(
     def costfunction(out_simu: np.ndarray) ->np.float64:
         return np.sum(
             np.sum(
-                ((out_simu - means)/sigmas - (obs-means)/sigmas)**2, 
+                (((out_simu - means)/sigmas - (obs-means)/sigmas)**2)/10,
                 axis=1
             ),
             axis=time_dim_ind
