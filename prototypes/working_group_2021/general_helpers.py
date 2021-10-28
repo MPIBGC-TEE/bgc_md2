@@ -77,6 +77,13 @@ def mcmc(
     C_op = initial_parameters
     tb=time()
     first_out = param2res(C_op)
+    # 
+    #print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' upgrade2 iworker ' + str(iworker) +\
+    #					': ' + str(upgrade2) + ' out of ' + str(simu) + ' cost: ' + str(np.round(cost_new, 2)) +\
+    #					' r2: soc ' + str(np.round(r2_soc, 2)) + ' litter ' + str(np.round(r2_litter, 2)) +\
+    #					' cwd ' + str(np.round(r2_cwd, 2)) + ' hr ' + str(np.round(r2_hr, 2)) + \
+    #					' bgoc ' + str(np.round(r2_bgoc, 2)))
+    #			
     J_last = costfunction(first_out)
     print('first_iteration done after' + str(time()-tb))
     #J_last = 400 # original code
@@ -131,25 +138,56 @@ time elapsed: {minutes:02d}:{sec:02d}.
     return C_upgraded[:,useful_slice], J_upgraded[:,useful_slice]
 
 def make_feng_cost_func(
-        obs: np.ndarray
+        obs: np.ndarray,
     ) -> Callable[[np.ndarray],np.float64]:
-    # first unpack the observation array into its parts and estimate the mean
-    # and standard deviation of each observable which has to be done only once
-    # for a set of observables, hence we do it outside the actual costfunction
-    # which will be used
-    time_dim_ind = 0
-    means = np.mean(obs,axis=time_dim_ind)
-    sigmas = np.sqrt(np.sum((obs-means)**2,axis=time_dim_ind))
-
-    def costfunction(out_simu: np.ndarray) ->np.float64:
-        return np.sum(
-            np.sum(
-                ((out_simu - means)/sigmas - (obs-means)/sigmas)**2, 
-                axis=1
-            ),
-            axis=time_dim_ind
-        )
+    # Note:
+    # in our code the dimension 0 is the time
+    # and dimension 1 the pool index
+    n = obs.shape[1]
+    means = obs.mean(axis=0)
+    mean_centered_obs = obs-means
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    #   The dominators in this case are actually the TEMPORAL variances of the data streams
+    #   which i find weierd
+    denominators=np.sum(mean_centered_obs**2,axis=0) 
+    #   The desired effect of automatically adjusting weight could be achieved
+    #   by the mean itself.
+    # dominators = means
+    def costfunction(mod: np.ndarray) ->np.float64:
+        cost= np.mean(
+                np.sum((obs - mod)**2,axis=0)/denominators*100
+        ) 
+        # this is equivalent to the following slightly less compact but slightly more readable code
+        #cost = np.mean(
+        #        [
+        #            np.sum((obs[:,i] - mod[:,i])**2)/ denominators[i]*100 
+        #            for i in range(n)
+        #        ]
+        #)
+        return cost
+    
     return costfunction     
+
+def make_jon_cost_func(
+        obs: np.ndarray,
+    ) -> Callable[[np.ndarray],np.float64]:
+    # Note:
+    # in our code the dimension 0 is the time
+    # and dimension 1 the pool index
+    n = obs.shape[1]
+    means = obs.mean(axis=0)
+    denominators = means**2
+    mean_centered_obs = obs-means
+
+    def costfunction(mod: np.ndarray) ->np.float64:
+        cost= np.mean(
+                np.sum((obs - mod)**2,axis=0)/denominators 
+        ) 
+        return cost
+    
+    return costfunction     
+
 
 def day_2_month_index(d):
     return months_by_day_arr()[(d%365)]
