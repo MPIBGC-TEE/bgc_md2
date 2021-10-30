@@ -50,6 +50,100 @@ def make_multivariate_normal_proposer(
 
     return GenerateParamValues
 
+def adaptive_mcmc(
+        initial_parameters: Iterable,
+        covv: np.ndarray,
+        filter_func: Callable,
+        param2res: Callable[[np.ndarray], np.ndarray],
+        costfunction: Callable[[np.ndarray],np.float64],
+        nsimu: int 
+    ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
+
+    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
+    :param param2res: A function that given a parameter(tuple) returns
+    the model output, which has to be an array of the same shape as the observations used to
+    build the costfunction.
+    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a specific set of observations, which is why they do not appear as an argument.
+    :param nsimu: The length of the chain
+    """
+    proposer = make_multivariate_normal_proposer(covv, filter_func)
+    np.random.seed(seed=10)
+    
+    paramNum=len(initial_parameters)
+    
+    upgraded=0;
+    C_op = initial_parameters
+    tb=time()
+    first_out = param2res(C_op)
+    # 
+    #print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' upgrade2 iworker ' + str(iworker) +\
+    #					': ' + str(upgrade2) + ' out of ' + str(simu) + ' cost: ' + str(np.round(cost_new, 2)) +\
+    #					' r2: soc ' + str(np.round(r2_soc, 2)) + ' litter ' + str(np.round(r2_litter, 2)) +\
+    #					' cwd ' + str(np.round(r2_cwd, 2)) + ' hr ' + str(np.round(r2_hr, 2)) + \
+    #					' bgoc ' + str(np.round(r2_bgoc, 2)))
+    #			
+    J_last = costfunction(first_out)
+    print('first_iteration done after' + str(time()-tb))
+    #J_last = 400 # original code
+    
+    # intialize the result arrays to the maximum length
+    # Depending on many of the parameters will be accepted only 
+    # a part of them will be filled with real values
+    C_upgraded = np.zeros((paramNum, nsimu))
+    J_upgraded = np.zeros((1, nsimu))
+    
+    #for simu in tqdm(range(nsimu)):
+    st =time() 
+    lc= covv.shape[0]
+    from IPython import embed;embed()
+    for simu in range(nsimu):
+        if (upgraded%10 == 0) & (upgraded > nsimu/20):
+            l = C_accepted.shape[1]
+            covv = np.cov(C_accepted[:,l-lc:])
+            proposer = make_multivariate_normal_proposer(covv,filter_func)
+        c_new = proposer(C_op)
+        out_simu = param2res(c_new)
+        J_new = costfunction(out_simu)
+    
+        delta_J =  J_last - J_new;
+        
+        randNum = np.random.uniform(0, 1)
+        if (min(1.0, np.exp(delta_J)) > randNum):
+                C_op=c_new;
+                J_last=J_new;
+                C_upgraded[:,upgraded]=C_op;
+                C_accepted = C_upgraded[:,0:upgraded]
+                J_upgraded[:,upgraded]=J_last; 
+                upgraded=upgraded+1;
+        # print some metadata 
+        # (This could be added to the outputfile later)
+        
+        if simu%10==0 or simu == (nsimu-1):
+            print(
+ """ 
+#(upgraded): {n}
+over all acceptance ratio till now: {r}% 
+progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+time elapsed: {minutes:02d}:{sec:02d}.
+""".format(
+                n=upgraded,
+                r=int(upgraded/(simu+1)*100),
+                simu=simu,
+                nsimu=nsimu,
+                pbs='|'+int(50*simu/(nsimu-1))*'#'+int((1-simu/(nsimu-1))*50)*' '+'|',
+                p=int(simu/(nsimu-1)*100),
+                minutes=int((time()-st)/60),
+                sec=int((time()-st)%60)
+            ),
+            end='\033[5A' # print alway on the same spot of the screen...
+            )
+
+    #remove the part of the arryas that is still filled with zeros
+    useful_slice = slice(0,upgraded)
+    return C_upgraded[:,useful_slice], J_upgraded[:,useful_slice]
+
 
 def mcmc(
         initial_parameters: Iterable,
@@ -77,13 +171,6 @@ def mcmc(
     C_op = initial_parameters
     tb=time()
     first_out = param2res(C_op)
-    # 
-    #print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' upgrade2 iworker ' + str(iworker) +\
-    #					': ' + str(upgrade2) + ' out of ' + str(simu) + ' cost: ' + str(np.round(cost_new, 2)) +\
-    #					' r2: soc ' + str(np.round(r2_soc, 2)) + ' litter ' + str(np.round(r2_litter, 2)) +\
-    #					' cwd ' + str(np.round(r2_cwd, 2)) + ' hr ' + str(np.round(r2_hr, 2)) + \
-    #					' bgoc ' + str(np.round(r2_bgoc, 2)))
-    #			
     J_last = costfunction(first_out)
     print('first_iteration done after' + str(time()-tb))
     #J_last = 400 # original code

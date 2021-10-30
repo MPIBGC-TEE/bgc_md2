@@ -169,13 +169,10 @@ pd.DataFrame(J_demo).to_csv(dataPath.joinpath('cable_demo_da_j_aa.csv'),sep=',')
 # build a new proposer based on a multivariate_normal distribution using the estimated covariance of the previous run if available
 # parameter values of the previous run
 
-normal_prop = make_multivariate_normal_proposer(
-    covv = np.cov(C_demo[:, int(C_demo.shape[1]/10):]), # the part of the demo run samples to use (here the last 90%) 
-    filter_func=isQualified
-)
-C_formal, J_formal = mcmc(
+C_formal, J_formal = adaptive_mcmc(
         initial_parameters=epa_0,
-        proposer=normal_prop,
+        covv=np.cov(C_demo[:, int(C_demo.shape[9]/10):]),
+        filter_func = isQualified, 
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
