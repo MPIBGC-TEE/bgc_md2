@@ -1,3 +1,4 @@
+import pathlib
 from typing import Callable
 import netCDF4 as nc
 import numpy as np
@@ -14,32 +15,27 @@ from general_helpers import day_2_month_index, month_2_day_index, months_by_day_
 # that are not aware of the names. They can still use the positions like 
 # in the original code
 
-# @Kostia and the 'R'tists: 
-# It is not necessary to replicate the complete functionality of the #
-# namedtuple classes. A simple 'R'proximation is a list with named entries 
-# pa=list(C_leaf_0=2,...)
-
-
-# This set is used by the functions that produce the 
+# This set is used by the functions that produce the
 # specific ingredients (functions) that will be run by
 # mcmc alg.
 UnEstimatedParameters = namedtuple(
     "UnEstimatedParameters",
     [
         'C_leaf_0',
-        'C_root_0',
         'C_wood_0',
-        'c_litter_0',
-        'C_cwd_0',
-        'c_soil_0',
+        'C_root_0',
+        'C_litter_above_0',
+        'C_litter_below_0',
+        'C_fast_som_0',
+        'C_slow_som_0',
+        'C_pass_som_0',
         'rh_0',
-        'clay',
-        'silt',
-        'lig_wood',
-        'f_wood2CWD',
-        'f_metlit2mic',
+        'f_veg_lit_0',
+        'f_lit_soil_0',
         'npp',
-        'number_of_months'
+        'number_of_months',
+        'mrso',
+        'tsl'
     ]
 )
 
@@ -49,26 +45,34 @@ EstimatedParameters = namedtuple(
     "EstiamatedParameters",
     [
         "beta_leaf",    #  0 (indices uses in original code) 
-        "beta_root",    #  1
-        "lig_leaf",     #  2
-        "f_leaf2metlit",#  3
-        "f_root2metlit",#  4
-        "k_leaf",       #  5
-        "k_root",       #  6
-        "k_wood",       #  7
-        "k_metlit",	#  8
-        "k_mic",	#  9
-        "k_slowsom",	# 10
-        "k_passsom",	# 11
-        "C_metlit_0",	# 12
-        "C_strlit_0",	# 13
-        "C_mic_0",	# 14
-        "C_passom_0"    # 15
+        "beta_wood",    #  1
+        "f_leaf_lit2fast_som",#  2
+        "f_leaf_lit2slow_som",#  3
+        "f_leaf_lit2pass_som",#  4
+        "f_wood_lit2fast_som",  # 5
+        "f_wood_lit2slow_som",  # 6
+        "f_wood_lit2pass_som",  # 7
+        "f_root_lit2fast_som",  # 8
+        "f_root_lit2slow_som",  # 9
+        "f_root_lit2pass_som",  # 10
+        "k_leaf",       #  11
+        "k_wood",       #  12
+        "k_root",       #  13
+        "k_leaf_lit",	#  14
+        "k_wood_lit",	#  15
+        "k_root_lit",   #  16
+        "k_fast_som",    #  17
+        "k_slow_som",	# 18
+        "k_pass_som",	# 19
+        "C_leaf_lit_0",	# 20
+        "T_0",	# 21
+        "E",	# 22
+        "KM"    # 23
     ]
 )
 
 # This is the set off all 
-_Parameters=namedtuple(
+_Parameters = namedtuple(
         "Parameters",
         EstimatedParameters._fields + UnEstimatedParameters._fields
 )
@@ -90,14 +94,14 @@ StateVariables = namedtuple(
     'StateVariables',
     [
         'C_leaf',
-        'C_root',
         'C_wood',
-        'C_metlit',
-        'C_strlit',
-        'C_cwd',
-        'C_mic',
-        'C_slowsom',
-        'C_passsom'
+        'C_root',
+        'C_leaf_lit',
+        'C_wood_lit',
+        'C_root_lit',
+        'C_fast_som',
+        'C_slow_som',
+        'C_pass_som'
     ]
 )
 Observables = namedtuple(
@@ -106,9 +110,14 @@ Observables = namedtuple(
         'C_leaf',
         'C_root',
         'C_wood',
-        'c_litter',
-        'c_soil',
-        'respiration'
+        'C_litter_above',
+        'C_litter_below',
+        'C_fast_som',
+        'C_slow_som',
+        'C_pass_som',
+        'rh',
+        'f_veg2litter',
+        'f_litter2som'
     ]
 )
 
@@ -124,16 +133,17 @@ ModelParameters = namedtuple(
         name for name in Parameters._fields 
         if name not in [
             'C_leaf_0',
-            'C_root_0',
             'C_wood_0',
-            'c_litter_0',
-            'c_soil_0',
-            "C_metlit_0",
-            "C_strlit_0",
-            "C_cwd_0",
-            "C_mic_0",
-            "C_slowsom_0",
-            "C_passom_0",
+            'C_root_0',
+            'C_litter_above_0',
+            'C_litter_below_0'
+            'C_fast_som_0',
+            'C_slow_som_0',
+            'C_pass_som_0',
+            'C_leaf_lit_0',
+            'rh_0',
+            'f_veg_lit_0',
+            'f_lit_soil_0'
             'number_of_months'
         ] 
     ]
@@ -166,48 +176,62 @@ def get_variables_from_files(dataPath):
 
     return map(f,names)
 
+#     # Read NetCDF data  ******************************************************************************************************************************
+
 def get_example_site_vars(dataPath):
     (
-        C_leaf,         
-        C_litter_above, 
+        C_leaf,
+        C_litter_above,
         C_litter_below,
-        C_root,        
-        C_fast_som,    
-        C_slow_som,    
-        C_pass_som,    
-        C_veg,         
-        f_litter2som,  
-        f_veg2litter,  
-        mrso ,         
-        npp,           
-        rh,            
+        C_root,
+        C_fast_som,
+        C_slow_som,
+        C_pass_som,
+        C_veg,
+        f_litter2som,
+        f_veg2litter,
+        mrso,
+        npp,
+        rh,
         tsl
     )= get_variables_from_files(dataPath)
     # pick up 1 site   wombat state forest
     s = slice(None,None,None) # this is the same as : 
-    t = s,49,325 # [t] = [:,49,325]
-    npp= var_npp[t]* 86400   #   kg/m2/s kg/m2/day; 
-    rh= var_rh[t]*86400;   # per s to per day  
+    t = s,50,33 # [t] = [:,49,325]
+    npp = npp[t]* 86400   #   kg/m2/s kg/m2/day;
+    rh = rh[t]*86400  # per s to per day
+    f_veg2litter = f_veg2litter[t] * 86400
+    f_litter2som = f_litter2som[t] * 86400
+    tsl_mean = np.mean(tsl, axis=1) # avarage soil temperature at different depth
     (
-        clitter,
-        csoil,
-        cveg,
-        cleaf,
-        croot,
-        ccwd
+        C_leaf,
+        C_litter_above,
+        C_litter_below,
+        C_root,
+        C_fast_som,
+        C_slow_som,
+        C_pass_som,
+        C_veg,
+        mrso,
+        tsl
     ) = map(
         lambda var: var[t],
         (
-            var_clitter,
-            var_csoil, 
-            var_cveg,
-            var_cleaf,
-            var_croot,
-            var_ccwd
+            C_leaf,
+            C_litter_above,
+            C_litter_below,
+            C_root,
+            C_fast_som,
+            C_slow_som,
+            C_pass_som,
+            C_veg,
+            mrso,
+            tsl_mean
         )
     )
-    cwood = cveg - cleaf - croot; 
-    return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
+    C_wood = C_veg - C_leaf - C_root
+    return (npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_som, C_pass_som,
+            rh, f_veg2litter, f_litter2som, mrso, tsl)
 
 def make_param_filter_func(
         c_max: np.ndarray,
@@ -221,47 +245,50 @@ def make_param_filter_func(
         cond1 =  (c >= c_min).all() 
         cond2 =  (c <= c_max).all() 
         cond3 = (c[0] + c[1]) < 1
-        return (cond1 and cond2 and cond3)
+        cond4 = (c[2] + c[3] + c[4]) < 1
+        cond5 = (c[5] + c[6] + c[7]) < 1
+        cond6 = (c[8] + c[9] + c[10]) < 1
+        return (cond1 and cond2 and cond3 and cond4 and cond5 and cond6)
         
     
     return isQualified
 
-def make_weighted_cost_func(
-        obs: np.ndarray
-    ) -> Callable[[np.ndarray],np.float64]:
-    # first unpack the observation array into its parts
-    cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
-    def costfunction(out_simu: np.ndarray) ->np.float64:
-        # fixme 
-        #   as indicated by the fact that the function lives in this  
-        #   model-specific module it is not apropriate for (all) other models.
-        #   There are model specific properties:
-        #   1.) The weight for the different observation streams
-        #   
-        tot_len=out_simu.shape[0]
-        # we assume the model output to be in the same shape and order 
-        # as the obeservation
-        # this convention has to be honored by the forwar_simulation as well
-        # which in this instance already compresses the 3 different litter pools
-        # to c_litter and the 3 different soil pools to one
-        c_simu = out_simu[:,0:5] 
-        
-        # we assume the rh  part to be in the remaining columns again
-        # this convention has to be honored by the forwar_simulation as well
-        rh_simu = out_simu[:,5:]
-        #from IPython import embed; embed()
-
-        J_obj1 = np.mean (( c_simu[:,0] - cleaf[0:tot_len] )**2)/(2*np.var(cleaf[0:tot_len]))
-        J_obj2 = np.mean (( c_simu[:,1] - croot[0:tot_len] )**2)/(2*np.var(croot[0:tot_len]))
-        J_obj3 = np.mean (( c_simu[:,2] - cwood[0:tot_len] )**2)/(2*np.var(cwood[0:tot_len]))
-        J_obj4 = np.mean (( c_simu[:,3]-  clitter[0:tot_len] )**2)/(2*np.var(clitter[0:tot_len]))
-        J_obj5 = np.mean (( c_simu[:,4]-  csoil[0:tot_len] )**2)/(2*np.var(csoil[0:tot_len]))
-        
-        J_obj6 = np.mean (( rh_simu[:,0] - rh[0:tot_len] )**2)/(2*np.var(rh[0:tot_len]))
-        
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
-        return J_new
-    return costfunction     
+# def make_weighted_cost_func(
+#         obs: np.ndarray
+#     ) -> Callable[[np.ndarray],np.float64]:
+#     # first unpack the observation array into its parts
+#     cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
+#     def costfunction(out_simu: np.ndarray) ->np.float64:
+#         # fixme
+#         #   as indicated by the fact that the function lives in this
+#         #   model-specific module it is not apropriate for (all) other models.
+#         #   There are model specific properties:
+#         #   1.) The weight for the different observation streams
+#         #
+#         tot_len=out_simu.shape[0]
+#         # we assume the model output to be in the same shape and order
+#         # as the obeservation
+#         # this convention has to be honored by the forwar_simulation as well
+#         # which in this instance already compresses the 3 different litter pools
+#         # to c_litter and the 3 different soil pools to one
+#         c_simu = out_simu[:,0:5]
+#
+#         # we assume the rh  part to be in the remaining columns again
+#         # this convention has to be honored by the forwar_simulation as well
+#         rh_simu = out_simu[:,5:]
+#         #from IPython import embed; embed()
+#
+#         J_obj1 = np.mean (( c_simu[:,0] - cleaf[0:tot_len] )**2)/(2*np.var(cleaf[0:tot_len]))
+#         J_obj2 = np.mean (( c_simu[:,1] - croot[0:tot_len] )**2)/(2*np.var(croot[0:tot_len]))
+#         J_obj3 = np.mean (( c_simu[:,2] - cwood[0:tot_len] )**2)/(2*np.var(cwood[0:tot_len]))
+#         J_obj4 = np.mean (( c_simu[:,3]-  clitter[0:tot_len] )**2)/(2*np.var(clitter[0:tot_len]))
+#         J_obj5 = np.mean (( c_simu[:,4]-  csoil[0:tot_len] )**2)/(2*np.var(csoil[0:tot_len]))
+#
+#         J_obj6 = np.mean (( rh_simu[:,0] - rh[0:tot_len] )**2)/(2*np.var(rh[0:tot_len]))
+#
+#         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
+#         return J_new
+#     return costfunction
 
 
 def make_param2res(
@@ -299,49 +326,47 @@ def make_param2res(
         epa=EstimatedParameters(*pa)
         days=[31,28,31,30,31,30,31,31,30,31,30,31]
         # Construct b vector 
-        beta1=epa.beta_leaf; beta2=epa.beta_root; beta3= 1- beta1- beta2
+        beta1=epa.beta_leaf; beta2=epa.beta_wood; beta3= 1- beta1- beta2
         b = np.array([beta1, beta2, beta3, 0, 0, 0, 0,0,0]).reshape([9,1])   # allocation
         # Now construct A matrix
-        lig_leaf = epa.lig_leaf
-    
-        f41 = epa.f_leaf2metlit; f42 = epa.f_root2metlit; f51 = 1-f41; f52 = 1-f42; f63 = 1;
-        f74 = 0.45; f75 = 0.45*(1-lig_leaf); 
-        f85 = 0.7*lig_leaf; f86 = 0.4*(1-cpa.lig_wood);
-        f96 = 0.7*cpa.lig_wood;  
-        f87=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.997 - 0.032*cpa.clay)
-        f97=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.003 + 0.032*cpa.clay)
-        f98=0.45 * (0.003 + 0.009 *cpa.clay)
-    
+
+        f41 = 1; f52 = 1; f63 = 1;
+        f74 = epa.f_leaf_lit2fast_som; f84 = epa.f_leaf_lit2slow_som; f94 = epa.f_leaf_lit2pass_som;
+        f75 = epa.f_wood_lit2fast_som; f85 = epa.f_wood_lit2slow_som; f95 = epa.f_wood_lit2pass_som
+        f76 = epa.f_root_lit2fast_som; f86 = epa.f_root_lit2slow_som; f96 = epa.f_root_lit2pass_som
+
         A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
                          0,  -1,   0,   0,   0,   0,   0,   0,   0,
                          0,   0,  -1,   0,   0,   0,   0,   0,   0,
-                       f41, f42,   0,  -1,   0,   0,   0,   0,   0,
-                       f51, f52,   0,   0,  -1,   0,   0,   0,   0,
+                       f41,   0,   0,  -1,   0,   0,   0,   0,   0,
+                         0, f52,   0,   0,  -1,   0,   0,   0,   0,
                          0,   0, f63,   0,   0,  -1,   0,   0,   0,
-                         0,   0,   0, f74, f75,   0,  -1,   0,   0,
-                         0,   0,   0,   0, f85, f86, f87,  -1,   0,
-                         0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
+                         0,   0,   0, f74, f75, f76,  -1,   0,   0,
+                         0,   0,   0, f84, f85, f86,   0,  -1,   0,
+                         0,   0,   0, f94, f95, f96,   0,   0,  -1 ]).reshape([9,9])   # tranfer
     
         #turnover rate per day of pools: 
-        temp = [epa.k_leaf,epa.k_root,epa.k_wood, epa.k_metlit,epa.k_metlit/(5.75*np.exp(-3*epa.lig_leaf)), epa.k_metlit/20.6, epa.k_mic,epa.k_slowsom, epa.k_passsom]
+        temp = [epa.k_leaf,epa.k_wood,epa.k_root, epa.k_leaf_lit,epa.k_wood_lit, epa.k_root_lit, epa.k_fast_som,epa.k_slow_som, epa.k_pass_som]
         K = np.zeros(81).reshape([9, 9])
         for i in range(0, 9):
             K[i][i] = temp[i]
           
         x_fin=np.zeros((cpa.number_of_months,9))
         rh_fin=np.zeros((cpa.number_of_months,1))
+        f_veg_lit_fin = np.zeros((cpa.number_of_months, 1))
+        f_lit_som_fin = np.zeros((cpa.number_of_months, 1))
         # leaf, root , wood, metabolic, structural, CWD, microbial, slow, passive 
         x_init = np.array(
             [
                 cpa.C_leaf_0,
-                cpa.C_root_0,
                 cpa.C_wood_0,
-                epa.C_metlit_0,
-                epa.C_strlit_0,
-                cpa.C_cwd_0,
-                epa.C_mic_0,
-                cpa.c_soil_0- epa.C_mic_0 - epa.C_passom_0,
-                epa.C_passom_0
+                cpa.C_root_0,
+                epa.C_leaf_lit_0,
+                cpa.C_litter_above_0 - epa.C_leaf_lit_0,
+                cpa.C_litter_below_0,
+                cpa.C_fast_som_0,
+                cpa.C_slow_som_0,
+                cpa.C_pass_som_0
             ]
         ).reshape([9, 1])   # Initial carbon pool size
         # initialize carbon pools 
@@ -349,40 +374,88 @@ def make_param2res(
         
         # initialize first respiration value 
         co2_rh=cpa.rh_0
+        f_veg_lit=cpa.f_veg_lit_0
+        f_lit_soil=cpa.f_lit_soil_0
         # fixme:
         # slight change to the original
         # I would like to start the solution with the initial values
-        # m=0 means after 0 moths = in the initial step
+        # m=0 means after 0 months = in the initial step
         B=A@K
         #pa=Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
         #B=make_compartmental_matrix_func(pa)(0,X)
+        def Rh_calc (TS, M, T0, E, KM):
+            TS < -TS - 273.15
+            if TS > T0:
+                rh_out = np.exp(E * (1 / (10 - T0) - 1 / (TS - T0))) * M / (KM + M)
+            else:
+                rh_out = 0
+            return rh_out
 
         for m in range(0,cpa.number_of_months):
             x_fin[m, :]=X.reshape(1,9)
             npp_in = cpa.npp[m] 
             rh_fin[m, 0]=co2_rh
-            co2_rh = 0   
+            f_veg_lit_fin[m,0]=f_veg_lit
+            f_lit_som_fin[m,0]=f_lit_soil
+            co2_rh = 0; f_veg_lit = 0; f_lit_soil = 0
+            rh_modifier = Rh_calc(cpa.tsl[m], cpa.mrso[m], epa.T_0, epa.E, epa.KM)
+            ksi = np.array(
+                [
+                    1,
+                    1,
+                    1,
+                    rh_modifier,
+                    rh_modifier,
+                    rh_modifier,
+                    rh_modifier,
+                    rh_modifier,
+                    rh_modifier
+                ]
+            ).reshape([9, 1])  # environmental modifiers
             for d in range(0,days[m%12]):
-                X=X + b*npp_in + B@X
-                co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
+                X=X + b*npp_in + B@X*ksi
+                co2_rate = [0,0,0,
+                        (1-f74-f84-f94)*K[3,3]*ksi[3],
+                        (1-f75-f85-f95)*K[4,4]*ksi[4],
+                        (1-f76-f86-f96)*K[5,5]*ksi[5],
+                        K[6,6]*ksi[6],
+                        K[7,7]*ksi[7],
+                        K[8,8]*ksi[8]
+                    ]
                 co2=np.sum(co2_rate*X.reshape(1,9))
                 co2_rh = co2_rh + co2/days[m%12]   # monthly average rh 
-               
+                litterfall_rate = [f41*K[0,0]*ksi[0],f52*K[1,1]*ksi[1],f63*K[2,2]*ksi[2],0,0,0,0,0,0]
+                litterfall = np.sum(litterfall_rate * X.reshape(1, 9))
+                f_veg_lit = f_veg_lit + litterfall / days[m % 12] # monthly average flux from veg to litter
+                litter_to_soil_rate = [
+                        0,0,0,f74*K[3,3]*ksi[3]+f84*K[3,3]*ksi[3]+f84*K[3,3]*ksi[3],
+                        f75*K[4,4]*ksi[4]+ f85*K[4,4]*ksi[4]+ f95*K[4,4]*ksi[4],
+                        f76*K[5,5]*ksi[5]+ f86*K[5,5]*ksi[5]+ f96*K[5,5]*ksi[5],
+                        0,0,0
+                    ]
+                litter_to_soil = np.sum(litter_to_soil_rate * X.reshape(1, 9))
+                f_lit_soil = f_lit_soil + litter_to_soil / days[m % 12] # monthly average flux from litter to soil
         # We create an output that has the same shape
         # as the obvervations to make the costfunctions 
         # easier. 
         # To this end we project our 10 output variables of the matrix simulation
         # onto the 6 data streams by summing up the 3 litter pools into one
         # and also the 3 soil pools into one
-        c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(cpa.number_of_months,1)
-        c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(cpa.number_of_months,1)
+        #C_litter_above = x_fin[:,3] + x_fin[:,4]
+        C_litter_above = np.sum(x_fin[:,3:5],axis=1).reshape(cpa.number_of_months,1)
+        #C_litter_below = x_fin[:,5]
+        #c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(cpa.number_of_months,1)
+        #c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(cpa.number_of_months,1)
         #from IPython import embed; embed()
         out_simu = np.concatenate(
             [
                 x_fin[:,0:3], # the first 3 pools are used as they are
-                c_litter,
-                c_soil,
-                rh_fin
+                C_litter_above,
+                #C_litter_below,
+                x_fin[:,5:9],
+                rh_fin,
+                f_veg_lit_fin,
+                f_lit_som_fin
             ]
             ,axis=1
         )
@@ -397,83 +470,83 @@ def make_param2res(
 ################################################################################
 ################################################################################
 
-# alternative implementation and helper functions. If you do not want to use it # comment it.
-def make_param2res_2(
-        cpa: UnEstimatedParameters
-    ) -> Callable[[np.ndarray], np.ndarray]: 
-    # This function is an alternative implementation with the same results as 
-    # make_param2res 
-    # Internally it uses a slightly higher level of abstraction and devides the task 
-    # into more numerous but smaller testable and reusable units.
-    # Although both properties are not necessary to replicate the original
-    # code they provide a different perspective which is easier to reuse the code
-    # in  a wider range of models e.g. models with daily driver data, time
-    # dependent or even nonlinear matrices and so on. 
-    # Thus it allows to test small parts of the code against the respective parts of the 
-    # symbolic framework 
-    # 
-    # It differs in the following respects:
-    # 0.)   We use named tuples for the parameters (just for readability)
-    # 1.)   We use a seperate function to costruct the matrix which will be
-    #       a function B(i,X)  of the iteration it  and the present poolvalues X 
-    #       (althouhg in this case unnecessary since B is constant but
-    #       the dependence on 'i' becomes useful if you want to include 
-    #       an environmental scalar and the dependence on X makes it possible
-    #       to include nonlinearities.
-    # 2.)   We build a daily advancing model that can provide output for an arbitrary 
-    #       selection of days.  To do so we provide all driver data as
-    #       functions of the smalles timestep (here day with index i), which in
-    #       the case of this model means that we provide the same npp value for
-    #       all the days in a given month. 
-    # 3.)   We translate the index of a given month to the appropriate day index
-    #       and apply the dayly model of 2.). Again this seems cumbersome for this
-    #       example but allows us to reuse the daily model for all applications.
-    #       This is espacially usefull for testing since we only need some dayly timesteps.
-    #       It makes it also easier to keep an overview over the appropriate 
-    #       units: If the smallest timestep is a day, then all time related parameters
-    #       have to be provided in the corresponding  units, regardless of the
-    #       number of available datapoints 
-    #
-    def param2res(pa):
-        epa=EstimatedParameters(*pa)
-        # here we want to store only monthly values
-        # although the computation takes place on a daily basis
-        V_init = construct_V0(cpa,epa)
-        # compute the days when we need the results
-        # to be able to compare to the monthly output
-        day_indices = month_2_day_index(range(cpa.number_of_months)) 
-        print("day_indices=",day_indices)
-        apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
-
-        mpa = ModelParameters(
-            **{
-                k:v for k,v in apa._asdict().items() 
-                if k in ModelParameters._fields
-            }
-        )
-        full_res = run_forward_simulation(
-            V_init=V_init,
-            day_indices=day_indices,
-            mpa=mpa
-        )
-        
-        # project the litter and soil pools
-        tot_len=cpa.number_of_months
-        c_litter = np.sum(full_res[:,3:6],axis=1).reshape(tot_len,1)
-        c_soil = np.sum(full_res[:,6:9],axis=1).reshape(tot_len,1)
-        out_simu = np.concatenate(
-            [
-                full_res[:,0:3], # the first 3 pools are used as they are
-                c_litter,
-                c_soil,
-                full_res[:,9:10]
-            ]
-            ,axis=1
-        )
-        return out_simu
-        
-    return param2res
-
+# # alternative implementation and helper functions. If you do not want to use it # comment it.
+# def make_param2res_2(
+#         cpa: UnEstimatedParameters
+#     ) -> Callable[[np.ndarray], np.ndarray]:
+#     # This function is an alternative implementation with the same results as
+#     # make_param2res
+#     # Internally it uses a slightly higher level of abstraction and devides the task
+#     # into more numerous but smaller testable and reusable units.
+#     # Although both properties are not necessary to replicate the original
+#     # code they provide a different perspective which is easier to reuse the code
+#     # in  a wider range of models e.g. models with daily driver data, time
+#     # dependent or even nonlinear matrices and so on.
+#     # Thus it allows to test small parts of the code against the respective parts of the
+#     # symbolic framework
+#     #
+#     # It differs in the following respects:
+#     # 0.)   We use named tuples for the parameters (just for readability)
+#     # 1.)   We use a seperate function to costruct the matrix which will be
+#     #       a function B(i,X)  of the iteration it  and the present poolvalues X
+#     #       (althouhg in this case unnecessary since B is constant but
+#     #       the dependence on 'i' becomes useful if you want to include
+#     #       an environmental scalar and the dependence on X makes it possible
+#     #       to include nonlinearities.
+#     # 2.)   We build a daily advancing model that can provide output for an arbitrary
+#     #       selection of days.  To do so we provide all driver data as
+#     #       functions of the smalles timestep (here day with index i), which in
+#     #       the case of this model means that we provide the same npp value for
+#     #       all the days in a given month.
+#     # 3.)   We translate the index of a given month to the appropriate day index
+#     #       and apply the dayly model of 2.). Again this seems cumbersome for this
+#     #       example but allows us to reuse the daily model for all applications.
+#     #       This is espacially usefull for testing since we only need some dayly timesteps.
+#     #       It makes it also easier to keep an overview over the appropriate
+#     #       units: If the smallest timestep is a day, then all time related parameters
+#     #       have to be provided in the corresponding  units, regardless of the
+#     #       number of available datapoints
+#     #
+#     def param2res(pa):
+#         epa=EstimatedParameters(*pa)
+#         # here we want to store only monthly values
+#         # although the computation takes place on a daily basis
+#         V_init = construct_V0(cpa,epa)
+#         # compute the days when we need the results
+#         # to be able to compare to the monthly output
+#         day_indices = month_2_day_index(range(cpa.number_of_months))
+#         print("day_indices=",day_indices)
+#         apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
+#
+#         mpa = ModelParameters(
+#             **{
+#                 k:v for k,v in apa._asdict().items()
+#                 if k in ModelParameters._fields
+#             }
+#         )
+#         full_res = run_forward_simulation(
+#             V_init=V_init,
+#             day_indices=day_indices,
+#             mpa=mpa
+#         )
+#
+#         # project the litter and soil pools
+#         tot_len=cpa.number_of_months
+#         c_litter = np.sum(full_res[:,3:6],axis=1).reshape(tot_len,1)
+#         c_soil = np.sum(full_res[:,6:9],axis=1).reshape(tot_len,1)
+#         out_simu = np.concatenate(
+#             [
+#                 full_res[:,0:3], # the first 3 pools are used as they are
+#                 c_litter,
+#                 c_soil,
+#                 full_res[:,9:10]
+#             ]
+#             ,axis=1
+#         )
+#         return out_simu
+#
+#     return param2res
+#
 
 def run_forward_simulation(
         V_init,
@@ -629,30 +702,30 @@ def make_compartmental_matrix_func(
         return A@K
 
     return B_func
-
-def construct_V0(
-        cpa :UnEstimatedParameters,
-        epa :EstimatedParameters
-    ) -> np.ndarray:
-    """Construct the initial values for the forward simulation
-    from constant and eveluated parameters
-
-    param: cpa : constant parameeters
-    param: epa : estimated parameters 
-    """
-    # to make sure that we are in the right order we use the 
-    # StateVariables namedtuple 
-    X_0 = StateVariables( 
-        C_leaf=cpa.C_leaf_0,
-        C_root=cpa.C_root_0,
-        C_wood=cpa.C_wood_0,
-        C_metlit=epa.C_metlit_0,
-        C_strlit=epa.C_strlit_0,
-        C_cwd=C_cwd_0,
-        C_mic=epa.C_mic_0,
-        C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
-        C_passsom=epa.C_passom_0
-    )
-    # add the respiration start value to the tuple
-    V_0 = (*X_0,cpa.rh_0)
-    return np.array(V_0).reshape(10,1)   
+#
+# def construct_V0(
+#         cpa :UnEstimatedParameters,
+#         epa :EstimatedParameters
+#     ) -> np.ndarray:
+#     """Construct the initial values for the forward simulation
+#     from constant and eveluated parameters
+#
+#     param: cpa : constant parameeters
+#     param: epa : estimated parameters
+#     """
+#     # to make sure that we are in the right order we use the
+#     # StateVariables namedtuple
+#     X_0 = StateVariables(
+#         C_leaf=cpa.C_leaf_0,
+#         C_root=cpa.C_root_0,
+#         C_wood=cpa.C_wood_0,
+#         C_metlit=epa.C_metlit_0,
+#         C_strlit=epa.C_strlit_0,
+#         C_cwd=C_cwd_0,
+#         C_mic=epa.C_mic_0,
+#         C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0,
+#         C_passsom=epa.C_passom_0
+#     )
+#     # add the respiration start value to the tuple
+#     V_0 = (*X_0,cpa.rh_0)
+#     return np.array(V_0).reshape(10,1)
