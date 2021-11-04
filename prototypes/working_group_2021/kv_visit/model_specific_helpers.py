@@ -108,8 +108,8 @@ Observables = namedtuple(
     'Observables',
     [
         'C_leaf',
-        'C_root',
         'C_wood',
+        'C_root',
         'C_litter_above',
         'C_litter_below',
         'C_fast_som',
@@ -380,7 +380,7 @@ def make_param2res(
         # slight change to the original
         # I would like to start the solution with the initial values
         # m=0 means after 0 months = in the initial step
-        B=A@K
+        #B=A@K
         #pa=Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
         #B=make_compartmental_matrix_func(pa)(0,X)
         def Rh_calc (TS, M, T0, E, KM):
@@ -413,7 +413,8 @@ def make_param2res(
                 ]
             ).reshape([9, 1])  # environmental modifiers
             for d in range(0,days[m%12]):
-                X=X + b*npp_in + B@X*ksi
+                K_new=K*ksi
+                X=X + b*npp_in + A@K_new@X
                 co2_rate = [0,0,0,
                         (1-f74-f84-f94)*K[3,3]*ksi[3],
                         (1-f75-f85-f95)*K[4,4]*ksi[4],
