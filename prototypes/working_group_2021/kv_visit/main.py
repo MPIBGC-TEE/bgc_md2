@@ -12,9 +12,9 @@ import json
 from model_specific_helpers import (
     get_example_site_vars,
     make_param_filter_func,
-    make_weighted_cost_func,
+    #make_weighted_cost_func,
     make_param2res,
-    make_param2res_2,
+    #make_param2res_2,
     UnEstimatedParameters,
     EstimatedParameters,
     Observables
@@ -24,6 +24,7 @@ from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
         mcmc,
+        adaptive_mcmc,
         make_feng_cost_func,
         plot_solutions
 )
@@ -33,113 +34,146 @@ with Path('config.json').open(mode='r') as f:
 
 dataPath = Path(conf_dict['dataPath'])
 
-npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
+npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_som, C_pass_som, \
+rh, f_veg2litter, f_litter2som, mrso, tsl = get_example_site_vars(dataPath)
 
-#nyears=320
+#nyears=150
 nyears = 10
 tot_len = 12*nyears
 obs_tup=Observables(
-    C_leaf=cleaf,
-    C_root=croot,
-    C_wood=cwood,
-    c_litter=clitter,
-    c_soil=csoil,
-    respiration=rh
+    C_leaf=C_leaf,
+    C_wood=C_wood,
+    C_root=C_root,
+    C_litter_above=C_litter_above,
+    C_litter_below=C_litter_below,
+    C_fast_som=C_fast_som,
+    C_slow_som=C_slow_som,
+    C_pass_som=C_pass_som,
+    rh=rh,
+    f_veg2litter=f_veg2litter,
+    f_litter2som=f_litter2som
 )
 obs = np.stack(obs_tup, axis=1)[0:tot_len,:]
 
 cpa = UnEstimatedParameters(
-    C_leaf_0=cleaf[0],
-    C_root_0=croot[0],
-    C_wood_0=cwood[0],
-    C_cwd_0=ccwd[0],
-    c_litter_0=clitter[0],
-    c_soil_0=csoil[0],
-    rh_0 = rh[0],
+    C_leaf_0=C_leaf[0],
+    C_wood_0=C_wood[0],
+    C_root_0=C_root[0],
+    C_litter_above_0=C_litter_above[0],
+    C_litter_below_0=C_litter_below[0],
+    C_fast_som_0=C_fast_som[0],
+    C_slow_som_0=C_slow_som[0],
+    C_pass_som_0=C_pass_som[0],
+    rh_0=rh[0],
+    f_veg_lit_0=f_veg2litter[0],
+    f_lit_soil_0=f_litter2som[0],
     npp=npp,
     number_of_months=tot_len,
-    clay=0.2028,
-    silt=0.2808,
-    lig_wood=0.4,
-    f_wood2CWD=1, 
-    f_metlit2mic=0.45
+    mrso=mrso,
+    tsl=tsl
 )
 param2res = make_param2res(cpa) 
 
-
 c_min = np.array(
     EstimatedParameters(
-        beta_leaf=0.09,
-        beta_root=0.09,
-        lig_leaf=0.09,
-        f_leaf2metlit=0.01,
-        f_root2metlit=0.01,
-        k_leaf=1/(2*365),
-        k_root=1/(365*10),
-        k_wood=1/(60*365),
-        k_metlit=0.1/(0.1*365),
-        k_mic=0.06/(0.137*365),
-        k_slowsom=0.06/(5*365),
-        k_passsom=0.06/(222.22*365),
-        C_metlit_0=clitter[0]/100,
-        C_strlit_0=clitter[0]/100,
-        C_mic_0=csoil[0]/100,
-        C_passom_0=csoil[0]/2
+        beta_leaf=0,
+        beta_wood=0,
+        f_leaf_lit2fast_som=0.1,
+        f_leaf_lit2slow_som=0.01,
+        f_leaf_lit2pass_som=0.001,
+        f_wood_lit2fast_som=0.1,
+        f_wood_lit2slow_som=0.01,
+        f_wood_lit2pass_som=0.001,
+        f_root_lit2fast_som=0.1,
+        f_root_lit2slow_som=0.01,
+        f_root_lit2pass_som=0.001,
+        k_leaf=1/(365*2),
+        k_wood=1/(365*60),
+        k_root=1/(365*30),
+        k_leaf_lit=1/(365*60),
+        k_wood_lit=1/(365*30),
+        k_root_lit=1/(365*30),
+        k_fast_som=1/(365*200),
+        k_slow_som=1/(365*500),
+        k_pass_som=1/(365*1000),
+        C_leaf_lit_0=0,
+        T_0=-10,
+        E=1,
+        KM=1
     )
 )
 
 c_max = np.array(
     EstimatedParameters(
-        beta_leaf=1,               
-        beta_root=1,		    
-        lig_leaf=0.21,		    
-        f_leaf2metlit=1,		    
-        f_root2metlit=1,		    
-        k_leaf=1/(0.3*365),	    
-        k_root=1/(0.8*365),	    
-        k_wood=1/365,		    
-        k_metlit=1/(365*0.1),	    
-        k_mic=0.6/(365*0.137),    
-        k_slowsom=0.6/(365*5),	    
-        k_passsom=0.6/(222.22*365),   
-        C_metlit_0=clitter[0],	    
-        C_strlit_0=clitter[0],	    
-        C_mic_0=csoil[0]/3,	    
-        C_passom_0=csoil[0]/2
+        beta_leaf=1,
+        beta_wood=1,
+        f_leaf_lit2fast_som=0.9,
+        f_leaf_lit2slow_som=0.9,
+        f_leaf_lit2pass_som=0.9,
+        f_wood_lit2fast_som=0.9,
+        f_wood_lit2slow_som=0.2,
+        f_wood_lit2pass_som=0.2,
+        f_root_lit2fast_som=0.9,
+        f_root_lit2slow_som=0.9,
+        f_root_lit2pass_som=0.9,
+        k_leaf=1/30,
+        k_wood=1/(365*1),
+        k_root=1/(365*0.5),
+        k_leaf_lit=1/(365*1),
+        k_wood_lit=1/(365*0.5),
+        k_root_lit=1/(365*0.5),
+        k_fast_som=1/(365*1),
+        k_slow_som=1/(365*3.5),
+        k_pass_som=1/(365*10),
+        C_leaf_lit_0=0.4,
+        T_0=4,
+        E=100,
+        KM=100
     )
 )
 # I commented your original settings and instead used the 
 # values constructed from the limits (see below)
-#epa_0 = EstimatedParameters(
-#    beta_leaf=0.15,
-#    beta_root=0.2,
-#    lig_leaf=0.15,
-#    f_leaf2metlit=0.28,
-#    f_root2metlit=0.6,
-#    k_leaf=1/365,
-#    k_root=1/(365*5),
-#    k_wood=1/(365*40),
-#    k_metlit=0.5/(365*0.1),
-#    k_mic=0.3/(365*0.137),
-#    k_slowsom=0.3/(365*5),
-#    k_passsom=0.3/(222.22*365),
-#    C_metlit_0=0.05,
-#    C_strlit_0=0.1,
-#    C_mic_0=1,
-#    C_passom_0=10,
-#)
-epa_0 = EstimatedParameters._make( 
-        np.concatenate(
-            [   
-                # we dont want to use the average for 
-                # the betas since their sum will immidiately
-                # violate our filter condition 3
-                np.array((0.15, 0.2)), 
-                # but for the rest it se
-                (c_min+c_max)[2:] / 2.0
-            ]
-        )
+epa_0 = EstimatedParameters(
+    beta_leaf=0.6,    #  0 (parameters used in original code)
+    beta_wood=0.25,    #  1
+    f_leaf_lit2fast_som=0.41,  #  2
+    f_leaf_lit2slow_som=0.07,#  3
+    f_leaf_lit2pass_som=0.02,#  4
+    f_wood_lit2fast_som=0.30,  #  5
+    f_wood_lit2slow_som=0.12,#  6
+    f_wood_lit2pass_som=0.08,#  7
+    f_root_lit2fast_som=0.30,  #  8
+    f_root_lit2slow_som=0.14,#  9
+    f_root_lit2pass_som=0.07,#  10
+    k_leaf=1/(60*2),       #  11
+    k_wood=1/(365*30),       #  12
+    k_root=1/(365*22),       #  13
+    k_leaf_lit=1/(365*3.3),	#  14
+    k_wood_lit=1/(365*11),	#  15
+    k_root_lit=1/(365*11),	#  16
+    k_fast_som=1/(365*18),	#  17
+    k_slow_som=1/(365*100),	# 18
+    k_pass_som=1/(365*350),	# 19
+    C_leaf_lit_0=0.3,	# 20
+    T_0=2,	# 21
+    E=4,	# 22
+    KM=10  # 23
 )
+
+pd.DataFrame(epa_0).to_csv(dataPath.joinpath('epa_0.csv'),sep=',')
+
+# epa_0 = EstimatedParameters._make(
+#         np.concatenate(
+#             [
+#                 # we don't want to use the average for
+#                 # the betas and fs since their sum will immediately
+#                 # violate our filter condition 3,4,5,6
+#                 np.array((0.25, 0.2, 0.42,0.075, 0.005, 0.35, 0.12,  0.03, 0.37, 0.11, 0.01)),
+#                 # but for the rest it se
+#                 (c_min+c_max)[11:] / 2.0
+#             ]
+#         )
+# )
 
 isQualified = make_param_filter_func(c_max,c_min)
 # check if the current value passes the filter
@@ -150,7 +184,7 @@ if not(isQualified(np.array(epa_0))):
 uniform_prop = make_uniform_proposer(
     c_min,
     c_max,
-    D=30,
+    D=240,
     filter_func=isQualified
 )
 
@@ -160,29 +194,27 @@ C_demo, J_demo = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
-        nsimu=100
+        nsimu=5000
 )
 # save the parameters and costfunctionvalues for postprocessing 
-pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
-pd.DataFrame(J_demo).to_csv(dataPath.joinpath('cable_demo_da_j_aa.csv'),sep=',')
+pd.DataFrame(C_demo).to_csv(dataPath.joinpath('visit_demo_da_aa.csv'),sep=',')
+pd.DataFrame(J_demo).to_csv(dataPath.joinpath('visit_demo_da_j_aa.csv'),sep=',')
 
 # build a new proposer based on a multivariate_normal distribution using the estimated covariance of the previous run if available
 # parameter values of the previous run
 
 C_formal, J_formal = adaptive_mcmc(
         initial_parameters=epa_0,
-        covv=np.cov(C_demo[:, int(C_demo.shape[9]/10):]),
+        covv=np.cov(C_demo[:, int(C_demo.shape[1]/10):]),
         filter_func = isQualified, 
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
         #nsimu=20000
-        nsimu=100
+        nsimu=10000
 )
-formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
-formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
-pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
-pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
+pd.DataFrame(C_formal).to_csv(dataPath.joinpath('visit_formal_da_aa.csv'),sep=',')
+pd.DataFrame(J_formal).to_csv(dataPath.joinpath('visit_formal_da_j_aa.csv'),sep=',')
 
 # POSTPROCESSING 
 #
@@ -231,7 +263,22 @@ fig.savefig('scatter_matrix.pdf')
 # A possible aggregation of this histogram to a singe parameter
 # vector is the mean which is an estimator of  the expected value of the
 # desired distribution.
+sol_init_par =param2res(epa_0)
 sol_mean =param2res(np.mean(C_formal,axis=1))
+sol_median =param2res(np.median(C_formal,axis=1))
+sol_min_J =param2res(C_formal[:,np.max(np.where(J_formal==np.min(J_formal)))])
+
+obs_path = dataPath.joinpath('obs.csv')
+sol_init_par_path = dataPath.joinpath('sol_init_par.csv')
+sol_mean_path = dataPath.joinpath('sol_mean.csv')
+sol_median_path = dataPath.joinpath('sol_median.csv')
+sol_min_J_path = dataPath.joinpath('sol_min_J.csv')
+
+pd.DataFrame(obs).to_csv(obs_path,sep=',')
+pd.DataFrame(sol_init_par).to_csv(sol_init_par_path,sep=',')
+pd.DataFrame(sol_mean).to_csv(sol_mean_path,sep=',')
+pd.DataFrame(sol_median).to_csv(sol_median_path,sep=',')
+pd.DataFrame(sol_min_J).to_csv(sol_min_J_path,sep=',')
 
 fig = plt.figure()
 plot_solutions(
@@ -242,3 +289,14 @@ plot_solutions(
         names=('mean','obs')
 )
 fig.savefig('solutions.pdf')
+
+############################# plot solution with initial parameters ######################
+fig = plt.figure()
+plot_solutions(
+        fig,
+        times=range(sol_init_par.shape[0]),
+        var_names=Observables._fields,
+        tup=(sol_init_par, obs),
+        names=('mean','obs')
+)
+fig.savefig('solutions_init.pdf')

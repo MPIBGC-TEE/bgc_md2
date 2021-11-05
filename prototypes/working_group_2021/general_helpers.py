@@ -73,6 +73,7 @@ def adaptive_mcmc(
     
     paramNum=len(initial_parameters)
     
+
     upgraded=0;
     C_op = initial_parameters
     tb=time()
@@ -204,7 +205,6 @@ def mcmc(
             print(
  """ 
 #(upgraded): {n}
-over all acceptance ratio till now: {r}% 
 progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
 time elapsed: {minutes:02d}:{sec:02d}.
 """.format(
