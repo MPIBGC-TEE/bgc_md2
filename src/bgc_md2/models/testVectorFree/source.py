@@ -1,6 +1,6 @@
 from sympy import symbols
-
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -31,11 +31,15 @@ k_vl, k_vw = symbols("k_vl k_vw")
 
 
 # specialVars = {
-mvs = MVarSet({
-    InFluxesBySymbol({vl: I_vl, vw: I_vw}),
-    OutFluxesBySymbol({vl: k_vl * vl, vw: k_vw * vw}),
-    InternalFluxesBySymbol({(vl, vw): k_vl * vl, (vw, vl): k_vw * vw}),
-    TimeSymbol("t"),
-    StateVariableTuple((vl, vw))
-    # srm
-})
+mvs = CMTVS(
+    {
+        InFluxesBySymbol({vl: I_vl, vw: I_vw}),
+        OutFluxesBySymbol({vl: k_vl * vl, vw: k_vw * vw}),
+        InternalFluxesBySymbol({(vl, vw): k_vl * vl, (vw, vl): k_vw * vw}),
+        TimeSymbol("t"),
+        StateVariableTuple((vl, vw))
+        #srm
+    },
+    bgc_md2_computers()
+
+)

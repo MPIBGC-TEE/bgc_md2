@@ -11,7 +11,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'X': 'microbial biomass pool',  # "\\mu gC cm^{-3}"
@@ -62,22 +63,25 @@ nsv2 = NumericStartValueDict({X:1.0, S: 2.5}) # "Medium"
 nsv3 = NumericStartValueDict({X: 1.5, S: 4.0}) # "High"
 ntimes = NumericSimulationTimes(np.arange(0,2000,0.1))
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="BACWAVE",
-        longName="", 
-        version="",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="15/03/2016",
-        doi="10.2307/4251775",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    np1,
-    nsv1,
-    ntimes
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="BACWAVE",
+            longName="", 
+            version="",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="15/03/2016",
+            doi="10.2307/4251775",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        np1,
+        nsv1,
+        ntimes
+    },
+    bgc_md2_computers()
+)

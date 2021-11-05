@@ -7,8 +7,8 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'LIT_m': 'Metabolic litter'
@@ -89,20 +89,34 @@ F9 = MIC_k * Vmax_k4 * SOM_c /(Km_k4 + SOM_c)
 F10 = MIC_k * tau_k
 x = StateVariableTuple((LIT_m,LIT_s,MIC_r,MIC_k,SOM_p,SOM_c))
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="MIMICS",
-        longName="Microbial-Mineral Carbon Stabilization",
-        version="1",
-        entryAuthor="Carlos Sierra",
-        entryAuthorOrcid="0000-0003-0009-4169",
-        entryCreationDate="14/08/2018",
-        doi="10.5194/bg-11-3899-2014",
-        sym_dict=sym_dict
-    ),
-    TimeSymbol("t"), # unit: "hour"
-    x,  # state vector of the complete system
-#    InFluxesBySymbol({})
-#    OutFluxesBySymbol({})
-    InternalFluxesBySymbol({(LIT_m, MIC_r): F1, (LIT_s, MIC_r): F2, (SOM_p, MIC_r): F3, (SOM_c, MIC_r): F4, (MIC_r, SOM_p): F5, (LIT_m, MIC_k): F6, (LIT_s, MIC_k): F7, (SOM_p, MIC_k): F8, (SOM_c, MIC_k): F9, (MIC_k, SOM_c): F10})
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="MIMICS",
+            longName="Microbial-Mineral Carbon Stabilization",
+            version="1",
+            entryAuthor="Carlos Sierra",
+            entryAuthorOrcid="0000-0003-0009-4169",
+            entryCreationDate="14/08/2018",
+            doi="10.5194/bg-11-3899-2014",
+            sym_dict=sym_dict
+        ),
+        TimeSymbol("t"), # unit: "hour"
+        x,  # state vector of the complete system
+    #    InFluxesBySymbol({})
+    #    OutFluxesBySymbol({})
+        InternalFluxesBySymbol({
+            (LIT_m, MIC_r): F1,
+            (LIT_s, MIC_r): F2,
+            (SOM_p, MIC_r): F3,
+            (SOM_c, MIC_r): F4,
+            (MIC_r, SOM_p): F5,
+            (LIT_m, MIC_k): F6,
+            (LIT_s, MIC_k): F7,
+            (SOM_p, MIC_k): F8,
+            (SOM_c, MIC_k): F9,
+            (MIC_k, SOM_c): F10
+        })
+    },
+    bgc_md2_computers()
+)    
