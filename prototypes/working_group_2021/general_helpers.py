@@ -103,11 +103,11 @@ def autostep_mcmc(
             count=0
             if accepted_100 == 0:
                 accepted_100 = 1 # to avoid division by 0
-            D = D * np.sqrt(nsimu * 0.1/accepted_100/100)  # compare to 10% acceptance rate and update the step
+            D = D * np.sqrt(10 / (accepted_100/(nsimu * 0.01)))  # compare to 10% acceptance rate and update the step
             accepted_100 = 0
             proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
         if simu % int(nsimu * 0.2) == 0:  # every 20% of nsimu - return to the initial the step (to avoid local minimum)
-             =10
+             D=10
         c_new = proposer(C_op)
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)

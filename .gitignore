@@ -148,3 +148,13 @@ tests/tmp
 prototypes/working_group_2021/.Rhistory
 prototypes/working_group_2021/kv_visit/.Rhistory
 prototypes/working_group_2021/kv_visit_R/.Rhistory
+prototypes/working_group_2021/kv_visit_R/.RData
+prototypes/working_group_2021/.idea/inspectionProfiles/profiles_settings.xml
+prototypes/working_group_2021/.idea/misc.xml
+prototypes/working_group_2021/.idea/modules.xml
+prototypes/working_group_2021/.idea/vcs.xml
+prototypes/working_group_2021/.idea/working_group_2021.iml
+prototypes/working_group_2021/.idea/workspace.xml
+*.xml
+*.iml
+prototypes/working_group_2021/.idea/.name
