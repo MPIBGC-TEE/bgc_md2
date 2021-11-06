@@ -50,6 +50,116 @@ def make_multivariate_normal_proposer(
 
     return GenerateParamValues
 
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+def autostep_mcmc(
+        initial_parameters: Iterable,
+        filter_func: Callable,
+        param2res: Callable[[np.ndarray], np.ndarray],
+        costfunction: Callable[[np.ndarray], np.float64],
+        nsimu: int,
+        c_max: np.ndarray,
+        c_min: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
+
+    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
+    :param filter_func: model-specific function to filter out impossible parameter combinations
+    :param param2res: A function that given a parameter(tuple) returns
+    the model output, which has to be an array of the same shape as the observations used to
+    build the costfunction.
+    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a specific set of observations, which is why they do not appear as an argument.
+    :param nsimu: The length of the chain
+    :param c_max: Array of maximum values for each parameter
+    :param c_min: Array of minimum values for each parameter
+    """
+    np.random.seed(seed=10)
+
+    paramNum = len(initial_parameters)
+
+    upgraded = 0;
+    C_op = initial_parameters
+    tb = time()
+    first_out = param2res(C_op)
+    J_last = costfunction(first_out)
+    J_min = J_last; J_min_simu = 0
+    print('first_iteration done after ' + str(time() - tb))
+    # J_last = 400 # original code
+
+    # initialize the result arrays to the maximum length
+    # Depending on many of the parameters will be accepted only
+    # a part of them will be filled with real values
+    C_upgraded = np.zeros((paramNum, nsimu))
+    J_upgraded = np.zeros((1, nsimu))
+    D = 10
+    proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D*paramNum, filter_func=filter_func)
+    # for simu in tqdm(range(nsimu)):
+    st = time()
+    count = 0
+    accepted_100 = 0
+    for simu in range(nsimu):
+        count = count+1
+        if simu % int(nsimu * 0.01) == 0:  # every 1% of nsimu - update the step
+            count=0
+            if accepted_100 == 0:
+                accepted_100 = 1 # to avoid division by 0
+            D = D * np.sqrt(nsimu * 0.1/accepted_100/100)  # compare to 10% acceptance rate and update the step
+            accepted_100 = 0
+            proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
+        if simu % int(nsimu * 0.2) == 0:  # every 20% of nsimu - return to the initial the step (to avoid local minimum)
+             =10
+        c_new = proposer(C_op)
+        out_simu = param2res(c_new)
+        J_new = costfunction(out_simu)
+
+        delta_J = J_last - J_new;
+
+        randNum = np.random.uniform(0, 1)
+        if (min(1.0, np.exp(delta_J)) > randNum):
+            C_op = c_new;
+            J_last = J_new;
+            if J_last < J_min:
+                J_min = J_last; J_min_simu = simu
+            C_upgraded[:, upgraded] = C_op;
+            J_upgraded[:, upgraded] = J_last;
+            upgraded = upgraded + 1;
+            accepted_100 = accepted_100 + 1
+        # print some metadata
+        # (This could be added to the output file later)
+
+        if simu % 10 == 0 or simu == (nsimu - 1):
+            print(
+                """ 
+               #(upgraded): {n}  | D value: {d} 
+               overall acceptance ratio: {r}% | current acceptance ratio: {rr}%
+               progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+               time elapsed: {minutes:02d}:{sec:02d}
+               overall minimum cost: {cost} - achieved at {s} iteration | last accepted cost: {cost2} 
+               """.format(
+                    n=upgraded,
+                    r=int(upgraded / (simu + 1) * 100),
+                    simu=simu,
+                    nsimu=nsimu,
+                    pbs='|' + int(50 * simu / (nsimu - 1)) * '#' + int((1 - simu / (nsimu - 1)) * 50) * ' ' + '|',
+                    p=int(simu / (nsimu - 1) * 100),
+                    minutes=int((time() - st) / 60),
+                    sec=int((time() - st) % 60),
+                    cost=round(J_min, 2),
+                    cost2=round(J_last, 2),
+                    rr=int(accepted_100/(nsimu * 0.01)*100),
+                    d=round(D,2),
+                    dd=round(D*paramNum,2),
+                    c=count,
+                    s=J_min_simu
+                ),
+                end='\033[5A'  # print always on the same spot of the screen...
+            )
+
+    # remove the part of the arrays that is still filled with zeros
+    useful_slice = slice(0, upgraded)
+    return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
+
+# Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 def adaptive_mcmc(
         initial_parameters: Iterable,
         covv: np.ndarray,
@@ -68,11 +178,16 @@ def adaptive_mcmc(
     :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a specific set of observations, which is why they do not appear as an argument.
     :param nsimu: The length of the chain
     """
-    proposer = make_multivariate_normal_proposer(covv, filter_func)
+
     np.random.seed(seed=10)
     
     paramNum=len(initial_parameters)
-    
+
+    sd_controling_factor = 1 #0.1  # 2.4
+    sd = sd_controling_factor / paramNum
+    covv = covv * sd
+
+    proposer = make_multivariate_normal_proposer(covv, filter_func)
 
     upgraded=0;
     C_op = initial_parameters
@@ -86,7 +201,7 @@ def adaptive_mcmc(
     #					' bgoc ' + str(np.round(r2_bgoc, 2)))
     #			
     J_last = costfunction(first_out)
-    print('first_iteration done after' + str(time()-tb))
+    print('first_iteration done after ' + str(time()-tb))
     #J_last = 400 # original code
     
     # intialize the result arrays to the maximum length
@@ -98,11 +213,13 @@ def adaptive_mcmc(
     #for simu in tqdm(range(nsimu)):
     st =time() 
     lc= covv.shape[0]
-    from IPython import embed;embed()
+  #  from IPython import embed;embed()
     for simu in range(nsimu):
-        if (upgraded%10 == 0) & (upgraded > nsimu/20):
+        #if (upgraded%10 == 0) & (upgraded > nsimu/20):
+        if (simu > nsimu / 10):
             l = C_accepted.shape[1]
-            covv = np.cov(C_accepted[:,l-lc:])
+            #covv = np.cov(C_accepted[:,l-lc:])
+            covv = sd * np.cov(C_accepted)
             proposer = make_multivariate_normal_proposer(covv,filter_func)
         c_new = proposer(C_op)
         out_simu = param2res(c_new)
@@ -125,9 +242,10 @@ def adaptive_mcmc(
             print(
  """ 
 #(upgraded): {n}
-over all acceptance ratio till now: {r}% 
+overall acceptance ratio till now: {r}% 
 progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-time elapsed: {minutes:02d}:{sec:02d}.
+time elapsed: {minutes:02d}:{sec:02d}
+current cost function: {cost} | last accepted cost function: {cost2}
 """.format(
                 n=upgraded,
                 r=int(upgraded/(simu+1)*100),
@@ -136,7 +254,9 @@ time elapsed: {minutes:02d}:{sec:02d}.
                 pbs='|'+int(50*simu/(nsimu-1))*'#'+int((1-simu/(nsimu-1))*50)*' '+'|',
                 p=int(simu/(nsimu-1)*100),
                 minutes=int((time()-st)/60),
-                sec=int((time()-st)%60)
+                sec=int((time()-st)%60),
+                cost=round(J_new,2),
+                cost2 = round(J_last, 2)
             ),
             end='\033[5A' # print alway on the same spot of the screen...
             )
@@ -173,7 +293,7 @@ def mcmc(
     tb=time()
     first_out = param2res(C_op)
     J_last = costfunction(first_out)
-    print('first_iteration done after' + str(time()-tb))
+    print('first_iteration done after ' + str(time()-tb))
     #J_last = 400 # original code
     
     # intialize the result arrays to the maximum length
@@ -183,7 +303,7 @@ def mcmc(
     J_upgraded = np.zeros((1, nsimu))
     
     #for simu in tqdm(range(nsimu)):
-    st =time() 
+    st =time()
     for simu in range(nsimu):
         c_new = proposer(C_op)
         out_simu = param2res(c_new)
@@ -199,14 +319,16 @@ def mcmc(
                 J_upgraded[:,upgraded]=J_last; 
                 upgraded=upgraded+1;
         # print some metadata 
-        # (This could be added to the outputfile later)
+        # (This could be added to the output file later)
         
         if simu%10==0 or simu == (nsimu-1):
             print(
  """ 
 #(upgraded): {n}
+overall acceptance ratio till now: {r}% 
 progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-time elapsed: {minutes:02d}:{sec:02d}.
+time elapsed: {minutes:02d}:{sec:02d}
+current cost function: {cost} | last accepted cost function: {cost2}
 """.format(
                 n=upgraded,
                 r=int(upgraded/(simu+1)*100),
@@ -215,7 +337,9 @@ time elapsed: {minutes:02d}:{sec:02d}.
                 pbs='|'+int(50*simu/(nsimu-1))*'#'+int((1-simu/(nsimu-1))*50)*' '+'|',
                 p=int(simu/(nsimu-1)*100),
                 minutes=int((time()-st)/60),
-                sec=int((time()-st)%60)
+                sec=int((time()-st)%60),
+                cost=round(J_new,2),
+                cost2 = round(J_last, 2)
             ),
             end='\033[5A' # print alway on the same spot of the screen...
             )
@@ -235,8 +359,8 @@ def make_feng_cost_func(
     mean_centered_obs = obs-means
     # now we compute a scaling factor per observable stream
     # fixme mm 10-28-2021
-    #   The dominators in this case are actually the TEMPORAL variances of the data streams
-    #   which i find weierd
+    #   The denominators in this case are actually the TEMPORAL variances of the data streams
+    #   which i find weird
     denominators=np.sum(mean_centered_obs**2,axis=0) 
     #   The desired effect of automatically adjusting weight could be achieved
     #   by the mean itself.
