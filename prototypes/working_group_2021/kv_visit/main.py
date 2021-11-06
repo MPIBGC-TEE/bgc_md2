@@ -25,6 +25,7 @@ from general_helpers import (
         make_multivariate_normal_proposer,
         mcmc,
         adaptive_mcmc,
+        autostep_mcmc,
         make_feng_cost_func,
         plot_solutions
 )
@@ -37,8 +38,8 @@ dataPath = Path(conf_dict['dataPath'])
 npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_som, C_pass_som, \
 rh, f_veg2litter, f_litter2som, mrso, tsl = get_example_site_vars(dataPath)
 
-#nyears=150
-nyears = 10
+nyears=150
+#nyears = 10
 tot_len = 12*nyears
 obs_tup=Observables(
     C_leaf=C_leaf,
@@ -54,6 +55,9 @@ obs_tup=Observables(
     f_litter2som=f_litter2som
 )
 obs = np.stack(obs_tup, axis=1)[0:tot_len,:]
+
+# save observational data for comparison with model output
+pd.DataFrame(obs).to_csv(dataPath.joinpath('obs.csv'),sep=',')
 
 cpa = UnEstimatedParameters(
     C_leaf_0=C_leaf[0],
@@ -181,6 +185,27 @@ isQualified = make_param_filter_func(c_max,c_min)
 if not(isQualified(np.array(epa_0))):
     raise ValueError("""the current value does not pass filter_func. This is probably due to an initial value chosen outside the permitted range""")
 
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = autostep_mcmc(
+        initial_parameters=epa_0,
+        filter_func=isQualified,
+        param2res=param2res,
+        costfunction=make_feng_cost_func(obs),
+        nsimu=10000,
+        c_max=c_max,
+        c_min=c_min
+)
+# save the parameters and cost function values for postprocessing
+pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('visit_autostep_da_aa.csv'),sep=',')
+pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('visit_autostep_da_j_aa.csv'),sep=',')
+# forward run with median and min J parameter sets
+sol_median_autostep =param2res(np.median(C_autostep,axis=1))
+sol_min_J_autostep =param2res(C_autostep[:,np.max(np.where(J_autostep==np.min(J_autostep)))])
+# export solutions
+pd.DataFrame(sol_median_autostep).to_csv(dataPath.joinpath('sol_median_autostep.csv'),sep=',')
+pd.DataFrame(sol_min_J_autostep).to_csv(dataPath.joinpath('sol_min_J_autostep.csv'),sep=',')
+
+# Demo MCMC: with a uniform proposer and fixed step
 uniform_prop = make_uniform_proposer(
     c_min,
     c_max,
@@ -194,15 +219,22 @@ C_demo, J_demo = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
-        nsimu=5000
+        nsimu=10000
 )
-# save the parameters and costfunctionvalues for postprocessing 
+# save the parameters and cost function values for postprocessing
 pd.DataFrame(C_demo).to_csv(dataPath.joinpath('visit_demo_da_aa.csv'),sep=',')
 pd.DataFrame(J_demo).to_csv(dataPath.joinpath('visit_demo_da_j_aa.csv'),sep=',')
+# forward run with median and min J parameter sets
+sol_median_demo =param2res(np.median(C_demo,axis=1))
+sol_min_J_demo =param2res(C_demo[:,np.max(np.where(J_demo==np.min(J_demo)))])
+# export solutions
+pd.DataFrame(sol_median_demo).to_csv(dataPath.joinpath('sol_median_demo.csv'),sep=',')
+pd.DataFrame(sol_min_J_demo).to_csv(dataPath.joinpath('sol_min_J_demo.csv'),sep=',')
 
 # build a new proposer based on a multivariate_normal distribution using the estimated covariance of the previous run if available
 # parameter values of the previous run
 
+# Formal MCMC: with multivariate normal proposer based on adaptive covariance matrix
 C_formal, J_formal = adaptive_mcmc(
         initial_parameters=epa_0,
         covv=np.cov(C_demo[:, int(C_demo.shape[1]/10):]),
@@ -213,10 +245,17 @@ C_formal, J_formal = adaptive_mcmc(
         #nsimu=20000
         nsimu=10000
 )
+# save the parameters and cost function values for postprocessing
 pd.DataFrame(C_formal).to_csv(dataPath.joinpath('visit_formal_da_aa.csv'),sep=',')
 pd.DataFrame(J_formal).to_csv(dataPath.joinpath('visit_formal_da_j_aa.csv'),sep=',')
+# forward run with median and min J parameter sets
+sol_median_formal =param2res(np.median(C_formal,axis=1))
+sol_min_J_formal =param2res(C_formal[:,np.max(np.where(J_formal==np.min(J_formal)))])
+# export solutions
+pd.DataFrame(sol_median_formal).to_csv(dataPath.joinpath('sol_median_formal.csv'),sep=',')
+pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'),sep=',')
 
-# POSTPROCESSING 
+# POSTPROCESSING
 #
 # The 'solution' of the inverse problem is actually the (joint) posterior
 # probability distribution of the parameters, which we approximate by the
@@ -263,40 +302,19 @@ fig.savefig('scatter_matrix.pdf')
 # A possible aggregation of this histogram to a singe parameter
 # vector is the mean which is an estimator of  the expected value of the
 # desired distribution.
-sol_init_par =param2res(epa_0)
-sol_mean =param2res(np.mean(C_formal,axis=1))
-sol_median =param2res(np.median(C_formal,axis=1))
-sol_min_J =param2res(C_formal[:,np.max(np.where(J_formal==np.min(J_formal)))])
-
-obs_path = dataPath.joinpath('obs.csv')
-sol_init_par_path = dataPath.joinpath('sol_init_par.csv')
-sol_mean_path = dataPath.joinpath('sol_mean.csv')
-sol_median_path = dataPath.joinpath('sol_median.csv')
-sol_min_J_path = dataPath.joinpath('sol_min_J.csv')
-
-pd.DataFrame(obs).to_csv(obs_path,sep=',')
-pd.DataFrame(sol_init_par).to_csv(sol_init_par_path,sep=',')
-pd.DataFrame(sol_mean).to_csv(sol_mean_path,sep=',')
-pd.DataFrame(sol_median).to_csv(sol_median_path,sep=',')
-pd.DataFrame(sol_min_J).to_csv(sol_min_J_path,sep=',')
 
 fig = plt.figure()
 plot_solutions(
         fig,
-        times=range(sol_mean.shape[0]),
+        times=range(sol_median_formal.shape[0]),
         var_names=Observables._fields,
-        tup=(sol_mean, obs),
+        tup=(sol_median_formal, obs),
         names=('mean','obs')
 )
 fig.savefig('solutions.pdf')
 
-############################# plot solution with initial parameters ######################
-fig = plt.figure()
-plot_solutions(
-        fig,
-        times=range(sol_init_par.shape[0]),
-        var_names=Observables._fields,
-        tup=(sol_init_par, obs),
-        names=('mean','obs')
-)
-fig.savefig('solutions_init.pdf')
+# additional output
+#sol_init_par =param2res(epa_0)
+#sol_mean =param2res(np.mean(C_formal,axis=1))
+#pd.DataFrame(sol_init_par).to_csv(sol_init_par_path,sep=',')
+#pd.DataFrame(sol_mean).to_csv(sol_mean_path,sep=',')
