@@ -33,23 +33,24 @@ def readVariable(**keywords):
     var = dataset[variable_name]
     ## check right output format of data
     try:
-        if ReturnClass == StockVariable:
-            if check_units and var.cell_methods != "time: instantaneous":
-#                pass
-                raise(
-                    ModelDataObjectException(
-                        "Stock data " + variable_name + " is not instantaneous"
-                    )
-                )
-
-        if ReturnClass == FluxVariable:
-            if check_units and var.cell_methods != "time: mean":
-#                pass
-                raise(
-                    ModelDataObjectException(
-                        "Flux data " + variable_name + " is not a mean"
-                    )
-                )
+        pass
+#        if ReturnClass == StockVariable:
+#            if check_units and var.cell_methods != "time: instantaneous":
+##                pass
+#                raise(
+#                    ModelDataObjectException(
+#                        "Stock data " + variable_name + " is not instantaneous"
+#                    )
+#                )
+#
+#        if ReturnClass == FluxVariable:
+#            if check_units and var.cell_methods != "time: mean":
+##                pass
+#                raise(
+#                    ModelDataObjectException(
+#                        "Flux data " + variable_name + " is not a mean"
+#                    )
+#                )
     except AttributeError:
 #        pass
         if check_units:
