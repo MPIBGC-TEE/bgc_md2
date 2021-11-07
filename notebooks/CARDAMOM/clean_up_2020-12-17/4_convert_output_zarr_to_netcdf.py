@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -71,7 +71,9 @@ time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 output_path = data_path.joinpath(data_path.joinpath(params["output_folder"]))
 
 project_path = output_path.joinpath(model_type)
@@ -91,7 +93,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(1, 3, 1), # done: (0, 50, 1) discrete (m), (0, 1, 1) continuous (m), (0, 1, 1) y00, (0, 1, 1) y06
+    "prob": slice(0, None, 1), # done: (0, 50, 1)
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -127,15 +129,15 @@ mean_system_age_da = (solution_da * mean_pool_age_vector_da).sum(-1) / solution_
 system_age_moment_2_da = (solution_da * pool_age_moment_vector_2_da).sum(-1) / solution_da.sum(-1)
 system_age_sd_da = da.sqrt(system_age_moment_2_da)
 
-# pool age median and quantiles
-pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
-pool_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_05")))
-pool_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_95")))
+## pool age median and quantiles
+#pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
+#pool_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_05")))
+#pool_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("pool_age_quantile_95")))
 
-# system age median and quantiles
-system_age_median_da = da.from_zarr(str(project_path.joinpath("system_age_median")))
-system_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("system_age_quantile_05")))
-system_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("system_age_quantile_95")))
+## system age median and quantiles
+#system_age_median_da = da.from_zarr(str(project_path.joinpath("system_age_median")))
+#system_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("system_age_quantile_05")))
+#system_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("system_age_quantile_95")))
 
 # compute backward transit time moments
 if model_type == "continuous":
@@ -201,9 +203,9 @@ variables = [
     {"name": "pool_age_moment_vector_2", "da": pool_age_moment_vector_2_da/(31*12)**2, "unit": "yr^2"},
     {"name": "pool_age_sd_vector", "da": pool_age_sd_vector_da/(31*12), "unit": "yr"},
 
-    {"name": "pool_age_median", "da": pool_age_median_da/(31*12), "unit": "yr"},
-    {"name": "pool_age_quantile_05", "da": pool_age_quantile_05_da/(31*12), "unit": "yr"},
-    {"name": "pool_age_quantile_95", "da": pool_age_quantile_95_da/(31*12), "unit": "yr"},
+#    {"name": "pool_age_median", "da": pool_age_median_da/(31*12), "unit": "yr"},
+#    {"name": "pool_age_quantile_05", "da": pool_age_quantile_05_da/(31*12), "unit": "yr"},
+#    {"name": "pool_age_quantile_95", "da": pool_age_quantile_95_da/(31*12), "unit": "yr"},
 
 ]
 if model_type == "continuous":
@@ -231,9 +233,9 @@ variables = [
     {"name": "system_age_moment_2", "da": system_age_moment_2_da/(31*12)**2, "unit": "yr^2"},
     {"name": "system_age_sd", "da": system_age_sd_da/(31*12), "unit": "yr"},
 
-    {"name": "system_age_median", "da": system_age_median_da/(31*12), "unit": "yr"},
-    {"name": "system_age_quantile_05", "da": system_age_quantile_05_da/(31*12), "unit": "yr"},
-    {"name": "system_age_quantile_95", "da": system_age_quantile_95_da/(31*12), "unit": "yr"},
+#    {"name": "system_age_median", "da": system_age_median_da/(31*12), "unit": "yr"},
+#    {"name": "system_age_quantile_05", "da": system_age_quantile_05_da/(31*12), "unit": "yr"},
+#    {"name": "system_age_quantile_95", "da": system_age_quantile_95_da/(31*12), "unit": "yr"},
 
     {"name": "mean_btt", "da": mean_btt_da/(31*12), "unit": "yr"},
     {"name": "btt_moment_2", "da": btt_moment_2_da/(31*12)**2, "unit": "yr^2"},
@@ -302,8 +304,12 @@ del_obj.compute()
 
 
 # ## Add GPP to files afterwards
+#
+# This is necessary because in the first versions of the data GPP was not included. The variable names of the input, gpp_to_xxx, are actually NPP.
+#
+# **create tmp folder first!**
 
-for prob in tqdm(arr[4:]):
+for prob in tqdm(arr):
     old_netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
     old_ds = xr.open_dataset(old_netCDF_filename)
 
@@ -313,5 +319,7 @@ for prob in tqdm(arr[4:]):
     old_ds.close()
     new_ds.close()
     print("written", new_netCDF_filename)
+
+# **Then move the files from tmp one folder up by hand.**
 
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -6,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -69,7 +70,9 @@ time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 output_path = data_path.joinpath(params["output_folder"])
 
 project_path = output_path.joinpath(model_type)
@@ -98,18 +101,28 @@ nr_pools = 6
 nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 
 # +
+# old data
+## use all "lat", all "lon" and 1 "prob", all "time"
+#slices = {
+#    "lat": slice(0, None, 1),
+#    "lon": slice(0, None, 1),
+#    # no 14C
+#    "prob": slice(0, 5, 1), # done (0, 50, 1)
+#    # 14C start values only
+##    "prob": slice(0, None, 1), # done (0, 50, 1)
+#    
+##    "lat": slice(28, 32, 1),
+##    "lon": slice(48, 52, 1),
+##    "prob": slice(0, 2, 1),
+#    "time": slice(0, None, 1) # don't change the time entry
+#}
+
+# 2021 data
 # use all "lat", all "lon" and 1 "prob", all "time"
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    # no 14C
-    "prob": slice(0, 5, 1), # done (0, 50, 1)
-    # 14C start values only
-#    "prob": slice(0, None, 1), # done (0, 50, 1)
-    
-#    "lat": slice(28, 32, 1),
-#    "lon": slice(48, 52, 1),
-#    "prob": slice(0, 2, 1),
+    "prob": slice(0, None, 1), # done (0, 50, 1)
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -134,7 +147,7 @@ task_list = [
         "func": CARDAMOMlib.compute_age_moment_vector_up_to,
         "func_args": {"nr_time_steps": params["nr_time_steps"], "up_to_order": 2}, # nr_months for fake eq_model, up_to_order
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 3, nr_pools), # solution + 2 moments
         "result_chunks": (1, 1, 1, nr_times_total, 3, nr_pools),
         "return_shape": (1, nr_times, 3, nr_pools),
@@ -256,7 +269,7 @@ task_list = [
         "func": CARDAMOMlib.compute_acc_net_external_output_vector,
         "func_args": dict(),
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -274,7 +287,7 @@ task_list = [
             "maxsize": 10*nr_times # maximum cache size
         },
         "timeouts": [10, 20, 30, np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -292,7 +305,7 @@ task_list = [
             "maxsize": 10*nr_times # maximum cache size
         },
         "timeouts": [20, np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -310,7 +323,7 @@ task_list = [
             "maxsize": 10*nr_times # maximum cache size
         },
         "timeouts": [30, np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -326,12 +339,14 @@ for task in task_list:
 
 # ## Computing
 #
-# *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
+# **Attention:** `"overwrite" = True` in the task dictionary deletes the **entire zarr archive**, not just all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
 # +
 # %%time
 
-for task in task_list[8:]: 
+# TODO: 0, 7, 8, 9, 10
+# nächstes: 10 (läuft jetzt)
+for task in [task_list[10]]:
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -344,6 +359,12 @@ for task in task_list[8:]:
         slices
     )
 # -
+
+
+
+
+
+
 
 
 

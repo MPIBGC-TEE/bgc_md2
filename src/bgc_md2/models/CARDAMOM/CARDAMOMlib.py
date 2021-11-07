@@ -15,6 +15,7 @@ from dask.distributed import LocalCluster
 from getpass import getuser
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_DAILY, ALPHA_14C
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
@@ -566,17 +567,22 @@ def compute_Bs_discrete(single_site_dict, time_step_in_days):
 
     data = np.nan * np.ones((len(times), nr_pools, nr_pools))
 
-#        try:
-    Bs = DMR.reconstruct_Bs(
-        xs.data.filled(),
-        Fs.data.filled(),
-        Rs.data.filled()
-    )
-        
-    data[:-1, ...] = Bs
-#        except (DMRError, ValueError, OverflowError) as e:
-#            error = str(e)
-#            print(error, flush=True)
+    try:
+        Bs = DMR.reconstruct_Bs(
+            xs.data.filled(),
+            Fs.data.filled(),
+            Rs.data.filled()
+        )
+            
+        data[:-1, ...] = Bs
+    except (DMRError, ValueError, OverflowError) as e:
+        error = str(e)
+        print(error, flush=True)
+        print(
+            "lat", single_site_dict["lat"],
+            "lon", single_site_dict["lon"],
+            "prob", single_site_dict["prob"]
+        )
 
     info = tuple()
     return data, info

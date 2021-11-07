@@ -39,7 +39,9 @@ my_cluster = CARDAMOMlib.prepare_cluster(
 Client(my_cluster)
 
 # +
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 netCDF_filestem = "sol_acc_age_btt"
 
 dc = ("monthly", None, "discrete")
@@ -90,15 +92,16 @@ else:
 
     # Ras/GPP is NOT constant in time (Greg said it would be)
     fig, ax = plt.subplots()
-#    (Ras/GPP).mean(dim="prob").mean(dim=["lat", "lon"]).plot(ax=ax)
+    (Ras/GPP).mean(dim="prob").mean(dim=["lat", "lon"]).plot(ax=ax, label="mean")
 
 
     ####### Just for testing if autotrophic respiration fraction is constant
-    (Ras/GPP).isel(lat=28, lon=52, prob=0).plot(ax=ax)
+    (Ras/GPP).isel(lat=28, lon=52, prob=0).plot(ax=ax, label="[28, 52, 0]")
     ########
     
     
     ax.set_title("Autotrophic respiration rate")
+    ax.legend()
     
 # add Ras to dataset
 small_ds = temp_small_ds.assign({"Ras": Ras})  
@@ -243,7 +246,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
         data_vars=data_vars,
         coords = {"time": ds.time.data}
     )
-    sub_ds.close()
+#    sub_ds.close()
 
     return res_ds
 
@@ -357,7 +360,7 @@ else:
 nr_time_steps = 10 * 12
 
 res_list = []
-for task in task_list[2:3]:
+for task in task_list:
     print("starting", task)
     res = compute_global_btt_quantile_complete_ensemble(
         small_ds,
@@ -370,7 +373,7 @@ for task in task_list[2:3]:
     for name, var in current_ds.data_vars.items():
         current_ds[name] = var / 31 / 12 # convert age from days to years
 
-    filename = project_path.joinpath(task["name"]+correction_str+".nc")      
+    filename = project_path.joinpath(task["name"] + correction_str + ".nc")      
     current_ds.to_netcdf(filename)
     res_list.append(current_ds)
     print("finished", task)
@@ -395,12 +398,14 @@ ds_btt
 fig, axes = plt.subplots(nrows=len(ds_btt.data_vars), figsize=(18, 8*len(ds_btt.data_vars)))
 
 for (name, var), ax in zip(ds_btt.data_vars.items(), axes):
-    var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2, lw=4)
-    var.mean(dim="prob").rolling(time=12).mean().plot(ax=ax, c="red", label="mean")
+#    var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2, lw=4)
+    var.plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2, lw=0.2)
+#    var.mean(dim="prob").rolling(time=12).mean().plot(ax=ax, c="red", label="mean")
+    var.mean(dim="prob").plot(ax=ax, c="red", label="mean")
 
     ax.set_ylabel("yr")
     ax.set_title(var.name + " (rolling mean over 12 months)")
-    ax.set_xlim([ds_btt.time[0], ds_btt.time[-1]])
+#    ax.set_xlim([ds_btt.time[0], ds_btt.time[-1]])
     ax.legend()
 
 fig.tight_layout()
@@ -468,15 +473,16 @@ fig, ax = plt.subplots(figsize=(18, 8))
 #var = ds_btt.global_btt_median / (np.log(2)*global_mean_btt)
 #var.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2)
 
-#var2 = global_mean_btt / global_mean_age
-var2 = global_mean_age / global_mean_btt
+var2 = global_mean_btt / global_mean_age
+#var2 = global_mean_age / global_mean_btt
 var2.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="red", alpha=0.2)
 
 from matplotlib.lines import Line2D
 colors = ["blue", "red"]
 lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='-') for c in colors]
 #labels = ["median / [log(2) * mean]", "global mean transit time / global mean age"]
-labels = ["-", "global mean age / global mean transit time"]
+#labels = ["-", "global mean age / global mean transit time"]
+labels = ["-", "global mean transit time / global mean age"]
 _ = ax.legend(lines, labels)
 #_ = ax.set_title("global btt median / [log(2) * Global mean BTT]")
 # -
