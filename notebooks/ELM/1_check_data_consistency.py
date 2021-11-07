@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -19,7 +19,8 @@
 
 # ## Computation of data consistency
 
-# %load_ext autoreload
+# +
+# #%load_ext autoreload
 
 # +
 import xarray as xr
@@ -39,7 +40,7 @@ from dask.distributed import Client
 # #%autoreload 2
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=2, my_user_name="hmetzler")
+my_cluster = CARDAMOMlib.prepare_cluster(n_workers=24)#, my_user_name="hmetzler")
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -88,12 +89,10 @@ ds
 # check data consistency for single (lat, lon)
 def func_data_consistency(ds_single):
 #    print(ds_single)
-#    mdo = CARDAMOMlib.load_mdo_greg(ds_single)
-#    abs_err, rel_err = mdo.check_data_consistency()
-
-    abs_err, rel_err = CARDAMOMlib.check_data_consistency(
+   
+    abs_err, rel_err = ELMlib_no_vr.check_data_consistency(
         ds_single,
-        "time_step_in_days"
+        time_step_in_days
     )
     data_vars = dict()
     data_vars['abs_err'] = xr.DataArray(
@@ -114,7 +113,8 @@ def func_data_consistency(ds_single):
 
 # delegate chunk to single (lat, lon)
 def func_chunk(chunk_ds):
-#    print('chunk started:', chunk_ds.lat[0].data, chunk_ds.lon[0].data,flush=True)
+#    print(chunk_ds, flush=True)
+    print('chunk started:', chunk_ds.lat[0].data, chunk_ds.lon[0].data,flush=True)
     res = nested_groupby_apply(chunk_ds, ['lat', 'lon'], func_data_consistency)
     print(
         'chunk finished:',
@@ -127,13 +127,12 @@ def func_chunk(chunk_ds):
 
 
 # +
-chunk_dict = {"lat": 1, "lon": 1}
-#ds_sub = ds.isel(
-#    lat=slice(0, None, 1),
-#    lon=slice(0, None, 1),
-#).chunk(chunk_dict)
+chunk_dict = {"lat": 10, "lon": 10} # keep the number of chunks limited, otherwise nothing happens
+ds_sub = ds.isel(
+    lat=slice(0, None, 1), # 24
+    lon=slice(0, None, 1), # 38
+).chunk(chunk_dict)
 
-ds_sub = ds.chunk(chunk_dict)
 ds_sub
 
 # +
@@ -187,68 +186,69 @@ output_file_path
 
 print(output_file_path)
 ds_data_consistency = xr.open_dataset(output_file_path)
+ds_data_consistency
 
-# Now we show how many of the 34 x 71 x 50 = 120,700 (lat x lon x prob) single sites actually DO have data (presumably then land areas).
+# Now we show how many of the 96 x 144 = 13824 (lat x lon) single sites actually DO have data (presumably then land areas).
 
 # +
 # find count of nonnull coordinates (land coordinates, basically)
 # (just an exercise here)
 
-da_stacked = ds_data_consistency.abs_err.stack(notnull=['lat', 'lon', 'prob'])
+da_stacked = ds_data_consistency.abs_err.stack(notnull=['lat', 'lon'])
 notnull = da_stacked[da_stacked.notnull()].notnull()
 print(
-    "(lat, lon, prob) with data:",
+    "(lat, lon) with data:",
     len(notnull),
     "out of",
     da_stacked.shape[0]
 )
 # -
 
-# The data consistency describes if the stocks and fluxes do actually match.The first plots show absolute and relative errors, there are three outliers, one in Siberia, one in San Francisco and one in Chile. Please don't blame me for bad geographical knowledge.
+# The data consistency describes if the stocks and fluxes do actually match.
 
 # +
 fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12,6))
 
-ds_data_consistency.abs_err.mean(dim='prob').plot(
+ds_data_consistency.abs_err.plot(
     ax=ax1,
     cbar_kwargs={"label": '$%s$' % ds_data_consistency.abs_err.attrs['units']},
 #    robust=True
 )
 ax1.set_title('mean absolute error')
 
-ds_data_consistency.rel_err.mean(dim='prob').plot(
+ds_data_consistency.rel_err.plot(
     ax=ax2,
     cbar_kwargs={"label": '%s' % ds_data_consistency.rel_err.attrs['units']},
 #    robust=True
 )
 ax2.set_title('mean relative error')
 
-plt.suptitle('CARDAMOM - data consistency (non-robust version)')
+plt.suptitle('ELM - data consistency (non-robust version)')
 
 plt.tight_layout()
 plt.draw()
 # -
 
-# The robust version ignores outliers (2-quantile to 98-quantile only, if I remember correctly), so we can see that the provided CARDAMOM data are globally incredibly consistent.
+# The robust version ignores outliers (2-quantile to 98-quantile only, if I remember correctly).
 
 # +
 fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12,6))
 
-ds_data_consistency.abs_err.mean(dim='prob').plot(
+ds_data_consistency.abs_err.plot(
     ax=ax1,
     cbar_kwargs={"label": '$%s$' % ds_data_consistency.abs_err.attrs['units']},
     robust=True
 )
 ax1.set_title('mean absolute error')
 
-ds_data_consistency.rel_err.mean(dim='prob').plot(
+ds_data_consistency.rel_err.plot(
     ax=ax2,
     cbar_kwargs={"label": '%s' % ds_data_consistency.rel_err.attrs['units']},
     robust=True
 )
 ax2.set_title('mean relative error')
 
-plt.suptitle('CARDAMOM - data consistency (robust version)')
+plt.suptitle('ELM - data consistency (robust version)')
 
 plt.tight_layout()
 plt.draw()
@@ -257,16 +257,15 @@ plt.draw()
 
 
 bad_idx = (ds_data_consistency.abs_err + ds_data_consistency.rel_err > 0.1)
-nr_sites = len(ds.lat)*len(ds.lon)*len(ds.prob)
+nr_sites = len(ds.lat) * len(ds.lon)
 print("Throw out %d sites of %d: %.2f%%" % (np.sum(bad_idx), nr_sites, np.sum(bad_idx)/nr_sites*100))
 np.where(bad_idx)
-print(ds.lat[3], ds.lon[20])
-print(ds.lat[21], ds.lon[12])
-print(ds.lat[27], ds.lon[54])
 
 # +
 data_vars = dict()
 for name, var in tqdm(ds.data_vars.items()):
+    var = var.transpose("lat", "lon", "time")
+
     data = np.asarray(var)
     data[bad_idx] = np.nan
     data_vars[name] = xr.DataArray(
@@ -286,5 +285,4 @@ clean_ds
 clean_ds.to_netcdf(clean_file_path)
 clean_file_path
 # -
-
 

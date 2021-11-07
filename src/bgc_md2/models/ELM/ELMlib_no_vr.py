@@ -6,7 +6,8 @@ from bgc_md2.ModelDataObject import ModelDataObject
 from bgc_md2.Variable import Variable
 
 
-DATA_PATH = Path("../../../../SOIL-R/Manuscripts/Berkeley/2019/Data/Holger_veg_soil/no_vr/")
+#DATA_PATH = Path("../../../../SOIL-R/Manuscripts/Berkeley/2019/Data/Holger_veg_soil/no_vr/")
+DATA_PATH = Path("/home/data/ELM/Holger_veg_soil/no_vr/")
 
 
 def load_model_structure_with_vegetation():
