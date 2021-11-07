@@ -52,9 +52,13 @@ from model_specific_helpers import (
 from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
-        mcmc,
+        #mcmc,
         make_feng_cost_func,
         plot_solutions
+)
+from general_helpers import (
+        mcmc,
+        adaptive_mcmc
 )
 
 # fixme: 
@@ -153,7 +157,7 @@ if not demo_aa_path.exists():
             proposer=uniform_prop,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=50000
+            nsimu=200
     )
     # save the parameters and costfunctionvalues for postprocessing 
     pd.DataFrame(C_demo).to_csv(demo_aa_path,sep=',')
@@ -187,7 +191,7 @@ if not formal_aa_path.exists():
             proposer=normal_prop,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=50000
+            nsimu=200
     )
     pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
     pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')

@@ -12,8 +12,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'Y': 'young pool of soil carbon' # "kgCm^{-2}" 
@@ -86,22 +86,25 @@ nsv7 = NumericStartValueDict({Y: 0.3, O: 4.14})
 # ntimes can be used for all parameter sets
 ntimes = NumericSimulationTimes(np.arange(0,100,0.1))
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="ICBM",
-        longName="Introductory Carbon Balance Model", 
-        version="",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="09/03/2016",
-        doi="10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    np1,
-    nsv1,
-    ntimes
-})
+mvs = CMTVS(
+        {
+        BibInfo(# Bibliographical Information
+            name="ICBM",
+            longName="Introductory Carbon Balance Model", 
+            version="",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="09/03/2016",
+            doi="10.1890/1051-0761(1997)007[1226:ITICBM]2.0.CO;2",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        np1,
+        nsv1,
+        ntimes
+    },
+    bgc_md2_computers()
+)

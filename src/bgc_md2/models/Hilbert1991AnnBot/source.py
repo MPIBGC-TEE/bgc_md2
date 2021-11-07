@@ -12,8 +12,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'W_p': 'Mass of leaf proteins'
@@ -101,23 +101,26 @@ N: 0.01, C: 0.15, W_p: 100, W_s: 100, W_r: 100, W_C: 45, W_N: 30
 ntimes = NumericSimulationTimes(np.arange(0, 150, 25))
 #ntimes = NumericSimulationTimes(np.arange(0, 1, 0.001)) #Fixme: There were 2 in the yaml file, not sure which one works best
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="29/7/2015",
-        doi="10.1093/oxfordjournals.aob.a088273",
-        sym_dict=sym_dict
-    ),
-    A,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonStateVariableTuple((W_N, W_C, W_p, W_s, W_r)),
-    np1,
-    nsv1,
-    ntimes
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="29/7/2015",
+            doi="10.1093/oxfordjournals.aob.a088273",
+            sym_dict=sym_dict
+        ),
+        A,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonStateVariableTuple((W_N, W_C, W_p, W_s, W_r)),
+        np1,
+        nsv1,
+        ntimes
+    },
+    bgc_md2_computers()
+)

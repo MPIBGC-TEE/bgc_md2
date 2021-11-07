@@ -2,7 +2,9 @@ from sympy import Matrix, symbols
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+
+from bgc_md2.helper import bgc_md2_computers
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -12,20 +14,22 @@ from bgc_md2.resolve.mvars import (
 )
 
 # one wood product pool
-Wood_products = symbols("Wood-products")
+WP_S, WP_L = symbols("WP_S WP_L")
 
-state_vector = Matrix([Wood_products])
+state_vector = Matrix([WP_S, WP_L])
 
-WP_input = symbols("WP_input")
+WP_S_input, WP_L_input = symbols("WP_S_input WP_L_input")
 input_fluxes = {
-    Wood_products: WP_input
+    WP_S: WP_S_input,
+    WP_L: WP_L_input
 }
 
 internal_fluxes = dict()
 
-r_WP = symbols("r_WP")
+r_S, r_L = symbols("r_S r_L")
 output_fluxes = {
-    Wood_products: r_WP * Wood_products
+    WP_S: r_S * WP_S,
+    WP_L: r_L * WP_L
 }
 
 t = symbols("t")
@@ -37,11 +41,14 @@ srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
     internal_fluxes
 )
 
-mvs = MVarSet({
-    InFluxesBySymbol(input_fluxes),
-    OutFluxesBySymbol(output_fluxes),
-    InternalFluxesBySymbol(internal_fluxes),
-    TimeSymbol(t.name),
-    StateVariableTuple(state_vector)
-})
+mvs = CMTVS(
+    {
+        InFluxesBySymbol(input_fluxes),
+        OutFluxesBySymbol(output_fluxes),
+        InternalFluxesBySymbol(internal_fluxes),
+        TimeSymbol(t.name),
+        StateVariableTuple(state_vector)
+    },
+    bgc_md2_computers()
+)
 

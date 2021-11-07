@@ -18,7 +18,7 @@ from CompartmentalSystems.helpers_reservoir import (
 )
 
 
-########## symbol definitions ##########
+# ######### symbol definitions ##########
 
 # time symbol
 time_symbol = symbols("t")
@@ -75,13 +75,13 @@ ages = np.arange(0, max_age + 1, 1)
 G_emanuel = 113.0
 
 # GPP data
-#gpp_mean = pd.read_csv("~/Repos/cmip6stop/esm-hist/timeSeries/multimodGPPannual.csv")
-#gpp_anomaly = (
+# gpp_mean = pd.read_csv("~/Repos/cmip6stop/esm-hist/timeSeries/multimodGPPannual.csv")
+# gpp_anomaly = (
 #    gpp_mean.GPPmean - gpp_mean.GPPmean[0]
-#)  # Anomaly with respect to 1850 value
-#gpp_industrial = G_emanuel + gpp_anomaly
+# )  # Anomaly with respect to 1850 value
+# gpp_industrial = G_emanuel + gpp_anomaly
 #
-#print(gpp_industrial)
+# print(gpp_industrial)
 
 # Time dependent GPP from Rasmussen et al. (2016, JMB). We assume that proportional increase in GPP is equal for both pools
 T_s0 = 15
@@ -90,7 +90,8 @@ sigma = 4.5
 alpha = 1
 rho = 0.65
 f_i = 1
-x_a = start_year*exp(0.0305*time_symbol)/(start_year+exp(0.0305*time_symbol)-1)+284 
+#x_a = start_year*exp(0.0305*time_symbol)/(start_year+exp(0.0305*time_symbol)-1)+284 
+x_a = start_year*exp(0.0305*(time_symbol-start_year))/(start_year+exp(0.0305*(time_symbol-start_year))-1)+284 
 T_s = T_s0 + sigma/log(2)*log(x_a/285)
 Gamma = 42.7 + 1.68*(T_s-25) + 0.012*(T_s-25)**2
 beta = 3*rho*x_a*Gamma/((rho*x_a-Gamma)*(rho*x_a+2*Gamma))
@@ -99,13 +100,15 @@ s_i = f_i*alpha*s_0*(1+2.5*beta*log(x_a/285))
 gpp_industrial = G_emanuel * s_i
 
 
+gpp_industrial
+
 # linear interpolation of the (nonnegative) data points
-#u_interp = interp1d(gpp_mean.Year, gpp_industrial)
+# u_interp = interp1d(gpp_mean.Year, gpp_industrial)
 
 
-#def u_func(t_val):
+# def u_func(t_val):
 #    # here we could do whatever we want to compute the input function
-##    return u_interp(t_val)
+# #    return u_interp(t_val)
 #    return gpp_industrial.evalf(subs={time_symbol:t_val})
 
 u_func_numerical = numerical_function_from_expression(
@@ -139,7 +142,12 @@ stocks = cstocks.join(pd.DataFrame({"Time": times}))
 stocks.to_csv("stocks.csv", index=False)
 
 
-##### load linear autonomous pool model in steady state #####
+GPP=pd.DataFrame(smr.external_input_vector, columns=pool_names)
+Re=pd.DataFrame(smr.external_output_vector, columns=pool_names)
+GPP.to_csv("GPP.csv", index=False)
+Re.to_csv("Re.csv", index=False)
+
+# #### load linear autonomous pool model in steady state #####
 
 # no fossil fuel inputs
 u_eq = Matrix(5, 1, [77, 0, 36, 0, 0])
@@ -148,7 +156,7 @@ u_eq = Matrix(5, 1, [77, 0, 36, 0, 0])
 # symbolic treatment would be too slow here
 LM = LinearAutonomousPoolModel(u_eq, B, force_numerical=True)
 
-## load equilibrium age densities ##
+# # load equilibrium age densities ##
 
 # the start age densities are given as a function of age that returns
 # a vector of mass with that age
@@ -190,7 +198,7 @@ smr.save_pools_and_system_density_csv(
 # print('done', flush = True)
 
 
-##### mean ages #####
+# #### mean ages #####
 
 pool_age_means = []
 system_age_means = []
@@ -202,7 +210,7 @@ mean_pool_ages = pd.DataFrame(pool_age_mean, columns=pool_names)
 mean_ages = mean_pool_ages.join(pd.DataFrame({"System Age": system_age_mean}))
 mean_ages.to_csv("mean_ages.csv", index=False)
 
-##### age medians #####
+# #### age medians #####
 
 # start cumulative mass functions of age
 # to have it available allows faster computations,
@@ -229,7 +237,7 @@ median_ages = median_pool_age.join(pd.DataFrame({"SystemA Age": system_age_media
 median_ages.to_csv("median_ages.csv", index=False)
 
 
-####### forward transit time #####
+# ###### forward transit time #####
 
 # years = np.array([1850, 1900, 1950, 2000])
 years = np.arange(1851, 2001, 1)

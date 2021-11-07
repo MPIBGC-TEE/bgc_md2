@@ -41,6 +41,58 @@ make_multivariate_normal_proposer<-function(covv, filter_func){
 return (GenerateParamValues)
 }
 
+mcmc_parallel<-function(initial_parameters, proposer, param2res, costfunction, nsimu, K_accept=1) { # K_accept - coefficient to modify acceptance rate
+    # """
+    # perform the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
+    # 
+    # :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
+    # :param proposer: A function that proposes a new parameter(tuple) from a given parameter (tuple).
+    # :param param2res: A function that given a parameter(tuple) returns
+    # the model output, which has to be an array of the same shape as the observations used to
+    # build the costfunction.
+    # :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a specific set of observations, which is why they do not appear as an argument.
+    # :param nsimu: The length of the chain
+    # """
+    set.seed(10)
+
+    paramNum=length(initial_parameters)
+    upgraded=0
+    
+    C_op = initial_parameters
+    first_out = param2res(C_op)
+    J_last = costfunction(first_out)
+    #J_last = 400 # original code
+
+    C_upgraded = rep(0,paramNum*nsimu)
+    C_upgraded = matrix(C_upgraded, nrow = nsimu, byrow = TRUE)
+    J_upgraded = rep(0, nsimu)
+
+    for (simu in 1:nsimu) {
+if (simu%%100==0) {print (paste0("simulation ",simu, " out of ", nsimu))} 
+        C_new = proposer(C_op)
+
+        out_simu = param2res(C_new)
+        J_new = costfunction(out_simu)
+
+        delta_J =  J_last - J_new;
+
+        randNum = runif(1)
+  
+        if (min(1.0, exp(delta_J)) > randNum/K_accept) {
+            C_op=C_new;
+            J_last=J_new;
+            C_upgraded[upgraded,]=unlist(C_op, use.names=FALSE);
+            J_upgraded[upgraded]=J_last; 
+            upgraded=upgraded+1 
+            }
+    }
+        # select only rows with upgraded parameters, discard 0s at the end
+        C_upgraded<-C_upgraded[1:upgraded,]
+        J_upgraded<-J_upgraded[1:upgraded] 
+        acceptance_rate<-upgraded/nsimu
+        
+        output<-list(C_upgraded, J_upgraded, acceptance_rate)
+return (output)
 mcmc<-function(initial_parameters, proposer, param2res, costfunction, nsimu, K_accept=1) { # K_accept - coefficient to modify acceptance rate
     # """
     # perform the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)

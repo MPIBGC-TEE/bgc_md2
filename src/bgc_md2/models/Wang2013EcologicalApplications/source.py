@@ -7,8 +7,9 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'P': 'particulate organic carbon pool' # "mgC g^{-1}\\text{ soil}"
@@ -68,20 +69,23 @@ N = ImmutableMatrix([[V_P*EP/(K_P+P),              0,           0,        0,    
                      [             0,              0,           0,        0,       0,    0, r_EM]])
 B = CompartmentalMatrix(T*N)
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="MEND",
-        longName="Microbial-Enzyme-Mediated Decomposition model", 
-        version="1",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="21/03/2016",
-        doi="10.1890/12-0681.1",
-        further_references=BibInfo(doi="10.2307/1313568"),#Li2014Biogeochemistry
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="MEND",
+            longName="Microbial-Enzyme-Mediated Decomposition model", 
+            version="1",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="21/03/2016",
+            doi="10.1890/12-0681.1",
+            further_references=BibInfo(doi="10.2307/1313568"),#Li2014Biogeochemistry
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    },
+    bgc_md2_computers()
+)

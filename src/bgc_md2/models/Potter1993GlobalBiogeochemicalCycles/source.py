@@ -14,7 +14,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 # We can retain make the original description available to the framework as 
 # part of the bibliographical information in a dictionary which could also be used to define
@@ -110,30 +111,33 @@ np1 = NumericParameterization(
 #            values: {alpha_f: 0.25, alpha_r: 0.25, alpha_w: 0.5, tau_f: 1.5, tau_r: 2, tau_w: 25}
 #            doi: 10.2307/1313568
 #specialVars = {
-mvs=MVarSet({
-    BibInfo(# Bibliographical Information
-        name="CASA",
-        longName="Carnegie-Ames-Stanford approach", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="17/7/2015",
-        doi="10.1029/93GB02725",
-        further_references=BibInfo(doi="10.2307/1313568"),
-        #  Also from PDF in Reflex experiment
-        sym_dict=sym_dict
-        
-    ),
-    #
-    # the following variables constitute the compartmental system:
-    #
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
-    np1
-})
+mvs=CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="CASA",
+            longName="Carnegie-Ames-Stanford approach", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="17/7/2015",
+            doi="10.1029/93GB02725",
+            further_references=BibInfo(doi="10.2307/1313568"),
+            #  Also from PDF in Reflex experiment
+            sym_dict=sym_dict
+            
+        ),
+        #
+        # the following variables constitute the compartmental system:
+        #
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
+        np1
+    },
+    bgc_md2_computers()
+)

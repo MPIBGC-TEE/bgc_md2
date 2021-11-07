@@ -90,7 +90,7 @@ class TestVegetationCarbonInputTuple(unittest.TestCase):
 
         I1 = ImmutableMatrix(2, 1, [1, 3])
         I2 = ImmutableMatrix(2, 1, [1, 3])
-        In = VegetationCarbonInputTuple(I1+I2)
+        In = VegetationCarbonInputTuple((I1+I2))
         self.assertEqual(type(In), VegetationCarbonInputTuple)
         self.assertEqual(In[0, 0], 2)
         self.assertEqual(In[1, 0], 6)
@@ -119,7 +119,7 @@ class TestVegetationCarbonInputPartitioningTuple(unittest.TestCase):
 
         I1 = ImmutableMatrix(2, 1, [1, 3])
         I2 = ImmutableMatrix(2, 1, [1, 3])
-        In = VegetationCarbonInputPartitioningTuple(I1+I2)
+        In = VegetationCarbonInputPartitioningTuple((I1+I2))
         self.assertEqual(type(In), VegetationCarbonInputPartitioningTuple)
         self.assertEqual(In[0, 0], 2)
         self.assertEqual(In[1, 0], 6)

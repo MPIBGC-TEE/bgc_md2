@@ -30,13 +30,18 @@ from bgc_md2.notebook_helpers import (
 )
 
 
-def prepare_cluster(n_workers, alternative_dashboard_port=None):
+def prepare_cluster(
+    n_workers,
+    alternative_dashboard_port=None,
+    my_user_name=None
+):
     port_dict = {
         "cs": 8888,        # change at will
         "mm": 8889,
         "hmetzler": 8890 # change at will
     }
-    my_user_name = getuser()
+    if my_user_name is None:
+        my_user_name = getuser()
     print("username:", my_user_name)
 
     my_port = port_dict[my_user_name]
@@ -96,19 +101,19 @@ def load_params(time_resolution, delay_in_months):
         raise(ValueError("Unknown time resolution"))
 
     
-def check_data_consistency(ds, time_step_in_days):
+def check_data_consistency(ds_single_site, time_step_in_days):
     ms = load_model_structure()
 
-    # data_test.py says tht for labile 31.0 is constantly right
+    # data_test.py says that for labile 31.0 is constantly right
     time = Variable(
         name="time",
-        data=np.arange(len(ds.time)) * time_step_in_days,
+        data=np.arange(len(ds_single_site.time)) * time_step_in_days,
         unit="d"
     )
 
     mdo = ModelDataObject(
         model_structure=ms,
-        dataset=ds, 
+        dataset=ds_single_site, 
         stock_unit="gC/m2", 
         time=time
     )
