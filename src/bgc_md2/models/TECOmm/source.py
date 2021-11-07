@@ -14,8 +14,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_foliage': 'Carbon in foliage'
@@ -127,38 +127,41 @@ nsv1 = NumericStartValueDict({C_foliage: 250, C_roots: 4145, C_wood: 192, C_metl
 })
 ntimes = NumericSimulationTimes(np.arange(0,200,1))
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="TECO",
-        longName="Terrestrial Ecosystem Model", 
-        version="",
-        entryAuthor="Carlos A. Sierra",
-        entryAuthorOrcid="0000-0003-0009-4169",
-        entryCreationDate="12/4/2018",
-        doi="",
-        sym_dict=sym_dict
-#        bibtex= "@incollection{Luo2012TE,
-#                 Address = {Berkeley},
-#                 Author = {Yiqi Luo and Ensheng Weng and Yuanhe Yang},
-#                 Booktitle = {Encyclopedia of Theoretical Ecology},
-#                 Date-Added = {2015-05-05 15:20:40 +0000},
-#                 Date-Modified = {2015-05-05 15:20:40 +0000},
-#                 Editor = {Alan Hastings and Louis Gross},
-#                 Pages = {219-229},
-#                 Publisher = {University of California Press},
-#                 Title = {Ecosystem Ecology},
-#                 Year = {2012}}
-#                 abstract = {"Ecosystem ecology is a subdiscipline of ecology that focuses on exchange of energy and materials between organisms and the environment. The materials that are commonly studied in ecosystem ecology include water, carbon, nitrogen, phosphorus, and other elements that organisms use as nutrients. The source of energy for most ecosystems is solar radiation. In this entry, material cy-cling and energy exchange are generally described before the carbon cycle is used as an example to illustrate our quantitative and theoretical understanding of ecosystem ecology."}",
-    ),
-    B,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_foliage, C_roots, C_wood)),
-    np1,
-    nsv1,
-    ntimes
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="TECO",
+            longName="Terrestrial Ecosystem Model", 
+            version="",
+            entryAuthor="Carlos A. Sierra",
+            entryAuthorOrcid="0000-0003-0009-4169",
+            entryCreationDate="12/4/2018",
+            doi="",
+            sym_dict=sym_dict
+    #        bibtex= "@incollection{Luo2012TE,
+    #                 Address = {Berkeley},
+    #                 Author = {Yiqi Luo and Ensheng Weng and Yuanhe Yang},
+    #                 Booktitle = {Encyclopedia of Theoretical Ecology},
+    #                 Date-Added = {2015-05-05 15:20:40 +0000},
+    #                 Date-Modified = {2015-05-05 15:20:40 +0000},
+    #                 Editor = {Alan Hastings and Louis Gross},
+    #                 Pages = {219-229},
+    #                 Publisher = {University of California Press},
+    #                 Title = {Ecosystem Ecology},
+    #                 Year = {2012}}
+    #                 abstract = {"Ecosystem ecology is a subdiscipline of ecology that focuses on exchange of energy and materials between organisms and the environment. The materials that are commonly studied in ecosystem ecology include water, carbon, nitrogen, phosphorus, and other elements that organisms use as nutrients. The source of energy for most ecosystems is solar radiation. In this entry, material cy-cling and energy exchange are generally described before the carbon cycle is used as an example to illustrate our quantitative and theoretical understanding of ecosystem ecology."}",
+        ),
+        B,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_foliage, C_roots, C_wood)),
+        np1,
+        nsv1,
+        ntimes
+    },
+    bgc_md2_computers()
+)
 

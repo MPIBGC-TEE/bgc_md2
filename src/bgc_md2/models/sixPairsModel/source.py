@@ -1,5 +1,6 @@
 from sympy import var, ImmutableMatrix
 from frozendict import frozendict
+from bgc_md2.helper import bgc_md2_computers
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
     InputTuple,
@@ -7,8 +8,7 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
 
 sym_dict = {
         'S1': 'Substrate 1' # "mgC g^{-1}\\text{ soil}"
@@ -55,19 +55,22 @@ N = ImmutableMatrix([[k_s1*B1/(K_M1+S1),              0,                0,      
            [                 0,              0,                0,        0,                0, k_b3]])
 B = CompartmentalMatrix(T*N)
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="Three microbe-substrate pairs",
-        longName="", 
-        version="",
-        entryAuthor="Carlos Sierra",
-        entryAuthorOrcid="0000-0003-0009-4169",
-        entryCreationDate="13/04/2016",
-        doi="10.1890/12-0681.1",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="Three microbe-substrate pairs",
+            longName="", 
+            version="",
+            entryAuthor="Carlos Sierra",
+            entryAuthorOrcid="0000-0003-0009-4169",
+            entryCreationDate="13/04/2016",
+            doi="10.1890/12-0681.1",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    },
+    bgc_md2_computers()
+)

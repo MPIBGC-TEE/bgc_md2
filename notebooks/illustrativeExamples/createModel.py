@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.13.0
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -21,7 +21,7 @@
 from IPython.display import HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# #%load_ext autoreload
+# %load_ext autoreload
 # %autoreload 2
 # -
 
@@ -58,7 +58,7 @@ model_inspection
 # * There are no examples for the computation of a transit time or age density computation. Not even a variable with that name exists (in bgc_md2) yet.
 
 from bgc_md2.resolve.mvars import VegetationCarbonInputPartitioningTuple, NumericSolutionArray
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs import CMTVS
 
 li = h.list_target_models(
     target_classes=frozenset(

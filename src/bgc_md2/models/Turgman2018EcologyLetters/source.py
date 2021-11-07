@@ -10,8 +10,8 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonStateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C': 'Non-structural carbon (NSC), starch' # "kgC*m^{-2}" 
@@ -43,23 +43,26 @@ B = CompartmentalMatrix(
 [W*U/C, -m_X, 0],
 [W*(1-U)/C, 0, -m_L]])
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="",
-        doi="10.1111/ele.13136",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(beta),
-    VegetationCarbonStateVariableTuple((C,X,L)),
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="",
+            doi="10.1111/ele.13136",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(beta),
+        VegetationCarbonStateVariableTuple((C,X,L)),
+    },
+    bgc_md2_computers()
+)

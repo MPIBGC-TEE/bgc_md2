@@ -13,8 +13,8 @@ from bgc_md2.resolve.mvars import (
 #    NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict={
         'age': 'Age of the stand' #changed symbol in comparison to yaml to separate from TimeSymbol
@@ -158,23 +158,26 @@ np1 = NumericParameterization(
 #            values: {R_c: 0.25*NPP,Q_10: 2,Q_010: 1.94,n_crit: 0.034,I_0: 1.164,k: 0.5,R_0: 27,T_a: 3.8,epsilon_0: (1.05,1.25),sigma: 7.6,a_f: (0.16,0.19),a_r: (0.42,0.58),a_w: (0.23,0.42)}
 #            doi: 10.1016/S0304-3800(00)00345-8
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="", 
-        version="",
-#        basedOn="G'DAY"
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="16/3/2016",
-        doi="10.1016/S0304-3800(00)00345-8",
-    ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_r, C_w)),
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="", 
+            version="",
+    #        basedOn="G'DAY"
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="16/3/2016",
+            doi="10.1016/S0304-3800(00)00345-8",
+        ),
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_f, C_r, C_w)),
+    },
+    bgc_md2_computers()
+)

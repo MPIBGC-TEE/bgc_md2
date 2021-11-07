@@ -14,7 +14,8 @@ from bgc_md2.resolve.mvars import (
 #    NumericSimulationTimes,
    )
 from ..BibInfo import BibInfo 
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict={
         'C_leaf': 'Plant (carbon) pool Leaf' #unit: "gC*m^{-2}" 
@@ -166,27 +167,30 @@ t = TimeSymbol("t") #'day' # or 'year'? incongruent turnover units
 #
 #ntimes = NumericSimulationTimes(np.arange(, , ))
 
-mvs=MVarSet({
-    BibInfo(# Bibliographical Information
-        name="CABLE",
-        longName="CSIRO Atmosphere Biosphere Land Exchange", 
-        version="1",
-#        basedOn = "CASA'" # Fung et al. (2005) -> Need to look it up
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="14/3/2016",
-        doi="10.5194/bg-7-2261-2010",
-        sym_dict=sym_dict
-        
-    ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_leaf, C_root, C_wood)),
-#    np1
-})
+mvs=CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="CABLE",
+            longName="CSIRO Atmosphere Biosphere Land Exchange", 
+            version="1",
+    #        basedOn = "CASA'" # Fung et al. (2005) -> Need to look it up
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="14/3/2016",
+            doi="10.5194/bg-7-2261-2010",
+            sym_dict=sym_dict
+            
+        ),
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_leaf, C_root, C_wood)),
+    #    np1
+    },
+    bgc_md2_computers()
+)
 

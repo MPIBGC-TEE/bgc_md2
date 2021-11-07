@@ -8,8 +8,8 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'A': 'labile pool' # "MgC*ha^{-1}" 
@@ -29,29 +29,32 @@ A_GeM = CompartmentalMatrix(
 [[-alpha,     0 ],
  [alpha*K, -beta]])
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="Henin and Dupois", 
-        version="1",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="09/03/2016",
-        doi="",
-#        bibtex="@inproceedings{Henin1945Annalesagronomiques,
-#                     author = {H\\'{e}nin, S and Dupuis, M},
-#                     booktitle = {Annales agronomiques},
-#                     pages = {17--29},
-#                     title = {{Essai de bilan de la mati\\`{e}re organique du sol}},
-#                     volume = {15},
-#                     year = {1945}
-#                    }",
-        sym_dict=sym_dict
-    ),
-    A_GeM,  # the overall compartmental matrix, decomposition operator
-    I,  # the overall input
-    t,  # time for the complete system
-    C,  # state vector of the complete system
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="Henin and Dupois", 
+            version="1",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="09/03/2016",
+            doi="",
+    #        bibtex="@inproceedings{Henin1945Annalesagronomiques,
+    #                     author = {H\\'{e}nin, S and Dupuis, M},
+    #                     booktitle = {Annales agronomiques},
+    #                     pages = {17--29},
+    #                     title = {{Essai de bilan de la mati\\`{e}re organique du sol}},
+    #                     volume = {15},
+    #                     year = {1945}
+    #                    }",
+            sym_dict=sym_dict
+        ),
+        A_GeM,  # the overall compartmental matrix, decomposition operator
+        I,  # the overall input
+        t,  # time for the complete system
+        C,  # state vector of the complete system
+    },
+    bgc_md2_computers()   
+)
 
 
