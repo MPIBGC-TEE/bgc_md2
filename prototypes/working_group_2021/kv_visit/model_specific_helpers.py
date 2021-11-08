@@ -153,28 +153,28 @@ ModelParameters = namedtuple(
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
     names = [
-        ('cLeaf','cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cLitterAbove','cLitterAbove_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cLitterBelow','cLitterBelow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cRoot','cRoot_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilFast','cSoilFast_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilMedium','cSoilMedium_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilSlow','cSoilSlow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cVeg','cVeg_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('fLitterSoil','fLitterSoil_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('fVegLitter','fVegLitter_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('mrsos','mrsos_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('npp','npp_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('rh','rh_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('tsl','tsl_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cLeaf', 'cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cLitterAbove', 'cLitterAbove_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cLitterBelow', 'cLitterBelow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cRoot', 'cRoot_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cSoilFast', 'cSoilFast_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cSoilMedium', 'cSoilMedium_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cSoilSlow', 'cSoilSlow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cVeg', 'cVeg_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('fLitterSoil', 'fLitterSoil_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('fVegLitter', 'fVegLitter_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('mrsos', 'mrsos_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('npp', 'npp_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('rh', 'rh_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('tsl', 'tsl_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
     ]
     def f(tup):
-        vn,fn = tup
+        vn, fn = tup
         path = dataPath.joinpath(fn)
         ds = nc.Dataset(str(path))
         return ds.variables[vn][:, :, :]
 
-    return map(f,names)
+    return map(f, names)
 
 #     # Read NetCDF data  ******************************************************************************************************************************
 
@@ -196,13 +196,13 @@ def get_example_site_vars(dataPath):
         tsl
     )= get_variables_from_files(dataPath)
     # pick up 1 site   wombat state forest
-    s = slice(None,None,None) # this is the same as : 
-    t = s,50,33 # [t] = [:,49,325]
-    npp = npp[t]* 86400   #   kg/m2/s kg/m2/day;
+    s = slice(None, None, None)  # this is the same as :
+    t = s, 50, 33  # [t] = [:,49,325]
+    npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
     rh = rh[t]*86400  # per s to per day
     f_veg2litter = f_veg2litter[t] * 86400
     f_litter2som = f_litter2som[t] * 86400
-    tsl_mean = np.mean(tsl, axis=1) # avarage soil temperature at different depth
+    tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
     (
         C_leaf,
         C_litter_above,
@@ -297,14 +297,15 @@ def make_param2res(
     """The returned function 'param2res' is used by the metropolis hastings algorithm
     to produce a result from a proposed parameter(tuple).
     'param2res' will be called only with the parameters to be estimated 'pe'.
-    The constant parameters are the parameters of the present function 'pc' and are automatically available in the returned 'param2res' (closure).
+    The constant parameters are the parameters of the present function 'pc' and are automatically
+    available in the returned 'param2res' (closure).
     
     In the case of this model 'param2res' has to perform the following 
     tasks.
     -   use both sets of parameters 'pc' and 'pe' to build a forward model
     -   run the forward model to produce output for the times 
-        when obeservations are available.(Here monthly)
-    -   project the output of the forward model to the obeserved variables.
+        when observations are available.(Here monthly)
+    -   project the output of the forward model to the observed variables.
         (here summation of all different soil-pools to compare to the single
         observed soil-pool and the same for the litter pools)
         
@@ -323,15 +324,15 @@ def make_param2res(
     def param2res(pa):
         # pa is a numpy array when pa comes from the predictor
         # so we transform it to be able to use names instead of positions 
-        epa=EstimatedParameters(*pa)
-        days=[31,28,31,30,31,30,31,31,30,31,30,31]
+        epa = EstimatedParameters(*pa)
+        days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         # Construct b vector 
-        beta1=epa.beta_leaf; beta2=epa.beta_wood; beta3= 1- beta1- beta2
-        b = np.array([beta1, beta2, beta3, 0, 0, 0, 0,0,0]).reshape([9,1])   # allocation
+        beta1 = epa.beta_leaf; beta2 = epa.beta_wood; beta3 = 1 - beta1 - beta2
+        b = np.array([beta1, beta2, beta3, 0, 0, 0, 0, 0, 0]).reshape([9, 1])   # allocation
         # Now construct A matrix
 
-        f41 = 1; f52 = 1; f63 = 1;
-        f74 = epa.f_leaf_lit2fast_som; f84 = epa.f_leaf_lit2slow_som; f94 = epa.f_leaf_lit2pass_som;
+        f41 = 1; f52 = 1; f63 = 1
+        f74 = epa.f_leaf_lit2fast_som; f84 = epa.f_leaf_lit2slow_som; f94 = epa.f_leaf_lit2pass_som
         f75 = epa.f_wood_lit2fast_som; f85 = epa.f_wood_lit2slow_som; f95 = epa.f_wood_lit2pass_som
         f76 = epa.f_root_lit2fast_som; f86 = epa.f_root_lit2slow_som; f96 = epa.f_root_lit2pass_som
 
@@ -343,10 +344,11 @@ def make_param2res(
                          0,   0, f63,   0,   0,  -1,   0,   0,   0,
                          0,   0,   0, f74, f75, f76,  -1,   0,   0,
                          0,   0,   0, f84, f85, f86,   0,  -1,   0,
-                         0,   0,   0, f94, f95, f96,   0,   0,  -1 ]).reshape([9,9])   # tranfer
+                         0,   0,   0, f94, f95, f96,   0,   0,  -1 ]).reshape([9, 9])   # transfer
     
         #turnover rate per day of pools: 
-        temp = [epa.k_leaf,epa.k_wood,epa.k_root, epa.k_leaf_lit,epa.k_wood_lit, epa.k_root_lit, epa.k_fast_som,epa.k_slow_som, epa.k_pass_som]
+        temp = [epa.k_leaf, epa.k_wood, epa.k_root, epa.k_leaf_lit, epa.k_wood_lit, epa.k_root_lit, epa.k_fast_som,
+                epa.k_slow_som, epa.k_pass_som]
         K = np.zeros(81).reshape([9, 9])
         for i in range(0, 9):
             K[i][i] = temp[i]
@@ -391,12 +393,12 @@ def make_param2res(
                 rh_out = 0
             return rh_out
 
-        for m in range(0,cpa.number_of_months):
-            x_fin[m, :]=X.reshape(1,9)
+        for m in range(0, cpa.number_of_months):
+            x_fin[m, :] = X.reshape(1, 9)
             npp_in = cpa.npp[m] 
-            rh_fin[m, 0]=co2_rh
-            f_veg_lit_fin[m,0]=f_veg_lit
-            f_lit_som_fin[m,0]=f_lit_soil
+            rh_fin[m, 0] = co2_rh
+            f_veg_lit_fin[m, 0] = f_veg_lit
+            f_lit_som_fin[m, 0] = f_lit_soil
             co2_rh = 0; f_veg_lit = 0; f_lit_soil = 0
             rh_modifier = Rh_calc(cpa.tsl[m], cpa.mrso[m], epa.T_0, epa.E, epa.KM)
             ksi = np.array(
@@ -412,27 +414,27 @@ def make_param2res(
                     rh_modifier
                 ]
             ).reshape([9, 1])  # environmental modifiers
-            for d in range(0,days[m%12]):
-                K_new=K*ksi
-                X=X + b*npp_in + A@K_new@X
-                co2_rate = [0,0,0,
-                        (1-f74-f84-f94)*K[3,3]*ksi[3],
-                        (1-f75-f85-f95)*K[4,4]*ksi[4],
-                        (1-f76-f86-f96)*K[5,5]*ksi[5],
-                        K[6,6]*ksi[6],
-                        K[7,7]*ksi[7],
-                        K[8,8]*ksi[8]
+            for d in range(0, days[m % 12]):
+                K_new = K*ksi
+                X = X + b*npp_in + A@K_new@X
+                co2_rate = [0, 0, 0,
+                        (1-f74-f84-f94)*K[3, 3]*ksi[3],
+                        (1-f75-f85-f95)*K[4, 4]*ksi[4],
+                        (1-f76-f86-f96)*K[5, 5]*ksi[5],
+                        K[6, 6]*ksi[6],
+                        K[7, 7]*ksi[7],
+                        K[8, 8]*ksi[8]
                     ]
-                co2=np.sum(co2_rate*X.reshape(1,9))
-                co2_rh = co2_rh + co2/days[m%12]   # monthly average rh 
-                litterfall_rate = [f41*K[0,0]*ksi[0],f52*K[1,1]*ksi[1],f63*K[2,2]*ksi[2],0,0,0,0,0,0]
+                co2 = np.sum(co2_rate*X.reshape(1, 9))
+                co2_rh = co2_rh + co2/days[m % 12]   # monthly average rh
+                litterfall_rate = [f41*K[0, 0]*ksi[0], f52*K[1, 1]*ksi[1], f63*K[2, 2]*ksi[2], 0, 0, 0, 0, 0, 0]
                 litterfall = np.sum(litterfall_rate * X.reshape(1, 9))
-                f_veg_lit = f_veg_lit + litterfall / days[m % 12] # monthly average flux from veg to litter
+                f_veg_lit = f_veg_lit + litterfall / days[m % 12]  # monthly average flux from veg to litter
                 litter_to_soil_rate = [
-                        0,0,0,f74*K[3,3]*ksi[3]+f84*K[3,3]*ksi[3]+f84*K[3,3]*ksi[3],
-                        f75*K[4,4]*ksi[4]+ f85*K[4,4]*ksi[4]+ f95*K[4,4]*ksi[4],
-                        f76*K[5,5]*ksi[5]+ f86*K[5,5]*ksi[5]+ f96*K[5,5]*ksi[5],
-                        0,0,0
+                        0, 0, 0, f74*K[3, 3]*ksi[3]+f84*K[3, 3]*ksi[3]+f84*K[3, 3]*ksi[3],
+                        f75*K[4, 4]*ksi[4] + f85*K[4, 4]*ksi[4] + f95*K[4, 4]*ksi[4],
+                        f76*K[5, 5]*ksi[5] + f86*K[5, 5]*ksi[5] + f96*K[5, 5]*ksi[5],
+                        0, 0, 0
                     ]
                 litter_to_soil = np.sum(litter_to_soil_rate * X.reshape(1, 9))
                 f_lit_soil = f_lit_soil + litter_to_soil / days[m % 12] # monthly average flux from litter to soil
@@ -443,22 +445,22 @@ def make_param2res(
         # onto the 6 data streams by summing up the 3 litter pools into one
         # and also the 3 soil pools into one
         #C_litter_above = x_fin[:,3] + x_fin[:,4]
-        C_litter_above = np.sum(x_fin[:,3:5],axis=1).reshape(cpa.number_of_months,1)
+        C_litter_above = np.sum(x_fin[:, 3:5], axis=1).reshape(cpa.number_of_months,1)
         #C_litter_below = x_fin[:,5]
         #c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(cpa.number_of_months,1)
         #c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(cpa.number_of_months,1)
         #from IPython import embed; embed()
         out_simu = np.concatenate(
             [
-                x_fin[:,0:3], # the first 3 pools are used as they are
+                x_fin[:, 0:3],  # the first 3 pools are used as they are
                 C_litter_above,
                 #C_litter_below,
-                x_fin[:,5:9],
+                x_fin[:, 5:9],
                 rh_fin,
                 f_veg_lit_fin,
                 f_lit_som_fin
             ]
-            ,axis=1
+            , axis=1
         )
         return out_simu
 
