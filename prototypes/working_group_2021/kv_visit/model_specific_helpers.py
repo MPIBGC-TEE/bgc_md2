@@ -386,7 +386,7 @@ def make_param2res(
         #pa=Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
         #B=make_compartmental_matrix_func(pa)(0,X)
         def Rh_calc (TS, M, T0, E, KM):
-            TS < -TS - 273.15
+            TS = TS - 273.15
             if TS > T0:
                 rh_out = np.exp(E * (1 / (10 - T0) - 1 / (TS - T0))) * M / (KM + M)
             else:
