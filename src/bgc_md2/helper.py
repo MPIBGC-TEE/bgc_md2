@@ -1,5 +1,6 @@
 from IPython.display import Math
 from IPython.display import display
+from ipywidgets import HTML, Button, HBox, VBox
 from typing import  Tuple, Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
