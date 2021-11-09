@@ -12,13 +12,17 @@ jobs:
         #python-version: [3.6,3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      # You may pin to the exact commit or the version.
+      # uses: textbook/git-checkout-submodule-action@0cb23c7e6a67085e1dc5e884920bd620f7b9c469
+      uses: textbook/git-checkout-submodule-action@2.1.1
       with:
+      # Set the --remote flag
+        #remote: # optional
         repository: MPIBGC-TEE/bgc_md2
         token: ${{ secrets.ACCESS_TOKEN }}
 
-    - uses: textbook/git-checkout-submodule-action@master
-      #- uses: jwsi/submodule-checkout@v1
+    
     - name: Set up conda 
       uses: s-weigand/setup-conda@v1
       with:
