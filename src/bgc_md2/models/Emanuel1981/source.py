@@ -12,8 +12,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'x_1': 'Non-woody tree parts'
@@ -58,34 +58,37 @@ nsv1 = NumericStartValueDict({x_1: 37, x_2: 452, x_3: 69, x_4: 81, x_5: 1121
 })
 ntimes = NumericSimulationTimes(np.arange(0,200,0.1))
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="", 
-        version="",
-        entryAuthor="Carlos A. Sierra",
-        entryAuthorOrcid="0000-0003-0009-4169",
-        entryCreationDate="12/9/2016",
-        doi="",
-#        bibtex= "@incollection{Emanuel1981,
-#                     author = {W. R. Emanuel and G. G. Killough and J. S. Olson},
-#                     booktitle = {Carbon Cycle Modelling},
-#                     editor = {Bert Bolin},
-#                     pages = {335--353},
-#                     publisher = {John Wiley and Sons},
-#                     series = {SCOPE 16},
-#                     title = {Modelling the circulation of carbon in the world's terrestrial ecosystems},
-#                     year = {1981}
-#                     abstract = {"A mathematical model for the circulation of carbon in the world terrestrial ecosystems is proposed. A five-compartment representation is developed which corresponds to the functional components studied by field ecologists. Rate coefficients for this linear dynamic model are calculated from estimates of the 1970 standingcrops and compartment exchanges of carbon. The model is analyzed in terms of response to a unit impulse, thereby displaying a transient time distribution. The response to a hypothetical pulse input through gross primary production is also simulated, illustrating the efficiency of the terrestrial carbon system in transferring carbon into longer storage components. Finally, the concept of CO$_2$ fertilization is examined by allowing gross primary production to increase in response to higher atmospheric concentrations. Although the standing crop of carbon in photosynthesizing compartments is induced to grow from a hypothetical preindustrial level to a specified 1970 level, the accompanying increase in other compartments is not as large as obtained in earlier model formulations which incorporate an input from the atmosphere directly to compartments containing carbon in woody material or soil."}
-#                }",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonStateVariableTuple((x_1,x_2)),
-    np1,
-    nsv1,
-    ntimes
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="", 
+            version="",
+            entryAuthor="Carlos A. Sierra",
+            entryAuthorOrcid="0000-0003-0009-4169",
+            entryCreationDate="12/9/2016",
+            doi="",
+    #        bibtex= "@incollection{Emanuel1981,
+    #                     author = {W. R. Emanuel and G. G. Killough and J. S. Olson},
+    #                     booktitle = {Carbon Cycle Modelling},
+    #                     editor = {Bert Bolin},
+    #                     pages = {335--353},
+    #                     publisher = {John Wiley and Sons},
+    #                     series = {SCOPE 16},
+    #                     title = {Modelling the circulation of carbon in the world's terrestrial ecosystems},
+    #                     year = {1981}
+    #                     abstract = {"A mathematical model for the circulation of carbon in the world terrestrial ecosystems is proposed. A five-compartment representation is developed which corresponds to the functional components studied by field ecologists. Rate coefficients for this linear dynamic model are calculated from estimates of the 1970 standingcrops and compartment exchanges of carbon. The model is analyzed in terms of response to a unit impulse, thereby displaying a transient time distribution. The response to a hypothetical pulse input through gross primary production is also simulated, illustrating the efficiency of the terrestrial carbon system in transferring carbon into longer storage components. Finally, the concept of CO$_2$ fertilization is examined by allowing gross primary production to increase in response to higher atmospheric concentrations. Although the standing crop of carbon in photosynthesizing compartments is induced to grow from a hypothetical preindustrial level to a specified 1970 level, the accompanying increase in other compartments is not as large as obtained in earlier model formulations which incorporate an input from the atmosphere directly to compartments containing carbon in woody material or soil."}
+    #                }",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonStateVariableTuple((x_1,x_2)),
+        np1,
+        nsv1,
+        ntimes
+    },
+    bgc_md2_computers()
+)

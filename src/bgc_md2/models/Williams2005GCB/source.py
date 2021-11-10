@@ -16,6 +16,9 @@ from sympy.physics.units.systems.si import dimsys_SI
 
 from frozendict import frozendict
 
+from ComputabilityGraphs.CMTVS import CMTVS
+
+from bgc_md2.helper import bgc_md2_computers
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
     InputTuple,
@@ -42,8 +45,8 @@ from bgc_md2.resolve.computers import (
     quantity_model_run_1,
     quantity_start_value_array_1,
 )
+
 from bgc_md2.models.BibInfo import BibInfo 
-from bgc_md2.resolve.MVarSet import MVarSet
 
 
 t = TimeSymbol("t")
@@ -234,54 +237,57 @@ qsmr= numeric_model_run_1(
 # Open questions regarding the translation
 # - The variable G seems to be identical with GPP but
 #specialVars = {
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="DALEC",
-        longName="Data Assimilation Linked Ecosystem model", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="16/9/2016",
-        doi="10.1111/j.1365-2486.2004.00891.x",
-        further_references=BibInfo(doi="10.1016/j.agrformet.2009.05.002"),
-        #  Also from PDF in Reflex experiment
-        sym_dict=sym_dict
-        
-    ),
-    #
-    # the following variables constitute the compartmental system:
-    #
-    A,  # the overall compartmental matrix
-    Input,  # the overall imput
-    t,  # time for the complete system
-    x,  # state vector of the the complete system
-    #
-    # the following variables constitute a numerical model run :
-    #
-    np1,
-    nsv1,
-    ntimes,
-    # Again the model run could be created explicitly (in several ways)
-    #
-    # the following variables constitute a quantiy model run :
-    #
-    qp1,
-    qsv1,
-    qtimes,
-    # Again the model run could be created explicitly (in several ways)
-    #
-    # the following variables give a more detailed view with respect to
-    # carbon and vegetation variables
-    # This imformation can be used to extract the part
-    # of a model that is concerned with carbon and vegetation
-    # in the case of this model all of the state variables
-    # are vegetation and carbon related but for an ecosystem model
-    # for different elements there could be different subsystems
-    # e.g. consisting of  Nitrogen Soil state variables
-    #
-    # vegetation carbon
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="DALEC",
+            longName="Data Assimilation Linked Ecosystem model", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="16/9/2016",
+            doi="10.1111/j.1365-2486.2004.00891.x",
+            further_references=BibInfo(doi="10.1016/j.agrformet.2009.05.002"),
+            #  Also from PDF in Reflex experiment
+            sym_dict=sym_dict
+            
+        ),
+        #
+        # the following variables constitute the compartmental system:
+        #
+        A,  # the overall compartmental matrix
+        Input,  # the overall imput
+        t,  # time for the complete system
+        x,  # state vector of the the complete system
+        #
+        # the following variables constitute a numerical model run :
+        #
+        np1,
+        nsv1,
+        ntimes,
+        # Again the model run could be created explicitly (in several ways)
+        #
+        # the following variables constitute a quantiy model run :
+        #
+        qp1,
+        qsv1,
+        qtimes,
+        # Again the model run could be created explicitly (in several ways)
+        #
+        # the following variables give a more detailed view with respect to
+        # carbon and vegetation variables
+        # This imformation can be used to extract the part
+        # of a model that is concerned with carbon and vegetation
+        # in the case of this model all of the state variables
+        # are vegetation and carbon related but for an ecosystem model
+        # for different elements there could be different subsystems
+        # e.g. consisting of  Nitrogen Soil state variables
+        #
+        # vegetation carbon
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_f, C_lab, C_w, C_r))
+    },
+    bgc_md2_computers()
+)

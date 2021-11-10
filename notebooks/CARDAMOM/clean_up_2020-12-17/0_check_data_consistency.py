@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -33,7 +33,7 @@ from bgc_md2.notebook_helpers import nested_groupby_apply
 from dask.distributed import Client
 # -
 
-my_cluster = CARDAMOMlib.prepare_cluster(n_workers=24)
+my_cluster = CARDAMOMlib.prepare_cluster(n_workers=12)
 Client(my_cluster)
 
 # ## How to connect to remote
@@ -41,7 +41,7 @@ Client(my_cluster)
 #
 # ### remotely
 # `
-# screen
+# tmux
 # # cd GitHub/bgc_md2/notebooks/CARDAMOM
 # conda activate bgc_md2
 # jupyter lab --no-browser -- port=8890
@@ -72,8 +72,12 @@ time_resolution, delay_in_months = "monthly", None
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 output_path = data_path.joinpath(params["output_folder"])
+output_path.mkdir(exist_ok=True)
+
 output_file_path = output_path.joinpath("data_consistency.nc")
 
 if time_resolution == "monthly":
@@ -126,7 +130,7 @@ def func_chunk(chunk_ds):
         'chunk finished:',
         chunk_ds.lat[0].data,
         chunk_ds.lon[0].data,
-        chunk_ds.prob.data[0],
+        f"{chunk_ds.prob.data[0]} - {chunk_ds.prob.data[-1]}",
         flush=True
     )
     
@@ -270,9 +274,11 @@ bad_idx = (ds_data_consistency.abs_err + ds_data_consistency.rel_err > 0.1)
 nr_sites = len(ds.lat)*len(ds.lon)*len(ds.prob)
 print("Throw out %d sites of %d: %.2f%%" % (np.sum(bad_idx), nr_sites, np.sum(bad_idx)/nr_sites*100))
 np.where(bad_idx)
-print(ds.lat[3], ds.lon[20])
-print(ds.lat[21], ds.lon[12])
-print(ds.lat[27], ds.lon[54])
+
+# +
+#print(ds.lat[3], ds.lon[20])
+#print(ds.lat[21], ds.lon[12])
+#print(ds.lat[27], ds.lon[54])
 
 # +
 data_vars = dict()

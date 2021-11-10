@@ -9,8 +9,8 @@ from bgc_md2.resolve.mvars import (
     NumericParameterization,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_1': 'decomposable plant material pool (DPM)' # "t C*ha^{-1}"
@@ -65,21 +65,24 @@ np1 = NumericParameterization(
     func_dict=frozendict({})
 )
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="RothC-26.3",
-        longName="", 
-        version="",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="10/03/2016",
-        doi="10.1097/00010694-197705000-00005",
-        further_references=BibInfo(doi="10.1007/978-3-642-61094-3_17"),
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    np1,
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="RothC-26.3",
+            longName="", 
+            version="",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="10/03/2016",
+            doi="10.1097/00010694-197705000-00005",
+            further_references=BibInfo(doi="10.1007/978-3-642-61094-3_17"),
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        np1,
+    },
+    bgc_md2_computers()
+)

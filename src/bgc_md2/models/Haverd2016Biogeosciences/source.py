@@ -10,8 +10,8 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonStateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_L': 'Leaf biomass' # "molC*m^{-2}" 
@@ -39,23 +39,26 @@ B = CompartmentalMatrix(
                          [0, -(k_R+(m_stem/C_stem)), 0],
                          [0, 0, -m_stem]])
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="HAVANA",
-        longName="Hydrology and Vegetation-dynamics Algorithm for Northern Australia", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="",
-        doi="10.5194/bg-13-761-2016",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-#    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-#    VegetationCarbonInputPartitioningTuple(beta),
-    VegetationCarbonStateVariableTuple((C_L,C_R,C_stem)),
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="HAVANA",
+            longName="Hydrology and Vegetation-dynamics Algorithm for Northern Australia", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="",
+            doi="10.5194/bg-13-761-2016",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    #    VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+    #    VegetationCarbonInputPartitioningTuple(beta),
+        VegetationCarbonStateVariableTuple((C_L,C_R,C_stem)),
+    },
+    bgc_md2_computers()
+)

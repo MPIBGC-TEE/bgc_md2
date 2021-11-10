@@ -28,7 +28,9 @@ from bgc_md2.models.CARDAMOM import CARDAMOMlib
 
 
 # +
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 netCDF_filestem = "sol_acc_age_btt"
 
 dc = ("monthly", None, "discrete")
@@ -58,6 +60,8 @@ else:
 # add Ras to dataset
 ds = ds.assign({"Ras": Ras})  
 # -
+
+ds
 
 # # Load merged dataset with global quantiles
 
@@ -99,6 +103,10 @@ mean_btt = (Ras * 0 + Rs * ds["mean_btt"]) / (Ras + Rs)
 btt_weights = (ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac * Rs).fillna(0)
 global_mean_btt = mean_btt.weighted(btt_weights).mean(dim=["lat", "lon"])
 
+# global btt_moment_2
+btt_moment_2 = (Ras * 0 + Rs * ds["btt_moment_2"]) / (Ras + Rs)
+global_btt_moment_2 = btt_moment_2.weighted(btt_weights).mean(dim=["lat", "lon"])
+
 # global mean age
 age_weights = (ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac * ds.solution.sum(dim="pool")).fillna(0)
 global_mean_age = ds["mean_system_age"].weighted(age_weights).mean(dim=["lat", "lon"])
@@ -127,6 +135,7 @@ global_stocks = stocks.weighted(weights).sum(dim=["lat", "lon"])
 # +
 new_data_vars = {
     "global_mean_btt": global_mean_btt,
+    "global_btt_moment_2": global_btt_moment_2,
     "global_mean_age": global_mean_age,
     "global_C": global_stocks,
     "global_GPP": global_GPPs,
@@ -143,5 +152,19 @@ ds_target
 filename = project_path.joinpath("global_ds"+correction_str+".nc")
 ds_target.to_netcdf(filename)
 filename
+
+
+
+ds_global = xr.open_dataset(str(project_path.joinpath("global_ds"+correction_str+".nc")))
+ds_global
+
+fig, ax = plt.subplots(figsize=(20,8))
+global_GPP.mean(dim="prob").plot(ax=ax, x="time")
+
+fig, ax = plt.subplots(figsize=(20,8))
+var = ds_global.global_btt_moment_2 - ds_global.global_mean_btt**2
+sd = np.sqrt(var)
+cv = sd / ds_global.global_mean_btt
+_ = cv.rolling(time=12).mean().plot.line(ax=ax, x="time", add_legend=False, c="blue", alpha=0.2, lw=4)
 
 

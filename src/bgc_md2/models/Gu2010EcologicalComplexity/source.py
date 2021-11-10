@@ -9,8 +9,8 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonStateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_S': 'Carbon in stem'
@@ -50,23 +50,26 @@ A = CompartmentalMatrix([[-gamma_S,          0,          0],
 )
 t = TimeSymbol("t")
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="CEVSA2  ",
-        longName="", 
-        version="2",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="",
-        doi="10.1016/j.ecocom.2010.04.002",
-        sym_dict=sym_dict
-    ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_S, C_R, C_L)),
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="CEVSA2  ",
+            longName="", 
+            version="2",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="",
+            doi="10.1016/j.ecocom.2010.04.002",
+            sym_dict=sym_dict
+        ),
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_S, C_R, C_L)),
+    },
+    bgc_md2_computers()
+)
