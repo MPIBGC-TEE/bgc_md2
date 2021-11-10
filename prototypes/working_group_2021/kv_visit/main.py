@@ -8,8 +8,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import json
-import scipy
-from scipy import stats
 from scipy.stats import gaussian_kde
 
 from model_specific_helpers import (
@@ -42,7 +40,7 @@ npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_
 rh, f_veg2litter, f_litter2som, mrso, tsl = get_example_site_vars(dataPath)
 
 #nyears = 150
-nyears = 50
+nyears = 10  # reduced time span for testing purposes
 tot_len = 12 * nyears
 obs_tup = Observables(
     C_leaf=C_leaf,
@@ -197,14 +195,17 @@ C_autostep, J_autostep = autostep_mcmc(
     costfunction=make_feng_cost_func(obs),
     nsimu=10000,
     c_max=c_max,
-    c_min=c_min
+    c_min=c_min,
+    acceptance_rate=10,   # default value | target acceptance rate in %
+    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1   # default value | increase value to reduce initial step size
 )
 # save the parameters and cost function values for postprocessing
 pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('visit_autostep_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('visit_autostep_da_j_aa.csv'), sep=',')
 
 
-# calculate maximum likelihood parameters as peaks of posterior distributions
+# calculate maximum likelihood for each parameter as a peak of posterior distribution
 def density_peaks(distr):
     peaks = np.zeros(distr.shape[0])
     for i in range(distr.shape[0]):
@@ -268,9 +269,8 @@ C_formal, J_formal = adaptive_mcmc(
     param2res=param2res,
     # costfunction=make_weighted_cost_func(obs)
     costfunction=make_feng_cost_func(obs),
-    # nsimu=20000
     nsimu=10000,
-    sd_controlling_factor=1
+    sd_controlling_factor=1  # default value | increase value to reduce step size
 )
 # save the parameters and cost function values for postprocessing
 pd.DataFrame(C_formal).to_csv(dataPath.joinpath('visit_formal_da_aa.csv'), sep=',')
@@ -291,13 +291,13 @@ pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'),
 # The 'solution' of the inverse problem is actually the (joint) posterior
 # probability distribution of the parameters, which we approximate by the
 # histogram consisting of the mcmc generated samples.
-# This joint distribution contains as much information as all its (infinitly
+# This joint distribution contains as much information as all its (infinitely
 # many) projections to curves through the parameter space combined.
 # Unfortunately, for this very reason, a joint distribution of more than two
-# parameters is very difficult to visualize in its entirity.
+# parameters is very difficult to visualize in its entirety.
 # to do:
 #   a) make a movie of color coded samples  of the a priori distribution of the parameters.
-#   b) -"-                                  of the a posteriory distribution -'-
+#   b) -"-                                  of the a posterior distribution -'-
 
 # Therefore the  following visualizations have to be considered with caution:
 # 1.
@@ -345,8 +345,3 @@ pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'),
 # )
 # fig.savefig('solutions.pdf')
 
-# additional output
-# sol_init_par =param2res(epa_0)
-# sol_mean =param2res(np.mean(C_formal,axis=1))
-# pd.DataFrame(sol_init_par).to_csv(sol_init_par_path,sep=',')
-# pd.DataFrame(sol_mean).to_csv(sol_mean_path,sep=',')

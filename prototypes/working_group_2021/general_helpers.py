@@ -60,11 +60,20 @@ def make_multivariate_normal_proposer(
     return GenerateParamValues
 
 
-def accept_costfunction(J_last: float, J_new: float):
+def accept_costfunction(J_last: float, J_new: float, K=1):
+    """Regulates how new cost functions are accepted or rejected. If the new cost function is lower than the old one,
+    it is always accepted. If the the new cost function is higher than the old one, it has a random
+    chance to be accepted based on percentage difference between the old and the new. The chance is defined
+    by an exponential function and regulated by the K coefficient.
+    :param J_last: old (last accepted) cost function
+    :param J_new: new cost function
+    :param K: regulates acceptance chance. Default 1 means that a 1% higher cost function has 37% chance to be accepted.
+    Increase K to reduce the chance to accept higher cost functions
+    """
     accept = False
     delta_J_percent = (J_last - J_new) / J_last * 100  # normalize delta_J as a percentage of current J
     randNum = np.random.uniform(0, 1)
-    if min(1.0, np.exp(delta_J_percent)) > randNum:
+    if min(1.0, np.exp(delta_J_percent*K)) > randNum:  # 1% higher cost function has 37% chance to be accepted
         accept = True
     return accept
 
@@ -79,7 +88,8 @@ def autostep_mcmc(
         c_max: np.ndarray,
         c_min: np.ndarray,
         acceptance_rate=10,
-        D_init=10
+        chunk_size=100,
+        D_init=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
@@ -95,8 +105,10 @@ def autostep_mcmc(
     :param nsimu: The length of the chain
     :param c_max: Array of maximum values for each parameter
     :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %, default = 10%
-    :param D_init: initial D value, default = 10
+    :param acceptance_rate: Target acceptance rate in %, default is 10%
+    :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
+    Set to 0 for constant step size. Default is 100.
+    :param D_init: initial D value (Increase to get a smaller step size), default = 1
     """
     np.random.seed(seed=10)
 
@@ -122,11 +134,10 @@ def autostep_mcmc(
     # for simu in tqdm(range(nsimu)):
     st = time()
     accepted_current = 0
-    chunk_size = 100  # number of iterations after which step size is adjusted
-    if nsimu >= 10000:
-        chunk_size = int(nsimu * 0.01)
+    if chunk_size == 0:
+        chunk_size = nsimu  # if chunk_size is set to 0 - proceed without updating step size.
     for simu in range(nsimu):
-        if simu % chunk_size == 0:  # every 100 iterations or 1% of nsimu - update the step
+        if (simu > 0) and (simu % chunk_size == 0):  # every chunk size (e.g. 100 iterations) update the proposer step
             if accepted_current == 0:
                 accepted_current = 1  # to avoid division by 0
             D = D * np.sqrt(
@@ -157,7 +168,7 @@ def autostep_mcmc(
             print(
                 """ 
                #(upgraded): {n}  | D value: {d} 
-               overall acceptance ratio: {r}% | current acceptance ratio: {rr}%
+               overall acceptance ratio: {r}% | currently {ac} accepted out of {ch}
                progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
                time elapsed: {minutes:02d}:{sec:02d}
                overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
@@ -172,8 +183,10 @@ def autostep_mcmc(
                     sec=int((time() - st) % 60),
                     cost=round(J_min, 2),
                     cost2=round(J_last, 2),
-                    rr=int(accepted_current / chunk_size * 100),
-                    d=round(D, 2),
+                    ac=accepted_current,
+                    # rr=int(accepted_current / chunk_size * 100),
+                    ch=chunk_size,
+                    d=round(D, 3),
                     s=J_min_simu
                 ),
                 end='\033[5A'  # print always on the same spot of the screen...
@@ -183,7 +196,6 @@ def autostep_mcmc(
     useful_slice = slice(0, upgraded)
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
-
 # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 def adaptive_mcmc(
         initial_parameters: Iterable,
@@ -192,12 +204,11 @@ def adaptive_mcmc(
         param2res: Callable[[np.ndarray], np.ndarray],
         costfunction: Callable[[np.ndarray], np.float64],
         nsimu: int,
-        sd_controlling_factor=1
+        sd_controlling_factor=10
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with
     shape (len(initial_parameters),nsimu) and the array of cost function values with shape (q,nsimu)
-
     :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
     :param covv: The covariance matrix (usually estimated from a previously run chain)
     :param filter_func: function to remove impossible parameter combinations
@@ -231,7 +242,7 @@ def adaptive_mcmc(
     # J_last = 400 # original code
 
     # initialize the result arrays to the maximum length
-    # Depending on many of the parameters will be accepted only 
+    # Depending on many of the parameters will be accepted only
     # a part of them will be filled with real values
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
@@ -259,7 +270,7 @@ def adaptive_mcmc(
             J_upgraded[1, upgraded] = J_last
             J_upgraded[0, upgraded] = simu
             upgraded = upgraded + 1
-        # print some metadata 
+        # print some metadata
         # (This could be added to the output file later)
 
         if simu % 10 == 0 or simu == (nsimu - 1):
@@ -391,7 +402,6 @@ def make_feng_cost_func(
     # now we compute a scaling factor per observable stream
     # fixme mm 10-28-2021
     #   The denominators in this case are actually the TEMPORAL variances of the data streams
-    #   which i find weird
     denominators = np.sum(mean_centered_obs ** 2, axis=0)
 
     #   The desired effect of automatically adjusting weight could be achieved
@@ -401,14 +411,6 @@ def make_feng_cost_func(
         cost = np.mean(
             np.sum((obs - mod) ** 2, axis=0) / denominators * 100
         )
-        # this is equivalent to the following slightly less compact but slightly more readable code
-        # n = obs.shape[1]
-        # cost = np.mean(
-        #        [
-        #            np.sum((obs[:,i] - mod[:,i])**2)/ denominators[i]*100 
-        #            for i in range(n)
-        #        ]
-        # )
         return cost
 
     return costfunction
