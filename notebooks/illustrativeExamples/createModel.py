@@ -17,7 +17,7 @@
 #
 
 # +
-# adjust the output
+# adjust the output to full width
 from IPython.display import HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
 

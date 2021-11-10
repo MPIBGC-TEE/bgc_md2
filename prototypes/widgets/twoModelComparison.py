@@ -26,11 +26,39 @@ from bgc_md2.resolve.mvars import CompartmentalMatrix, InputTuple
 import bgc_md2.helper as h
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from ipywidgets import Output,Layout, Button, Box, VBox, Label, HTMLMath
+display(HTML("<style>.container { width:100% !important; }</style>"))
+
+
+# -
+
 def table(
         records,
         types
     ):
-    cws=['20%','30%']
+    n=len(types)+1
+    cws=['{}%'.format(100/n) for i in range(n)]
+    print(cws)
+    line_layout= Layout(
+        overflow='scroll hidden',
+        border='3px solid black',
+        #width='1500px',
+        width='100%',
+        height='',
+        flex_flow='row',
+        display='flex'
+    )
+    def firstline():
+        names=['graph'] + [ t.__name__ for t in types]
+        return Box(
+            children=[
+                HTML(
+                    value="<h3>{}</h3>".format(name),
+                    layout=Layout(width=cws[i])
+                ) 
+                for i,name in enumerate(names)
+            ],
+            layout = line_layout
+        )
     def line(record):
         srm = record._get_single_value(SmoothReservoirModel)
         with plt.ioff():
@@ -41,7 +69,7 @@ def table(
         graph_out = Output(
             layout=Layout(
                 height='auto',
-                min_width=cws[0],
+                width=cws[0],
                 description="Compartmental Graph",
             )
         )
@@ -49,31 +77,27 @@ def table(
             ax.clear()
             srm.plot_pools_and_fluxes(ax)
             display(ax.figure)
-    
+            
+        outs = [ 
+            Output(layout=Layout(width=cws[i]))
+            for i,t in enumerate(types)
+        ]
+        for i,t in enumerate(types):
+            with outs[i]:
+                display(record._get_single_value(t))
+                    
+
+        
         line = Box(
-                children=[ graph_out]+[
-                    HTMLMath(
-                        value=latex(record._get_single_value(t)),
-                        #value=r"Some math and <i>HTML</i>: \(x^2\) and $$\frac{x+1}{x-1}$$",
-                        layout=Layout(width=cws[1])
-                    ) 
-                    for t in types
-                ],
-                layout= Layout(
-                    overflow='scroll hidden',
-                    border='3px solid black',
-                    width='1500px',
-                    height='',
-                    flex_flow='row',
-                    display='flex'
-                )
+                children=[ graph_out]+outs,
+                layout = line_layout
         )
         return line
     
-    return VBox([line(r) for r in records])
-
-
-# -
+    return VBox(
+        [firstline()]+
+        [line(r) for r in records]
+    )
 
 display(
     table(
@@ -81,7 +105,7 @@ display(
             h.CMTVS_from_model_name(name) 
             for name in ["Williams2005GCB"]
         ],
-        types = [InputTuple]
+        types = [InputTuple,CompartmentalMatrix]
     )
 )
 

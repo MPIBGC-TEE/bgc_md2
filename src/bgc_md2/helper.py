@@ -45,8 +45,7 @@ def batchSlices(nland, nproc):
 
 # @Thomas
 # If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense)
-# feel free to add it. It is probably not the commented one below anyway...
-#
+# feel free to add it. 
 
 def list_target_models(
     target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
@@ -104,7 +103,7 @@ import importlib """
 mod = importlib.import_module('bgc_md2.models.{}.source')
 mvs = mod.mvs""".format(model_name)
     c_graph = "h.compartmental_graph(mvs)"
-    c_mvars = "mvs.computable_mvar_types"
+    c_mvars = "mvs.computable_mvar_types()"
     c_render = """for var in mvs.computable_mvar_types():
     res = mvs._get_single_value(var)
     h.latex_render(var,res)"""
@@ -412,11 +411,17 @@ def compartmental_graph(mvs):
 
 
 # fixme mm 11/04/2021
-def latex_render(var,res,capture=True):
+def latex_render(
+        t,
+        res,
+        capture=False
+    ):
     out = widgets.Output()
     with out:
         display(
-            "\\text{var.__name__}" + "=" +Math(latex(res))
+            Math(
+                "\\text{"+ t.__name__ +"} = " + latex(res)
+            )
         )
         # The latex could be filtered to display subscripts better
         # display(res)
