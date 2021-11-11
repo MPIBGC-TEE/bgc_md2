@@ -1,6 +1,5 @@
 ## Aneesh SDGVM model specific helper file
 
-rm(list=ls())
 library(raster)
 library(sp)
 library(ncdf4)
@@ -143,7 +142,7 @@ ModelParameters = Parameters[!( names(Parameters) %in% list(
 #   }
 #   names(dat)<-c("lon","lat", var_names) # assign variable names
 
-# setwd("/Users/aneeshchandel/Desktop/Working_group/S1")  
+setwd("/Users/aneeshchandel/Desktop/Working_group/S1")  
 npp<-stack("npp.nc")
 clitter <- stack("cLitter.nc")
 cRoot<-stack("cRoot.nc")

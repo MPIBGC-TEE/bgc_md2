@@ -1,9 +1,9 @@
 library(Metrics)
 # identify script location (if using R-studio). If not working: input path manually into setwd()
 library(rstudioapi)  
-script_location<-normalizePath(rstudioapi::getActiveDocumentContext()$path)
-script_location<-substr(script_location, 1, regexpr("main.R",script_location)-1)
-setwd(script_location)
+# script_location<-normalizePath(rstudioapi::getActiveDocumentContext()$path)
+# script_location<-substr(script_location, 1, regexpr("main.R",script_location)-1)
+# setwd(script_location)
 
 # Throughout the whole script there are '# fixme' comment
 # you can search for them to find places where you have to adapt the code
@@ -23,9 +23,9 @@ setwd(script_location)
 #   - 'mm_cable' and so on. 
 #   All functions in module model_specifiC_helpers.py provide model specific results
 #   and can not be applied directly but serve as examples.
-
-source ("model_specifiC_helpers.R")
-source ("../general_helpers.R") 
+setwd("/Users/aneeshchandel/Documents/GitHub/bgc_md2/prototypes/working_group_2021/Aneesh_SDGVM")
+source ("model_specific_helper.R")
+source ("general_helpers.R") 
 
 # fixme: 
 #   put the (relative or asolute) location of your data into a small file called 'config.json' and
@@ -40,36 +40,31 @@ dataPath <- fromJSON(file = "config.json")[[1]]
 
 # fixme: 
 #    Note that the function is imported from 
-#    model_specifiC_helpers which means that you have to provide
-#    your version of this fuction which will most likely return different
+#    model_specific_helpers which means that you have to provide
+#    your version of this function which will most likely return different
 #    variables 
 # get data for a selected site: data path, longitude, latitude
-lon=33.3
-lat=50.0
+# lon=33.3
+# lat=50.0
 
-# read data from NetCDF if using the script for he 1st time
+# read data from NetCDF if using the script for the 1st time
 #dat<-get_example_site_vars(dataPath, lon, lat)
 
 # read data from a csv file if previously saved
-dat<-get_data_from_file(dataPath)
+#dat<-get_data_from_file(dataPath)
 
 # combine them to a single array which we will later use as input to the costfunction
-nyears=150
+#nyears=150
 #nyears = 20
-tot_len = 12*nyears
+tot_len = 117
 library(dplyr)
-obs = dplyr::select(dat, 
-                    C_leaf,
-                    C_wood,
-                    C_root,
-                    C_litter_above,
-                    C_litter_below,    
-                    C_fastsom,
-                    C_slowsom,
-                    C_passsom,
-                    rh,
-                    f_veg2litter,
-                    f_litter2som,
+#obs = dat2
+obs = dplyr::select(dat2, 
+                    litter,
+                    root,
+                    soil,
+                    Veg,
+                    leaf_wood
 )
 obs<-obs[1:tot_len,]
 
@@ -109,33 +104,65 @@ cpa = list(
 
 param2res = make_param2res(cpa) #pa=[beta1,beta2, lig_leaf, f41,f42, kleaf,kroot,kwood,kmet,kmic, kslow,kpass, cmet_init, cstr_init, cmiC_init, cpassive_init ]
 
-epa_0 = list(
-  beta_leaf=0.25,    #  1 (parameters used in original code) 
-  beta_wood=0.2,    #  2
-  f_leaflit2fastsom=0.41,  #  3
-  f_leaflit2slowsom=0.07,#  4
-  f_leaflit2passsom=0.02,#  5
-  f_woodlit2fastsom=0.30,  #  6
-  f_woodlit2slowsom=0.12,#  7
-  f_woodlit2passsom=0.08,#  8
-  f_rootlit2fastsom=0.30,  #  9
-  f_rootlit2slowsom=0.14,#  10
-  f_rootlit2passsom=0.07,#  11
-  k_leaf=1/60,       #  12
-  k_wood=1/(365*12),       #  13
-  k_root=1/(365*5),       #  14
-  k_leaflit=1/(365*2),	#  15
-  k_woodlit=1/(365*6.7),	#  16
-  k_rootlit=1/(365*3.5),	#  17
-  k_fastsom=1/(365*6.7),	#  18
-  k_slowsom=1/(365*28),	# 19
-  k_passsom=1/(365*87),	# 20
-  C_leaflit_0=0.3,	# 21
-  T0=2,	# 22
-  E=4,	# 23
-  KM=10  # 24
-)
+# epa_0 = list(
+#   beta_leaf=0.25,    #  1 (parameters used in original code) 
+#   beta_wood=0.2,    #  2
+#   f_leaflit2fastsom=0.41,  #  3
+#   f_leaflit2slowsom=0.07,#  4
+#   f_leaflit2passsom=0.02,#  5
+#   f_woodlit2fastsom=0.30,  #  6
+#   f_woodlit2slowsom=0.12,#  7
+#   f_woodlit2passsom=0.08,#  8
+#   f_rootlit2fastsom=0.30,  #  9
+#   f_rootlit2slowsom=0.14,#  10
+#   f_rootlit2passsom=0.07,#  11
+#   k_leaf=1/60,       #  12
+#   k_wood=1/(365*12),       #  13
+#   k_root=1/(365*5),       #  14
+#   k_leaflit=1/(365*2),	#  15
+#   k_woodlit=1/(365*6.7),	#  16
+#   k_rootlit=1/(365*3.5),	#  17
+#   k_fastsom=1/(365*6.7),	#  18
+#   k_slowsom=1/(365*28),	# 19
+#   k_passsom=1/(365*87),	# 20
+#   C_leaflit_0=0.3,	# 21
+#   T0=2,	# 22
+#   E=4,	# 23
+#   KM=10  # 24
+# )
 
+epa_0 = list(
+  beta1=0,   #1
+  f31=0,    #2
+  f52=0,    #3
+  f73=0,   #4
+  f74=0,   #5
+  f85=0,    #6
+  f95=0,     #7
+  f86=0,   #8
+  f97=0,   #9
+  f98=0,   #10
+  f108=0,   #11
+  f89=0,    #12
+  f109=0,     #13
+  f810=0,   #14
+  k1=0,    #15
+  k2=0,     #16
+  k3=0,     #17
+  k4=0,     #18
+  k5=0,     #19
+  k6=0,     #20
+  k7=0,     #21
+  k8=0,     #22
+  k9=0,     #23
+  k10=0,    #24
+  C_agb_stru_litter_0=0,   #25
+  C_agb_met_litter_0=0,    #26
+  C_blw_stru_litter_0=0,   #27
+  C_blw_met_litter_0=0,    #28
+  C_soil_microbe_0=0,    #29
+  C_slow_soil_0=0      #30
+)
 ########################## this is test of forward run and visualization of initial fit ################################3
 test = param2res(epa_0)
 summary(as.data.frame(test))
@@ -163,8 +190,8 @@ mcmc_demo = mcmc(
   initial_parameters=epa_0,
   proposer=uniform_prop,
   param2res=param2res,
-  #costfunction=make_weighted_cost_func(obs),
-  costfunction=make_feng_cost_func(obs),
+  costfunction=make_weighted_cost_func(obs),
+  #costfunction=make_feng_cost_func(obs),
   nsimu=nsimu_demo,
   K_accept=0.5 # modifier to reduce acceptance rate
 )
@@ -198,8 +225,8 @@ mcmc_formal = mcmc(
   initial_parameters=epa_0,
   proposer=normal_prop,
   param2res=param2res,
-  #costfunction=make_weighted_cost_func(obs),
-  costfunction=make_feng_cost_func(obs),
+  costfunction=make_weighted_cost_func(obs),
+  #costfunction=make_feng_cost_func(obs),
   nsimu=nsimu_formal,
   K_accept=0.5 # modifier to reduce acceptance rate
 )
