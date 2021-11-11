@@ -3,7 +3,9 @@ from sympy import Matrix
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems import helpers_reservoir as hr
 
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
+
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -56,11 +58,14 @@ srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
     LROT[3]
 )
 
-mvs = MVarSet({
-    InFluxesBySymbol(LROT[1]),
-    OutFluxesBySymbol(LROT[2]),
-    InternalFluxesBySymbol(LROT[3]),
-    TimeSymbol("t"),
-    StateVariableTuple((E, B_L, C_L, B_OS, B_OH, C_S, B_TH, B_TS, C_R, B_R))
-})
+mvs = CMTVS(
+    {
+        InFluxesBySymbol(LROT[1]),
+        OutFluxesBySymbol(LROT[2]),
+        InternalFluxesBySymbol(LROT[3]),
+        TimeSymbol("t"),
+        StateVariableTuple((E, B_L, C_L, B_OS, B_OH, C_S, B_TH, B_TS, C_R, B_R))
+    },
+    bgc_md2_computers()
+)
 

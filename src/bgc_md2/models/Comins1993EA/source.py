@@ -14,7 +14,8 @@ from bgc_md2.resolve.mvars import (
 #    NumericSimulationTimes,
    )
 from ..BibInfo import BibInfo 
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict={
         'C_f': 'Foliage carbon content'
@@ -139,25 +140,28 @@ np1 = NumericParameterization(
 #
 #ntimes = NumericSimulationTimes(np.arange(, , ))
 
-mvs=MVarSet({
-    BibInfo(# Bibliographical Information
-        name="G'DAY",
-        longName="Generic Decomposition and Yield", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="27/1/2016",
-        doi="10.2307/1942099",
-        sym_dict=sym_dict
-        
-    ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
-    np1
-})
+mvs=CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="G'DAY",
+            longName="Generic Decomposition and Yield", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="27/1/2016",
+            doi="10.2307/1942099",
+            sym_dict=sym_dict
+            
+        ),
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
+        np1
+    },
+    bgc_md2_computers()
+)

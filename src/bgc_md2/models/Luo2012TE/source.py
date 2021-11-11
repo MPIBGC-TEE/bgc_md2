@@ -14,7 +14,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
    )
 from ..BibInfo import BibInfo 
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict={
         'x_1': 'Carbon in foliage',
@@ -133,46 +134,49 @@ nsv1 = NumericStartValueDict({
 
 ntimes = NumericSimulationTimes(np.arange(0, 150, 2.5))
 
-mvs=MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="", 
-        version="",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="24/3/2016",
-        doi="",
-#        further_3eferences=BibInfo(doi=""),
-#        modApproach: process based,
-#        partitioningScheme: fixed,
-#        claimedDynamicPart: "no",
-#        spaceScale: global, 
-#        #    unit: "1°",
-#        timeResolution: monthly,
-#        #    unit: month^{-1},
-#        bibtex: "@article{Luo2012TE,
-#                 address = {Berkeley},
-#                 author = {Yiqi Luo and Ensheng Weng and Yuanhe Yang},
-#                 booktitle = {Encyclopedia of Theoretical Ecology},
-#                 editor = {Alan Hastings and Louis Gross},
-#                 pages = {219-229},
-#                 publisher = {University of California Press},
-#                 title = {Ecosystem Ecology},
-#                 year = {2012}
-#                }",
-#        
-#        abstract: "Ecosystem ecology is a subdiscipline of ecology that focuses on exchange of energy and materials between organisms and the environment. The materials that are commonly studied in ecosystem ecology include water, carbon, nitrogen, phosphorus, and other elements that organisms use as nutrients. The source of energy for most ecosystems is solar radiation. In this entry, material cy-cling and energy exchange are generally described before the carbon cycle is used as an example to illustrate our quantitative and theoretical understanding of ecosystem ecology.",
-        sym_dict=sym_dict
-        
-    ),
-    CM,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(U),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple((b_1, b_2, b_3)),
-    VegetationCarbonStateVariableTuple((x_1, x_2, x_3)),
-    np1,
-    nsv1
-})
+mvs=CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="", 
+            version="",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="24/3/2016",
+            doi="",
+    #        further_3eferences=BibInfo(doi=""),
+    #        modApproach: process based,
+    #        partitioningScheme: fixed,
+    #        claimedDynamicPart: "no",
+    #        spaceScale: global, 
+    #        #    unit: "1°",
+    #        timeResolution: monthly,
+    #        #    unit: month^{-1},
+    #        bibtex: "@article{Luo2012TE,
+    #                 address = {Berkeley},
+    #                 author = {Yiqi Luo and Ensheng Weng and Yuanhe Yang},
+    #                 booktitle = {Encyclopedia of Theoretical Ecology},
+    #                 editor = {Alan Hastings and Louis Gross},
+    #                 pages = {219-229},
+    #                 publisher = {University of California Press},
+    #                 title = {Ecosystem Ecology},
+    #                 year = {2012}
+    #                }",
+    #        
+    #        abstract: "Ecosystem ecology is a subdiscipline of ecology that focuses on exchange of energy and materials between organisms and the environment. The materials that are commonly studied in ecosystem ecology include water, carbon, nitrogen, phosphorus, and other elements that organisms use as nutrients. The source of energy for most ecosystems is solar radiation. In this entry, material cy-cling and energy exchange are generally described before the carbon cycle is used as an example to illustrate our quantitative and theoretical understanding of ecosystem ecology.",
+            sym_dict=sym_dict
+            
+        ),
+        CM,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(U),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple((b_1, b_2, b_3)),
+        VegetationCarbonStateVariableTuple((x_1, x_2, x_3)),
+        np1,
+        nsv1
+    },
+    bgc_md2_computers()
+)

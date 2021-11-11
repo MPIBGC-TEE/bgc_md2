@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.6.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -70,7 +70,9 @@ time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 output_path = data_path.joinpath(params["output_folder"])
 zarr_data_path = output_path.joinpath("rechunked_zarr_clean")
 
@@ -114,7 +116,7 @@ for name in ["lat", "lon", "prob", "time"]:
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(40, 50, 1),
+    "prob": slice(40, 50, 1), # done (0, 40, 1)
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -156,7 +158,7 @@ task_list = [
         "func": CARDAMOMlib.compute_xs,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -170,7 +172,7 @@ task_list = [
         "func": CARDAMOMlib.compute_start_values,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_pools), # chunk over lat, lon, prob
         "return_shape": (1, nr_pools), # return from "func" in map_blocks
@@ -184,7 +186,7 @@ task_list = [
         "func": CARDAMOMlib.compute_Us, # note the capital U in Us (aggregated over time step)
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
         "return_shape": (1, nr_times, nr_pools),
@@ -199,7 +201,7 @@ task_list = [
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
 #        "timeouts": [30, 300, 2000],
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools, nr_pools),
         "result_chunks": (1, 1, 1, nr_times_total, nr_pools, nr_pools),
         "return_shape": (1, nr_times, nr_pools, nr_pools),
@@ -213,7 +215,7 @@ task_list = [
         "func": CARDAMOMlib.compute_GPPs_discrete,
         "func_args": {"time_step_in_days": params["time_step_in_days"]},
         "timeouts": [np.inf],
-        "batch_size": 500,
+        "batch_size": 1000,
         "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total),
         "result_chunks": (1, 1, 1, nr_times_total),
         "return_shape": (1, nr_times),
@@ -225,12 +227,12 @@ task_list = [
 
 # ## Computing
 #
-# *Attention:* `"overwrite" = True` in the task disctionary deletes all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
+# **Attention:** `"overwrite" = True` in the task dictionary deletes the **entire zarr archive**, not just all data in the selected slices. The setting `"overwrite" = False` tries to load an existing archive and extend it by computing incomplete points within the chosen slices.
 
 # +
 # %%time
 
-for task in task_list[4:]:
+for task in [task_list[3]]:
     print("task: computing", task["computation"])
     print()
     
@@ -266,4 +268,10 @@ for task in task_list[4:]:
     print(nr_incomplete_sites, "incomplete sites remaining")
     print()
 # -
+# # TODO
+# - find number of sites with data and compare to complete B sites, count
+# - same for old data, is it much worse?
+#     - I did things like this before, is there a notebook for it?
+# - can we just leave out some probs? probably not
+
 

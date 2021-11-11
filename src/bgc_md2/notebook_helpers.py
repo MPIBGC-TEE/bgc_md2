@@ -9,11 +9,12 @@ import numpy as np
 
 
 def write_to_logfile(logfilename, *args):
-    t = time.localtime()
-    current_time = time.strftime("%H:%M:%S", t)
-    with open(logfilename, 'a') as f:
-        t = (current_time,) + args
-        f.write(", ".join([str(s) for s in t]) + '\n')
+    if logfilename is not None:
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        with open(logfilename, 'a') as f:
+            t = (current_time,) + args
+            f.write(", ".join([str(s) for s in t]) + '\n')
 
 
 def write_header_to_logfile(logfile_name, var_da, time_limit_in_min):

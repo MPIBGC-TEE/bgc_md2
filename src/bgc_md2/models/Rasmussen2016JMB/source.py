@@ -8,7 +8,8 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonStateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict={
         'x_1': 'Leaves' # Pg C
@@ -89,21 +90,24 @@ B = CompartmentalMatrix(
                                 [    0,     0,     0,        0,        0,        0,  b_97*xi,  b_98*xi, -b_99*xi]])
 C = StateVariableTuple((x_1, x_2, x_3, x_4, x_5, x_6, x_7, x_8, x_9))
 
-mvs=MVarSet({
-    BibInfo(# Bibliographical Information
-        name="CASA",
-        longName="Carnegie-Ames-Stanford approach", 
-        version="2016",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="18/01/2018",
-        doi="10.1007/s00285-016-0990-8",
-        sym_dict=sym_dict
-        
-    ),
-    # the following variables constitute the compartmental system:
-    s,  # the overall input
-    B,  # the overall compartmental matrix
-    C, #state vector of the complete system
-    VegetationCarbonStateVariableTuple((x_1, x_2, x_3))
-})
+mvs=CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="CASA",
+            longName="Carnegie-Ames-Stanford approach", 
+            version="2016",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="18/01/2018",
+            doi="10.1007/s00285-016-0990-8",
+            sym_dict=sym_dict
+            
+        ),
+        # the following variables constitute the compartmental system:
+        s,  # the overall input
+        B,  # the overall compartmental matrix
+        C, #state vector of the complete system
+        VegetationCarbonStateVariableTuple((x_1, x_2, x_3))
+    },
+    bgc_md2_computers()
+)

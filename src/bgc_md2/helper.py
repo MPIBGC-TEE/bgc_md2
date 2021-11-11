@@ -1,5 +1,6 @@
 from IPython.display import Math
 from IPython.display import display
+from ipywidgets import HTML, Button, HBox, VBox
 from typing import  Tuple, Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
@@ -7,21 +8,18 @@ from frozendict import frozendict
 import ipywidgets as widgets
 import nbformat as nbf
 import pkgutil
+import importlib
 import matplotlib.pyplot as plt
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
-from . import models
 # from .models.helpers import computable_mvars, get_single_mvar_value
 from .resolve.mvars import CompartmentalMatrix, StateVariableTuple
-from .resolve.MVarSet import MVarSet
-from .resolve.graph_helpers import (
-    sparse_powerset_graph,
-    minimal_target_subgraph_for_single_var,
-    minimal_startnodes_for_single_var,
-    node_2_string,
-    nodes_2_string,
-)
-
+from ComputabilityGraphs.CMTVS import CMTVS
+from ComputabilityGraphs.helpers import module_computers
+from functools import _lru_cache_wrapper
+import inspect
+from .resolve import computers as cmod
+from . import models
 
 def combine(
         d1: frozendict,
@@ -45,68 +43,18 @@ def batchSlices(nland, nproc):
 
     # fixme mm:
 
-# As an intermediate solution I created the following subclass to account for model specific stuff.
-# I abandoned this because it complicated the user interface. (The MVarsSets are now explicitly created in the
-# source.py files and ONE MVarSet class is enough to worry the user about...
 # @Thomas
 # If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense)
-# feel free to add it. It is probably not the commented one below anyway...
-#
-# class ModelMVarSet(MVarSet):
-#     '''This class adds some methods for displaying MVarSets that are specific
-#     to MVarSets that describe compartmental systems.
-#     It is used in the notebooks to display summaries of models or collections of models.
-#     It also contains some convenient ways to collect the models in the package.
-#     '''
-#     @classmethod
-#     def from_model_name(cls,name):
-#         """
-#         convenience method to get the instance from a submodule of bgc.models
-#         by just giving the name of the submodule
-#         """
-#         s=provided_mvar_values(name)
-#         return cls(s)
-#
-#     def render(self, var):
-#         res = self._get_single_mvar_value(var)
-#         display(Math("\\text{" + var.__name__ + "} =" + latex(res)))
-#         # The latex could be filtered to display subscripts better
-#         # display(res)
-#
-#     def graph(self):
-#         target_var = SmoothReservoirModel
-#         if target_var not in self.computable_mvar_types():
-#             return
-#
-#         srm = self._get_single_mvar_value(target_var)
-#         fig = plt.figure()
-#         rect = (0, 0, 0.8, 1.2)  # l, b, w, h
-#         ax = fig.add_axes(rect)
-#         ax.clear()
-#         srm.plot_pools_and_fluxes(ax)
-#         plt.close(fig)
-#         return ax.figure
-#         out = widgets.Output()
-#         with out:
-#             display(var.__name__ + "=")
-#             display(Math(latex(res)))
-#             # The latex could be filtered to display subscripts better
-#             # display(res)
-#         if capture:
-#             return out
-#         else:
-#             display(out)
-
+# feel free to add it. 
 
 def list_target_models(
     target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
     explicit_exclude_models: Set[str] = frozenset()
-) -> List[MVarSet]:
+) -> List[CMTVS]:
     sub_mod_pkgs = list_models(explicit_exclude_models)
-    print(sub_mod_pkgs)
 
     def pred(mn):
-        mvs = MVarSet.from_model_name(mn)
+        mvs = CMTVS_from_model_name(mn)
         return (target_classes.issubset(mvs.computable_mvar_types()))
 
     hits = [mod for mod in sub_mod_pkgs if pred(mod)]
@@ -140,7 +88,7 @@ def list_models_md():
 
 
 def createSingleModelNb(model_name, report_file_path):
-    mvs = MVarSet.from_model_name(model_name)
+    mvs = CMTVS_from_model_name(model_name)
     nb = nbf.v4.new_notebook()
 
     text = "# {}".format(model_name)
@@ -150,13 +98,15 @@ def createSingleModelNb(model_name, report_file_path):
     # )
     c_imports = """import bgc_md2.helper as h
 import importlib """
-    # c_mvs = "mvs = h.MVarSet.from_model_name({})".format(repr(model_name))
+    # c_mvs = "mvs = h.CMTVS.from_model_name({})".format(repr(model_name))
     c_mvs = """importlib.invalidate_caches()
 mod = importlib.import_module('bgc_md2.models.{}.source')
 mvs = mod.mvs""".format(model_name)
-    c_graph = "mvs.graph()"
-    c_mvars = "mvs.computable_mvar_names"
-    c_render = "for var in mvs.computable_mvar_types():\n    mvs.render(var)"
+    c_graph = "h.compartmental_graph(mvs)"
+    c_mvars = "mvs.computable_mvar_types()"
+    c_render = """for var in mvs.computable_mvar_types():
+    res = mvs._get_single_value(var)
+    h.latex_render(var,res)"""
 
     nb["cells"] = [
         nbf.v4.new_markdown_cell(text),
@@ -207,55 +157,58 @@ def funcmakerInsertLinkInToBox(grid, name):
     return insert_link
 
 
-def modelVBox(model_name):
-    mvs = MVarSet.from_model_name(model_name)
-    # on demand computation is used
-    # I am aware of the possibility of mvs.computable_mvars
-    cmvs = computable_mvars(model_name)
-    target_var = SmoothReservoirModel
-    pictlist = []
-    if target_var in cmvs:
-        srm = mvs._get_single_mvar_value(target_var)
-        graph_out = widgets.Output()
-        fig = plt.figure()
-        rect = 0, 0, 0.8, 1.2  # l, b, w, h
-        ax = fig.add_axes(rect)
-        with graph_out:
-            ax.clear()
-            srm.plot_pools_and_fluxes(ax)
-            display(ax.figure)
-        pictlist = [graph_out]
-
-    box = widgets.VBox(
-        [
-            widgets.HTML(
-                value="""
-                <h1>{name}</h1>
-                Overview 
-                """.format(
-                    name=model_name
-                )
-            ),
-            widgets.HTML(
-                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-                + "<ol>\n"
-                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
-                + "</ol>\n"
-            ),
-        ]
-        + pictlist
-        + [
-            mvs.render(var, capture=True)
-            for var in mvs.computable_mvar_types()
-          ]
-    )
-    b = widgets.Button(
-        layout=widgets.Layout(width="auto", height="auto"),
-        description="Create notebook from template",
-    )
-    b.on_click(funcmakerInsertLinkInToBox(box, model_name))
-    box.children += (b,)
-    return box
+#def modelVBox(model_name):
+#    mvs = CMTVS.from_model_name(model_name)
+#    # on demand computation is used
+#    # I am aware of the possibility of mvs.computable_mvars
+#    cmvs = computable_mvars(model_name)
+#    target_var = SmoothReservoirModel
+#    pictlist = []
+#    if target_var in cmvs:
+#        srm = mvs._get_single_mvar_value(target_var)
+#        graph_out = widgets.Output()
+#        fig = plt.figure()
+#        rect = 0, 0, 0.8, 1.2  # l, b, w, h
+#        ax = fig.add_axes(rect)
+#        with graph_out:
+#            ax.clear()
+#            srm.plot_pools_and_fluxes(ax)
+#            display(ax.figure)
+#        pictlist = [graph_out]
+#
+#    box = widgets.VBox(
+#        [
+#            widgets.HTML(
+#                value="""
+#                <h1>{name}</h1>
+#                Overview 
+#                """.format(
+#                    name=model_name
+#                )
+#            ),
+#            widgets.HTML(
+#                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
+#                + "<ol>\n"
+#                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
+#                + "</ol>\n"
+#            ),
+#        ]
+#        + pictlist
+#        + [
+#            latex_render(
+#                var,
+#                mvs._get_single_value(var),
+#            )
+#            for var in mvs.computable_mvar_types()
+#          ]
+#    )
+#    b = widgets.Button(
+#        layout=widgets.Layout(width="auto", height="auto"),
+#        description="Create notebook from template",
+#    )
+#    b.on_click(funcmakerInsertLinkInToBox(box, model_name))
+#    box.children += (b,)
+#    return box
 
 
 ##############################################################################
@@ -295,16 +248,16 @@ class ModelListGridBox(widgets.GridspecLayout):
             # the overview takes way too lang to appear in the notebook
             # The design is also flawed (ticket) by the fact that 
             # the rows are all equally tall, which creates a lot of whitespace
-            #mvs = MVarSet.from_model_name(name)
-            #target_class = CompartmentalMatrix
-            #if target_class in mvs.computable_mvar_types():
-            #    res = mvs._get_single_mvar_value(target_class)
-            #else:
-            #    res = f"can not compute {target_class}" 
-            #out = widgets.Output()
-            #with out:
-            #    display(res)
-            #self[i, 1:9] = out
+            mvs = CMTVS_from_model_name(name)
+            target_class = CompartmentalMatrix
+            if target_class in mvs.computable_mvar_types():
+                res = mvs._get_single_value(target_class)
+            else:
+                res = f"can not compute {target_class}" 
+            out = widgets.Output()
+            with out:
+                display(res)
+            self[i, 1:9] = out
 
 class GeneralMvarSetListGridBox(widgets.GridspecLayout):
 
@@ -330,7 +283,7 @@ class GeneralMvarSetListGridBox(widgets.GridspecLayout):
                 button_callback(self.inspect_mvs, name)
             )
             self[i, 0] = button_inspect_mvs
-            mvs = MVarSet.from_model_name(name)
+            mvs = CMTVS_from_model_name(name)
             results = [ 
                 mvs._get_single_mvar_value(target_class)
                 for target_class in self.target_classes
@@ -360,7 +313,7 @@ class MvarSetInspectionBox(widgets.VBox):
         )
 
     def update(self, model_name):
-        mvs = MVarSet.from_model_name(model_name)
+        mvs = CMTVS_from_model_name(model_name)
 
         self.children = (
             widgets.HTML(
@@ -374,12 +327,12 @@ class MvarSetInspectionBox(widgets.VBox):
             widgets.HTML(
                 "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
                 + "<ol>\n"
-                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
+                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_types())
                 + "</ol>\n"
             ),
         )
 
-        graph = mvs.graph()
+        graph = compartmental_graph(mvs)
         if graph:
             graph_out = widgets.Output()
             with graph_out:
@@ -389,7 +342,7 @@ class MvarSetInspectionBox(widgets.VBox):
         rendered_vars = widgets.Output()
         with rendered_vars:
             for var in mvs.computable_mvar_types():
-                mvs.render(var)
+                latex_render(var,mvs._get_single_value(var))
         self.children += (rendered_vars,)
 
         b = widgets.Button(
@@ -401,4 +354,80 @@ class MvarSetInspectionBox(widgets.VBox):
 
         self.nb_link_box = widgets.VBox()
         self.children += (self.nb_link_box,)
+
+def CMTVS_from_model_name(model_id):
+        """
+        convenience method to get the instance from a submodule of bgc.models
+        by just giving the name of the submodule
+        """
+        sep = "."
+        #model_mod_name = sep.join(__name__.split(sep)[:-1])
+        models_mod_name = 'bgc_md2.models'
+        # in case the module has been created or changed
+        # after the current session started
+        importlib.invalidate_caches()
+
+        mod = importlib.import_module(
+            sep + str(model_id) + sep + "source", package=models_mod_name
+        )
+        cls = CMTVS
+        retVal= mod.mvs
+        if type(retVal)==cls:
+            return  retVal
+        else:
+            raise Exception(
+                "The variable mvs in the target module is not of type {}.".format(cls.__name__)              )
+
+def bgc_md2_computers():
+    sep = "."
+    pkg_name = __name__.split(sep)[0]
+    cmod = importlib.import_module(".resolve.computers", package=pkg_name)
+    def pred(a):
+        return inspect.isfunction(a) or isinstance(a,_lru_cache_wrapper)
+    return frozenset(
+        [
+            getattr(cmod, c)
+            for c in cmod.__dir__()
+            if pred(getattr(cmod, c)) 
+        ]
+    )
+
+def compartmental_graph(mvs):
+    # fixme mm 11-04 2021 
+    # Could we have a computer for the graph
+    # and keep only the display part here
+    target_var = SmoothReservoirModel
+    if target_var not in mvs.computable_mvar_types():
+        return
+
+    srm = mvs._get_single_value(target_var)
+    fig = plt.figure()
+    rect = (0, 0, 0.8, 1.2)  # l, b, w, h
+    ax = fig.add_axes(rect)
+    ax.clear()
+    srm.plot_pools_and_fluxes(ax)
+    plt.close(fig)
+    return ax.figure
+
+
+# fixme mm 11/04/2021
+def latex_render(
+        t,
+        res,
+        capture=False
+    ):
+    out = widgets.Output()
+    with out:
+        display(
+            Math(
+                "\\text{"+ t.__name__ +"} = " + latex(res)
+            )
+        )
+        # The latex could be filtered to display subscripts better
+        # display(res)
+    if capture:
+        return out
+    else:
+        display(out)
+
 

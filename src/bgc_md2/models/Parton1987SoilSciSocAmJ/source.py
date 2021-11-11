@@ -10,8 +10,8 @@ from bgc_md2.resolve.mvars import (
     NumericStartValueDict,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_1': 'structural soil surface litter pool'
@@ -84,22 +84,25 @@ nsv1 = NumericStartValueDict({
 C_1: 100, C_2: 200, C_3: 00, C_4: 0, C_5: 0, C_6: 0, C_7: 0}) #faked values by Markus to make it run
 #ntimes = NumericSimulationTimes(np.arange())
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="Century",
-        longName="", 
-        version="1",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="10/03/2016",
-        doi="10.2136/sssaj1987.03615995005100050015x",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    np1,
-    nsv1,
-#    ntimes
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="Century",
+            longName="", 
+            version="1",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="10/03/2016",
+            doi="10.2136/sssaj1987.03615995005100050015x",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        np1,
+        nsv1,
+    #    ntimes
+    },
+    bgc_md2_computers()
+)

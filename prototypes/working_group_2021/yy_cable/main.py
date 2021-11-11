@@ -17,7 +17,7 @@ import numpy as np
 #import math
 import pandas as pd
 #import calendar
-#import matplotlib 
+import matplotlib.pyplot as plt
 # use platform independent path descriptions so that you can run
 # your stuff on windows or linux or mac
 from pathlib import Path
@@ -45,14 +45,20 @@ from model_specific_helpers import (
     make_param2res,
     make_param2res_2,
     UnEstimatedParameters,
-    EstimatedParameters
+    EstimatedParameters,
+    Observables
 )
 
 from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
+        #mcmc,
+        make_feng_cost_func,
+        plot_solutions
+)
+from general_helpers import (
         mcmc,
-        make_feng_cost_func
+        adaptive_mcmc
 )
 
 # fixme: 
@@ -97,7 +103,7 @@ isQualified = make_param_filter_func(c_max,c_min)
 uniform_prop = make_uniform_proposer(
     c_min,
     c_max,
-    D=10.0,
+    D=100.0, # this value 
     filter_func=isQualified
 )
 
@@ -116,8 +122,7 @@ cpa = UnEstimatedParameters(
     f_wood2CWD=1, 
     f_metlit2mic=0.45
 )
-param2res = make_param2res(cpa) #pa=[beta1,beta2, lig_leaf, f41,f42, kleaf,kroot,kwood,kmet,kmic, kslow,kpass, cmet_init, cstr_init, cmic_init, cpassive_init ]
-pa=            [0.15,  0.2,0.15,0.28, 0.6,      1/365,  1/(365*5), 1/(365*40), 0.5/(365*0.1),  0.3/(365*0.137),  0.3/(365*5),  0.3/(222.22*365),          0.05,           0.1,           1,         5]
+param2res = make_param2res(cpa) 
 epa_0 = EstimatedParameters(
     beta_leaf=0.15,
     beta_root=0.2,
@@ -136,34 +141,125 @@ epa_0 = EstimatedParameters(
     C_mic_0=1,
     C_passom_0=5,
 )
-nsimu_demo = 2000    
-C_demo, J_demo = mcmc(
-        initial_parameters=epa_0,
-        proposer=uniform_prop,
-        param2res=param2res,
-        #costfunction=make_weighted_cost_func(obs)
-        costfunction=make_feng_cost_func(obs),
-        nsimu=nsimu_demo
-)
-# save the parameters and costfunctionvalues for postprocessing 
-pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
-pd.DataFrame(J_demo).to_csv(dataPath.joinpath('cable_demo_da_j_aa.csv'),sep=',')
+# it is sensible to use the same costfunction for both the demo and
+# the formal run so we define it here for both
+#costfunction=make_feng_cost_func(obs)
+costfunction=make_weighted_cost_func(obs)
 
-# build a new proposer based on a multivariate_normal distribution using the estimated covariance of the previous run if available
-# parameter values of the previous run
+# Look for data from the demo run and use it to compute the covariance matrix if necessarry
+demo_aa_path = dataPath.joinpath('cable_demo_da_aa.csv')
+demo_aa_j_path = dataPath.joinpath('cable_demo_da_j_aa.csv')
+if not demo_aa_path.exists():
 
-#from IPython import embed; embed()
+    print("Did not find demo run results. Will perform  demo run")
+    C_demo, J_demo = mcmc(
+            initial_parameters=epa_0,
+            proposer=uniform_prop,
+            param2res=param2res,
+            costfunction=costfunction,
+            nsimu=200
+    )
+    # save the parameters and costfunctionvalues for postprocessing 
+    pd.DataFrame(C_demo).to_csv(demo_aa_path,sep=',')
+    pd.DataFrame(J_demo).to_csv(demo_aa_j_path,sep=',')
+else:
+    print("""Found {p} from a previous demo run. 
+    If you also want to recreate the demo output then move the file!
+    """.format(p = demo_aa_path)) 
+    C_demo = pd.read_csv(demo_aa_path).to_numpy()
+    J_demo = pd.read_csv(demo_aa_j_path).to_numpy() 
+
+# build a new proposer based on a multivariate_normal distribution using the
+# estimated covariance of the previous run if available first we check how many
+# accepted parameters we got 
+# and then use part of them to compute a covariance matrix for the 
+# formal run
+covv = np.cov(C_demo[:, int(C_demo.shape[1]/10):]) 
+
+
 normal_prop = make_multivariate_normal_proposer(
-    covv = np.cov(C_demo[:, int(nsimu_demo/10):]), # the part of the demo run samples to use (here the last 90%) 
+    covv = covv,
     filter_func=isQualified
 )
-C_formal, J_formal = mcmc(
-        initial_parameters=epa_0,
-        proposer=normal_prop,
-        param2res=param2res,
-        #costfunction=make_weighted_cost_func(obs)
-        costfunction=make_feng_cost_func(obs),
-        #nsimu=20000
-        nsimu=2000
+# Look for data from the formal run and use it  for postprocessing 
+formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
+formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
+if not formal_aa_path.exists():
+    print("Did not find results. Will perform formal run")
+    C_formal, J_formal = mcmc(
+            initial_parameters=epa_0,
+            proposer=normal_prop,
+            param2res=param2res,
+            costfunction=costfunction,
+            nsimu=200
+    )
+    pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
+    pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
+
+else:
+    print("""Found {p} from a previous demo run. 
+If you also want recreate the output then move the file!
+""".format(p = formal_aa_path)) 
+    C_formal = pd.read_csv(formal_aa_path).to_numpy()
+    J_formal = pd.read_csv(formal_aa_j_path).to_numpy() 
+
+# POSTPROCESSING 
+#
+# The 'solution' of the inverse problem is actually the (joint) posterior
+# probability distribution of the parameters, which we approximate by the
+# histogram consisting of the mcmc generated samples.  
+# This joint distribution contains as much information as all its (infinitly
+# many) projections to curves through the parameter space combined.
+# Unfortunately, for this very reason, a joint distribution of more than two
+# parameters is very difficult to visualize in its entirity. 
+# to do: 
+#   a) make a movie of color coded samples  of the a priori distribution of the parameters.
+#   b) -"-                                  of the a posteriory distribution -'- 
+
+# Therefore the  following visualizations have to be considered with caution:
+# 1.
+# The (usual) histograms of the values of a SINGLE parameters can be very
+# misleading since e.g. we can not see that certain parameter combination only
+# occure together. In fact this decomposition is only appropriate for
+# INDEPENDENT distributions of parameters in which case the joint distribution
+# would be the product of the distributions of the single parameters.  This is
+# however not even to be expected if our prior probability distribution can be
+# decomposed in this way. (Due to the fact that the Metropolis Hastings Alg. does not
+# produce independent samples ) 
+df = pd.DataFrame({name :C_formal[:,i] for i,name in enumerate(EstimatedParameters._fields)})
+subplots=df.hist()
+fig=subplots[0,0].figure
+fig.set_figwidth(15)
+fig.set_figheight(15)
+fig.savefig('histograms.pdf')
+
+# As the next best thing we can create a matrix of plots containing all 
+# projections to possible  parameter tuples
+# (like the pairs plot in the R package FME) but 16x16 plots are too much for one page..
+# However the plot shows that we are dealing with a lot of colinearity for this  parameter set
+subplots = pd.plotting.scatter_matrix(df) 
+fig=subplots[0,0].figure
+fig.set_figwidth(15)
+fig.set_figheight(15)
+fig.savefig('scatter_matrix.pdf')
+
+
+# 2.
+# another way to get an idea of the quality of the parameter estimation is
+# to plot trajectories.
+# A possible aggregation of this histogram to a singe parameter
+# vector is the mean which is an estimator of  the expected value of the
+# desired distribution.
+sol_mean =param2res(np.mean(C_formal,axis=1))
+
+fig = plt.figure()
+plot_solutions(
+        fig,
+        times=range(sol_mean.shape[0]),
+        var_names=Observables._fields,
+        tup=(sol_mean, obs),
+        names=('mean','obs')
 )
+fig.savefig('solutions.pdf')
+
 

@@ -12,6 +12,8 @@ def readme():
     with open("README.md") as f:
         return f.read()
 
+packages=find_packages('src'),  # find all packages (multifile modules) recursively
+print(packages)
 
 setup(
     name="bgc_md2",
@@ -19,12 +21,11 @@ setup(
     test_suite="example_package.tests",  # http://pythonhosted.org/setuptools/setuptools.html#test
     description="Model Database for Carbon Allocation",
     long_description=readme(),  # avoid duplication
-    author="Markus, Thomas, Holger, Veronika ",
+    author="MarkusHolger, Veronika, Thomas,  ",
     author_email="markus.mueller.1.g@gmail.com",
     url="https://github.com/MPIBGC-TEE/bgc_md2",
     packages=find_packages('src'),  # find all packages (multifile modules) recursively
     package_dir={'': 'src'},
-    # py_modules=['external_module'], # external_module.py is a module living outside this dir as an example how to iclude something not
     include_package_data=True,
     zip_safe=False,
     classifiers=[
@@ -42,23 +43,15 @@ setup(
     #        ]
     # },
     install_requires=[
+        "testinfrastructure",   
+        "ComputabilityGraphs",
+        "LAPM",
         "CompartmentalSystems",
-        "testinfrastructure",  # also on https://github.com/MPIBGC-TEE/testinfrastructure.githttps://github.com/MPIBGC-TEE/testinfrastructure.git
-        "concurrencytest"
-        # ,"requests"
-        # ,"mendeley "
-        # ,"PyYAML"
-        # ,"pandas"
-        ,
-        "netCDF4"
-        # ,'sqlalchemy'
-        # ,'oslash'
-        # ,'pypandoc'
-        ,
+        "netCDF4",
         "sympy",
         "xarray",
         "networkx",
         "pygraphviz",
         "cf-units",
-    ],
+    ]
 )

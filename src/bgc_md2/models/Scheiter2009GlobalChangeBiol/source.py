@@ -11,8 +11,8 @@ from bgc_md2.resolve.mvars import (
     NumericParameterization,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'B_L': 'Carbon in foliage'
@@ -58,25 +58,28 @@ a_0L: 0.3, a_0R: 0.5, a_0S: 0.2, Q_i: 1},
     func_dict=frozendict({})
 )
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="aDGVM",
-        longName="", 
-        version="",
-#       modApproach= "individuals based"
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="17/7/2015",
-        doi="10.1111/j.1365-2486.2008.01838.x",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((B_L, B_R, B_S)),
-    np1,
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="aDGVM",
+            longName="", 
+            version="",
+    #       modApproach= "individuals based"
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="17/7/2015",
+            doi="10.1111/j.1365-2486.2008.01838.x",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((B_L, B_R, B_S)),
+        np1,
+    },
+    bgc_md2_computers()
+)
