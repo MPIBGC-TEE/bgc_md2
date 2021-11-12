@@ -1,10 +1,25 @@
 from typing import Callable
 import netCDF4 as nc
 import numpy as np
+from sympy import Symbol, var
+from functools import lru_cache, reduce
+import netCDF4 as nc
+from pathlib import Path
 from collections import namedtuple
-from functools import reduce
-from general_helpers import day_2_month_index, month_2_day_index, months_by_day_arr, TimeStepIterator2, respiration_from_compartmental_matrix
 
+from general_helpers import (
+        day_2_month_index, 
+        month_2_day_index,
+        months_by_day_arr,
+        TimeStepIterator2,
+        respiration_from_compartmental_matrix
+)
+
+from bgc_md2.resolve.mvars import NumericStartValueDict
+from bgc_md2.models.cable_yuanyuan.source import mvs 
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
+import CompartmentalSystems.helpers_reservoir as hr
 # fixme:
 # Your parameters will most likely differ but you can still use the
 # destinctions between different sets of parameters. The aim is to make
@@ -516,6 +531,7 @@ def run_forward_simulation(
         RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
         return RES
 
+
 def make_daily_iterator(
         V_init,
         mpa
@@ -579,6 +595,128 @@ def make_daily_iterator(
                 #max_it=max(day_indices)+1
         )
         
+def construct_matrix_func_sym(pa):
+    # we create a parameterdict for the fixed values
+    # and extend it by the parameters provided 
+    symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+    for name in symbol_names:
+        var(name)
+    parDict = {
+        clay: 0.2028,
+        silt: 0.2808,
+        lig_wood: 0.4,
+        f_wood2CWD: 1,
+        f_metlit2mic: 0.45,
+    #    NPP: npp_in
+    }
+    model_params = {Symbol(k): v for k,v in pa._asdict().items()}
+    parDict.update(model_params)
+    B_func = hr.numerical_array_func(
+            state_vector = mvs.get_StateVariableTuple(),
+            time_symbol=mvs.get_TimeSymbol(),
+            expr=mvs.get_CompartmentalMatrix(),
+            parameter_dict=parDict,
+            func_dict={}
+    )
+    # in the general nonautonomous nonlinear B_func is a function of t,x
+    # although for this example it does not depend on either t, nor x.
+    return B_func 
+
+def run_forward_simulation_sym(
+        V_init,
+        day_indices,
+        mpa,
+        func_dict
+    ):
+        tsi = make_daily_iterator_sym(
+            V_init,
+            mpa=mpa,
+            func_dict=func_dict
+        )
+
+        def g(acc, i):
+            xs,co2s,acc_co2,acc_days = acc
+            v = tsi.__next__()
+            d_pools = v[0:-1,:]
+            d_co2=v[-1:,:]
+            acc_co2 += d_co2
+            acc_days += 1
+            if i in day_indices:
+                xs += [d_pools] 
+                co2s +=[acc_co2/acc_days]
+                acc_co2=np.array([0.0]).reshape(1,1)
+                acc_days = 0
+                
+            acc = (xs,co2s,acc_co2,acc_days)
+            return acc
+        xs,co2s,acc_days,_ =  reduce(g,range(max(day_indices)+1),([],[],0,0))
+                
+        def h(tup):
+            x, co2 = tup
+            return np.transpose(np.concatenate([x,co2]))
+    
+        values_with_accumulated_co2 = [v for v in  map(h,zip(xs,co2s))]
+        RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
+        return RES
+
+def make_daily_iterator_sym(
+        V_init,
+        mpa,
+        func_dict
+    ):
+         
+
+        # b (b vector for partial allocation) 
+        beta_wood = 1- mpa.beta_leaf- mpa.beta_root
+        b = np.array(
+            [
+                mpa.beta_leaf,
+                mpa.beta_root,
+                beta_wood,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+        ).reshape(9,1)
+        # Now construct B matrix B=A*K 
+        B_func  = construct_matrix_func_sym(
+            pa=mpa,
+        )
+        # Build the iterator which is the representation of a dynamical system
+        # for looping forward over the results of a difference equation
+        # X_{i+1}=f(X_{i},i)
+        # This is the discrete counterpart to the initial value problem 
+        # of the continuous ODE  
+        # dX/dt = f(X,t) and initial values X(t=0)=X_0
+        
+        def f(it,V):
+            X = V[0:9]
+            co2 = V[9]
+            npp  = func_dict[Symbol('npp')](it,X)
+            B = B_func(it,X)
+            X_new = X + npp * b + B@X
+
+            # we also compute the respired co2 in every (daily) timestep
+            # and use this part of the solution later to sum up the monthly amount
+            co2_new = -np.sum(B @ X) # fixme add computer for respirattion
+            
+            V_new = np.concatenate((X_new,np.array([co2_new]).reshape(1,1)), axis=0)
+            return V_new
+    
+    
+        #X_0 = np.array(x_init).reshape(9,1) #transform the tuple to a matrix
+        #co2_0 = np.array([0]).reshape(1,1)
+        #V_0 = np.concatenate((X_0, co2_0), axis=0)
+
+        return TimeStepIterator2(
+                initial_values=V_init,
+                f=f#,
+                #max_it=max(day_indices)+1
+        )
+
 
 def make_compartmental_matrix_func(
         mpa
