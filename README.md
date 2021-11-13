@@ -106,7 +106,3 @@ https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependen
 * The computibility graph is expensive to create and only changes if new
   `Computers` and `MVars` are created.  It should be cached, which encurages
   the use of immutable data structures. (since we can use functools )
-
-   
-
-
