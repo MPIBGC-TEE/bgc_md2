@@ -681,10 +681,10 @@ def run_forward_simulation_sym(
         # in general this function can depend on the day i and the state_vector X
         # e.g. typically the size fo X.leaf...
         # In this case it only depends on the day i 
-        def npp_func(day,X):
+        def npp_func(day):
             return mpa.npp[day_2_month_index(day)] 
 
-        func_dict = {Symbol('Npp'):npp_func}
+        func_dict = {Symbol('NPP'):npp_func}
         tsi = make_daily_iterator_sym(
             V_init,
             mpa=mpa,

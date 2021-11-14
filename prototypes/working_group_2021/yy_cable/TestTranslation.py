@@ -147,6 +147,23 @@ class TestTranslation(TestCommon):
             )
         )
 
+    def test_daily_forward_simulation(self):
+        cpa=self.cpa  # make UnEstimatedParametersparameters available from setup
+        epa=self.epa0 # EstimatedParameters
+        mpa=self.mpa  # ModelParameters
+        # Initial carbon pool size
+        V_init = construct_V0(cpa,epa)
+        res1=run_forward_simulation(
+                V_init=V_init,
+                day_indices=month_2_day_index(range(self.pa.number_of_months)),
+                mpa=mpa
+        )
+        res2=run_forward_simulation_sym(
+                V_init=V_init,
+                day_indices=month_2_day_index(range(self.pa.number_of_months)),
+                mpa=mpa,
+        )
+        self.assertTrue(np.allclose(res1,res2))
 
 
 
@@ -241,23 +258,6 @@ class TestTranslation(TestCommon):
         print(l)
         self.assertTrue(np.allclose(B, B_sym))
 
-    def test_daily_forward_simulation(self):
-        cpa=self.cpa  # make UnEstimatedParametersparameters available from setup
-        epa=self.epa0 # EstimatedParameters
-        mpa=self.mpa  # ModelParameters
-        # Initial carbon pool size
-        V_init = construct_V0(cpa,epa)
-        res1=run_forward_simulation(
-                V_init=V_init,
-                day_indices=month_2_day_index(range(self.pa.number_of_months)),
-                mpa=mpa
-        )
-        res2=run_forward_simulation_sym(
-                V_init=V_init,
-                day_indices=month_2_day_index(range(self.pa.number_of_months)),
-                mpa=mpa,
-        )
-        self.assertTrue(np.allclose(res1,res2))
 
 
 
