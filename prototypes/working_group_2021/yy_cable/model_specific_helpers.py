@@ -6,20 +6,23 @@ from functools import lru_cache, reduce
 import netCDF4 as nc
 from pathlib import Path
 from collections import namedtuple
+from CompartmentalSystems import helpers_reservoir as hr
+from CompartmentalSystems.TimeStepIterator import (
+        TimeStepIterator2,
+)
 
 from general_helpers import (
         day_2_month_index, 
         month_2_day_index,
         months_by_day_arr,
-        TimeStepIterator2,
-        respiration_from_compartmental_matrix
+        respiration_from_compartmental_matrix,
+        make_B_u_funcs
 )
 
 from bgc_md2.resolve.mvars import NumericStartValueDict
-from bgc_md2.models.cable_yuanyuan.source import mvs 
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
-import CompartmentalSystems.helpers_reservoir as hr
 # fixme:
 # Your parameters will most likely differ but you can still use the
 # destinctions between different sets of parameters. The aim is to make
@@ -495,6 +498,50 @@ def make_param2res_2(
         
     return param2res
 
+def make_param2res_sym(
+        cpa: UnEstimatedParameters
+    ) -> Callable[[np.ndarray], np.ndarray]: 
+    # This function is an alternative implementation with the same results as 
+    # make_param2res but uses the symbolic model in bgc_md2
+    def param2res(pa):
+        epa=EstimatedParameters(*pa)
+        # here we want to store only monthly values
+        # although the computation takes place on a daily basis
+        V_init = construct_V0(cpa,epa)
+        # compute the days when we need the results
+        # to be able to compare to the monthly output
+        day_indices = month_2_day_index(range(cpa.number_of_months)) 
+        print("day_indices=",day_indices)
+        apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
+
+        mpa = ModelParameters(
+            **{
+                k:v for k,v in apa._asdict().items() 
+                if k in ModelParameters._fields
+            }
+        )
+        full_res = run_forward_simulation_sym(
+            V_init=V_init,
+            day_indices=day_indices,
+            mpa=mpa
+        )
+        
+        # project the litter and soil pools
+        tot_len=cpa.number_of_months
+        c_litter = np.sum(full_res[:,3:6],axis=1).reshape(tot_len,1)
+        c_soil = np.sum(full_res[:,6:9],axis=1).reshape(tot_len,1)
+        out_simu = np.concatenate(
+            [
+                full_res[:,0:3], # the first 3 pools are used as they are
+                c_litter,
+                c_soil,
+                full_res[:,9:10]
+            ]
+            ,axis=1
+        )
+        return out_simu
+        
+    return param2res
 
 def run_forward_simulation(
         V_init,
@@ -594,10 +641,13 @@ def make_daily_iterator(
                 f=f,
                 #max_it=max(day_indices)+1
         )
+    
+
         
 def construct_matrix_func_sym(pa):
     # we create a parameterdict for the fixed values
     # and extend it by the parameters provided 
+    from bgc_md2.models.cable_yuanyuan.source import mvs 
     symbol_names = mvs.get_BibInfo().sym_dict.keys()   
     for name in symbol_names:
         var(name)
@@ -625,9 +675,16 @@ def construct_matrix_func_sym(pa):
 def run_forward_simulation_sym(
         V_init,
         day_indices,
-        mpa,
-        func_dict
+        mpa
     ):
+        # Construct npp(day)
+        # in general this function can depend on the day i and the state_vector X
+        # e.g. typically the size fo X.leaf...
+        # In this case it only depends on the day i 
+        def npp_func(day,X):
+            return mpa.npp[day_2_month_index(day)] 
+
+        func_dict = {Symbol('Npp'):npp_func}
         tsi = make_daily_iterator_sym(
             V_init,
             mpa=mpa,
@@ -664,40 +721,15 @@ def make_daily_iterator_sym(
         mpa,
         func_dict
     ):
-         
-
-        # b (b vector for partial allocation) 
-        beta_wood = 1- mpa.beta_leaf- mpa.beta_root
-        b = np.array(
-            [
-                mpa.beta_leaf,
-                mpa.beta_root,
-                beta_wood,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0
-            ],
-        ).reshape(9,1)
-        # Now construct B matrix B=A*K 
-        B_func  = construct_matrix_func_sym(
-            pa=mpa,
-        )
-        # Build the iterator which is the representation of a dynamical system
-        # for looping forward over the results of a difference equation
-        # X_{i+1}=f(X_{i},i)
-        # This is the discrete counterpart to the initial value problem 
-        # of the continuous ODE  
-        # dX/dt = f(X,t) and initial values X(t=0)=X_0
+        from bgc_md2.models.cable_yuanyuan.source import mvs 
+        B_func, u_func = make_B_u_funcs(mvs,mpa,func_dict)  
         
         def f(it,V):
             X = V[0:9]
             co2 = V[9]
-            npp  = func_dict[Symbol('npp')](it,X)
+            b = u_func(it,X)
             B = B_func(it,X)
-            X_new = X + npp * b + B@X
+            X_new = X + b + B@X
 
             # we also compute the respired co2 in every (daily) timestep
             # and use this part of the solution later to sum up the monthly amount
@@ -706,16 +738,13 @@ def make_daily_iterator_sym(
             V_new = np.concatenate((X_new,np.array([co2_new]).reshape(1,1)), axis=0)
             return V_new
     
-    
-        #X_0 = np.array(x_init).reshape(9,1) #transform the tuple to a matrix
-        #co2_0 = np.array([0]).reshape(1,1)
-        #V_0 = np.concatenate((X_0, co2_0), axis=0)
-
         return TimeStepIterator2(
                 initial_values=V_init,
                 f=f#,
                 #max_it=max(day_indices)+1
         )
+
+
 
 
 def make_compartmental_matrix_func(

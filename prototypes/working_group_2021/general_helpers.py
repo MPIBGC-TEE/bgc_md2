@@ -4,6 +4,55 @@ from typing import Callable, Tuple, Iterable
 from functools import reduce, lru_cache
 from copy import copy
 from time import time
+from sympy import var, Symbol
+import CompartmentalSystems.helpers_reservoir as hr
+
+days_per_year = 365 
+
+# should be part  of CompartmentalSystems
+def make_B_u_funcs(
+        mvs,
+        mpa,
+        func_dict
+    ):
+        symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+        for name in symbol_names:
+            var(name)
+        t = mvs.get_TimeSymbol()
+        it = Symbol('it')
+        delta_t=Symbol('delta_t')
+        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
+        parameter_dict = {**model_params,delta_t: 1}
+        state_vector = mvs.get_StateVariableTuple()
+
+        sym_B =hr.euler_forward_B_sym(
+                mvs.get_CompartmentalMatrix(),
+                cont_time=t,
+                delta_t=delta_t,
+                iteration=it
+        )
+        sym_u = hr.euler_forward_net_u_sym(
+                mvs.get_InputTuple(),
+                t,
+                delta_t,
+                it
+        )
+        
+        B_func = hr.numerical_array_func(
+                state_vector = state_vector, 
+                time_symbol=it,
+                expr=sym_B,
+                parameter_dict=parameter_dict,
+                func_dict=func_dict
+        )
+        u_func = hr.numerical_array_func(
+                state_vector = state_vector,
+                time_symbol=it,
+                expr=sym_u,
+                parameter_dict=parameter_dict,
+                func_dict=func_dict
+        )
+        return (B_func,u_func)
 
 
 def make_uniform_proposer(
@@ -422,21 +471,22 @@ def make_jon_cost_func(
     # Note:
     # in our code the dimension 0 is the time
     # and dimension 1 the pool index
-    n = obs.shape[0]
+    n = obs.shape[1]
     means = obs.mean(axis=0)
     denominators = means ** 2
+    mean_centered_obs = obs - means
 
     def costfunction(mod: np.ndarray) -> np.float64:
         cost = np.mean(
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators,
-        axis=1)
+            np.sum((obs - mod) ** 2, axis=0) / denominators
+        )
         return cost
 
     return costfunction
 
 
 def day_2_month_index(d):
-    return months_by_day_arr()[(d % 365)]
+    return months_by_day_arr()[(d % days_per_year)]
 
 
 @lru_cache
@@ -453,6 +503,18 @@ def months_by_day_arr():
             )
         )
     )
+
+def year_2_day_index(ns):
+    """ computes the index of the day at the end of the year n in ns
+    this works on vectors 
+    """
+    return np.array(list(map(lambda n:days_per_year*n,ns)))
+
+def day_2_year_index(ns):
+    """ computes the index of the year
+    this works on vectors 
+    """
+    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
 
 
 def month_2_day_index(ns):
@@ -555,6 +617,7 @@ def plot_solutions(
     if names is None:
         names = tuple(str(i) for i in range(len(tup)))
 
+    #from IPython import embed; embed()
     assert (all([tup[0].shape == el.shape for el in tup]))
 
     if tup[0].ndim == 1:

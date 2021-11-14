@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from model_specific_helpers import (
     Observables,
     month_2_day_index,
-    make_param2res_2,
+    make_param2res_sym,
 )
 
 from general_helpers import (
@@ -19,11 +19,11 @@ from TestCommon import TestCommon
 
 class TestSymbolic(TestCommon):
 
-    def test_param2res_2(self):
+    def test_param2res_sym(self):
         const_params = self.cpa
         
-        param2res_2 = make_param2res_2(const_params)
-        res_2 = param2res_2(self.epa0)
+        param2res_sym = make_param2res_sym(const_params)
+        res_sym = param2res_sym(self.epa0)
         
         day_indices=month_2_day_index(range(self.pa.number_of_months)),
 
@@ -32,7 +32,7 @@ class TestSymbolic(TestCommon):
                 fig,
                 times=day_indices,
                 var_names=Observables._fields,
-                tup=(res_2,)
+                tup=(res_sym,)
         )
         fig.savefig('solutions.pdf')
 

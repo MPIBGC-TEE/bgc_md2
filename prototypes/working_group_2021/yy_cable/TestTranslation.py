@@ -9,18 +9,10 @@ sys.path.insert(0,'..')
 
 from sympy import var, Symbol
 import numpy as np
-import pandas as pd
-from pathlib import Path
-import json 
 import matplotlib.pyplot as plt
-from unittest import TestCase, skip
-from testinfrastructure.InDirTest import InDirTest
+from unittest import skip
+from copy import copy
 from model_specific_helpers import (
-    EstimatedParameters, 
-    UnEstimatedParameters, 
-    Parameters, 
-    StateVariables,
-    ModelParameters,
     Observables,
     run_forward_simulation,
     run_forward_simulation_sym,
@@ -31,8 +23,9 @@ from model_specific_helpers import (
     day_2_month_index,
     make_param2res,
     make_param2res_2,
-    make_param_filter_func,
-    make_weighted_cost_func,
+    make_param2res_sym,
+    make_daily_iterator,
+    make_daily_iterator_sym,
     construct_matrix_func_sym
 )
 
@@ -45,6 +38,120 @@ from general_helpers import (
 from TestCommon import TestCommon
 
 class TestTranslation(TestCommon):
+    def test_param2res_vs_sym(self):
+        npp, rh, clitter, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(self.dataPath)
+        const_params = self.cpa
+        
+        param2res = make_param2res(const_params)
+        param2res_sym = make_param2res_sym(const_params)
+        res = param2res(self.epa0)
+        res_sym = param2res_sym(self.epa0)
+        
+        day_indices=month_2_day_index(range(self.pa.number_of_months)),
+
+        fig = plt.figure()
+        plot_solutions(
+                fig,
+                times=day_indices,
+                var_names=Observables._fields,
+                tup=(res, res_sym)
+        )
+        fig.savefig('solutions.pdf')
+        
+        self.assertTrue(
+                np.allclose(
+                    res,
+                    res_sym,
+                    rtol=1e-2
+                ),
+        )
+
+    #######################################################################
+    ## All tests from here on are only required to track down the cause of failure 
+    ## if test_param2res_versions fails
+
+    def test_param2res_versions(self):
+        npp, rh, clitter, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(self.dataPath)
+        const_params = self.cpa
+        
+        param2res = make_param2res(const_params)
+        param2res_2 = make_param2res_2(const_params)
+        param2res_sym = make_param2res_sym(const_params)
+        res = param2res(self.epa0)
+        res_2 = param2res_2(self.epa0)
+        res_sym = param2res_sym(self.epa0)
+        
+        day_indices=month_2_day_index(range(self.pa.number_of_months)),
+
+        fig = plt.figure()
+        plot_solutions(
+                fig,
+                times=day_indices,
+                var_names=Observables._fields,
+                tup=(res, res_2, res_sym)
+        )
+        fig.savefig('solutions.pdf')
+        self.assertTrue(
+                np.allclose(
+                    res,
+                    res_2,
+                    rtol=1e-2
+                ),
+        )
+        self.assertTrue(
+                np.allclose(
+                    res,
+                    res_sym,
+                    rtol=1e-2
+                ),
+        )
+
+    #@skip   
+    def test_daily_iterator_versions(self):
+        mpa = self.mpa
+        # Construct npp(day)
+        # in general this function can depend on the day i and the state_vector X
+        # e.g. typically the size fo X.leaf...
+        # In this case it only depends on the day i 
+        def npp_func(day):
+            #xs = tup[1:]
+            return mpa.npp[day_2_month_index(day)] 
+        it= make_daily_iterator(
+            V_init=construct_V0(
+                self.cpa,
+                self.epa0
+            ),
+            mpa=mpa,
+        )
+
+        it_sym = make_daily_iterator_sym(
+            V_init=construct_V0(
+                self.cpa,
+                self.epa0
+            ),
+            mpa=mpa,
+            func_dict={
+                'NPP':npp_func
+            },
+        )
+        n=5
+        res= np.zeros((n,10))
+        res_sym = copy(res)
+        for i in range(n):
+            res[i,:]=it.__next__().reshape(10,)
+            res_sym[i,:]=it_sym.__next__().reshape(10,)
+        self.assertTrue(
+            np.allclose(
+                res,
+                res_sym
+            )
+        )
+
+
+
+
+
+
     def test_npp_func(self):
         pa = self.pa
         months = range(pa.number_of_months)
@@ -145,19 +252,10 @@ class TestTranslation(TestCommon):
                 day_indices=month_2_day_index(range(self.pa.number_of_months)),
                 mpa=mpa
         )
-        # Construct npp(day)
-        # in general this function can depend on the day i and the state_vector X
-        # e.g. typically the size fo X.leaf...
-        # In this case it only depends on the day i 
-        def npp_func(day,X):
-            return mpa.npp[day_2_month_index(day)] 
-
-        func_dict = {Symbol('npp'):npp_func}
         res2=run_forward_simulation_sym(
                 V_init=V_init,
                 day_indices=month_2_day_index(range(self.pa.number_of_months)),
                 mpa=mpa,
-                func_dict=func_dict
         )
         self.assertTrue(np.allclose(res1,res2))
 
@@ -165,29 +263,3 @@ class TestTranslation(TestCommon):
 
 
 
-    def test_param2res_2(self):
-        npp, rh, clitter, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(self.dataPath)
-        const_params = self.cpa
-        
-        param2res = make_param2res(const_params)
-        param2res_2 = make_param2res_2(const_params)
-        res = param2res(self.epa0)
-        res_2 = param2res_2(self.epa0)
-        
-        day_indices=month_2_day_index(range(self.pa.number_of_months)),
-
-        fig = plt.figure()
-        plot_solutions(
-                fig,
-                times=day_indices,
-                var_names=Observables._fields,
-                tup=(res, res_2)
-        )
-        fig.savefig('solutions.pdf')
-        self.assertTrue(
-                np.allclose(
-                    res,
-                    res_2,
-                    rtol=1e-2
-                ),
-        )
