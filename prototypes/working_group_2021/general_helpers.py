@@ -471,15 +471,13 @@ def make_jon_cost_func(
     # Note:
     # in our code the dimension 0 is the time
     # and dimension 1 the pool index
-    n = obs.shape[1]
+    n = obs.shape[0]
     means = obs.mean(axis=0)
     denominators = means ** 2
-    mean_centered_obs = obs - means
 
     def costfunction(mod: np.ndarray) -> np.float64:
         cost = np.mean(
-            np.sum((obs - mod) ** 2, axis=0) / denominators
-        )
+            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators)
         return cost
 
     return costfunction
