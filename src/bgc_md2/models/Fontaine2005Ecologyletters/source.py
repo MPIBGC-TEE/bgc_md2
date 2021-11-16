@@ -7,8 +7,8 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_s': 'carbon stock in soil organic matter' # "\\text{quantitiy of carbon}"
@@ -46,19 +46,22 @@ B = CompartmentalMatrix([[-A/C_s*C_ds,           0,       s,                    
 #      C_ds: (s+r)*(-(Phi_i-Phi_o-Phi_up+beta*Phi_l) + alpha*s*Phi_l/(s+r))/(A*r*alpha)
 #      N: alpha*s-beta*(s+r)/i*C_df
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="",
-        longName="The C-N model of SOM dynamics, two decomposer types", 
-        version="SOM decomposers C limited, FOM composers N limited (case 4)",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="22/03/2016",
-        doi="10.1111/j.1461-0248.2005.00813.x",
-        sym_dict=sym_dict
-    ),
-    B,  # Compartmental matrix, decomposition operator
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="",
+            longName="The C-N model of SOM dynamics, two decomposer types", 
+            version="SOM decomposers C limited, FOM composers N limited (case 4)",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="22/03/2016",
+            doi="10.1111/j.1461-0248.2005.00813.x",
+            sym_dict=sym_dict
+        ),
+        B,  # Compartmental matrix, decomposition operator
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    },
+    bgc_md2_computers()
+)

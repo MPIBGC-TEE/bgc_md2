@@ -36,7 +36,8 @@ from bgc_md2.resolve.computers import (
 
 from ..BibInfo import BibInfo 
 from ...  import helper as h
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_leaf': 'Carbon in foliage'
@@ -208,42 +209,45 @@ internal_fl_n = {
     (N_soil, N_NH4): t_soilN,
     (N_NH4, N_NO3): nitr
 }
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="ACONITE",
-        longName="A new, simple model of ecosystem C–N cycling and interactions", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="29/3/2016",
-        doi="10.5194/gmd-7-2015-2014",
-        sym_dict=sym_dict
-    ),
-    InFluxesBySymbol(h.combine(in_fl_c, in_fl_n)),
-    OutFluxesBySymbol(h.combine(out_fl_c, out_fl_n)),
-    InternalFluxesBySymbol(h.combine(internal_fl_c, internal_fl_n)), 
-    t,   # time for the complete system
-    x,   # state vector of the complete system
-    xc,  # state vector of the carbon sub system
-    # from which the carbon fluxes and hence 
-    # the CarbonCompartMentalMatrix can be derived
-    # (even though in this case it is given)
-    # A_c,  # the carbon compartmental matrix
-    # in_fl_c, #alternatively to the CarbonCompartmentalMatrix
-    # out_fl_c,# 
-    # internal_fl_c,
-    xn,  # state vector of the nitrogen sub system
-    # from which the nitrogenfluxes and hence the nitrogen compartmental
-    # matrix could be derived whence the computers for extraction the
-    # nitrogen fluxes from the global fluxes have been implemented 
-    # NitrogenInFluxesBySymbol(in_fl_n),
-    # NitrogenOutFluxesBySymbol(out_fl_n),
-    # NitrogenInternalFluxesBySymbol(internal_fl_n),
-    VegetationCarbonStateVariableTuple(
-        (C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa)
-    ),
-    # the following can be computed automatically
-    # VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    # VegetationCarbonInputPartitioningTuple(b),
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="ACONITE",
+            longName="A new, simple model of ecosystem C–N cycling and interactions", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="29/3/2016",
+            doi="10.5194/gmd-7-2015-2014",
+            sym_dict=sym_dict
+        ),
+        InFluxesBySymbol(h.combine(in_fl_c, in_fl_n)),
+        OutFluxesBySymbol(h.combine(out_fl_c, out_fl_n)),
+        InternalFluxesBySymbol(h.combine(internal_fl_c, internal_fl_n)), 
+        t,   # time for the complete system
+        x,   # state vector of the complete system
+        xc,  # state vector of the carbon sub system
+        # from which the carbon fluxes and hence 
+        # the CarbonCompartMentalMatrix can be derived
+        # (even though in this case it is given)
+        # A_c,  # the carbon compartmental matrix
+        # in_fl_c, #alternatively to the CarbonCompartmentalMatrix
+        # out_fl_c,# 
+        # internal_fl_c,
+        xn,  # state vector of the nitrogen sub system
+        # from which the nitrogenfluxes and hence the nitrogen compartmental
+        # matrix could be derived whence the computers for extraction the
+        # nitrogen fluxes from the global fluxes have been implemented 
+        # NitrogenInFluxesBySymbol(in_fl_n),
+        # NitrogenOutFluxesBySymbol(out_fl_n),
+        # NitrogenInternalFluxesBySymbol(internal_fl_n),
+        VegetationCarbonStateVariableTuple(
+            (C_labile, C_bud, C_leaf, C_wood, C_root, C_labileRa)
+        ),
+        # the following can be computed automatically
+        # VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        # VegetationCarbonInputPartitioningTuple(b),
+    },
+    bgc_md2_computers()
+)

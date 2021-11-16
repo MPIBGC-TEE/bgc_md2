@@ -1,5 +1,5 @@
 import numpy as np
-from sympy import var, ImmutableMatrix, Min, sqrt, exp
+from sympy import var, Function, ImmutableMatrix, Min, sqrt, exp
 from frozendict import frozendict
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -14,8 +14,9 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers    
+
 # questions 
 # 1.) (for yuanyuan) What do the following variables mean exactly?
 #     lig_leaf, lig_wood, clay, silt
@@ -38,7 +39,6 @@ sym_dict = {
         'C_mic': 'Carbon ?',
         'C_slowsom': 'Carbon in slow SOM',
         'C_passsom': 'Carbon in passive SOM',
-        'NPP': 'Photosynthetic rate (Carbon input) at time t',
         'beta_leaf': 'Fixed partitioning ratio (fraction) of available carbon allocated to foliage',
         'beta_root': 'Fixed partitioning ratio (fraction) of available carbon allocated to roots',
         'beta_wood': 'Fixed partitioning ratio (fraction) of available carbon allocated to wood',
@@ -73,6 +73,8 @@ sym_dict = {
 for name in sym_dict.keys():
     var(name)
     
+NPP = Function('NPP') 
+
 beta_wood = 1.0 - (beta_leaf + beta_root)
 f_leaf2stlit = 1.0 - f_leaf2metlit
 f_root2stlit = 1.0 - f_root2metlit
@@ -112,30 +114,33 @@ A = ImmutableMatrix(
 
 B = CompartmentalMatrix(A*K)
 t = TimeSymbol("t")  # unit: "day"
-u = NPP
+u = NPP(t)
 b = ImmutableMatrix([beta_leaf, beta_root, beta_wood, 0, 0, 0, 0, 0, 0])
 Input = InputTuple(u * b)
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="CABLE_yuanyuan",
-        longName="Terrestrial Ecosystem Model", 
-        version="",
-        entryAuthor="Markus Müller",
-        entryAuthorOrcid="0000-0003-0009-4169",
-        entryCreationDate="08/24/2021",
-        doi="",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_leaf, C_root, C_wood)),
-    #np1,
-    #nsv1,
-    #ntimes
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="CABLE_yuanyuan",
+            longName="Terrestrial Ecosystem Model", 
+            version="",
+            entryAuthor="Markus Müller",
+            entryAuthorOrcid="0000-0003-0009-4169",
+            entryCreationDate="08/24/2021",
+            doi="",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_leaf, C_root, C_wood)),
+        #np1,
+        #nsv1,
+        #ntimes
+    },
+    bgc_md2_computers()
+)
 

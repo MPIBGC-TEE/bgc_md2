@@ -15,6 +15,7 @@ from dask.distributed import LocalCluster
 from getpass import getuser
 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run import DMRError
 from CompartmentalSystems.discrete_model_run_14C import DiscreteModelRun_14C as DMR_14C
 from CompartmentalSystems.helpers_reservoir import DECAY_RATE_14C_DAILY, ALPHA_14C
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
@@ -29,13 +30,18 @@ from bgc_md2.notebook_helpers import (
 )
 
 
-def prepare_cluster(n_workers, alternative_dashboard_port=None):
+def prepare_cluster(
+    n_workers,
+    alternative_dashboard_port=None,
+    my_user_name=None
+):
     port_dict = {
         "cs": 8888,        # change at will
         "mm": 8889,
         "hmetzler": 8890 # change at will
     }
-    my_user_name = getuser()
+    if my_user_name is None:
+        my_user_name = getuser()
     print("username:", my_user_name)
 
     my_port = port_dict[my_user_name]
@@ -95,19 +101,19 @@ def load_params(time_resolution, delay_in_months):
         raise(ValueError("Unknown time resolution"))
 
     
-def check_data_consistency(ds, time_step_in_days):
+def check_data_consistency(ds_single_site, time_step_in_days):
     ms = load_model_structure()
 
-    # data_test.py says tht for labile 31.0 is constantly right
+    # data_test.py says that for labile 31.0 is constantly right
     time = Variable(
         name="time",
-        data=np.arange(len(ds.time)) * time_step_in_days,
+        data=np.arange(len(ds_single_site.time)) * time_step_in_days,
         unit="d"
     )
 
     mdo = ModelDataObject(
         model_structure=ms,
-        dataset=ds, 
+        dataset=ds_single_site, 
         stock_unit="gC/m2", 
         time=time
     )
@@ -566,17 +572,22 @@ def compute_Bs_discrete(single_site_dict, time_step_in_days):
 
     data = np.nan * np.ones((len(times), nr_pools, nr_pools))
 
-#        try:
-    Bs = DMR.reconstruct_Bs(
-        xs.data.filled(),
-        Fs.data.filled(),
-        Rs.data.filled()
-    )
-        
-    data[:-1, ...] = Bs
-#        except (DMRError, ValueError, OverflowError) as e:
-#            error = str(e)
-#            print(error, flush=True)
+    try:
+        Bs = DMR.reconstruct_Bs(
+            xs.data.filled(),
+            Fs.data.filled(),
+            Rs.data.filled()
+        )
+            
+        data[:-1, ...] = Bs
+    except (DMRError, ValueError, OverflowError) as e:
+        error = str(e)
+        print(error, flush=True)
+        print(
+            "lat", single_site_dict["lat"],
+            "lon", single_site_dict["lon"],
+            "prob", single_site_dict["prob"]
+        )
 
     info = tuple()
     return data, info

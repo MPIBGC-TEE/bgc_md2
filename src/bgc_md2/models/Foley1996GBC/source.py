@@ -9,8 +9,8 @@ from bgc_md2.resolve.mvars import (
     VegetationCarbonStateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_il': 'Carbon in leaves of plant functional type (PFT) i'
@@ -98,24 +98,27 @@ t = TimeSymbol("t")
 #        - "Tropical evergreen trees":
 #            values: {a_il: 0.25,a_is: 0.5,a_ir: 0.25}
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="IBIS",
-        longName="Integrated Biosphere Simulator", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="26/1/2016",
-        doi="10.1029/96GB02692 ",
-        #further_references=BibInfo(doi=""),
-        sym_dict=sym_dict
-    ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-    VegetationCarbonInputScalar(u),
-    # vegetation carbon partitioning.
-    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_il, C_is, C_ir)),
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="IBIS",
+            longName="Integrated Biosphere Simulator", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="26/1/2016",
+            doi="10.1029/96GB02692 ",
+            #further_references=BibInfo(doi=""),
+            sym_dict=sym_dict
+        ),
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+        VegetationCarbonInputScalar(u),
+        # vegetation carbon partitioning.
+        VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_il, C_is, C_ir)),
+    },
+    bgc_md2_computers()
+)

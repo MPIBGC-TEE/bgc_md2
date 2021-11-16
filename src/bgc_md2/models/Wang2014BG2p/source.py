@@ -7,8 +7,9 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_s': 'soil organic matter' # "g C m^{-2}"
@@ -30,19 +31,22 @@ u = InputTuple((F_NPP, 0))
 B = CompartmentalMatrix([[       -lamda,  mu_b],
                          [epsilon*lamda, -mu_b]])
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="Two-pool microbial",
-        longName="", 
-        version="1",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="18/01/2018",
-        doi="10.5194/bg-11-1817-2014",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="Two-pool microbial",
+            longName="", 
+            version="1",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="18/01/2018",
+            doi="10.5194/bg-11-1817-2014",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    },
+    bgc_md2_computers()
+)

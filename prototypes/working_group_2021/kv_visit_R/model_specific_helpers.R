@@ -177,7 +177,61 @@ get_example_site_vars<-function(dataPath, lon, lat){
   write.csv(output,paste0(dataPath,"/dat.csv"))
   return(output)
 
-}  
+} 
+# function to get total and mean data for the globe as in 1 pixel
+get_global_mean_data<-function(dataPath){
+  # load all netCDF files in the folder
+  files<-list.files(dataPath, pattern="..nc") # list all netCDF files in the folder
+  (var_names<-substr(files, 0 ,regexpr("_",files)-1)) # derive variable names from file names
+  # create empty output table
+  r<-stack(paste0(dataPath,"/",files[1]))
+  dat1 = rep(0,length(var_names)*length(r@layers))
+  dat1 = matrix(dat1, nrow = length(r@layers), byrow = TRUE)
+  dat1<-as.data.frame(dat1)
+  names(dat1)<-var_names
+  for (i in 1:length(var_names)){
+    r<-stack(paste0(dataPath,"/",files[i]))
+    for (j in 1:length(r@layers)){
+    if( (var_names[i]=="mrsos") || ( var_names[i]=="ts") || ( var_names[i]=="tsl") ) # for T and moisture calc mean
+    {x<-mean(values(r[[j]]), na.rm = T)}
+      else {x<-sum(values(r[[j]]), na.rm = T)} # for the rest - calc sum of C stocks and fluxes for all pixels
+    dat1[j,i]<-x
+    }
+  }
+  #calculate wood pool from veg, leaf and root
+  dat1$cWood=dat1$cVeg-dat1$cLeaf-dat1$cRoot
+  # correct fluxes from per second to per day
+  dat1$gpp<-dat1$gpp*86400
+  dat1$npp<-dat1$npp*86400
+  dat1$nppLeaf<-dat1$nppLeaf*86400
+  dat1$nppWood<-dat1$nppWood*86400
+  dat1$nppRoot<-dat1$nppRoot*86400
+  dat1$fVegLitter<-dat1$fVegLitter*86400
+  dat1$fLitterSoil<-dat1$fLitterSoil*86400
+  dat1$rh<-dat1$rh*86400
+  
+  output=data.frame(
+    C_leaf=dat1$cLeaf,
+    C_wood=dat1$cWood,
+    C_root=dat1$cRoot,
+    C_litter_above=dat1$cLitterAbove,
+    C_litter_below=dat1$cLitterBelow,
+    C_fastsom=dat1$cSoilFast,
+    C_slowsom=dat1$cSoilMedium,
+    C_passsom=dat1$cSoilSlow,
+    npp=dat1$npp,
+    rh=dat1$rh,
+    f_veg2litter=dat1$fVegLitter,
+    f_litter2som=dat1$fLitterSoil,
+    tsl=dat1$tsl, # soil temperature - for dynamic turnover rates
+    mrso=dat1$mrsos, # soil moisture - for dynamic turnover rates
+    ts=dat1$ts # air temperature - for dynamic turnover rates
+  )
+  write.csv(output,paste0(dataPath,"/dat_global.csv"))
+  return(output)
+}
+  
+  
 # read data from a csv file if previously saved  
 get_data_from_file<-function(dataPath){
   dat<-read.csv(paste0(dataPath,"/dat.csv")) 
