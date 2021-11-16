@@ -29,8 +29,8 @@ UnEstimatedParameters = namedtuple(
         'C_leaf_0',
         'C_root_0',
         'C_wood_0',
-        'c_litter_0',
-        'c_soil_0',
+        'clitter_0',
+        'csoil_0',
         'rh_0',
         'clay',
         'silt',
@@ -60,7 +60,7 @@ EstimatedParameters = namedtuple(
         "k_slowsom",	# 10
         "k_passsom",	# 11
         "C_metlit_0",	# 12
-        "C_strlit_0",	# 13
+        "CWD_0",	# 13
         "C_mic_0",	# 14
         "C_passom_0"    # 15
     ]
@@ -92,8 +92,8 @@ StateVariables = namedtuple(
         'C_root',
         'C_wood',
         'C_metlit',
-        'C_strlit',
-        'C_cwd',
+        'C_stlit',
+        'CWD',
         'C_mic',
         'C_slowsom',
         'C_passsom'
@@ -107,6 +107,7 @@ Observables = namedtuple(
         'C_wood',
         'c_litter',
         'c_soil',
+        'gpp',
         'respiration'
     ]
 )
@@ -125,13 +126,11 @@ ModelParameters = namedtuple(
             'C_leaf_0',
             'C_root_0',
             'C_wood_0',
-            'c_litter_0',
-            'c_soil_0',
+            'clitter_0',
+            'csoil_0',
             "C_metlit_0",
-            "C_strlit_0",
-            "C_cwd_0",
+            "CWD_0",
             "C_mic_0",
-            "C_slowsom_0",
             "C_passom_0",
             'number_of_months'
         ] 
@@ -141,55 +140,52 @@ ModelParameters = namedtuple(
 # 1.) make a namedtuple for the yycable data or use xarray to create a multifile dataset
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
-    path = dataPath.joinpath("CABLE-POP_S2_npp.nc")
+    path = dataPath.joinpath("CLASSIC_S2_gpp.nc")
     ds = nc.Dataset(str(path))
-    var_npp = ds.variables['npp'][:,:,:]
+    var_npp = ds.variables['gpp'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("CABLE-POP_S2_rh.nc")
+    path = dataPath.joinpath("CLASSIC_S2_rh.nc")
     ds = nc.Dataset(str(path))
     var_rh = ds.variables['rh'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("CABLE-POP_S2_cLeaf.nc")
+    path = dataPath.joinpath("CLASSIC_S2_cLeaf.nc")
     ds = nc.Dataset(str(path))
     var_cleaf = ds.variables['cLeaf'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("CABLE-POP_S2_cRoot.nc")
+    path = dataPath.joinpath("CLASSIC_S2_cRoot.nc")
     ds = nc.Dataset(str(path))
     var_croot = ds.variables['cRoot'][:,:,:]
     ds.close()
     
     
-    path = dataPath.joinpath("CABLE-POP_S2_cVeg.nc")
+    path = dataPath.joinpath("CLASSIC_S2_cVeg.nc")
     ds = nc.Dataset(str(path))
     var_cveg = ds.variables['cVeg'][:,:,:]
     ds.close()
     
     
-    path = dataPath.joinpath("CABLE-POP_S2_cSoil.nc")
+    path = dataPath.joinpath("CLASSIC_S2_cSoil.nc")
     ds = nc.Dataset(str(path))
     var_csoil = ds.variables['cSoil'][:,:,:]
+    lat_data=ds.variables['lat'][:].data
+    lon_data=ds.variables['lon'][:].data
     ds.close()
     
-    path = dataPath.joinpath("CABLE-POP_S2_cLitter.nc")
+    path = dataPath.joinpath("CLASSIC_S2_cLitter.nc")
     ds = nc.Dataset(str(path))
     var_clitter = ds.variables['cLitter'][:,:,:]
     ds.close()
 
-    path = dataPath.joinpath("CABLE-POP_S2_cCwd.nc")
-    ds = nc.Dataset(str(path))
-    var_ccwd = ds.variables['cCwd'][:, :, :]
-    ds.close()
-
-    return (var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd)
+    return (var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter)       
 
 def get_example_site_vars(dataPath):
-    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd = get_variables_from_files(dataPath)
-    # pick up 1 site   wombat state forest
+    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter = get_variables_from_files(dataPath)       
+    # pick up 1 site   62.8125 W, 17.5S
     s = slice(None,None,None) # this is the same as : 
-    t = s,49,325 # [t] = [:,49,325]
+    t = s,58,159 # [t] = [:,58,159]
     npp= var_npp[t]* 86400   #   kg/m2/s kg/m2/day; 
     rh= var_rh[t]*86400;   # per s to per day  
     (
@@ -197,8 +193,7 @@ def get_example_site_vars(dataPath):
         csoil,
         cveg,
         cleaf,
-        croot,
-        ccwd
+        croot
     ) = map(
         lambda var: var[t],
         (
@@ -206,13 +201,11 @@ def get_example_site_vars(dataPath):
             var_csoil, 
             var_cveg,
             var_cleaf,
-            var_croot,
-            var_ccwd
+            var_croot
         )
     )
     cwood = cveg - cleaf - croot; 
-    return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
-
+    return (npp, rh, clitter, csoil, cveg, cleaf, croot, cwood)
 
 def get_global_sum_vars(dataPath):
     var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd = get_variables_from_files(dataPath)
@@ -224,7 +217,6 @@ def get_global_sum_vars(dataPath):
     cveg = var_cveg.sum((1,2));
     cleaf = var_cleaf.sum((1,2));
     croot = var_croot.sum((1,2));
-    ccwd = var_ccwd.sum((1,2));
     cwood = cveg - cleaf - croot;
     return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
 
@@ -237,11 +229,16 @@ def make_param_filter_func(
         # fixme
         #   this function is model specific: It discards parameter proposals
         #   where beta1 and beta2 are >0.99
-        cond1 =  (c >= c_min).all() 
-        cond2 =  (c <= c_max).all() 
-        cond3 = (c[0] + c[1]) < 1
-        return (cond1 and cond2 and cond3)
-        
+        paramNum = len(c)
+        flag = True
+        for i in range(paramNum):
+           if(c[i] > c_max[i] or c[i] < c_min[i]):
+              flag = False
+              break
+           if(c[0] + c[1] > 0.99):
+              flag = False
+              break
+        return flag
     
     return isQualified
 
@@ -279,7 +276,10 @@ def make_weighted_cost_func(
         J_obj6 = np.mean (( rh_simu[:,0] - rh[0:tot_len] )**2)/(2*np.var(rh[0:tot_len]))
         
         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
-        return J_new
+        # to make this special costfunction comparable (in its effect on the
+        # acceptance rate) to the general costfunction proposed by Feng we
+        # rescale it by a factor 
+        return J_new*50.0
     return costfunction     
 
 
@@ -319,32 +319,25 @@ def make_param2res(
         days=[31,28,31,30,31,30,31,31,30,31,30,31]
         # Construct b vector 
         beta1=epa.beta_leaf; beta2=epa.beta_root; beta3= 1- beta1- beta2
-        b = np.array([beta1, beta2, beta3, 0, 0, 0, 0,0,0]).reshape([9,1])   # allocation
+        b = np.array([beta1, beta2, beta3, 0, 0]).reshape([5,1])   # allocation
+
         # Now construct A matrix
-        lig_leaf = epa.lig_leaf
+        f41 = epa.f_leaf2metlit;
+        f42 = epa.f_root2metlit;
+        f43 = epa.
+        f54 = epa.
+
     
-        f41 = epa.f_leaf2metlit; f42 = epa.f_root2metlit; f51 = 1-f41; f52 = 1-f42; f63 = 1;
-        f74 = 0.45; f75 = 0.45*(1-lig_leaf); 
-        f85 = 0.7*epa.lig_leaf; f86 = 0.4*(1-cpa.lig_wood);
-        f96 = 0.7*cpa.lig_wood;  
-        f87=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.997 - 0.032*cpa.clay)
-        f97=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.003 + 0.032*cpa.clay)
-        f98=0.45 * (0.003 + 0.009 *cpa.clay)
-    
-        A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
-                         0,  -1,   0,   0,   0,   0,   0,   0,   0,
-                         0,   0,  -1,   0,   0,   0,   0,   0,   0,
-                       f41, f42,   0,  -1,   0,   0,   0,   0,   0,
-                       f51, f52,   0,   0,  -1,   0,   0,   0,   0,
-                         0,   0, f63,   0,   0,  -1,   0,   0,   0,
-                         0,   0,   0, f74, f75,   0,  -1,   0,   0,
-                         0,   0,   0,   0, f85, f86, f87,  -1,   0,
-                         0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
+        A = np.array([  -1,   0,   0,   0,   0,
+                         0,  -1,   0,   0,   0,
+                         0,   0,  -1,   0,   0,
+                       f41, f42,   0,  -1,   0,
+                       f51, f52,   0,   0,  -1 ]).reshape([5,5])   # tranfer
     
         #turnover rate per day of pools: 
-        temp = [epa.k_leaf,epa.k_root,epa.k_wood, epa.k_metlit,epa.k_metlit/(5.75*np.exp(-3*epa.lig_leaf)), epa.k_metlit/20.6, epa.k_mic,epa.k_slowsom, epa.k_passsom]
-        K = np.zeros(81).reshape([9, 9])
-        for i in range(0, 9):
+        temp = [epa.k_leaf,epa.k_root,epa.k_wood, epa.k_litter,epa.k_soil]
+        K = np.zeros(25).reshape([5, 5])
+        for i in range(0, 5):
             K[i][i] = temp[i]
           
         x_fin=np.zeros((cpa.number_of_months,9))
@@ -353,17 +346,12 @@ def make_param2res(
         x_init = np.array(
             [
                 cpa.C_leaf_0,
-                cpa.C_root_0,
                 cpa.C_wood_0,
-                epa.C_metlit_0,
-                epa.C_strlit_0,
-                cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
-                #cpa.C_cwd_0,
-                epa.C_mic_0,
-                cpa.c_soil_0- epa.C_mic_0 - epa.C_passom_0,
-                epa.C_passom_0
+                cpa.C_root_0,
+                cpa.clitter_0,
+                cpa.csoil_0
             ]
-        ).reshape([9, 1])   # Initial carbon pool size
+        ).reshape([5, 1])   # Initial carbon pool size
         # initialize carbon pools 
         X=x_init   
         
@@ -383,6 +371,7 @@ def make_param2res(
             rh_fin[m, 0]=co2_rh
             co2_rh = 0   
             for d in range(0,days[m%12]):
+                #X=X + b*npp_in + np.array(A@K@X).reshape([9,1])
                 X=X + b*npp_in + B@X
                 co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
                 co2=np.sum(co2_rate*X.reshape(1,9))
@@ -394,14 +383,12 @@ def make_param2res(
         # To this end we project our 10 output variables of the matrix simulation
         # onto the 6 data streams by summing up the 3 litter pools into one
         # and also the 3 soil pools into one
-        c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(cpa.number_of_months,1)
-        c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(cpa.number_of_months,1)
+        #c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(cpa.number_of_months,1)
+        #c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(cpa.number_of_months,1)
         #from IPython import embed; embed()
         out_simu = np.concatenate(
             [
-                x_fin[:,0:3], # the first 3 pools are used as they are
-                c_litter,
-                c_soil,
+                x_fin[:,0:5], # I think all pools can be used as is
                 rh_fin
             ]
             ,axis=1
@@ -442,13 +429,13 @@ def make_param2res_2(
     #       to include nonlinearities.
     # 2.)   We build a daily advancing model that can provide output for an arbitrary 
     #       selection of days.  To do so we provide all driver data as
-    #       functions of the smallest timestep (here day with index i), which in
+    #       functions of the smalles timestep (here day with index i), which in
     #       the case of this model means that we provide the same npp value for
     #       all the days in a given month. 
     # 3.)   We translate the index of a given month to the appropriate day index
-    #       and apply the daily model of 2.). Again this seems cumbersome for this
+    #       and apply the dayly model of 2.). Again this seems cumbersome for this
     #       example but allows us to reuse the daily model for all applications.
-    #       This is especially useful for testing since we only need some daily timesteps.
+    #       This is espacially usefull for testing since we only need some dayly timesteps.
     #       It makes it also easier to keep an overview over the appropriate 
     #       units: If the smallest timestep is a day, then all time related parameters
     #       have to be provided in the corresponding  units, regardless of the
@@ -623,9 +610,9 @@ def make_compartmental_matrix_func(
     A[4,1] = 1.0 - mpa.f_root2metlit
     A[5,2] = mpa.f_wood2CWD 
     A[6,3] = mpa.f_metlit2mic 
-    A[6,4] = mpa.f_metlit2mic * (1.0 - mpa.lig_leaf)
+    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
     A[7,4] = 0.7 * mpa.lig_leaf
-    A[7,5] = 0.4 * (1.0 - mpa.lig_wood)
+    A[7,5] = 0.4 * (1 - mpa.lig_wood)
     A[8,5] = 0.7 * mpa.lig_wood
     A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
     A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
@@ -667,8 +654,8 @@ def construct_V0(
         C_root=cpa.C_root_0,
         C_wood=cpa.C_wood_0,
         C_metlit=epa.C_metlit_0,
-        C_strlit=epa.C_strlit_0,
-        C_cwd=cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
+        C_stlit=epa.CWD_0,
+        CWD=cpa.clitter_0-epa.C_metlit_0-epa.CWD_0,
         C_mic=epa.C_mic_0,
         C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
         C_passsom=epa.C_passom_0

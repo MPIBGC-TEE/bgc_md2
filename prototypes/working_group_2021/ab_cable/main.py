@@ -34,11 +34,11 @@ with Path('config.json').open(mode='r') as f:
 
 dataPath = Path(conf_dict['dataPath'])
 
-#npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
-npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_global_sum_vars(dataPath)
+#npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath) # site runs
+npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_global_sum_vars(dataPath)  # global run
 
-#nyears=320
-nyears = 10
+nyears=320
+#nyears = 10
 tot_len = 12*nyears
 obs_tup=Observables(
     C_leaf=cleaf,
@@ -72,16 +72,16 @@ c_min = np.array(
     EstimatedParameters(
         beta_leaf=0.15,  #0.15
         beta_root=0.3,  #0.2
-        lig_leaf=0.05,  #0.09
+        lig_leaf=0.005,  #0.09
         f_leaf2metlit=0.01,
         f_root2metlit=0.01,
-        k_leaf=1/(5*365), #3
-        k_root=1/(15*365), #10
-        k_wood=1/(80*365), #60
-        k_metlit=0.1/(0.2*365), #0.1
-        k_mic=0.06/(0.137*365),
+        k_leaf=1/(10*365), #3
+        k_root=1/(27*365), #10
+        k_wood=1/(150*365), #60
+        k_metlit=0.1/(0.25*365), #0.1
+        k_mic=0.05/(0.137*365),
         k_slowsom=0.06/(5*365),
-        k_passsom=0.07/(222.22*365), #0.06
+        k_passsom=0.03/(222.22*365), #0.06
         C_metlit_0=clitter[0]/100,
         C_strlit_0=clitter[0]/100,
         C_mic_0=csoil[0]/100,
@@ -91,18 +91,18 @@ c_min = np.array(
 
 c_max = np.array(
     EstimatedParameters(
-        beta_leaf=0.4,   #1
+        beta_leaf=0.5,   #1
         beta_root=0.8,   #1
-        lig_leaf=0.21,		    
+        lig_leaf=0.1,
         f_leaf2metlit=1,		    
         f_root2metlit=1,		    
-        k_leaf=1/(2*365), #0.8
-        k_root=1/(2*365), #0.6
-        k_wood=1/(10*365),  #10
-        k_metlit=1/(0.2*365), #0.1
-        k_mic=0.6/(0.137*365),
+        k_leaf=1/(6*365), #0.8
+        k_root=1/(4*365), #0.6
+        k_wood=1/(12*365),  #10
+        k_metlit=1/(0.25*365), #0.1
+        k_mic=0.5/(0.137*365),
         k_slowsom=0.6/(5*365),
-        k_passsom=0.7/(222.22*365), #0.6
+        k_passsom=0.3/(222.22*365), #0.6
         C_metlit_0=clitter[0]/5,  #1
         C_strlit_0=clitter[0]/5,  #1
         C_mic_0=csoil[0]/3,	    
@@ -161,7 +161,7 @@ C_demo, J_demo = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
-        nsimu=1000
+        nsimu=20000
 )
 # save the parameters and costfunctionvalues for postprocessing 
 pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
@@ -181,7 +181,7 @@ C_formal, J_formal = mcmc(
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
         #nsimu=20000
-        nsimu=1000
+        nsimu=20000
 )
 formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
 formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
