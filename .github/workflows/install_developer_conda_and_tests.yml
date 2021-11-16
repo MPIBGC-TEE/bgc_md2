@@ -12,13 +12,15 @@ jobs:
         #python-version: [3.6,3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout repo and submodules
+      uses: actions/checkout@v2
       with:
+        submodules: recursive
+        #remote: # optional
         repository: MPIBGC-TEE/bgc_md2
         token: ${{ secrets.ACCESS_TOKEN }}
 
-    - uses: textbook/git-checkout-submodule-action@master
-      #- uses: jwsi/submodule-checkout@v1
+    
     - name: Set up conda 
       uses: s-weigand/setup-conda@v1
       with:

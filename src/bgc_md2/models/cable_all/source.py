@@ -18,6 +18,8 @@ from sympy import (
     Piecewise,
     exp,
 )
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
     InputTuple,
@@ -32,8 +34,6 @@ from bgc_md2.resolve.mvars import (
 )
 from ..BibInfo import BibInfo
 
-# from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
 
 sym_dict = {
     "leaf": "",
@@ -222,7 +222,7 @@ B=CompartmentalMatrix(
     HadamardProduct(xi,A*k)
 )
 print(A.shape, k.shape, xi.shape)
-mvs = MVarSet(
+mvs = CMTVS(
     {
         BibInfo(  # Bibliographical Information
             name="cable",
@@ -242,5 +242,6 @@ mvs = MVarSet(
         # vegetation carbon partitioning.
         # VegetationCarbonInputPartitioningTuple(b),
         # VegetationCarbonStateVariableTuple((C_il, C_is, C_ir)),
-    }
+    },
+    bgc_md2_computers()
 )

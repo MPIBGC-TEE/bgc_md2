@@ -7,8 +7,8 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 from ..BibInfo import BibInfo 
-#from bgc_md2.resolve.MVarSet import MVarSet
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict = {
         'C_s': 'carbon stock in soil organic matter' # "\\text{quantitiy of carbon}"
@@ -38,19 +38,22 @@ B = CompartmentalMatrix([[0,              0,                        s-A,        
                          [0,              0, A-s-r+alpha*r/(alpha-beta),  i/(alpha-beta)],
                          [0,              0,                          0,              -i]])
 
-mvs = MVarSet({
-    BibInfo(# Bibliographical Information
-        name="FB2005 - The C-N model of SOM dynamics with a single type of decomposer (model 3)",
-        longName="The C-N model of SOM dynamics, two decomposer types", 
-        version="2 - N limitation",
-        entryAuthor="Holger Metzler",
-        entryAuthorOrcid="0000-0002-8239-1601",
-        entryCreationDate="22/03/2016",
-        doi="10.1111/j.1461-0248.2005.00813.x",
-        sym_dict=sym_dict
-    ),
-    B,  # the overall compartmental matrix
-    u,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-})
+mvs = CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="FB2005 - The C-N model of SOM dynamics with a single type of decomposer (model 3)",
+            longName="The C-N model of SOM dynamics, two decomposer types", 
+            version="2 - N limitation",
+            entryAuthor="Holger Metzler",
+            entryAuthorOrcid="0000-0002-8239-1601",
+            entryCreationDate="22/03/2016",
+            doi="10.1111/j.1461-0248.2005.00813.x",
+            sym_dict=sym_dict
+        ),
+        B,  # the overall compartmental matrix
+        u,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    },
+    bgc_md2_computers()
+)

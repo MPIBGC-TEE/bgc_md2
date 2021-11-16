@@ -11,6 +11,8 @@ agedensEq=read.csv("start_age_dens.csv")
 agedens=read.csv("Emmanuel_age_dens.csv")
 bttdens=read.csv('backward_transit_time_densities.csv')
 bttmeans=read.csv('backward_transit_time_mean_and_median.csv')
+gpp=read.csv('GPP.csv')
+re=read.csv('Re.csv')
 
 pool_names=c("Non-woody tree parts", "Woody tree parts", "Ground vegetation", "Detritus/Decomposers", "Soil" )
 
@@ -130,4 +132,28 @@ longftt=as.vector(ftt)
 pdf('Figures/BTTAge.pdf')
 plot(calyr, bttmeans$meanBTT/meanAges$System.Age, type="l", xlab="Calendar year",
      ylab="Mean BTT:Mean Age ratio", ylim=c(0.1,0.3), bty="n")
+dev.off()
+
+#### Correlations between Respiration and GPP
+GPP=rowSums(gpp)
+Ra=rowSums(re[,1:3])
+Rh=rowSums(re[,4:5])
+Re=rowSums(re)
+
+pdf("Figures/RaGPP.pdf")
+plot(calyr,GPP, col=4,type="l", ylim=c(0,200), xlab="Calendar year", ylab=expression(paste("GPP or Ra (Pg C y", r^-1, ")")), bty="n")
+lines(calyr, Ra,col=2)
+legend("bottomleft", c("GPP", "Ra"), lty=1,col=c(4,2),bty="n")
+dev.off()
+
+pdf("Figures/corRaGPP.pdf")
+ccf(Ra,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
+dev.off()
+
+pdf("Figures/corRhGPP.pdf")
+ccf(Rh,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
+dev.off()
+
+pdf("Figures/corReGPP.pdf")
+ccf(Re,GPP, ylab="Correlation coefficient", xlab="Lag (yr)")
 dev.off()

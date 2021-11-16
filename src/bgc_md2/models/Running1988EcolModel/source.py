@@ -14,7 +14,8 @@ from bgc_md2.resolve.mvars import (
     NumericSimulationTimes,
    )
 from ..BibInfo import BibInfo 
-from bgc_md2.helper import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import bgc_md2_computers
 
 sym_dict={
         'C_f': 'Carbon in foliage',
@@ -86,23 +87,26 @@ np4 = NumericParameterization(
     func_dict=frozendict({})
 )
 
-mvs=MVarSet({
-    BibInfo(# Bibliographical Information
-        name="FOREST-BGC",
-        longName="", 
-        version="1",
-        entryAuthor="Verónika Ceballos-Núñez",
-        entryAuthorOrcid="0000-0002-0046-1160",
-        entryCreationDate="17/7/2015",
-        doi= "10.1016/0304-3800(88)90112-3",
-        sym_dict=sym_dict
-    ),
-    A,  # the overall compartmental matrix
-    Input,  # the overall input
-    t,  # time for the complete system
-    x,  # state vector of the complete system
-#    VegetationCarbonInputScalar(u),
-#    VegetationCarbonInputPartitioningTuple(b),
-    VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
-#    np1
-})
+mvs=CMTVS(
+    {
+        BibInfo(# Bibliographical Information
+            name="FOREST-BGC",
+            longName="", 
+            version="1",
+            entryAuthor="Verónika Ceballos-Núñez",
+            entryAuthorOrcid="0000-0002-0046-1160",
+            entryCreationDate="17/7/2015",
+            doi= "10.1016/0304-3800(88)90112-3",
+            sym_dict=sym_dict
+        ),
+        A,  # the overall compartmental matrix
+        Input,  # the overall input
+        t,  # time for the complete system
+        x,  # state vector of the complete system
+    #    VegetationCarbonInputScalar(u),
+    #    VegetationCarbonInputPartitioningTuple(b),
+        VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
+    #    np1
+    },
+    bgc_md2_computers()
+)

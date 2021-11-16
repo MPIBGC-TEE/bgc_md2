@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.2
+#       jupytext_version: 1.13.0
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -67,12 +67,12 @@ for i in range(4):
     grid[i, 1] = HTMLMath(
         value=r"Some math and <i>HTML</i>: \(x^2\) and $$\frac{x+1}{x-1}$$",
         placeholder="Some HTML",
-        description="Some HTML",
+        description="Some HTML"
     )
 
 grid
 # -
-A = Matrix([[1, 2], [2, Symbol("x")]])
+A = Matrix([[1, 2], [2, Symbol("sigma")]])
 
 
 out = widgets.Output()
@@ -138,9 +138,9 @@ box
 
 
 # +
-from bgc_md2.models.helpers import computable_mvars
-from bgc_md2.models.helpers import get_single_mvar_value
+from ComputabilityGraphs import CMTVS
 from bgc_md2.resolve.mvars import CompartmentalMatrix
+import bgc_md2.helper as h
 from sympy import latex
 
 import nbformat as nbf
@@ -148,10 +148,10 @@ import pkgutil
 import matplotlib.pyplot as plt
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
-model_name = "Williams2005GCB"
-
+record = h.CMTVS_from_model_name("Williams2005GCB")
 target_var = SmoothReservoirModel
-srm = get_single_mvar_value(target_var, model_name)
+srm = record._get_single_value(target_var)
+
 graph_out = widgets.Output()
 with graph_out:
     fig = plt.figure()
@@ -178,3 +178,42 @@ box = widgets.VBox(
 
 box
 # -
+from ipywidgets import Layout, Button, Box, VBox, Label, HTMLMath
+cw1='60%'
+cw2='30%'
+items1 = [
+    Button(
+        layout= Layout(height='auto', min_width=cw1),
+        description=str(1),
+        button_style='warning'
+    ),
+    Button(
+        layout= Layout(height='auto', min_width=cw2),
+        description=str(2),
+        button_style='warning'
+    ),
+]
+items2 = [
+    HTMLMath(
+        value=r"Some math and <i>HTML</i>: \(x^2\) and $$\frac{x+1}{x-1}$$",
+        layout= Layout(height='auto', min_width=cw1),
+        description=str(1),
+    ),
+    Button(
+        layout= Layout(height='auto', min_width=cw2),
+        description=str(2),
+        button_style='warning'
+    ),
+]
+box_layout = Layout(overflow='scroll hidden',
+                    border='3px solid black',
+                    width='500px',
+                    height='',
+                    flex_flow='row',
+                    display='flex')
+line1= Box(children=items1, layout=box_layout)
+line2= Box(children=items2, layout=box_layout)
+VBox([Label('Scroll horizontally:'), line1,line2])
+
+
+
