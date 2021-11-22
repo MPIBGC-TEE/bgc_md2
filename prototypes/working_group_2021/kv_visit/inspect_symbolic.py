@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -33,5 +33,14 @@ from IPython.display import Math
 
 
 display(Math("\\text{InputTuple}"))
+
+from sympy import Piecewise, symbols, lambdify
+KM, E=symbols("KM, E")
+f=Piecewise((2, KM < 0), (5, E > 5), (3, True))
+
+# +
+# lambdify?
+
+# -
 
 
