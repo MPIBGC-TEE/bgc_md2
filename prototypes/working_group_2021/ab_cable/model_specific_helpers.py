@@ -213,19 +213,78 @@ def get_example_site_vars(dataPath):
     cwood = cveg - cleaf - croot; 
     return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
 
+# get global sum of variables - modification of make_global_average.py from Jon model.
+
+def grad2rad(alpha):
+    return np.pi/180.0 * alpha
+
+def area(lat):
+    delta_phi=1
+    delta_theta=1
+    r= 6378.1370 #km
+    # translate to normal spherical coordinates
+    theta=(90.0-lat)
+    theta, delta_theta, delta_phi = map(
+        grad2rad,
+        (
+            theta,
+            delta_theta,
+            delta_phi,
+        )
+    )
+    return A_fun(theta,delta_theta,delta_phi)*r
 
 def get_global_sum_vars(dataPath):
     var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd = get_variables_from_files(dataPath)
 
-    npp= var_npp.sum((1,2))* 86400   #   kg/m2/s kg/m2/day;
-    rh= var_rh.sum((1,2))*86400;   # per s to per day
-    clitter = var_clitter.sum((1,2));
-    csoil = var_csoil.sum((1,2));
-    cveg = var_cveg.sum((1,2));
-    cleaf = var_cleaf.sum((1,2));
-    croot = var_croot.sum((1,2));
-    ccwd = var_ccwd.sum((1,2));
+    longs = var_npp.variables['longitude'].__array__()
+    lats = var_npp.variables['latitude'].__array__()
+    # We assume that lat,lon actually specifies the center of the gridcell
+    # and that it extends from lat-0.5 to lat+0.5 and long-0.5
+    for v in ('theta', 'phi', 'delta_theta', 'delta_phi', 'r'):
+        var(v)
+
+    # we compute the are of a delta_phi * delta_theta patch
+    # on the unit ball (which depends also on theta but not
+    # on phi)
+    A_sym = integrate(
+        integrate(
+            sin(theta),
+            (theta, theta - delta_theta / 2, theta + delta_theta / 2)
+        ),
+        (phi, phi - delta_phi / 2, phi + delta_phi / 2)
+    )
+
+    A_fun = lambdify((theta, delta_theta, delta_phi), A_sym)
+
+    weights = np.array(list(map(area, lats)))
+
+    npp_lon_sum = var_npp.sum(axis=2)*86400 #   kg/m2/s kg/m2/day;
+    npp = (npp_lon_sum*weights).sum(axis=1);
+
+    rh_lon_sum = var_rh.sum(axis=2)*86400;   # per s to per day
+    rh = (rh_lon_sum*weights).sum(axis=1);
+
+    clitter_lon_sim = var_clitter.sum(axis=2);
+    clitter = (clitter_lon_sim*weights).sum(axis=1);
+
+    csoil_lon_sum = var_csoil.sum(axis=2);
+    csoil = (csoil_lon_sum*weights).sum(axis=1);
+
+    cveg_lon_sum = var_cveg.sum(axis=2);
+    cveg = (cveg_lon_sum * weights).sum(axis=1);
+
+    cleaf_lon_sum = var_cleaf.sum(axis=2);
+    cleaf= (cleaf_lon_sum * weights).sum(axis=1);
+
+    croot_lon_sum = var_croot.sum(axis=2);
+    croot = (croot_lon_sum * weights).sum(axis=1);
+
+    ccwd_lon_sum = var_ccwd.sum(axis=2);
+    ccwd = (ccwd_lon_sum * weights).sum(axis=1);
+
     cwood = cveg - cleaf - croot;
+
     return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
 
 def make_param_filter_func(
