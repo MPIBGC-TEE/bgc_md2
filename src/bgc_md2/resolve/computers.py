@@ -15,7 +15,10 @@ from .mvars import (
     NitrogenInternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    StateVariableTupleTimeDerivative,
     CarbonStateVariableTuple,
+    CarbonStoragePotential,
+    CarbonStorageCapacity,
     NitrogenStateVariableTuple,
     CompartmentalMatrix,
     CarbonCompartmentalMatrix,
@@ -138,6 +141,56 @@ def vegetation_carbon_compartmental_matrix_1(
         vcsvt
     )
     return VegetationCarbonCompartmentalMatrix(cm)
+
+@lru_cache
+def stateVariableTupleTimeDerivative(
+    u: InputTuple,
+    B: CompartmentalMatrix,
+    #time_symbol: TimeSymbol,
+    state_variable_tuple: StateVariableTuple,
+) -> StateVariableTupleTimeDerivative:
+    return u + B * state_variable_tuple
+
+@lru_cache
+def stateVariableTupleTimeDerivative(
+    u: InputTuple,
+    B: CompartmentalMatrix,
+    #time_symbol: TimeSymbol,
+    state_variable_tuple: StateVariableTuple,
+) -> StateVariableTupleTimeDerivative:
+    return u + B * state_variable_tuple
+
+def carbonStorageCapacity(
+    M :CompartmentalMatrix,
+    I: InputTuple
+)->CarbonStorageCapacity:
+    # see doi:10.5194/bg-14-145-2017
+    # equation (2) second term
+    # in Yiqi's nomenclature the 
+    # pool contents X(t) can be expressed as 
+    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+    # I(t)  = B u(t)
+    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+    # so the first term is
+    # C_s =M_inv(t) I(t)
+    return M.inv()*I
+    
+def carbonStoragePotential(
+    M :CompartmentalMatrix,
+    dXdT: StateVariableTupleTimeDerivative
+    )->CarbonStorageCapacity:
+    # see doi:10.5194/bg-14-145-2017
+    # equation (2) second term
+    # in Yiqi's nomenclature the 
+    # pool contents X(t) can be expressed as 
+    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+    # I(t)  = B u(t)
+    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+    # so the second term is
+    # C_p=M_inv(t) dx/dt
+    return M.inv()*dXdt
 
 @lru_cache
 def smooth_reservoir_model_from_fluxes(

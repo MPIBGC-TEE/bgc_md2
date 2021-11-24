@@ -40,7 +40,7 @@ class TestCommon(InDirTest):
 	    k_slowsom=0.3/(365*5),
 	    k_passsom=0.3/(222.22*365),
 	    C_metlit_0=0.05,
-	    CWD_0=0.1,
+	    C_CWD_0=0.1,
 	    C_mic_0=1,
 	    C_passom_0=5,
         )
@@ -54,7 +54,7 @@ class TestCommon(InDirTest):
             C_wood=cwood[0],
             C_metlit=epa0[12],
             C_stlit=epa0[13],
-            CWD=clitter[0]-epa0[12]-epa0[13],
+            C_CWD=clitter[0]-epa0[12]-epa0[13],
             C_mic=epa0[14],
             C_slowsom=csoil[0]- epa0[14] - epa0[15],
             C_passsom=epa0[15]

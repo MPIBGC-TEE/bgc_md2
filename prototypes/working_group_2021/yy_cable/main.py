@@ -122,7 +122,7 @@ cpa = UnEstimatedParameters(
     f_wood2CWD=1, 
     f_metlit2mic=0.45
 )
-param2res = make_param2res(cpa) 
+param2res = make_param2res_sym(cpa) 
 epa_0 = EstimatedParameters(
     beta_leaf=0.15,
     beta_root=0.2,
@@ -149,25 +149,16 @@ costfunction=make_weighted_cost_func(obs)
 # Look for data from the demo run and use it to compute the covariance matrix if necessarry
 demo_aa_path = dataPath.joinpath('cable_demo_da_aa.csv')
 demo_aa_j_path = dataPath.joinpath('cable_demo_da_j_aa.csv')
-if not demo_aa_path.exists():
-
-    print("Did not find demo run results. Will perform  demo run")
-    C_demo, J_demo = mcmc(
-            initial_parameters=epa_0,
-            proposer=uniform_prop,
-            param2res=param2res,
-            costfunction=costfunction,
-            nsimu=200
-    )
-    # save the parameters and costfunctionvalues for postprocessing 
-    pd.DataFrame(C_demo).to_csv(demo_aa_path,sep=',')
-    pd.DataFrame(J_demo).to_csv(demo_aa_j_path,sep=',')
-else:
-    print("""Found {p} from a previous demo run. 
-    If you also want to recreate the demo output then move the file!
-    """.format(p = demo_aa_path)) 
-    C_demo = pd.read_csv(demo_aa_path).to_numpy()
-    J_demo = pd.read_csv(demo_aa_j_path).to_numpy() 
+C_demo, J_demo = mcmc(
+        initial_parameters=epa_0,
+        proposer=uniform_prop,
+        param2res=param2res,
+        costfunction=costfunction,
+        nsimu=60000
+)
+# save the parameters and costfunctionvalues for postprocessing 
+pd.DataFrame(C_demo).to_csv(demo_aa_path,sep=',')
+pd.DataFrame(J_demo).to_csv(demo_aa_j_path,sep=',')
 
 # build a new proposer based on a multivariate_normal distribution using the
 # estimated covariance of the previous run if available first we check how many
@@ -184,24 +175,16 @@ normal_prop = make_multivariate_normal_proposer(
 # Look for data from the formal run and use it  for postprocessing 
 formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
 formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
-if not formal_aa_path.exists():
-    print("Did not find results. Will perform formal run")
-    C_formal, J_formal = mcmc(
-            initial_parameters=epa_0,
-            proposer=normal_prop,
-            param2res=param2res,
-            costfunction=costfunction,
-            nsimu=200
-    )
-    pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
-    pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
+C_formal, J_formal = mcmc(
+        initial_parameters=epa_0,
+        proposer=normal_prop,
+        param2res=param2res,
+        costfunction=costfunction,
+        nsimu=60000
+)
+pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
+pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
 
-else:
-    print("""Found {p} from a previous demo run. 
-If you also want recreate the output then move the file!
-""".format(p = formal_aa_path)) 
-    C_formal = pd.read_csv(formal_aa_path).to_numpy()
-    J_formal = pd.read_csv(formal_aa_j_path).to_numpy() 
 
 # POSTPROCESSING 
 #

@@ -159,6 +159,35 @@ class StateVariableTuple(ColumnVectorLike):
     on the ordering and have to be consistent."""
     pass
 
+class StateVariableTupleTimeDerivative(ColumnVectorLike):
+    pass
+
+class CarbonStorageCapacity(ColumnVectorLike):
+    # see doi:10.5194/bg-14-145-2017
+    # equation (2) 
+    # in Yiqi's nomenclature the 
+    # pool contents X(t) can be expressed as 
+    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+    # I(t)  = B u(t) (Input Vector)
+    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+    # so the first term is
+    # C_p=M_inv(t) dx/dt
+    pass
+
+class CarbonStoragePotential(ColumnVectorLike):
+    # see doi:10.5194/bg-14-145-2017
+    # equation (2) second term
+    # in Yiqi's nomenclature the 
+    # pool contents X(t) can be expressed as 
+    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+    # I(t)  = B u(t)
+    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+    # so the second term is
+    # C_p=M_inv(t) dx/dt
+    pass
+
 class VegetationCarbonStateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
