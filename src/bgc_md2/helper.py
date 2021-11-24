@@ -157,60 +157,6 @@ def funcmakerInsertLinkInToBox(grid, name):
     return insert_link
 
 
-#def modelVBox(model_name):
-#    mvs = CMTVS.from_model_name(model_name)
-#    # on demand computation is used
-#    # I am aware of the possibility of mvs.computable_mvars
-#    cmvs = computable_mvars(model_name)
-#    target_var = SmoothReservoirModel
-#    pictlist = []
-#    if target_var in cmvs:
-#        srm = mvs._get_single_mvar_value(target_var)
-#        graph_out = widgets.Output()
-#        fig = plt.figure()
-#        rect = 0, 0, 0.8, 1.2  # l, b, w, h
-#        ax = fig.add_axes(rect)
-#        with graph_out:
-#            ax.clear()
-#            srm.plot_pools_and_fluxes(ax)
-#            display(ax.figure)
-#        pictlist = [graph_out]
-#
-#    box = widgets.VBox(
-#        [
-#            widgets.HTML(
-#                value="""
-#                <h1>{name}</h1>
-#                Overview 
-#                """.format(
-#                    name=model_name
-#                )
-#            ),
-#            widgets.HTML(
-#                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-#                + "<ol>\n"
-#                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
-#                + "</ol>\n"
-#            ),
-#        ]
-#        + pictlist
-#        + [
-#            latex_render(
-#                var,
-#                mvs._get_single_value(var),
-#            )
-#            for var in mvs.computable_mvar_types()
-#          ]
-#    )
-#    b = widgets.Button(
-#        layout=widgets.Layout(width="auto", height="auto"),
-#        description="Create notebook from template",
-#    )
-#    b.on_click(funcmakerInsertLinkInToBox(box, model_name))
-#    box.children += (b,)
-#    return box
-
-
 ##############################################################################
 
 
