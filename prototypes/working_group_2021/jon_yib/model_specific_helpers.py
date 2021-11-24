@@ -211,23 +211,31 @@ def get_example_site_vars(dataPath):
 
 def make_param_filter_func(
         c_max: np.ndarray,
-        c_min: np.ndarray
+        c_min: np.ndarray,
+        c_veg,
+        c_soil 
         ) -> Callable[[np.ndarray], bool]:
 
     def isQualified(c):
         # fixme
         #   this function is model specific: It discards parameter proposals
         #   where beta1 and beta2 are > 0.99
+        #   checks for soil/veg sums as well
         #print("Is Qualified was called")
         paramNum = len(c)
         flag = True
         for i in range(paramNum):
-           if(c[i] > c_max[i] or c[i] < c_min[i]):
-              flag = False
-              break
-           if(c[0] + c[1] > 0.99):
-              flag = False
-              break
+            if(c[i] > c_max[i] or c[i] < c_min[i]):
+                flag = False
+                break
+        if(c[0] + c[1] > 0.99):
+            flag = False
+        if(np.sum(c[17:18]) > 0.99*c_veg):
+            flag = False
+        if(np.sum(c[19:26]) > 0.99*c_soil):
+            flag = False
+        if((c[14] > 0.99) or (c[15] > 0.99) or (c[16] > 0.99)):
+            flag = False
         return flag
     
     return isQualified
@@ -322,26 +330,26 @@ def make_param2res(
         b[1] = beta_root   #remember python n starts at zero
         b[2] = beta_wood
 
-        # define transfer values for A matrix
-        f_samet_leaf = epa.f_samet_leaf     #optimized: leaf -> surface metabolic
-        f_sastr_leaf = (1-f_samet_leaf-0.2) #remainder to surface str minus 20% loss
-        f_slmet_root = epa.f_slmet_root     #optimized: root -> soil metabolic
-        f_slstr_root = (1-f_slmet_root-0.2) #remainder to soil str minus 20% loss
-        f_cwd_wood = 0.4                   #fixed - made up values so far
-        f_samic_cwd = epa.f_samic_cwd               #optimized: cwd ->  surface microbial
-        f_slow_cwd = (1-f_samic_cwd-0.2)    #remainder to slow soil minus 20% loss
-        f_samic_samet = 0.3                #fixed - made up values so far
-        f_samic_sastr = 0.1                #fixed - made up values so far
-        f_slow_sastr = 0.1                 #fixed - made up values so far
-        f_slow_samic = 0.1                 #fixed - made up values so far
-        f_slmic_slmet = 0.4                #fixed - made up values so far
-        f_slmic_slstr = 0.3                #fixed - made up values so far
-        f_slow_slstr = 0.2                 #fixed - made up values so far
-        f_slow_slmic = 0.2                 #fixed - made up values so far
-        f_arm_slmic = 0.1                  #fixed - made up values so far
-        f_slmic_slow = 0.15                #fixed - made up values so far
-        f_arm_slow = 0.45*(0.003+0.009*cpa.clay)	#copied CABLES slow to passive
-        f_slmic_arm = 0.15                 #fixed - made up values so far
+        # define transfer values for A matrix    
+        f_samet_leaf = epa.f_samet_leaf * epa.k_leaf     #optimized: leaf -> surface metabolic
+        f_sastr_leaf = (1-f_samet_leaf) * epa.k_leaf     #remainder to surface str 
+        f_slmet_root = epa.f_slmet_root * epa.k_root     #optimized: root -> soil metabolic
+        f_slstr_root = (1-f_slmet_root) * epa.k_root     #remainder to soil str 
+        f_cwd_wood = 0.4 * epa.k_wood                    #fixed - made up values so far
+        f_samic_cwd = epa.f_samic_cwd * epa.k_cwd        #optimized: cwd ->  surface microbial
+        f_slow_cwd = (1-f_samic_cwd) * epa.k_cwd         #remainder to slow soil 
+        f_samic_samet = 0.3 * epa.k_samet                #fixed - made up values so far
+        f_samic_sastr = 0.1 * epa.k_sastr                #fixed - made up values so far
+        f_slow_sastr = 0.1 * epa.k_sastr                 #fixed - made up values so far
+        f_slow_samic = 0.1 * epa.k_samic                 #fixed - made up values so far
+        f_slmic_slmet = 0.4 * epa.k_slmet                #fixed - made up values so far
+        f_slmic_slstr = 0.3 * epa.k_slstr                #fixed - made up values so far
+        f_slow_slstr = 0.2 * epa.k_slstr                 #fixed - made up values so far
+        f_slow_slmic = 0.4 * epa.k_slmic                 #fixed - made up values so far
+        f_arm_slmic = 0.4 * epa.k_slmic                  #fixed - made up values so far
+        f_slmic_slow = 0.10 * epa.k_slow                 #fixed - made up values so far
+        f_arm_slow = 0.45*(0.003+0.009*cpa.clay) * epa.k_slow	#copied CABLES slow to passive
+        f_slmic_arm = 0.10 * epa.k_arm                   #fixed - made up values so far
         
         #create A matrix
         A = np.zeros(abh*aw).reshape([abh,aw])  #create empty A matrix
@@ -400,7 +408,7 @@ def make_param2res(
             [
                 epa.C_leaf_0,
                 epa.C_root_0,
-                cpa.C_veg_0 - epa.C_leaf_0 - epa.C_root_0 ,
+                cpa.C_veg_0 - epa.C_leaf_0 - epa.C_root_0,
                 epa.C_cwd_0,
                 epa.C_samet_0,
                 epa.C_sastr_0,
@@ -409,7 +417,7 @@ def make_param2res(
                 epa.C_slstr_0,
                 epa.C_slmic_0,
                 epa.C_slow_0,
-                cpa.C_soil_0 - epa.C_slmet_0 - epa.C_slstr_0 - epa.C_slmic_0 - epa.C_slow_0
+                cpa.C_soil_0 - epa.C_slmet_0 - epa.C_slstr_0 - epa.C_slmic_0 - epa.C_slow_0 - epa.C_cwd_0 - epa.C_samet_0 - epa.C_sastr_0 - epa.C_samic_0
             ]
         ).reshape([12,1])
         X=x_init   # initialize carbon pools 
@@ -428,21 +436,21 @@ def make_param2res(
                         0,
                         0,
                         0, 
-                        (1-f_samic_cwd-f_slow_cwd)*K[3,3], 
-                        (1-f_samic_samet)*K[4,4], 
-                        (1-f_samic_sastr-f_slow_sastr)*K[5,5], 
-                        (1-f_slow_samic)*K[6,6], 
-                        (1-f_slmic_slmet)*K[7,7], 
-                        (1-f_slmic_slstr-f_slow_slstr)*K[8,8], 
-                        (1-f_slow_slmic-f_arm_slmic)*K[9,9], 
-                        (1-f_slmic_slow-f_arm_slow)*K[10,10], 
-                        (1-f_slmic_arm)*K[11,11]
+                        (K[3,3]-f_samic_cwd-f_slow_cwd), 
+                        (K[4,4]-f_samic_samet), 
+                        (K[5,5]-f_samic_sastr-f_slow_sastr), 
+                        (K[6,6]-f_slow_samic), 
+                        (K[7,7]-f_slmic_slmet), 
+                        (K[8,8]-f_slmic_slstr-f_slow_slstr), 
+                        (K[9,9]-f_slow_slmic-f_arm_slmic), 
+                        (K[10,10]-f_slmic_slow-f_arm_slow), 
+                        (K[11,11]-f_slmic_arm)
                     ]
                     #similarly calculate autotrophic respiration ra
                     co2_arate = [
-                        (1-f_samet_leaf-f_sastr_leaf)*K[0,0], 
-                        (1-f_slmet_root-f_slstr_root)*K[1,1],
-                        (1-f_cwd_wood)*K[2,2],
+                        (K[0,0]-f_samet_leaf-f_sastr_leaf), 
+                        (K[1,1]-f_slmet_root-f_slstr_root),
+                        (K[2,2]-f_cwd_wood),
                         0,
                         0,
                         0,
@@ -488,10 +496,10 @@ def make_param2res(
         # 'slmic',
         # 'slow',
         # 'arm'
-        # x_veg = Leaf + wood + root ?
-        x_veg = np.sum(x_fin[:,0:3],axis=1).reshape(cpa.nyears,1)
+        # x_veg = Leaf + wood + root + ?
+        x_veg = np.sum(x_fin[:,0:6],axis=1).reshape(cpa.nyears,1)
         # x_soil = C_slmet + C_slstr + C_slmic + C_slow +C_arm
-        x_soil = np.sum(x_fin[:,7:12],axis=1).reshape(cpa.nyears,1)
+        x_soil = np.sum(x_fin[:,7:11],axis=1).reshape(cpa.nyears,1)
             
         out_simu = np.concatenate(
             [
