@@ -36,11 +36,11 @@ with Path('config.json').open(mode='r') as f:
 
 dataPath = Path(conf_dict['dataPath'])
 
-#npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath) # site runs
-npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_global_sum_vars(dataPath)  # global run
+npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath) # site runs
+#npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood = get_global_sum_vars(dataPath)  # global run
 
 #nyears=320
-nyears = 10 # reduced time span for testing purposes
+nyears = 320 # reduced time span for testing purposes
 tot_len = 12*nyears
 obs_tup=Observables(
     C_leaf=cleaf,
@@ -90,7 +90,7 @@ c_min = np.array(
         C_metlit_0=clitter[0]/100,
         C_strlit_0=clitter[0]/100,
         C_mic_0=csoil[0]/100,
-        C_passom_0=csoil[0]/2
+        C_passom_0=csoil[0]/5
     )
 )
 
@@ -163,7 +163,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=10000,
+    nsimu=5000,
     c_max=c_max,
     c_min=c_min,
     acceptance_rate=10,   # default value | target acceptance rate in %
@@ -171,8 +171,8 @@ C_autostep, J_autostep = autostep_mcmc(
     D_init=1   # default value | increase value to reduce initial step size
 )
 # save the parameters and cost function values for postprocessing
-pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('visit_autostep_da_aa.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('visit_autostep_da_j_aa.csv'), sep=',')
+pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('cable_autostep_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('cable_autostep_da_j_aa.csv'), sep=',')
 
 
 # calculate maximum likelihood for each parameter as a peak of posterior distribution
@@ -211,7 +211,7 @@ C_demo, J_demo = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
-        nsimu=100
+        nsimu=5000
 )
 # save the parameters and costfunctionvalues for postprocessing 
 pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
@@ -239,7 +239,7 @@ C_formal, J_formal = adaptive_mcmc(
     param2res=param2res,
     # costfunction=make_weighted_cost_func(obs)
     costfunction=make_feng_cost_func(obs),
-    nsimu=10000,
+    nsimu=5000,
     sd_controlling_factor=1  # default value | increase value to reduce step size
 )
 # save the parameters and cost function values for postprocessing
@@ -267,7 +267,7 @@ pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'),
 # parameters is very difficult to visualize in its entirety.
 # to do: 
 #   a) make a movie of color coded samples  of the a priori distribution of the parameters.
-#   b) -"-                                  of the a posteriory distribution -'- 
+#   b) -"-                                  of the a posterior distribution -'-
 
 # Therefore the  following visualizations have to be considered with caution:
 # 1.
@@ -280,23 +280,23 @@ pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'),
 # decomposed in this way. (Due to the fact that the Metropolis Hastings Alg. does not
 # produce independent samples )
 
-# df = pd.DataFrame({name: C_formal[:, i] for i, name in enumerate(EstimatedParameters._fields)})
-# subplots = df.hist()
-# fig = subplots[0, 0].figure
-# fig.set_figwidth(15)
-# fig.set_figheight(15)
-# fig.savefig('histograms.pdf')
+df = pd.DataFrame({name: C_formal[:, i] for i, name in enumerate(EstimatedParameters._fields)})
+subplots = df.hist()
+fig = subplots[0, 0].figure
+fig.set_figwidth(15)
+fig.set_figheight(15)
+fig.savefig('histograms.pdf')
 
 # As the next best thing we can create a matrix of plots containing all 
 # projections to possible  parameter tuples
 # (like the pairs plot in the R package FME) but 16x16 plots are too much for one page..
 # However the plot shows that we are dealing with a lot of collinearity for this  parameter set
 
-# subplots = pd.plotting.scatter_matrix(df)
-# fig = subplots[0, 0].figure
-# fig.set_figwidth(15)
-# fig.set_figheight(15)
-# fig.savefig('scatter_matrix.pdf')
+subplots = pd.plotting.scatter_matrix(df)
+fig = subplots[0, 0].figure
+fig.set_figwidth(15)
+fig.set_figheight(15)
+fig.savefig('scatter_matrix.pdf')
 
 # 2.
 # another way to get an idea of the quality of the parameter estimation is
@@ -305,13 +305,13 @@ pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'),
 # vector is the mean which is an estimator of  the expected value of the
 # desired distribution.
 
-# fig = plt.figure()
-# plot_solutions(
-#     fig,
-#     times=range(sol_median_formal.shape[0]),
-#     var_names=Observables._fields,
-#     tup=(sol_median_formal, obs),
-#     names=('mean', 'obs')
-# )
-# fig.savefig('solutions.pdf')
+fig = plt.figure()
+plot_solutions(
+    fig,
+    times=range(sol_median_formal.shape[0]),
+     var_names=Observables._fields,
+     tup=(sol_median_formal, obs),
+    names=('mean', 'obs')
+ )
+fig.savefig('solutions.pdf')
 
