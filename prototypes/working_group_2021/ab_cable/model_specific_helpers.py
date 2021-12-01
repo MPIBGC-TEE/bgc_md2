@@ -30,7 +30,6 @@ UnEstimatedParameters = namedtuple(
         'C_root_0',
         'C_wood_0',
         'c_litter_0',
-        'C_cwd_0',
         'c_soil_0',
         'rh_0',
         'clay',
@@ -214,6 +213,21 @@ def get_example_site_vars(dataPath):
     cwood = cveg - cleaf - croot; 
     return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
 
+
+def get_global_sum_vars(dataPath):
+    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd = get_variables_from_files(dataPath)
+
+    npp= var_npp.sum((1,2))* 86400   #   kg/m2/s kg/m2/day;
+    rh= var_rh.sum((1,2))*86400;   # per s to per day
+    clitter = var_clitter.sum((1,2));
+    csoil = var_csoil.sum((1,2));
+    cveg = var_cveg.sum((1,2));
+    cleaf = var_cleaf.sum((1,2));
+    croot = var_croot.sum((1,2));
+    ccwd = var_ccwd.sum((1,2));
+    cwood = cveg - cleaf - croot;
+    return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
+
 def make_param_filter_func(
         c_max: np.ndarray,
         c_min: np.ndarray
@@ -343,7 +357,8 @@ def make_param2res(
                 cpa.C_wood_0,
                 epa.C_metlit_0,
                 epa.C_strlit_0,
-                cpa.C_cwd_0,
+                cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
+                #cpa.C_cwd_0,
                 epa.C_mic_0,
                 cpa.c_soil_0- epa.C_mic_0 - epa.C_passom_0,
                 epa.C_passom_0
@@ -427,13 +442,13 @@ def make_param2res_2(
     #       to include nonlinearities.
     # 2.)   We build a daily advancing model that can provide output for an arbitrary 
     #       selection of days.  To do so we provide all driver data as
-    #       functions of the smalles timestep (here day with index i), which in
+    #       functions of the smallest timestep (here day with index i), which in
     #       the case of this model means that we provide the same npp value for
     #       all the days in a given month. 
     # 3.)   We translate the index of a given month to the appropriate day index
-    #       and apply the dayly model of 2.). Again this seems cumbersome for this
+    #       and apply the daily model of 2.). Again this seems cumbersome for this
     #       example but allows us to reuse the daily model for all applications.
-    #       This is espacially usefull for testing since we only need some dayly timesteps.
+    #       This is especially useful for testing since we only need some daily timesteps.
     #       It makes it also easier to keep an overview over the appropriate 
     #       units: If the smallest timestep is a day, then all time related parameters
     #       have to be provided in the corresponding  units, regardless of the
@@ -608,9 +623,9 @@ def make_compartmental_matrix_func(
     A[4,1] = 1.0 - mpa.f_root2metlit
     A[5,2] = mpa.f_wood2CWD 
     A[6,3] = mpa.f_metlit2mic 
-    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
+    A[6,4] = mpa.f_metlit2mic * (1.0 - mpa.lig_leaf)
     A[7,4] = 0.7 * mpa.lig_leaf
-    A[7,5] = 0.4 * (1 - mpa.lig_wood)
+    A[7,5] = 0.4 * (1.0 - mpa.lig_wood)
     A[8,5] = 0.7 * mpa.lig_wood
     A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
     A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
@@ -653,7 +668,7 @@ def construct_V0(
         C_wood=cpa.C_wood_0,
         C_metlit=epa.C_metlit_0,
         C_strlit=epa.C_strlit_0,
-        C_cwd=C_cwd_0,
+        C_cwd=cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
         C_mic=epa.C_mic_0,
         C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
         C_passsom=epa.C_passom_0

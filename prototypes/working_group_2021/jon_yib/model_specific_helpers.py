@@ -698,85 +698,234 @@ def make_param2res(
 #        )
 #        
 #
-#def make_compartmental_matrix_func(
+##def make_compartmental_matrix_func(
+##        mpa
+##    ):
+##    # Now construct A matrix
+##    # diagonal 
+##    # make sure to use 1.0 instead of 1 otherwise it will be an interger array
+##    # and round your values....
+##    A =np.diag([-1.0 for i in range(9)]) 
+##    # because of python indices starting at 0 we have A[i-1,j-1]=fij
+##    #
+##    #A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
+##    #                 0,  -1,   0,   0,   0,   0,   0,   0,   0,
+##    #                 0,   0,  -1,   0,   0,   0,   0,   0,   0,
+##    #               f41, f42,   0,  -1,   0,   0,   0,   0,   0,
+##    #               f51, f52,   0,   0,  -1,   0,   0,   0,   0,
+##    #                 0,   0, f63,   0,   0,  -1,   0,   0,   0,
+##    #                 0,   0,   0, f74, f75,   0,  -1,   0,   0,
+##    #                 0,   0,   0,   0, f85, f86, f87,  -1,   0,
+##    #                 0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
+##
+##    # note that the matrix description of a model is implicitly related to the
+##    # order of pools in the state_vector and not independent from it.
+##
+##    A[3,0] = mpa.f_leaf2metlit
+##    A[3,1] = mpa.f_root2metlit
+##    A[4,0] = 1.0 - mpa.f_leaf2metlit
+##    A[4,1] = 1.0 - mpa.f_root2metlit
+##    A[5,2] = mpa.f_wood2CWD 
+##    A[6,3] = mpa.f_metlit2mic 
+##    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
+##    A[7,4] = 0.7 * mpa.lig_leaf
+##    A[7,5] = 0.4 * (1 - mpa.lig_wood)
+##    A[8,5] = 0.7 * mpa.lig_wood
+##    A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
+##    A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
+##    A[8,7] = 0.45 * (0.003 + 0.009 * mpa.clay)
+##
+##    #turnover rate per day of pools: 
+##    K = np.diag([
+##        mpa.k_leaf,
+##        mpa.k_root,
+##        mpa.k_wood,
+##        mpa.k_metlit,
+##        mpa.k_metlit/(5.75*np.exp(-3*mpa.lig_leaf)),
+##        mpa.k_metlit/20.6,
+##        mpa.k_mic,
+##        mpa.k_slowsom,
+##        mpa.k_passsom
+##    ])
+##    # in the general nonautonomous nonlinear case
+##    # B will depend on an it,X (althouh in this case it does not depend on either
+##    def B_func(it,X): 
+##        return A@K
+##
+##    return B_func
+##
+#def run_forward_simulation_sym(
+#        V_init,
+#        day_indices,
 #        mpa
 #    ):
-#    # Now construct A matrix
-#    # diagonal 
-#    # make sure to use 1.0 instead of 1 otherwise it will be an interger array
-#    # and round your values....
-#    A =np.diag([-1.0 for i in range(9)]) 
-#    # because of python indices starting at 0 we have A[i-1,j-1]=fij
-#    #
-#    #A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
-#    #                 0,  -1,   0,   0,   0,   0,   0,   0,   0,
-#    #                 0,   0,  -1,   0,   0,   0,   0,   0,   0,
-#    #               f41, f42,   0,  -1,   0,   0,   0,   0,   0,
-#    #               f51, f52,   0,   0,  -1,   0,   0,   0,   0,
-#    #                 0,   0, f63,   0,   0,  -1,   0,   0,   0,
-#    #                 0,   0,   0, f74, f75,   0,  -1,   0,   0,
-#    #                 0,   0,   0,   0, f85, f86, f87,  -1,   0,
-#    #                 0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
+#        # Construct npp(day)
+#        # in general this function can depend on the day i and the state_vector X
+#        # e.g. typically the size fo X.leaf...
+#        # In this case it only depends on the day i 
+#        def npp_func(day,X):
+#            return mpa.npp[day_2_month_index(day)] 
 #
-#    # note that the matrix description of a model is implicitly related to the
-#    # order of pools in the state_vector and not independent from it.
+#        func_dict = {Symbol('npp'):npp_func}
+#        tsi = make_daily_iterator_sym(
+#            V_init,
+#            mpa=mpa,
+#            func_dict=func_dict
+#        )
 #
-#    A[3,0] = mpa.f_leaf2metlit
-#    A[3,1] = mpa.f_root2metlit
-#    A[4,0] = 1.0 - mpa.f_leaf2metlit
-#    A[4,1] = 1.0 - mpa.f_root2metlit
-#    A[5,2] = mpa.f_wood2CWD 
-#    A[6,3] = mpa.f_metlit2mic 
-#    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
-#    A[7,4] = 0.7 * mpa.lig_leaf
-#    A[7,5] = 0.4 * (1 - mpa.lig_wood)
-#    A[8,5] = 0.7 * mpa.lig_wood
-#    A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
-#    A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
-#    A[8,7] = 0.45 * (0.003 + 0.009 * mpa.clay)
-#
-#    #turnover rate per day of pools: 
-#    K = np.diag([
-#        mpa.k_leaf,
-#        mpa.k_root,
-#        mpa.k_wood,
-#        mpa.k_metlit,
-#        mpa.k_metlit/(5.75*np.exp(-3*mpa.lig_leaf)),
-#        mpa.k_metlit/20.6,
-#        mpa.k_mic,
-#        mpa.k_slowsom,
-#        mpa.k_passsom
-#    ])
-#    # in the general nonautonomous nonlinear case
-#    # B will depend on an it,X (althouh in this case it does not depend on either
-#    def B_func(it,X): 
-#        return A@K
-#
-#    return B_func
-#
-#def construct_V0(
-#        cpa :UnEstimatedParameters,
-#        epa :EstimatedParameters
-#    ) -> np.ndarray:
-#    """Construct the initial values for the forward simulation
-#    from constant and eveluated parameters
-#
-#    param: cpa : constant parameeters
-#    param: epa : estimated parameters 
-#    """
-#    # to make sure that we are in the right order we use the 
-#    # StateVariables namedtuple 
-#    X_0 = StateVariables( 
-#        C_leaf=cpa.C_leaf_0,
-#        C_root=cpa.C_root_0,
-#        C_wood=cpa.C_wood_0,
-#        C_metlit=epa.C_metlit_0,
-#        C_stlit=epa.CWD_0,
-#        CWD=cpa.clitter_0-epa.C_metlit_0-epa.CWD_0,
-#        C_mic=epa.C_mic_0,
-#        C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
-#        C_passsom=epa.C_passom_0
-#    )
-#    # add the respiration start value to the tuple
-#    V_0 = (*X_0,cpa.rh_0)
-#    return np.array(V_0).reshape(10,1)   
+#        def g(acc, i):
+#            xs,co2s,acc_co2,acc_days = acc
+#            v = tsi.__next__()
+#            d_pools = v[0:-1,:]
+#            d_co2=v[-1:,:]
+#            acc_co2 += d_co2
+#            acc_days += 1
+#            if i in day_indices:
+#                xs += [d_pools] 
+#                co2s +=[acc_co2/acc_days]
+#                acc_co2=np.array([0.0]).reshape(1,1)
+#                acc_days = 0
+#                
+#            acc = (xs,co2s,acc_co2,acc_days)
+#            return acc
+#        xs,co2s,acc_days,_ =  reduce(g,range(max(day_indices)+1),([],[],0,0))
+#                
+#        def h(tup):
+#            x, co2 = tup
+#            return np.transpose(np.concatenate([x,co2]))
+#    
+#        values_with_accumulated_co2 = [v for v in  map(h,zip(xs,co2s))]
+#        RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
+#        return RES
+
+def make_daily_iterator_sym(
+        V_init,
+        mpa,
+        func_dict
+    ):
+         
+
+        # b (b vector for partial allocation) 
+        beta_wood = 1- mpa.beta_leaf- mpa.beta_root
+        b = np.array(
+            [
+                mpa.beta_leaf,
+                mpa.beta_root,
+                beta_wood,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+        ).reshape(9,1)
+        # Now construct B matrix B=A*K 
+        B_func  = construct_matrix_func_sym(
+            pa=mpa,
+        )
+        # Build the iterator which is the representation of a dynamical system
+        # for looping forward over the results of a difference equation
+        # X_{i+1}=f(X_{i},i)
+        # This is the discrete counterpart to the initial value problem 
+        # of the continuous ODE  
+        # dX/dt = f(X,t) and initial values X(t=0)=X_0
+        
+        def f(it,V):
+            X = V[0:9]
+            co2 = V[9]
+            npp  = func_dict[Symbol('npp')](it,X)
+            B = B_func(it,X)
+            X_new = X + npp * b + B@X
+
+            # we also compute the respired co2 in every (daily) timestep
+            # and use this part of the solution later to sum up the monthly amount
+            co2_new = -np.sum(B @ X) # fixme add computer for respirattion
+            
+            V_new = np.concatenate((X_new,np.array([co2_new]).reshape(1,1)), axis=0)
+            return V_new
+    
+    
+        #X_0 = np.array(x_init).reshape(9,1) #transform the tuple to a matrix
+        #co2_0 = np.array([0]).reshape(1,1)
+        #V_0 = np.concatenate((X_0, co2_0), axis=0)
+
+        return TimeStepIterator2(
+                initial_values=V_init,
+                f=f#,
+                #max_it=max(day_indices)+1
+        )
+
+def construct_V0(
+        cpa :UnEstimatedParameters,
+        epa :EstimatedParameters
+    ) -> np.ndarray:
+    """Construct the initial values for the forward simulation
+    from constant and eveluated parameters
+
+    param: cpa : constant parameeters
+    param: epa : estimated parameters 
+    """
+    # to make sure that we are in the right order we use the 
+    # StateVariables namedtuple 
+    X_0 = StateVariables( 
+        leaf=  epa.C_leaf_0,
+        root=  epa.C_root_0,
+        wood=  cpa.C_veg_0 - epa.C_leaf_0 - epa.C_root_0 ,
+        cwd=   epa.C_cwd_0,
+        samet= epa.C_samet_0,
+        sastr= epa.C_sastr_0,
+        samic= epa.C_samic_0,
+        slmet= epa.C_slmet_0,
+        slstr= epa.C_slstr_0,
+        slmic= epa.C_slmic_0,
+        slow=  epa.C_slow_0,
+        arm=   cpa.C_soil_0 - epa.C_slmet_0 - epa.C_slstr_0 - epa.C_slmic_0 - epa.C_slow_0
+    )
+    # add the respiration start value to the tuple
+    return np.array(X_0).reshape(12,1)   
+
+def make_param2res_sym(
+        cpa: UnEstimatedParameters
+    ) -> Callable[[np.ndarray], np.ndarray]: 
+    # This function is an alternative implementation with the same results as 
+    # make_param2res but uses the symbolic model in bgc_md2
+    def param2res(pa):
+        epa=EstimatedParameters(*pa)
+        # here we want to store only monthly values
+        # although the computation takes place on a daily basis
+        V_init = construct_V0(cpa,epa)
+        # compute the days when we need the results
+        # to be able to compare to the monthly output
+        day_indices = month_2_day_index(range(cpa.number_of_months)) 
+        print("day_indices=",day_indices)
+        apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
+
+        mpa = ModelParameters(
+            **{
+                k:v for k,v in apa._asdict().items() 
+                if k in ModelParameters._fields
+            }
+        )
+        full_res = run_forward_simulation_sym(
+            V_init=V_init,
+            day_indices=day_indices,
+            mpa=mpa
+        )
+        
+        # project the litter and soil pools
+        tot_len=cpa.number_of_months
+        c_litter = np.sum(full_res[:,3:6],axis=1).reshape(tot_len,1)
+        c_soil = np.sum(full_res[:,6:9],axis=1).reshape(tot_len,1)
+        out_simu = np.concatenate(
+            [
+                full_res[:,0:3], # the first 3 pools are used as they are
+                c_litter,
+                c_soil,
+                full_res[:,9:10]
+            ]
+            ,axis=1
+        )
+        return out_simu
+        
+    return param2res
