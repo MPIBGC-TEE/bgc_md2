@@ -36,6 +36,7 @@ from general_helpers import (
         make_multivariate_normal_proposer,
         mcmc,
         make_feng_cost_func,
+        make_jon_cost_func, 
         plot_solutions
 )
 
@@ -101,35 +102,44 @@ cpa = UnEstimatedParameters(
 param2res = make_param2res(cpa)
 
 # set max/min parameters limits 
-c_min=np.array(epa0)*0.5
-c_max=np.array(epa0)*1.5
+c_min=np.array(epa0)*0.001
+c_max=np.array(epa0)*1000
+c_max[0]=1
+c_max[1]=1
+c_max[14]=1
+c_max[15]=1
+c_max[16]=1
 
 #   this function is model specific: It discards parameter proposals
 #   where beta1 and beta2 add up to more than 0.99
-isQualified = make_param_filter_func(c_max,c_min)
+isQualified = make_param_filter_func(c_max,c_min,cveg[0],csoil[0])
 uniform_prop = make_uniform_proposer(
     c_min,
     c_max,
-    D=100, # this value 
+    D=15, # this value 
     filter_func=isQualified
 )
 
 #set cost function 
-costfunction=make_feng_cost_func(obs)
+costfunction=make_jon_cost_func(obs)
 
 #define uniform parallel mcmc wrapper function
 def uniform_parallel_mcmc(_):
     #calculate length of parameters
     par_len = len(epa0)
-    #randomly perturb parameters for each chain by up to +- 10%
-    pertb = np.random.uniform(low=0.9, high=1.1, size=(par_len,)).astype(float)
+    #randomly perturb parameters for each chain by up to +- 50%
+    flag=True
+    while(flag):
+        pertb = epa0*np.random.uniform(low=0.5, high=1.5, size=(par_len,)).astype(float)
+        if(isQualified(pertb)):
+            flag=False
     return(
         mcmc(
-            initial_parameters=epa0*pertb,
+            initial_parameters=pertb,
             proposer=uniform_prop,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=20000
+            nsimu=200
         )
     )
 
@@ -138,6 +148,7 @@ uni_c_path = dataPath.joinpath('yibs_pmcmc_uniform_c.csv')
 uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 
 # Parallel uniform distribution run 
+print("starting parallel run")
 [
     [c_uni1,j_uni1],
     [c_uni2,j_uni2],
@@ -187,18 +198,18 @@ J_cat = np.concatenate(
         j_uni10 
     ), axis=1
 )
+
+# save the parameters and costfunctionvalues for postprocessing 
+pd.DataFrame(C_cat).to_csv(uni_c_path,sep=',')
+pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
     
 #sort lowest to highest
 indx = np.argsort(J_cat) 
 C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
 J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
 
-# save the parameters and costfunctionvalues for postprocessing 
-pd.DataFrame(C_demo).to_csv(uni_c_path,sep=',')
-pd.DataFrame(J_demo).to_csv(uni_j_path,sep=',')
-
 # formal run using normal distribution and cov matrix from uniform run
-covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.1)]) #lowest 10% by cost 
+covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
 normal_prop = make_multivariate_normal_proposer(
     covv = covv,
     filter_func=isQualified
@@ -206,17 +217,14 @@ normal_prop = make_multivariate_normal_proposer(
 
 #define normal parallel mcmc wrapper
 def normal_parallel_mcmc(_):
-    #calculate length of parameters
-    par_len = len(epa0)
-    #randomly perturb parameters for each chain by up to +- 10%
-    pertb = np.random.uniform(low=0.9, high=1.1, size=(par_len,)).astype(float)
     return(
-        mcmc(
-            initial_parameters=epa0*pertb,
-            proposer=normal_prop,
+        adaptive_mcmc(
+            initial_parameters=C.demo[:,0],
+            covv=covv,
+            filter_func=isQualified,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=20000
+            nsimu=2000
         )
     )
 
