@@ -1,65 +1,22 @@
-import bgc_md2.helper as h 
-from unittest import TestCase
+from time import time as now
+from unittest import TestCase, skip
 from ComputabilityGraphs.rec_graph_helpers import fast_graph
 from ComputabilityGraphs.helpers import all_mvars
 from ComputabilityGraphs.TypeSet import TypeSet
 
-from bgc_md2.helper import bgc_md2_computers
+import bgc_md2.helper as h 
 from bgc_md2.resolve.mvars import *
 
 class TestModels(TestCase):
+    @skip
     def test_bgc_graph_computation(self):
-        possible_types = all_mvars(bgc_md2_computers()).difference({VegetationCarbonInputPartitioningTuple})
+        possible_types = all_mvars(h.bgc_md2_computers()).difference({VegetationCarbonInputPartitioningTuple})
         #print(TypeSet(possible_types))
-        #possible_types={
-        #    NumericSolutionArray,
-	#    TimeSymbol,
-	#    VegetationCarbonInputTuple,
-	#    CompartmentalMatrix,
-	#    QuantityStartValueDict,
-	#    NumericParameterizedSmoothReservoirModel,
-	#    CarbonInputTuple,
-	#    NitrogenCompartmentalMatrix,
-	#    SmoothReservoirModel,
-	#    NitrogenInFluxesBySymbol,
-	#    NumericStartValueArray,
-	#    CarbonStateVariableTuple,
-	#    VegetationCarbonCompartmentalMatrix,
-	#    VegetationCarbonInternalFluxesBySymbol,
-	#    StateVarUnitTuple,
-	#    InternalFluxesBySymbol,
-	#    VegetationCarbonInFluxesBySymbol,
-	#    QuantityParameterizedSmoothReservoirModel,
-	#    InputTuple,
-	#    VegetationCarbonStateVariableTuple,
-	#    QuantitySolutionArray,
-	#    CarbonOutFluxesBySymbol,
-	#    NitrogenInputTuple,
-	#    QuantitySimulationTimes,
-	#    NitrogenInternalFluxesBySymbol,
-	#    InFluxesBySymbol,
-	#    VegetationCarbonInputScalar,
-	#    QuantityStartValueArray,
-	#    CarbonCompartmentalMatrix,
-	#    NitrogenOutFluxesBySymbol,
-	#    NumericParameterization,
-	#    #VegetationCarbonInputPartitioningTuple,
-	#    CarbonInternalFluxesBySymbol,
-	#    NumericSimulationTimes,
-	#    Quantity,
-	#    CarbonInFluxesBySymbol,
-	#    NitrogenStateVariableTuple,
-	#    VegetationCarbonOutFluxesBySymbol,
-	#    NumericStartValueDict,
-	#    QuantityModelRun,
-	#    OutFluxesBySymbol,
-	#    StateVariableTuple,
-	#    QuantityParameterization,
-	#    SmoothModelRun,
-	#    #_empty
-        #}
+        for t in possible_types:
+            print(t.__name__)
 
         for root in possible_types:
+            before=now()
             with self.subTest(root=root):
                 print(root)
                 g = fast_graph(
@@ -67,8 +24,9 @@ class TestModels(TestCase):
                     root_type=root,
                     given=frozenset()
                 )
+            print(now() - before)
         
-
+    @skip
     def test_all_computable_mvars_for_all_models(self):
         # https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests
         model_names = h.list_models(
