@@ -78,7 +78,7 @@ EstimatedParameters = namedtuple(
         "k_slowsom",	# 10
         "k_passsom",	# 11
         "C_metlit_0",	# 12
-        "CWD_0",	# 13
+        "C_CWD_0",	# 13
         "C_mic_0",	# 14
         "C_passom_0"    # 15
     ]
@@ -111,7 +111,7 @@ StateVariables = namedtuple(
         'C_wood',
         'C_metlit',
         'C_stlit',
-        'CWD',
+        'C_CWD',
         'C_mic',
         'C_slowsom',
         'C_passsom'
@@ -146,7 +146,7 @@ ModelParameters = namedtuple(
             'clitter_0',
             'csoil_0',
             "C_metlit_0",
-            "CWD_0",
+            "C_CWD_0",
             "C_mic_0",
             "C_passom_0",
             'number_of_months'
@@ -353,15 +353,15 @@ def make_param2res(
           
         x_fin=np.zeros((cpa.number_of_months,9))
         rh_fin=np.zeros((cpa.number_of_months,1))
-        # leaf, root , wood, metabolic, structural, CWD, microbial, slow, passive 
+        # leaf, root , wood, metabolic, structural, C_CWD, microbial, slow, passive 
         x_init = np.array(
             [
                 cpa.C_leaf_0,
                 cpa.C_root_0,
                 cpa.C_wood_0,
                 epa.C_metlit_0,
-                epa.CWD_0,
-                cpa.clitter_0-epa.C_metlit_0-epa.CWD_0,
+                epa.C_CWD_0,
+                cpa.clitter_0-epa.C_metlit_0-epa.C_CWD_0,
                 epa.C_mic_0,
                 cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0,
                 epa.C_passom_0
@@ -466,7 +466,6 @@ def make_param2res_2(
         # compute the days when we need the results
         # to be able to compare to the monthly output
         day_indices = month_2_day_index(range(cpa.number_of_months)) 
-        print("day_indices=",day_indices)
         apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
 
         mpa = ModelParameters(
@@ -511,7 +510,6 @@ def make_param2res_sym(
         # compute the days when we need the results
         # to be able to compare to the monthly output
         day_indices = month_2_day_index(range(cpa.number_of_months)) 
-        print("day_indices=",day_indices)
         apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
 
         mpa = ModelParameters(
@@ -820,8 +818,8 @@ def construct_V0(
         C_root=cpa.C_root_0,
         C_wood=cpa.C_wood_0,
         C_metlit=epa.C_metlit_0,
-        C_stlit=epa.CWD_0,
-        CWD=cpa.clitter_0-epa.C_metlit_0-epa.CWD_0,
+        C_stlit=epa.C_CWD_0,
+        C_CWD=cpa.clitter_0-epa.C_metlit_0-epa.C_CWD_0,
         C_mic=epa.C_mic_0,
         C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
         C_passsom=epa.C_passom_0
