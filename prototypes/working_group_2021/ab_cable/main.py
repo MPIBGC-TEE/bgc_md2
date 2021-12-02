@@ -6,27 +6,29 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-import json 
-
+import json
+from scipy.stats import gaussian_kde
 
 from model_specific_helpers import (
     get_example_site_vars,
     get_global_sum_vars,
     make_param_filter_func,
-    make_weighted_cost_func,
+    #make_weighted_cost_func,
     make_param2res,
-    make_param2res_2,
+    #make_param2res_2,
     UnEstimatedParameters,
     EstimatedParameters,
     Observables
 )
 
 from general_helpers import (
-        make_uniform_proposer,
-        make_multivariate_normal_proposer,
-        mcmc,
-        make_feng_cost_func,
-        plot_solutions
+    make_uniform_proposer,
+    make_multivariate_normal_proposer,
+    mcmc,
+    adaptive_mcmc,
+    autostep_mcmc,
+    make_feng_cost_func,
+    plot_solutions
 )
 
 with Path('config.json').open(mode='r') as f:
@@ -34,11 +36,11 @@ with Path('config.json').open(mode='r') as f:
 
 dataPath = Path(conf_dict['dataPath'])
 
-#npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath)
-npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_global_sum_vars(dataPath)
+npp, rh, clitter, ccwd, csoil, cveg, cleaf, croot, cwood = get_example_site_vars(dataPath) # site runs
+#npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood = get_global_sum_vars(dataPath)  # global run
 
 #nyears=320
-nyears = 10
+nyears = 320 # reduced time span for testing purposes
 tot_len = 12*nyears
 obs_tup=Observables(
     C_leaf=cleaf,
@@ -49,6 +51,9 @@ obs_tup=Observables(
     respiration=rh
 )
 obs = np.stack(obs_tup, axis=1)[0:tot_len,:]
+
+# save observational data for comparison with model output
+pd.DataFrame(obs).to_csv(dataPath.joinpath('obs.csv'), sep=',')
 
 cpa = UnEstimatedParameters(
     C_leaf_0=cleaf[0],
@@ -72,37 +77,37 @@ c_min = np.array(
     EstimatedParameters(
         beta_leaf=0.15,  #0.15
         beta_root=0.3,  #0.2
-        lig_leaf=0.05,  #0.09
+        lig_leaf=0.005,  #0.09
         f_leaf2metlit=0.01,
         f_root2metlit=0.01,
-        k_leaf=1/(5*365), #3
-        k_root=1/(15*365), #10
-        k_wood=1/(80*365), #60
-        k_metlit=0.1/(0.2*365), #0.1
-        k_mic=0.06/(0.137*365),
+        k_leaf=1/(10*365), #3
+        k_root=1/(27*365), #10
+        k_wood=1/(150*365), #60
+        k_metlit=0.1/(0.25*365), #0.1
+        k_mic=0.05/(0.137*365),
         k_slowsom=0.06/(5*365),
-        k_passsom=0.07/(222.22*365), #0.06
+        k_passsom=0.03/(222.22*365), #0.06
         C_metlit_0=clitter[0]/100,
         C_strlit_0=clitter[0]/100,
         C_mic_0=csoil[0]/100,
-        C_passom_0=csoil[0]/2
+        C_passom_0=csoil[0]/5
     )
 )
 
 c_max = np.array(
     EstimatedParameters(
-        beta_leaf=0.4,   #1
+        beta_leaf=0.5,   #1
         beta_root=0.8,   #1
-        lig_leaf=0.21,		    
+        lig_leaf=0.1,
         f_leaf2metlit=1,		    
         f_root2metlit=1,		    
-        k_leaf=1/(2*365), #0.8
-        k_root=1/(2*365), #0.6
-        k_wood=1/(10*365),  #10
-        k_metlit=1/(0.2*365), #0.1
-        k_mic=0.6/(0.137*365),
+        k_leaf=1/(6*365), #0.8
+        k_root=1/(4*365), #0.6
+        k_wood=1/(12*365),  #10
+        k_metlit=1/(0.25*365), #0.1
+        k_mic=0.5/(0.137*365),
         k_slowsom=0.6/(5*365),
-        k_passsom=0.7/(222.22*365), #0.6
+        k_passsom=0.3/(222.22*365), #0.6
         C_metlit_0=clitter[0]/5,  #1
         C_strlit_0=clitter[0]/5,  #1
         C_mic_0=csoil[0]/3,	    
@@ -141,17 +146,62 @@ epa_0 = EstimatedParameters._make(
             ]
         )
 )
+# save initial parameters
+pd.DataFrame(epa_0).to_csv(dataPath.joinpath('epa_0.csv'), sep=',')
+
 
 isQualified = make_param_filter_func(c_max,c_min)
 # check if the current value passes the filter
-# to avoid to get stuck in an inescapable series of rejections  
-if not(isQualified(np.array(epa_0))):
-    raise ValueError("""the current value does not pass filter_func. This is probably due to an initial value chosen outside the permitted range""")
+# to avoid to get stuck in an inescapable series of rejections
+if not (isQualified(np.array(epa_0))):
+    raise ValueError(
+        """the current value does not pass filter_func. This is probably due to an initial value chosen outside the permitted range""")
 
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = autostep_mcmc(
+    initial_parameters=epa_0,
+    filter_func=isQualified,
+    param2res=param2res,
+    costfunction=make_feng_cost_func(obs),
+    nsimu=5000,
+    c_max=c_max,
+    c_min=c_min,
+    acceptance_rate=10,   # default value | target acceptance rate in %
+    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1   # default value | increase value to reduce initial step size
+)
+# save the parameters and cost function values for postprocessing
+pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('cable_autostep_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('cable_autostep_da_j_aa.csv'), sep=',')
+
+
+# calculate maximum likelihood for each parameter as a peak of posterior distribution
+def density_peaks(distr):
+    peaks = np.zeros(distr.shape[0])
+    for i in range(distr.shape[0]):
+        x = distr[i, :]
+        pdf = gaussian_kde(x)
+        l = np.linspace(np.min(x), np.max(x), len(x))
+        density = pdf(l)
+        peaks[i] = l[density.argmax()]
+    return peaks
+
+max_likelihood_autostep = density_peaks(C_autostep)
+
+# forward run with median, max likelihood, and min J parameter sets
+sol_median_autostep = param2res(np.median(C_autostep, axis=1))
+sol_likelihood_autostep = param2res(max_likelihood_autostep)
+sol_min_J_autostep = param2res(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))])
+# export solutions
+pd.DataFrame(sol_median_autostep).to_csv(dataPath.joinpath('sol_median_autostep.csv'), sep=',')
+pd.DataFrame(sol_likelihood_autostep).to_csv(dataPath.joinpath('sol_likelihood_autostep.csv'), sep=',')
+pd.DataFrame(sol_min_J_autostep).to_csv(dataPath.joinpath('sol_min_J_autostep.csv'), sep=',')
+
+# Demo MCMC: with a uniform proposer and fixed step
 uniform_prop = make_uniform_proposer(
     c_min,
     c_max,
-    D=30,
+    D=240,
     filter_func=isQualified
 )
 
@@ -161,32 +211,50 @@ C_demo, J_demo = mcmc(
         param2res=param2res,
         #costfunction=make_weighted_cost_func(obs)
         costfunction=make_feng_cost_func(obs),
-        nsimu=1000
+        nsimu=5000
 )
 # save the parameters and costfunctionvalues for postprocessing 
 pd.DataFrame(C_demo).to_csv(dataPath.joinpath('cable_demo_da_aa.csv'),sep=',')
 pd.DataFrame(J_demo).to_csv(dataPath.joinpath('cable_demo_da_j_aa.csv'),sep=',')
 
+max_likelihood_demo = density_peaks(C_demo)
+
+# forward run with median, max likelihood, and min J parameter sets
+sol_median_demo = param2res(np.median(C_demo, axis=1))
+sol_likelihood_demo = param2res(max_likelihood_demo)
+sol_min_J_demo = param2res(C_demo[:, np.where(J_demo[1] == np.min(J_demo[1]))])
+# export solutions
+pd.DataFrame(sol_median_demo).to_csv(dataPath.joinpath('sol_median_demo.csv'), sep=',')
+pd.DataFrame(sol_likelihood_demo).to_csv(dataPath.joinpath('sol_likelihood_demo.csv'), sep=',')
+pd.DataFrame(sol_min_J_demo).to_csv(dataPath.joinpath('sol_min_J_demo.csv'), sep=',')
+
 # build a new proposer based on a multivariate_normal distribution using the estimated covariance of the previous run if available
 # parameter values of the previous run
 
-normal_prop = make_multivariate_normal_proposer(
-    covv = np.cov(C_demo[:, int(C_demo.shape[1]/10):]), # the part of the demo run samples to use (here the last 90%) 
-    filter_func=isQualified
+# Formal MCMC: with multivariate normal proposer based on adaptive covariance matrix
+C_formal, J_formal = adaptive_mcmc(
+    initial_parameters=epa_0,
+    covv=np.cov(C_demo[:, int(C_demo.shape[1] / 10):]),
+    filter_func=isQualified,
+    param2res=param2res,
+    # costfunction=make_weighted_cost_func(obs)
+    costfunction=make_feng_cost_func(obs),
+    nsimu=5000,
+    sd_controlling_factor=1  # default value | increase value to reduce step size
 )
-C_formal, J_formal = mcmc(
-        initial_parameters=epa_0,
-        proposer=normal_prop,
-        param2res=param2res,
-        #costfunction=make_weighted_cost_func(obs)
-        costfunction=make_feng_cost_func(obs),
-        #nsimu=20000
-        nsimu=1000
-)
-formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
-formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
-pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
-pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
+# save the parameters and cost function values for postprocessing
+pd.DataFrame(C_formal).to_csv(dataPath.joinpath('cable_formal_da_aa.csv'), sep=',')
+pd.DataFrame(J_formal).to_csv(dataPath.joinpath('cable_formal_da_j_aa.csv'), sep=',')
+
+max_likelihood_formal = density_peaks(C_formal)
+# forward run with median, max likelihood, and min J parameter sets
+sol_median_formal = param2res(np.median(C_formal, axis=1))
+sol_likelihood_formal = param2res(max_likelihood_formal)
+sol_min_J_formal = param2res(C_formal[:, np.where(J_formal[1] == np.min(J_formal[1]))])
+# export solutions
+pd.DataFrame(sol_median_formal).to_csv(dataPath.joinpath('sol_median_formal.csv'), sep=',')
+pd.DataFrame(sol_likelihood_formal).to_csv(dataPath.joinpath('sol_likelihood_formal.csv'), sep=',')
+pd.DataFrame(sol_min_J_formal).to_csv(dataPath.joinpath('sol_min_J_formal.csv'), sep=',')
 
 # POSTPROCESSING 
 #
@@ -199,7 +267,7 @@ pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
 # parameters is very difficult to visualize in its entirety.
 # to do: 
 #   a) make a movie of color coded samples  of the a priori distribution of the parameters.
-#   b) -"-                                  of the a posteriory distribution -'- 
+#   b) -"-                                  of the a posterior distribution -'-
 
 # Therefore the  following visualizations have to be considered with caution:
 # 1.
@@ -210,10 +278,11 @@ pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
 # would be the product of the distributions of the single parameters.  This is
 # however not even to be expected if our prior probability distribution can be
 # decomposed in this way. (Due to the fact that the Metropolis Hastings Alg. does not
-# produce independent samples ) 
-df = pd.DataFrame({name :C_formal[:,i] for i,name in enumerate(EstimatedParameters._fields)})
-subplots=df.hist()
-fig=subplots[0,0].figure
+# produce independent samples )
+
+df = pd.DataFrame({name: C_formal[:, i] for i, name in enumerate(EstimatedParameters._fields)})
+subplots = df.hist()
+fig = subplots[0, 0].figure
 fig.set_figwidth(15)
 fig.set_figheight(15)
 fig.savefig('histograms.pdf')
@@ -221,13 +290,13 @@ fig.savefig('histograms.pdf')
 # As the next best thing we can create a matrix of plots containing all 
 # projections to possible  parameter tuples
 # (like the pairs plot in the R package FME) but 16x16 plots are too much for one page..
-# However the plot shows that we are dealing with a lot of colinearity for this  parameter set
-subplots = pd.plotting.scatter_matrix(df) 
-fig=subplots[0,0].figure
+# However the plot shows that we are dealing with a lot of collinearity for this  parameter set
+
+subplots = pd.plotting.scatter_matrix(df)
+fig = subplots[0, 0].figure
 fig.set_figwidth(15)
 fig.set_figheight(15)
 fig.savefig('scatter_matrix.pdf')
-
 
 # 2.
 # another way to get an idea of the quality of the parameter estimation is
@@ -235,14 +304,14 @@ fig.savefig('scatter_matrix.pdf')
 # A possible aggregation of this histogram to a singe parameter
 # vector is the mean which is an estimator of  the expected value of the
 # desired distribution.
-sol_mean =param2res(np.mean(C_formal,axis=1))
 
 fig = plt.figure()
 plot_solutions(
-        fig,
-        times=range(sol_mean.shape[0]),
-        var_names=Observables._fields,
-        tup=(sol_mean, obs),
-        names=('mean','obs')
-)
+    fig,
+    times=range(sol_median_formal.shape[0]),
+     var_names=Observables._fields,
+     tup=(sol_median_formal, obs),
+    names=('mean', 'obs')
+ )
 fig.savefig('solutions.pdf')
+
