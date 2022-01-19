@@ -1,6 +1,6 @@
 from IPython.display import Math
 from IPython.display import display
-from ipywidgets import HTML, Button, HBox, VBox
+from ipywidgets import Output, Layout, HTML, Button, HBox, VBox
 from typing import  Tuple, Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
@@ -376,4 +376,97 @@ def latex_render(
     else:
         display(out)
 
-
+def vertical_table(records):
+    cws=['50%']
+    def headerbox(mvs):
+        return HTML(
+               value="<h3>{}</h3>".format(mvs.get_BibInfo().name),
+               layout=Layout(width=cws[0])
+            )  
+        
+    def graphbox(mvs):        
+        out = Output(
+            layout=Layout(
+                height='auto',
+                description="Compartmental Graph",
+                width=cws[0]
+            )
+        )
+        with out:
+             display(compartmental_graph(mvs))
+        return out
+                
+    def influxbox(mvs):
+        out= Output(
+            layout=Layout(
+                height='auto',
+                width=cws[0]
+            )
+        )
+        with out:
+            for k,v in mvs.get_InFluxesBySymbol().items():
+                display( Math( "In_{"+str(k)+"} = " + latex(v) ))
+                
+        return out
+    
+    def outfluxbox(mvs):
+        out= Output(
+            layout=Layout(
+                height='auto',
+                width=cws[0]
+            )
+        )
+        with out:
+            for k,v in mvs.get_OutFluxesBySymbol().items():
+                display( Math( "Out_{"+str(k)+"} = " + latex(v) ))
+                
+        return out
+    
+    def internalfluxbox(mvs):
+        out= Output(
+            layout=Layout(
+                height='auto',
+                width=cws[0]
+            )
+        )
+        with out:
+            for k,v in mvs.get_InternalFluxesBySymbol().items():
+                display( Math( "F_{"+str(k)+"} = " + latex(v) ))
+                
+        return out
+    
+    def customVBox(records,name,boxfunc):
+        return VBox(
+            [
+               HTML(
+                   value="<h2>{}</h2>".format(name),
+                   layout=Layout(width=cws[0])
+               ),  
+                HBox([ boxfunc(r) for r in records])
+            ]
+        )
+    def customHBox(records,boxfunc):
+        return VBox(
+            [
+                HBox([ boxfunc(r) for r in records])
+            ]
+        )
+    # main part
+    return VBox([
+        #HBox([
+        #   HTML(
+        #       value="<h3>VISIT</h3>",
+        #       layout=Layout(width=cws[0])
+        #   ),  
+        #   HTML(
+        #       value="<h3>CABLE</h3>",
+        #       layout=Layout(width=cws[0])
+        #   )  
+        #]),
+        customHBox(records,headerbox),
+        customHBox(records,graphbox),
+        #HBox([graph_out_visit,graph_out_cable]),
+        customVBox(records,"Influxes",influxbox),
+        customVBox(records,"Internal Fluxes",internalfluxbox),
+        customVBox(records,"Outfluxes",outfluxbox)
+    ])

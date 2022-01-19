@@ -8,29 +8,11 @@ import bgc_md2.helper as h
 from bgc_md2.resolve.mvars import *
 
 class TestModels(TestCase):
-    @skip
-    def test_bgc_graph_computation(self):
-        possible_types = all_mvars(h.bgc_md2_computers()).difference({VegetationCarbonInputPartitioningTuple})
-        #print(TypeSet(possible_types))
-        for t in possible_types:
-            print(t.__name__)
-
-        for root in possible_types:
-            before=now()
-            with self.subTest(root=root):
-                print(root)
-                g = fast_graph(
-                    cs=h.bgc_md2_computers(),
-                    root_type=root,
-                    given=frozenset()
-                )
-            print(now() - before)
-        
-    @skip
+    #@skip
     def test_all_computable_mvars_for_all_models(self):
-        # https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests
         model_names = h.list_models(
-                explicit_exclude_models=frozenset({'Hilbert1991AnnBot', 'Thomas2014GeosciModelDev'})
+                #explicit_exclude_models=frozenset({'Hilbert1991AnnBot', 'Thomas2014GeosciModelDev'})
+                explicit_exclude_models=frozenset()
         )
         #print(model_names)
         #model_names=[
@@ -84,7 +66,7 @@ class TestModels(TestCase):
         #    'testVectorFree'
         #]:
         for mn in model_names:
-
+            # https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests
             with self.subTest(mn=mn):
                 mvs = h.CMTVS_from_model_name(mn)
                 mvars = mvs.computable_mvar_types()
@@ -93,4 +75,5 @@ class TestModels(TestCase):
                 for var in mvars:
                     print("########################################")
                     print(str(var.__name__))
-                    print(mvs._get_single_value(var))
+                    #print(mvs._get_single_value(var))
+                    print(mvs._get_single_value_by_depgraph(var))
