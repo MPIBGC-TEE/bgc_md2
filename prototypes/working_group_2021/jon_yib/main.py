@@ -46,7 +46,7 @@ with Path('config.json').open(mode='r') as f:
 dataPath = Path(conf_dict['dataPath'])
 
 #get data streams
-npp, rh, ra, csoil, cveg = get_example_site_vars(Path(conf_dict['dataPath']))
+gpp, rh, ra, csoil, cveg = get_example_site_vars(Path(conf_dict['dataPath']))
 nyears = 320
 obs_tup=Observables(
     c_veg=cveg,
@@ -93,7 +93,7 @@ cpa = UnEstimatedParameters(
     C_veg_0=cveg[0],
     rh_0 = rh[0],
     ra_0 = ra[0],
-    npp=npp,
+    gpp=gpp,
     clay=0.2028,
     silt=0.2808,
     nyears=320
@@ -139,7 +139,7 @@ def uniform_parallel_mcmc(_):
             proposer=uniform_prop,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=200
+            nsimu=20000
         )
     )
 
@@ -204,156 +204,156 @@ pd.DataFrame(C_cat).to_csv(uni_c_path,sep=',')
 pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
     
 #sort lowest to highest
-indx = np.argsort(J_cat) 
-C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
-J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
-
-# formal run using normal distribution and cov matrix from uniform run
-covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
-normal_prop = make_multivariate_normal_proposer(
-    covv = covv,
-    filter_func=isQualified
-)
-
-#define normal parallel mcmc wrapper
-def normal_parallel_mcmc(_):
-    return(
-        adaptive_mcmc(
-            initial_parameters=C.demo[:,0],
-            covv=covv,
-            filter_func=isQualified,
-            param2res=param2res,
-            costfunction=costfunction,
-            nsimu=2000
-        )
-    )
-
-# formal run 
-[
-    [c_form1,j_form1],
-    [c_form2,j_form2],
-    [c_form3,j_form3],
-    [c_form4,j_form4],
-    [c_form5,j_form5],
-    [c_form6,j_form6],
-    [c_form7,j_form7],
-    [c_form8,j_form8],
-    [c_form9,j_form9],
-    [c_form10,j_form10]
-] = client.gather(
-        client.map(
-            normal_parallel_mcmc, 
-            range(0,10)
-        )
-    )
-
-#concatenate chains
-C_cat = np.concatenate(
-    (
-        c_form1,
-        c_form2,
-        c_form3,
-        c_form4,
-        c_form5,
-        c_form6,
-        c_form7,
-        c_form8,
-        c_form9,
-        c_form10 
-    ), axis=1
-)
-
-#concatenate cost function
-J_cat = np.concatenate(
-    (
-        j_form1,
-        j_form2,
-        j_form3,
-        j_form4,
-        j_form5,
-        j_form6,
-        j_form7,
-        j_form8,
-        j_form9,
-        j_form10 
-    ), axis=1
-)
-
-#sort lowest to highest
-indx = np.argsort(J_cat) 
-C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
-J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
-
-#print chain5 output as test
-formal_c_path = dataPath.joinpath('yibs_pmcmc_normal_c.csv')
-formal_j_path = dataPath.joinpath('yibs_pmcmc_normal_j.csv')
-pd.DataFrame(C_demo).to_csv(formal_c_path,sep=',')
-pd.DataFrame(J_demo).to_csv(formal_j_path,sep=',')
-    
-#use output csv file for post processing
-C_formal = pd.read_csv(formal_c_path).to_numpy()
-J_formal = pd.read_csv(formal_j_path).to_numpy()
-
-#subset to lowest cost subset of mulitple chains (lowest 10%)
-C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
-
-# POSTPROCESSING 
+#indx = np.argsort(J_cat) 
+#C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
+#J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
 #
-# The 'solution' of the inverse problem is actually the (joint) posterior
-# probability distribution of the parameters, which we approximate by the
-# histogram consisting of the mcmc generated samples.  
-# This joint distribution contains as much information as all its (infinitly
-# many) projections to curves through the parameter space combined.
-# Unfortunately, for this very reason, a joint distribution of more than two
-# parameters is very difficult to visualize in its entirity. 
-# to do: 
-#   a) make a movie of color coded samples  of the a priori distribution of the parameters.
-#   b) -"-                                  of the a posteriory distribution -'- 
-
-# Therefore the  following visualizations have to be considered with caution:
-# 1.
-# The (usual) histograms of the values of a SINGLE parameters can be very
-# misleading since e.g. we can not see that certain parameter combination only
-# occure together. In fact this decomposition is only appropriate for
-# INDEPENDENT distributions of parameters in which case the joint distribution
-# would be the product of the distributions of the single parameters.  This is
-# however not even to be expected if our prior probability distribution can be
-# decomposed in this way. (Due to the fact that the Metropolis Hastings Alg. does not
-# produce independent samples ) 
-#df = pd.DataFrame({name :C_formal[:,i] for i,name in enumerate(EstimatedParameters._fields)})
-#subplots=df.hist()
-#fig=subplots[0,0].figure
-#fig.set_figwidth(15)
-#fig.set_figheight(15)
-#fig.savefig('histograms.pdf')
-
-# As the next best thing we can create a matrix of plots containing all 
-# projections to possible  parameter tuples
-# (like the pairs plot in the R package FME) but 16x16 plots are too much for one page..
-# However the plot shows that we are dealing with a lot of colinearity for this  parameter set
-#subplots = pd.plotting.scatter_matrix(df) 
-#fig=subplots[0,0].figure
-#fig.set_figwidth(15)
-#fig.set_figheight(15)
-#fig.savefig('scatter_matrix.pdf')
-
-
-# 2.
-# another way to get an idea of the quality of the parameter estimation is
-# to plot trajectories.
-# A possible aggregation of this histogram to a singe parameter
-# vector is the mean which is an estimator of  the expected value of the
-# desired distribution.
-sol_mean =param2res(np.mean(C_formal,axis=1))
-
-fig = plt.figure()
-plot_solutions(
-        fig,
-        times=np.array(range(nyears)),
-        var_names=Observables._fields,
-        tup=(sol_mean, obs),
-        names=('mean','obs')
-)
-fig.savefig('solutions.pdf')
-
-
+## formal run using normal distribution and cov matrix from uniform run
+#covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
+#normal_prop = make_multivariate_normal_proposer(
+#    covv = covv,
+#    filter_func=isQualified
+#)
+#
+##define normal parallel mcmc wrapper
+#def normal_parallel_mcmc(_):
+#    return(
+#        adaptive_mcmc(
+#            initial_parameters=C.demo[:,0],
+#            covv=covv,
+#            filter_func=isQualified,
+#            param2res=param2res,
+#            costfunction=costfunction,
+#            nsimu=2000
+#        )
+#    )
+#
+## formal run 
+#[
+#    [c_form1,j_form1],
+#    [c_form2,j_form2],
+#    [c_form3,j_form3],
+#    [c_form4,j_form4],
+#    [c_form5,j_form5],
+#    [c_form6,j_form6],
+#    [c_form7,j_form7],
+#    [c_form8,j_form8],
+#    [c_form9,j_form9],
+#    [c_form10,j_form10]
+#] = client.gather(
+#        client.map(
+#            normal_parallel_mcmc, 
+#            range(0,10)
+#        )
+#    )
+#
+##concatenate chains
+#C_cat = np.concatenate(
+#    (
+#        c_form1,
+#        c_form2,
+#        c_form3,
+#        c_form4,
+#        c_form5,
+#        c_form6,
+#        c_form7,
+#        c_form8,
+#        c_form9,
+#        c_form10 
+#    ), axis=1
+#)
+#
+##concatenate cost function
+#J_cat = np.concatenate(
+#    (
+#        j_form1,
+#        j_form2,
+#        j_form3,
+#        j_form4,
+#        j_form5,
+#        j_form6,
+#        j_form7,
+#        j_form8,
+#        j_form9,
+#        j_form10 
+#    ), axis=1
+#)
+#
+##sort lowest to highest
+#indx = np.argsort(J_cat) 
+#C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
+#J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
+#
+##print chain5 output as test
+#formal_c_path = dataPath.joinpath('yibs_pmcmc_normal_c.csv')
+#formal_j_path = dataPath.joinpath('yibs_pmcmc_normal_j.csv')
+#pd.DataFrame(C_demo).to_csv(formal_c_path,sep=',')
+#pd.DataFrame(J_demo).to_csv(formal_j_path,sep=',')
+#    
+##use output csv file for post processing
+#C_formal = pd.read_csv(formal_c_path).to_numpy()
+#J_formal = pd.read_csv(formal_j_path).to_numpy()
+#
+##subset to lowest cost subset of mulitple chains (lowest 10%)
+#C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
+#
+## POSTPROCESSING 
+##
+## The 'solution' of the inverse problem is actually the (joint) posterior
+## probability distribution of the parameters, which we approximate by the
+## histogram consisting of the mcmc generated samples.  
+## This joint distribution contains as much information as all its (infinitly
+## many) projections to curves through the parameter space combined.
+## Unfortunately, for this very reason, a joint distribution of more than two
+## parameters is very difficult to visualize in its entirity. 
+## to do: 
+##   a) make a movie of color coded samples  of the a priori distribution of the parameters.
+##   b) -"-                                  of the a posteriory distribution -'- 
+#
+## Therefore the  following visualizations have to be considered with caution:
+## 1.
+## The (usual) histograms of the values of a SINGLE parameters can be very
+## misleading since e.g. we can not see that certain parameter combination only
+## occure together. In fact this decomposition is only appropriate for
+## INDEPENDENT distributions of parameters in which case the joint distribution
+## would be the product of the distributions of the single parameters.  This is
+## however not even to be expected if our prior probability distribution can be
+## decomposed in this way. (Due to the fact that the Metropolis Hastings Alg. does not
+## produce independent samples ) 
+##df = pd.DataFrame({name :C_formal[:,i] for i,name in enumerate(EstimatedParameters._fields)})
+##subplots=df.hist()
+##fig=subplots[0,0].figure
+##fig.set_figwidth(15)
+##fig.set_figheight(15)
+##fig.savefig('histograms.pdf')
+#
+## As the next best thing we can create a matrix of plots containing all 
+## projections to possible  parameter tuples
+## (like the pairs plot in the R package FME) but 16x16 plots are too much for one page..
+## However the plot shows that we are dealing with a lot of colinearity for this  parameter set
+##subplots = pd.plotting.scatter_matrix(df) 
+##fig=subplots[0,0].figure
+##fig.set_figwidth(15)
+##fig.set_figheight(15)
+##fig.savefig('scatter_matrix.pdf')
+#
+#
+## 2.
+## another way to get an idea of the quality of the parameter estimation is
+## to plot trajectories.
+## A possible aggregation of this histogram to a singe parameter
+## vector is the mean which is an estimator of  the expected value of the
+## desired distribution.
+#sol_mean =param2res(np.mean(C_formal,axis=1))
+#
+#fig = plt.figure()
+#plot_solutions(
+#        fig,
+#        times=np.array(range(nyears)),
+#        var_names=Observables._fields,
+#        tup=(sol_mean, obs),
+#        names=('mean','obs')
+#)
+#fig.savefig('solutions.pdf')
+#
+#

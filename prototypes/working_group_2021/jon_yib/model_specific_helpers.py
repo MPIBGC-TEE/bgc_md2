@@ -31,7 +31,7 @@ UnEstimatedParameters = namedtuple(
         'C_veg_0',
         'rh_0',
         'ra_0',
-        'npp',
+        'gpp',
         'clay',
         'silt',
         'nyears'
@@ -121,7 +121,7 @@ Observables = namedtuple(
 
 # We define another set of parameters which describes
 # the parameters of the matrices A,K and the vector b
-# and drivers like npp (in form of arrays)
+# and drivers like gpp (in form of arrays)
 # but does not include start values and hyperparameters like the 'number_of_months'
 # This distinction is helpful for the forward simulation where the
 # distinction between estimated and constant is irrelevant.
@@ -162,9 +162,9 @@ def pseudo_daily_to_yearly(daily):
 
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
-    path = dataPath.joinpath("YIBs_S3_Monthly_npp.nc")
+    path = dataPath.joinpath("YIBs_S3_Monthly_gpp.nc")
     ds = nc.Dataset(str(path))
-    var_npp = ds.variables['npp'][:,:,:]
+    var_gpp = ds.variables['gpp'][:,:,:]
     ds.close()
     
     path = dataPath.joinpath("YIBs_S3_Monthly_rh.nc")
@@ -187,14 +187,14 @@ def get_variables_from_files(dataPath):
     var_csoil = ds.variables['cSoil'][:,:,:]
     ds.close()
     
-    return (var_npp, var_rh, var_ra, var_cveg, var_csoil)       
+    return (var_gpp, var_rh, var_ra, var_cveg, var_csoil)       
 
 def get_example_site_vars(dataPath):
-    var_npp, var_rh, var_ra, var_cveg, var_csoil = get_variables_from_files(dataPath)       
+    var_gpp, var_rh, var_ra, var_cveg, var_csoil = get_variables_from_files(dataPath)       
     # pick up 1 site   62.8125 W, 17.5S
     s = slice(None,None,None) # this is the same as : 
     t = s,74,118 # [t] = [:,58,159]
-    npp= var_npp[t]*86400   #   kg/m2/s kg/m2/day; 
+    gpp= var_gpp[t]*86400   #   kg/m2/s kg/m2/day; 
     rh= var_rh[t]*86400;   # per s to per day 
     ra= var_ra[t]*86400;
     (
@@ -207,7 +207,7 @@ def get_example_site_vars(dataPath):
             var_cveg,
         )
     ) 
-    return (npp, rh, ra, csoil, cveg)
+    return (gpp, rh, ra, csoil, cveg)
 
 def make_param_filter_func(
         c_max: np.ndarray,
@@ -304,7 +304,7 @@ def make_param2res(
     # This function is model-specific in several ways:
     # 0. Which are the fixed and which are the estimated variables
     # 1. The matrices for the forward simulation 
-    # 2. the driver (here monthly npp)
+    # 2. the driver (here monthly gpp)
     # 3. the projection of the simulated pool values to observable variables
     #    (here summation of   
     def param2res(pa):
@@ -428,7 +428,7 @@ def make_param2res(
             ra_year_avg=0
             rh_year_avg=0
             for m in np.arange(0,12):
-                npp_in = cpa.npp[i_m]
+                gpp_in = cpa.gpp[i_m]
                 co2_rh = 0
                 co2_ra = 0
                 for pd in np.arange(0,pseudo_days_per_month):
@@ -461,7 +461,7 @@ def make_param2res(
                         0,
                         0
                     ]
-                    X=X + b*npp_in + np.array(A@K@X).reshape([12,1])
+                    X=X + b*gpp_in + np.array(A@K@X).reshape([12,1])
                     x_year_avg += X.reshape(1,12)/(pseudo_days_per_month*12)
                     co2h=np.sum(co2_hrate*X.reshape(1,12))
                     rh_year_avg += co2h/(pseudo_days_per_month*12)
@@ -547,7 +547,7 @@ def make_param2res(
 #    # 2.)   We build a daily advancing model that can provide output for an arbitrary 
 #    #       selection of days.  To do so we provide all driver data as
 #    #       functions of the smalles timestep (here day with index i), which in
-#    #       the case of this model means that we provide the same npp value for
+#    #       the case of this model means that we provide the same gpp value for
 #    #       all the days in a given month. 
 #    # 3.)   We translate the index of a given month to the appropriate day index
 #    #       and apply the dayly model of 2.). Again this seems cumbersome for this
@@ -639,12 +639,12 @@ def make_param2res(
 #        mpa
 #    ):
 #         
-#        # Construct npp(day)
+#        # Construct gpp(day)
 #        # in general this function can depend on the day i and the state_vector X
 #        # e.g. typically the size fo X.leaf...
 #        # In this case it only depends on the day i 
-#        def npp_func(day,X):
-#            return mpa.npp[day_2_month_index(day)] 
+#        def gpp_func(day,X):
+#            return mpa.gpp[day_2_month_index(day)] 
 #
 #        # b (b vector for partial allocation) 
 #        beta_wood = 1- mpa.beta_leaf- mpa.beta_root
@@ -675,9 +675,9 @@ def make_param2res(
 #        def f(it,V):
 #            X = V[0:9]
 #            co2 = V[9]
-#            npp  = npp_func(it,X)
+#            gpp  = gpp_func(it,X)
 #            B = B_func(it,X)
-#            X_new = X + npp * b + B@X
+#            X_new = X + gpp * b + B@X
 #
 #            # we also compute the respired co2 in every (daily) timestep
 #            # and use this part of the solution later to sum up the monthly amount
@@ -759,14 +759,14 @@ def make_param2res(
 #        day_indices,
 #        mpa
 #    ):
-#        # Construct npp(day)
+#        # Construct gpp(day)
 #        # in general this function can depend on the day i and the state_vector X
 #        # e.g. typically the size fo X.leaf...
 #        # In this case it only depends on the day i 
-#        def npp_func(day,X):
-#            return mpa.npp[day_2_month_index(day)] 
+#        def gpp_func(day,X):
+#            return mpa.gpp[day_2_month_index(day)] 
 #
-#        func_dict = {Symbol('npp'):npp_func}
+#        func_dict = {Symbol('gpp'):gpp_func}
 #        tsi = make_daily_iterator_sym(
 #            V_init,
 #            mpa=mpa,
@@ -834,9 +834,9 @@ def make_daily_iterator_sym(
         def f(it,V):
             X = V[0:9]
             co2 = V[9]
-            npp  = func_dict[Symbol('npp')](it,X)
+            gpp  = func_dict[Symbol('gpp')](it,X)
             B = B_func(it,X)
-            X_new = X + npp * b + B@X
+            X_new = X + gpp * b + B@X
 
             # we also compute the respired co2 in every (daily) timestep
             # and use this part of the solution later to sum up the monthly amount
