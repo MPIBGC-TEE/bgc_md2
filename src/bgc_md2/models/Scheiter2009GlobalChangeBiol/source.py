@@ -79,7 +79,10 @@ mvs = CMTVS(
         # vegetation carbon partitioning.
         VegetationCarbonInputPartitioningTuple(b),
         VegetationCarbonStateVariableTuple((B_L, B_R, B_S)),
-        np1,
+        # fixme mm 01-20-2022 the parameterization is incomplete error: The
+        # following free symbols: {gamma_f, gamma_r, gamma_w} of the
+        # expression: {gamma_f, gamma_r, gamma_w} are not arguments.
+        #np1,
     },
     bgc_md2_computers()
 )

@@ -70,7 +70,7 @@ beta_root = 1.0- (beta_leaf+beta_wood)
 mvs = CMTVS(
     {
         BibInfo(# Bibliographical Information
-            name="Visit",
+            name="VISIT",
             longName="Vegetation Intergrative Simulator for Trace Gases", 
             version="1",
             entryAuthor="Konstantin Viatkin",

@@ -24,23 +24,22 @@ import importlib
 # -
 
 importlib.invalidate_caches()
-#mod = importlib.import_module('bgc_md2.models.cable_yuanyuan.source_Luo')
-mod = importlib.import_module('bgc_md2.models.cable_yuanyuan.source')
+mod = importlib.import_module('bgc_md2.models.cable_yuanyuan.source_Luo')
+#mod = importlib.import_module('bgc_md2.models.cable_yuanyuan.source')
 mvs = mod.mvs
 
 
 h.compartmental_graph(mvs)
 
-# +
-from ComputabilityGraphs.TypeSet import TypeSet
+#from ComputabilityGraphs.TypeSet import TypeSet
+#
+#mvs.computable_mvar_types()
 
-mvs.computable_mvar_types()
-
-# -
 
 mvs.get_CompartmentalMatrix()
 
-mvs.get_OutFluxesBySymbol()
+# +
+#mvs.get_OutFluxesBySymbol()
 
 # +
 import sys
@@ -113,7 +112,6 @@ cpa = UnEstimatedParameters(
 )
 param2res = make_param2res_sym(cpa) 
 
-# +
 epa_0 = EstimatedParameters(
     beta_leaf=0.15,
     beta_root=0.2,
@@ -132,49 +130,58 @@ epa_0 = EstimatedParameters(
     C_mic_0=1,
     C_passom_0=5,
 )
-# it is sensible to use the same costfunction for both the demo and
-# the formal run so we define it here for both
-costfunction=make_feng_cost_func(obs)
-#costfunction=make_weighted_cost_fun c(obs)
+# -
+
+## it is sensible to use the same costfunction for both the demo and
+## the formal run so we define it here for both
+#costfunction=make_feng_cost_func(obs)
+##costfunction=make_weighted_cost_fun c(obs)
 demo_aa_path = dataPath.joinpath('cable_demo_da_aa.csv')
 demo_aa_j_path = dataPath.joinpath('cable_demo_da_j_aa.csv')
-
-C_demo, J_demo = mcmc(
-        initial_parameters=epa_0,
-        proposer=uniform_prop,
-        param2res=param2res,
-        costfunction=costfunction,
-        nsimu=200
-)
-#save the parameters and costfunctionvalues for postprocessing 
-pd.DataFrame(C_demo).to_csv(demo_aa_path,sep=',')
-pd.DataFrame(J_demo).to_csv(demo_aa_j_path,sep=',')
+#
+#C_demo, J_demo = mcmc(
+#        initial_parameters=epa_0,
+#        proposer=uniform_prop,
+#        param2res=param2res,
+#        costfunction=costfunction,
+#        nsimu=10000
+#)
+##save the parameters and costfunctionvalues for postprocessing 
+#pd.DataFrame(C_demo).to_csv(demo_aa_path,sep=',')
+#pd.DataFrame(J_demo).to_csv(demo_aa_j_path,sep=',')
 
 # +
-# build a new proposer based on a multivariate_normal distribution using the
-# estimated covariance of the previous run if available first we check how many
-# accepted parameters we got 
-# and then use part of them to compute a covariance matrix for the 
-# formal run
-covv = np.cov(C_demo[:, int(C_demo.shape[1]/10):]) 
+## build a new proposer based on a multivariate_normal distribution using the
+## estimated covariance of the previous run if available first we check how many
+## accepted parameters we got 
+## and then use part of them to compute a covariance matrix for the 
+## formal run
+#covv = np.cov(C_demo[:, int(C_demo.shape[1]/10):]) 
+#
+#
+#normal_prop = make_multivariate_normal_proposer(
+#    covv = covv,
+#    filter_func=isQualified
+#)
+## Look for data from the formal run and use it  for postprocessing 
+#formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
+#formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
+#C_formal, J_formal = mcmc(
+#        initial_parameters=epa_0,
+#        proposer=normal_prop,
+#        param2res=param2res,
+#        costfunction=costfunction,
+#        nsimu=200
+#)
+#pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
+#pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
+# -
 
-
-normal_prop = make_multivariate_normal_proposer(
-    covv = covv,
-    filter_func=isQualified
-)
-# Look for data from the formal run and use it  for postprocessing 
-formal_aa_path = dataPath.joinpath('cable_formal_da_aa.csv')
-formal_aa_j_path = dataPath.joinpath('cable_formal_da_j_aa.csv')
-C_formal, J_formal = mcmc(
-        initial_parameters=epa_0,
-        proposer=normal_prop,
-        param2res=param2res,
-        costfunction=costfunction,
-        nsimu=200
-)
-pd.DataFrame(C_formal).to_csv(formal_aa_path,sep=',')
-pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
+J_demo,C_demo=map(lambda name: (pd.read_csv(str(dataPath.joinpath(name))).to_numpy())[:,1:],('demo_J.csv','demo_C.csv'))
+#J_demo,C_demo=map(
+#    lambda p:pd.read_csv(p).to_numpy()[:,1:],
+#    (demo_aa_j_path,demo_aa_path))
+J_demo.shape,C_demo.shape
 
 # +
 # POSTPROCESSING 
@@ -200,47 +207,102 @@ pd.DataFrame(J_formal).to_csv(formal_aa_j_path,sep=',')
 # however not even to be expected if our prior probability distribution can be
 # decomposed in this way. (Due to the fact that the Metropolis Hastings Alg. does not
 # produce independent samples ) 
-df = pd.DataFrame({name :C_formal[:,i] for i,name in enumerate(EstimatedParameters._fields)})
-subplots=df.hist()
-fig=subplots[0,0].figure
-fig.set_figwidth(15)
-fig.set_figheight(15)
-fig.savefig('histograms.pdf')
-
+#df = pd.DataFrame({name :C_demo[:,i] for i,name in enumerate(EstimatedParameters._fields)})
+#df = pd.DataFrame({name :C_formal[1:,i] for i,name in enumerate(EstimatedParameters._fields)})
+#subplots=df.hist()
+#fig=subplots[0,0].figure
+#fig.set_figwidth(15)
+#fig.set_figheight(15)
+#fig.savefig('histograms.pdf')
+# +
 # As the next best thing we can create a matrix of plots containing all 
 # projections to possible  parameter tuples
 # (like the pairs plot in the R package FME) but 16x16 plots are too much for one page..
 # However the plot shows that we are dealing with a lot of colinearity for this  parameter set
-subplots = pd.plotting.scatter_matrix(df) 
-fig=subplots[0,0].figure
-fig.set_figwidth(15)
-fig.set_figheight(15)
-fig.savefig('scatter_matrix.pdf')
-
+#subplots = pd.plotting.scatter_matrix(df) 
+#fig=subplots[0,0].figure
+#fig.set_figwidth(15)
+#fig.set_figheight(15)
+#fig.savefig('scatter_matrix.pdf')
+# -
 
 # 2.
 # another way to get an idea of the quality of the parameter estimation is
-# to plot trajectories.
-# A possible aggregation of this histogram to a singe parameter
+# to plot trajectories.(of the parameters with the lowest costfunction values)
+# we find the parameter with the lowest cost function
+plt.plot(J_demo[0,:])
+plt.plot(J_demo[1,:])
+#chose the minimum
+C_opt = C_demo[:,J_demo[1,:].argmin()]
+C_opt
+sol_opt=param2res(C_opt)
+#sol_opt
+# Another possible aggregation of this histogram to a singe parameter
 # vector is the mean which is an estimator of  the expected value of the
 # desired distribution.
-sol_mean =param2res(np.mean(C_formal,axis=1))
+#sol_mean =param2res(np.mean(C_formal,axis=1))
+#sol_mean =param2res(np.mean(C_demo,axis=1))
+
+# Preliminary tests with data assimilation
+
+# +
+
+fig = plt.figure()
+ax= fig.subplots()
+ax.plot(sol_opt[:,1])
+ax.plot(obs[:,1])
+fig.savefig('solutions.pdf')
+# -
 
 fig = plt.figure()
 plot_solutions(
         fig,
-        times=range(sol_mean.shape[0]),
+        times=range(sol_opt.shape[0]),
         var_names=Observables._fields,
-        tup=(sol_mean, obs),
-        names=('mean','obs')
+        tup=(sol_opt, obs),
+        #tup=(sol_opt,),
+        #names=('opt')
+        names=('opt','obs')
 )
 fig.savefig('solutions.pdf')
-# -
+
 from ComputabilityGraphs.helpers import all_mvars
 from ComputabilityGraphs.TypeSet import TypeSet
 for t in all_mvars(h.bgc_md2_computers()):
     print(t.__name__)
 
-mvs.get_StateVariableTupleTimeDerivative()
+# +
+#mvs.get_StateVariableTupleTimeDerivative()
+
+# +
+epa_opt=EstimatedParameters._make(C_opt)
+
+from model_specific_helpers import ModelParameters,Parameters
+apa= Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa_opt,cpa)
+mpa = ModelParameters(
+            **{
+                k:v for k,v in apa._asdict().items() 
+                if k in ModelParameters._fields
+            }
+        )
+
+
+# -
+
+mpa
+
+Bib=mvs.get_BibInfo()
+
+Bib.sym_dict
+
+from sympy import Symbol
+from model_specific_helpers import make_npp_func,make_daily_iterator_sym,construct_V0
+func_dict = {Symbol('NPP'):make_npp_func(mpa)}
+V_init = construct_V0(cpa,epa_opt)
+
+iv=make_daily_iterator_sym(V_init,mpa,func_dict)
+
+
+
 
 
