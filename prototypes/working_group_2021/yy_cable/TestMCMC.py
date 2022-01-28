@@ -87,7 +87,7 @@ class TestMCMC(TestCommon):
             k_slowsom=0.3/(365*5),
             k_passsom=0.3/(222.22*365),
             C_metlit_0=0.05,
-            CWD_0=0.1,
+            C_CWD_0=0.1,
             C_mic_0=1,
             C_passom_0=5,
         )

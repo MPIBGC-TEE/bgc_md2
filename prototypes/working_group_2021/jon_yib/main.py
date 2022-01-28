@@ -35,6 +35,7 @@ from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
         mcmc,
+        autostep_mcmc,
         make_feng_cost_func,
         make_jon_cost_func, 
         plot_solutions,
@@ -110,6 +111,16 @@ c_max[1]=1
 c_max[14]=1
 c_max[15]=1
 c_max[16]=1
+c_max[17]=cveg[0]
+c_max[18]=cveg[0]
+c_max[19]=csoil[0]
+c_max[20]=csoil[0]
+c_max[21]=csoil[0]
+c_max[22]=csoil[0]
+c_max[23]=csoil[0]
+c_max[24]=csoil[0]
+c_max[25]=csoil[0]
+c_max[26]=csoil[0]
 
 #   this function is model specific: It discards parameter proposals
 #   where beta1 and beta2 add up to more than 0.99
@@ -135,6 +146,7 @@ def uniform_parallel_mcmc(_):
         if(isQualified(pertb)):
             flag=False
     return(
+<<<<<<< HEAD
         autostep_mcmc(
             initial_parameters=pertb,
 	    filter_func=isQualified,
@@ -143,6 +155,23 @@ def uniform_parallel_mcmc(_):
             nsimu=10000,
 	    c_max=c_max,
 	    c_min=c_min
+=======
+        #mcmc(
+        #    initial_parameters=pertb,
+        #    proposer=uniform_prop,
+        #    param2res=param2res,
+        #    costfunction=costfunction,
+        #    nsimu=20000
+        #)
+        autostep_mcmc(
+             initial_parameters=pertb,
+             filter_func=isQualified,
+             param2res=param2res,
+             costfunction=costfunction,
+             nsimu=20000,
+             c_max=c_max,
+             c_min=c_min
+>>>>>>> 9b75372d2f7b263094ecad76af00101038c3a017
         )
     )
 
@@ -206,7 +235,11 @@ J_cat = np.concatenate(
 pd.DataFrame(C_cat).to_csv(uni_c_path,sep=',')
 pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
     
+<<<<<<< HEAD
 #sort lowest to highest
+=======
+##sort lowest to highest
+>>>>>>> 9b75372d2f7b263094ecad76af00101038c3a017
 #indx = np.argsort(J_cat) 
 #C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
 #J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
@@ -300,6 +333,7 @@ pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
 ##subset to lowest cost subset of mulitple chains (lowest 10%)
 #C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
 #
+<<<<<<< HEAD
 ## POSTPROCESSING 
 ##
 ## The 'solution' of the inverse problem is actually the (joint) posterior
@@ -359,4 +393,7 @@ pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
 #)
 #fig.savefig('solutions.pdf')
 #
+=======
+# POSTPROCESSING 
+>>>>>>> 9b75372d2f7b263094ecad76af00101038c3a017
 #

@@ -5,10 +5,11 @@ import sys
 sys.path.insert(0,'..')
 
 import matplotlib.pyplot as plt
-from model_specific_helpers import (
-    Observables,
-    month_2_day_index,
+from symbolic_helpers import(
     make_param2res_sym,
+)
+from ParameterMappings import (
+    Observables,
 )
 
 from general_helpers import (
