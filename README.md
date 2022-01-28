@@ -1,5 +1,4 @@
-![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install/badge.svg)
-![test_conda_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
+![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
 ## Installation
 
 * For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
@@ -27,11 +26,12 @@
      ```bash 
      conda create -y --name bgc_md2 python=3
      conda activate bgc_md2
+     cd bgc_md2
      ./install_developer_conda.sh 
      ```
      (on MS-Windows replace the last line with)
      ```bash
-     ./install_developer_conda.bat 
+     install_developer_conda.bat 
      ```
      This will install the dependencies and run ```python setup.py develop``` for every subpackage so that your code changes 
      in one of these packages take mmediate effect.
@@ -105,7 +105,3 @@ https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependen
 * The computibility graph is expensive to create and only changes if new
   `Computers` and `MVars` are created.  It should be cached, which encurages
   the use of immutable data structures. (since we can use functools )
-
-   
-
-

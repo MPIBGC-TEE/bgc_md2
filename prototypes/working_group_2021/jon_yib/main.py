@@ -35,7 +35,9 @@ from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
         mcmc,
+        autostep_mcmc,
         make_feng_cost_func,
+        make_jon_cost_func, 
         plot_solutions
 )
 
@@ -76,10 +78,10 @@ epa0 = EstimatedParameters(
     f_samic_cwd=0.3,            # 16     
     C_leaf_0=cveg[0]/5,         # 17      
     C_root_0=cveg[0]/5,         # 18      
-    C_cwd_0=cveg[0]/50,         # 19      
-    C_samet_0=cveg[0]/300,      # 20      
-    C_sastr_0=cveg[0]/300,      # 21      
-    C_samic_0=cveg[0]/500,      # 22      
+    C_cwd_0=csoil[0]/50,         # 19      
+    C_samet_0=csoil[0]/300,      # 20      
+    C_sastr_0=csoil[0]/300,      # 21      
+    C_samic_0=csoil[0]/500,      # 22      
     C_slmet_0=csoil[0]/10,      # 23      
     C_slstr_0=csoil[0]/10,      # 24      
     C_slmic_0=csoil[0]/10,      # 25      
@@ -101,35 +103,63 @@ cpa = UnEstimatedParameters(
 param2res = make_param2res(cpa)
 
 # set max/min parameters limits 
-c_min=np.array(epa0)*0.5
-c_max=np.array(epa0)*1.5
+c_min=np.array(epa0)*0.001
+c_max=np.array(epa0)*1000
+c_max[0]=1
+c_max[1]=1
+c_max[14]=1
+c_max[15]=1
+c_max[16]=1
+c_max[17]=cveg[0]
+c_max[18]=cveg[0]
+c_max[19]=csoil[0]
+c_max[20]=csoil[0]
+c_max[21]=csoil[0]
+c_max[22]=csoil[0]
+c_max[23]=csoil[0]
+c_max[24]=csoil[0]
+c_max[25]=csoil[0]
+c_max[26]=csoil[0]
 
 #   this function is model specific: It discards parameter proposals
 #   where beta1 and beta2 add up to more than 0.99
-isQualified = make_param_filter_func(c_max,c_min)
+isQualified = make_param_filter_func(c_max,c_min,cveg[0],csoil[0])
 uniform_prop = make_uniform_proposer(
     c_min,
     c_max,
-    D=100, # this value 
+    D=15, # this value 
     filter_func=isQualified
 )
 
 #set cost function 
-costfunction=make_feng_cost_func(obs)
+costfunction=make_jon_cost_func(obs)
 
 #define uniform parallel mcmc wrapper function
 def uniform_parallel_mcmc(_):
     #calculate length of parameters
     par_len = len(epa0)
-    #randomly perturb parameters for each chain by up to +- 10%
-    pertb = np.random.uniform(low=0.9, high=1.1, size=(par_len,)).astype(float)
+    #randomly perturb parameters for each chain by up to +- 50%
+    flag=True
+    while(flag):
+        pertb = epa0*np.random.uniform(low=0.5, high=1.5, size=(par_len,)).astype(float)
+        if(isQualified(pertb)):
+            flag=False
     return(
-        mcmc(
-            initial_parameters=epa0*pertb,
-            proposer=uniform_prop,
-            param2res=param2res,
-            costfunction=costfunction,
-            nsimu=20000
+        #mcmc(
+        #    initial_parameters=pertb,
+        #    proposer=uniform_prop,
+        #    param2res=param2res,
+        #    costfunction=costfunction,
+        #    nsimu=20000
+        #)
+        autostep_mcmc(
+             initial_parameters=pertb,
+             filter_func=isQualified,
+             param2res=param2res,
+             costfunction=costfunction,
+             nsimu=20000,
+             c_max=c_max,
+             c_min=c_min
         )
     )
 
@@ -138,6 +168,7 @@ uni_c_path = dataPath.joinpath('yibs_pmcmc_uniform_c.csv')
 uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 
 # Parallel uniform distribution run 
+print("starting parallel run")
 [
     [c_uni1,j_uni1],
     [c_uni2,j_uni2],
@@ -187,108 +218,105 @@ J_cat = np.concatenate(
         j_uni10 
     ), axis=1
 )
-    
-#sort lowest to highest
-indx = np.argsort(J_cat) 
-C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
-J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
 
 # save the parameters and costfunctionvalues for postprocessing 
-pd.DataFrame(C_demo).to_csv(uni_c_path,sep=',')
-pd.DataFrame(J_demo).to_csv(uni_j_path,sep=',')
-
-# formal run using normal distribution and cov matrix from uniform run
-covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.1)]) #lowest 10% by cost 
-normal_prop = make_multivariate_normal_proposer(
-    covv = covv,
-    filter_func=isQualified
-)
-
-#define normal parallel mcmc wrapper
-def normal_parallel_mcmc(_):
-    #calculate length of parameters
-    par_len = len(epa0)
-    #randomly perturb parameters for each chain by up to +- 10%
-    pertb = np.random.uniform(low=0.9, high=1.1, size=(par_len,)).astype(float)
-    return(
-        mcmc(
-            initial_parameters=epa0*pertb,
-            proposer=normal_prop,
-            param2res=param2res,
-            costfunction=costfunction,
-            nsimu=20000
-        )
-    )
-
-# formal run 
-[
-    [c_form1,j_form1],
-    [c_form2,j_form2],
-    [c_form3,j_form3],
-    [c_form4,j_form4],
-    [c_form5,j_form5],
-    [c_form6,j_form6],
-    [c_form7,j_form7],
-    [c_form8,j_form8],
-    [c_form9,j_form9],
-    [c_form10,j_form10]
-] = client.gather(
-        client.map(
-            normal_parallel_mcmc, 
-            range(0,10)
-        )
-    )
-
-#concatenate chains
-C_cat = np.concatenate(
-    (
-        c_form1,
-        c_form2,
-        c_form3,
-        c_form4,
-        c_form5,
-        c_form6,
-        c_form7,
-        c_form8,
-        c_form9,
-        c_form10 
-    ), axis=1
-)
-
-#concatenate cost function
-J_cat = np.concatenate(
-    (
-        j_form1,
-        j_form2,
-        j_form3,
-        j_form4,
-        j_form5,
-        j_form6,
-        j_form7,
-        j_form8,
-        j_form9,
-        j_form10 
-    ), axis=1
-)
-
-#sort lowest to highest
-indx = np.argsort(J_cat) 
-C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
-J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
-
-#print chain5 output as test
-formal_c_path = dataPath.joinpath('yibs_pmcmc_normal_c.csv')
-formal_j_path = dataPath.joinpath('yibs_pmcmc_normal_j.csv')
-pd.DataFrame(C_demo).to_csv(formal_c_path,sep=',')
-pd.DataFrame(J_demo).to_csv(formal_j_path,sep=',')
+pd.DataFrame(C_cat).to_csv(uni_c_path,sep=',')
+pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
     
-#use output csv file for post processing
-C_formal = pd.read_csv(formal_c_path).to_numpy()
-J_formal = pd.read_csv(formal_j_path).to_numpy()
-
-#subset to lowest cost subset of mulitple chains (lowest 10%)
-C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
-
+##sort lowest to highest
+#indx = np.argsort(J_cat) 
+#C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
+#J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
+#
+## formal run using normal distribution and cov matrix from uniform run
+#covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
+#normal_prop = make_multivariate_normal_proposer(
+#    covv = covv,
+#    filter_func=isQualified
+#)
+#
+##define normal parallel mcmc wrapper
+#def normal_parallel_mcmc(_):
+#    return(
+#        adaptive_mcmc(
+#            initial_parameters=C.demo[:,0],
+#            covv=covv,
+#            filter_func=isQualified,
+#            param2res=param2res,
+#            costfunction=costfunction,
+#            nsimu=2000
+#        )
+#    )
+#
+## formal run 
+#[
+#    [c_form1,j_form1],
+#    [c_form2,j_form2],
+#    [c_form3,j_form3],
+#    [c_form4,j_form4],
+#    [c_form5,j_form5],
+#    [c_form6,j_form6],
+#    [c_form7,j_form7],
+#    [c_form8,j_form8],
+#    [c_form9,j_form9],
+#    [c_form10,j_form10]
+#] = client.gather(
+#        client.map(
+#            normal_parallel_mcmc, 
+#            range(0,10)
+#        )
+#    )
+#
+##concatenate chains
+#C_cat = np.concatenate(
+#    (
+#        c_form1,
+#        c_form2,
+#        c_form3,
+#        c_form4,
+#        c_form5,
+#        c_form6,
+#        c_form7,
+#        c_form8,
+#        c_form9,
+#        c_form10 
+#    ), axis=1
+#)
+#
+##concatenate cost function
+#J_cat = np.concatenate(
+#    (
+#        j_form1,
+#        j_form2,
+#        j_form3,
+#        j_form4,
+#        j_form5,
+#        j_form6,
+#        j_form7,
+#        j_form8,
+#        j_form9,
+#        j_form10 
+#    ), axis=1
+#)
+#
+##sort lowest to highest
+#indx = np.argsort(J_cat) 
+#C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
+#J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
+#
+##print chain5 output as test
+#formal_c_path = dataPath.joinpath('yibs_pmcmc_normal_c.csv')
+#formal_j_path = dataPath.joinpath('yibs_pmcmc_normal_j.csv')
+#pd.DataFrame(C_demo).to_csv(formal_c_path,sep=',')
+#pd.DataFrame(J_demo).to_csv(formal_j_path,sep=',')
+#    
+##use output csv file for post processing
+#C_formal = pd.read_csv(formal_c_path).to_numpy()
+#J_formal = pd.read_csv(formal_j_path).to_numpy()
+#
+##subset to lowest cost subset of mulitple chains (lowest 10%)
+#C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
+#
 # POSTPROCESSING 
 #
 # The 'solution' of the inverse problem is actually the (joint) posterior

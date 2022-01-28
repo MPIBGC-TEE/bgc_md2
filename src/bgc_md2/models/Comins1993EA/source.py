@@ -161,7 +161,12 @@ mvs=CMTVS(
         # vegetation carbon partitioning.
         VegetationCarbonInputPartitioningTuple(b),
         VegetationCarbonStateVariableTuple((C_f, C_w, C_r)),
-        np1
+        # fixme mm 01-20-2022
+        # The parameterization is incomplete
+        # Exception: The following free symbols: {upsilon_f, AT_soil,
+        # upsilon_r} of the expression: {upsilon_f, AT_soil, upsilon_r} are not
+        # arguments.
+        #np1
     },
     bgc_md2_computers()
 )

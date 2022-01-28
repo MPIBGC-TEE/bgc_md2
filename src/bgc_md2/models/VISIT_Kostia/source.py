@@ -1,45 +1,23 @@
-from sympy import symbols
+from sympy import symbols, Function, exp, var, Piecewise
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import bgc_md2_computers
-from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
-    TimeSymbol,
-    StateVariableTuple,
-)
+from .source_minus_1 import mvs as mvs_base 
 
-# from sympy.vector import CoordSysND,express
-# fixme mm:
-# add this boilerplatecode automatically
-# from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+Bib = mvs_base.get_BibInfo()
+for name in Bib.sym_dict.keys():
+    var(name)
+mrso=Function('mrso')
+tsl =Function('tsl')
+NPP = Function('NPP')
+subs_dict ={xi: Piecewise(
+    (exp(E * (1 / (10 - T0) - 1 / (tsl(t) - T0))) * mrso(t) / (KM + mrso(t)),tsl(t)>T0),
+    #(0,tsl(t)<T0)
+    (0,True) #catch all
+    )
+}
 
-# C=get_CooordSystem()
-I_vl, I_vw = symbols("I_vl I_vw")
-vl, vw = symbols("vl vw")
-k_vl, k_vw = symbols("k_vl k_vw")
-
-
-# the keys of the internal flux dictionary are tuples (source_pool,target_pool)
-
-# srm:SmoothReservoirModel
-# srm=SmoothReservoirModel.from_state_variable_indexed_fluxes(
-#     in_fluxes
-#    ,out_fluxes
-#    ,internal_fluxes
-# )
-
-
-# specialVars = {
-mvs = CMTVS(
-    {
-        InFluxesBySymbol({vl: I_vl, vw: I_vw}),
-        OutFluxesBySymbol({vl: k_vl * vl, vw: k_vw * vw}),
-        InternalFluxesBySymbol({(vl, vw): k_vl * vl, (vw, vl): k_vw * vw}),
-        TimeSymbol("t"),
-        StateVariableTuple((vl, vw))
-        #srm
-    },
-    bgc_md2_computers()
-
-)
+s = {
+        mvs_base.get_InternalFluxesBySymbol().subs(subs_dict),
+        mvs_base.get_OutFluxesBySymbol().subs(subs_dict)
+}
+mvs=mvs_base.update(s)

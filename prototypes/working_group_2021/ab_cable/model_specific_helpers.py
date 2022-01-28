@@ -3,6 +3,9 @@ import netCDF4 as nc
 import numpy as np
 from collections import namedtuple
 from functools import reduce
+import json
+from sympy import sin,integrate,var,lambdify
+from pathlib import Path
 from general_helpers import day_2_month_index, month_2_day_index, months_by_day_arr, TimeStepIterator2, respiration_from_compartmental_matrix
 
 # fixme:
@@ -30,7 +33,6 @@ UnEstimatedParameters = namedtuple(
         'C_root_0',
         'C_wood_0',
         'c_litter_0',
-        'C_cwd_0',
         'c_soil_0',
         'rh_0',
         'clay',
@@ -145,24 +147,28 @@ def get_variables_from_files(dataPath):
     path = dataPath.joinpath("CABLE-POP_S2_npp.nc")
     ds = nc.Dataset(str(path))
     var_npp = ds.variables['npp'][:,:,:]
+    print(var_npp[10:])
     ds.close()
-    
+    print("finished npp")
+    print("data type is ", type(var_npp))
+
     path = dataPath.joinpath("CABLE-POP_S2_rh.nc")
     ds = nc.Dataset(str(path))
     var_rh = ds.variables['rh'][:,:,:]
     ds.close()
-    
+    print("finished rh")
+
     path = dataPath.joinpath("CABLE-POP_S2_cLeaf.nc")
     ds = nc.Dataset(str(path))
     var_cleaf = ds.variables['cLeaf'][:,:,:]
     ds.close()
+    print("finished cLeaf")
     
     path = dataPath.joinpath("CABLE-POP_S2_cRoot.nc")
     ds = nc.Dataset(str(path))
     var_croot = ds.variables['cRoot'][:,:,:]
     ds.close()
-    
-    
+
     path = dataPath.joinpath("CABLE-POP_S2_cVeg.nc")
     ds = nc.Dataset(str(path))
     var_cveg = ds.variables['cVeg'][:,:,:]
@@ -178,16 +184,24 @@ def get_variables_from_files(dataPath):
     ds = nc.Dataset(str(path))
     var_clitter = ds.variables['cLitter'][:,:,:]
     ds.close()
+    print("finished cLitter")
 
     path = dataPath.joinpath("CABLE-POP_S2_cCwd.nc")
     ds = nc.Dataset(str(path))
     var_ccwd = ds.variables['cCwd'][:, :, :]
+    print("finished ccwd")
+    var_lon = ds.variables['longitude'][:]
+    print("finished long")
+    print(var_lon[:10])
+    var_lat = ds.variables['latitude'][:]
+    print("finished lat")
+    print(var_lat[:10])
     ds.close()
 
-    return (var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd)
+    return (var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd, var_lon, var_lat)
 
 def get_example_site_vars(dataPath):
-    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd = get_variables_from_files(dataPath)
+    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd, var_lon, var_lat= get_variables_from_files(dataPath)
     # pick up 1 site   wombat state forest
     s = slice(None,None,None) # this is the same as : 
     t = s,49,325 # [t] = [:,49,325]
@@ -211,7 +225,95 @@ def get_example_site_vars(dataPath):
             var_ccwd
         )
     )
-    cwood = cveg - cleaf - croot; 
+    cwood = cveg - cleaf - croot;
+    print("yo there - the data type is of npp is", type(var_npp))
+    print("yo there - the data type is of var cveg is", type(var_cveg))
+    print("yo there - the data type is of cveg is", type(cveg))
+    return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
+
+# get global sum of variables - modification of make_global_average.py from Jon model.
+
+
+
+def get_global_sum_vars(dataPath):
+    var_npp, var_rh, var_cleaf, var_croot, var_cveg, var_csoil, var_clitter, var_ccwd, var_lon, var_lat= get_variables_from_files(dataPath)
+
+    # We assume that lat,lon actually specifies the center of the gridcell
+    # and that it extends from lat-0.5 to lat+0.5 and long-0.5
+    for v in ('theta', 'phi', 'delta_theta', 'delta_phi', 'r'):
+        var(v)
+
+    # we compute the are of a delta_phi * delta_theta patch
+    # on the unit ball (which depends also on theta but not
+    # on phi)
+    A_sym = integrate(
+        integrate(
+            sin(theta),
+            (theta, theta - delta_theta / 2, theta + delta_theta / 2)
+        ),
+        (phi, phi - delta_phi / 2, phi + delta_phi / 2)
+    )
+
+    A_fun=lambdify((theta,delta_theta,delta_phi),A_sym)
+
+    def grad2rad(alpha):
+        return np.pi / 180.0 * alpha
+
+    def area(lat):
+        delta_phi = 1
+        delta_theta = 1
+        r = 6378.1370  # km
+        # translate to normal spherical coordinates
+        theta = (90.0 - lat)
+        theta, delta_theta, delta_phi = map(
+            grad2rad,
+            (
+                theta,
+                delta_theta,
+                delta_phi,
+            )
+        )
+        return A_fun(theta, delta_theta, delta_phi) * r
+
+    weights = np.array(list(map(area, var_lat)))
+
+    npp_lon_sum = var_npp.sum(axis=2)*86400 #   kg/m2/s kg/m2/day;
+    npp = (npp_lon_sum*weights).sum(axis=1);
+    print("yo there - the data type is of npp is", type(npp))
+    print("global npp calculated")
+    print("data type is ", type(npp))
+
+    rh_lon_sum = var_rh.sum(axis=2)*86400;   # per s to per day
+    rh = (rh_lon_sum*weights).sum(axis=1);
+    print("global rh calculated")
+
+    clitter_lon_sim = var_clitter.sum(axis=2);
+    clitter = (clitter_lon_sim*weights).sum(axis=1);
+    print("global clitter calculated")
+
+    csoil_lon_sum = var_csoil.sum(axis=2);
+    csoil = (csoil_lon_sum*weights).sum(axis=1);
+    print("global csoil calculated")
+
+    cveg_lon_sum = var_cveg.sum(axis=2);
+    cveg = (cveg_lon_sum * weights).sum(axis=1);
+    print("global cveg calculated")
+
+    cleaf_lon_sum = var_cleaf.sum(axis=2);
+    cleaf= (cleaf_lon_sum * weights).sum(axis=1);
+    print("global cleaf calculated")
+
+    croot_lon_sum = var_croot.sum(axis=2);
+    croot = (croot_lon_sum * weights).sum(axis=1);
+    print("global croot calculated")
+
+    ccwd_lon_sum = var_ccwd.sum(axis=2);
+    ccwd = (ccwd_lon_sum * weights).sum(axis=1);
+    print("global ccwd calculated")
+
+    cwood = cveg - cleaf - croot;
+    print("yo there - the data type is of cwood is", type(cwood))
+
     return (npp, rh, clitter, csoil, cveg, cleaf, croot, ccwd, cwood)
 
 def make_param_filter_func(
@@ -311,7 +413,7 @@ def make_param2res(
     
         f41 = epa.f_leaf2metlit; f42 = epa.f_root2metlit; f51 = 1-f41; f52 = 1-f42; f63 = 1;
         f74 = 0.45; f75 = 0.45*(1-lig_leaf); 
-        f85 = 0.7*lig_leaf; f86 = 0.4*(1-cpa.lig_wood);
+        f85 = 0.7*epa.lig_leaf; f86 = 0.4*(1-cpa.lig_wood);
         f96 = 0.7*cpa.lig_wood;  
         f87=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.997 - 0.032*cpa.clay)
         f97=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.003 + 0.032*cpa.clay)
@@ -343,7 +445,8 @@ def make_param2res(
                 cpa.C_wood_0,
                 epa.C_metlit_0,
                 epa.C_strlit_0,
-                cpa.C_cwd_0,
+                cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
+                #cpa.C_cwd_0,
                 epa.C_mic_0,
                 cpa.c_soil_0- epa.C_mic_0 - epa.C_passom_0,
                 epa.C_passom_0
@@ -427,13 +530,13 @@ def make_param2res_2(
     #       to include nonlinearities.
     # 2.)   We build a daily advancing model that can provide output for an arbitrary 
     #       selection of days.  To do so we provide all driver data as
-    #       functions of the smalles timestep (here day with index i), which in
+    #       functions of the smallest timestep (here day with index i), which in
     #       the case of this model means that we provide the same npp value for
     #       all the days in a given month. 
     # 3.)   We translate the index of a given month to the appropriate day index
-    #       and apply the dayly model of 2.). Again this seems cumbersome for this
+    #       and apply the daily model of 2.). Again this seems cumbersome for this
     #       example but allows us to reuse the daily model for all applications.
-    #       This is espacially usefull for testing since we only need some dayly timesteps.
+    #       This is especially useful for testing since we only need some daily timesteps.
     #       It makes it also easier to keep an overview over the appropriate 
     #       units: If the smallest timestep is a day, then all time related parameters
     #       have to be provided in the corresponding  units, regardless of the
@@ -608,9 +711,9 @@ def make_compartmental_matrix_func(
     A[4,1] = 1.0 - mpa.f_root2metlit
     A[5,2] = mpa.f_wood2CWD 
     A[6,3] = mpa.f_metlit2mic 
-    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
+    A[6,4] = mpa.f_metlit2mic * (1.0 - mpa.lig_leaf)
     A[7,4] = 0.7 * mpa.lig_leaf
-    A[7,5] = 0.4 * (1 - mpa.lig_wood)
+    A[7,5] = 0.4 * (1.0 - mpa.lig_wood)
     A[8,5] = 0.7 * mpa.lig_wood
     A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
     A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
@@ -653,7 +756,7 @@ def construct_V0(
         C_wood=cpa.C_wood_0,
         C_metlit=epa.C_metlit_0,
         C_strlit=epa.C_strlit_0,
-        C_cwd=C_cwd_0,
+        C_cwd=cpa.c_litter_0-epa.C_metlit_0-epa.C_strlit_0,
         C_mic=epa.C_mic_0,
         C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
         C_passsom=epa.C_passom_0

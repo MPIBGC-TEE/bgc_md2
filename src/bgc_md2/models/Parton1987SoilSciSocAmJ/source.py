@@ -100,7 +100,9 @@ mvs = CMTVS(
         u,  # the overall input
         t,  # time for the complete system
         x,  # state vector of the complete system
-        np1,
+        # fixme mm 01-20-2022: The parameterization is incompomplete
+        # error: The following free symbols: {A_l, Ls, Tx} of the expression: {A_l, Tx, Ls} 
+        # np1, 
         nsv1,
     #    ntimes
     },

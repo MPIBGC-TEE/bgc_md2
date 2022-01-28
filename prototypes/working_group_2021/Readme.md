@@ -23,7 +23,7 @@ To use the code You have two options.
       2. Press the green Code button and copy the url
       3. type 
          ```bash
-         git clone https://github.com/MPIBGC-TEE/bgc_md2.git
+         git clone https://github.com/MPIBGC-TEE/bgc_md2.git --recurse submodules
          ``` 
          in your terminal 
          (in the directory where you want to checkout the code)
@@ -33,37 +33,43 @@ To use the code You have two options.
 The files are organized in two catagories:
  * model specific
  * general
-For every model there is a specific sub folder, containing model the specific files, while the general functions reside one level above.
-The first model (and at the time of writing the only) represented in this way is the modified version of  Yuanyuan's cable example.
+For every model there is a specific sub folder, containing the model specific files, while the general functions reside one level above.
+The first model  represented in this way is the modified version of  Yuanyuan's cable example.
 The folder name is  `yy_cable`.
 ### Test the example
 Before you start working on your own version of it you should make sure that you can run the example.
-1. Depending on your python environment you will have to install some packages: 
-  * json
-  * numpy
-  * pandas
-  * netCDF4
-  * tqdm
-1. `cd yy_cable`Create a small config file named `config.json` to tell the code where to look for the data: 
+1. Install the `bgc_md2` package as described in the instructions in the gitHub https://github.com/MPIBGC-TEE/bgc_md2#installation
+   Remark: If you cloned the repo change the url to your fork, otherwise you will not see your latest contributions.
+
+1. `cd yy_cable`Create a small config file named `config.json` to tell the code where to download and look for the data: 
 In my case the files reside in `/home/data/yuanyuan` and the content of `config.json` is 
 ```json
 {"dataPath": "/home/data/yuanyuan"}
 ```
+1. Run the little script to download the data.
 1. After the successful installation you can change into `yy_cable` and should be able to execute the mcmc by typing`python main.py`
 
 ### Adapt the code to your own needs
-1. copy and rename the folder 
-1. start adapting the code to your own model
-   There are several ways how to do this depending on your workflow.
-   I what follows I describe a how I went about adapting Alisons code.
-   I use automated tests to get one part after the other to work and conserver the progress.
+1. Create a folder for your model. We call it `{your_model}` from now on.
+1. Start copying and changing the code and the automated tests for your own model
+   To do this step by step
+   	1. Create a symbolic description of the model.
+	   Check the paper that describes your model and find out if the equations are already in matrix form
+	   or if they are given as fluxes (into, out of , or between pools). 
+	   This decides which example you should start with.
+	   An example folder for a matrix description is `yy_cable`
+	   The folder `kv_visit2` contains an example starting from fluxes.
+	   The package will create the matrix from this input for you.
+	   We will call the folder you decide to start with `{example}` from now on.  
 
-  To do this it step by step
-	1. run the TestSuite in the newly created folder by 
-           ```bash
-           python -m unittest TestModel.py 
-	   '''
-           To make sure that you start with an example that works.
+   		1. copy the following files from `{example}` into your new folder:
+		   ```bash
+		   run_tests_serial.py, TestSymbolic_1.py` into your new folder
+		1. run the TestSuite in the newly created folder by 
+        	   ```bash
+        	   python -m unittest TestModel.py 
+		   '''
+        	   To make sure that you start with an example that works.
 
 	1. Open the files  `TestModel.py' and `model_specific_helpers.py'
 	   and change the names and values of the `UnEstimatedParameters' and `EstimatedParameters'

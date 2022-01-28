@@ -31,6 +31,7 @@ from general_helpers import (
     plot_solutions
 )
 
+#with Path('./prototypes/working_group_2021/kv_visit/config.json').open(mode='r') as f:
 with Path('config.json').open(mode='r') as f:
     conf_dict = json.load(f)
 
@@ -193,7 +194,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=10000,
+    nsimu=1000,
     c_max=c_max,
     c_min=c_min,
     acceptance_rate=10,   # default value | target acceptance rate in %
