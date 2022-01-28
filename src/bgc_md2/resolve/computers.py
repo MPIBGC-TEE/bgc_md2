@@ -222,19 +222,19 @@ def numericCompartmentalMatrixFunc(
         return NumericCompartmentalMatrixFunc(B_func)
 
 
-#def numericCompartmentalMatrixSolutionTuple(
-#        xs: NumericSolutionArray,
-#        ts: NumericSimulationTimes,
-#        B_fun: NumericCompartmentalMatrixFunc
-#    )->NumericCompartmentalMatrixSolutionTuple:
-#    def f(tup):
-#        t,x=tup
-#        return B_fun(t,x)
-#    Bs = tuple(map(f,zip(ts,xs)))
-#    return NumericCompartmentalMatrixSolutionTuple(Bs)
-#
-#
-#
+def numericCompartmentalMatrixSolutionTuple(
+        xs: NumericSolutionArray,
+        ts: NumericSimulationTimes,
+        B_fun: NumericCompartmentalMatrixFunc
+    )->NumericCompartmentalMatrixSolutionTuple:
+    def f(tup):
+        t,x=tup
+        return B_fun(t,x)
+    Bs = tuple(map(f,zip(ts,xs)))
+    return NumericCompartmentalMatrixSolutionTuple(Bs)
+
+
+
 #def numericCarbonStoragePotentialSolutionList(
 #    Ms :NumericCompartmentalMatrixSolutionTuple,
 #    dXdTs: NumericStateVariableTupleTimeDerivativeSolutionList
@@ -471,7 +471,7 @@ def vegetation_carbon_input_tuple_2(
 ) -> VegetationCarbonInputTuple:
     return VegetationCarbonInputTuple(hr.in_or_out_flux_tuple(vcsv, ifls))
 
-
+# projector
 @lru_cache
 def vegetation_carbon_input_scalar_1(
     t: VegetationCarbonInputTuple
@@ -481,9 +481,9 @@ def vegetation_carbon_input_scalar_1(
 
 @lru_cache
 def vegetation_carbon_input_partitioning_tuple_1(
-    u: VegetationCarbonInputScalar,
     t: VegetationCarbonInputTuple
 ) -> VegetationCarbonInputPartitioningTuple:
+    u = sum(t)
     return VegetationCarbonInputPartitioningTuple(
         [tc/u for tc in t]
     )

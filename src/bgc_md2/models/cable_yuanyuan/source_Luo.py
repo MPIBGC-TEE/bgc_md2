@@ -35,7 +35,7 @@ sym_dict = {
         'C_wood': 'Carbon in woody tissue',
         'C_metlit': 'Carbon in metabolic litter',
         'C_stlit': 'Carbon in structural litter',
-        'C_CWD': 'Corse woody debris Carbon ?',
+        'CWD': 'Corse woody debris Carbon ?',
         'C_mic': 'Carbon ?',
         'C_slowsom': 'Carbon in slow SOM',
         'C_passsom': 'Carbon in passive SOM',
@@ -47,22 +47,22 @@ sym_dict = {
         'k_root': 'Fine roots cycling rate' ,
         'k_metlit': 'Metabolic litter cycling rate' ,
         'k_stlit': 'Structural litter cycling rate' ,
-        'k_C_CWD': 'cycling rate' ,
+        'k_CWD': 'cycling rate' ,
         'k_mic': 'Microbial SOM cycling rate' ,
         'k_slowsom': 'Slow SOM cycling rate' ,
         'k_passsom': 'Passive SOM cycling rate' ,
         'f_leaf2metlit': 'Transfer coefficient from Foliage to Metabilic Litter',
-        #'f_leaf2stlit': 'Transfer coefficient from Foliage to Structural Litter',
-        'f_wood2CWD': 'Transfer coefficient from Wood to C_CWD',
+        'f_leaf2stlit': 'Transfer coefficient from Foliage to Structural Litter',
+        'f_wood2CWD': 'Transfer coefficient from Wood to CWD',
         'f_root2metlit': 'Transfer coefficient from Fine Roots to Metabolic Litter',
-        #'f_root2stlit': 'Transfer coefficient from Fine Roots to Structural Litter',
+        'f_root2stlit': 'Transfer coefficient from Fine Roots to Structural Litter',
         'f_metlit2mic': 'Transfer coefficient from Metabolic Litter to Fast SOM',
         'f_stlit2mic': 'Transfer coefficient from Structural Litter to Fast SOM',
         'f_stlit2slowsom': 'Transfer coefficient from Structural Litter to Slow SOM',
         'f_mic2slowsom': 'Transfer coefficient from Fast to Slow SOM',
         'f_mic2passsom': 'Transfer coefficient from Fast to Passive SOM',
-        'f_CWD2slowsom': 'Transfer coefficient from C_CWD to Slow SOM',
-        'f_CWD2passsom': 'Transfer coefficient from C_CWD to passive SOM',
+        'f_CWD2slowsom': 'Transfer coefficient from CWD to Slow SOM',
+        'f_CWD2passsom': 'Transfer coefficient from CWD to passive SOM',
         'f_slowsom2passsom': 'Transfer coefficient from Slow to Passive SOM',
         'lig_leaf': '?' ,
         'lig_wood': '?' ,
@@ -75,29 +75,9 @@ for name in sym_dict.keys():
     
 NPP = Function('NPP') 
 
-beta_wood = 1.0 - (beta_leaf + beta_root)
-f_leaf2stlit = 1.0 - f_leaf2metlit
-f_root2stlit = 1.0 - f_root2metlit
-f_stlit2mic = 0.45 * (1.0 - lig_leaf)
-f_stlit2slowsom = 0.7 * lig_leaf
-f_CWD2slowsom = 0.4 * (1.0 - lig_wood)
-f_CWD2passsom = 0.7 * lig_wood
-f_mic2slowsom = (0.85 - 0.68 * (clay+silt)) * (0.997 - 0.032 * clay)
-f_mic2passsom = (0.85 - 0.68 * (clay+silt)) * (0.003 + 0.032 * clay)
-f_slowsom2passsom = 0.45 * (0.003 + 0.009 * clay)
 
-temp_leaf     = k_leaf
-temp_wood     = k_wood
-temp_root     = k_root
-temp_metlit   = k_metlit
-temp_stlit    = k_metlit / (5.75 * exp(-3.0 * lig_leaf))
-temp_CWD      = k_metlit / 20.6
-temp_mic      = k_mic
-temp_slowsom  = k_slowsom
-temp_passsom  = k_passsom
-
-x = StateVariableTuple((C_leaf, C_root, C_wood, C_metlit, C_stlit, C_CWD, C_mic, C_slowsom, C_passsom))
-K = ImmutableMatrix.diag([temp_leaf, temp_root, temp_wood, temp_metlit, temp_stlit, temp_CWD, temp_mic, temp_slowsom, temp_passsom] )
+x = StateVariableTuple((C_leaf, C_root, C_wood, C_metlit, C_stlit, CWD, C_mic, C_slowsom, C_passsom))
+K = ImmutableMatrix.diag([k_leaf, k_root, k_wood, k_metlit, k_stlit, k_CWD, k_mic, k_slowsom, k_passsom] )
 A = ImmutableMatrix(
         [
             [               -1,                 0,          0,                  0,                 0,             0,                    0,                 0,   0],
@@ -122,7 +102,7 @@ mvs = CMTVS(
     {
         BibInfo(# Bibliographical Information
             name="CABLE",
-            longName="Yuanyuan 2021", #fixme
+            longName="Terrestrial Ecosystem Model", 
             version="",
             entryAuthor="Markus Müller",
             entryAuthorOrcid="0000-0003-0009-4169",

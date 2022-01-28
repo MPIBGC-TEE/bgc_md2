@@ -168,8 +168,63 @@ mvs = CMTVS(
 # We could type `C_leaf` somewhere without an error since it is now known as a variable.
 # In the next step we replace all occurences of `vl` by `C_leaf` 
 
-from sympy import var
-var("a b")
-a**2
+# +
+from sympy import var 
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import module_computers
+from bgc_md2.resolve.mvars import (
+    InFluxesBySymbol,
+    OutFluxesBySymbol,
+    InternalFluxesBySymbol,
+    TimeSymbol,
+    StateVariableTuple,
+)
+import bgc_md2.resolve.computers as bgc_c
+
+var("I_vl I_vw k_leaf k_vw")
+# we organize the new symbols a bit better by putting them in a dictionary
+# together with some description that we can use later to display some metainformation
+sym_dict = {
+        'C_leaf': 'content of leaf pool',
+        'C_root': 'content of root pool',
+        'C_wood': 'content of wood pool',
+        'C_metlit': 'content of metabolic litter pool',
+        'C_strlit': 'content of static litter pool',
+        'C_cwd': 'content of corse woody debris pool',
+        'C_mic': 'content of microbial pool',
+        'C_slowsom': 'content of the slow soil pool',
+        'C_passsom': 'content of the passive soil pool'
+}
+# for the moment only use the 
+var(list(sym_dict.keys()))
+
+        
+
+mvs = CMTVS(
+    {
+        StateVariableTuple((C_leaf, C_root, C_wood, C_metlit, C_strlit, C_cwd, C_mic, C_slowsom, C_passsom, )),
+        TimeSymbol("t"),
+        InFluxesBySymbol({C_leaf: I_vl, C_wood: I_vw}),
+        OutFluxesBySymbol({C_leaf: k_leaf * C_leaf, C_wood: k_vw * C_wood}),
+        InternalFluxesBySymbol({(C_leaf, C_wood): k_leaf * C_leaf, (C_wood, C_leaf): k_vw * C_wood}),
+    },
+
+    computers=module_computers(bgc_c)
+)
+
+# +
+
+h.compartmental_graph(mvs)
+
+# +
+from sympy import diff
+
+diff(f,a)
+# -
+
+var('y')
+g=y**2
+g
+
 
 

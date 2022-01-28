@@ -44,6 +44,8 @@ from model_specific_helpers import (
     make_weighted_cost_func,
     make_param2res,
     make_param2res_2,
+)
+from ParameterMappings import (
     UnEstimatedParameters,
     EstimatedParameters,
     Observables
@@ -52,13 +54,13 @@ from model_specific_helpers import (
 from general_helpers import (
         make_uniform_proposer,
         make_multivariate_normal_proposer,
-        #mcmc,
+        mcmc,
+        adaptive_mcmc,
         make_feng_cost_func,
         plot_solutions
 )
-from general_helpers import (
-        mcmc,
-        adaptive_mcmc
+from symbolic_helpers import (
+        make_param2res_sym,
 )
 
 # fixme: 
@@ -137,7 +139,7 @@ epa_0 = EstimatedParameters(
     k_slowsom=0.3/(365*5),
     k_passsom=0.3/(222.22*365),
     C_metlit_0=0.05,
-    CWD_0=0.1,
+    C_CWD_0=0.1,
     C_mic_0=1,
     C_passom_0=5,
 )
