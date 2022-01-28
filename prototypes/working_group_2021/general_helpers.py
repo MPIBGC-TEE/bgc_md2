@@ -4,8 +4,11 @@ from typing import Callable, Tuple, Iterable
 from functools import reduce, lru_cache
 from copy import copy
 from time import time
-from sympy import var, Symbol
+from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 import CompartmentalSystems.helpers_reservoir as hr
+from pathlib import Path
+import json 
+import netCDF4 as nc
 
 days_per_year = 365 
 
@@ -651,3 +654,114 @@ def plot_solutions(
                 )
                 axs[j].set_title(var_names[j])
                 axs[j].legend()
+
+
+
+
+def global_mean(lats,lons,arr):
+    # assuming an equidistant grid.
+    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
+    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
+
+    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+    
+    #copy the mask from the array (first time step) 
+    weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
+
+    weight_mat= np.ma.array(
+        np.array(
+            [
+                    [   
+                        pixel_area(lats[lat_ind]) 
+                        for lon_ind in range(len(lons))    
+                    ]
+                for lat_ind in range(len(lats))    
+            ]
+        ),
+        mask = weight_mask 
+    )
+    
+    # to compute the sum of weights we add only those weights that
+    # do not correspond to an unmasked grid cell
+    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+    
+
+
+
+def grad2rad(alpha_in_grad):
+    return np.pi/180*alpha_in_grad
+
+
+def make_pixel_area_on_unit_spehre(delta_lat,delta_lon,sym=False):  
+    # we compute the are of a delta_phi * delta_theta patch 
+    # on the unit ball centered around phi,theta  
+    # (which depends on theta but not
+    # on phi)
+    # the infinitesimal area element dA = sin(theta)*d_phi * d_theta
+    # we have to integrate it from phi_min to phi_max
+    # and from theta_min to theta_max
+    if sym:
+        # we can do this with sympy (for testing) 
+        for v in ('theta','phi','theta_min', 'theta_max','phi_min','phi_max'):
+            var(v)
+        
+        # We can do this symbolicaly with sympy just for testing...
+        A_sym = integrate(
+                    integrate(
+                        sin(theta),
+                        (theta,theta_min,theta_max)
+                    ),
+                    (phi,phi_min,phi_max)
+        )
+        # translate this to a numeric function
+        A_num=lambdify((theta_min,theta_max,phi_min,phi_max),A_sym,modules=['numpy'])
+    else:
+        # or manually solve the integral since it is very simple
+        def A_num(theta_min,theta_max,phi_min,phi_max):
+            return (
+                (phi_max-phi_min)
+                *
+                (-np.cos(theta_max) + np.cos(theta_min))
+            )
+
+    delta_theta, delta_phi = map(grad2rad, ( delta_lat, delta_lon))
+    dth = delta_theta/2.0
+    dph = delta_phi/2.0
+    
+    def A_patch(theta):
+        # computes the area of a pixel on the unitsphere
+        if np.abs(theta<dth/100): #(==0)  
+            # pixel centered at north pole only extends northwards
+            #print("##################### north pole ##########")
+            theta_min_v=0.0
+            theta_max_v=dth
+        elif np.abs(theta > np.pi-dth/100): #==pi) 
+            # pixel centered at south pole only extends northwards
+            #print("##################### south pole ##########")
+            theta_min_v=np.pi-dth
+            theta_max_v=np.pi 
+        else: 
+            # normal pixel extends south and north-wards
+            theta_min_v=theta-dth
+            theta_max_v=theta+dth
+
+        phi_min_v = -dph
+        phi_max_v = +dph
+        res = A_num(
+            theta_min_v,
+	    theta_max_v,
+	    phi_min_v,
+	    phi_max_v
+        )
+        #print(res)
+        return res
+     
+
+    def pixel_area_on_unit_sphere(lat):
+        # computes the fraction of the area of the sphere covered by this pixel
+        theta_grad=lat+90
+        theta = grad2rad(theta_grad)
+        # the area of the unitsphere is 4 * pi
+        return A_patch(theta)
+
+    return pixel_area_on_unit_sphere

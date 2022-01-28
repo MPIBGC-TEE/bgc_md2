@@ -1,5 +1,4 @@
-![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install/badge.svg)
-![test_conda_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
+![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
 ## Installation
 
 * For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 

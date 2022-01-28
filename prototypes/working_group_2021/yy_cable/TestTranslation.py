@@ -12,27 +12,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 from unittest import skip
 from copy import copy
+
+from ParameterMappings import (
+    Observables,
+    StateVariables,
+    UnEstimatedParameters,
+    EstimatedParameters,
+    ModelParameters,
+    Parameters
+)
+
 from model_specific_helpers import (
     Observables,
     run_forward_simulation,
-    run_forward_simulation_sym,
-    construct_V0,
     make_compartmental_matrix_func,
     get_example_site_vars,
-    month_2_day_index,
-    day_2_month_index,
     make_param2res,
     make_param2res_2,
-    make_param2res_sym,
     make_daily_iterator,
+)
+from symbolic_helpers import (
+    Observables,
+    run_forward_simulation_sym,
+    construct_V0,
+    month_2_day_index,
+    make_param2res_sym,
     make_daily_iterator_sym,
-    construct_matrix_func_sym
+    #construct_matrix_func_sym
 )
 
 from general_helpers import (
     respiration_from_compartmental_matrix,
     month_2_day_index,
     year_2_day_index,
+    day_2_month_index,
     plot_solutions
 )
 from TestCommon import TestCommon
@@ -246,17 +259,17 @@ class TestTranslation(TestCommon):
         nrh = respiration_from_compartmental_matrix(B,X)
         self.assertTrue(np.allclose(orh-nrh,np.zeros((9,1))))
 
-    def test_construct_matrix(self):
-        B_func  = make_compartmental_matrix_func(
-            self.mpa
-        )
-        B_func_sym = construct_matrix_func_sym(self.mpa)
-        B = B_func(0, self.x_init)
-        B_sym = B_func_sym(0, self.x_init)
-        b=np.array(np.abs(B-B_sym)>1e-3)
-        l=[ (i,j) for i in range(9) for j in range(9) if b[i,j]]
-        print(l)
-        self.assertTrue(np.allclose(B, B_sym))
+#    def test_construct_matrix(self):
+#        B_func  = make_compartmental_matrix_func(
+#            self.mpa
+#        )
+#        B_func_sym = construct_matrix_func_sym(self.mpa)
+#        B = B_func(0, self.x_init)
+#        B_sym = B_func_sym(0, self.x_init)
+#        b=np.array(np.abs(B-B_sym)>1e-3)
+#        l=[ (i,j) for i in range(9) for j in range(9) if b[i,j]]
+#        print(l)
+#        self.assertTrue(np.allclose(B, B_sym))
 
 
 

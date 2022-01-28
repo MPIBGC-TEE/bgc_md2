@@ -31,7 +31,8 @@ from general_helpers import (
     plot_solutions
 )
 
-with Path('./prototypes/working_group_2021/kv_visit/config.json').open(mode='r') as f:
+#with Path('./prototypes/working_group_2021/kv_visit/config.json').open(mode='r') as f:
+with Path('config.json').open(mode='r') as f:
     conf_dict = json.load(f)
 
 dataPath = Path(conf_dict['dataPath'])

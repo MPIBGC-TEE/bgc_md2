@@ -47,52 +47,59 @@ from testinfrastructure.helpers import pp, pe
 # which requires that the model authors provide dimensions
 # for there variables
 
+class DictLike(frozendict):
+    def subs(self,subsdict):
+        res = {
+                k:v.subs(subsdict) 
+                for k,v in self.items()
+        }
+        return self.__class__(res)
 
-class InFluxesBySymbol(frozendict):
+class InFluxesBySymbol(DictLike):
     pass
 
 
-class OutFluxesBySymbol(frozendict):
+class OutFluxesBySymbol(DictLike):
     pass
 
 
-class InternalFluxesBySymbol(frozendict):
+class InternalFluxesBySymbol(DictLike):
     pass
 
 
-class CarbonInFluxesBySymbol(frozendict):
+class CarbonInFluxesBySymbol(DictLike):
     pass
 
 
-class CarbonOutFluxesBySymbol(frozendict):
+class CarbonOutFluxesBySymbol(DictLike):
     pass
 
 
-class VegetationCarbonInFluxesBySymbol(frozendict):
+class VegetationCarbonInFluxesBySymbol(DictLike):
     pass
 
 
-class VegetationCarbonOutFluxesBySymbol(frozendict):
+class VegetationCarbonOutFluxesBySymbol(DictLike):
     pass
 
 
-class VegetationCarbonInternalFluxesBySymbol(frozendict):
+class VegetationCarbonInternalFluxesBySymbol(DictLike):
     pass
 
 
-class CarbonInternalFluxesBySymbol(frozendict):
+class CarbonInternalFluxesBySymbol(DictLike):
     pass
 
 
-class NitrogenInFluxesBySymbol(frozendict):
+class NitrogenInFluxesBySymbol(DictLike):
     pass
 
 
-class NitrogenOutFluxesBySymbol(frozendict):
+class NitrogenOutFluxesBySymbol(DictLike):
     pass
 
 
-class NitrogenInternalFluxesBySymbol(frozendict):
+class NitrogenInternalFluxesBySymbol(DictLike):
     pass
 
 class TimeSymbol(Symbol):
@@ -142,7 +149,18 @@ class MatrixLike(ImmutableMatrix):
         obj._rep = rep
         return obj
 
-    pass 
+
+class FunctionLike:
+    """Base class for function like results"""
+    def __init__(self,f):
+        self.f = f
+
+    def __call__(self,*args,**kwargs):
+        return self.f(*args,**kwargs)
+
+class NumericCompartmentalMatrixFunc(FunctionLike):
+    # fixme mm: We could add a check for the right arguments and return values here
+    pass
 
 class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...
@@ -157,6 +175,35 @@ class StateVariableTuple(ColumnVectorLike):
     Although two models with identical fluxes between there pools are identical on a physical
     level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
     on the ordering and have to be consistent."""
+    pass
+
+class StateVariableTupleTimeDerivative(ColumnVectorLike):
+    pass
+
+class CarbonStorageCapacity(ColumnVectorLike):
+    # see doi:10.5194/bg-14-145-2017
+    # equation (2) 
+    # in Yiqi's nomenclature the 
+    # pool contents X(t) can be expressed as 
+    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+    # I(t)  = B u(t) (Input Vector)
+    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+    # so the first term is
+    # C_p=M_inv(t) dx/dt
+    pass
+
+class CarbonStoragePotential(ColumnVectorLike):
+    # see doi:10.5194/bg-14-145-2017
+    # equation (2) second term
+    # in Yiqi's nomenclature the 
+    # pool contents X(t) can be expressed as 
+    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+    # I(t)  = B u(t)
+    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+    # so the second term is
+    # C_p=M_inv(t) dx/dt
     pass
 
 class VegetationCarbonStateVariableTuple(ColumnVectorLike):
@@ -420,6 +467,8 @@ class QuantitySimulationTimes(np.ndarray):
     def __hash__(self):
         return hash(tuple(self))
 
+class NumericCompartmentalMatrixSolutionTuple(tuple):
+    pass
 
 class NumericSolutionArray(np.ndarray):
     # just a wrapper class to distinguish the array as a solution
