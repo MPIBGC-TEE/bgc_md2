@@ -37,7 +37,8 @@ from general_helpers import (
         mcmc,
         make_feng_cost_func,
         make_jon_cost_func, 
-        plot_solutions
+        plot_solutions,
+	autostep_mcmc
 )
 
 #load file path from json file
@@ -46,12 +47,12 @@ with Path('config.json').open(mode='r') as f:
 dataPath = Path(conf_dict['dataPath'])
 
 #get data streams
-gpp, rh, ra, csoil, cveg = get_example_site_vars(Path(conf_dict['dataPath']))
+npp, rh, ra, csoil, cveg = get_example_site_vars(Path(conf_dict['dataPath']))
 nyears = 320
 obs_tup=Observables(
     c_veg=cveg,
     c_soil=csoil,
-    a_respiration=monthly_to_yearly(ra),
+    #a_respiration=monthly_to_yearly(ra),
     h_respiration=monthly_to_yearly(rh)
 )
 obs = np.stack(obs_tup, axis=1)[0:nyears,:]
@@ -77,10 +78,10 @@ epa0 = EstimatedParameters(
     f_samic_cwd=0.3,            # 16     
     C_leaf_0=cveg[0]/5,         # 17      
     C_root_0=cveg[0]/5,         # 18      
-    C_cwd_0=cveg[0]/50,         # 19      
-    C_samet_0=cveg[0]/300,      # 20      
-    C_sastr_0=cveg[0]/300,      # 21      
-    C_samic_0=cveg[0]/500,      # 22      
+    C_cwd_0=csoil[0]/50,         # 19      
+    C_samet_0=csoil[0]/300,      # 20      
+    C_sastr_0=csoil[0]/300,      # 21      
+    C_samic_0=csoil[0]/500,      # 22      
     C_slmet_0=csoil[0]/10,      # 23      
     C_slstr_0=csoil[0]/10,      # 24      
     C_slmic_0=csoil[0]/10,      # 25      
@@ -93,7 +94,7 @@ cpa = UnEstimatedParameters(
     C_veg_0=cveg[0],
     rh_0 = rh[0],
     ra_0 = ra[0],
-    gpp=gpp,
+    npp=npp,
     clay=0.2028,
     silt=0.2808,
     nyears=320
@@ -130,16 +131,18 @@ def uniform_parallel_mcmc(_):
     #randomly perturb parameters for each chain by up to +- 50%
     flag=True
     while(flag):
-        pertb = epa0*np.random.uniform(low=0.5, high=1.5, size=(par_len,)).astype(float)
+        pertb = epa0*np.random.uniform(low=0.95, high=1.05, size=(par_len,)).astype(float)
         if(isQualified(pertb)):
             flag=False
     return(
-        mcmc(
+        autostep_mcmc(
             initial_parameters=pertb,
-            proposer=uniform_prop,
+	    filter_func=isQualified,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=20000
+            nsimu=10000,
+	    c_max=c_max,
+	    c_min=c_min
         )
     )
 

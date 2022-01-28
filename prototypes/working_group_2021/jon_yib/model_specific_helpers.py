@@ -31,7 +31,7 @@ UnEstimatedParameters = namedtuple(
         'C_veg_0',
         'rh_0',
         'ra_0',
-        'gpp',
+        'npp',
         'clay',
         'silt',
         'nyears'
@@ -114,14 +114,14 @@ Observables = namedtuple(
     [
         'c_veg',
         'c_soil',
-        'a_respiration',
+       #'a_respiration',
         'h_respiration'
     ]
 )
 
 # We define another set of parameters which describes
 # the parameters of the matrices A,K and the vector b
-# and drivers like gpp (in form of arrays)
+# and drivers like npp (in form of arrays)
 # but does not include start values and hyperparameters like the 'number_of_months'
 # This distinction is helpful for the forward simulation where the
 # distinction between estimated and constant is irrelevant.
@@ -162,39 +162,39 @@ def pseudo_daily_to_yearly(daily):
 
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
-    path = dataPath.joinpath("YIBs_S3_Monthly_gpp.nc")
+    path = dataPath.joinpath("YIBs_S2_Monthly_npp.nc")
     ds = nc.Dataset(str(path))
-    var_gpp = ds.variables['gpp'][:,:,:]
+    var_npp = ds.variables['npp'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("YIBs_S3_Monthly_rh.nc")
+    path = dataPath.joinpath("YIBs_S2_Monthly_rh.nc")
     ds = nc.Dataset(str(path))
     var_rh = ds.variables['rh'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("YIBs_S3_Monthly_ra.nc")
+    path = dataPath.joinpath("YIBs_S2_Monthly_ra.nc")
     ds = nc.Dataset(str(path))
     var_ra = ds.variables['ra'][:,:,:]
     ds.close()
 
-    path = dataPath.joinpath("YIBs_S3_Annual_cVeg.nc")
+    path = dataPath.joinpath("YIBs_S2_Annual_cVeg.nc")
     ds = nc.Dataset(str(path))
     var_cveg = ds.variables['cVeg'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("YIBs_S3_Annual_cSoil.nc")
+    path = dataPath.joinpath("YIBs_S2_Annual_cSoil.nc")
     ds = nc.Dataset(str(path))
     var_csoil = ds.variables['cSoil'][:,:,:]
     ds.close()
     
-    return (var_gpp, var_rh, var_ra, var_cveg, var_csoil)       
+    return (var_npp, var_rh, var_ra, var_cveg, var_csoil)       
 
 def get_example_site_vars(dataPath):
-    var_gpp, var_rh, var_ra, var_cveg, var_csoil = get_variables_from_files(dataPath)       
+    var_npp, var_rh, var_ra, var_cveg, var_csoil = get_variables_from_files(dataPath)       
     # pick up 1 site   62.8125 W, 17.5S
     s = slice(None,None,None) # this is the same as : 
     t = s,74,118 # [t] = [:,58,159]
-    gpp= var_gpp[t]*86400   #   kg/m2/s kg/m2/day; 
+    npp= var_npp[t]*86400   #   kg/m2/s kg/m2/day; 
     rh= var_rh[t]*86400;   # per s to per day 
     ra= var_ra[t]*86400;
     (
@@ -207,7 +207,7 @@ def get_example_site_vars(dataPath):
             var_cveg,
         )
     ) 
-    return (gpp, rh, ra, csoil, cveg)
+    return (npp, rh, ra, csoil, cveg)
 
 def make_param_filter_func(
         c_max: np.ndarray,
@@ -304,7 +304,7 @@ def make_param2res(
     # This function is model-specific in several ways:
     # 0. Which are the fixed and which are the estimated variables
     # 1. The matrices for the forward simulation 
-    # 2. the driver (here monthly gpp)
+    # 2. the driver (here monthly npp)
     # 3. the projection of the simulated pool values to observable variables
     #    (here summation of   
     def param2res(pa):
@@ -398,7 +398,7 @@ def make_param2res(
           
         x_fin=np.zeros((cpa.nyears,12))
         rh_fin=np.zeros((cpa.nyears,1))
-        ra_fin=np.zeros((cpa.nyears,1))
+        #ra_fin=np.zeros((cpa.nyears,1))
         #leaf(p1),root(p2),wood(p3),cwd(p4),samet(p5),sastr(p6),samic(p7),
         #slmet(p8),slstr(p9),slmic(p10),slow(p11),arm(p12)
         #x_init = np.array([cleaf[0],croot[0],cwood[0],cwd[0],pa[17],pa[18],
@@ -428,7 +428,7 @@ def make_param2res(
             ra_year_avg=0
             rh_year_avg=0
             for m in np.arange(0,12):
-                gpp_in = cpa.gpp[i_m]
+                npp_in = cpa.npp[i_m]
                 co2_rh = 0
                 co2_ra = 0
                 for pd in np.arange(0,pseudo_days_per_month):
@@ -447,31 +447,31 @@ def make_param2res(
                         (K[11,11]-f_slmic_arm)
                     ]
                     #similarly calculate autotrophic respiration ra
-                    co2_arate = [
-                        (K[0,0]-f_samet_leaf-f_sastr_leaf), 
-                        (K[1,1]-f_slmet_root-f_slstr_root),
-                        (K[2,2]-f_cwd_wood),
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0
-                    ]
-                    X=X + b*gpp_in + np.array(A@K@X).reshape([12,1])
+                    #co2_arate = [
+                    #    (K[0,0]-f_samet_leaf-f_sastr_leaf), 
+                    #    (K[1,1]-f_slmet_root-f_slstr_root),
+                    #    (K[2,2]-f_cwd_wood),
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0
+                    #]
+                    X=X + b*npp_in + np.array(A@X).reshape([12,1])
                     x_year_avg += X.reshape(1,12)/(pseudo_days_per_month*12)
                     co2h=np.sum(co2_hrate*X.reshape(1,12))
                     rh_year_avg += co2h/(pseudo_days_per_month*12)
                     
-                    co2a=np.sum(co2_arate*X.reshape(1,12))
-                    ra_year_avg += co2a/(pseudo_days_per_month*12)
+                    #co2a=np.sum(co2_arate*X.reshape(1,12))
+                    #ra_year_avg += co2a/(pseudo_days_per_month*12)
                     i_pd += 1
                 i_m += 1
             x_fin[y,:] = x_year_avg
-            ra_fin[y,:] = ra_year_avg
+            #ra_fin[y,:] = ra_year_avg
             rh_fin[y,:] = rh_year_avg
 
         # end od part I (run the nodel dayly
@@ -505,7 +505,7 @@ def make_param2res(
             [
                 x_veg,
                 x_soil,
-                ra_fin,
+                #ra_fin,
                 rh_fin
             ]
             ,axis=1
