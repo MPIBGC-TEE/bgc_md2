@@ -151,7 +151,7 @@ def uniform_parallel_mcmc(_):
 	    filter_func=isQualified,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=10,
+            nsimu=10000,
 	    c_max=c_max,
 	    c_min=c_min
 	    )
