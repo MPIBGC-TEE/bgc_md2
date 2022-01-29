@@ -198,16 +198,16 @@ def get_example_site_vars(dataPath):
     rh= var_rh[t]*86400;   # per s to per day 
     ra= var_ra[t]*86400;
     (
-        csoil,
         cveg,
+        csoil,
     ) = map(
             lambda var: var[t],
         (
-            var_csoil, 
-            var_cveg,
+            var_cveg, 
+            var_csoil,
         )
     ) 
-    return (npp, rh, ra, csoil, cveg)
+    return (npp, rh, ra, cveg, csoil)
 
 def make_param_filter_func(
         c_max: np.ndarray,
@@ -423,9 +423,13 @@ def make_param2res(
         X=x_init   # initialize carbon pools 
         i_m = 0
         i_pd =0
+        x_year_avg = X.reshape(1,12)
+        rh_year_avg = cpa.rh_0
         for y in np.arange(0,cpa.nyears):
+            x_fin[y,:] = x_year_avg
+            rh_fin[y,:] = rh_year_avg
             x_year_avg=0
-            ra_year_avg=0
+            #ra_year_avg=0
             rh_year_avg=0
             for m in np.arange(0,12):
                 npp_in = cpa.npp[i_m]
@@ -470,9 +474,9 @@ def make_param2res(
                     #ra_year_avg += co2a/(pseudo_days_per_month*12)
                     i_pd += 1
                 i_m += 1
-            x_fin[y,:] = x_year_avg
+            #x_fin[y,:] = x_year_avg
             #ra_fin[y,:] = ra_year_avg
-            rh_fin[y,:] = rh_year_avg
+            #rh_fin[y,:] = rh_year_avg
 
         # end od part I (run the nodel dayly
         # part II projection to yearly values 
@@ -497,9 +501,9 @@ def make_param2res(
         # 'slow',
         # 'arm'
         # x_veg = Leaf + wood + root + ?
-        x_veg = np.sum(x_fin[:,0:6],axis=1).reshape(cpa.nyears,1)
+        x_veg = np.sum(x_fin[:,0:3],axis=1).reshape(cpa.nyears,1)
         # x_soil = C_slmet + C_slstr + C_slmic + C_slow +C_arm
-        x_soil = np.sum(x_fin[:,7:11],axis=1).reshape(cpa.nyears,1)
+        x_soil = np.sum(x_fin[:,3:12],axis=1).reshape(cpa.nyears,1)
             
         out_simu = np.concatenate(
             [

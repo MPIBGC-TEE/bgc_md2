@@ -480,12 +480,8 @@ def make_jon_cost_func(
 
     def costfunction(mod: np.ndarray) -> np.float64:
         cost = np.mean(
-<<<<<<< HEAD
             (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators
         )
-=======
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators)
->>>>>>> 074f8b690f6c78146fb7df7ca1729006e50c5060
         return cost
 
     return costfunction

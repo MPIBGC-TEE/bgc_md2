@@ -5,16 +5,10 @@
 #SBATCH --nodes=4
 #SBATCH --ntasks=12
 #SBATCH --cpus-per-task=1
-<<<<<<< HEAD
 #SBATCH -C amd
 #SBATCH --chdir=/scratch/jw2636/bgc_md2/prototypes/working_group_2021/jon_yib
 #SBATCH --output=/scratch/jw2636/bgc_md2/prototypes/working_group_2021/jon_yib/dask.out.%J
 #SBATCH --error=/scratch/jw2636/bgc_md2/prototypes/working_group_2021/jon_yib/dask.err.%J
-=======
-#SBATCH --chdir=/scratch/mm4967/bgc_md2/prototypes/working_group_2021/jon_yib
-#SBATCH --output=/scratch/mm4967/bgc_md2/prototypes/working_group_2021/jon_yib/dask.out
-#SBATCH --error=/scratch/mm4967/bgc_md2/prototypes/working_group_2021/jon_yib/dask.err
->>>>>>> 9b75372d2f7b263094ecad76af00101038c3a017
 
 module purge
 module load anaconda3/2021.05 #has to match the currently activated anaconda version in the shell

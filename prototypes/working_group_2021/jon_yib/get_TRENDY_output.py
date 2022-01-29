@@ -20,7 +20,7 @@ sftp = paramiko.SFTPClient.from_transport(transport)
 remote_path = "output"
 
 model      = "YIBs"
-experiment = "S3"
+experiment = "S2"
 variables   = ["Monthly_npp","Monthly_rh", "Monthly_ra", "Annual_cSoil", "Annual_cVeg"]
 ext = ".nc"
 full_ext = ".tar.gz"
