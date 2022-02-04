@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from typing import Callable, Tuple, Iterable
+from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
 from copy import copy
 from time import time
@@ -760,3 +760,148 @@ def make_pixel_area_on_unit_spehre(delta_lat,delta_lon,sym=False):
         return A_patch(theta)
 
     return pixel_area_on_unit_sphere
+
+	
+def download_TRENDY_output(
+        username: str,
+        password: str,
+        dataPath: Path,
+        models: List[str],
+        variables: List[str]
+):
+    import paramiko
+    
+    
+    # open a transport
+    host = "trendy.ex.ac.uk"
+    port = 22
+    transport = paramiko.Transport(host)
+    
+    # authentication
+    transport.connect(None,username=username,password=password)
+    
+    
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    
+    # download files
+    
+    
+    # Other models, "CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP","JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern",
+    #                 "OCN","ORCHIDEEv3","SDGVM","VISIT","YIBs"
+    
+    #models      = ["CABLE-POP"]
+    experiments = ["S2"]
+    #variables   = ["cCwd","cLeaf", "cLitter", "cRoot", "cSoil", "cVeg", "cWood", "npp", "rh"]
+    
+    for model in models:
+        print("downloading model ", model)
+        for experiment in experiments:
+            for variable in variables:
+    
+                modelname = model
+                modelname_file = model
+                ext = "nc"
+                extra = ""
+                
+                if model == "CLM5":
+                    modelname_file = "CLM5.0"
+                elif model == "ISBA_CTRIP":
+                    modelname_file = "ISBA-CTRIP"
+                elif model == "JULES-ES":
+                    modelname = "JULES-ES-1.0"
+                    modelname_file = "JULES-ES-1p0"
+                elif model == "SDGVM" or model == "VISIT":
+                    ext = "nc.gz"
+                elif model == "YIBs":
+                    ext = "nc.tar.gz"
+                    extra = "Monthly_"
+                elif model == "LPJwsl":
+                    modelname_file = "LPJ"
+                    ext = "nc.gz"
+                    
+                filename  = modelname_file + "_" + experiment + "_" + extra + variable + "." + ext
+                   
+                try:
+                    dataPath.mkdir(exist_ok=True)
+                    complete_path = "output/" + modelname + "/" + experiment + "/" + filename
+                    print(sftp.stat(complete_path)) # get file information + test if existing (IOError handling)
+                    sftp.get(
+                        remotepath=complete_path,
+                        localpath=dataPath.joinpath(filename)
+                    )
+                except FileNotFoundError as e:
+                    print(e)
+                    print(complete_path)
+                    print(local_path)
+    
+                        
+    print("finished!")
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
