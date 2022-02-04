@@ -148,12 +148,12 @@ def uniform_parallel_mcmc(_):
     return(
         autostep_mcmc(
             initial_parameters=pertb,
-	    filter_func=isQualified,
+            filter_func=isQualified,
             param2res=param2res,
             costfunction=costfunction,
             nsimu=10000,
-	    c_max=c_max,
-	    c_min=c_min
+            c_max=c_max,
+            c_min=c_min
 	    )
 	)
         #mcmc(
@@ -371,7 +371,7 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 ## vector is the mean which is an estimator of  the expected value of the
 ## desired distribution.
 sol_mean =param2res(best_pars)
-#
+
 fig = plt.figure()
 plot_solutions(
         fig,
@@ -381,5 +381,3 @@ plot_solutions(
         names=('best','obs')
 )
 fig.savefig('solutions.pdf')
-#
-#

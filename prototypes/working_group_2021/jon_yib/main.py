@@ -53,7 +53,7 @@ nyears = 320
 obs_tup=Observables(
     c_veg=cveg,
     c_soil=csoil,
-    #a_respiration=monthly_to_yearly(ra),
+    a_respiration=monthly_to_yearly(ra),
     h_respiration=monthly_to_yearly(rh)
 )
 obs = np.stack(obs_tup, axis=1)[0:nyears,:]
@@ -93,8 +93,8 @@ epa0 = EstimatedParameters(
 cpa = UnEstimatedParameters(
     C_soil_0=csoil[0],
     C_veg_0=cveg[0],
-    rh_0 = rh[0],
-    ra_0 = ra[0],
+    rh_0 = monthly_to_yearly(rh)[0],
+    ra_0 = monthly_to_yearly(ra)[0],
     npp=npp,
     clay=0.2028,
     silt=0.2808,
@@ -372,16 +372,14 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 # # vector is the mean which is an estimator of  the expected value of the
 # # desired distribution.
 #
-# sol_mean =param2res(best_par)
-#
-# fig = plt.figure()
-# plot_solutions(
-#        fig,
-#        times=np.array(range(nyears)),
-#        var_names=Observables._fields,
-#        tup=(sol_mean, obs),
-#        names=('best','obs')
-# )
-# fig.savefig('solutions.pdf')
-#
-#
+ sol_mean =param2res(best_par)
+
+ fig = plt.figure()
+ plot_solutions(
+        fig,
+        times=np.array(range(nyears)),
+        var_names=Observables._fields,
+        tup=(sol_mean, obs),
+        names=('best','obs')
+ )
+ fig.savefig('solutions.pdf')

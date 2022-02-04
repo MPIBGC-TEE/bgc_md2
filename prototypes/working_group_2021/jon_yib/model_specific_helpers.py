@@ -114,7 +114,7 @@ Observables = namedtuple(
     [
         'c_veg',
         'c_soil',
-       #'a_respiration',
+        'a_respiration',
         'h_respiration'
     ]
 )
@@ -392,8 +392,8 @@ def make_param2res(
                 epa.k_arm
             ]
         )
-        K = np.zeros(abh*aw).reshape([12,12])
-        np.fill_diagonal(K, k_val)
+        #K = np.zeros(abh*aw).reshape([12,12])
+        #np.fill_diagonal(K, k_val)
         
         #create final A*K matrix
         B = A
