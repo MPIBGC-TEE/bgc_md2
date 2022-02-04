@@ -83,7 +83,7 @@ def make_uniform_proposer(
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + (g.random(paramNum) - 0.5) * (c_max - c_min) / D
+            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max - c_min) / D)
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -480,7 +480,8 @@ def make_jon_cost_func(
 
     def costfunction(mod: np.ndarray) -> np.float64:
         cost = np.mean(
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators)
+            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators
+        )
         return cost
 
     return costfunction

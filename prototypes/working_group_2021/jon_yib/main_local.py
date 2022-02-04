@@ -9,10 +9,10 @@ import json
 
 #parallel chains -  JW
 from os import environ
-from dask_mpi import initialize
-initialize()
-from distributed import Client
-client=Client()
+#from dask_mpi import initialize
+#initialize()
+#from distributed import Client
+#client=Client()
 
 #import model specific functions
 from model_specific_helpers import (
@@ -48,7 +48,7 @@ with Path('config.json').open(mode='r') as f:
 dataPath = Path(conf_dict['dataPath'])
 
 #get data streams
-npp, rh, ra, csoil, cveg = get_example_site_vars(Path(conf_dict['dataPath']))
+npp, rh, ra, cveg, csoil = get_example_site_vars(Path(conf_dict['dataPath']))
 nyears = 320
 obs_tup=Observables(
     c_veg=cveg,
@@ -93,7 +93,7 @@ epa0 = EstimatedParameters(
 cpa = UnEstimatedParameters(
     C_soil_0=csoil[0],
     C_veg_0=cveg[0],
-    rh_0 = rh[0],
+    rh_0 = monthly_to_yearly(rh)[0],
     ra_0 = ra[0],
     npp=npp,
     clay=0.2028,
@@ -169,65 +169,69 @@ uni_c_path = dataPath.joinpath('yibs_pmcmc_uniform_c.csv')
 uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 
 # Parallel uniform distribution run 
-print("starting parallel run")
-[
-    [c_uni1,j_uni1],
-    [c_uni2,j_uni2],
-    [c_uni3,j_uni3],
-    [c_uni4,j_uni4],
-    [c_uni5,j_uni5],
-    [c_uni6,j_uni6],
-    [c_uni7,j_uni7],
-    [c_uni8,j_uni8],
-    [c_uni9,j_uni9],
-    [c_uni10,j_uni10]
-] = client.gather(
-        client.map(
-            uniform_parallel_mcmc, 
-            range(0,10)
-        )
-    )
+#print("starting parallel run")
+#[
+#    [c_uni1,j_uni1],
+#    [c_uni2,j_uni2],
+#    [c_uni3,j_uni3],
+#    [c_uni4,j_uni4],
+#    [c_uni5,j_uni5],
+#    [c_uni6,j_uni6],
+#    [c_uni7,j_uni7],
+#    [c_uni8,j_uni8],
+#    [c_uni9,j_uni9],
+#    [c_uni10,j_uni10]
+#] = client.gather(
+#        client.map(
+#            uniform_parallel_mcmc, 
+#            range(0,10)
+#        )
+#    )
 
 #concatenate chains
-C_cat = np.concatenate(
-    (
-        c_uni1,
-        c_uni2,
-        c_uni3,
-        c_uni4,
-        c_uni5,
-        c_uni6,
-        c_uni7,
-        c_uni8,
-        c_uni9,
-        c_uni10 
-    ), axis=1
-)
+#C_cat = np.concatenate(
+#    (
+#        c_uni1,
+#        c_uni2,
+#        c_uni3,
+#        c_uni4,
+#        c_uni5,
+#        c_uni6,
+#        c_uni7,
+#        c_uni8,
+#        c_uni9,
+#        c_uni10 
+#    ), axis=1
+#)
 
 #concatenate cost function
-J_cat = np.concatenate(
-    (
-        j_uni1,
-        j_uni2,
-        j_uni3,
-        j_uni4,
-        j_uni5,
-        j_uni6,
-        j_uni7,
-        j_uni8,
-        j_uni9,
-        j_uni10 
-    ), axis=1
-)
+#J_cat = np.concatenate(
+#    (
+#        j_uni1,
+#        j_uni2,
+#        j_uni3,
+#        j_uni4,
+#        j_uni5,
+#        j_uni6,
+#        j_uni7,
+#        j_uni8,
+#        j_uni9,
+#        j_uni10 
+#    ), axis=1
+#)
+
+
+[C_cat, J_cat] = uniform_parallel_mcmc(1)
 
 # save the parameters and costfunctionvalues for postprocessing 
 pd.DataFrame(C_cat).to_csv(uni_c_path,sep=',')
 pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
-    
-#sort lowest to highest
-#indx = np.argsort(J_cat) 
-#C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
-#J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
+
+#subset to best pars
+best_pars = C_cat[:,J_cat[1,:].argmin()]
+
+#from IPython import embed; embed()
+
 #
 ## formal run using normal distribution and cov matrix from uniform run
 #covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
@@ -366,16 +370,16 @@ pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
 ## A possible aggregation of this histogram to a singe parameter
 ## vector is the mean which is an estimator of  the expected value of the
 ## desired distribution.
-#sol_mean =param2res(np.mean(C_formal,axis=1))
+sol_mean =param2res(best_pars)
 #
-#fig = plt.figure()
-#plot_solutions(
-#        fig,
-#        times=np.array(range(nyears)),
-#        var_names=Observables._fields,
-#        tup=(sol_mean, obs),
-#        names=('mean','obs')
-#)
-#fig.savefig('solutions.pdf')
+fig = plt.figure()
+plot_solutions(
+        fig,
+        times=np.array(range(nyears)),
+        var_names=Observables._fields,
+        tup=(sol_mean, obs),
+        names=('best','obs')
+)
+fig.savefig('solutions.pdf')
 #
 #

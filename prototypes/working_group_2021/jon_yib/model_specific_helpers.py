@@ -114,7 +114,7 @@ Observables = namedtuple(
     [
         'c_veg',
         'c_soil',
-        'a_respiration',
+       #'a_respiration',
         'h_respiration'
     ]
 )
@@ -162,27 +162,27 @@ def pseudo_daily_to_yearly(daily):
 
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
-    path = dataPath.joinpath("YIBs_S3_Monthly_npp.nc")
+    path = dataPath.joinpath("YIBs_S2_Monthly_npp.nc")
     ds = nc.Dataset(str(path))
     var_npp = ds.variables['npp'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("YIBs_S3_Monthly_rh.nc")
+    path = dataPath.joinpath("YIBs_S2_Monthly_rh.nc")
     ds = nc.Dataset(str(path))
     var_rh = ds.variables['rh'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("YIBs_S3_Monthly_ra.nc")
+    path = dataPath.joinpath("YIBs_S2_Monthly_ra.nc")
     ds = nc.Dataset(str(path))
     var_ra = ds.variables['ra'][:,:,:]
     ds.close()
 
-    path = dataPath.joinpath("YIBs_S3_Annual_cVeg.nc")
+    path = dataPath.joinpath("YIBs_S2_Annual_cVeg.nc")
     ds = nc.Dataset(str(path))
     var_cveg = ds.variables['cVeg'][:,:,:]
     ds.close()
     
-    path = dataPath.joinpath("YIBs_S3_Annual_cSoil.nc")
+    path = dataPath.joinpath("YIBs_S2_Annual_cSoil.nc")
     ds = nc.Dataset(str(path))
     var_csoil = ds.variables['cSoil'][:,:,:]
     ds.close()
@@ -198,16 +198,16 @@ def get_example_site_vars(dataPath):
     rh= var_rh[t]*86400;   # per s to per day 
     ra= var_ra[t]*86400;
     (
-        csoil,
         cveg,
+        csoil,
     ) = map(
             lambda var: var[t],
         (
-            var_csoil, 
-            var_cveg,
+            var_cveg, 
+            var_csoil,
         )
     ) 
-    return (npp, rh, ra, csoil, cveg)
+    return (npp, rh, ra, cveg, csoil)
 
 def make_param_filter_func(
         c_max: np.ndarray,
@@ -398,7 +398,7 @@ def make_param2res(
           
         x_fin=np.zeros((cpa.nyears,12))
         rh_fin=np.zeros((cpa.nyears,1))
-        ra_fin=np.zeros((cpa.nyears,1))
+        #ra_fin=np.zeros((cpa.nyears,1))
         #leaf(p1),root(p2),wood(p3),cwd(p4),samet(p5),sastr(p6),samic(p7),
         #slmet(p8),slstr(p9),slmic(p10),slow(p11),arm(p12)
         #x_init = np.array([cleaf[0],croot[0],cwood[0],cwd[0],pa[17],pa[18],
@@ -423,9 +423,13 @@ def make_param2res(
         X=x_init   # initialize carbon pools 
         i_m = 0
         i_pd =0
+        x_year_avg = X.reshape(1,12)
+        rh_year_avg = cpa.rh_0
         for y in np.arange(0,cpa.nyears):
+            x_fin[y,:] = x_year_avg
+            rh_fin[y,:] = rh_year_avg
             x_year_avg=0
-            ra_year_avg=0
+            #ra_year_avg=0
             rh_year_avg=0
             for m in np.arange(0,12):
                 npp_in = cpa.npp[i_m]
@@ -447,32 +451,32 @@ def make_param2res(
                         (K[11,11]-f_slmic_arm)
                     ]
                     #similarly calculate autotrophic respiration ra
-                    co2_arate = [
-                        (K[0,0]-f_samet_leaf-f_sastr_leaf), 
-                        (K[1,1]-f_slmet_root-f_slstr_root),
-                        (K[2,2]-f_cwd_wood),
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0
-                    ]
+                    #co2_arate = [
+                    #    (K[0,0]-f_samet_leaf-f_sastr_leaf), 
+                    #    (K[1,1]-f_slmet_root-f_slstr_root),
+                    #    (K[2,2]-f_cwd_wood),
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0,
+                    #    0
+                    #]
                     X=X + b*npp_in + np.array(A@K@X).reshape([12,1])
                     x_year_avg += X.reshape(1,12)/(pseudo_days_per_month*12)
                     co2h=np.sum(co2_hrate*X.reshape(1,12))
                     rh_year_avg += co2h/(pseudo_days_per_month*12)
                     
-                    co2a=np.sum(co2_arate*X.reshape(1,12))
-                    ra_year_avg += co2a/(pseudo_days_per_month*12)
+                    #co2a=np.sum(co2_arate*X.reshape(1,12))
+                    #ra_year_avg += co2a/(pseudo_days_per_month*12)
                     i_pd += 1
                 i_m += 1
-            x_fin[y,:] = x_year_avg
-            ra_fin[y,:] = ra_year_avg
-            rh_fin[y,:] = rh_year_avg
+            #x_fin[y,:] = x_year_avg
+            #ra_fin[y,:] = ra_year_avg
+            #rh_fin[y,:] = rh_year_avg
 
         # end od part I (run the nodel dayly
         # part II projection to yearly values 
@@ -497,15 +501,15 @@ def make_param2res(
         # 'slow',
         # 'arm'
         # x_veg = Leaf + wood + root + ?
-        x_veg = np.sum(x_fin[:,0:6],axis=1).reshape(cpa.nyears,1)
+        x_veg = np.sum(x_fin[:,0:3],axis=1).reshape(cpa.nyears,1)
         # x_soil = C_slmet + C_slstr + C_slmic + C_slow +C_arm
-        x_soil = np.sum(x_fin[:,7:11],axis=1).reshape(cpa.nyears,1)
+        x_soil = np.sum(x_fin[:,3:12],axis=1).reshape(cpa.nyears,1)
             
         out_simu = np.concatenate(
             [
                 x_veg,
                 x_soil,
-                ra_fin,
+                #ra_fin,
                 rh_fin
             ]
             ,axis=1
@@ -547,7 +551,7 @@ def make_param2res(
 #    # 2.)   We build a daily advancing model that can provide output for an arbitrary 
 #    #       selection of days.  To do so we provide all driver data as
 #    #       functions of the smalles timestep (here day with index i), which in
-#    #       the case of this model means that we provide the same npp value for
+#    #       the case of this model means that we provide the same gpp value for
 #    #       all the days in a given month. 
 #    # 3.)   We translate the index of a given month to the appropriate day index
 #    #       and apply the dayly model of 2.). Again this seems cumbersome for this
@@ -639,12 +643,12 @@ def make_param2res(
 #        mpa
 #    ):
 #         
-#        # Construct npp(day)
+#        # Construct gpp(day)
 #        # in general this function can depend on the day i and the state_vector X
 #        # e.g. typically the size fo X.leaf...
 #        # In this case it only depends on the day i 
-#        def npp_func(day,X):
-#            return mpa.npp[day_2_month_index(day)] 
+#        def gpp_func(day,X):
+#            return mpa.gpp[day_2_month_index(day)] 
 #
 #        # b (b vector for partial allocation) 
 #        beta_wood = 1- mpa.beta_leaf- mpa.beta_root
@@ -675,9 +679,9 @@ def make_param2res(
 #        def f(it,V):
 #            X = V[0:9]
 #            co2 = V[9]
-#            npp  = npp_func(it,X)
+#            gpp  = gpp_func(it,X)
 #            B = B_func(it,X)
-#            X_new = X + npp * b + B@X
+#            X_new = X + gpp * b + B@X
 #
 #            # we also compute the respired co2 in every (daily) timestep
 #            # and use this part of the solution later to sum up the monthly amount
@@ -759,14 +763,14 @@ def make_param2res(
 #        day_indices,
 #        mpa
 #    ):
-#        # Construct npp(day)
+#        # Construct gpp(day)
 #        # in general this function can depend on the day i and the state_vector X
 #        # e.g. typically the size fo X.leaf...
 #        # In this case it only depends on the day i 
-#        def npp_func(day,X):
-#            return mpa.npp[day_2_month_index(day)] 
+#        def gpp_func(day,X):
+#            return mpa.gpp[day_2_month_index(day)] 
 #
-#        func_dict = {Symbol('npp'):npp_func}
+#        func_dict = {Symbol('gpp'):gpp_func}
 #        tsi = make_daily_iterator_sym(
 #            V_init,
 #            mpa=mpa,
@@ -834,9 +838,9 @@ def make_daily_iterator_sym(
         def f(it,V):
             X = V[0:9]
             co2 = V[9]
-            npp  = func_dict[Symbol('npp')](it,X)
+            gpp  = func_dict[Symbol('gpp')](it,X)
             B = B_func(it,X)
-            X_new = X + npp * b + B@X
+            X_new = X + gpp * b + B@X
 
             # we also compute the respired co2 in every (daily) timestep
             # and use this part of the solution later to sum up the monthly amount
