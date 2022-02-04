@@ -465,7 +465,7 @@ def make_param2res(
                     #    0,
                     #    0
                     #]
-                    X=X + b*npp_in + np.array(A@X).reshape([12,1])
+                    X=X + b*npp_in + np.array(A@K@X).reshape([12,1])
                     x_year_avg += X.reshape(1,12)/(pseudo_days_per_month*12)
                     co2h=np.sum(co2_hrate*X.reshape(1,12))
                     rh_year_avg += co2h/(pseudo_days_per_month*12)

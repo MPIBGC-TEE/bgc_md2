@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.3
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -512,6 +512,177 @@ mvs.get_OutFluxesBySymbol().keys()
 
 mvs.get_StateVariableTuple()
 
+# #### Intermediate summary:
+# We have achieved the symbolic formulation of the model. We can use it to check the structure and compute derived diagnostic variables including the matrices used for the traceability analysis, but up to now only in symbolic form.
+#
+# ## Connecting symbolic description and data
+# The next goal is to connect the symbolic formulation to the data.
+# Since the data comes in several shapes this involves several steps. 
+# We also want to be able to make this step portable across different models and computers.
+# The endproduct is a collection of models that everybody can run who installes the package and executes the code we provide
+#
+# We will have to: 
+# 1. Find as many model parameters as possible in the model description (in the literature or in communication with the modeling group) so that we do not have to estimate them from the model output. 
+# 1. provide code to download the output for your model.
+# 1. implement functions for the drivers (using the data)
+# 1. run the model forward with a possible set of parameters.
+# 1. infer unknown parameters by data assimilation.
+#
+# ### downloading the data
+# #### create a small site specific config file 
+# This file specifies:
+# - a username and password to download the data 
+# - the location where you want to download the data to 
+#   which will differ depending on the machine you are using (your laptop or a supercomputer) and     also accross users. You will have to have one everywhere you want to work with the model.
+# Here comes a template from my laptop (content of file `../config.json`):
+# `{"username": "trendy-v9", "password": "gcb-2020", "dataPath": "/home/data/VISIT_data_CMIP6"}`
+#
+# Note that 
+# - the file resides one level above your current folder since it is not modelspecific
+#   (This is a change from the first round of model gathering)
+# - 
+
+# +
+import sys
+sys.path.insert(0,'..') # necessary to import general_helpers
+from general_helpers import download_TRENDY_output
+import json 
+from pathlib import Path
+
+with Path('config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
+def download_data():
+    download_TRENDY_output(
+        username=conf_dict["username"],
+        password=conf_dict["password"],
+        dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
+        models=['VISIT'],
+        variables   = ["cLitter", "cSoil", "cVeg", "gpp", "rh" ,"ra"]
+    )
+
+#download_data()
+
+
+# +
+
+import netCDF4 as nc
+import numpy as np
+from pathlib import Path
+import json 
+def get_variables_from_files(dataPath):
+    # Read NetCDF data  ******************************************************************************************************************************
+    names = [
+        ('cLeaf', 'cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cLitterAbove', 'cLitterAbove_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cLitterBelow', 'cLitterBelow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cRoot', 'cRoot_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cSoilFast', 'cSoilFast_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cSoilMedium', 'cSoilMedium_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cSoilSlow', 'cSoilSlow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('cVeg', 'cVeg_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('fLitterSoil', 'fLitterSoil_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('fVegLitter', 'fVegLitter_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('mrsos', 'mrsos_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('npp', 'npp_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('rh', 'rh_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+        ('tsl', 'tsl_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
+    ]
+    def f(tup):
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        ds = nc.Dataset(str(path))
+        return ds.variables[vn][:, :, :]
+
+    return map(f, names)
+
+#     # Read NetCDF data  ******************************************************************************************************************************
+
+def get_example_site_vars(dataPath):
+    (
+        C_leaf,
+        C_litter_above,
+        C_litter_below,
+        C_root,
+        C_fast_som,
+        C_slow_som,
+        C_pass_som,
+        C_veg,
+        f_litter2som,
+        f_veg2litter,
+        mrso,
+        npp,
+        rh,
+        tsl
+    )= get_variables_from_files(dataPath)
+    # pick up 1 site   wombat state forest
+    s = slice(None, None, None)  # this is the same as :
+    t = s, 50, 33  # [t] = [:,49,325]
+    npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
+    rh = rh[t]*86400  # per s to per day
+    f_veg2litter = f_veg2litter[t] * 86400
+    f_litter2som = f_litter2som[t] * 86400
+    tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
+    (
+        C_leaf,
+        C_litter_above,
+        C_litter_below,
+        C_root,
+        C_fast_som,
+        C_slow_som,
+        C_pass_som,
+        C_veg,
+        mrso,
+        tsl
+    ) = map(
+        lambda var: var[t],
+        (
+            C_leaf,
+            C_litter_above,
+            C_litter_below,
+            C_root,
+            C_fast_som,
+            C_slow_som,
+            C_pass_som,
+            C_veg,
+            mrso,
+            tsl_mean
+        )
+    )
+    C_wood = C_veg - C_leaf - C_root
+    return (npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_som, C_pass_som,
+            rh, f_veg2litter, f_litter2som, mrso, tsl)
+
+
+with Path('config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
+
+dataPath = Path(conf_dict['dataPath'])
+(
+    npp,
+    C_leaf,
+    C_wood,
+    C_root,
+    C_litter_above,
+    C_litter_below,
+    C_fast_som,
+    C_slow_som,
+    C_pass_som,
+    rh,
+    f_veg2litter,
+    f_litter2som,
+    mrso,
+    tsl
+)=get_example_site_vars(dataPath)
+
+import sys 
+sys.path.insert(0,'..')
+from general_helpers import day_2_month_index
+def NPP_fun(day ):
+    return npp[day_2_month_index(day)] 
+
+func_dict={NPP: NPP_fun}
+# -
+
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
 # So we need:
@@ -583,34 +754,34 @@ all_rates
 # -
 
 old_par_dict = {
-    beta_leaf: 0.6,  # 0 (parameters used in original code)
-    beta_wood: 0.25,  # 1
-    T_0: 2,  # 21
-    E: 4,  # 22
-    KM: 10,  # 23
+    beta_leaf: 0.6,
+    beta_wood: 0.25,
+    T_0: 2,
+    E: 4,
+    KM: 10,
     f_C_leaf_2_C_leaf_litter: 1,
-    f_C_wood_2_C_wood_litter: 1, 
+    f_C_wood_2_C_wood_litter: 1,
     f_C_root_2_C_root_litter: 1,
-    f_C_leaf_litter_2_C_soil_fast: 0.41,  # 2
-    f_C_leaf_litter_2_C_soil_slow: 0.07,  # 3
-    f_C_leaf_litter_2_C_soil_passive: 0.02,  # 4
-    f_C_wood_litter_2_C_soil_fast: 0.30,  # 5
-    f_C_wood_litter_2_C_soil_slow: 0.12,  # 6
-    f_C_wood_litter_2_C_soil_passive: 0.08,  # 7
-    f_C_root_litter_2_C_soil_fast: 0.30,  # 8
-    f_C_root_litter_2_C_soil_slow: 0.14,  # 9
-    f_C_root_litter_2_C_soil_passive: 0.07,  # 10
-    k_C_leaf: 1 / (60 * 2),  # 11
-    k_C_wood: 1 / (365 * 30),  # 12
-    k_C_root: 1 / (365 * 22),  # 13
-    k_C_leaf_litter: 1 / (365 * 3.3),  # 14
-    k_C_wood_litter: 1 / (365 * 11),  # 15
-    k_C_root_litter: 1 / (365 * 11),  # 16
-    k_C_soil_fast: 1 / (365 * 18),  # 17
-    k_C_soil_slow: 1 / (365 * 100),  # 18
-    k_C_soil_passive: 1 / (365 * 350),  # 19
+    f_C_leaf_litter_2_C_soil_fast: 0.41,
+    f_C_leaf_litter_2_C_soil_slow: 0.07,
+    f_C_leaf_litter_2_C_soil_passive: 0.02,
+    f_C_wood_litter_2_C_soil_fast: 0.30,
+    f_C_wood_litter_2_C_soil_slow: 0.12,
+    f_C_wood_litter_2_C_soil_passive: 0.08,
+    f_C_root_litter_2_C_soil_fast: 0.30,
+    f_C_root_litter_2_C_soil_slow: 0.14,
+    f_C_root_litter_2_C_soil_passive: 0.07,
+    k_C_leaf: 1 / (60 * 2),
+    k_C_wood: 1 / (365 * 30),
+    k_C_root: 1 / (365 * 22),
+    k_C_leaf_litter: 1 / (365 * 3.3),
+    k_C_wood_litter: 1 / (365 * 11),
+    k_C_root_litter: 1 / (365 * 11),
+    k_C_soil_fast: 1 / (365 * 18),
+    k_C_soil_slow: 1 / (365 * 100),
+    k_C_soil_passive: 1 / (365 * 350),
 }
-    
+
 
 # Now we can translate the old paramterisation to the new one.
 
@@ -626,15 +797,11 @@ par_dict.update(
 )
 par_dict
 
-
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
+# We will later store these functions in  `model_specific_helpers.py` which resides in the same folder as this notebook. You will have to adapt them to your data set. 
 
-# +
-def NPP_fun(t):
-    
-func_dict={NPP: NPP_fun, ksi: ksi_fun}
-# -
+
 
 To make a 
 
