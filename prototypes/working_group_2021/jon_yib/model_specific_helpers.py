@@ -351,9 +351,8 @@ def make_param2res(
         f_arm_slow = 0.45*(0.003+0.009*cpa.clay) * epa.k_slow	#copied CABLES slow to passive
         f_slmic_arm = 0.10 * epa.k_arm                   #fixed - made up values so far
         
-        #create A matrix
+        #place transfer rates in A matrix
         A = np.zeros(abh*aw).reshape([abh,aw])  #create empty A matrix
-        np.fill_diagonal(A,-1)                  #replace diagonal with -1s
         A[4,0] = f_samet_leaf   	#f5_1 #add in transfers - A is a zero ordered matrix
         A[5,0] = f_sastr_leaf   	#f6_1 #minus one from matrix position for [row,col]
         A[7,1] = f_slmet_root   	#f8_2 #f8_2, to pool8 from pool2 matrix pos [7,1]
@@ -395,10 +394,15 @@ def make_param2res(
         )
         K = np.zeros(abh*aw).reshape([12,12])
         np.fill_diagonal(K, k_val)
-          
+        
+        #create final A*K matrix
+        B = A
+        np.fill_diagonal(B, -k_Val)
+        
+        #define empty dataframe for results
         x_fin=np.zeros((cpa.nyears,12))
         rh_fin=np.zeros((cpa.nyears,1))
-        #ra_fin=np.zeros((cpa.nyears,1))
+        ra_fin=np.zeros((cpa.nyears,1))
         #leaf(p1),root(p2),wood(p3),cwd(p4),samet(p5),sastr(p6),samic(p7),
         #slmet(p8),slstr(p9),slmic(p10),slow(p11),arm(p12)
         #x_init = np.array([cleaf[0],croot[0],cwood[0],cwd[0],pa[17],pa[18],
@@ -423,14 +427,16 @@ def make_param2res(
         X=x_init   # initialize carbon pools 
         i_m = 0
         i_pd =0
-        x_year_avg = X.reshape(1,12)
-        rh_year_avg = cpa.rh_0
+        x_year = X.reshape(1,12)
+        rh_year = cpa.rh_0
+        ra_year = cpa.ra_0
         for y in np.arange(0,cpa.nyears):
-            x_fin[y,:] = x_year_avg
-            rh_fin[y,:] = rh_year_avg
-            x_year_avg=0
-            #ra_year_avg=0
-            rh_year_avg=0
+            x_fin[y,:] = x_year
+            rh_fin[y,:] = rh_year
+            ra_fin[y,:] = ra_year
+            x_year=0
+            ra_year=0
+            rh_year=0
             for m in np.arange(0,12):
                 npp_in = cpa.npp[i_m]
                 co2_rh = 0
@@ -451,27 +457,26 @@ def make_param2res(
                         (K[11,11]-f_slmic_arm)
                     ]
                     #similarly calculate autotrophic respiration ra
-                    #co2_arate = [
-                    #    (K[0,0]-f_samet_leaf-f_sastr_leaf), 
-                    #    (K[1,1]-f_slmet_root-f_slstr_root),
-                    #    (K[2,2]-f_cwd_wood),
-                    #    0,
-                    #    0,
-                    #    0,
-                    #    0,
-                    #    0,
-                    #    0,
-                    #    0,
-                    #    0,
-                    #    0
-                    #]
-                    X=X + b*npp_in + np.array(A@K@X).reshape([12,1])
-                    x_year_avg += X.reshape(1,12)/(pseudo_days_per_month*12)
+                    co2_arate = [
+                        (K[0,0]-f_samet_leaf-f_sastr_leaf), 
+                        (K[1,1]-f_slmet_root-f_slstr_root),
+                        (K[2,2]-f_cwd_wood),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                    X=X + b*npp_in + np.array(B@X).reshape([12,1])
+                    x_year += X.reshape(1,12)
                     co2h=np.sum(co2_hrate*X.reshape(1,12))
-                    rh_year_avg += co2h/(pseudo_days_per_month*12)
-                    
-                    #co2a=np.sum(co2_arate*X.reshape(1,12))
-                    #ra_year_avg += co2a/(pseudo_days_per_month*12)
+                    rh_year += co2h
+                    co2a=np.sum(co2_arate*X.reshape(1,12))
+                    ra_year += co2a
                     i_pd += 1
                 i_m += 1
             #x_fin[y,:] = x_year_avg
@@ -509,7 +514,7 @@ def make_param2res(
             [
                 x_veg,
                 x_soil,
-                #ra_fin,
+                ra_fin,
                 rh_fin
             ]
             ,axis=1
@@ -519,14 +524,14 @@ def make_param2res(
     return param2res
 
 ################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
+# ###############################################################################
+# ###############################################################################
+# ###############################################################################
+# ###############################################################################
+# ###############################################################################
 #
-## alternative implementation and helper functions. If you do not want to use it # comment it.
-#def make_param2res_2(
+# # alternative implementation and helper functions. If you do not want to use it # comment it.
+# def make_param2res_2(
 #        cpa: UnEstimatedParameters
 #    ) -> Callable[[np.ndarray], np.ndarray]: 
 #    # This function is an alternative implementation with the same results as 
@@ -603,7 +608,7 @@ def make_param2res(
 #    return param2res
 #
 #
-#def run_forward_simulation(
+# def run_forward_simulation(
 #        V_init,
 #        day_indices,
 #        mpa
@@ -638,7 +643,7 @@ def make_param2res(
 #        RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
 #        return RES
 #
-#def make_daily_iterator(
+# def make_daily_iterator(
 #        V_init,
 #        mpa
 #    ):
@@ -702,63 +707,63 @@ def make_param2res(
 #        )
 #        
 #
-##def make_compartmental_matrix_func(
-##        mpa
-##    ):
-##    # Now construct A matrix
-##    # diagonal 
-##    # make sure to use 1.0 instead of 1 otherwise it will be an interger array
-##    # and round your values....
-##    A =np.diag([-1.0 for i in range(9)]) 
-##    # because of python indices starting at 0 we have A[i-1,j-1]=fij
-##    #
-##    #A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
-##    #                 0,  -1,   0,   0,   0,   0,   0,   0,   0,
-##    #                 0,   0,  -1,   0,   0,   0,   0,   0,   0,
-##    #               f41, f42,   0,  -1,   0,   0,   0,   0,   0,
-##    #               f51, f52,   0,   0,  -1,   0,   0,   0,   0,
-##    #                 0,   0, f63,   0,   0,  -1,   0,   0,   0,
-##    #                 0,   0,   0, f74, f75,   0,  -1,   0,   0,
-##    #                 0,   0,   0,   0, f85, f86, f87,  -1,   0,
-##    #                 0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
-##
-##    # note that the matrix description of a model is implicitly related to the
-##    # order of pools in the state_vector and not independent from it.
-##
-##    A[3,0] = mpa.f_leaf2metlit
-##    A[3,1] = mpa.f_root2metlit
-##    A[4,0] = 1.0 - mpa.f_leaf2metlit
-##    A[4,1] = 1.0 - mpa.f_root2metlit
-##    A[5,2] = mpa.f_wood2CWD 
-##    A[6,3] = mpa.f_metlit2mic 
-##    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
-##    A[7,4] = 0.7 * mpa.lig_leaf
-##    A[7,5] = 0.4 * (1 - mpa.lig_wood)
-##    A[8,5] = 0.7 * mpa.lig_wood
-##    A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
-##    A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
-##    A[8,7] = 0.45 * (0.003 + 0.009 * mpa.clay)
-##
-##    #turnover rate per day of pools: 
-##    K = np.diag([
-##        mpa.k_leaf,
-##        mpa.k_root,
-##        mpa.k_wood,
-##        mpa.k_metlit,
-##        mpa.k_metlit/(5.75*np.exp(-3*mpa.lig_leaf)),
-##        mpa.k_metlit/20.6,
-##        mpa.k_mic,
-##        mpa.k_slowsom,
-##        mpa.k_passsom
-##    ])
-##    # in the general nonautonomous nonlinear case
-##    # B will depend on an it,X (althouh in this case it does not depend on either
-##    def B_func(it,X): 
-##        return A@K
-##
-##    return B_func
-##
-#def run_forward_simulation_sym(
+# #def make_compartmental_matrix_func(
+# #        mpa
+# #    ):
+# #    # Now construct A matrix
+# #    # diagonal 
+# #    # make sure to use 1.0 instead of 1 otherwise it will be an interger array
+# #    # and round your values....
+# #    A =np.diag([-1.0 for i in range(9)]) 
+# #    # because of python indices starting at 0 we have A[i-1,j-1]=fij
+# #    #
+# #    #A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
+# #    #                 0,  -1,   0,   0,   0,   0,   0,   0,   0,
+# #    #                 0,   0,  -1,   0,   0,   0,   0,   0,   0,
+# #    #               f41, f42,   0,  -1,   0,   0,   0,   0,   0,
+# #    #               f51, f52,   0,   0,  -1,   0,   0,   0,   0,
+# #    #                 0,   0, f63,   0,   0,  -1,   0,   0,   0,
+# #    #                 0,   0,   0, f74, f75,   0,  -1,   0,   0,
+# #    #                 0,   0,   0,   0, f85, f86, f87,  -1,   0,
+# #    #                 0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
+# #
+# #    # note that the matrix description of a model is implicitly related to the
+# #    # order of pools in the state_vector and not independent from it.
+# #
+# #    A[3,0] = mpa.f_leaf2metlit
+# #    A[3,1] = mpa.f_root2metlit
+# #    A[4,0] = 1.0 - mpa.f_leaf2metlit
+# #    A[4,1] = 1.0 - mpa.f_root2metlit
+# #    A[5,2] = mpa.f_wood2CWD 
+# #    A[6,3] = mpa.f_metlit2mic 
+# #    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
+# #    A[7,4] = 0.7 * mpa.lig_leaf
+# #    A[7,5] = 0.4 * (1 - mpa.lig_wood)
+# #    A[8,5] = 0.7 * mpa.lig_wood
+# #    A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
+# #    A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
+# #    A[8,7] = 0.45 * (0.003 + 0.009 * mpa.clay)
+# #
+# #    #turnover rate per day of pools: 
+# #    K = np.diag([
+# #        mpa.k_leaf,
+# #        mpa.k_root,
+# #        mpa.k_wood,
+# #        mpa.k_metlit,
+# #        mpa.k_metlit/(5.75*np.exp(-3*mpa.lig_leaf)),
+# #        mpa.k_metlit/20.6,
+# #        mpa.k_mic,
+# #        mpa.k_slowsom,
+# #        mpa.k_passsom
+# #    ])
+# #    # in the general nonautonomous nonlinear case
+# #    # B will depend on an it,X (althouh in this case it does not depend on either
+# #    def B_func(it,X): 
+# #        return A@K
+# #
+# #    return B_func
+# #
+# def run_forward_simulation_sym(
 #        V_init,
 #        day_indices,
 #        mpa
