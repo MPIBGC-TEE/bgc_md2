@@ -479,13 +479,11 @@ def make_jon_cost_func(
     denominators = means ** 2
 
     def costfunction(mod: np.ndarray) -> np.float64:
-        cost = np.mean(
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators
-        )
+        cost = (1/n) * np.sum(
+            100* np.sum((obs - mod)**2, axis=0) / denominators 
+            )
         return cost
-
     return costfunction
-
 
 def day_2_month_index(d):
     return months_by_day_arr()[(d % days_per_year)]

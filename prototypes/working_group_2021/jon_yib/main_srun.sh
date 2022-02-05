@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=main_srun
-#SBATCH --time=168:00:00
+#SBATCH --time=90:00:00
 #SBATCH --mem=10GB
 #SBATCH --nodes=4
 #SBATCH --ntasks=12
@@ -12,7 +12,7 @@
 
 module purge
 module load anaconda3/2021.05 #has to match the currently activated anaconda version in the shell
-conda activate /scratch/mm4967/miniconda_envs/bgc_md2
+conda activate /scratch/jw2636/env_bgc
 
 conda list
 echo ""

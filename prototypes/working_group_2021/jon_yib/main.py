@@ -48,54 +48,54 @@ with Path('config.json').open(mode='r') as f:
 dataPath = Path(conf_dict['dataPath'])
 
 #get data streams
-npp, rh, ra, csoil, cveg = get_example_site_vars(Path(conf_dict['dataPath']))
+npp, rh, ra, cveg, csoil = get_example_site_vars(Path(conf_dict['dataPath']))
 nyears = 320
 obs_tup=Observables(
+    h_respiration=monthly_to_yearly(rh),
+    #a_respiration=monthly_to_yearly(ra),
     c_veg=cveg,
-    c_soil=csoil,
-    a_respiration=monthly_to_yearly(ra),
-    h_respiration=monthly_to_yearly(rh)
+    c_soil=csoil
 )
 obs = np.stack(obs_tup, axis=1)[0:nyears,:]
 
 #set estimated parameters
 epa0 = EstimatedParameters(
-    beta_leaf=0.15,             # 0         
-    beta_root=0.2,              # 1      
-    k_leaf=1/365,               # 2      
-    k_root=1/(365*5),           # 3         
-    k_wood=1/(365*40),          # 4
-    k_cwd=1/(365*5),            # 5      
-    k_samet=0.5/(365*0.1),      # 6      
-    k_sastr=0.5/(365*0.1),      # 7      
-    k_samic=0.3/(365*0.137),    # 8      
-    k_slmet=0.3/(365),          # 9      
-    k_slstr=0.3/(365),          # 10      
-    k_slmic=0.3/(365),          # 11      
-    k_slow=0.3/(365*5),         # 12      
-    k_arm=0.3/(222*365),        # 13      
-    f_samet_leaf=0.3,           # 14      
-    f_slmet_root=0.3,           # 15      
-    f_samic_cwd=0.3,            # 16     
-    C_leaf_0=cveg[0]/5,         # 17      
-    C_root_0=cveg[0]/5,         # 18      
-    C_cwd_0=csoil[0]/50,         # 19      
-    C_samet_0=csoil[0]/300,      # 20      
-    C_sastr_0=csoil[0]/300,      # 21      
-    C_samic_0=csoil[0]/500,      # 22      
-    C_slmet_0=csoil[0]/10,      # 23      
-    C_slstr_0=csoil[0]/10,      # 24      
-    C_slmic_0=csoil[0]/10,      # 25      
-    C_slow_0=csoil[0]/10,       # 26 
+    beta_leaf=0.21,
+    beta_root=0.27,
+    k_leaf=0.014,
+    k_root=0.022,
+    k_wood=0.003,
+    k_cwd=0.005,
+    k_samet=0.01,
+    k_sastr=0.001,
+    k_samic=0.05,
+    k_slmet=0.040,
+    k_slstr=0.0039,
+    k_slmic=0.005,
+    k_slow=0.00001,
+    k_arm=3.27E-06,
+    f_samet_leaf=0.28,
+    f_slmet_root=0.34,
+    f_samic_cwd=0.29,
+    C_leaf_0=0.06,
+    C_root_0=0.08,
+    C_cwd_0=0.5,
+    C_samet_0=0.4,
+    C_sastr_0=1.07,
+    C_samic_0=0.49,
+    C_slmet_0=0.83,
+    C_slstr_0=2.07,
+    C_slmic_0=1.04,
+    C_slow_0=5.66
 )
 
 #set fixed parameters
 cpa = UnEstimatedParameters(
-    C_soil_0=csoil[0],
-    C_veg_0=cveg[0],
-    rh_0 = monthly_to_yearly(rh)[0],
-    ra_0 = monthly_to_yearly(ra)[0],
     npp=npp,
+    rh_0 = monthly_to_yearly(rh)[0],
+    ra_0 = monthly_to_yearly(ra)[0],    
+    C_veg_0=cveg[0],
+    C_soil_0=csoil[0],
     clay=0.2028,
     silt=0.2808,
     nyears=320
@@ -142,7 +142,7 @@ def uniform_parallel_mcmc(_):
     #randomly perturb parameters for each chain by up to +- 50%
     flag=True
     while(flag):
-        pertb = epa0*np.random.uniform(low=0.95, high=1.05, size=(par_len,)).astype(float)
+        pertb = epa0*np.random.uniform(low=0.85, high=1.15, size=(par_len,)).astype(float)
         if(isQualified(pertb)):
             flag=False
     return(
@@ -151,7 +151,7 @@ def uniform_parallel_mcmc(_):
             filter_func=isQualified,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=10000,
+            nsimu=50000,
             c_max=c_max,
             c_min=c_min
 	    )
@@ -372,14 +372,14 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 # # vector is the mean which is an estimator of  the expected value of the
 # # desired distribution.
 #
- sol_mean =param2res(best_par)
+sol_mean =param2res(best_pars)
 
- fig = plt.figure()
- plot_solutions(
+fig = plt.figure()
+plot_solutions(
         fig,
         times=np.array(range(nyears)),
         var_names=Observables._fields,
         tup=(sol_mean, obs),
         names=('best','obs')
- )
- fig.savefig('solutions.pdf')
+)
+fig.savefig('solutions.pdf')
