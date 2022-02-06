@@ -26,14 +26,10 @@
 # ## Inspect a minimal model
 #
 # We will start with an extremely simple model.
-# whose original you can find in 
-# ```bash
-# bgc_md2/src/bgc_md2/models/testVectorFree/source.py
-# ```
 # and copy its contents into a new cell. (we will later save it under a new name) 
 
 # +
-from sympy import var, Symbol, Function 
+from sympy import  Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
 from bgc_md2.resolve.mvars import (
@@ -50,9 +46,9 @@ sym_dict={
     "vl": "vegegation leaf pool",
     "vw": "vegetation wood pool content",
     "I_vw": "Influx into vegetation wood pool",
-    "k_vw_o": "out flux rate of wood pool",
-    "k_vl_2_vw": "internal flux rate from leaf to wood", 
-    "k_vw_2_vl": "internal flux rate from wood to leaf", 
+    "r_vw_o": "out flux rate of wood pool",
+    "r_vl_2_vw": "internal flux rate from leaf to wood", 
+    "r_vw_2_vl": "internal flux rate from wood to leaf", 
 }
 # Make symbols from  the strings that we can later use in expressions  
 # vl, vw,...
@@ -63,7 +59,7 @@ for k in sym_dict.keys():
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
     "I_vl": "Influx into vegetation leaf pool",
-    "k_vl_o": "out flux rate of leaf pool",
+    "r_vl_o": "out flux rate of leaf pool",
 }
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
@@ -76,8 +72,8 @@ mvs = CMTVS(
         StateVariableTuple((vl, vw)),
         t,
         InFluxesBySymbol({vl: I_vl(t), vw: I_vw}),
-        OutFluxesBySymbol({vl: k_vl_o(t) * vl, vw: k_vw_o * vw}),
-        InternalFluxesBySymbol({(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw}),
+        OutFluxesBySymbol({vl: r_vl_o(t) * vl, vw: r_vw_o * vw}),
+        InternalFluxesBySymbol({(vl, vw): r_vl_2_vw * vl, (vw, vl): r_vw_2_vl * vw}),
     },
 
     computers=module_computers(bgc_c)
@@ -150,8 +146,8 @@ import bgc_md2.resolve.computers as bgc_c
 sym_dict={
     "vl": "vegegation leaf pool",
     "vw": "vegetation wood pool content",
-    "k_vl_2_vw": "internal flux rate from leaf to wood", 
-    "k_vw_2_vl": "internal flux rate from wood to leaf", 
+    "r_vl_2_vw": "internal flux rate from leaf to wood", 
+    "r_vw_2_vl": "internal flux rate from wood to leaf", 
     'C_soil_fast': '',
     'C_soil_slow': '',
     'C_soil_passive': '',
@@ -161,24 +157,24 @@ sym_dict={
     'C_leaf_litter': '',
     'C_root_litter': '',
     'C_wood_litter': '',
-    'k_leaf_2_leaf_litter': '',
-    'k_root_2_root_litter': '',
-    'k_wood_2_wood_litter': '',
-    'k_leaf_litter_rh': '',
-    'k_root_litter_rh': '',
-    'k_wood_litter_rh': '',
-    'k_soil_fast_rh': '',
-    'k_soil_slow_rh': '',
-    'k_soil_passive_rh': '',
-    'k_leaf_litter_2_soil_fast': '',
-    'k_leaf_litter_2_soil_slow': '',
-    'k_leaf_litter_2_soil_passive': '',
-    'k_wood_litter_2_soil_fast': '',
-    'k_wood_litter_2_soil_slow': '',
-    'k_wood_litter_2_soil_passive': '',
-    'k_root_litter_2_soil_fast': '',
-    'k_root_litter_2_soil_slow': '',
-    'k_root_litter_2_soil_passive': '',
+    'r_C_leaf_2_C_leaf_litter': '',
+    'r_C_root_2_C_root_litter': '',
+    'r_C_wood_2_C_wood_litter': '',
+    'r_C_leaf_litter_rh': '',
+    'r_C_root_litter_rh': '',
+    'r_C_wood_litter_rh': '',
+    'r_C_soil_fast_rh': '',
+    'r_C_soil_slow_rh': '',
+    'r_C_soil_passive_rh': '',
+    'r_C_leaf_litter_2_C_soil_fast': '',
+    'r_C_leaf_litter_2_C_soil_slow': '',
+    'r_C_leaf_litter_2_C_soil_passive': '',
+    'r_C_wood_litter_2_C_soil_fast': '',
+    'r_C_wood_litter_2_C_soil_slow': '',
+    'r_C_wood_litter_2_C_soil_passive': '',
+    'r_C_root_litter_2_C_soil_fast': '',
+    'r_C_root_litter_2_C_soil_slow': '',
+    'r_C_root_litter_2_C_soil_passive': '',
     'tsl': '',
     'mrso': '',
     't': '',
@@ -195,7 +191,7 @@ for k in sym_dict.keys():
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
     "I_vl": "Influx into vegetation leaf pool",
-    "k_vl_o": "out flux rate of leaf pool",
+    "r_vl_o": "out flux rate of leaf pool",
     'xi': '',
     'NPP': '',
 }
@@ -212,8 +208,8 @@ mvs = CMTVS(
         StateVariableTuple((vl, vw)),
         t,
         InFluxesBySymbol({vl: I_vl(t), vw: I_vw}),
-        OutFluxesBySymbol({vl: k_vl_o(t) * vl, vw: k_vw_o * vw}),
-        InternalFluxesBySymbol({(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw}),
+        OutFluxesBySymbol({vl: r_vl_o(t) * vl, vw: r_vw_o * vw}),
+        InternalFluxesBySymbol({(vl, vw): r_vl_2_vw * vl, (vw, vl): r_vw_2_vl * vw}),
     },
 
     computers=module_computers(bgc_c)
@@ -227,7 +223,7 @@ mvs = CMTVS(
 # For the moment we leave the old ones (vl and vw) in to have a template for how to formulate fluxes)
 
 # +
-from sympy import var 
+from sympy import Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
 from bgc_md2.resolve.mvars import (
@@ -242,12 +238,9 @@ import bgc_md2.resolve.computers as bgc_c
 # Make a small dictionary for the variables we will use
 sym_dict={
     "vl": "vegegation leaf pool",
-    "vl": "vegegation leaf pool",
     "vw": "vegetation wood pool content",
-    "I_vw": "Influx into vegetation wood pool",
-    "k_vw_o": "out flux rate of wood pool",
-    "k_vl_2_vw": "internal flux rate from leaf to wood", 
-    "k_vw_2_vl": "internal flux rate from wood to leaf", 
+    "r_vl_2_vw": "internal flux rate from leaf to wood", 
+    "r_vw_2_vl": "internal flux rate from wood to leaf", 
     'C_soil_fast': '',
     'C_soil_slow': '',
     'C_soil_passive': '',
@@ -257,24 +250,24 @@ sym_dict={
     'C_leaf_litter': '',
     'C_root_litter': '',
     'C_wood_litter': '',
-    'k_leaf_2_leaf_litter': '',
-    'k_root_2_root_litter': '',
-    'k_wood_2_wood_litter': '',
-    'k_leaf_litter_rh': '',
-    'k_root_litter_rh': '',
-    'k_wood_litter_rh': '',
-    'k_soil_fast_rh': '',
-    'k_soil_slow_rh': '',
-    'k_soil_passive_rh': '',
-    'k_leaf_litter_2_soil_fast': '',
-    'k_leaf_litter_2_soil_slow': '',
-    'k_leaf_litter_2_soil_passive': '',
-    'k_wood_litter_2_soil_fast': '',
-    'k_wood_litter_2_soil_slow': '',
-    'k_wood_litter_2_soil_passive': '',
-    'k_root_litter_2_soil_fast': '',
-    'k_root_litter_2_soil_slow': '',
-    'k_root_litter_2_soil_passive': '',
+    'r_C_leaf_2_C_leaf_litter': '',
+    'r_C_root_2_C_root_litter': '',
+    'r_C_wood_2_C_wood_litter': '',
+    'r_C_leaf_litter_rh': '',
+    'r_C_root_litter_rh': '',
+    'r_C_wood_litter_rh': '',
+    'r_C_soil_fast_rh': '',
+    'r_C_soil_slow_rh': '',
+    'r_C_soil_passive_rh': '',
+    'r_C_leaf_litter_2_C_soil_fast': '',
+    'r_C_leaf_litter_2_C_soil_slow': '',
+    'r_C_leaf_litter_2_C_soil_passive': '',
+    'r_C_wood_litter_2_C_soil_fast': '',
+    'r_C_wood_litter_2_C_soil_slow': '',
+    'r_C_wood_litter_2_C_soil_passive': '',
+    'r_C_root_litter_2_C_soil_fast': '',
+    'r_C_root_litter_2_C_soil_slow': '',
+    'r_C_root_litter_2_C_soil_passive': '',
     'tsl': '',
     'mrso': '',
     't': '',
@@ -317,8 +310,8 @@ mvs = CMTVS(
 	        C_soil_passive,
         )),
         InFluxesBySymbol({vl: I_vl(t), vw: I_vw}),
-        OutFluxesBySymbol({vl: k_vl_o(t) * vl, vw: k_vw_o * vw}),
-        InternalFluxesBySymbol({(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw}),
+        OutFluxesBySymbol({vl: r_vl_o(t) * vl, vw: r_vw_o * vw}),
+        InternalFluxesBySymbol({(vl, vw): r_vl_2_vw * vl, (vw, vl): r_vw_2_vl * vw}),
     },
 
     computers=module_computers(bgc_c)
@@ -335,7 +328,7 @@ dh.mass_balance_equation(mvs)
 #
 
 # +
-from sympy import var 
+from sympy import Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
 from bgc_md2.resolve.mvars import (
@@ -356,6 +349,10 @@ sym_dict={
     # "k_vw_o": "out flux rate of wood pool",
     # "k_vl_2_vw": "internal flux rate from leaf to wood", 
     # "k_vw_2_vl": "internal flux rate from wood to leaf", 
+    "vl": "vegegation leaf pool",
+    "vw": "vegetation wood pool content",
+    "r_vl_2_vw": "internal flux rate from leaf to wood", 
+    "r_vw_2_vl": "internal flux rate from wood to leaf", 
     'C_soil_fast': '',
     'C_soil_slow': '',
     'C_soil_passive': '',
@@ -365,24 +362,24 @@ sym_dict={
     'C_leaf_litter': '',
     'C_root_litter': '',
     'C_wood_litter': '',
-    'k_leaf_2_leaf_litter': '',
-    'k_root_2_root_litter': '',
-    'k_wood_2_wood_litter': '',
-    'k_leaf_litter_rh': '',
-    'k_root_litter_rh': '',
-    'k_wood_litter_rh': '',
-    'k_soil_fast_rh': '',
-    'k_soil_slow_rh': '',
-    'k_soil_passive_rh': '',
-    'k_leaf_litter_2_soil_fast': '',
-    'k_leaf_litter_2_soil_slow': '',
-    'k_leaf_litter_2_soil_passive': '',
-    'k_wood_litter_2_soil_fast': '',
-    'k_wood_litter_2_soil_slow': '',
-    'k_wood_litter_2_soil_passive': '',
-    'k_root_litter_2_soil_fast': '',
-    'k_root_litter_2_soil_slow': '',
-    'k_root_litter_2_soil_passive': '',
+    'r_C_leaf_2_C_leaf_litter': '',
+    'r_C_root_2_C_root_litter': '',
+    'r_C_wood_2_C_wood_litter': '',
+    'r_C_leaf_litter_rh': '',
+    'r_C_root_litter_rh': '',
+    'r_C_wood_litter_rh': '',
+    'r_C_soil_fast_rh': '',
+    'r_C_soil_slow_rh': '',
+    'r_C_soil_passive_rh': '',
+    'r_C_leaf_litter_2_C_soil_fast': '',
+    'r_C_leaf_litter_2_C_soil_slow': '',
+    'r_C_leaf_litter_2_C_soil_passive': '',
+    'r_C_wood_litter_2_C_soil_fast': '',
+    'r_C_wood_litter_2_C_soil_slow': '',
+    'r_C_wood_litter_2_C_soil_passive': '',
+    'r_C_root_litter_2_C_soil_fast': '',
+    'r_C_root_litter_2_C_soil_slow': '',
+    'r_C_root_litter_2_C_soil_passive': '',
     'tsl': '',
     'mrso': '',
     't': '',
@@ -436,29 +433,29 @@ mvs = CMTVS(
         OutFluxesBySymbol(
             {
                 #vl: k_vl_o * vl, vw: k_vw_o * vw
-                C_leaf_litter: k_leaf_litter_rh*C_leaf_litter*xi(t),
-                C_wood_litter: k_wood_litter_rh*C_wood_litter*xi(t),
-                C_root_litter: k_root_litter_rh*C_root_litter*xi(t),
-                C_soil_fast: k_soil_fast_rh*C_soil_fast*xi(t),
-                C_soil_slow: k_soil_slow_rh*C_soil_slow*xi(t),
-                C_soil_passive: k_soil_passive_rh*C_soil_passive*xi(t),
+                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),
+                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),
+                C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),
+                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi(t),
+                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi(t),
+                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi(t),
             }
         ),
         InternalFluxesBySymbol(
             {
                 #(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw
-                (C_leaf, C_leaf_litter): k_leaf_2_leaf_litter*C_leaf, 
-                (C_wood, C_wood_litter): k_wood_2_wood_litter*C_wood, 
-                (C_root, C_root_litter): k_root_2_root_litter*C_root, 
-                (C_leaf_litter, C_soil_fast)    : k_leaf_litter_2_soil_fast * C_leaf_litter*xi(t),
-                (C_leaf_litter, C_soil_slow)    : k_leaf_litter_2_soil_slow * C_leaf_litter*xi(t),
-                (C_leaf_litter, C_soil_passive) : k_leaf_litter_2_soil_passive * C_leaf_litter*xi(t),
-                (C_wood_litter, C_soil_fast)    : k_wood_litter_2_soil_fast * C_wood_litter*xi(t),
-                (C_wood_litter, C_soil_slow)    : k_wood_litter_2_soil_slow * C_wood_litter*xi(t),
-                (C_wood_litter, C_soil_passive) : k_wood_litter_2_soil_passive * C_wood_litter*xi(t),
-                (C_root_litter, C_soil_fast)    : k_root_litter_2_soil_fast * C_root_litter*xi(t),
-                (C_root_litter, C_soil_slow)    : k_root_litter_2_soil_slow * C_root_litter*xi(t),
-                (C_root_litter, C_soil_passive) : k_root_litter_2_soil_passive * C_root_litter*xi(t),
+                (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
+                (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
+                (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
+                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi(t),
+                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi(t),
+                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi(t),
+                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi(t),
+                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi(t),
+                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi(t),
+                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi(t),
+                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi(t),
+                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),
             }
         ),
     },
@@ -508,7 +505,132 @@ K
 # we now have the (symbolic) ingredients for the tracebility analysis.
 #xi_d,K,A
 
-mvs.get_OutFluxesBySymbol().keys()
+# We can store the symbolic representation in a file that we can use in for several purposes later.
+# Copy your version of the following cell into a text editor and save the file in the current directory as `source.py`)
+
+# +
+from sympy import Symbol, Function 
+from ComputabilityGraphs.CMTVS import CMTVS
+from bgc_md2.helper import module_computers
+from bgc_md2.resolve.mvars import (
+    InFluxesBySymbol,
+    OutFluxesBySymbol,
+    InternalFluxesBySymbol,
+    TimeSymbol,
+    StateVariableTuple,
+)
+import bgc_md2.resolve.computers as bgc_c
+
+# Make a small dictionary for the variables we will use
+sym_dict={
+    "vl": "vegegation leaf pool",
+    "vw": "vegetation wood pool content",
+    "r_vl_2_vw": "internal flux rate from leaf to wood", 
+    "r_vw_2_vl": "internal flux rate from wood to leaf", 
+    'C_soil_fast': '',
+    'C_soil_slow': '',
+    'C_soil_passive': '',
+    'C_leaf': '',
+    'C_root': '',
+    'C_wood': '',
+    'C_leaf_litter': '',
+    'C_root_litter': '',
+    'C_wood_litter': '',
+    'r_C_leaf_2_C_leaf_litter': '',
+    'r_C_root_2_C_root_litter': '',
+    'r_C_wood_2_C_wood_litter': '',
+    'r_C_leaf_litter_rh': '',
+    'r_C_root_litter_rh': '',
+    'r_C_wood_litter_rh': '',
+    'r_C_soil_fast_rh': '',
+    'r_C_soil_slow_rh': '',
+    'r_C_soil_passive_rh': '',
+    'r_C_leaf_litter_2_C_soil_fast': '',
+    'r_C_leaf_litter_2_C_soil_slow': '',
+    'r_C_leaf_litter_2_C_soil_passive': '',
+    'r_C_wood_litter_2_C_soil_fast': '',
+    'r_C_wood_litter_2_C_soil_slow': '',
+    'r_C_wood_litter_2_C_soil_passive': '',
+    'r_C_root_litter_2_C_soil_fast': '',
+    'r_C_root_litter_2_C_soil_slow': '',
+    'r_C_root_litter_2_C_soil_passive': '',
+    'tsl': '',
+    'mrso': '',
+    't': '',
+    'T_0': '',
+    'E': '',
+    'KM': '',
+    'beta_leaf': '',
+    'beta_wood': '',
+}
+for k in sym_dict.keys():
+    code=k+" = Symbol('{0}')".format(k)
+    exec(code)
+
+# some we will also use some symbols for functions (which appear with an argument) 
+func_dict={
+    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
+    'NPP': '',
+}
+for k in func_dict.keys():
+    code=k+" = Function('{0}')".format(k)
+    exec(code)
+
+t=TimeSymbol("t")
+beta_root = 1.0- (beta_leaf+beta_wood)
+mvs = CMTVS(
+    {
+        t,
+        StateVariableTuple((
+            C_leaf,
+	        C_wood,
+	        C_root,
+	        C_leaf_litter,
+	        C_wood_litter,
+	        C_root_litter,
+	        C_soil_fast,
+	        C_soil_slow,
+	        C_soil_passive,
+        )),
+        InFluxesBySymbol(
+            {
+                C_leaf: NPP(t) * beta_leaf, 
+                C_root: NPP(t) * beta_root, 
+                C_wood: NPP(t) * beta_wood
+            }
+        ),
+        OutFluxesBySymbol(
+            {
+                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),
+                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),
+                C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),
+                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi(t),
+                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi(t),
+                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi(t),
+            }
+        ),
+        InternalFluxesBySymbol(
+            {
+                (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
+                (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
+                (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
+                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi(t),
+                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi(t),
+                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi(t),
+                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi(t),
+                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi(t),
+                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi(t),
+                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi(t),
+                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi(t),
+                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),
+            }
+        ),
+    },
+
+
+    computers=module_computers(bgc_c)
+)
+# -
 
 mvs.get_StateVariableTuple()
 
@@ -540,7 +662,13 @@ mvs.get_StateVariableTuple()
 # Note that 
 # - the file resides one level above your current folder since it is not modelspecific
 #   (This is a change from the first round of model gathering)
-# - 
+#
+# #### create a small model specific function to download the data
+# This function  will later be stored in the file `model_specific_helpers.py` 
+# This function **saves us a lot of time** when we want to reproduce your results and run your model since finding the correct dataset can be a time consuming task.
+# There is a helper function `download_TRENDY_output` in `../general_helpers.py` that you can probably use within your `download_my_TRENDY_output`.
+# If it's not general enough to be called it should at least give you an idea. 
+#
 
 # +
 import sys
@@ -548,133 +676,65 @@ sys.path.insert(0,'..') # necessary to import general_helpers
 from general_helpers import download_TRENDY_output
 import json 
 from pathlib import Path
+from collections import namedtuple 
 
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-def download_data():
+
+# we will use the trendy output names directly in other parts of the output
+Observables = namedtuple(
+    'Observables',
+    ["cLitter", "cSoil", "cVeg", "gpp", "rh" ,"ra" ]
+)
+    
+    
+#create a small model specific function that will later be stored in the file model_specific_helpers.py
+def download_my_TRENDY_output():
     download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['VISIT'],
-        variables   = ["cLitter", "cSoil", "cVeg", "gpp", "rh" ,"ra"]
+        variables = Observables._fields
     )
+#call it to test that the download works the data
+#download_my_TRENDY_output()
+# -
 
-#download_data()
+# #### provide functions to read the data
+#
+
 
 
 # +
-
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
 import json 
-def get_variables_from_files(dataPath):
-    # Read NetCDF data  ******************************************************************************************************************************
-    names = [
-        ('cLeaf', 'cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cLitterAbove', 'cLitterAbove_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cLitterBelow', 'cLitterBelow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cRoot', 'cRoot_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilFast', 'cSoilFast_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilMedium', 'cSoilMedium_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilSlow', 'cSoilSlow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cVeg', 'cVeg_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('fLitterSoil', 'fLitterSoil_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('fVegLitter', 'fVegLitter_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('mrsos', 'mrsos_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('npp', 'npp_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('rh', 'rh_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('tsl', 'tsl_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-    ]
+def get_example_site_vars(dataPath):
+    # pick up 1 site   
+    s = slice(None, None, None)  # this is the same as :
+    t = s, 50, 33  # [t] = [:,49,325]
+    names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
-        return ds.variables[vn][:, :, :]
+        return ds.variables[vn][t]
 
-    return map(f, names)
+    return Observables(*map(f, names))
+
 
 #     # Read NetCDF data  ******************************************************************************************************************************
+# -
 
-def get_example_site_vars(dataPath):
-    (
-        C_leaf,
-        C_litter_above,
-        C_litter_below,
-        C_root,
-        C_fast_som,
-        C_slow_som,
-        C_pass_som,
-        C_veg,
-        f_litter2som,
-        f_veg2litter,
-        mrso,
-        npp,
-        rh,
-        tsl
-    )= get_variables_from_files(dataPath)
-    # pick up 1 site   wombat state forest
-    s = slice(None, None, None)  # this is the same as :
-    t = s, 50, 33  # [t] = [:,49,325]
-    npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
-    rh = rh[t]*86400  # per s to per day
-    f_veg2litter = f_veg2litter[t] * 86400
-    f_litter2som = f_litter2som[t] * 86400
-    tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
-    (
-        C_leaf,
-        C_litter_above,
-        C_litter_below,
-        C_root,
-        C_fast_som,
-        C_slow_som,
-        C_pass_som,
-        C_veg,
-        mrso,
-        tsl
-    ) = map(
-        lambda var: var[t],
-        (
-            C_leaf,
-            C_litter_above,
-            C_litter_below,
-            C_root,
-            C_fast_som,
-            C_slow_som,
-            C_pass_som,
-            C_veg,
-            mrso,
-            tsl_mean
-        )
-    )
-    C_wood = C_veg - C_leaf - C_root
-    return (npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_som, C_pass_som,
-            rh, f_veg2litter, f_litter2som, mrso, tsl)
+svs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 
-with Path('config.json').open(mode='r') as f:
-    conf_dict=json.load(f) 
+svs
 
-dataPath = Path(conf_dict['dataPath'])
-(
-    npp,
-    C_leaf,
-    C_wood,
-    C_root,
-    C_litter_above,
-    C_litter_below,
-    C_fast_som,
-    C_slow_som,
-    C_pass_som,
-    rh,
-    f_veg2litter,
-    f_litter2som,
-    mrso,
-    tsl
-)=get_example_site_vars(dataPath)
-
-import sys 
+# +
 sys.path.insert(0,'..')
 from general_helpers import day_2_month_index
 def NPP_fun(day ):
@@ -682,6 +742,8 @@ def NPP_fun(day ):
 
 func_dict={NPP: NPP_fun}
 # -
+
+
 
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
@@ -742,8 +804,8 @@ import  CompartmentalSystems.helpers_reservoir as hr
 hr.out_fluxes_by_symbol(sv,M_sym)
 
 # we create a dictionary for the outfluxrates (flux divided by dono pool content)
-outflux_rates = {"k_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
-internal_flux_rates = {"k_"+str(key[0])+"_2_"+str(key[1]):value/key[0] for key,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
+outflux_rates = {"r_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
+internal_flux_rates = {"r_"+str(key[0])+"_2_"+str(key[1]):value/key[0] for key,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
 from copy import  deepcopy
 all_rates=deepcopy(outflux_rates)
 all_rates.update(internal_flux_rates)
@@ -793,7 +855,7 @@ par_dict={
     KM: 10 
 }
 par_dict.update(
-    {k:v.subs(old_par_dict) for k,v in all_rates.items()}
+    {Symbol(k):v.subs(old_par_dict) for k,v in all_rates.items()}
 )
 par_dict
 
@@ -801,8 +863,112 @@ par_dict
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
 # We will later store these functions in  `model_specific_helpers.py` which resides in the same folder as this notebook. You will have to adapt them to your data set. 
 
+# +
+from general_helpers import make_B_u_funcs_2, day_2_month_index
+# check the numeric functions for B and u
+
+# test the dayly iterator
+def npp_func(day):
+    month=day_2_month_index(day)
+    return svs.gpp[month]-(svs.rh[month]+svs.ra[month])
+
+def xi_func(day):
+    return 1.0 # preliminary fake for lack of better data... 
+
+func_dict={
+    'NPP':npp_func,
+     'xi':xi_func
+}
+
+B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+X_0= np.array((
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cLitter/3,
+    svs_0.cLitter/3,
+    svs_0.cLitter/3,
+    svs_0.cSoil/3,
+    svs_0.cSoil/3,
+    svs_0.cSoil/3,
+)).reshape(9,1)
+# in general B and u are nonlinear and can depend on X, thats why we have to test them with index and X arguments
+u_func(0,X_0),B_func(0,X_0)
+
+# +
+from CompartmentalSystems import helpers_reservoir as hr
+from CompartmentalSystems.TimeStepIterator import (
+        TimeStepIterator2,
+)
+from copy import copy
+
+def make_daily_iterator_sym(
+        mvs,
+        V_init,
+        par_dict,
+        func_dict
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    def f(it,V):
+        X = V[0:9]
+        co2 = V[9]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B@X
+
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        out = B @ X
+        ra= -np.sum(out[0:3]) # check with  mvs.get_StateVariableTuple()[0:3]
+        rh= -np.sum(out[3:9]) # check with  mvs.get_StateVariableTuple()[3:9]
+        
+        V_new = np.concatenate((X_new,np.array([ra,rh]).reshape(2,1)), axis=0)
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_init,
+        f=f#,
+        #max_it=max(day_indices)+1
+    )
 
 
-To make a 
+# -
+
+mvs.get_StateVariableTuple()[3:9]
+
+Observables._fields
+
+# +
+# test the dayly iterator
+
+svs_0=Observables(*map(lambda v: v[0],svs))
+V_init=np.array((
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cLitter/3,
+    svs_0.cLitter/3,
+    svs_0.cLitter/3,
+    svs_0.cSoil/3,
+    svs_0.cSoil/3,
+    svs_0.cSoil/3,
+    svs_0.ra,
+    svs_0.rh
+)).reshape(11,1)
+    
+it_sym = make_daily_iterator_sym(
+    mvs,
+    V_init=V_init,
+    par_dict=par_dict,
+    func_dict=func_dict
+)
+n=5
+res= np.zeros((n,len(V_init)))
+res_sym = copy(res)
+for i in range(n):
+    res_sym[i,:]=it_sym.__next__().reshape(len(V_init),)
+res_sym
+# -
+
+
 
 
