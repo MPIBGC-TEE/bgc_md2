@@ -18,13 +18,20 @@ def make_B_u_funcs(
         mpa,
         func_dict
     ):
-        symbol_names = mvs.get_BibInfo().sym_dict.keys()   
-        for name in symbol_names:
-            var(name)
+        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
+        return make_B_u_funcs_2(mvs,model_params,func_dict)
+
+def make_B_u_funcs_2(
+        mvs,
+        model_params,
+        func_dict
+    ):
+        #symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+        #for name in symbol_names:
+        #    var(name)
         t = mvs.get_TimeSymbol()
         it = Symbol('it')
         delta_t=Symbol('delta_t')
-        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
         parameter_dict = {**model_params,delta_t: 1}
         state_vector = mvs.get_StateVariableTuple()
 
@@ -34,6 +41,7 @@ def make_B_u_funcs(
                 delta_t=delta_t,
                 iteration=it
         )
+        #from IPython import embed;embed()
         sym_u = hr.euler_forward_net_u_sym(
                 mvs.get_InputTuple(),
                 t,
@@ -56,7 +64,6 @@ def make_B_u_funcs(
                 func_dict=func_dict
         )
         return (B_func,u_func)
-
 
 def make_uniform_proposer(
         c_max: Iterable,
@@ -785,8 +792,6 @@ def download_TRENDY_output(
     sftp = paramiko.SFTPClient.from_transport(transport)
     
     # download files
-    
-    
     # Other models, "CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP","JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern",
     #                 "OCN","ORCHIDEEv3","SDGVM","VISIT","YIBs"
     
@@ -837,72 +842,3 @@ def download_TRENDY_output(
     
                         
     print("finished!")
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
