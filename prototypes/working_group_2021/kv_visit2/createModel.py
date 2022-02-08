@@ -128,7 +128,8 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #   but this way we are not forced to replace all the fluxes at
 #   once.It's always good to be able to make small steps...
 # - Note that for the following steps you **do not** have to copy and paste the previous cell
-#   as I did to show the incremental progress.
+#   as I did to show the incremental progress. Yoy can keep changing or maybe have one version that still works..
+#   
 
 # +
 from sympy import Symbol, Function 
