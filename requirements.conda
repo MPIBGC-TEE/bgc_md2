@@ -1,4 +1,5 @@
 matplotlib
+esgf-pyclient
 paramiko
 sympy
 nodejs
