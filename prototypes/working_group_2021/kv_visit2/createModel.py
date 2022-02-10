@@ -877,7 +877,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return dvs.gpp[month]-svs.ra[month]
+    return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -938,8 +938,8 @@ V_init= StartVector(
     C_soil_fast=svs_0.cSoil/3,
     C_soil_slow=svs_0.cSoil/3,
     C_soil_passive=svs_0.cSoil/3,
-    ra=svs_0.ra,
-    rh=svs_0.rh        
+    ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
+    rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;        
 )
 V_init.__getattribute__("C_leaf")
 
@@ -1095,9 +1095,9 @@ cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- gpp_0=svs_0.cSoil,
- rh_0=svs_0.rh,
- ra_0=svs_0.ra,
+ gpp_0=dvs.gpp[0] * 86400,   # kg/m2/s kg/m2/day
+ rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
+ ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
  r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
  r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
  number_of_months=len(svs.rh)
@@ -1178,7 +1178,7 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.gpp[month]-svs.rh[month]
+        return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)

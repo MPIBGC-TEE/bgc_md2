@@ -276,7 +276,7 @@ Observables = namedtuple(
 )
 Drivers=namedtuple(
     "Drivers",
-    ["npp"]
+    ["npp","mrso"]
 )    
     
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
@@ -334,11 +334,6 @@ def NPP_fun(day ):
 
 func_dict={NPP: NPP_fun}
 # -
-mvs.get_CompartmentalMatrix().subs(par_dict).free_symbols
-
-
-par_dict
-
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
 # So we need:
@@ -480,7 +475,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return dvs.npp[month]
+    return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -545,7 +540,7 @@ V_init= StartVector(
     C_dom=svs_0.cSoil/6,
     C_nom=svs_0.cSoil/6,
     C_psom=svs_0.cSoil/6,
-    rh=svs_0.rh        
+    rh=svs_0.rh * 86400   # kg/m2/s kg/m2/day        
 )
 #V_init.__getattribute__("rh")
 V_init
@@ -720,8 +715,8 @@ cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- npp_0=dvs.npp[0],
- rh_0=svs_0.rh,
+ npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
+ rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
  #mrso_0=dvs.mrso[0],
  #tsl_0=dvs.tsl[0],
  number_of_months=len(svs.rh)
@@ -734,7 +729,7 @@ V_init
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
 
-# deriving epa0 (initial Estimated Parameter values) from par_dict
+# deriving epa_0 (initial Estimated Parameter values) from par_dict
 temp_list=list()
 for name,dict_ in par_dict.items():
     temp_list.append(dict_)
@@ -825,7 +820,7 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.npp[month]#-(svs.rh[month]+svs.ra[month])
+        return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
