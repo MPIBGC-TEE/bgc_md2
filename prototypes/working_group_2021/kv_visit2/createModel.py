@@ -686,7 +686,7 @@ with Path('config.json').open(mode='r') as f:
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cLitter", "cSoil", "cVeg", "rh" ,"ra" ]
+    ["cLitter","cSoil", "cVeg","rh","ra"]
 )
 Drivers=namedtuple(
     "Drivers",
@@ -703,7 +703,7 @@ def download_my_TRENDY_output():
         variables = Observables._fields + Drivers._fields
     )
 #call it to test that the download works the data
-#download_my_TRENDY_output()
+download_my_TRENDY_output()
 # -
 
 # #### provide functions to read the data

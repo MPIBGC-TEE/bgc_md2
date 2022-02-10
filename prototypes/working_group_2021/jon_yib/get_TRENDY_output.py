@@ -44,5 +44,5 @@ for variable in  variables:
     except FileNotFoundError:
         print("file not found:" + filename)
 
-                    
+
 print("finished!")
