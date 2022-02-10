@@ -44,7 +44,7 @@ import bgc_md2.resolve.computers as bgc_c
 # Make a small dictionary for the variables we will use
 sym_dict={
     "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
+    "vw": "vegetation wood pool",
     "I_vw": "Influx into vegetation wood pool",
     "r_vw_o": "out flux rate of wood pool",
     "r_vl_2_vw": "internal flux rate from leaf to wood", 
@@ -344,50 +344,49 @@ import bgc_md2.resolve.computers as bgc_c
 
 # Make a small dictionary for the variables we will use
 sym_dict={
-    # "vl": "vegegation leaf pool",
-    # "vl": "vegegation leaf pool",
-    # "vw": "vegetation wood pool content",
-    # "I_vw": "Influx into vegetation wood pool",
-    # "k_vw_o": "out flux rate of wood pool",
-    # "k_vl_2_vw": "internal flux rate from leaf to wood", 
-    # "k_vw_2_vl": "internal flux rate from wood to leaf", 
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
     'C_leaf': '',
     'C_root': '',
     'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
+    'C_lit_cwd': '',
+    'C_lit_met': '',
+    'C_lit_str': '',
+    'C_lit_mic': '',
+    'C_soil_met': '',
+    'C_soil_str': '',
+    'C_soil_mic': '',
+    'C_soil_slow': '',
+    'C_soil_passive': '',
+    'r_C_lit_cwd_rh': '',
+    'r_C_lit_met_rh': '',
+    'r_C_lit_str_rh': '',
+    'r_C_lit_mic_rh': '',
+    'r_C_soil_met_rh': '',
+    'r_C_soil_str_rh': '',
+    'r_C_soil_mic_rh': '',
     'r_C_soil_slow_rh': '',
     'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'tsl': '',
-    'mrso': '',
+    'r_C_leaf_2_C_lit_met': '',
+    'r_C_leaf_2_C_lit_str': '',
+    'r_C_root_2_C_soil_met': '',    
+    'r_C_root_2_C_soil_str': '',
+    'r_C_wood_2_C_lit_cwd': '',
+    'r_C_lit_cwd_2_C_lit_mic': '',
+    'r_C_lit_cwd_2_C_soil_slow': '',
+    'r_C_lit_met_2_C_lit_mic': '',
+    'r_C_lit_str_2_C_lit_mic': '',
+    'r_C_lit_str_2_C_soil_slow': '',
+    'r_C_lit_mic_2_C_soil_slow': '',
+    'r_C_soil_met_2_C_soil_mic': '',
+    'r_C_soil_str_2_C_soil_mic': '',
+    'r_C_soil_str_2_C_soil_slow': '',
+    'r_C_soil_mic_2_C_soil_slow': '',
+    'r_C_soil_mic_2_C_soil_passive': '',
+    'r_C_soil_slow_2_C_soil_mic': '',
+    'r_C_soil_slow_2_C_soil_passive': '',
+    'r_C_soil_passive_2_C_soil_mic': '',
     't': '',
-    'T_0': '',
-    'E': '',
-    'KM': '',
+    'silt': '',
+    'clay': '',
     'beta_leaf': '',
     'beta_wood': '',
 }
@@ -397,9 +396,6 @@ for k in sym_dict.keys():
 
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
-    #"I_vl": "Influx into vegetation leaf pool",
-    #"k_vl_o": "out flux rate of leaf pool",
-    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
     'NPP': '',
 }
 for k in func_dict.keys():
@@ -407,26 +403,26 @@ for k in func_dict.keys():
     exec(code)
 
 t=TimeSymbol("t")
-beta_root = 1.0- (beta_leaf+beta_wood)
+beta_root = 1.0-(beta_leaf+beta_wood)
 mvs = CMTVS(
     {
         t,
-        StateVariableTuple((
-            #vl, 
-            #vw, 
+        StateVariableTuple(( 
             C_leaf,
 	        C_wood,
 	        C_root,
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
+	        C_lit_cwd,
+	        C_lit_met,
+	        C_lit_str,
+            C_lit_mic,
+            C_soil_met,
+            C_soil_str,
+	        C_soil_mic,
 	        C_soil_slow,
 	        C_soil_passive,
         )),
         InFluxesBySymbol(
             {
-                #vl: I_vl, vw: I_vw
                 C_leaf: NPP(t) * beta_leaf, 
                 C_root: NPP(t) * beta_root, 
                 C_wood: NPP(t) * beta_wood
@@ -434,7 +430,8 @@ mvs = CMTVS(
         ),
         OutFluxesBySymbol(
             {
-                #vl: k_vl_o * vl, vw: k_vw_o * vw
+                C_lit_cwd: r_C_lit_cwd_rh*C
+                
                 C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),
                 C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),
                 C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),
