@@ -128,8 +128,7 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #   but this way we are not forced to replace all the fluxes at
 #   once.It's always good to be able to make small steps...
 # - Note that for the following steps you **do not** have to copy and paste the previous cell
-#   as I did to show the incremental progress. Yoy can keep changing or maybe have one version that still works..
-#   
+#   as I did to show the incremental progress.
 
 # +
 from sympy import Symbol, Function 
@@ -177,7 +176,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tsl': '',
+    'tas': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -270,7 +269,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tsl': '',
+    'tas': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -382,7 +381,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tsl': '',
+    'tas': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -556,7 +555,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tsl': '',
+    'tas': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -690,7 +689,7 @@ Observables = namedtuple(
 )
 Drivers=namedtuple(
     "Drivers",
-    ["gpp"]
+    ["gpp", "mrso", "tas"]
 )    
     
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
@@ -878,7 +877,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return dvs.gpp[month]-(svs.rh[month]+svs.ra[month])
+    return dvs.gpp[month]-svs.ra[month]
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -1179,7 +1178,7 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.gpp[month]-(svs.rh[month]+svs.ra[month])
+        return dvs.gpp[month]-svs.rh[month]
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
