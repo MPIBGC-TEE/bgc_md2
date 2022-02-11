@@ -21,7 +21,7 @@ remote_path = "output"
 
 model      = "YIBs"
 experiment = "S2"
-variables   = ["Monthly_npp","Monthly_rh", "Monthly_ra", "Annual_cSoil", "Annual_cVeg"]
+variables   = ["Monthly_gpp"] #,"Monthly_rh", "Monthly_ra", "Annual_cSoil", "Annual_cVeg"]
 ext = ".nc"
 full_ext = ".tar.gz"
 
@@ -44,5 +44,5 @@ for variable in  variables:
     except FileNotFoundError:
         print("file not found:" + filename)
 
-                    
+
 print("finished!")

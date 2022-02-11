@@ -39,7 +39,7 @@ from general_helpers import (
         make_feng_cost_func,
         make_jon_cost_func, 
         plot_solutions,
-	autostep_mcmc
+        autostep_mcmc
 )
 
 #load file path from json file
@@ -51,10 +51,10 @@ dataPath = Path(conf_dict['dataPath'])
 npp, rh, ra, cveg, csoil = get_example_site_vars(Path(conf_dict['dataPath']))
 nyears = 320
 obs_tup=Observables(
+    h_respiration=monthly_to_yearly(rh),
+    a_respiration=monthly_to_yearly(ra),
     c_veg=cveg,
-    c_soil=csoil,
-    #a_respiration=monthly_to_yearly(ra),
-    h_respiration=monthly_to_yearly(rh)
+    c_soil=csoil    
 )
 obs = np.stack(obs_tup, axis=1)[0:nyears,:]
 
@@ -62,40 +62,40 @@ obs = np.stack(obs_tup, axis=1)[0:nyears,:]
 epa0 = EstimatedParameters(
     beta_leaf=0.15,             # 0         
     beta_root=0.2,              # 1      
-    k_leaf=1/365,               # 2      
-    k_root=1/(365*5),           # 3         
-    k_wood=1/(365*40),          # 4
-    k_cwd=1/(365*5),            # 5      
-    k_samet=0.5/(365*0.1),      # 6      
-    k_sastr=0.5/(365*0.1),      # 7      
-    k_samic=0.3/(365*0.137),    # 8      
-    k_slmet=0.3/(365),          # 9      
-    k_slstr=0.3/(365),          # 10      
-    k_slmic=0.3/(365),          # 11      
-    k_slow=0.3/(365*5),         # 12      
-    k_arm=0.3/(222*365),        # 13      
-    f_samet_leaf=0.3,           # 14      
-    f_slmet_root=0.3,           # 15      
-    f_samic_cwd=0.3,            # 16     
-    C_leaf_0=cveg[0]/5,         # 17      
-    C_root_0=cveg[0]/5,         # 18      
-    C_cwd_0=csoil[0]/50,         # 19      
-    C_samet_0=csoil[0]/300,      # 20      
-    C_sastr_0=csoil[0]/300,      # 21      
-    C_samic_0=csoil[0]/500,      # 22      
+    k_leaf=1/365,            # 2      
+    k_root=1/(365*5),        # 3         
+    k_wood=1/(365*40),       # 4
+    k_cwd=1/(365*5),        # 5      
+    k_samet=0.5/(365*0.1),    # 6      
+    k_sastr=0.5/(365*0.1),    # 7      
+    k_samic=0.3/(365*0.137),  # 8      
+    k_slmet=0.3/(365),        # 9      
+    k_slstr=0.3/(365),        # 10      
+    k_slmic=0.3/(365),        # 11      
+    k_slow=0.3/(365*5),      # 12      
+    k_arm=0.3/(222*365),  # 13      
+    f_samet_leaf=0.3,            # 14      
+    f_slmet_root=0.3,             # 15      
+    f_samic_cwd=0.3,             # 16     
+    C_leaf_0=cveg[0]/5,        # 17      
+    C_root_0=cveg[0]/5,        # 18      
+    C_cwd_0=csoil[0]/50,      # 19      
+    C_samet_0=csoil[0]/300,     # 20      
+    C_sastr_0=csoil[0]/300,     # 21      
+    C_samic_0=csoil[0]/500,     # 22      
     C_slmet_0=csoil[0]/10,      # 23      
     C_slstr_0=csoil[0]/10,      # 24      
     C_slmic_0=csoil[0]/10,      # 25      
-    C_slow_0=csoil[0]/10,       # 26 
+    C_slow_0=csoil[0]/10      # 26 
 )
 
 #set fixed parameters
 cpa = UnEstimatedParameters(
-    C_soil_0=csoil[0],
-    C_veg_0=cveg[0],
-    rh_0 = monthly_to_yearly(rh)[0],
-    ra_0 = ra[0],
     npp=npp,
+    rh_0 = monthly_to_yearly(rh)[0],
+    ra_0 = monthly_to_yearly(ra)[0],
+    C_veg_0=cveg[0],
+    C_soil_0=csoil[0],
     clay=0.2028,
     silt=0.2808,
     nyears=320
@@ -148,12 +148,12 @@ def uniform_parallel_mcmc(_):
     return(
         autostep_mcmc(
             initial_parameters=pertb,
-	    filter_func=isQualified,
+            filter_func=isQualified,
             param2res=param2res,
             costfunction=costfunction,
-            nsimu=10000,
-	    c_max=c_max,
-	    c_min=c_min
+            nsimu=100,
+            c_max=c_max,
+            c_min=c_min
 	    )
 	)
         #mcmc(
@@ -169,8 +169,8 @@ uni_c_path = dataPath.joinpath('yibs_pmcmc_uniform_c.csv')
 uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 
 # Parallel uniform distribution run 
-#print("starting parallel run")
-#[
+# print("starting parallel run")
+# [
 #    [c_uni1,j_uni1],
 #    [c_uni2,j_uni2],
 #    [c_uni3,j_uni3],
@@ -181,15 +181,15 @@ uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 #    [c_uni8,j_uni8],
 #    [c_uni9,j_uni9],
 #    [c_uni10,j_uni10]
-#] = client.gather(
+# ] = client.gather(
 #        client.map(
 #            uniform_parallel_mcmc, 
 #            range(0,10)
 #        )
 #    )
 
-#concatenate chains
-#C_cat = np.concatenate(
+# concatenate chains
+# C_cat = np.concatenate(
 #    (
 #        c_uni1,
 #        c_uni2,
@@ -202,10 +202,10 @@ uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 #        c_uni9,
 #        c_uni10 
 #    ), axis=1
-#)
+# )
 
-#concatenate cost function
-#J_cat = np.concatenate(
+# concatenate cost function
+# J_cat = np.concatenate(
 #    (
 #        j_uni1,
 #        j_uni2,
@@ -218,7 +218,7 @@ uni_j_path = dataPath.joinpath('yibs_pmcmc_uniform_j.csv')
 #        j_uni9,
 #        j_uni10 
 #    ), axis=1
-#)
+# )
 
 
 [C_cat, J_cat] = uniform_parallel_mcmc(1)
@@ -230,18 +230,18 @@ pd.DataFrame(J_cat).to_csv(uni_j_path,sep=',')
 #subset to best pars
 best_pars = C_cat[:,J_cat[1,:].argmin()]
 
-#from IPython import embed; embed()
+# from IPython import embed; embed()
 
 #
-## formal run using normal distribution and cov matrix from uniform run
-#covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
-#normal_prop = make_multivariate_normal_proposer(
+# # formal run using normal distribution and cov matrix from uniform run
+# covv = np.cov(C_demo[:, 0:int(C_demo.shape[1]*0.4)]) #lowest 10% by cost 
+# normal_prop = make_multivariate_normal_proposer(
 #    covv = covv,
 #    filter_func=isQualified
-#)
+# )
 #
-##define normal parallel mcmc wrapper
-#def normal_parallel_mcmc(_):
+# #define normal parallel mcmc wrapper
+# def normal_parallel_mcmc(_):
 #    return(
 #        adaptive_mcmc(
 #            initial_parameters=C.demo[:,0],
@@ -253,8 +253,8 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 #        )
 #    )
 #
-## formal run 
-#[
+# # formal run 
+# [
 #    [c_form1,j_form1],
 #    [c_form2,j_form2],
 #    [c_form3,j_form3],
@@ -265,15 +265,15 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 #    [c_form8,j_form8],
 #    [c_form9,j_form9],
 #    [c_form10,j_form10]
-#] = client.gather(
+# ] = client.gather(
 #        client.map(
 #            normal_parallel_mcmc, 
 #            range(0,10)
 #        )
 #    )
 #
-##concatenate chains
-#C_cat = np.concatenate(
+# #concatenate chains
+# C_cat = np.concatenate(
 #    (
 #        c_form1,
 #        c_form2,
@@ -286,10 +286,10 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 #        c_form9,
 #        c_form10 
 #    ), axis=1
-#)
+# )
 #
-##concatenate cost function
-#J_cat = np.concatenate(
+# #concatenate cost function
+# J_cat = np.concatenate(
 #    (
 #        j_form1,
 #        j_form2,
@@ -302,25 +302,25 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 #        j_form9,
 #        j_form10 
 #    ), axis=1
-#)
+# )
 #
-##sort lowest to highest
-#indx = np.argsort(J_cat) 
-#C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
-#J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
+# #sort lowest to highest
+# indx = np.argsort(J_cat) 
+# C_demo = C_cat[np.arange(C_cat.shape[0])[:,None], indx]
+# J_demo = J_cat[np.arange(J_cat.shape[0])[:,None], indx]
 #
-##print chain5 output as test
-#formal_c_path = dataPath.joinpath('yibs_pmcmc_normal_c.csv')
-#formal_j_path = dataPath.joinpath('yibs_pmcmc_normal_j.csv')
-#pd.DataFrame(C_demo).to_csv(formal_c_path,sep=',')
-#pd.DataFrame(J_demo).to_csv(formal_j_path,sep=',')
+# #print chain5 output as test
+# formal_c_path = dataPath.joinpath('yibs_pmcmc_normal_c.csv')
+# formal_j_path = dataPath.joinpath('yibs_pmcmc_normal_j.csv')
+# pd.DataFrame(C_demo).to_csv(formal_c_path,sep=',')
+# pd.DataFrame(J_demo).to_csv(formal_j_path,sep=',')
 #    
-##use output csv file for post processing
-#C_formal = pd.read_csv(formal_c_path).to_numpy()
-#J_formal = pd.read_csv(formal_j_path).to_numpy()
+# #use output csv file for post processing
+# C_formal = pd.read_csv(formal_c_path).to_numpy()
+# J_formal = pd.read_csv(formal_j_path).to_numpy()
 #
-##subset to lowest cost subset of mulitple chains (lowest 10%)
-#C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
+# #subset to lowest cost subset of mulitple chains (lowest 10%)
+# C_formal = C_formal[:, :int(C_formal.shape[1]*0.1)]
 #
 
 ## POSTPROCESSING 
@@ -371,7 +371,7 @@ best_pars = C_cat[:,J_cat[1,:].argmin()]
 ## vector is the mean which is an estimator of  the expected value of the
 ## desired distribution.
 sol_mean =param2res(best_pars)
-#
+
 fig = plt.figure()
 plot_solutions(
         fig,
@@ -381,5 +381,3 @@ plot_solutions(
         names=('best','obs')
 )
 fig.savefig('solutions.pdf')
-#
-#

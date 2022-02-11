@@ -486,13 +486,11 @@ def make_jon_cost_func(
     denominators = means ** 2
 
     def costfunction(mod: np.ndarray) -> np.float64:
-        cost = np.mean(
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators
-        )
+        cost = (1/n) * np.sum(
+            100* np.sum((obs - mod)**2, axis=0) / denominators 
+            )
         return cost
-
     return costfunction
-
 
 def day_2_month_index(d):
     return months_by_day_arr()[(d % days_per_year)]
@@ -687,7 +685,7 @@ def global_mean(lats,lons,arr):
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
     return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
-    
+
 
 
 
@@ -769,7 +767,7 @@ def make_pixel_area_on_unit_spehre(delta_lat,delta_lon,sym=False):
 
     return pixel_area_on_unit_sphere
 
-	
+
 def download_TRENDY_output(
         username: str,
         password: str,
@@ -778,7 +776,18 @@ def download_TRENDY_output(
         variables: List[str]
 ):
     import paramiko
-    
+    import tarfile
+    import gzip
+    import shutil
+
+    def unzip_shutil(source_filepath, dest_filepath, model):
+        if model == "YIBs":
+            f=tarfile.open(source_filepath,'r:gz')
+            f.extractall(path=dataPath)
+            f.close()
+        else:
+            with gzip.open(source_filepath, 'rb') as s_file, open(dest_filepath, 'wb') as d_file:
+                shutil.copyfileobj(s_file, d_file)
     
     # open a transport
     host = "trendy.ex.ac.uk"
@@ -800,10 +809,10 @@ def download_TRENDY_output(
     #variables   = ["cCwd","cLeaf", "cLitter", "cRoot", "cSoil", "cVeg", "cWood", "npp", "rh"]
     
     for model in models:
-        print("downloading model ", model)
+        print("downloading data for",model,"model")
         for experiment in experiments:
             for variable in variables:
-    
+                 
                 modelname = model
                 modelname_file = model
                 ext = "nc"
@@ -811,6 +820,8 @@ def download_TRENDY_output(
                 
                 if model == "CLM5":
                     modelname_file = "CLM5.0"
+                elif model == "ORCHIDEEv3" or model == "ORCHIDEEv3_0.5deg":
+                    modelname_file = "ORCHIDEEv3"
                 elif model == "ISBA_CTRIP":
                     modelname_file = "ISBA-CTRIP"
                 elif model == "JULES-ES":
@@ -820,7 +831,10 @@ def download_TRENDY_output(
                     ext = "nc.gz"
                 elif model == "YIBs":
                     ext = "nc.tar.gz"
-                    extra = "Monthly_"
+                    if variable == "cSoil" or variable == "cVeg" or variable == "landCoverFrac":
+                        extra="Annual_"
+                    else:
+                        extra = "Monthly_"
                 elif model == "LPJwsl":
                     modelname_file = "LPJ"
                     ext = "nc.gz"
@@ -830,15 +844,30 @@ def download_TRENDY_output(
                 try:
                     dataPath.mkdir(exist_ok=True)
                     complete_path = "output/" + modelname + "/" + experiment + "/" + filename
-                    print(sftp.stat(complete_path)) # get file information + test if existing (IOError handling)
-                    sftp.get(
-                        remotepath=complete_path,
-                        localpath=dataPath.joinpath(filename)
-                    )
+                    zipped_path = dataPath.joinpath(filename)
+                    unzipped_filename = modelname_file + "_" + experiment + "_" + extra + variable + ".nc"
+                    unzipped_path = dataPath.joinpath(unzipped_filename)
+                    try:
+                        unzipped_path.resolve(strict=True)
+                    except FileNotFoundError:
+                        try:
+                            zipped_path.resolve(strict=True)
+                        except FileNotFoundError:
+                            print("downloading missing data:",variable)
+                            sftp.get(
+                                remotepath=complete_path,
+                                localpath=zipped_path
+                            )
+                            if zipped_path != unzipped_path:
+                                print("unzipping",zipped_path)
+                                unzip_shutil(zipped_path,unzipped_path,model)
+                        else:
+                            print("unzipping",zipped_path)
+                            unzip_shutil(zipped_path,unzipped_path,model)
+                    else:
+                        print(unzipped_path,"exists, skipping")                    
                 except FileNotFoundError as e:
                     print(e)
                     print(complete_path)
-                    print(local_path)
-    
-                        
+                    print(zipped_path)               
     print("finished!")

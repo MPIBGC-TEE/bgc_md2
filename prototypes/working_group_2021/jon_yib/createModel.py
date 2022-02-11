@@ -44,7 +44,7 @@ import bgc_md2.resolve.computers as bgc_c
 # Make a small dictionary for the variables we will use
 sym_dict={
     "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
+    "vw": "vegetation wood pool",
     "I_vw": "Influx into vegetation wood pool",
     "r_vw_o": "out flux rate of wood pool",
     "r_vl_2_vw": "internal flux rate from leaf to wood", 
@@ -128,7 +128,8 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #   but this way we are not forced to replace all the fluxes at
 #   once.It's always good to be able to make small steps...
 # - Note that for the following steps you **do not** have to copy and paste the previous cell
-#   as I did to show the incremental progress.
+#   as I did to show the incremental progress. Yoy can keep changing or maybe have one version that still works..
+#   
 
 # +
 from sympy import Symbol, Function 
@@ -176,7 +177,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
+    'tsl': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -269,7 +270,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
+    'tsl': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -343,50 +344,49 @@ import bgc_md2.resolve.computers as bgc_c
 
 # Make a small dictionary for the variables we will use
 sym_dict={
-    # "vl": "vegegation leaf pool",
-    # "vl": "vegegation leaf pool",
-    # "vw": "vegetation wood pool content",
-    # "I_vw": "Influx into vegetation wood pool",
-    # "k_vw_o": "out flux rate of wood pool",
-    # "k_vl_2_vw": "internal flux rate from leaf to wood", 
-    # "k_vw_2_vl": "internal flux rate from wood to leaf", 
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
     'C_leaf': '',
     'C_root': '',
     'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
+    'C_lit_cwd': '',
+    'C_lit_met': '',
+    'C_lit_str': '',
+    'C_lit_mic': '',
+    'C_soil_met': '',
+    'C_soil_str': '',
+    'C_soil_mic': '',
+    'C_soil_slow': '',
+    'C_soil_passive': '',
+    'r_C_lit_cwd_rh': '',
+    'r_C_lit_met_rh': '',
+    'r_C_lit_str_rh': '',
+    'r_C_lit_mic_rh': '',
+    'r_C_soil_met_rh': '',
+    'r_C_soil_str_rh': '',
+    'r_C_soil_mic_rh': '',
     'r_C_soil_slow_rh': '',
     'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
-    'mrso': '',
+    'r_C_leaf_2_C_lit_met': '',
+    'r_C_leaf_2_C_lit_str': '',
+    'r_C_root_2_C_soil_met': '',    
+    'r_C_root_2_C_soil_str': '',
+    'r_C_wood_2_C_lit_cwd': '',
+    'r_C_lit_cwd_2_C_lit_mic': '',
+    'r_C_lit_cwd_2_C_soil_slow': '',
+    'r_C_lit_met_2_C_lit_mic': '',
+    'r_C_lit_str_2_C_lit_mic': '',
+    'r_C_lit_str_2_C_soil_slow': '',
+    'r_C_lit_mic_2_C_soil_slow': '',
+    'r_C_soil_met_2_C_soil_mic': '',
+    'r_C_soil_str_2_C_soil_mic': '',
+    'r_C_soil_str_2_C_soil_slow': '',
+    'r_C_soil_mic_2_C_soil_slow': '',
+    'r_C_soil_mic_2_C_soil_passive': '',
+    'r_C_soil_slow_2_C_soil_mic': '',
+    'r_C_soil_slow_2_C_soil_passive': '',
+    'r_C_soil_passive_2_C_soil_mic': '',
     't': '',
-    'T_0': '',
-    'E': '',
-    'KM': '',
+    'silt': '',
+    'clay': '',
     'beta_leaf': '',
     'beta_wood': '',
 }
@@ -396,9 +396,6 @@ for k in sym_dict.keys():
 
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
-    #"I_vl": "Influx into vegetation leaf pool",
-    #"k_vl_o": "out flux rate of leaf pool",
-    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
     'NPP': '',
 }
 for k in func_dict.keys():
@@ -406,26 +403,26 @@ for k in func_dict.keys():
     exec(code)
 
 t=TimeSymbol("t")
-beta_root = 1.0- (beta_leaf+beta_wood)
+beta_root = 1.0-(beta_leaf+beta_wood)
 mvs = CMTVS(
     {
         t,
-        StateVariableTuple((
-            #vl, 
-            #vw, 
+        StateVariableTuple(( 
             C_leaf,
 	        C_wood,
 	        C_root,
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
+	        C_lit_cwd,
+	        C_lit_met,
+	        C_lit_str,
+            C_lit_mic,
+            C_soil_met,
+            C_soil_str,
+	        C_soil_mic,
 	        C_soil_slow,
 	        C_soil_passive,
         )),
         InFluxesBySymbol(
             {
-                #vl: I_vl, vw: I_vw
                 C_leaf: NPP(t) * beta_leaf, 
                 C_root: NPP(t) * beta_root, 
                 C_wood: NPP(t) * beta_wood
@@ -433,7 +430,8 @@ mvs = CMTVS(
         ),
         OutFluxesBySymbol(
             {
-                #vl: k_vl_o * vl, vw: k_vw_o * vw
+                C_lit_cwd: r_C_lit_cwd_rh*C
+                
                 C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),
                 C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),
                 C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),
@@ -555,7 +553,7 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
+    'tsl': '',
     'mrso': '',
     't': '',
     'T_0': '',
@@ -630,6 +628,7 @@ mvs = CMTVS(
 
 
     computers=module_computers(bgc_c)
+)
 # -
 
 mvs.get_StateVariableTuple()
@@ -688,7 +687,7 @@ Observables = namedtuple(
 )
 Drivers=namedtuple(
     "Drivers",
-    ["gpp", "mrso", "tas"]
+    ["gpp"]
 )    
     
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
@@ -876,7 +875,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
+    return dvs.gpp[month]-(svs.rh[month]+svs.ra[month])
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -937,8 +936,8 @@ V_init= StartVector(
     C_soil_fast=svs_0.cSoil/3,
     C_soil_slow=svs_0.cSoil/3,
     C_soil_passive=svs_0.cSoil/3,
-    ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
-    rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;        
+    ra=svs_0.ra,
+    rh=svs_0.rh        
 )
 V_init.__getattribute__("C_leaf")
 
@@ -1090,15 +1089,13 @@ EstimatedParameters = namedtuple(
 
 EstimatedParameters._fields
 
-dvs.gpp[1:100]
-
 cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- gpp_0=dvs.gpp[0] * 86400,   # kg/m2/s kg/m2/day
- rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
- ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
+ gpp_0=svs_0.cSoil,
+ rh_0=svs_0.rh,
+ ra_0=svs_0.ra,
  r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
  r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
  number_of_months=len(svs.rh)
@@ -1179,7 +1176,7 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     def npp_func(day):
         month=day_2_month_index(day)
-        return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
+        return dvs.gpp[month]-(svs.rh[month]+svs.ra[month])
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
