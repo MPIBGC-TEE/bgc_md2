@@ -630,7 +630,6 @@ mvs = CMTVS(
 
 
     computers=module_computers(bgc_c)
-)
 # -
 
 mvs.get_StateVariableTuple()
@@ -1090,6 +1089,8 @@ EstimatedParameters = namedtuple(
 # -
 
 EstimatedParameters._fields
+
+dvs.gpp[1:100]
 
 cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
