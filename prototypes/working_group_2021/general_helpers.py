@@ -796,18 +796,12 @@ def download_TRENDY_output(
     
     # authentication
     transport.connect(None,username=username,password=password)
-    
-    
     sftp = paramiko.SFTPClient.from_transport(transport)
     
-    # download files
-    # Other models, "CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP","JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern",
-    #                 "OCN","ORCHIDEEv3","SDGVM","VISIT","YIBs"
-    
-    #models      = ["CABLE-POP"]
+    #We are using s2 data
     experiments = ["S2"]
-    #variables   = ["cCwd","cLeaf", "cLitter", "cRoot", "cSoil", "cVeg", "cWood", "npp", "rh"]
     
+    #Loop through models, experiments, and variables to download
     for model in models:
         print("downloading data for",model,"model")
         for experiment in experiments:
@@ -824,8 +818,7 @@ def download_TRENDY_output(
                     modelname_file = "ORCHIDEEv3"
                 elif model == "ISBA_CTRIP":
                     modelname_file = "ISBA-CTRIP"
-                elif model == "JULES-ES":
-                    modelname = "JULES-ES-1.0"
+                elif model == "JULES-ES-1.0":
                     modelname_file = "JULES-ES-1p0"
                 elif model == "SDGVM" or model == "VISIT":
                     ext = "nc.gz"
@@ -871,3 +864,20 @@ def download_TRENDY_output(
                     print(complete_path)
                     print(zipped_path)               
     print("finished!")
+
+
+def monthly_to_yearly(monthly):
+    #TRENDY specific - months weighted like all months are 30 days
+    if len(monthly.shape) > 1:
+        sub_arrays=[monthly[i*12:(i+1)*12,:,:] for i in range(int(monthly.shape[0]/12))]
+    else:
+        sub_arrays=[monthly[i*12:(i+1)*12,] for i in range(int(monthly.shape[0]/12))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+
+
+def pseudo_daily_to_yearly(daily):
+    # compute a yearly average from pseudo daily data
+    # for one data point
+    pseudo_days_per_year = pseudo_days_per_month*12 
+    sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
