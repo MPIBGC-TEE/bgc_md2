@@ -627,9 +627,8 @@ mvs = CMTVS(
             }
         ),
     },
-
-
     computers=module_computers(bgc_c)
+)
 # -
 
 mvs.get_StateVariableTuple()
@@ -906,17 +905,96 @@ X_0= np.array((
 ))#.reshape(9,)
 # in general B and u are nonlinear and can depend on X, thats why we have to test them with index and X arguments
 u_func(0,X_0),B_func(0,X_0)
+
+# +
+import CompartmentalSystems.helpers_reservoir as hr
+
+# To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
+# We first create numerical functions for all the outfluxes from our symbolic description.
+# lets do it for the outflux of one pool first (and then for the whole lot of them)
+expr_cont=mvs.get_OutFluxesBySymbol()[C_leaf_litter]
+
+# this is the momentary outflux as a function of t,C_leaf_litter as it would occure in the differential equation
+expr_cont
+
 # -
 
-# We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
-# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
-#
-# In our case we are also interested in tracking the autotrophic and heterotrophic respiration.
-# So we will let `bgc_md2` derive numeric functions for the Compartmental matrix $B$ and the input $u$ from our symbolic description but use them to build our own iterator. (which we do by a function)    
-#
-# We will start by creating $V_0$ and then build the function $f$
-#
-#
+# what we want is acutally the accumulated flux over one timestep in the simplest approximation (euler forward)
+# the framework has a helper function to create an euler forward discretisation of a flux
+delta_t=Symbol("delta_t")
+it=Symbol("it") #arbitrary symbol (in our case it=days_since_start )
+expr_disc=hr.euler_forward_net_flux_sym(
+    flux_sym_cont=expr_cont,
+    cont_time=t,
+    delta_t=delta_t,
+    iteration=it #arbitrary
+)
+# If you look at the result you see that the euler forwar approximation assumes the flux at time t to be constant for the timestep  
+expr_disc
+
+# if we assume tat delta_t is 1 day and it counts days 
+# it becomes even simpler
+expr_disc.subs({delta_t:1})
+#Which is the same as if we had 't' replaced in the above formula wiht it
+
+# +
+# this expression we turn now into a numeric funciton of it
+# although in our example it depends only on t and C_leaf_litter we make it a function of ALL state variables to be able to call it in the same way as u_func and B_func 
+argtup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple())
+
+C_leaf_litter_func = hr.numerical_function_from_expression(
+    expr=expr_cont,
+    tup=argtup, 
+    parameter_dict=par_dict,
+    func_set=func_dict
+)
+# call it for testing
+C_leaf_litter_func(0,*X_0)
+
+
+# +
+#mass production of output functions
+def numfunc(expr):
+    return hr.numerical_function_from_expression(
+    expr=expr,
+    tup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple()),
+    parameter_dict=par_dict,
+    func_set=func_dict
+)
+    
+numOutFluxesBySymbol={k:numfunc(expr) for k,expr in mvs.get_OutFluxesBySymbol().items()} 
+
+# now we can compute ra 
+# apply all the outfluxfunctions of the veg pools and add up the result
+ra_0=np.sum(
+    [
+        numOutFluxesBySymbol[k](0,*X_0) 
+        for k in [C_leaf,C_wood,C_root] 
+        if k in numOutFluxesBySymbol.keys()
+    ]
+)
+rh_0=np.sum(
+    [
+        numOutFluxesBySymbol[k](0,*X_0) 
+        for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
+        if k in numOutFluxesBySymbol.keys()
+    ]
+)
+ra_0,rh_0
+# -
+
+OutFluxesBySymbol
+
+# +
+We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
+If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
+
+In our case we are also interested in tracking the autotrophic and heterotrophic respiration.
+
+So we will let `bgc_md2` derive numeric functions for the Compartmental matrix $B$ and the input $u$ , $ra$ $rh$ from our symbolic description 
+but build our own iterator by combining these functions.    
+We will start by creating $V_0$ and then build the function $f$
+# -
 
 # to guard agains accidentally changed order we use a namedtuple again. Since B_func and u_func rely 
 # on the correct ordering of the statevariables we build V dependent on this order 
@@ -964,18 +1042,29 @@ def make_daily_iterator_sym(
     V_arr=np.array(
         [V_init.__getattribute__(str(v)) for v in sv]+
         [V_init.ra,V_init.rh]
-    ).reshape(n+2,1) #reshaping is neccessary for matmux
+    ).reshape(n+2,1) #reshaping is neccessary for matmul
     
     def f(it,V):
         X = V[0:n]
         b = u_func(it,X)
         B = B_func(it,X)
-        outfluxes = B @ X
-        X_new = X + b + outfluxes
+        X_new = X + b + B @ X
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        ra= -np.sum(outfluxes[0:3]) # check with  mvs.get_StateVariableTuple()[0:3]
-        rh= -np.sum(outfluxes[3:n]) # check with  mvs.get_StateVariableTuple()[3:9]
         
+        ra = np.sum(
+            [
+              numOutFluxesBySymbol[k](0,*X_0) 
+                for k in [C_leaf,C_wood,C_root] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[k](0,*X_0) 
+                for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
         V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
         return V_new
     
@@ -983,9 +1072,9 @@ def make_daily_iterator_sym(
         initial_values=V_arr,
         f=f,
     )
-
-
 # -
+
+
 
 V_init
 
