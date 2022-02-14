@@ -13,47 +13,11 @@
 #     name: python3
 # ---
 
-# This illustrative notebook shows how to create a representation for a new model.
-#
-# For the sake of simplicity we assume here that we start with a description of pools and fluxes.
-# This is the form the models are usually described in the literature.
-# We will see that the framework can derive a matrix representation automatically. 
-#
-# It would also be possible to start from the matrices or even
-# mix the two approaches. 
-# We will point to some more advanced examples where you can see this in action. If you get familiar with the framework you will find many more combinations than we can cover. 
-#
-# ## Inspect a minimal model
-#
-# We will start with an extremely simple model.
-# and copy its contents into a new cell. (we will later save it under a new name) 
-
-
-
-# The last statement in the code defines a variable `mvs` which is 
-# an instance of CMTVS which stands for `C`onnected`M`ulti`T`ype`V`ariable`S`et".
-# It contains information in two forms. 
-# 1. Variables of certain type (like InFluxesBySymbol)
-# 2. a set of functions that "connect" these Variables and to other results we did not specify but which can be computed.
-#
-#
-# Taks:
-# To see what it can do with this information add a new cell an type `mvs.` and press the `tab` key `->`. This will show you the available methods, in other words what can be computed from the provided information.
-#
-# I wanted to see the compartmental the pools, the matrix and the inputs.
-
-
-
-
-
-
-
-
-
-
+# ## Jupyter Settings
+# Settings for display: 
 
 # +
-# adjust the output to full width
+# adjust jupyter display to full width
 from IPython.display import HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
@@ -63,37 +27,8 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 # %autoreload 2
 # -
 
-# ## Extend the minimal model
-#
-# ### add more state variables and add a small description
-#
-# In a first step I will 
-# - add new symbols to desricbe pools and parameters for the VISIT  model (from Kostias code) but
-#   leave the old ones there since they are presently used in the fluxes.
-#   We will replace them one bye one later 
-#   but this way we are not forced to replace all the fluxes at
-#   once.It's always good to be able to make small steps...
-# - Note that for the following steps you **do not** have to copy and paste the previous cell
-#   as I did to show the incremental progress. Yoy can keep changing or maybe have one version that still works..
-#   
-
-
-
-# Nothing has changed in the model description but be have some more symbols to work with.
-# We can now use the new symbols in expression without errors since they are now defined.
-# In the next step we add the new state variables.
-# For the moment we leave the old ones (vl and vw) in to have a template for how to formulate fluxes)
-
-
-
-
-
-
-
-# We can see only the old fluxes.
-# Now we add more fluxes according to the description of the model and remove the old ones, along with the symbols and fucntions that we do no longer need
-#
-#
+# ## Symbolic Model Description
+# Define your model using symbolic python code:
 
 # +
 from sympy import Symbol, Function 
@@ -108,7 +43,7 @@ from bgc_md2.resolve.mvars import (
 )
 import bgc_md2.resolve.computers as bgc_c
 
-# Make a small dictionary for the variables we will use
+# Make a dictionary for the variables we will use
 sym_dict={
     'c_leaf': '',
     'c_root': '',
