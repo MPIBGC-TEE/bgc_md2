@@ -89,4 +89,23 @@ Before you start working on your own model you should make sure that you can run
 
 ### General Remarks and Additional information
 
+**Keep your repository updated!** (Ohterwise you will base your changes on outdated code run into conflicts and make it very hard for us to incorporate your changes (and for you to incorporate ours...) 
+
+1. If you cloned the main repository ( https://github.com/MPIBGC-TEE/bgc_md2 ) it's a good practice to 
+   say `git pull` from time to time and definitely before you start working and change files.
+  
+1. If you use your own fork you should also update from the upstream repository frequently.
+   The first time you do this you have to tell your git which is the upstream repo **just once**:
+   ```
+   cd into/cloned/fork-repo
+   git remote add upstream https://github.com/MPIBGC-TEE/bgc_md2
+   git fetch upstream
+   ```
+   every time you want to pull the latest changes into your master you say:
+   ```git pull upstream master```
+   
+   
+ 
+  
+
 
