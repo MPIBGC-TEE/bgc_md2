@@ -1,10 +1,69 @@
 import numpy as np
 from tqdm import tqdm
-from typing import Callable, Tuple, Iterable
+from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
 from copy import copy
 from time import time
+from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
+import CompartmentalSystems.helpers_reservoir as hr
+from pathlib import Path
+import json 
+import netCDF4 as nc
 
+days_per_year = 365 
+
+# should be part  of CompartmentalSystems
+def make_B_u_funcs(
+        mvs,
+        mpa,
+        func_dict
+    ):
+        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
+        return make_B_u_funcs_2(mvs,model_params,func_dict)
+
+def make_B_u_funcs_2(
+        mvs,
+        model_params,
+        func_dict
+    ):
+        #symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+        #for name in symbol_names:
+        #    var(name)
+        t = mvs.get_TimeSymbol()
+        it = Symbol('it')
+        delta_t=Symbol('delta_t')
+        parameter_dict = {**model_params,delta_t: 1}
+        state_vector = mvs.get_StateVariableTuple()
+
+        sym_B =hr.euler_forward_B_sym(
+                mvs.get_CompartmentalMatrix(),
+                cont_time=t,
+                delta_t=delta_t,
+                iteration=it
+        )
+        #from IPython import embed;embed()
+        sym_u = hr.euler_forward_net_u_sym(
+                mvs.get_InputTuple(),
+                t,
+                delta_t,
+                it
+        )
+        
+        B_func = hr.numerical_array_func(
+                state_vector = state_vector, 
+                time_symbol=it,
+                expr=sym_B,
+                parameter_dict=parameter_dict,
+                func_dict=func_dict
+        )
+        u_func = hr.numerical_array_func(
+                state_vector = state_vector,
+                time_symbol=it,
+                expr=sym_u,
+                parameter_dict=parameter_dict,
+                func_dict=func_dict
+        )
+        return (B_func,u_func)
 
 def make_uniform_proposer(
         c_max: Iterable,
@@ -31,7 +90,7 @@ def make_uniform_proposer(
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + (g.random(paramNum) - 0.5) * (c_max - c_min) / D
+            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max - c_min) / D)
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -60,11 +119,20 @@ def make_multivariate_normal_proposer(
     return GenerateParamValues
 
 
-def accept_costfunction(J_last: float, J_new: float):
+def accept_costfunction(J_last: float, J_new: float, K=1):
+    """Regulates how new cost functions are accepted or rejected. If the new cost function is lower than the old one,
+    it is always accepted. If the the new cost function is higher than the old one, it has a random
+    chance to be accepted based on percentage difference between the old and the new. The chance is defined
+    by an exponential function and regulated by the K coefficient.
+    :param J_last: old (last accepted) cost function
+    :param J_new: new cost function
+    :param K: regulates acceptance chance. Default 1 means that a 1% higher cost function has 37% chance to be accepted.
+    Increase K to reduce the chance to accept higher cost functions
+    """
     accept = False
     delta_J_percent = (J_last - J_new) / J_last * 100  # normalize delta_J as a percentage of current J
     randNum = np.random.uniform(0, 1)
-    if min(1.0, np.exp(delta_J_percent)) > randNum:
+    if min(1.0, np.exp(delta_J_percent*K)) > randNum:  # 1% higher cost function has 37% chance to be accepted
         accept = True
     return accept
 
@@ -79,7 +147,8 @@ def autostep_mcmc(
         c_max: np.ndarray,
         c_min: np.ndarray,
         acceptance_rate=10,
-        D_init=10
+        chunk_size=100,
+        D_init=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
@@ -95,8 +164,10 @@ def autostep_mcmc(
     :param nsimu: The length of the chain
     :param c_max: Array of maximum values for each parameter
     :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %, default = 10%
-    :param D_init: initial D value, default = 10
+    :param acceptance_rate: Target acceptance rate in %, default is 10%
+    :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
+    Set to 0 for constant step size. Default is 100.
+    :param D_init: initial D value (Increase to get a smaller step size), default = 1
     """
     np.random.seed(seed=10)
 
@@ -122,11 +193,10 @@ def autostep_mcmc(
     # for simu in tqdm(range(nsimu)):
     st = time()
     accepted_current = 0
-    chunk_size = 100  # number of iterations after which step size is adjusted
-    if nsimu >= 10000:
-        chunk_size = int(nsimu * 0.01)
+    if chunk_size == 0:
+        chunk_size = nsimu  # if chunk_size is set to 0 - proceed without updating step size.
     for simu in range(nsimu):
-        if simu % chunk_size == 0:  # every 100 iterations or 1% of nsimu - update the step
+        if (simu > 0) and (simu % chunk_size == 0):  # every chunk size (e.g. 100 iterations) update the proposer step
             if accepted_current == 0:
                 accepted_current = 1  # to avoid division by 0
             D = D * np.sqrt(
@@ -157,7 +227,7 @@ def autostep_mcmc(
             print(
                 """ 
                #(upgraded): {n}  | D value: {d} 
-               overall acceptance ratio: {r}% | current acceptance ratio: {rr}%
+               overall acceptance ratio: {r}% | currently {ac} accepted out of {ch}
                progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
                time elapsed: {minutes:02d}:{sec:02d}
                overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
@@ -172,8 +242,10 @@ def autostep_mcmc(
                     sec=int((time() - st) % 60),
                     cost=round(J_min, 2),
                     cost2=round(J_last, 2),
-                    rr=int(accepted_current / chunk_size * 100),
-                    d=round(D, 2),
+                    ac=accepted_current,
+                    # rr=int(accepted_current / chunk_size * 100),
+                    ch=chunk_size,
+                    d=round(D, 3),
                     s=J_min_simu
                 ),
                 end='\033[5A'  # print always on the same spot of the screen...
@@ -183,7 +255,6 @@ def autostep_mcmc(
     useful_slice = slice(0, upgraded)
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
-
 # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 def adaptive_mcmc(
         initial_parameters: Iterable,
@@ -192,12 +263,11 @@ def adaptive_mcmc(
         param2res: Callable[[np.ndarray], np.ndarray],
         costfunction: Callable[[np.ndarray], np.float64],
         nsimu: int,
-        sd_controlling_factor=1
+        sd_controlling_factor=10
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with
     shape (len(initial_parameters),nsimu) and the array of cost function values with shape (q,nsimu)
-
     :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
     :param covv: The covariance matrix (usually estimated from a previously run chain)
     :param filter_func: function to remove impossible parameter combinations
@@ -231,7 +301,7 @@ def adaptive_mcmc(
     # J_last = 400 # original code
 
     # initialize the result arrays to the maximum length
-    # Depending on many of the parameters will be accepted only 
+    # Depending on many of the parameters will be accepted only
     # a part of them will be filled with real values
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
@@ -259,7 +329,7 @@ def adaptive_mcmc(
             J_upgraded[1, upgraded] = J_last
             J_upgraded[0, upgraded] = simu
             upgraded = upgraded + 1
-        # print some metadata 
+        # print some metadata
         # (This could be added to the output file later)
 
         if simu % 10 == 0 or simu == (nsimu - 1):
@@ -391,7 +461,6 @@ def make_feng_cost_func(
     # now we compute a scaling factor per observable stream
     # fixme mm 10-28-2021
     #   The denominators in this case are actually the TEMPORAL variances of the data streams
-    #   which i find weird
     denominators = np.sum(mean_centered_obs ** 2, axis=0)
 
     #   The desired effect of automatically adjusting weight could be achieved
@@ -401,14 +470,6 @@ def make_feng_cost_func(
         cost = np.mean(
             np.sum((obs - mod) ** 2, axis=0) / denominators * 100
         )
-        # this is equivalent to the following slightly less compact but slightly more readable code
-        # n = obs.shape[1]
-        # cost = np.mean(
-        #        [
-        #            np.sum((obs[:,i] - mod[:,i])**2)/ denominators[i]*100 
-        #            for i in range(n)
-        #        ]
-        # )
         return cost
 
     return costfunction
@@ -420,22 +481,19 @@ def make_jon_cost_func(
     # Note:
     # in our code the dimension 0 is the time
     # and dimension 1 the pool index
-    n = obs.shape[1]
+    n = obs.shape[0]
     means = obs.mean(axis=0)
     denominators = means ** 2
-    mean_centered_obs = obs - means
 
     def costfunction(mod: np.ndarray) -> np.float64:
-        cost = np.mean(
-            np.sum((obs - mod) ** 2, axis=0) / denominators
-        )
+        cost = (1/n) * np.sum(
+            100* np.sum((obs - mod)**2, axis=0) / denominators 
+            )
         return cost
-
     return costfunction
 
-
 def day_2_month_index(d):
-    return months_by_day_arr()[(d % 365)]
+    return months_by_day_arr()[(d % days_per_year)]
 
 
 @lru_cache
@@ -452,6 +510,18 @@ def months_by_day_arr():
             )
         )
     )
+
+def year_2_day_index(ns):
+    """ computes the index of the day at the end of the year n in ns
+    this works on vectors 
+    """
+    return np.array(list(map(lambda n:days_per_year*n,ns)))
+
+def day_2_year_index(ns):
+    """ computes the index of the year
+    this works on vectors 
+    """
+    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
 
 
 def month_2_day_index(ns):
@@ -554,6 +624,7 @@ def plot_solutions(
     if names is None:
         names = tuple(str(i) for i in range(len(tup)))
 
+    #from IPython import embed; embed()
     assert (all([tup[0].shape == el.shape for el in tup]))
 
     if tup[0].ndim == 1:
@@ -584,3 +655,219 @@ def plot_solutions(
                 )
                 axs[j].set_title(var_names[j])
                 axs[j].legend()
+
+
+
+
+def global_mean(lats,lons,arr):
+    # assuming an equidistant grid.
+    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
+    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
+
+    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+    
+    #copy the mask from the array (first time step) 
+    weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
+
+    weight_mat= np.ma.array(
+        np.array(
+            [
+                    [   
+                        pixel_area(lats[lat_ind]) 
+                        for lon_ind in range(len(lons))    
+                    ]
+                for lat_ind in range(len(lats))    
+            ]
+        ),
+        mask = weight_mask 
+    )
+    
+    # to compute the sum of weights we add only those weights that
+    # do not correspond to an unmasked grid cell
+    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+
+
+
+
+def grad2rad(alpha_in_grad):
+    return np.pi/180*alpha_in_grad
+
+
+def make_pixel_area_on_unit_spehre(delta_lat,delta_lon,sym=False):  
+    # we compute the are of a delta_phi * delta_theta patch 
+    # on the unit ball centered around phi,theta  
+    # (which depends on theta but not
+    # on phi)
+    # the infinitesimal area element dA = sin(theta)*d_phi * d_theta
+    # we have to integrate it from phi_min to phi_max
+    # and from theta_min to theta_max
+    if sym:
+        # we can do this with sympy (for testing) 
+        for v in ('theta','phi','theta_min', 'theta_max','phi_min','phi_max'):
+            var(v)
+        
+        # We can do this symbolicaly with sympy just for testing...
+        A_sym = integrate(
+                    integrate(
+                        sin(theta),
+                        (theta,theta_min,theta_max)
+                    ),
+                    (phi,phi_min,phi_max)
+        )
+        # translate this to a numeric function
+        A_num=lambdify((theta_min,theta_max,phi_min,phi_max),A_sym,modules=['numpy'])
+    else:
+        # or manually solve the integral since it is very simple
+        def A_num(theta_min,theta_max,phi_min,phi_max):
+            return (
+                (phi_max-phi_min)
+                *
+                (-np.cos(theta_max) + np.cos(theta_min))
+            )
+
+    delta_theta, delta_phi = map(grad2rad, ( delta_lat, delta_lon))
+    dth = delta_theta/2.0
+    dph = delta_phi/2.0
+    
+    def A_patch(theta):
+        # computes the area of a pixel on the unitsphere
+        if np.abs(theta<dth/100): #(==0)  
+            # pixel centered at north pole only extends northwards
+            #print("##################### north pole ##########")
+            theta_min_v=0.0
+            theta_max_v=dth
+        elif np.abs(theta > np.pi-dth/100): #==pi) 
+            # pixel centered at south pole only extends northwards
+            #print("##################### south pole ##########")
+            theta_min_v=np.pi-dth
+            theta_max_v=np.pi 
+        else: 
+            # normal pixel extends south and north-wards
+            theta_min_v=theta-dth
+            theta_max_v=theta+dth
+
+        phi_min_v = -dph
+        phi_max_v = +dph
+        res = A_num(
+            theta_min_v,
+	    theta_max_v,
+	    phi_min_v,
+	    phi_max_v
+        )
+        #print(res)
+        return res
+     
+
+    def pixel_area_on_unit_sphere(lat):
+        # computes the fraction of the area of the sphere covered by this pixel
+        theta_grad=lat+90
+        theta = grad2rad(theta_grad)
+        # the area of the unitsphere is 4 * pi
+        return A_patch(theta)
+
+    return pixel_area_on_unit_sphere
+
+
+def download_TRENDY_output(
+        username: str,
+        password: str,
+        dataPath: Path,
+        models: List[str],
+        variables: List[str]
+):
+    import paramiko
+    import tarfile
+    import gzip
+    import shutil
+
+    def unzip_shutil(source_filepath, dest_filepath, model):
+        if model == "YIBs":
+            f=tarfile.open(source_filepath,'r:gz')
+            f.extractall(path=dataPath)
+            f.close()
+        else:
+            with gzip.open(source_filepath, 'rb') as s_file, open(dest_filepath, 'wb') as d_file:
+                shutil.copyfileobj(s_file, d_file)
+    
+    # open a transport
+    host = "trendy.ex.ac.uk"
+    port = 22
+    transport = paramiko.Transport(host)
+    
+    # authentication
+    transport.connect(None,username=username,password=password)
+    
+    
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    
+    # download files
+    # Other models, "CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP","JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern",
+    #                 "OCN","ORCHIDEEv3","SDGVM","VISIT","YIBs"
+    
+    #models      = ["CABLE-POP"]
+    experiments = ["S2"]
+    #variables   = ["cCwd","cLeaf", "cLitter", "cRoot", "cSoil", "cVeg", "cWood", "npp", "rh"]
+    
+    for model in models:
+        print("downloading data for",model,"model")
+        for experiment in experiments:
+            for variable in variables:
+                 
+                modelname = model
+                modelname_file = model
+                ext = "nc"
+                extra = ""
+                
+                if model == "CLM5":
+                    modelname_file = "CLM5.0"
+                elif model == "ORCHIDEEv3" or model == "ORCHIDEEv3_0.5deg":
+                    modelname_file = "ORCHIDEEv3"
+                elif model == "ISBA_CTRIP":
+                    modelname_file = "ISBA-CTRIP"
+                elif model == "JULES-ES":
+                    modelname = "JULES-ES-1.0"
+                    modelname_file = "JULES-ES-1p0"
+                elif model == "SDGVM" or model == "VISIT":
+                    ext = "nc.gz"
+                elif model == "YIBs":
+                    ext = "nc.tar.gz"
+                    if variable == "cSoil" or variable == "cVeg" or variable == "landCoverFrac":
+                        extra="Annual_"
+                    else:
+                        extra = "Monthly_"
+                elif model == "LPJwsl":
+                    modelname_file = "LPJ"
+                    ext = "nc.gz"
+                    
+                filename  = modelname_file + "_" + experiment + "_" + extra + variable + "." + ext
+                   
+                try:
+                    dataPath.mkdir(exist_ok=True)
+                    complete_path = "output/" + modelname + "/" + experiment + "/" + filename
+                    zipped_path = dataPath.joinpath(filename)
+                    unzipped_filename = modelname_file + "_" + experiment + "_" + extra + variable + ".nc"
+                    unzipped_path = dataPath.joinpath(unzipped_filename)
+                    try:
+                        unzipped_path.resolve(strict=True)
+                    except FileNotFoundError:
+                        try:
+                            zipped_path.resolve(strict=True)
+                        except FileNotFoundError:
+                            print("downloading missing data:",variable)
+                            sftp.get(
+                                remotepath=complete_path,
+                                localpath=zipped_path
+                            )
+                            if zipped_path != unzipped_path:
+                                print("unzipping",zipped_path)
+                                unzip_shutil(zipped_path,unzipped_path,model)
+                        else:
+                            print("unzipping",zipped_path)
+                            unzip_shutil(zipped_path,unzipped_path,model)
+                    else:
+                        print(unzipped_path,"exists, skipping")                    
+                except FileNotFoundError as e:
+                    print(e)
+                    print(complete_path)
+                    print(zipped_path)               
+    print("finished!")

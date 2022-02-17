@@ -1,141 +1,36 @@
 from typing import Callable
 import netCDF4 as nc
 import numpy as np
+from sympy import Symbol, var
+from functools import lru_cache, reduce
+import netCDF4 as nc
+from pathlib import Path
 from collections import namedtuple
-from functools import reduce
-from general_helpers import day_2_month_index, month_2_day_index, months_by_day_arr, TimeStepIterator2, respiration_from_compartmental_matrix
-
-# fixme:
-# Your parameters will most likely differ but you can still use the
-# destinctions between different sets of parameters. The aim is to make
-# the different tasks in the code more obvious. In principal you could
-# have a lot of overlapping sets and just have to keep them consistent. 
-# 'namedtuples' can be used just as normal tuples by functions
-# that are not aware of the names. They can still use the positions like 
-# in the original code
-
-# @Kostia and the 'R'tists: 
-# It is not necessary to replicate the complete functionality of the #
-# namedtuple classes. A simple 'R'proximation is a list with named entries 
-# pa=list(C_leaf_0=2,...)
-
-
-# This set is used by the functions that produce the 
-# specific ingredients (functions) that will be run by
-# mcmc alg.
-UnEstimatedParameters = namedtuple(
-    "UnEstimatedParameters",
-    [
-        'C_leaf_0',
-        'C_root_0',
-        'C_wood_0',
-        'clitter_0',
-        'csoil_0',
-        'rh_0',
-        'clay',
-        'silt',
-        'lig_wood',
-        'f_wood2CWD',
-        'f_metlit2mic',
-        'npp',
-        'number_of_months'
-    ]
+from CompartmentalSystems import helpers_reservoir as hr
+from CompartmentalSystems.TimeStepIterator import (
+        TimeStepIterator2,
 )
 
-# This set is used (as argument) by the functions that are called
-# inside the mcmc
-EstimatedParameters = namedtuple(
-    "EstiamatedParameters",
-    [
-        "beta_leaf",    #  0 (indices uses in original code) 
-        "beta_root",    #  1
-        "lig_leaf",     #  2
-        "f_leaf2metlit",#  3
-        "f_root2metlit",#  4
-        "k_leaf",       #  5
-        "k_root",       #  6
-        "k_wood",       #  7
-        "k_metlit",	#  8
-        "k_mic",	#  9
-        "k_slowsom",	# 10
-        "k_passsom",	# 11
-        "C_metlit_0",	# 12
-        "CWD_0",	# 13
-        "C_mic_0",	# 14
-        "C_passom_0"    # 15
-    ]
+from bgc_md2.resolve.mvars import NumericStartValueDict
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.discrete_model_run import DiscreteModelRun
+from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
+from general_helpers import (
+        day_2_month_index, 
+        month_2_day_index,
+        months_by_day_arr,
+        respiration_from_compartmental_matrix,
+        make_B_u_funcs
+)
+from ParameterMappings import (
+    Observables,
+    StateVariables,
+    UnEstimatedParameters,
+    EstimatedParameters,
+    ModelParameters,
+    Parameters
 )
 
-# This is the set off all 
-_Parameters=namedtuple(
-        "Parameters",
-        EstimatedParameters._fields + UnEstimatedParameters._fields
-)
-class Parameters(_Parameters):
-    @classmethod
-    def from_EstimatedParametersAndUnEstimatedParameters(
-            cls,
-            epa :EstimatedParameters,
-            cpa :UnEstimatedParameters
-        ):
-        return cls(*(epa + cpa))
-
-
-# This set defines the order of the c pools
-# The order is crucial for the compatibility
-# with the matrices (B and b) If you change ist
-# the matrix changes
-StateVariables = namedtuple(
-    'StateVariables',
-    [
-        'C_leaf',
-        'C_root',
-        'C_wood',
-        'C_metlit',
-        'C_stlit',
-        'CWD',
-        'C_mic',
-        'C_slowsom',
-        'C_passsom'
-    ]
-)
-Observables = namedtuple(
-    'Observables',
-    [
-        'C_leaf',
-        'C_root',
-        'C_wood',
-        'c_litter',
-        'c_soil',
-        'respiration'
-    ]
-)
-
-# We define another set of parameters which describes
-# the parameters of the matrices A,K and the vector b
-# and drivers like npp (in form of arrays)
-# but does not include start values and hyperparameters like the 'number_of_months'
-# This distinction is helpful for the forward simulation where the
-# distinction between estimated and constant is irrelevant.
-ModelParameters = namedtuple(
-    "ModelParameters",
-    [
-        name for name in Parameters._fields 
-        if name not in [
-            'C_leaf_0',
-            'C_root_0',
-            'C_wood_0',
-            'clitter_0',
-            'csoil_0',
-            "C_metlit_0",
-            "CWD_0",
-            "C_mic_0",
-            "C_passom_0",
-            'number_of_months'
-        ] 
-    ]
-)
-# to do
 # 1.) make a namedtuple for the yycable data or use xarray to create a multifile dataset
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
@@ -335,15 +230,15 @@ def make_param2res(
           
         x_fin=np.zeros((cpa.number_of_months,9))
         rh_fin=np.zeros((cpa.number_of_months,1))
-        # leaf, root , wood, metabolic, structural, CWD, microbial, slow, passive 
+        # leaf, root , wood, metabolic, structural, C_CWD, microbial, slow, passive 
         x_init = np.array(
             [
                 cpa.C_leaf_0,
                 cpa.C_root_0,
                 cpa.C_wood_0,
                 epa.C_metlit_0,
-                epa.CWD_0,
-                cpa.clitter_0-epa.C_metlit_0-epa.CWD_0,
+                epa.C_CWD_0,
+                cpa.clitter_0-epa.C_metlit_0-epa.C_CWD_0,
                 epa.C_mic_0,
                 cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0,
                 epa.C_passom_0
@@ -396,6 +291,34 @@ def make_param2res(
 
     return param2res
 
+
+
+def construct_V0(
+        cpa :UnEstimatedParameters,
+        epa :EstimatedParameters
+    ) -> np.ndarray:
+    """Construct the initial values for the forward simulation
+    from constant and eveluated parameters
+
+    param: cpa : constant parameeters
+    param: epa : estimated parameters 
+    """
+    # to make sure that we are in the right order we use the 
+    # StateVariables namedtuple 
+    X_0 = StateVariables( 
+        C_leaf=cpa.C_leaf_0,
+        C_root=cpa.C_root_0,
+        C_wood=cpa.C_wood_0,
+        C_metlit=epa.C_metlit_0,
+        C_stlit=epa.C_CWD_0,
+        C_CWD=cpa.clitter_0-epa.C_metlit_0-epa.C_CWD_0,
+        C_mic=epa.C_mic_0,
+        C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
+        C_passsom=epa.C_passom_0
+    )
+    # add the respiration start value to the tuple
+    V_0 = (*X_0,cpa.rh_0)
+    return np.array(V_0).reshape(10,1)   
 ################################################################################
 ################################################################################
 ################################################################################
@@ -448,7 +371,6 @@ def make_param2res_2(
         # compute the days when we need the results
         # to be able to compare to the monthly output
         day_indices = month_2_day_index(range(cpa.number_of_months)) 
-        print("day_indices=",day_indices)
         apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
 
         mpa = ModelParameters(
@@ -516,6 +438,7 @@ def run_forward_simulation(
         RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
         return RES
 
+
 def make_daily_iterator(
         V_init,
         mpa
@@ -578,7 +501,12 @@ def make_daily_iterator(
                 f=f,
                 #max_it=max(day_indices)+1
         )
+    
+
         
+
+
+
 
 def make_compartmental_matrix_func(
         mpa
@@ -636,29 +564,3 @@ def make_compartmental_matrix_func(
 
     return B_func
 
-def construct_V0(
-        cpa :UnEstimatedParameters,
-        epa :EstimatedParameters
-    ) -> np.ndarray:
-    """Construct the initial values for the forward simulation
-    from constant and eveluated parameters
-
-    param: cpa : constant parameeters
-    param: epa : estimated parameters 
-    """
-    # to make sure that we are in the right order we use the 
-    # StateVariables namedtuple 
-    X_0 = StateVariables( 
-        C_leaf=cpa.C_leaf_0,
-        C_root=cpa.C_root_0,
-        C_wood=cpa.C_wood_0,
-        C_metlit=epa.C_metlit_0,
-        C_stlit=epa.CWD_0,
-        CWD=cpa.clitter_0-epa.C_metlit_0-epa.CWD_0,
-        C_mic=epa.C_mic_0,
-        C_slowsom=cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0, 
-        C_passsom=epa.C_passom_0
-    )
-    # add the respiration start value to the tuple
-    V_0 = (*X_0,cpa.rh_0)
-    return np.array(V_0).reshape(10,1)   

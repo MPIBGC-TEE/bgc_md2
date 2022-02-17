@@ -1,6 +1,6 @@
 from IPython.display import Math
 from IPython.display import display
-from ipywidgets import HTML, Button, HBox, VBox
+from ipywidgets import Output, Layout, HTML, Button, HBox, VBox
 from typing import  Tuple, Dict, List, Set, TypeVar
 from pathlib import Path
 from sympy import latex
@@ -45,8 +45,7 @@ def batchSlices(nland, nproc):
 
 # @Thomas
 # If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense)
-# feel free to add it. It is probably not the commented one below anyway...
-#
+# feel free to add it. 
 
 def list_target_models(
     target_classes=frozenset({CompartmentalMatrix, StateVariableTuple}),
@@ -104,7 +103,7 @@ import importlib """
 mod = importlib.import_module('bgc_md2.models.{}.source')
 mvs = mod.mvs""".format(model_name)
     c_graph = "h.compartmental_graph(mvs)"
-    c_mvars = "mvs.computable_mvar_types"
+    c_mvars = "mvs.computable_mvar_types()"
     c_render = """for var in mvs.computable_mvar_types():
     res = mvs._get_single_value(var)
     h.latex_render(var,res)"""
@@ -156,60 +155,6 @@ def funcmakerInsertLinkInToBox(grid, name):
         grid.children = old_chs + new_chs
 
     return insert_link
-
-
-#def modelVBox(model_name):
-#    mvs = CMTVS.from_model_name(model_name)
-#    # on demand computation is used
-#    # I am aware of the possibility of mvs.computable_mvars
-#    cmvs = computable_mvars(model_name)
-#    target_var = SmoothReservoirModel
-#    pictlist = []
-#    if target_var in cmvs:
-#        srm = mvs._get_single_mvar_value(target_var)
-#        graph_out = widgets.Output()
-#        fig = plt.figure()
-#        rect = 0, 0, 0.8, 1.2  # l, b, w, h
-#        ax = fig.add_axes(rect)
-#        with graph_out:
-#            ax.clear()
-#            srm.plot_pools_and_fluxes(ax)
-#            display(ax.figure)
-#        pictlist = [graph_out]
-#
-#    box = widgets.VBox(
-#        [
-#            widgets.HTML(
-#                value="""
-#                <h1>{name}</h1>
-#                Overview 
-#                """.format(
-#                    name=model_name
-#                )
-#            ),
-#            widgets.HTML(
-#                "computable_mvars( @Thomas perhaps as links to the docs or some graph ui ...)"
-#                + "<ol>\n"
-#                + "\n".join("<li>{}</li>".format(var) for var in mvs.computable_mvar_names)
-#                + "</ol>\n"
-#            ),
-#        ]
-#        + pictlist
-#        + [
-#            latex_render(
-#                var,
-#                mvs._get_single_value(var),
-#            )
-#            for var in mvs.computable_mvar_types()
-#          ]
-#    )
-#    b = widgets.Button(
-#        layout=widgets.Layout(width="auto", height="auto"),
-#        description="Create notebook from template",
-#    )
-#    b.on_click(funcmakerInsertLinkInToBox(box, model_name))
-#    box.children += (b,)
-#    return box
 
 
 ##############################################################################
@@ -412,11 +357,17 @@ def compartmental_graph(mvs):
 
 
 # fixme mm 11/04/2021
-def latex_render(var,res,capture=True):
+def latex_render(
+        t,
+        res,
+        capture=False
+    ):
     out = widgets.Output()
     with out:
         display(
-            "\\text{var.__name__}" + "=" +Math(latex(res))
+            Math(
+                "\\text{"+ t.__name__ +"} = " + latex(res)
+            )
         )
         # The latex could be filtered to display subscripts better
         # display(res)
@@ -425,4 +376,97 @@ def latex_render(var,res,capture=True):
     else:
         display(out)
 
-
+def vertical_table(records):
+    cws=['50%']
+    def headerbox(mvs):
+        return HTML(
+               value="<h3>{}</h3>".format(mvs.get_BibInfo().name),
+               layout=Layout(width=cws[0])
+            )  
+        
+    def graphbox(mvs):        
+        out = Output(
+            layout=Layout(
+                height='auto',
+                description="Compartmental Graph",
+                width=cws[0]
+            )
+        )
+        with out:
+             display(compartmental_graph(mvs))
+        return out
+                
+    def influxbox(mvs):
+        out= Output(
+            layout=Layout(
+                height='auto',
+                width=cws[0]
+            )
+        )
+        with out:
+            for k,v in mvs.get_InFluxesBySymbol().items():
+                display( Math( "In_{"+str(k)+"} = " + latex(v) ))
+                
+        return out
+    
+    def outfluxbox(mvs):
+        out= Output(
+            layout=Layout(
+                height='auto',
+                width=cws[0]
+            )
+        )
+        with out:
+            for k,v in mvs.get_OutFluxesBySymbol().items():
+                display( Math( "Out_{"+str(k)+"} = " + latex(v) ))
+                
+        return out
+    
+    def internalfluxbox(mvs):
+        out= Output(
+            layout=Layout(
+                height='auto',
+                width=cws[0]
+            )
+        )
+        with out:
+            for k,v in mvs.get_InternalFluxesBySymbol().items():
+                display( Math( "F_{"+str(k)+"} = " + latex(v) ))
+                
+        return out
+    
+    def customVBox(records,name,boxfunc):
+        return VBox(
+            [
+               HTML(
+                   value="<h2>{}</h2>".format(name),
+                   layout=Layout(width=cws[0])
+               ),  
+                HBox([ boxfunc(r) for r in records])
+            ]
+        )
+    def customHBox(records,boxfunc):
+        return VBox(
+            [
+                HBox([ boxfunc(r) for r in records])
+            ]
+        )
+    # main part
+    return VBox([
+        #HBox([
+        #   HTML(
+        #       value="<h3>VISIT</h3>",
+        #       layout=Layout(width=cws[0])
+        #   ),  
+        #   HTML(
+        #       value="<h3>CABLE</h3>",
+        #       layout=Layout(width=cws[0])
+        #   )  
+        #]),
+        customHBox(records,headerbox),
+        customHBox(records,graphbox),
+        #HBox([graph_out_visit,graph_out_cable]),
+        customVBox(records,"Influxes",influxbox),
+        customVBox(records,"Internal Fluxes",internalfluxbox),
+        customVBox(records,"Outfluxes",outfluxbox)
+    ])
