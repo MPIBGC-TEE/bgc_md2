@@ -507,7 +507,84 @@ X_0= np.array((
 ))#.reshape(11,)
 # in general B and u are nonlinear and can depend on X, thats why we have to test them with index and X arguments
 u_func(0,X_0),B_func(0,X_0)
+
+# +
+import CompartmentalSystems.helpers_reservoir as hr
+
+# To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
+# We first create numerical functions for all the outfluxes from our symbolic description.
+# lets do it for the outflux of one pool first (and then for the whole lot of them)
+expr_cont=mvs.get_OutFluxesBySymbol()[C_aom1]
+
+# this is the momentary outflux as a function of t,C_leaf_litter as it would occure in the differential equation
+expr_cont
 # -
+
+# what we want is acutally the accumulated flux over one timestep in the simplest approximation (euler forward)
+# the framework has a helper function to create an euler forward discretisation of a flux
+delta_t=Symbol("delta_t")
+it=Symbol("it") #arbitrary symbol (in our case it=days_since_start )
+expr_disc=hr.euler_forward_net_flux_sym(
+    flux_sym_cont=expr_cont,
+    cont_time=t,
+    delta_t=delta_t,
+    iteration=it #arbitrary
+)
+# If you look at the result you see that the euler forwar approximation assumes the flux at time t to be constant for the timestep  
+expr_disc
+
+# if we assume tat delta_t is 1 day and it counts days 
+# it becomes even simpler
+expr_disc.subs({delta_t:1})
+#Which is the same as if we had 't' replaced in the above formula wiht it
+
+# +
+# this expression we turn now into a numeric funciton of it
+# although in our example it depends only on t and C_leaf_litter we make it a function of ALL state variables to be able to call it in the same way as u_func and B_func 
+argtup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple())
+
+C_leaf_litter_func = hr.numerical_function_from_expression(
+    expr=expr_cont,
+    tup=argtup, 
+    parameter_dict=par_dict,
+    func_set=func_dict
+)
+# call it for testing
+C_leaf_litter_func(0,*X_0)
+
+
+# +
+#mass production of output functions
+def numfunc(expr):
+    return hr.numerical_function_from_expression(
+    expr=expr,
+    tup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple()),
+    parameter_dict=par_dict,
+    func_set=func_dict
+)
+    
+numOutFluxesBySymbol={k:numfunc(expr) for k,expr in mvs.get_OutFluxesBySymbol().items()} 
+
+# now we can compute ra 
+# apply all the outfluxfunctions of the veg pools and add up the result
+ra_0=np.sum(
+    [
+        numOutFluxesBySymbol[k](0,*X_0) 
+        for k in [C_leaf,C_wood,C_root] 
+        if k in numOutFluxesBySymbol.keys()
+    ]
+)
+rh_0=np.sum(
+    [
+        numOutFluxesBySymbol[k](0,*X_0) 
+        for k in [C_aom1,C_aom2,C_smb1,C_smb2,C_smr,C_nom,C_dom,C_psom] 
+        if k in numOutFluxesBySymbol.keys()
+    ]
+)
+ra_0,rh_0
+# -
+
+OutFluxesBySymbol
 
 # We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
 # If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
@@ -578,8 +655,13 @@ def make_daily_iterator_sym(
         outfluxes = B @ X
         X_new = X + b + outfluxes
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        #ra= -np.sum(outfluxes[0:3]) # check with  mvs.get_StateVariableTuple()[0:3]
-        rh= -(outfluxes[3:n]).reshape((n-3,)).sum() # check with  mvs.get_StateVariableTuple()[3:9]        
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[k](0,*X_0) 
+                for k in [C_aom1,C_aom2,C_smb1,C_smb2,C_smr,C_nom,C_dom,C_psom] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )     
         V_new = np.concatenate((X_new.reshape(n,1),rh.reshape(1,1)), axis=0)
         return V_new
     
@@ -709,7 +791,10 @@ EstimatedParameters=namedtuple("EstimatedParameters",field_names=temp_list)
 
 # -
 
-EstimatedParameters._fields
+[ par_dict[key] for key in [beta_leaf,beta_wood]]
+#par_dict.keys()
+
+UnEstimatedParameters._fields
 
 cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
@@ -909,6 +994,20 @@ def make_param2res_sym(
     return param2res
 
 
+# -
+
+# convert all observables to yearly timescale
+def monthly_to_yearly(monthly):
+    #TRENDY specific - months weighted like all months are 30 days
+    if len(monthly.shape) > 1:
+        sub_arrays=[monthly[i*12:(i+1)*12,:,:] for i in range(int(monthly.shape[0]/12))]
+    else:
+        sub_arrays=[monthly[i*12:(i+1)*12,] for i in range(int(monthly.shape[0]/12))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+x=monthly_to_yearly(np.array(svs.rh))
+obs=np.column_stack((np.array(svs.cVeg),np.array(svs.cLitter),np.array(svs.cSoil),monthly_to_yearly(np.array(svs.rh))))
+print(obs.shape)
+
 # +
 # now test it 
 import matplotlib.pyplot as plt
@@ -918,15 +1017,20 @@ const_params = cpa
 param2res_sym = make_param2res_sym(const_params)
 xs= param2res_sym(epa_0)
 
+# convert model output to yearly
+mod=np.zeros(obs.shape[0]*obs.shape[1]).reshape([obs.shape[0],obs.shape[1]])  
+for i in range(obs.shape[1]):
+    mod[:,i]=monthly_to_yearly(xs[:,i])
+
 day_indices=month_2_day_index(range(cpa.number_of_months)),
 
 fig = plt.figure()
 plot_solutions(
         fig,
         #times=day_indices,
-        times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months/12)),
         var_names=Observables._fields,
-        tup=(xs,)
+        tup=(mod,obs)
 )
 fig.savefig('solutions.pdf')
 
