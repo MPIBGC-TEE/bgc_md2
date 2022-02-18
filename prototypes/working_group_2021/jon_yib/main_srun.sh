@@ -1,17 +1,18 @@
 #!/bin/bash
 #SBATCH --job-name=main_srun
-#SBATCH --time=80:00:00
+#SBATCH --time=90:00:00
 #SBATCH --mem=10GB
 #SBATCH --nodes=4
 #SBATCH --ntasks=12
 #SBATCH --cpus-per-task=1
-#SBATCH --chdir=/scratch/mm4967/bgc_md2/prototypes/working_group_2021/jon_yib
-#SBATCH --output=/scratch/mm4967/bgc_md2/prototypes/working_group_2021/jon_yib/dask.out
-#SBATCH --error=/scratch/mm4967/bgc_md2/prototypes/working_group_2021/jon_yib/dask.err
+#SBATCH -C amd
+#SBATCH --chdir=/scratch/jw2636/bgc_md2/prototypes/working_group_2021/jon_yib
+#SBATCH --output=/scratch/jw2636/bgc_md2/prototypes/working_group_2021/jon_yib/dask.out.%J
+#SBATCH --error=/scratch/jw2636/bgc_md2/prototypes/working_group_2021/jon_yib/dask.err.%J
 
 module purge
 module load anaconda3/2021.05 #has to match the currently activated anaconda version in the shell
-conda activate /scratch/mm4967/miniconda_envs/bgc_md2
+conda activate /scratch/jw2636/env_bgc
 
 conda list
 echo ""

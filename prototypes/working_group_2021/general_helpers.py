@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from typing import Callable, Tuple, Iterable
+from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
 from copy import copy
 from time import time
@@ -18,13 +18,20 @@ def make_B_u_funcs(
         mpa,
         func_dict
     ):
-        symbol_names = mvs.get_BibInfo().sym_dict.keys()   
-        for name in symbol_names:
-            var(name)
+        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
+        return make_B_u_funcs_2(mvs,model_params,func_dict)
+
+def make_B_u_funcs_2(
+        mvs,
+        model_params,
+        func_dict
+    ):
+        #symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+        #for name in symbol_names:
+        #    var(name)
         t = mvs.get_TimeSymbol()
         it = Symbol('it')
         delta_t=Symbol('delta_t')
-        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
         parameter_dict = {**model_params,delta_t: 1}
         state_vector = mvs.get_StateVariableTuple()
 
@@ -34,6 +41,7 @@ def make_B_u_funcs(
                 delta_t=delta_t,
                 iteration=it
         )
+        #from IPython import embed;embed()
         sym_u = hr.euler_forward_net_u_sym(
                 mvs.get_InputTuple(),
                 t,
@@ -56,7 +64,6 @@ def make_B_u_funcs(
                 func_dict=func_dict
         )
         return (B_func,u_func)
-
 
 def make_uniform_proposer(
         c_max: Iterable,
@@ -83,7 +90,7 @@ def make_uniform_proposer(
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + (g.random(paramNum) - 0.5) * (c_max - c_min) / D
+            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max - c_min) / D)
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -479,12 +486,11 @@ def make_jon_cost_func(
     denominators = means ** 2
 
     def costfunction(mod: np.ndarray) -> np.float64:
-        cost = np.mean(
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators)
+        cost = (1/n) * np.sum(
+            100* np.sum((obs - mod)**2, axis=0) / denominators 
+            )
         return cost
-
     return costfunction
-
 
 def day_2_month_index(d):
     return months_by_day_arr()[(d % days_per_year)]
@@ -679,7 +685,7 @@ def global_mean(lats,lons,arr):
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
     return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
-    
+
 
 
 
@@ -760,3 +766,108 @@ def make_pixel_area_on_unit_spehre(delta_lat,delta_lon,sym=False):
         return A_patch(theta)
 
     return pixel_area_on_unit_sphere
+
+
+def download_TRENDY_output(
+        username: str,
+        password: str,
+        dataPath: Path,
+        models: List[str],
+        variables: List[str]
+):
+    import paramiko
+    import tarfile
+    import gzip
+    import shutil
+
+    def unzip_shutil(source_filepath, dest_filepath, model):
+        if model == "YIBs":
+            f=tarfile.open(source_filepath,'r:gz')
+            f.extractall(path=dataPath)
+            f.close()
+        else:
+            with gzip.open(source_filepath, 'rb') as s_file, open(dest_filepath, 'wb') as d_file:
+                shutil.copyfileobj(s_file, d_file)
+    
+    # open a transport
+    host = "trendy.ex.ac.uk"
+    port = 22
+    transport = paramiko.Transport(host)
+    
+    # authentication
+    transport.connect(None,username=username,password=password)
+    
+    
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    
+    # download files
+    # Other models, "CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP","JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern",
+    #                 "OCN","ORCHIDEEv3","SDGVM","VISIT","YIBs"
+    
+    #models      = ["CABLE-POP"]
+    experiments = ["S2"]
+    #variables   = ["cCwd","cLeaf", "cLitter", "cRoot", "cSoil", "cVeg", "cWood", "npp", "rh"]
+    
+    for model in models:
+        print("downloading data for",model,"model")
+        for experiment in experiments:
+            for variable in variables:
+                 
+                modelname = model
+                modelname_file = model
+                ext = "nc"
+                extra = ""
+                
+                if model == "CLM5":
+                    modelname_file = "CLM5.0"
+                elif model == "ORCHIDEEv3" or model == "ORCHIDEEv3_0.5deg":
+                    modelname_file = "ORCHIDEEv3"
+                elif model == "ISBA_CTRIP":
+                    modelname_file = "ISBA-CTRIP"
+                elif model == "JULES-ES":
+                    modelname = "JULES-ES-1.0"
+                    modelname_file = "JULES-ES-1p0"
+                elif model == "SDGVM" or model == "VISIT":
+                    ext = "nc.gz"
+                elif model == "YIBs":
+                    ext = "nc.tar.gz"
+                    if variable == "cSoil" or variable == "cVeg" or variable == "landCoverFrac":
+                        extra="Annual_"
+                    else:
+                        extra = "Monthly_"
+                elif model == "LPJwsl":
+                    modelname_file = "LPJ"
+                    ext = "nc.gz"
+                    
+                filename  = modelname_file + "_" + experiment + "_" + extra + variable + "." + ext
+                   
+                try:
+                    dataPath.mkdir(exist_ok=True)
+                    complete_path = "output/" + modelname + "/" + experiment + "/" + filename
+                    zipped_path = dataPath.joinpath(filename)
+                    unzipped_filename = modelname_file + "_" + experiment + "_" + extra + variable + ".nc"
+                    unzipped_path = dataPath.joinpath(unzipped_filename)
+                    try:
+                        unzipped_path.resolve(strict=True)
+                    except FileNotFoundError:
+                        try:
+                            zipped_path.resolve(strict=True)
+                        except FileNotFoundError:
+                            print("downloading missing data:",variable)
+                            sftp.get(
+                                remotepath=complete_path,
+                                localpath=zipped_path
+                            )
+                            if zipped_path != unzipped_path:
+                                print("unzipping",zipped_path)
+                                unzip_shutil(zipped_path,unzipped_path,model)
+                        else:
+                            print("unzipping",zipped_path)
+                            unzip_shutil(zipped_path,unzipped_path,model)
+                    else:
+                        print(unzipped_path,"exists, skipping")                    
+                except FileNotFoundError as e:
+                    print(e)
+                    print(complete_path)
+                    print(zipped_path)               
+    print("finished!")
