@@ -291,9 +291,7 @@ def download_my_TRENDY_output():
         variables = Observables._fields + Drivers._fields
     )
 #call it to test that the download works the data
-#download_my_TRENDY_output()
-
-
+download_my_TRENDY_output()
 # -
 
 import netCDF4 as nc
@@ -317,6 +315,14 @@ def get_variables_from_files(dataPath):
         return ds.variables[vn][:, :, :]
 
     return map(f, names)
+
+
+# +
+
+#ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
+ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
+ds.variables['rh']#[:,-56,26][20]
+print(ds)
 
 
 # +
@@ -350,6 +356,33 @@ def get_example_site_vars(dataPath):
             C_root
         )
     )
+    
+    # the dataset is not uniform 
+    # - npp and rh start at 16-01-1900 end at 03-28-2018 and are recorded every 30 days
+    # - C_litter, C_soil, C_veg, C_root start at 06-30-1700 end at 01-12-2014 
+    #
+    # To make them uniform we will:
+    # 1. Make C_litter, C_soil, C_veg, C_root start at time 1900 (cutting of the first 200y)
+    # 2. Adapt the resolution of rh to yearly by averaging over the monthly values and
+    #    also cutting them short to 2014
+    # 3. We will cut short npp to 2014 bu will NOT change the resolution (since it is a driver)
+    #    and does not affect the data assimilation functions 
+    print(C_litter.shape)
+    (
+        C_litter,
+        C_soil,
+        C_veg,
+        C_root
+    ) = map(
+        lambda var: var[200:],
+        (
+            C_litter,
+            C_soil,
+            C_veg,
+            C_root
+        )
+    )
+    
     return (Observables(C_litter, C_soil, C_veg, C_root, rh), Drivers(npp))
 
 with Path('config.json').open(mode='r') as f:
@@ -358,6 +391,21 @@ with Path('config.json').open(mode='r') as f:
 dataPath = Path(conf_dict['dataPath'])
 
 obs, dr =get_example_site_vars(dataPath)
+obs.cVeg.shape
+# -
+
+from copy import copy
+rh=copy(obs.rh)
+lm=len(rh)
+print(lm)
+ps=12
+rh_y=[
+    rh[p*ps:(p+1)*ps]   
+    for p in range(int(lm/ps))
+]
+len(rh_y)
+
+# +
 # (
 #    npp,
 #    C_litter,
@@ -846,5 +894,18 @@ plot_solutions(
 fig.savefig('solutions_SDGVM.pdf')
 
 # -
+ns=1400
+days=list(range(ns))
+npp=[ npp_func(d) for d in days]
+
+import matplotlib.pyplot as plt
+n=len(mvs.get_StateVariableTuple())
+#fig=plt.figure(figsize=(10,(n+1)*10))
+fig=plt.figure()
+axs=fig.subplots(2,1)
+axs[0].plot(days,npp)
+days2=list(range(70))
+axs[1].plot(days2,[day_2_month_index(d) for d in days2])
+
 
 
