@@ -871,3 +871,24 @@ def download_TRENDY_output(
                     print(complete_path)
                     print(zipped_path)               
     print("finished!")
+
+
+# +
+def monthly_to_yearly(monthly):
+    #TRENDY specific - months weighted like all months are 30 days
+    if len(monthly.shape) > 1:
+        sub_arrays=[monthly[i*12:(i+1)*12,:,:] for i in range(int(monthly.shape[0]/12))]
+    else:
+        sub_arrays=[monthly[i*12:(i+1)*12,] for i in range(int(monthly.shape[0]/12))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+
+
+def pseudo_daily_to_yearly(daily):
+    # compute a yearly average from pseudo daily data
+    # for one data point
+    pseudo_days_per_year = pseudo_days_per_month*12 
+    sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+# -
+
+
