@@ -920,7 +920,7 @@ expr_cont
 # -
 
 # what we want is acutally the accumulated flux over one timestep in the simplest approximation (euler forward)
-# the framework has a helper function to create an euler forward discretisation of a flux
+# the framework has a helper function to create an euler forward discretization of a flux
 delta_t=Symbol("delta_t")
 it=Symbol("it") #arbitrary symbol (in our case it=days_since_start )
 expr_disc=hr.euler_forward_net_flux_sym(
@@ -935,7 +935,7 @@ expr_disc
 # if we assume tat delta_t is 1 day and it counts days 
 # it becomes even simpler
 expr_disc.subs({delta_t:1})
-#Which is the same as if we had 't' replaced in the above formula wiht it
+#Which is the same as if we had 't' replaced in the above formula wiht 'it'
 
 # +
 # this expression we turn now into a numeric funciton of it
@@ -985,16 +985,14 @@ ra_0,rh_0
 
 OutFluxesBySymbol
 
-# +
-We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
-If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
-
-In our case we are also interested in tracking the autotrophic and heterotrophic respiration.
-
-So we will let `bgc_md2` derive numeric functions for the Compartmental matrix $B$ and the input $u$ , $ra$ $rh$ from our symbolic description 
-but build our own iterator by combining these functions.    
-We will start by creating $V_0$ and then build the function $f$
-# -
+# We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
+# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
+#
+# In our case we are also interested in tracking the autotrophic and heterotrophic respiration.
+#
+# So we will let `bgc_md2` derive numeric functions for the Compartmental matrix $B$ and the input $u$ , $ra$ $rh$ from our symbolic description 
+# but build our own iterator by combining these functions.    
+# We will start by creating $V_0$ and then build the function $f$
 
 # to guard agains accidentally changed order we use a namedtuple again. Since B_func and u_func rely 
 # on the correct ordering of the statevariables we build V dependent on this order 
@@ -1383,5 +1381,289 @@ fig.savefig('solutions.pdf')
 
 # ### mcmc to optimize parameters 
 # coming soon
+
+# ### Tracebility analysis  
+#
+# #### Outline
+# The tracebility analysis defines several diagnostic variables using as much algebraic structure of the mass balance equation as is available.
+# Not all diagnostic variables are possible for all compartmental models. 
+#
+# We chose here to introduce the diagnostic variables not all at once but rather in the order of decreasing generality.
+#
+# The first diagnostic variables are available for all compartmental models and need no additional assumptions. 
+# In the later parts of this section we then assume to be able to identify more and more specific terms in the mass balance equation and use those to derive and trace ever more specific diagnostics.
+# Thus the very first part is valid for all models but how many of the later parts are applicable to a specific model  depends on how much we know about it.  
+#
+#
+# #### Derivation of the matrix decomposition 
+# Compartmental models (well mixed mass balanced) can be written in as an ordinary differential equation in matrix form that relates the momentary value of the (time) derivative $\frac{d X}{d t}$ of an yet unknown function $X$ to the momentary value of $X$ itself.   
+# $$
+# \frac{d X}{d t}= M(X,t) X + I(X,t) \quad (1)   
+# $$ 
+# where $X$ is the statevector representing the pool contents, $M$ the "Compartmental matrix" and $I$ the input vector.
+# Together with a startvalue $X_0$ it constitutes an "initial value problem" (ivp) which can be solved numerically by moving step by step forward in time.
+#
+# Note: 
+#
+# It is mathematical standard notation to use $X$ in the *formulation* of the ivp (representing the momentary value) althoug *after we have solved it* the solution is expressed as function of time $X(t)$. This avoids confusion since everything appering with arguments is recognizable as explicitly calculable *before* we have solved the ivp.
+#
+# The system "nonautonomous" (if they depend on time $t$) and "nonlinear" if the dependent on $X$.
+# It is always possible to factorize $M(X,t)$ into a product $M=A(X,t) K(X,t)$ where $K$ is a  diagonal matrix.
+# and $I=B(t)*u(t)$ where $u$ is a scalar.
+# Using these we arrive at 
+# $$
+# \frac{d X}{d t}= A(X,t) K(X,t) X + B(X,t) u(X,t)  
+# $$
+# ##### Linearity assumption
+# If we assume the model to be linear and nonautonomous the dependency on $X$ vanishes and we have
+#
+# $$
+# \frac{d X}{d t}= A(t) K(t) X + B(t) u(t) . 
+# $$
+#
+# ##### Factorizability  assumption
+# Although this is not possible in general in many published models the nonautonous part  can be further localized into a diagonal matrix $\xi(t)$ so that we can achieve constant $A$ and $K$ which allows more specific interpretation.
+#
+# $$
+# \frac{d X}{d t}= A \xi(t) K X + B(t)u(t)
+# $$
+#
+# ##### Factorizability of $\xi$ assumption 
+# In some cases we can resolve $\xi$ further.
+# $$
+# \frac{d X}{d t}= A \xi_temp(t) \xi_mois(t) K X + B(t)u(t)
+# $$
+#
+# #### Definition of diagnostic variables
+#
+# ##### Storage capacity $X_c$ and storage potential $X_p$
+# These variables can be defined for any compartmental system and do not require either linearity nor factorizability. 
+# We can rearrange eq. $(1)$ and give names to the two summands. 
+# $$
+# X = M^{-1}(X,t) \left( \frac{d X}{d t}-I(X,t) \right) \\ 
+#   = \underbrace{M^{-1}(X,t) \frac{d X}{d t}}_{X_c} - \underbrace{M^{-1}(X,t)I(X,t)}_{X_p} \\
+#   = X_c - X_p
+# $$
+# Note:
+# This is not to be read as a recipe to compute $X$.
+# The equation becomes a bit clearer if we adapt the nomenclature to express that we *have solved the ivp* and know its solution $X(t)$  
+# <!-- and therefore also  the derivative $\frac{d X}{d t}=M(X(t),t) X(t) + I(X(t),t)=\prime{X}(t)$ -->
+# By substituting the solution $X(t)$ we get the recipes to compute:
+# $$
+# X_p(t) = M^{-1}(X(t),t)I(X(t),t)  \\ 
+# X_c(t) = X(t)-X_p(t) \\ 
+# $$
+# we see that all the ingredients become explicit functions of time.   
+# Since all values are taken at the same time $t$ we can drop the time dependence
+# in the notation and write an equation we can use in the iterator.
+# $$
+# X_p = M^{-1}I(X,t)  \\ 
+# X_c = X + X_p \\ 
+# $$
+#
+# ##### Residence time
+# The influx $I$ can always be written as $I=b u$ where the scalar $u=\sum_{k=1\dots n} I_k$  and the dimensionless vector $b=I/u$ where $\sum_{k=1\dots n} b_k =1$.
+# Assumimg that the pool contents (the components of $X$)  have dimension $mass$ we can infer from eq. (1) that $M$ has dimension $\frac{1}{time}$.
+# The components of the (inverse) matrix $M^{-1}$ have therefore dimension $time$. Accordingly the product $RT= M^{-1} b$ is a vector of the same shape as $X$  whose components have dimesion $time$.
+# In the context of the Tracebility Framework $RT$ is therefore called *residence time*.
+#
+# Notes on nomenclature: 
+# 1. The term *residence time* is not universally used with the same connotation outside the context of the *Tracebility Analysis*.
+#
+# 1. It is not *the time of residence* of the particles in the system for the following reasons:
+#     1. In well mixed systems particles can reside in a pool for different times from zero to infinity.
+#     1. You could compute the mean of these times over all particles exiting a pool, but even then the result is in general not equal to the above mentioned $rt$.
+#     1. The mean residence time would only coincide with the definition above if the system was in equilibrium (which it clearly is not as e.g $NPP(t)$ shows.)
+#     1. The origin of the term is probably most easily understood as the generalization of a one dimensional rate equation $\frac{d}{dt} x = m x + u$ 
+#        If $r$ and $u$ are constant then the mean residence time is $rt= m^{-1}$. If we start with the rate as property of the model the *residence time* 
+#        can be defined as the inverse of this rate. The above definition is the generalization of this simple relationship to matrices and vectors.
+#        The matrix $M^{-1}$ takes the role of the number $\frac{1}{m}$ . In the context of the *Tracebility Analysis* $M^{-1}$ is called *Chasing Time*. 
+#
+
+# +
+# lets build an iterator to trace  X, X_c and X_p
+# we will extend it further later (for more )
+# but we can also make it faster because we are not interested in
+# the respiration this time
+
+# build a new template for the StartVector 
+# at the moment 3 times the length of the vector of pool contents.
+# we will add more components later
+svt=mvs.get_StateVariableTuple()
+
+StartVectorTrace=namedtuple(
+    "StartVectorTrace",
+    [str(v) for v in svt]+
+    [str(v)+"_p" for v in svt]+
+    [str(v)+"_c" for v in svt]+
+    [str(v)+"_RT" for v in svt]
+)
+
+
+# -
+
+# now build the iterator to deal with such vectors
+def make_daily_iterator_sym_trace(
+        mvs,
+        V_init: StartVectorTrace,
+        par_dict,
+        func_dict
+    ):
+    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+    
+    n=len(mvs.get_StateVariableTuple())
+    def f(it,V):
+        #the pools are the first n values
+        X = V[0:n] 
+        I = I_func(it,X) 
+        # we decompose I
+        u=I.sum()
+        b=I/u
+        B = B_func(it,X)
+        B_inf = np.linalg.inv(B)
+        X_new = X + I + B @ X
+        X_p = B_inf @ I
+        X_c = X_new+X_p
+        RT = B_inf @ b
+        V_new = np.concatenate(
+            (
+                X_new.reshape(n,1),
+                X_p.reshape(n,1),
+                X_c.reshape(n,1),
+                RT.reshape(n,1),
+            ),
+            axis=0
+        )
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+
+
+# +
+# test the new iterator
+
+# first build a new s
+# actually we realy can choose only the startvalues for the pools
+# but the iterator now produces a 3 times longer vector 
+X_0= np.array((
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cLitter/3,
+    svs_0.cLitter/3,
+    svs_0.cLitter/3,
+    svs_0.cSoil/3,
+    svs_0.cSoil/3,
+    svs_0.cSoil/3,
+)).reshape(9,1)
+# we make the X_p and X_c  parts compatible with the ones computed by the iterator 
+# for following timesteps (to keep it) 
+# As you can see in the definition of the iterator these values have no impact on further results  
+I = u_func(0,X_0)
+u=I.sum()
+b=I/u
+B = B_func(0,X_0)
+B_inf = np.linalg.inv(B)
+X_p_0 = B_inf@I
+X_c_0 = X_0+X_p_0
+RT_0 = B_inf@b
+# combine the three 
+#here we rely on order to be consistent 
+#(although we could use also the names of the namedtuple)
+V_arr=np.concatenate((X_0,X_p_0,X_c_0,RT_0),axis=0 )
+V_init=StartVectorTrace(*V_arr)
+
+# -
+
+it_sym_trace = make_daily_iterator_sym_trace(
+    mvs,
+    V_init=V_init,
+    par_dict=par_dict,
+    func_dict=func_dict
+)
+# we will run the model for 15 steps
+ns=1500
+nv=len(V_init)
+res_trace= np.zeros((ns,nv))
+for i in range(ns):
+    res_trace[i,:]=it_sym_trace.__next__().reshape(len(V_init),)
+    #print(it_sym_trace.__next__().shape)
+res_trace
+
+# +
+import matplotlib.pyplot as plt
+n=len(mvs.get_StateVariableTuple())
+fig=plt.figure(figsize=(10,(n+1)*10))
+axs=fig.subplots(n+1,2)
+days=list(range(ns))
+
+
+for i in range(n):
+    
+    ax = axs[i,0]
+    #  the solution
+    pos=i
+    ax.plot(
+        days,
+        res_trace[:,i],
+        label=StartVectorTrace._fields[pos],
+        color='blue'
+    )
+    # X_p
+    pos=i+n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='red'
+    )
+    # X_c
+    pos=i+2*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='yellow'
+    )
+    ax.legend()
+    
+    ax = axs[i,1]
+    # RT
+    pos=i+3*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='black'
+    )
+    ax.legend()
+    
+axs[n,0].plot(
+    days,
+    [npp_func(d) for d in days],
+    label='NPP',
+    color='green'
+)
+axs[n,0].legend()
+
+# -
+
+#Remark:
+# For simple matrices it is possible to compute the inverse M^{-1} 
+# symbolically ONCE
+mvs.get_CompartmentalMatrix().inv()
+# and then just evaluate it for the X and t along the solution.
+# This could potentially be MUCH faster that inverting 
+# the numerical version of the matrix in every timestep.
+# However it could be very difficult to compute the symbolic inverse in 
+# some cases at all (why we will demonstrate the numeric approach) first. 
+
+
+
+
 
 
