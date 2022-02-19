@@ -880,3 +880,20 @@ def monthly_to_yearly(monthly):
     else:
         sub_arrays=[monthly[i*12:(i+1)*12,] for i in range(int(monthly.shape[0]/12))]
     return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+
+
+def make_param_filter_func(
+        c_max: np.ndarray,
+        c_min: np.ndarray
+        ) -> Callable[[np.ndarray], bool]:
+
+    def isQualified(c):
+        # fixme
+        #   this function is model specific: It discards parameter proposals
+        #   where beta1 and beta2 are >0.99
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        return (cond1 and cond2 )
+        
+    
+    return isQualified

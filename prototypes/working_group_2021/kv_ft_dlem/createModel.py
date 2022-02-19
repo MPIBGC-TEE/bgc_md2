@@ -1122,7 +1122,7 @@ mod= param2res_sym(epa_0)
 # for i in range(obs.shape[1]):
 #     mod[:,i]=monthly_to_yearly(xs[:,i])
 
-day_indices=month_2_day_index(range(cpa.number_of_months)),
+day_indices=month_2_day_index(range(cpa.number_of_months))
 
 fig = plt.figure()
 plot_solutions(

@@ -683,7 +683,7 @@ with Path('config.json').open(mode='r') as f:
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cLitter","cSoil", "cVeg","rh","ra"]
+    ["cVeg","cLitter","cSoil","rh","ra"]
 )
 Drivers=namedtuple(
     "Drivers",
@@ -700,7 +700,7 @@ def download_my_TRENDY_output():
         variables = Observables._fields + Drivers._fields
     )
 #call it to test that the download works the data
-download_my_TRENDY_output()
+#download_my_TRENDY_output()
 # -
 
 # #### provide functions to read the data
@@ -1137,9 +1137,9 @@ EstimatedParameters = namedtuple(
         "T_0",
         "E",
         "KM",
-        "r_C_leaf_rh",
-        "r_C_wood_rh",
-        "r_C_root_rh",
+        #"r_C_leaf_rh",
+        #"r_C_wood_rh",
+        #"r_C_root_rh",
         "r_C_leaf_litter_rh",
         "r_C_wood_litter_rh",
         "r_C_root_litter_rh",
@@ -1188,8 +1188,55 @@ cpa=UnEstimatedParameters(
  ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
  r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
  r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
- number_of_months=len(svs.rh)
+ #number_of_months=len(svs.rh)
+ number_of_months=120
 )
+
+X_0
+
+
+# +
+def make_steady_state_iterator_sym(
+        mvs,
+        V_init,
+        par_dict,
+        func_dict
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    def f(it,tup):
+        X,_,_=tup
+        b = u_func(it,X)
+        B = B_func(it,X)
+        return (X,b,B)
+  
+    return TimeStepIterator2(
+        initial_values=V_init,
+        f=f)
+# calculate steady state
+  
+it_sym = make_steady_state_iterator_sym(
+    mvs,
+    V_init=(X_0,u_func(0,X_0),B_func(0,X_0)),
+    par_dict=par_dict,
+    func_dict=func_dict
+)
+Bs=[]
+bs=[]
+for i in range(cpa.number_of_months*30):
+    bs.append(it_sym.__next__()[1])
+    Bs.append(it_sym.__next__()[2])
+B_mean=np.stack(Bs).mean(axis=0)
+b_mean=np.stack(bs).mean(axis=0)
+B_mean,b_mean
+np.linalg.inv(Bs[0])
+
+
+# +
+# calculate pseudo steady state
+X_ss = np.linalg.solve(B_mean, (-b_mean))
+
+steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVariableTuple())}
+# -
 
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
@@ -1199,9 +1246,6 @@ epa_0=EstimatedParameters(
  T_0=2,
  E=4,
  KM=10,
- r_C_leaf_rh=0,
- r_C_wood_rh=0,
- r_C_root_rh=0,
  r_C_leaf_litter_rh=0.000415110004151100,
  r_C_wood_litter_rh=0.000124533001245330,
  r_C_root_litter_rh=0.000122042341220423,
@@ -1218,15 +1262,13 @@ epa_0=EstimatedParameters(
  r_C_wood_litter_2_C_soil_slow=2.98879202988792e-5,
  r_C_wood_litter_2_C_soil_passive=1.99252801992528e-5,
  r_C_root_litter_2_C_soil_fast=7.47198007471980e-5,
- C_leaf_0=svs_0.cVeg/3,
- C_wood_0=svs_0.cVeg/3,
- C_leaf_litter_0=svs_0.cLitter/3,
- C_wood_litter_0=svs_0.cLitter/3,
- C_soil_fast_0=svs_0.cSoil/3,
- C_soil_slow_0=svs_0.cSoil/3,
+ C_leaf_0=steady_state_dict["C_leaf"],
+ C_wood_0=steady_state_dict["C_wood"],
+ C_leaf_litter_0=steady_state_dict["C_leaf_litter"],
+ C_wood_litter_0=steady_state_dict["C_wood_litter"],
+ C_soil_fast_0=steady_state_dict["C_soil_fast"],
+ C_soil_slow_0=steady_state_dict["C_soil_slow"]
 )
-
-
 
 # The function `param2res` (which will be used by a general model independent mcmc) only takes the estimated parameters as arguments and produce data in the same shape as the observations.
 # We will taylor make it by another function `make_param2res` which depends on the parameters that we decide to fix.
@@ -1239,7 +1281,7 @@ epa_0=EstimatedParameters(
 
 # +
 from typing import Callable
-from general_helpers import month_2_day_index
+from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 def make_param2res_sym(
@@ -1350,7 +1392,10 @@ def make_param2res_sym(
             sols.append(o)
             
         sol=np.stack(sols)       
-        return sol
+        #mod=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #    mod[:,i]=monthly_to_yearly(sol[:,i])
+        return sol 
         
     return param2res
 
@@ -1360,27 +1405,120 @@ def make_param2res_sym(
 # now test it 
 import matplotlib.pyplot as plt
 from general_helpers import plot_solutions
-const_params = cpa
 
-param2res_sym = make_param2res_sym(const_params)
+param2res_sym = make_param2res_sym(cpa)
 xs= param2res_sym(epa_0)
+obs=np.column_stack([ np.array(v) for v in svs])
 
-day_indices=month_2_day_index(range(cpa.number_of_months)),
+# +
+obs=obs[0:cpa.number_of_months,:] #cut 
+#print(obs.shape)
+#print(obs[:,3])
+obs[:,3:4]=obs[:,3:4]*86400
+#print(obs[:,3]
 
 fig = plt.figure()
 plot_solutions(
         fig,
-        #times=day_indices,
         times=range(cpa.number_of_months),
         var_names=Observables._fields,
-        tup=(xs,)
+        tup=(xs,obs)
+        #tup=(obs,)
 )
 fig.savefig('solutions.pdf')
 
+# +
+epa_min=EstimatedParameters(
+ beta_leaf=0,
+ beta_wood=0,
+ T_0=-20,
+ E=.1,
+ KM=1,
+ r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
+ r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
+ r_C_root_litter_rh=epa_0.r_C_root_litter_rh/100,
+ r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh/100,
+ r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh/100,
+ r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh/100,
+ r_C_leaf_2_C_leaf_litter=            epa_0.r_C_leaf_2_C_leaf_litter/100,       
+ r_C_wood_2_C_wood_litter=            epa_0.r_C_wood_2_C_wood_litter/100,
+ r_C_root_2_C_root_litter=            epa_0.r_C_root_2_C_root_litter/100,
+ r_C_leaf_litter_2_C_soil_fast=       epa_0.r_C_leaf_litter_2_C_soil_fast/100,
+ r_C_leaf_litter_2_C_soil_slow=       epa_0.r_C_leaf_litter_2_C_soil_slow/100,
+ r_C_leaf_litter_2_C_soil_passive=    epa_0.r_C_leaf_litter_2_C_soil_passive/100,
+ r_C_wood_litter_2_C_soil_fast=       epa_0.r_C_wood_litter_2_C_soil_fast/100,
+ r_C_wood_litter_2_C_soil_slow=       epa_0.r_C_wood_litter_2_C_soil_slow/100,
+ r_C_wood_litter_2_C_soil_passive=    epa_0.r_C_wood_litter_2_C_soil_passive/100,
+ r_C_root_litter_2_C_soil_fast=       epa_0.r_C_root_litter_2_C_soil_fast/100,
+ C_leaf_0=0,
+ C_wood_0=0,
+ C_leaf_litter_0=0,
+ C_wood_litter_0=0,
+ C_soil_fast_0=0,
+ C_soil_slow_0=0,
+)
+
+
+epa_max=EstimatedParameters(
+ beta_leaf=0.99,
+ beta_wood=0.99,
+ T_0=10,
+ E=100,
+ KM=100,
+ r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
+ r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
+ r_C_root_litter_rh=epa_0.r_C_root_litter_rh*100,
+ r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh*100,
+ r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh*100,
+ r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh*100,
+ r_C_leaf_2_C_leaf_litter=            epa_0.r_C_leaf_2_C_leaf_litter*100,       
+ r_C_wood_2_C_wood_litter=            epa_0.r_C_wood_2_C_wood_litter*100,
+ r_C_root_2_C_root_litter=            epa_0.r_C_root_2_C_root_litter*100,
+ r_C_leaf_litter_2_C_soil_fast=       epa_0.r_C_leaf_litter_2_C_soil_fast*100,
+ r_C_leaf_litter_2_C_soil_slow=       epa_0.r_C_leaf_litter_2_C_soil_slow*100,
+ r_C_leaf_litter_2_C_soil_passive=    epa_0.r_C_leaf_litter_2_C_soil_passive*100,
+ r_C_wood_litter_2_C_soil_fast=       epa_0.r_C_wood_litter_2_C_soil_fast*100,
+ r_C_wood_litter_2_C_soil_slow=       epa_0.r_C_wood_litter_2_C_soil_slow*100,
+ r_C_wood_litter_2_C_soil_passive=    epa_0.r_C_wood_litter_2_C_soil_passive*100,
+ r_C_root_litter_2_C_soil_fast=       epa_0.r_C_root_litter_2_C_soil_fast*100,
+ C_leaf_0=svs_0.cVeg,
+ C_wood_0=svs_0.cVeg,
+ C_leaf_litter_0=svs_0.cLitter,
+ C_wood_litter_0=svs_0.cLitter,
+ C_soil_fast_0=svs_0.cSoil,
+ C_soil_slow_0=svs_0.cSoil,
+)
 # -
 
 # ### mcmc to optimize parameters 
 # coming soon
+
+np.array(epa_max)
+
+# +
+from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
+
+isQualified = make_param_filter_func(epa_max, epa_min)
+param2res = make_param2res_sym(cpa)
+
+
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = autostep_mcmc(
+    initial_parameters=epa_0,
+    filter_func=isQualified,
+    param2res=param2res,
+    costfunction=make_feng_cost_func(obs),
+    nsimu=1000,
+    c_max=np.array(epa_max),
+    c_min=np.array(epa_min),
+    acceptance_rate=10,   # default value | target acceptance rate in %
+    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1   # default value | increase value to reduce initial step size
+)
+# save the parameters and cost function values for postprocessing
+#pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('visit_autostep_da_aa.csv'), sep=',')
+#pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('visit_autostep_da_j_aa.csv'), sep=',')
+# -
 
 # ### Tracebility analysis  
 #
