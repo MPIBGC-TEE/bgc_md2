@@ -871,3 +871,12 @@ def download_TRENDY_output(
                     print(complete_path)
                     print(zipped_path)               
     print("finished!")
+
+
+def monthly_to_yearly(monthly):
+    #TRENDY specific - months weighted like all months are 30 days
+    if len(monthly.shape) > 1:
+        sub_arrays=[monthly[i*12:(i+1)*12,:,:] for i in range(int(monthly.shape[0]/12))]
+    else:
+        sub_arrays=[monthly[i*12:(i+1)*12,] for i in range(int(monthly.shape[0]/12))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
