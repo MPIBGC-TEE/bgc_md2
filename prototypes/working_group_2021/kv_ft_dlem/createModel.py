@@ -330,7 +330,7 @@ svs,dvs
 sys.path.insert(0,'..')
 from general_helpers import day_2_month_index
 def NPP_fun(day ):
-    return npp[day_2_month_index(day)] 
+    return npp[day_2_month_index(day)] * 86400   # kg/m2/s kg/m2/day 
 
 func_dict={NPP: NPP_fun}
 # -
@@ -713,81 +713,22 @@ def make_daily_iterator_sym(
 
 V_init
 
-np.array(V_init).shape
-
 # +
-# # calculate steady state
+# test the daily iterator
     
-# it_sym = make_steady_state_iterator_sym(
-#     mvs,
-#     V_init=V_init,
-#     par_dict=par_dict,
-#     func_dict=func_dict
-# )
-# # we will run the model for 15 steps
-# ns=10
-# #res= np.zeros((ns,len(V_init)))
-# res=np.zeros((ns,11,12))
-# #print(res)
-# res_sym = copy(res)
-# it_sym.__next__()
-# for i in range(ns):
-#     #print("it_sym... ")
-#     #print(it_sym.__next__().shape)
-#     res_sym[i,:,:]=it_sym.__next__()#.reshape(len(V_init),)
-# #print("res_sym: ",res_sym[:,:,0])
-# #print(res_sym.shape)
-
-# # calculate steady state
-
-# b=res_sym[:,:,0]
-# B=res_sym[:,:,1:12]
-
-# B_mean = np.mean(B, axis = 0)
-# b_mean = np.mean(b, axis = 0).reshape(11,1)
-
-# #print("B_mean: ", B_mean.shape)
-# #print("b_mean: ", b_mean.shape)
-
-# X_ss = np.linalg.solve(B_mean, (b_mean))
-
-# print("steady: ", X_ss)
-print("NPP: ", dvs.npp[0:12])
-b=u_func(180,X_0)
-print("b: ",b)
-B=B_func(180,X_0)
-print ("B: ",B)
-X_ss = np.linalg.solve(B, (-b))
-print("steady: ", X_ss)
-
-# +
-# deriving initial pool proportions
-print("Total pools: ", svs_0)
-fraction_leaf=X_ss[0]/(X_ss[0]+X_ss[1]+X_ss[2])
-fraction_wood=X_ss[1]/(X_ss[0]+X_ss[1]+X_ss[2])
-fraction_root=X_ss[2]/(X_ss[0]+X_ss[1]+X_ss[2])
-fraction_aom1=X_ss[3]/(X_ss[3]+X_ss[4])
-fraction_aom2=X_ss[4]/(X_ss[3]+X_ss[4])
-fraction_smb1=X_ss[5]/(X_ss[5]+X_ss[6]+X_ss[7]+X_ss[8]+X_ss[9]+X_ss[10])
-fraction_smb2=X_ss[6]/(X_ss[5]+X_ss[6]+X_ss[7]+X_ss[8]+X_ss[9]+X_ss[10])
-fraction_smr=X_ss[7]/(X_ss[5]+X_ss[6]+X_ss[7]+X_ss[8]+X_ss[9]+X_ss[10])
-fraction_nom=X_ss[8]/(X_ss[5]+X_ss[6]+X_ss[7]+X_ss[8]+X_ss[9]+X_ss[10])
-fraction_dom=X_ss[9]/(X_ss[5]+X_ss[6]+X_ss[7]+X_ss[8]+X_ss[9]+X_ss[10])
-fraction_psom=X_ss[10]/(X_ss[5]+X_ss[6]+X_ss[7]+X_ss[8]+X_ss[9]+X_ss[10])
-
-# initial pools
-C_leaf_0=svs_0.cVeg*fraction_leaf
-C_wood_0=svs_0.cVeg*fraction_wood
-C_root_0=svs_0.cVeg*fraction_root
-C_aom1_0=svs_0.cLitter*fraction_aom1
-C_aom2_0=svs_0.cLitter*fraction_aom2
-C_smb1_0=svs_0.cSoil*fraction_smb1
-C_smb2_0=svs_0.cSoil*fraction_smb2
-C_smr_0=svs_0.cSoil*fraction_smr
-C_nom_0=svs_0.cSoil*fraction_nom
-C_dom_0=svs_0.cSoil*fraction_dom
-C_psom_0=svs_0.cSoil*fraction_psom
-C_leaf_0
+it_sym = make_daily_iterator_sym(
+    mvs,
+    V_init=V_init,
+    par_dict=par_dict,
+    func_dict=func_dict
+)
+# we will run the model for 15 steps
+ns=1
+res= np.zeros((ns,len(V_init)))
+res_sym = copy(res)
+for i in range(ns):
+    res_sym[i,:]=it_sym.__next__().reshape(len(V_init),)
+res_sym
 # -
 
 # ## Data assimilation
@@ -827,6 +768,8 @@ UnEstimatedParameters = namedtuple(
 temp_list=list()
 for name,dict_ in par_dict.items():
     temp_list.append(name)
+for i in range(len(temp_list)):
+    temp_list[i]=str(temp_list[i])
 # adding initial pool values that need to be estimated for TRENDY
 temp_list.append("C_leaf_0")
 temp_list.append("C_wood_0")
@@ -836,6 +779,10 @@ temp_list.append("C_smb2_0")
 temp_list.append("C_smr_0")
 temp_list.append("C_nom_0")
 temp_list.append("C_dom_0")
+# removing respiration of veg pools
+temp_list.remove("r_C_leaf_rh") 
+temp_list.remove("r_C_wood_rh") 
+temp_list.remove("r_C_root_rh") 
 
 # fix non-string elements
 temp_list = [str(element) for element in temp_list]
@@ -886,6 +833,8 @@ EstimatedParameters=namedtuple("EstimatedParameters",field_names=temp_list)
 
 # -
 
+EstimatedParameters._fields
+
 [ par_dict[key] for key in [beta_leaf,beta_wood]]
 #par_dict.keys()
 
@@ -899,12 +848,85 @@ cpa=UnEstimatedParameters(
  rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
  #mrso_0=dvs.mrso[0],
  #tsl_0=dvs.tsl[0],
- number_of_months=120#len(svs.rh)
+ number_of_months=120 # for testing and tuning mcmc
+ #number_of_months=len(svs.rh)
 )
 print(cpa)
 
-# check initial values for the pool sizes
-V_init
+
+# +
+def make_steady_state_iterator_sym(
+        mvs,
+        V_init,
+        par_dict,
+        func_dict
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    def f(it,tup):
+        X,_,_=tup
+        b = u_func(it,X)
+        B = B_func(it,X)
+        return (X,b,B)
+  
+    return TimeStepIterator2(
+        initial_values=V_init,
+        f=f)
+# calculate steady state
+  
+it_sym = make_steady_state_iterator_sym(
+    mvs,
+    V_init=(X_0,u_func(0,X_0),B_func(0,X_0)),
+    par_dict=par_dict,
+    func_dict=func_dict
+)
+Bs=[]
+bs=[]
+for i in range(cpa.number_of_months*30):
+    bs.append(it_sym.__next__()[1])
+    Bs.append(it_sym.__next__()[2])
+B_mean=np.stack(Bs).mean(axis=0)
+b_mean=np.stack(bs).mean(axis=0)
+B_mean,b_mean
+np.linalg.inv(Bs[0])
+
+# +
+# calculate pseudo steady state
+X_ss = np.linalg.solve(B_mean, (-b_mean))
+
+steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVariableTuple())}
+steady_state_dict
+
+# +
+# deriving initial pool proportions
+print("Total pools: ", svs_0)
+ss_veg=steady_state_dict["C_leaf"]+steady_state_dict["C_wood"]+steady_state_dict["C_root"]
+ss_litter=steady_state_dict["C_aom1"]+steady_state_dict["C_aom2"]
+ss_soil=steady_state_dict["C_smb1"]+steady_state_dict["C_smb2"]+steady_state_dict["C_smr"]+steady_state_dict["C_nom"]+steady_state_dict["C_dom"]+steady_state_dict["C_psom"]
+fraction_leaf=steady_state_dict["C_leaf"]/ss_veg
+fraction_wood=steady_state_dict["C_wood"]/ss_veg
+fraction_root=steady_state_dict["C_root"]/ss_veg
+fraction_aom1=steady_state_dict["C_aom1"]/ss_litter
+fraction_aom2=steady_state_dict["C_aom2"]/ss_litter
+fraction_smb1=steady_state_dict["C_smb1"]/ss_soil
+fraction_smb2=steady_state_dict["C_smb2"]/ss_soil
+fraction_smr=steady_state_dict["C_smr"]/ss_soil
+fraction_nom=steady_state_dict["C_nom"]/ss_soil
+fraction_dom=steady_state_dict["C_dom"]/ss_soil
+fraction_psom=steady_state_dict["C_psom"]/ss_soil
+
+# initial pools
+C_leaf_0=svs_0.cVeg*fraction_leaf
+C_wood_0=svs_0.cVeg*fraction_wood
+C_root_0=svs_0.cVeg*fraction_root
+C_aom1_0=svs_0.cLitter*fraction_aom1
+C_aom2_0=svs_0.cLitter*fraction_aom2
+C_smb1_0=svs_0.cSoil*fraction_smb1
+C_smb2_0=svs_0.cSoil*fraction_smb2
+C_smr_0=svs_0.cSoil*fraction_smr
+C_nom_0=svs_0.cSoil*fraction_nom
+C_dom_0=svs_0.cSoil*fraction_dom
+C_psom_0=svs_0.cSoil*fraction_psom
+C_wood_0
 
 # +
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
@@ -916,14 +938,18 @@ for name,dict_ in par_dict.items():
     temp_list.append(dict_)
 
 # adding initial pool values that need to be estimated for TRENDY
-temp_list.append(C_leaf_0) # C_leaf_0
-temp_list.append(C_wood_0) # C_wood_0
-temp_list.append(C_aom1_0) # C_aom1_0
-temp_list.append(C_smb1_0) # C_smb1_0
-temp_list.append(C_smb2_0) # C_smb2_0
-temp_list.append(C_smr_0) # C_smr_0
-temp_list.append(C_nom_0) # C_nom_0
-temp_list.append(C_dom_0) # C_dom_0
+temp_list.append(C_leaf_0) 
+temp_list.append(C_wood_0)
+temp_list.append(C_aom1_0) 
+temp_list.append(C_smb1_0)
+temp_list.append(C_smb2_0) 
+temp_list.append(C_smr_0) 
+temp_list.append(C_nom_0) 
+temp_list.append(C_dom_0)
+
+temp_list.remove(0) # remove 0 rh
+temp_list.remove(0)
+temp_list.remove(0)
 
 epa_0=EstimatedParameters(*temp_list)
 
@@ -1065,16 +1091,15 @@ def make_param2res_sym(
             mrh=0
             for d in range(dpm):
                 v = it_sym.__next__()
-                #mra +=v[9,0]
+                #mra +=v[10,0]
                 mrh +=v[11,0]
-            mrh=mrh/dpm
             V=StartVector(*v)
             o=Observables(
                 cVeg=float(V.C_leaf+V.C_wood+V.C_root),
                 cLitter=float(V.C_aom1+V.C_aom2),
                 cSoil=float(V.C_smb1+V.C_smb2+V.C_smr+V.C_nom+V.C_dom+V.C_psom),
                 #ra=mra,
-                rh=mrh,
+                rh=mrh/dpm, # monthly respiration back to kg/m2/day units
             )
             # equivalent
             #o=np.array([
@@ -1086,21 +1111,27 @@ def make_param2res_sym(
             #])
             sols.append(o)   
         sol=np.stack(sols)
-        mod=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #convert to yearly output
+        sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
         for i in range(sol.shape[1]):
-            mod[:,i]=monthly_to_yearly(sol[:,i])
-        return mod
+            sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        sol=sol_yr
+        return sol
 
     return param2res
 
 
-# -
+# +
+# now test it 
+import matplotlib.pyplot as plt
+from general_helpers import plot_solutions
 
 param2res_sym = make_param2res_sym(cpa)
 xs= param2res_sym(epa_0)
 print(xs.shape)
 print(xs)
 #print(cpa)
+# -
 
 obs=np.column_stack((np.array(svs.cVeg),np.array(svs.cLitter),np.array(svs.cSoil),monthly_to_yearly(np.array(svs.rh))))
 obs=obs[0:int(cpa.number_of_months/12),:]
@@ -1115,155 +1146,221 @@ import matplotlib.pyplot as plt
 from general_helpers import plot_solutions
 
 param2res_sym = make_param2res_sym(cpa)
-mod= param2res_sym(epa_0)
+xs= param2res_sym(epa_0)
 
-# convert model output to yearly
-# mod=np.zeros(obs.shape[0]*obs.shape[1]).reshape([obs.shape[0],obs.shape[1]])  
-# for i in range(obs.shape[1]):
-#     mod[:,i]=monthly_to_yearly(xs[:,i])
-
-day_indices=month_2_day_index(range(cpa.number_of_months))
-
-fig = plt.figure()
+fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        #times=day_indices,
         times=range(int(cpa.number_of_months/12)),
         var_names=Observables._fields,
-        tup=(mod,obs)
+        tup=(xs,obs)
 )
 fig.savefig('solutions.pdf')
 
 # -
 
 # ### mcmc to optimize parameters 
-# coming soon
 
 # +
-c_max = np.array(
+epa_min = np.array(
     EstimatedParameters(
-        beta_leaf=0.3, 
-        beta_wood=0.4, 
-        Theta_sat=0.1, 
-        Theta_fc=0.2, 
-        r_C_leaf_rh=0, 
-        r_C_wood_rh=0, 
-        r_C_root_rh=0, 
-        r_C_aom1_rh=0.000121765601217656, 
-        r_C_aom2_rh=6.08828006088280e-5, 
-        r_C_smb1_rh=0.000365296803652968, 
-        r_C_smb2_rh=0.000136986301369863, 
-        r_C_smr_rh=0.000112591480577970, 
-        r_C_nom_rh=0.00438356164383562, 
-        r_C_dom_rh=0.182648401826484, 
-        r_C_psom_rh=0.00175342465753425, 
-        r_C_leaf_2_C_aom1=0.00416666666666667, 
-        r_C_leaf_2_C_aom2=0.00416666666666667, 
-        r_C_wood_2_C_aom1=4.56621004566210e-5, 
-        r_C_wood_2_C_aom2=4.56621004566210e-5, 
-        r_C_root_2_C_aom1=6.22665006226650e-5, 
-        r_C_root_2_C_aom2=6.22665006226650e-5, 
-        r_C_aom1_2_C_smb1=0.000121765601217656, 
-        r_C_aom1_2_C_smb2=0.000121765601217656, 
-        r_C_aom1_2_C_nom=0.000121765601217656, 
-        r_C_aom1_2_C_dom=0.000121765601217656, 
-        r_C_aom2_2_C_smb1=3.04414003044140e-5, 
-        r_C_aom2_2_C_smb2=3.04414003044140e-5, 
-        r_C_aom2_2_C_dom=3.04414003044140e-5, 
-        r_C_smb1_2_C_nom=0.000730593607305936, 
-        r_C_smb1_2_C_psom=0.000730593607305936, 
-        r_C_smb2_2_C_smr=0.000319634703196347, 
-        r_C_smr_2_C_smb1=0.000262713454681929, 
-        r_C_nom_2_C_smb1=0.00219178082191781, 
-        r_C_nom_2_C_dom=0.00219178082191781, 
-        r_C_nom_2_C_psom=0.00219178082191781, 
-        r_C_dom_2_C_smb1=0.365296803652968, 
-        r_C_dom_2_C_nom=0.365296803652968, 
-        r_C_psom_2_C_smb1=0.000438356164383562, 
-        C_leaf_0= 0.0017252, 
-        C_wood_0=0.2098991, 
-        C_aom1_0= 0.16313342, 
-        C_smb1_0= 3.30185076, 
-        C_smb2_0= 4.68136884, 
-        C_smr_0= 3.98696579, 
-        C_nom_0= 0.43008121, 
-        C_dom_0= 0.00337288
+        beta_leaf=0, 
+        beta_wood=0, 
+        Theta_sat=0.01, 
+        Theta_fc=0.02, 
+        r_C_aom1_rh=epa_0.r_C_aom1_rh/100, 
+        r_C_aom2_rh=epa_0.r_C_aom2_rh/100, 
+        r_C_smb1_rh=epa_0.r_C_smb1_rh/100, 
+        r_C_smb2_rh=epa_0.r_C_smb2_rh/100, 
+        r_C_smr_rh=epa_0.r_C_smr_rh/100, 
+        r_C_nom_rh=epa_0.r_C_nom_rh/100, 
+        r_C_dom_rh=epa_0.r_C_dom_rh/100, 
+        r_C_psom_rh=epa_0.r_C_psom_rh/100, 
+        r_C_leaf_2_C_aom1=epa_0.r_C_leaf_2_C_aom1/100, 
+        r_C_leaf_2_C_aom2=epa_0.r_C_leaf_2_C_aom2/100, 
+        r_C_wood_2_C_aom1=epa_0.r_C_wood_2_C_aom1/100,
+        r_C_wood_2_C_aom2=epa_0.r_C_wood_2_C_aom2/100, 
+        r_C_root_2_C_aom1=epa_0.r_C_root_2_C_aom1/100,
+        r_C_root_2_C_aom2=epa_0.r_C_root_2_C_aom2/100, 
+        r_C_aom1_2_C_smb1=epa_0.r_C_aom1_2_C_smb1/100,
+        r_C_aom1_2_C_smb2=epa_0.r_C_aom1_2_C_smb2/100, 
+        r_C_aom1_2_C_nom=epa_0.r_C_aom1_2_C_nom/100, 
+        r_C_aom1_2_C_dom=epa_0.r_C_aom1_2_C_dom/100, 
+        r_C_aom2_2_C_smb1=epa_0.r_C_aom2_2_C_smb1/100, 
+        r_C_aom2_2_C_smb2=epa_0.r_C_aom2_2_C_smb2/100, 
+        r_C_aom2_2_C_dom=epa_0.r_C_aom2_2_C_dom/100, 
+        r_C_smb1_2_C_nom=epa_0.r_C_smb1_2_C_nom/100,
+        r_C_smb1_2_C_psom=epa_0.r_C_smb1_2_C_psom/100, 
+        r_C_smb2_2_C_smr=epa_0.r_C_smb2_2_C_smr/100, 
+        r_C_smr_2_C_smb1=epa_0.r_C_smr_2_C_smb1/100, 
+        r_C_nom_2_C_smb1=epa_0.r_C_nom_2_C_smb1/100,
+        r_C_nom_2_C_dom=epa_0.r_C_nom_2_C_dom/100, 
+        r_C_nom_2_C_psom=epa_0.r_C_nom_2_C_psom/100,
+        r_C_dom_2_C_smb1=epa_0.r_C_dom_2_C_smb1/100, 
+        r_C_dom_2_C_nom=epa_0.r_C_dom_2_C_nom/100, 
+        r_C_psom_2_C_smb1=epa_0.r_C_psom_2_C_smb1/100, 
+        C_leaf_0=0, 
+        C_wood_0=0, 
+        C_aom1_0=0, 
+        C_smb1_0=0, 
+        C_smb2_0=0, 
+        C_smr_0=0, 
+        C_nom_0=0, 
+        C_dom_0=0
     )
 )
 
-c_min = np.array(
+epa_max = np.array(
     EstimatedParameters(
-        beta_leaf=0.3, 
-        beta_wood=0.4, 
-        Theta_sat=0.1, 
-        Theta_fc=0.2, 
-        r_C_leaf_rh=0, 
-        r_C_wood_rh=0, 
-        r_C_root_rh=0, 
-        r_C_aom1_rh=0.000121765601217656, 
-        r_C_aom2_rh=6.08828006088280e-5, 
-        r_C_smb1_rh=0.000365296803652968, 
-        r_C_smb2_rh=0.000136986301369863, 
-        r_C_smr_rh=0.000112591480577970, 
-        r_C_nom_rh=0.00438356164383562, 
-        r_C_dom_rh=0.182648401826484, 
-        r_C_psom_rh=0.00175342465753425, 
-        r_C_leaf_2_C_aom1=0.00416666666666667, 
-        r_C_leaf_2_C_aom2=0.00416666666666667, 
-        r_C_wood_2_C_aom1=4.56621004566210e-5, 
-        r_C_wood_2_C_aom2=4.56621004566210e-5, 
-        r_C_root_2_C_aom1=6.22665006226650e-5, 
-        r_C_root_2_C_aom2=6.22665006226650e-5, 
-        r_C_aom1_2_C_smb1=0.000121765601217656, 
-        r_C_aom1_2_C_smb2=0.000121765601217656, 
-        r_C_aom1_2_C_nom=0.000121765601217656, 
-        r_C_aom1_2_C_dom=0.000121765601217656, 
-        r_C_aom2_2_C_smb1=3.04414003044140e-5, 
-        r_C_aom2_2_C_smb2=3.04414003044140e-5, 
-        r_C_aom2_2_C_dom=3.04414003044140e-5, 
-        r_C_smb1_2_C_nom=0.000730593607305936, 
-        r_C_smb1_2_C_psom=0.000730593607305936, 
-        r_C_smb2_2_C_smr=0.000319634703196347, 
-        r_C_smr_2_C_smb1=0.000262713454681929, 
-        r_C_nom_2_C_smb1=0.00219178082191781, 
-        r_C_nom_2_C_dom=0.00219178082191781, 
-        r_C_nom_2_C_psom=0.00219178082191781, 
-        r_C_dom_2_C_smb1=0.365296803652968, 
-        r_C_dom_2_C_nom=0.365296803652968, 
-        r_C_psom_2_C_smb1=0.000438356164383562, 
-        C_leaf_0= 0.0017252, 
-        C_wood_0=0.2098991, 
-        C_aom1_0= 0.16313342, 
-        C_smb1_0= 3.30185076, 
-        C_smb2_0= 4.68136884, 
-        C_smr_0= 3.98696579, 
-        C_nom_0= 0.43008121, 
-        C_dom_0= 0.00337288
+        beta_leaf=1, 
+        beta_wood=1, 
+        Theta_sat=0.9, 
+        Theta_fc=0.9,  
+        r_C_aom1_rh=epa_0.r_C_aom1_rh*100, 
+        r_C_aom2_rh=epa_0.r_C_aom2_rh*100, 
+        r_C_smb1_rh=epa_0.r_C_smb1_rh*100, 
+        r_C_smb2_rh=epa_0.r_C_smb2_rh*100, 
+        r_C_smr_rh=epa_0.r_C_smr_rh*100, 
+        r_C_nom_rh=epa_0.r_C_nom_rh*100, 
+        r_C_dom_rh=epa_0.r_C_dom_rh*100, 
+        r_C_psom_rh=epa_0.r_C_psom_rh*100, 
+        r_C_leaf_2_C_aom1=epa_0.r_C_leaf_2_C_aom1*100, 
+        r_C_leaf_2_C_aom2=epa_0.r_C_leaf_2_C_aom2*100, 
+        r_C_wood_2_C_aom1=epa_0.r_C_wood_2_C_aom1*100,
+        r_C_wood_2_C_aom2=epa_0.r_C_wood_2_C_aom2*100, 
+        r_C_root_2_C_aom1=epa_0.r_C_root_2_C_aom1*100,
+        r_C_root_2_C_aom2=epa_0.r_C_root_2_C_aom2*100, 
+        r_C_aom1_2_C_smb1=epa_0.r_C_aom1_2_C_smb1*100,
+        r_C_aom1_2_C_smb2=epa_0.r_C_aom1_2_C_smb2*100, 
+        r_C_aom1_2_C_nom=epa_0.r_C_aom1_2_C_nom*100, 
+        r_C_aom1_2_C_dom=epa_0.r_C_aom1_2_C_dom*100, 
+        r_C_aom2_2_C_smb1=epa_0.r_C_aom2_2_C_smb1*100, 
+        r_C_aom2_2_C_smb2=epa_0.r_C_aom2_2_C_smb2*100, 
+        r_C_aom2_2_C_dom=epa_0.r_C_aom2_2_C_dom*100, 
+        r_C_smb1_2_C_nom=epa_0.r_C_smb1_2_C_nom*100,
+        r_C_smb1_2_C_psom=epa_0.r_C_smb1_2_C_psom*100, 
+        r_C_smb2_2_C_smr=epa_0.r_C_smb2_2_C_smr*100, 
+        r_C_smr_2_C_smb1=epa_0.r_C_smr_2_C_smb1*100, 
+        r_C_nom_2_C_smb1=epa_0.r_C_nom_2_C_smb1*100,
+        r_C_nom_2_C_dom=epa_0.r_C_nom_2_C_dom*100, 
+        r_C_nom_2_C_psom=epa_0.r_C_nom_2_C_psom*100,
+        r_C_dom_2_C_smb1=epa_0.r_C_dom_2_C_smb1*100, 
+        r_C_dom_2_C_nom=epa_0.r_C_dom_2_C_nom*100, 
+        r_C_psom_2_C_smb1=epa_0.r_C_psom_2_C_smb1*100, 
+        C_leaf_0=svs_0.cVeg, 
+        C_wood_0=svs_0.cVeg, 
+        C_aom1_0=svs_0.cLitter, 
+        C_smb1_0=svs_0.cSoil, 
+        C_smb2_0=svs_0.cSoil, 
+        C_smr_0=svs_0.cSoil, 
+        C_nom_0=svs_0.cSoil, 
+        C_dom_0=svs_0.cSoil
     )
 )
 
 
 # +
-from general_helpers import autostep_mcmc
-from model_specific_helpers import make_param_filter_func
+from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
 
-isQualified = make_param_filter_func(c_max, c_min)
+isQualified = make_param_filter_func(epa_max, epa_min)
 param2res = make_param2res_sym(cpa)
-
-
+print(isQualified(epa_0))
+print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
 C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=100,
-    c_max=c_max,
-    c_min=c_min,
-    acceptance_rate=10,   # default value | target acceptance rate in %
+    nsimu=2000, # for testing and tuning mcmc
+    #nsimu=20000,
+    c_max=np.array(epa_max),
+    c_min=np.array(epa_min),
+    acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1   # default value | increase value to reduce initial step size
+    D_init=1,  # default value | increase value to reduce initial step size
+    K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
+print("Data assimilation finished!")
+# -
+
+len(epa_0)
+
+# +
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
+epa_opt=EstimatedParameters(*par_opt)
+mod_opt = param2res(epa_opt)  
+
+print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(cpa.number_of_months),
+        var_names=Observables._fields,
+        tup=(mod_opt,obs)
+)
+
+fig.savefig('solutions_opt.pdf')
+
 # save the parameters and cost function values for postprocessing
-#pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('visit_autostep_da_aa.csv'), sep=',')
-#pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('visit_autostep_da_j_aa.csv'), sep=',')
+outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+
+import pandas as pd
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+# -
+
+print("Optimized parameters: ", epa_opt)
+par_dict_opt={
+        beta_leaf=epa_opt.beta_leaf, 
+        beta_wood=epa_opt.beta_wood, 
+        Theta_sat=epa_opt.Theta_sat, 
+        Theta_fc=epa_opt.Theta_fc,  
+        r_C_aom1_rh=epa_opt.r_C_aom1_rh, 
+        r_C_aom2_rh=epa_opt.r_C_aom2_rh, 
+        r_C_smb1_rh=epa_opt.r_C_smb1_rh, 
+        r_C_smb2_rh=epa_opt.r_C_smb2_rh, 
+        r_C_smr_rh=epa_opt.r_C_smr_rh, 
+        r_C_nom_rh=epa_opt.r_C_nom_rh, 
+        r_C_dom_rh=epa_opt.r_C_dom_rh, 
+        r_C_psom_rh=epa_opt.r_C_psom_rh, 
+        r_C_leaf_2_C_epa_opt.r_C_leaf_2_C_epa_opt, 
+        r_C_leaf_2_C_aom2=epa_opt.r_C_leaf_2_C_aom2, 
+        r_C_wood_2_C_aom1=epa_opt.r_C_wood_2_C_aom1,
+        r_C_wood_2_C_aom2=epa_opt.r_C_wood_2_C_aom2, 
+        r_C_root_2_C_aom1=epa_opt.r_C_root_2_C_aom1,
+        r_C_root_2_C_aom2=epa_opt.r_C_root_2_C_aom2, 
+        r_C_aom1_2_C_smb1=epa_opt.r_C_aom1_2_C_smb1,
+        r_C_aom1_2_C_smb2=epa_opt.r_C_aom1_2_C_smb2, 
+        r_C_aom1_2_C_nom=epa_opt.r_C_aom1_2_C_nom, 
+        r_C_aom1_2_C_dom=epa_opt.r_C_aom1_2_C_dom, 
+        r_C_aom2_2_C_smb1=epa_opt.r_C_aom2_2_C_smb1, 
+        r_C_aom2_2_C_smb2=epa_opt.r_C_aom2_2_C_smb2, 
+        r_C_aom2_2_C_dom=epa_opt.r_C_aom2_2_C_dom, 
+        r_C_smb1_2_C_nom=epa_opt.r_C_smb1_2_C_nom,
+        r_C_smb1_2_C_psom=epa_opt.r_C_smb1_2_C_psom, 
+        r_C_smb2_2_C_smr=epa_opt.r_C_smb2_2_C_smr, 
+        r_C_smr_2_C_smb1=epa_opt.r_C_smr_2_C_smb1, 
+        r_C_nom_2_C_smb1=epa_opt.r_C_nom_2_C_smb1,
+        r_C_nom_2_C_dom=epa_opt.r_C_nom_2_C_dom, 
+        r_C_nom_2_C_psom=epa_opt.r_C_nom_2_C_psom,
+        r_C_dom_2_C_smb1=epa_opt.r_C_dom_2_C_smb1, 
+        r_C_dom_2_C_nom=epa_opt.r_C_dom_2_C_nom, 
+        r_C_psom_2_C_smb1=epa_opt.r_C_psom_2_C_smb1, 
+        C_leaf_0=epa_opt.C_leaf_0, 
+        C_wood_0=epa_opt.C_wood_0, 
+        C_aom1_0=epa_opt.C_aom1_0, 
+        C_smb1_0=epa_opt.C_smb1_0, 
+        C_smb2_0=epa_opt.C_smb2_0, 
+        C_smr_0=epa_opt.C_smr_0, 
+        C_nom_0=epa_opt.C_nom_0, 
+        C_dom_0=epa_opt.C_dom_0
+}
+print("Optimized parameters dictionary: ", par_dict_opt)
+
+# ### Traceability analysis  
+#
+# #### coming soon...

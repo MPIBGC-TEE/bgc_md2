@@ -503,7 +503,7 @@ xi_d
 # We can go on and decompose N =\xi K -> K=\xi^{-1}N
 K=xi_d.inv()*N
 K
-# we now have the (symbolic) ingredients for the tracebility analysis.
+# we now have the (symbolic) ingredients for the traceability analysis.
 #xi_d,K,A
 
 # We can store the symbolic representation in a file that we can use in for several purposes later.
@@ -1156,6 +1156,8 @@ EstimatedParameters = namedtuple(
         "r_C_wood_litter_2_C_soil_slow",
         "r_C_wood_litter_2_C_soil_passive",
         "r_C_root_litter_2_C_soil_fast",
+        "r_C_root_litter_2_C_soil_slow",
+        "r_C_root_litter_2_C_soil_passive",
         'C_leaf_0',#for the trendy data also the startvalues have to be estimated but 
         'C_wood_0',
         #C_root_0 can be inferred as cVeg_0-(C_leaf_0+C_wood_0)
@@ -1189,10 +1191,10 @@ cpa=UnEstimatedParameters(
  r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
  r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
  #number_of_months=len(svs.rh)
- number_of_months=120
+ number_of_months=120 # for testing and tuning mcmc
 )
 
-X_0
+len(svs.rh)
 
 
 # +
@@ -1262,6 +1264,8 @@ epa_0=EstimatedParameters(
  r_C_wood_litter_2_C_soil_slow=2.98879202988792e-5,
  r_C_wood_litter_2_C_soil_passive=1.99252801992528e-5,
  r_C_root_litter_2_C_soil_fast=7.47198007471980e-5,
+ r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
+ r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
  C_leaf_0=steady_state_dict["C_leaf"],
  C_wood_0=steady_state_dict["C_wood"],
  C_leaf_litter_0=steady_state_dict["C_leaf_litter"],
@@ -1378,8 +1382,8 @@ def make_param2res_sym(
                 cVeg=float(V.C_leaf+V.C_wood+V.C_root),
                 cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
                 cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                ra=mra,
-                rh=mrh,
+                ra=mra/dpm, # monthly respiration back to kg/m2/day units
+                rh=mrh/dpm, # monthly respiration back to kg/m2/day units
             )
             # equivalent
             #o=np.array([
@@ -1392,9 +1396,11 @@ def make_param2res_sym(
             sols.append(o)
             
         sol=np.stack(sols)       
-        #mod=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-        #for i in range(sol.shape[1]):
-        #    mod[:,i]=monthly_to_yearly(sol[:,i])
+        # convert to yearly output if necessary
+        sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        for i in range(sol.shape[1]):
+           sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        sol=sol_yr
         return sol 
         
     return param2res
@@ -1409,18 +1415,25 @@ from general_helpers import plot_solutions
 param2res_sym = make_param2res_sym(cpa)
 xs= param2res_sym(epa_0)
 obs=np.column_stack([ np.array(v) for v in svs])
+xs.shape
 
 # +
 obs=obs[0:cpa.number_of_months,:] #cut 
-#print(obs.shape)
-#print(obs[:,3])
-obs[:,3:4]=obs[:,3:4]*86400
-#print(obs[:,3]
+obs[:,3:4]=obs[:,3:4]*86400 # kg/m2/s kg/m2/day;
+n=cpa.number_of_months
 
-fig = plt.figure()
+# convert to yearly output if necessary
+obs_yr=np.zeros(int(cpa.number_of_months/12)*obs.shape[1]).reshape([int(cpa.number_of_months/12),obs.shape[1]])  
+for i in range(obs.shape[1]):
+    obs_yr[:,i]=monthly_to_yearly(obs[:,i])
+obs=obs_yr
+n=int(cpa.number_of_months/12)
+
+print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        times=range(cpa.number_of_months),
+        times=range(n),
         var_names=Observables._fields,
         tup=(xs,obs)
         #tup=(obs,)
@@ -1440,16 +1453,18 @@ epa_min=EstimatedParameters(
  r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh/100,
  r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh/100,
  r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh/100,
- r_C_leaf_2_C_leaf_litter=            epa_0.r_C_leaf_2_C_leaf_litter/100,       
- r_C_wood_2_C_wood_litter=            epa_0.r_C_wood_2_C_wood_litter/100,
- r_C_root_2_C_root_litter=            epa_0.r_C_root_2_C_root_litter/100,
- r_C_leaf_litter_2_C_soil_fast=       epa_0.r_C_leaf_litter_2_C_soil_fast/100,
- r_C_leaf_litter_2_C_soil_slow=       epa_0.r_C_leaf_litter_2_C_soil_slow/100,
- r_C_leaf_litter_2_C_soil_passive=    epa_0.r_C_leaf_litter_2_C_soil_passive/100,
- r_C_wood_litter_2_C_soil_fast=       epa_0.r_C_wood_litter_2_C_soil_fast/100,
- r_C_wood_litter_2_C_soil_slow=       epa_0.r_C_wood_litter_2_C_soil_slow/100,
- r_C_wood_litter_2_C_soil_passive=    epa_0.r_C_wood_litter_2_C_soil_passive/100,
- r_C_root_litter_2_C_soil_fast=       epa_0.r_C_root_litter_2_C_soil_fast/100,
+ r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter/100,       
+ r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter/100,
+ r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter/100,
+ r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast/100,
+ r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow/100,
+ r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive/100,
+ r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast/100,
+ r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow/100,
+ r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive/100,
+ r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast/100,
+ r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow/100,
+ r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive/100,
  C_leaf_0=0,
  C_wood_0=0,
  C_leaf_litter_0=0,
@@ -1471,16 +1486,18 @@ epa_max=EstimatedParameters(
  r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh*100,
  r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh*100,
  r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh*100,
- r_C_leaf_2_C_leaf_litter=            epa_0.r_C_leaf_2_C_leaf_litter*100,       
- r_C_wood_2_C_wood_litter=            epa_0.r_C_wood_2_C_wood_litter*100,
- r_C_root_2_C_root_litter=            epa_0.r_C_root_2_C_root_litter*100,
- r_C_leaf_litter_2_C_soil_fast=       epa_0.r_C_leaf_litter_2_C_soil_fast*100,
- r_C_leaf_litter_2_C_soil_slow=       epa_0.r_C_leaf_litter_2_C_soil_slow*100,
- r_C_leaf_litter_2_C_soil_passive=    epa_0.r_C_leaf_litter_2_C_soil_passive*100,
- r_C_wood_litter_2_C_soil_fast=       epa_0.r_C_wood_litter_2_C_soil_fast*100,
- r_C_wood_litter_2_C_soil_slow=       epa_0.r_C_wood_litter_2_C_soil_slow*100,
- r_C_wood_litter_2_C_soil_passive=    epa_0.r_C_wood_litter_2_C_soil_passive*100,
- r_C_root_litter_2_C_soil_fast=       epa_0.r_C_root_litter_2_C_soil_fast*100,
+ r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter*100,       
+ r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter*100,
+ r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter*100,
+ r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast*100,
+ r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow*100,
+ r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive*100,
+ r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast*100,
+ r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow*100,
+ r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive*100,
+ r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast*100,
+ r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow*100,
+ r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive*100,
  C_leaf_0=svs_0.cVeg,
  C_wood_0=svs_0.cVeg,
  C_leaf_litter_0=svs_0.cLitter,
@@ -1491,7 +1508,7 @@ epa_max=EstimatedParameters(
 # -
 
 # ### mcmc to optimize parameters 
-# coming soon
+#
 
 np.array(epa_max)
 
@@ -1501,29 +1518,87 @@ from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cos
 isQualified = make_param_filter_func(epa_max, epa_min)
 param2res = make_param2res_sym(cpa)
 
-
+print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
 C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=1000,
+    nsimu=2000, # for testing and tuning mcmc
+    #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=10,   # default value | target acceptance rate in %
+    acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1   # default value | increase value to reduce initial step size
+    D_init=1,   # default value | increase value to reduce initial step size
+    K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
+print("Data assimilation finished!")
+
+# +
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
+epa_opt=EstimatedParameters(*par_opt)
+mod_opt = param2res(epa_opt)  
+
+print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        #times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months/12)), # for yearly output
+        var_names=Observables._fields,
+        tup=(mod_opt,obs)
+)
+
+fig.savefig('solutions_opt.pdf')
+
 # save the parameters and cost function values for postprocessing
-#pd.DataFrame(C_autostep).to_csv(dataPath.joinpath('visit_autostep_da_aa.csv'), sep=',')
-#pd.DataFrame(J_autostep).to_csv(dataPath.joinpath('visit_autostep_da_j_aa.csv'), sep=',')
+outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+
+import pandas as pd
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
 # -
 
-# ### Tracebility analysis  
+print("Optimized parameters: ", epa_opt)
+par_dict_opt={
+    beta_leaf: epa_opt.beta_leaf,
+    beta_wood: epa_opt.beta_wood,
+    T_0: epa_opt.T_0,
+    E: epa_opt.E,
+    KM: epa_opt.KM,
+    #r_C_leaf_rh: 0,
+    #r_C_wood_rh: 0,
+    #r_C_root_rh: 0,
+    r_C_leaf_litter_rh: epa_opt.r_C_leaf_litter_rh,
+    r_C_wood_litter_rh: epa_opt.r_C_wood_litter_rh,
+    r_C_root_litter_rh: epa_opt.r_C_root_litter_rh,
+    r_C_soil_fast_rh: epa_opt.r_C_soil_fast_rh,
+    r_C_soil_slow_rh: epa_opt.r_C_soil_slow_rh,
+    r_C_soil_passive_rh: epa_opt.r_C_soil_passive_rh,
+    r_C_leaf_2_C_leaf_litter: epa_opt.r_C_leaf_2_C_leaf_litter,
+    r_C_wood_2_C_wood_litter: epa_opt.r_C_wood_2_C_wood_litter,
+    r_C_root_2_C_root_litter: epa_opt.r_C_root_2_C_root_litter,
+    r_C_leaf_litter_2_C_soil_fast: epa_opt.r_C_leaf_litter_2_C_soil_fast,
+    r_C_leaf_litter_2_C_soil_slow: epa_opt.r_C_leaf_litter_2_C_soil_slow,
+    r_C_leaf_litter_2_C_soil_passive: epa_opt.r_C_leaf_litter_2_C_soil_passive,
+    r_C_wood_litter_2_C_soil_fast: epa_opt.r_C_wood_litter_2_C_soil_fast,
+    r_C_wood_litter_2_C_soil_slow: epa_opt.r_C_wood_litter_2_C_soil_slow,
+    r_C_wood_litter_2_C_soil_passive: epa_opt.r_C_wood_litter_2_C_soil_passive,
+    r_C_root_litter_2_C_soil_fast: epa_opt.r_C_root_litter_2_C_soil_fast,
+    r_C_root_litter_2_C_soil_slow: epa_opt.r_C_root_litter_2_C_soil_slow,
+    r_C_root_litter_2_C_soil_passive: epa_opt.r_C_root_litter_2_C_soil_passive 
+}
+print("Optimized parameters dictionary: ", par_dict_opt)
+
+# ### Traceability analysis  
 #
 # #### Outline
-# The tracebility analysis defines several diagnostic variables using as much algebraic structure of the mass balance equation as is available.
+# The traceability analysis defines several diagnostic variables using as much algebraic structure of the mass balance equation as is available.
 # Not all diagnostic variables are possible for all compartmental models. 
 #
 # We chose here to introduce the diagnostic variables not all at once but rather in the order of decreasing generality.
@@ -1603,10 +1678,10 @@ C_autostep, J_autostep = autostep_mcmc(
 # The influx $I$ can always be written as $I=b u$ where the scalar $u=\sum_{k=1\dots n} I_k$  and the dimensionless vector $b=I/u$ where $\sum_{k=1\dots n} b_k =1$.
 # Assumimg that the pool contents (the components of $X$)  have dimension $mass$ we can infer from eq. (1) that $M$ has dimension $\frac{1}{time}$.
 # The components of the (inverse) matrix $M^{-1}$ have therefore dimension $time$. Accordingly the product $RT= M^{-1} b$ is a vector of the same shape as $X$  whose components have dimesion $time$.
-# In the context of the Tracebility Framework $RT$ is therefore called *residence time*.
+# In the context of the Traceability Framework $RT$ is therefore called *residence time*.
 #
 # Notes on nomenclature: 
-# 1. The term *residence time* is not universally used with the same connotation outside the context of the *Tracebility Analysis*.
+# 1. The term *residence time* is not universally used with the same connotation outside the context of the *Traceability Analysis*.
 #
 # 1. It is not *the time of residence* of the particles in the system for the following reasons:
 #     1. In well mixed systems particles can reside in a pool for different times from zero to infinity.
@@ -1615,7 +1690,7 @@ C_autostep, J_autostep = autostep_mcmc(
 #     1. The origin of the term is probably most easily understood as the generalization of a one dimensional rate equation $\frac{d}{dt} x = m x + u$ 
 #        If $r$ and $u$ are constant then the mean residence time is $rt= m^{-1}$. If we start with the rate as property of the model the *residence time* 
 #        can be defined as the inverse of this rate. The above definition is the generalization of this simple relationship to matrices and vectors.
-#        The matrix $M^{-1}$ takes the role of the number $\frac{1}{m}$ . In the context of the *Tracebility Analysis* $M^{-1}$ is called *Chasing Time*. 
+#        The matrix $M^{-1}$ takes the role of the number $\frac{1}{m}$ . In the context of the *Traceability Analysis* $M^{-1}$ is called *Chasing Time*. 
 #
 
 # +
@@ -1735,7 +1810,7 @@ res_trace
 # +
 import matplotlib.pyplot as plt
 n=len(mvs.get_StateVariableTuple())
-fig=plt.figure(figsize=(10,(n+1)*10))
+fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
 axs=fig.subplots(n+1,2)
 days=list(range(ns))
 
