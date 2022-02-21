@@ -291,7 +291,9 @@ def download_my_TRENDY_output():
         variables = Observables._fields + Drivers._fields
     )
 #call it to test that the download works the data
-download_my_TRENDY_output()
+#download_my_TRENDY_output()
+
+
 # -
 
 import netCDF4 as nc
@@ -320,10 +322,9 @@ def get_variables_from_files(dataPath):
 # +
 
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
-ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
-ds.variables['rh']#[:,-56,26][20]
-print(ds)
-
+#ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
+#ds.variables['rh']#[:,-56,26][20]
+#print(ds)
 
 # +
 def get_example_site_vars(dataPath):
@@ -374,7 +375,7 @@ def get_example_site_vars(dataPath):
         C_veg,
         C_root
     ) = map(
-        lambda var: var[200:],
+        lambda var: var[204:],
         (
             C_litter,
             C_soil,
@@ -391,7 +392,7 @@ with Path('config.json').open(mode='r') as f:
 dataPath = Path(conf_dict['dataPath'])
 
 obs, dr =get_example_site_vars(dataPath)
-obs.cVeg.shape
+obs.cLitter
 # -
 
 from copy import copy
@@ -870,6 +871,8 @@ def make_param2res_sym(
         return sol
         
     return param2res
+# -
+
 
 
 # +
@@ -881,6 +884,7 @@ const_params = cpa
 param2res_sym = make_param2res_sym(const_params)
 xs= param2res_sym(epa_0)
 
+    
 day_indices=month_2_day_index(range(cpa.number_of_months)),
 
 fig = plt.figure()
@@ -893,7 +897,34 @@ plot_solutions(
 )
 fig.savefig('solutions_SDGVM.pdf')
 
+# +
+# now test it 
+import matplotlib.pyplot as plt
+from general_helpers import plot_solutions
+const_params = cpa
+
+param2res_sym = make_param2res_sym(const_params)
+xs= param2res_sym(epa_0)
+
+# convert model output to yearly
+mod=np.zeros(obs.shape[0]*obs.shape[1]).reshape([obs.shape[0],obs.shape[1]])  
+for i in range(obs.shape[1]):
+    mod[:,i]=monthly_to_yearly(xs[:,i])
+
+day_indices=month_2_day_index(range(cpa.number_of_months)),
+
+fig = plt.figure()
+plot_solutions(
+        fig,
+        #times=day_indices,
+        times=range(int(cpa.number_of_months/12)),
+        var_names=Observables._fields,
+        tup=(mod,obs)
+)
+fig.savefig('solutions.pdf')
+
 # -
+
 ns=1400
 days=list(range(ns))
 npp=[ npp_func(d) for d in days]
