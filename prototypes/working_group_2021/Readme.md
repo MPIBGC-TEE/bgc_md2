@@ -89,4 +89,50 @@ Before you start working on your own model you should make sure that you can run
 
 ### General Remarks and Additional information
 
+## Keep your repository updated! ## (Ohterwise you will base your changes on outdated code run into conflicts and make it very hard for us to incorporate your changes (and for you to incorporate ours...) 
+
+1. If you cloned the main repository ( https://github.com/MPIBGC-TEE/bgc_md2 ) it's a good practice to 
+   say `git pull` from time to time and definitely before you start working and change files.
+  
+1. If you use your own fork you should also update from the upstream repository frequently.
+   The first time you do this you have to tell your git which is the upstream repo **just once**:
+   ```
+   cd into/cloned/fork-repo
+   git remote add upstream https://github.com/MPIBGC-TEE/bgc_md2
+   git fetch upstream
+   ```
+   every time you want to pull the latest changes into your master you say:
+   ```
+   git pull upstream master
+   ```
+   
+## Don't push directly to the master of the main repo ##
+- If you have your own fork you are already save.
+- In case you cloned the main repository the simplest strategy is to work with a branch.
+  https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell
+  
+  - create a branch of your own (the `-b` is only necessary the first time)
+    ```
+    git checkout -b   {YourUniqueBranchName} 
+    ```
+  - **or** use the `test` branch 
+    ```
+    git checkout test
+    ```  
+  and after committing your changes 
+  push to it's remote.
+  This will trigger a run of bgc_md2's testsuite on github, regardless of the branch you used.
+  You can see the results under the `Actions` tab on the github page https://github.com/MPIBGC-TEE/bgc_md2/actions.  
+  **Only if everything works** we merge the commits of your branch into the master and push again... 
+  ```
+  git checkout master 
+  git merge {YourUniqueBranchName}
+  git push
+  ```
+  Thus the master branch of the main repo stays reliable for everybody and *failed/incomplete experiments* 
+  (including unintended ones)  do not affect your colleagues.
+
+ 
+  
+
 

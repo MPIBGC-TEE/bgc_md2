@@ -119,7 +119,7 @@ def make_multivariate_normal_proposer(
     return GenerateParamValues
 
 
-def accept_costfunction(J_last: float, J_new: float, K=1):
+def accept_costfunction(J_last: float, J_new: float, K=2):
     """Regulates how new cost functions are accepted or rejected. If the new cost function is lower than the old one,
     it is always accepted. If the the new cost function is higher than the old one, it has a random
     chance to be accepted based on percentage difference between the old and the new. The chance is defined
@@ -132,7 +132,7 @@ def accept_costfunction(J_last: float, J_new: float, K=1):
     accept = False
     delta_J_percent = (J_last - J_new) / J_last * 100  # normalize delta_J as a percentage of current J
     randNum = np.random.uniform(0, 1)
-    if min(1.0, np.exp(delta_J_percent*K)) > randNum:  # 1% higher cost function has 37% chance to be accepted
+    if min(1.0, np.exp(delta_J_percent*K)) > randNum:  # 1% higher cost function has 14% chance to be accepted
         accept = True
     return accept
 
@@ -146,9 +146,10 @@ def autostep_mcmc(
         nsimu: int,
         c_max: np.ndarray,
         c_min: np.ndarray,
-        acceptance_rate=10,
+        acceptance_rate=15,
         chunk_size=100,
-        D_init=1
+        D_init=1, 
+        K=1 
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
@@ -164,10 +165,11 @@ def autostep_mcmc(
     :param nsimu: The length of the chain
     :param c_max: Array of maximum values for each parameter
     :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %, default is 10%
+    :param acceptance_rate: Target acceptance rate in %, default is 20%
     :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
     Set to 0 for constant step size. Default is 100.
-    :param D_init: initial D value (Increase to get a smaller step size), default = 1
+    :param D_init: initial D value (increase to get a smaller step size), default = 1
+    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions), default = 1
     """
     np.random.seed(seed=10)
 
@@ -180,7 +182,8 @@ def autostep_mcmc(
     J_last = costfunction(first_out)
     J_min = J_last
     J_min_simu = 0
-    print('first_iteration done after ' + str(time() - tb))
+    print('First_iteration done after ' + str( round(time() - tb, 2)) + 's')
+    print('Status update every 10 iterations:')
     # J_last = 400 # original code
 
     # initialize the result arrays to the maximum length
@@ -201,15 +204,18 @@ def autostep_mcmc(
                 accepted_current = 1  # to avoid division by 0
             D = D * np.sqrt(
                 acceptance_rate / (accepted_current / chunk_size * 100))  # compare acceptance and update step
+            if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
+                D = (1 / paramNum)
             accepted_current = 0
             proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
         if simu % (chunk_size * 20) == 0:  # every 20 chunks - return to the initial step size (to avoid local minimum)
             D = D_init
+
         c_new = proposer(C_op)
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
 
-        if accept_costfunction (J_last=J_last, J_new=J_new):
+        if accept_costfunction (J_last=J_last, J_new=J_new, K=K):
             C_op = c_new
             J_last = J_new
             if J_last < J_min:
@@ -226,11 +232,10 @@ def autostep_mcmc(
         if simu % 10 == 0 or simu == (nsimu - 1):
             print(
                 """ 
-               #(upgraded): {n}  | D value: {d} 
-               overall acceptance ratio: {r}% | currently {ac} accepted out of {ch}
+               #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
                progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
                time elapsed: {minutes:02d}:{sec:02d}
-               overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
+               overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
                """.format(
                     n=upgraded,
                     r=int(upgraded / (simu + 1) * 100),
@@ -242,7 +247,7 @@ def autostep_mcmc(
                     sec=int((time() - st) % 60),
                     cost=round(J_min, 2),
                     cost2=round(J_last, 2),
-                    ac=accepted_current,
+                    ac=accepted_current/chunk_size*100,
                     # rr=int(accepted_current / chunk_size * 100),
                     ch=chunk_size,
                     d=round(D, 3),
@@ -876,9 +881,27 @@ def monthly_to_yearly(monthly):
     return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
 
 
+
 def pseudo_daily_to_yearly(daily):
     # compute a yearly average from pseudo daily data
     # for one data point
     pseudo_days_per_year = pseudo_days_per_month*12 
     sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
     return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+
+def make_param_filter_func(
+        c_max: np.ndarray,
+        c_min: np.ndarray
+        ) -> Callable[[np.ndarray], bool]:
+
+    def isQualified(c):
+        # fixme
+        #   this function is model specific: It discards parameter proposals
+        #   where beta1 and beta2 are >0.99
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        return (cond1 and cond2 )
+        
+    
+    return isQualified
+
