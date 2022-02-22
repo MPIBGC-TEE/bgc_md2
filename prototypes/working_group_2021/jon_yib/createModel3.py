@@ -323,7 +323,7 @@ drivers=namedtuple(
 
 #when downloading data make sure model names match TRENDY server names:
 #"CABLE-POP","CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP",
-#"JSBACH","JULES-ES-1.0","LPJ-GUESS","LPJwsl","LPX-Bern","OCN",
+#"JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern","OCN",
 #"ORCHIDEE","ORCHIDEE-CNP","ORCHIDEEv3","ORCHIDEEv3_0.5deg"
 #"SDGVM","VISIT","YIBs"
 
@@ -615,8 +615,8 @@ cpa._asdict()    #print - everything should have a numeric value
 # #### Create list of parameters to be optimized during data assimilation:
 
 estimated = {**parameters._asdict(),**V_init._asdict()}            # Create dictionary of parameters and initial pools
-OptimizedParameters = namedtuple('OptimizedParameters', estimated) # Create function to convert dictionary to namedtuple
-epa0 = OptimizedParameters(**estimated)                            # Create namedtuple of all parameters optimized an initial values
+EstimatedParameters = namedtuple('EstimatedParameters', estimated) # Create function to convert dictionary to namedtuple
+epa0 = EstimatedParameters(**estimated)                            # Create namedtuple of all parameters optimized an initial values
 epa0._asdict()   #print
 
 # #### Create forward model function:
@@ -650,7 +650,7 @@ def make_param2res_sym(
     def param2res(pa):
         
         # Parameter vector
-        epa=OptimizedParameters(*pa)
+        epa=EstimatedParameters(*pa)
         
         # Create a startvector for the iterator 
         V_init = StartVector(
@@ -710,7 +710,7 @@ def make_param2res_sym(
                 outfluxes = B @ X
                 X_new = X + b + outfluxes
                 # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-                rh=0 
+                rh= -np.sum(outfluxes[3:n]) 
                 V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
                 return V_new
             
@@ -761,6 +761,14 @@ def make_param2res_sym(
 const_params = cpa                               # Define constant parameters
 param2res_sym = make_param2res_sym(const_params) # Define forward model
 xs= param2res_sym(epa0)                          # Run forward model from initial conditions
+
+# Create observation tuple
+#xs_month=[]
+#xs_month[:,0] = monthly_to_yearly(xs[:,0])
+#xs_month[:,1] = monthly_to_yearly(xs[:,1])
+#xs_month[:,2] = monthly_to_yearly(xs[:,2])
+#xs = np.stack(xs_month)
+#obs = np.stack[svs.cVeg,svs.cSoil,monthly_to_yearly(svs.rh)]
 
 # Plot simulation output for observables
 fig = plt.figure()

@@ -818,7 +818,8 @@ def download_TRENDY_output(
                     modelname_file = "ORCHIDEEv3"
                 elif model == "ISBA_CTRIP":
                     modelname_file = "ISBA-CTRIP"
-                elif model == "JULES-ES-1.0":
+                elif model == "JULES-ES":
+                    modelname = "JULES-ES-1.0"
                     modelname_file = "JULES-ES-1p0"
                 elif model == "SDGVM" or model == "VISIT":
                     ext = "nc.gz"
