@@ -59,7 +59,12 @@ from general_helpers import (
     month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
-    plot_solutions
+    plot_solutions,
+    autostep_mcmc,  
+    make_jon_cost_func
+)
+from model_specific_helpers import (
+    make_param_filter_func
 )
 from pathlib import Path
 from copy import copy, deepcopy
@@ -748,7 +753,12 @@ def make_param2res_sym(
                 rh=mrh,
             )
             sols.append(o) # Append monthly value to results
-        sol=np.stack(sols) # Stack arrays    
+        sol=np.stack(sols) # Stack arrays 
+        # convert to yearly output
+        sol_yr=np.zeros(cpa.nyears*sol.shape[1]).reshape([cpa.nyears,sol.shape[1]])  
+        for i in range(sol.shape[1]):
+           sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        sol=sol_yr
         return sol
     return param2res
 
@@ -756,30 +766,113 @@ def make_param2res_sym(
 # -
 
 # ## Forward Model Run
+# #### Run model forward:
 
-# +
 const_params = cpa                               # Define constant parameters
 param2res_sym = make_param2res_sym(const_params) # Define forward model
-xs= param2res_sym(epa0)                          # Run forward model from initial conditions
+xs = param2res_sym(epa0)                         # Run forward model from initial conditions
+xs
 
-# Create observation tuple
-#xs_month=[]
-#xs_month[:,0] = monthly_to_yearly(xs[:,0])
-#xs_month[:,1] = monthly_to_yearly(xs[:,1])
-#xs_month[:,2] = monthly_to_yearly(xs[:,2])
-#xs = np.stack(xs_month)
-#obs = np.stack[svs.cVeg,svs.cSoil,monthly_to_yearly(svs.rh)]
+# #### Create array of yearly observation data:
+
+n = cpa.nyears                                   # define number of years
+obs = np.zeros(n*3).reshape([n,3])               # create empty yearly dataframe 
+obs[:,0] = svs.cVeg                              # add yearly cVeg data to obs data
+obs[:,1] = svs.cSoil                             # add yearly cSoil data to obs data
+obs[:,2]=monthly_to_yearly(svs.rh)               # convert rh to yearly data 
+obs
+
+# #### Plot data-model fit:
 
 # Plot simulation output for observables
 fig = plt.figure()
 plot_solutions(
         fig,
-        times=range(cpa.nyears*12),
+        times=range(n),
         var_names=observables._fields,
-        tup=(xs,)
+        tup=(xs,obs)
 )
 fig.savefig('solutions.pdf')
-# -
 
 # ## Data Assimilation
-# Coming soon
+# #### Define parameter min/max values:
+
+# +
+# set min/max parameters to +- 100 times initial values
+epa_min=EstimatedParameters._make(tuple(np.array(epa0)*0.01))
+epa_max=EstimatedParameters._make(tuple(np.array(epa0)*100))
+
+# fix values that are problematic from calculation
+epa_max = epa_max._replace(beta_leaf = 0.99)
+epa_max = epa_max._replace(beta_root = 0.99)
+epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
+epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
+epa_max = epa_max._replace(c_wood_0 = svs_0.cVeg)
+epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_lit_met_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_lit_str_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_lit_mic_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_soil_met_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_soil_str_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_soil_mic_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
+epa_max = epa_max._replace(c_soil_passive_0 = svs_0.cSoil)
+
+#print - all names should have numerical values
+epa_max._asdict()
+# -
+
+# #### Conduct data assimilation:
+
+# +
+isQualified = make_param_filter_func(epa_max, epa_min, obs[0,0], obs[0,1])
+param2res = make_param2res_sym(cpa)
+costfunction = make_jon_cost_func(obs)
+
+print("Starting data assimilation...")
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = autostep_mcmc(
+    initial_parameters=epa0,
+    filter_func=isQualified,
+    param2res=param2res,
+    costfunction=costfunction,
+    nsimu=2000, # for testing and tuning mcmc
+    #nsimu=20000,
+    c_max=np.array(epa_max),
+    c_min=np.array(epa_min),
+    acceptance_rate=15,   # default value | target acceptance rate in %
+    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1,   # default value | increase value to reduce initial step size
+    K=2 # default value | increase value to reduce acceptance of higher cost functions
+)
+print("Data assimilation finished!")
+# -
+
+# #### Graph data assimilation results:
+
+# +
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
+epa_opt=EstimatedParameters(*par_opt)
+mod_opt = param2res(epa_opt)  
+
+print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        #times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months/12)), # for yearly output
+        var_names=observables._fields,
+        tup=(mod_opt,obs)
+)
+
+fig.savefig('solutions_opt.pdf')
+
+# save the parameters and cost function values for postprocessing
+outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+
+import pandas as pd
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')

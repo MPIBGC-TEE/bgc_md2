@@ -230,11 +230,9 @@ def make_param_filter_func(
                 break
         if(c[0] + c[1] > 0.99):
             flag = False
-        if(np.sum(c[17:18]) > 0.99*c_veg):
+        if(np.sum(c[33:36]) > 0.99*c_veg):
             flag = False
-        if(np.sum(c[19:26]) > 0.99*c_soil):
-            flag = False
-        if((c[14] > 0.99) or (c[15] > 0.99) or (c[16] > 0.99)):
+        if(np.sum(c[35:45]) > 0.99*c_soil):
             flag = False
         return flag
     
