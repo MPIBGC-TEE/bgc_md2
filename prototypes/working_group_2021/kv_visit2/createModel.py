@@ -919,31 +919,29 @@ expr_cont
 
 # -
 
-# what we want is acutally the accumulated flux over one timestep in the simplest approximation (euler forward)
-# the framework has a helper function to create an euler forward discretization of a flux
-delta_t=Symbol("delta_t")
-it=Symbol("it") #arbitrary symbol (in our case it=days_since_start )
-expr_disc=hr.euler_forward_net_flux_sym(
-    flux_sym_cont=expr_cont,
-    cont_time=t,
-    delta_t=delta_t,
-    iteration=it #arbitrary
-)
+# what we want is acutally the flux in the simplest approximation 
+delta_t=Symbol("delta_t") #
+it=Symbol("it")           #arbitrary symbol for the step index )
+t=mvs.get_TimeSymbol()
+expr_disc=expr_cont.subs({t:delta_t*it})
 # If you look at the result you see that the euler forwar approximation assumes the flux at time t to be constant for the timestep  
 expr_disc
 
+# Remark
 # if we assume tat delta_t is 1 day and it counts days 
 # it becomes even simpler
 expr_disc.subs({delta_t:1})
-#Which is the same as if we had 't' replaced in the above formula wiht 'it'
+# Which is the same as if we had 't' replaced in the above formula wiht 'it'
+# but this does not generalise to a bigger stepsize
 
 # +
 # this expression we turn now into a numeric funciton of it
-# although in our example it depends only on t and C_leaf_litter we make it a function of ALL state variables to be able to call it in the same way as u_func and B_func 
-argtup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple())
+# although in our example it depends only on the iteration "it" and C_leaf_litter 
+# we make it a function of it and ALL state variables to be able to call it in the same way as u_func and B_func 
+argtup=(it, *mvs.get_StateVariableTuple())
 
 C_leaf_litter_func = hr.numerical_function_from_expression(
-    expr=expr_cont,
+    expr=expr_disc.subs({delta_t:1}),
     tup=argtup, 
     parameter_dict=par_dict,
     func_set=func_dict
@@ -954,15 +952,28 @@ C_leaf_litter_func(0,*X_0)
 
 # +
 #mass production of output functions
-def numfunc(expr):
+def numfunc(expr_cont,delta_t_val):
+    # build the discrete expression (which depends on it,delta_t instead of
+    # the continius one that depends on t (TimeSymbol))
+    it=Symbol("it")           #arbitrary symbol for the step index )
+    t=mvs.get_TimeSymbol()
+    delta_t=Symbol('delta_t')
+    expr_disc = expr_cont.subs({t:delta_t*it})
     return hr.numerical_function_from_expression(
-    expr=expr,
-    tup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple()),
-    parameter_dict=par_dict,
-    func_set=func_dict
-)
+        expr=expr_disc.subs({delta_t:delta_t_val}),
+        tup=(it, *mvs.get_StateVariableTuple()),
+        parameter_dict=par_dict,
+        func_set=func_dict
+    )
     
-numOutFluxesBySymbol={k:numfunc(expr) for k,expr in mvs.get_OutFluxesBySymbol().items()} 
+numOutFluxesBySymbol={
+    k:numfunc(expr_cont,1) 
+    for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+} 
+numOutFluxesBySymbol2={
+    k:numfunc(expr_cont,2) 
+    for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+} 
 
 # now we can compute ra 
 # apply all the outfluxfunctions of the veg pools and add up the result
@@ -983,16 +994,48 @@ rh_0=np.sum(
 ra_0,rh_0
 # -
 
-OutFluxesBySymbol
+numOutFluxesBySymbol[C_leaf_litter](0,*X_0)
 
-# We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
-# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
+numOutFluxesBySymbol2[C_leaf_litter](0,*X_0)
+
+# We now build the essential object to run the model forward. We have a 
+# - startvector $V_0$ and 
+# - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
+#   the dependence on the iteration $it$ allows us to represent drivers that
+#   are functions of time 
 #
-# In our case we are also interested in tracking the autotrophic and heterotrophic respiration.
+# So we can compute all values:
 #
-# So we will let `bgc_md2` derive numeric functions for the Compartmental matrix $B$ and the input $u$ , $ra$ $rh$ from our symbolic description 
-# but build our own iterator by combining these functions.    
-# We will start by creating $V_0$ and then build the function $f$
+# $V_1=f(0,V_0)$
+#
+# $V_2=f(1,V_1)$
+#
+# ...
+#
+# $V_n+1=f(n,V_n)$
+#
+# Technically this can be implemented as an `iterator` object with a `__next__()` method to move our system one step forward in time. 
+#
+# What we want to build is an object `it_sym` that can use as follows.
+# ```python
+# for i in range(10):
+#     print(it_sym.__next__())
+# ```
+# to print out the first 10 values.
+#
+# If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, 
+# without all the nonessential technical details of e.g. how many steps we want to make or which of the results we want to store.
+# This is essential if we want to test and use the iterator later in different scenarios but avoid reimplemtation of the basic timestep. 
+#
+# Remark:
+#
+# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically without the need to build an iterator ourselves. 
+# In our case we are also interested in tracking the autotrophic and heterotrophic respiration and therefore have to recreate and extend the code `bgc_md2` would use in the background.
+# We will let `bgc_md2` do part of the work and derive numeric functions for the Compartmental matrix $B$ and the input $u$ and the Outfluxes - from which to compute $ra$ $rh$ - from our symbolic description but we will build our own iterator by combining these functions.    
+# We will proceed as follows:
+# - create $V_0$ 
+# - build the function $f$
+#
 
 # to guard agains accidentally changed order we use a namedtuple again. Since B_func and u_func rely 
 # on the correct ordering of the statevariables we build V dependent on this order 
@@ -1031,7 +1074,7 @@ def make_daily_iterator_sym(
         par_dict,
         func_dict
     ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val=1)  
     sv=mvs.get_StateVariableTuple()
     n=len(sv)
     # build an array in the correct order of the StateVariables which in our case is already correct 
@@ -1042,6 +1085,10 @@ def make_daily_iterator_sym(
         [V_init.ra,V_init.rh]
     ).reshape(n+2,1) #reshaping is neccessary for matmul
     
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=1) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
     def f(it,V):
         X = V[0:n]
         b = u_func(it,X)
@@ -1051,14 +1098,14 @@ def make_daily_iterator_sym(
         
         ra = np.sum(
             [
-              numOutFluxesBySymbol[k](0,*X_0) 
+              numOutFluxesBySymbol[k](it,*X) 
                 for k in [C_leaf,C_wood,C_root] 
                 if k in numOutFluxesBySymbol.keys()
             ]
         )
         rh = np.sum(
             [
-                numOutFluxesBySymbol[k](0,*X_0) 
+                numOutFluxesBySymbol[k](it,*X) 
                 for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
                 if k in numOutFluxesBySymbol.keys()
             ]
@@ -1070,10 +1117,9 @@ def make_daily_iterator_sym(
         initial_values=V_arr,
         f=f,
     )
+
+
 # -
-
-
-
 V_init
 
 np.array(V_init).shape
@@ -1095,6 +1141,117 @@ for i in range(ns):
     res_sym[i,:]=it_sym.__next__().reshape(len(V_init),)
 res_sym
 # -
+
+# We now create another iterator that does run with a different timestep and check that this does not change the results.
+# If we can increase the timestep the data assimilation will be much faster.
+#
+
+# +
+
+from CompartmentalSystems import helpers_reservoir as hr
+from CompartmentalSystems.TimeStepIterator import (
+        TimeStepIterator2,
+)
+from copy import copy
+
+def make_iterator_sym(
+        mvs,
+        V_init: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    sv=mvs.get_StateVariableTuple()
+    n=len(sv)
+    # build an array in the correct order of the StateVariables which in our case is already correct 
+    # since V_init was built automatically but in case somebody handcrafted it and changed
+    # the order later in the symbolic formulation....
+    V_arr=np.array(
+        [V_init.__getattribute__(str(v)) for v in sv]+
+        [V_init.ra,V_init.rh]
+    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+    
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B @ X
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        
+        ra = np.sum(
+            [
+              numOutFluxesBySymbol[k](it,*X)
+                for k in [C_leaf,C_wood,C_root] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[k](it,*X)
+                for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+
+
+# +
+
+# test the different iterators
+    
+it_sym = make_daily_iterator_sym(
+    mvs,
+    V_init=V_init,
+    par_dict=par_dict,
+    func_dict=func_dict
+)
+delta_t_val=30 #n_day iterator
+it_sym_2 = make_iterator_sym(
+    mvs,
+    V_init=V_init,
+    par_dict=par_dict,
+    func_dict=func_dict,
+    delta_t_val=delta_t_val
+)
+# we will run the dayly for 15 steps
+ns=10000
+res= np.zeros((ns,len(V_init)))
+times = np.arange(0,ns)
+res[0,:]=V_init 
+for i in range(1,ns-1):
+    res[i,:]=it_sym.__next__().reshape(len(V_init),)
+
+times_2= np.arange(0,ns,delta_t_val)
+res_2= np.zeros((len(times_2),len(V_init)))
+res_2[0,:]=V_init 
+for i in range(1,len(times_2)-1):
+    res_2[i,:]=it_sym_2.__next__().reshape(len(V_init),)
+# -
+
+times
+
+
+times_2
+
+from matplotlib import pyplot as plt
+fig = plt.figure(figsize=(5,50))
+n_coord=len(V_init)
+axs=fig.subplots(n_coord,1)
+for coord in range(n_coord):
+    axs[coord].plot(times,res[:,coord])
+    axs[coord].plot(times_2,res_2[:,coord])
 
 # ## Data assimilation
 # Until now we have used only the initial values of the observations. 
@@ -1310,9 +1467,10 @@ def make_param2res_sym(
     
     # the time dependent driver function for gpp does not change with the estimated parameters
     # so its enough to define it once as in our test
+    seconds_per_day = 86400
     def npp_func(day):
         month=day_2_month_index(day)
-        return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
+        return (dvs.gpp[month]-svs.ra[month]) * seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -1350,62 +1508,60 @@ def make_param2res_sym(
             'NPP':npp_func,
              'xi':xi_func
         }
-    
-        it_sym = make_daily_iterator_sym(
+        # size of the timestep in days
+        # We could set it to 30 o
+        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
+        delta_t_val=15 
+        it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
             par_dict=par_dict,
-            func_dict=func_dict
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
         )
         
         # Now that we have the iterator we can start to compute.
-        # the first thing to notice is that we don't need to store all daily values,
-        # since the observations are recorded monthly while our iterator has a
-        # daily timestep.
+        # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
+        # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
         # - for the pool contents we only need to record the last day of the month
-        # - for the respiration(s) ra and rh we have to sum up the daily values 
-        #   over a month
+        # - for the respiration(s) ra and rh we want an accumulated value (unit mass) 
+        #   have to sum up the products of the values*delta_t over a month
         # 
         # Note: check if TRENDY months are like this...
-        days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         sols=[]
         for m in range(cpa.number_of_months):
-            dpm = days_per_month[ m % 12]  
+            #dpm = days_per_month[ m % 12]  
+            dpm=30 # 
             mra=0
             mrh=0
-            for d in range(dpm):
+            for d in range(int(dpm/delta_t_val)):
                 v = it_sym.__next__()
-                mra +=v[9,0]
-                mrh +=v[10,0]
+                #mra +=v[9,0] 
+                #mrh +=v[10,0]
+                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+                # at the moment the iterator also computes a flux but in kg^-2 ^day
             V=StartVector(*v)
             o=Observables(
                 cVeg=float(V.C_leaf+V.C_wood+V.C_root),
                 cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
                 cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                ra=mra/dpm, # monthly respiration back to kg/m2/day units
-                rh=mrh/dpm, # monthly respiration back to kg/m2/day units
+                ra=v[9,0]/seconds_per_day,
+                rh=v[10,0]/seconds_per_day # the data is per second while the time units for the iterator refer to days
+                #ra=mra/dpm, # monthly respiration back to kg/m2/day units
+                #rh=mrh/dpm, # monthly respiration back to kg/m2/day units
             )
-            # equivalent
-            #o=np.array([
-            #    np.sum(v[0:3]),
-            #    np.sum(v[3:6]),
-            #    np.sum(v[6:9]),
-            #    mra,
-            #    mrh,
-            #])
             sols.append(o)
             
         sol=np.stack(sols)       
-        # convert to yearly output if necessary
-        sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-        for i in range(sol.shape[1]):
-           sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-        sol=sol_yr
+        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
+        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
         return sol 
         
     return param2res
-
-
 
 # +
 # now test it 
@@ -1419,15 +1575,15 @@ xs.shape
 
 # +
 obs=obs[0:cpa.number_of_months,:] #cut 
-obs[:,3:4]=obs[:,3:4]*86400 # kg/m2/s kg/m2/day;
+obs[:,3:4]=obs[:,3:4]
 n=cpa.number_of_months
 
 # convert to yearly output if necessary
-obs_yr=np.zeros(int(cpa.number_of_months/12)*obs.shape[1]).reshape([int(cpa.number_of_months/12),obs.shape[1]])  
-for i in range(obs.shape[1]):
-    obs_yr[:,i]=monthly_to_yearly(obs[:,i])
-obs=obs_yr
-n=int(cpa.number_of_months/12)
+#obs_yr=np.zeros(int(cpa.number_of_months/12)*obs.shape[1]).reshape([int(cpa.number_of_months/12),obs.shape[1]])  
+#for i in range(obs.shape[1]):
+#    obs_yr[:,i]=monthly_to_yearly(obs[:,i])
+#obs=obs_yr
+#n=int(cpa.number_of_months/12)
 
 print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
