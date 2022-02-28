@@ -45,6 +45,9 @@ MR = zeta_gluc/zeta_dw * R_mR * B_R
 B_S_star = symbols("B_S_star")
 MS = zeta_gluc/zeta_dw * R_mS * B_S_star
 
+# maintenance respiration correction term
+MR_C = symbols("MR_C")
+
 # growth respiration fluxes for leaves, roots, sapwood
 GL = f_L * C_gL/(C_gL+delta_L) * (1-eta_L) * E
 GR = f_R * C_gR/(C_gR+delta_R) * (1-eta_R) * E

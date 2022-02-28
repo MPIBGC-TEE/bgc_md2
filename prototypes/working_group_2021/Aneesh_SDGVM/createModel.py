@@ -296,30 +296,44 @@ def download_my_TRENDY_output():
 
 # -
 
+# Before we build a function to load the data lets look at it to get an idea.
+#
+
+# +
+# this is just an analysis you dont need this code later
+dataPath=Path(conf_dict['dataPath'])
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
 import json 
-def get_variables_from_files(dataPath):
-    # Read NetCDF data  ******************************************************************************************************************************
-    names = [
-        ('cLitter', 'SDGVM_S2_cLitter.nc'),
-        ('cSoil', 'SDGVM_S2_cSoil.nc'),
-        ('cVeg', 'SDGVM_S2_cVeg.nc'),
-        ('cRoot', 'SDGVM_S2_cRoot.nc'),
-        ('npp', 'SDGVM_S2_npp.nc'),
-        ('rh', 'SDGVM_S2_rh.nc')
-    ]
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        ds = nc.Dataset(str(path))
-        return ds.variables[vn][:, :, :]
 
-    return map(f, names)
+#  the reference point, values and number of recorded times in the data streams differ
+# there are two gropus
+ds_cLitter=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
+ds_cVeg=nc.Dataset(dataPath.joinpath('SDGVM_S2_cVeg.nc'))
+print(ds_cLitter)
+for ds in [ds_cLitter,ds_cVeg]:
+    print(ds['time'].units)
+    print(ds['time'].shape)
+
+ds_rh=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
+ds_npp=nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc'))
+for ds in [ds_rh,ds_npp]:
+    print(ds['time'].units)
+    print(ds['time'].shape)
+
+# refer them to a single reference point 01/01/1900 by substractin 200y in h's
+h_from_1900=ds_cLitter.variables['time'][:]-200*12*30*24
 
 
-# +
+# find the index after which we are after 01/01 1900
+ind_start=0
+while h_from_1900[ind_start]<0:
+    ind_start+=1
+print('ind_start={}'.format(ind_start))
+#ind_start is 200 confirming that we have 1 value per year and have to remove the first 200 values
+c_h_from_1900_after_1900=h_from_1900[ind_start:] 
+c_h_from_1900_after_1900.shape
 
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
@@ -395,26 +409,84 @@ obs, dr =get_example_site_vars(dataPath)
 obs.cLitter
 # -
 
-from copy import copy
-rh=copy(obs.rh)
-lm=len(rh)
-print(lm)
-ps=12
-rh_y=[
-    rh[p*ps:(p+1)*ps]   
-    for p in range(int(lm/ps))
-]
-len(rh_y)
+ds_cVeg.variables['cVeg'][ind_start:,-25,16], ds_cVeg.variables['cVeg'][ind_start:,-25,16].shape
+
+
+# this is the important function that we will use later
+def get_example_site_vars(dataPath):
+    # According to the netcdf metadata the datasets are not uniform 
+    # - npp and rh start at 360h (15 days) after 01-01-1900 and are recorded every 30 days
+    #   these are interpreted as mid-monthly 
+    # - C_litter, C_soil, C_veg, C_root start at 4320 h = 180 days = 6 months after 01-01-1700 
+    #   These can be seen at midyearly values since there are 6 (midmonth) times of the npp and rh measurements after the last (midyear)
+    #   measurement of C_litter, C_soil, C_veg, C_root
+    
+    # To combine these streams into a consistent array of observations we will:
+    # 1. Make C_litter, C_soil, C_veg, C_root refer to hours after 01/01/1900 (as npp and rh) 
+    # 
+    # 2. cut away everything before 1900 from them (cutting of the first 200y)
+    #    
+    # Note:
+    #    We will have to adapt the costfunction and param2res later to accommodate the different 
+    #    resolution of the C_pool and rh observations.
+    
+
+
+    # 1.) 
+    # pick one of the 1700 yearly example ds to get at the times 
+    # convert time to refer to the same starting point (from h after 1700 to h after 1900) 
+    hs_from_1900=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc')).variables['time'][:]-200*12*30*24
+    
+    #2.)
+    # find the index after which we are after 01/01 1900
+    ind_start = 200 
+    c_h_from_1900_after_1900=hs_from_1900[ind_start:] 
+    c_h_from_1900_after_1900.shape
+    
+    # pick up 1 site   wombat state forest for the spacial selection
+    s_rh  = slice(None, None, None)  # this is the same as :
+    s_c  = slice(ind_start, None, None)  # this is the same as ind_start:
+    #t = s, 50, 33  # [t] = [:,49,325]
+    loc=(-25,16)
+    t_rh = s_rh,*loc
+    t_c = s_c, *loc 
+    print(t_c)
+    
+    # Read NetCDF data and slice out our site 
+    arr_dict={
+        **{
+            vn:nc.Dataset(str(dataPath.joinpath(fn))).variables[vn][t_c] 
+            for vn,fn in  {
+                'cLitter': 'SDGVM_S2_cLitter.nc',
+                'cSoil': 'SDGVM_S2_cSoil.nc',
+                'cVeg': 'SDGVM_S2_cVeg.nc',
+                'cRoot': 'SDGVM_S2_cRoot.nc',
+            }.items()
+        },
+        **{
+            vn:nc.Dataset(str(dataPath.joinpath(fn))).variables[vn][t_rh]*86400   # kg/m2/s kg/m2/day;
+            for vn,fn in {
+                'npp': 'SDGVM_S2_npp.nc',
+                'rh': 'SDGVM_S2_rh.nc'
+            }.items()
+        }
+    }
+    
+    return (
+        Observables(*(arr_dict[k] for k in Observables._fields)),
+        Drivers(*(arr_dict[k] for k in Drivers._fields))
+    )
+#    return (Observables(C_litter, C_soil, C_veg, C_root, rh), Drivers(npp))
+#
+#with Path('config.json').open(mode='r') as f:
+#    conf_dict=json.load(f) 
+#
+#dataPath = Path(conf_dict['dataPath'])
+#
+#obs, dr =get_example_site_vars(dataPath)
+#obs.cVeg.shape
 
 # +
-# (
-#    npp,
-#    C_litter,
-#    C_soil,
-#    C_veg,
-#    C_root,
-# ) = obs
-
 import sys 
 sys.path.insert(0,'..')
 from general_helpers import day_2_month_index
@@ -426,7 +498,7 @@ func_dict={NPP: NPP_fun}
 
 svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
-svs,dvs
+svs.cLitter.shape
 
 # +
 from sympy import ImmutableMatrix
