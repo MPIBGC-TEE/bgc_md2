@@ -700,7 +700,7 @@ def download_my_TRENDY_output():
         variables = Observables._fields + Drivers._fields
     )
 #call it to test that the download works the data
-#download_my_TRENDY_output()
+download_my_TRENDY_output()
 # -
 
 # #### provide functions to read the data
@@ -1508,6 +1508,21 @@ def make_param2res_sym(
             'NPP':npp_func,
              'xi':xi_func
         }
+        
+        #mass production of output functions
+        def numfunc(expr_cont,delta_t_val):
+            # build the discrete expression (which depends on it,delta_t instead of
+            # the continius one that depends on t (TimeSymbol))
+            it=Symbol("it")           #arbitrary symbol for the step index )
+            t=mvs.get_TimeSymbol()
+            delta_t=Symbol('delta_t')
+            expr_disc = expr_cont.subs({t:delta_t*it})
+            return hr.numerical_function_from_expression(
+                expr=expr_disc.subs({delta_t:delta_t_val}),
+                tup=(it, *mvs.get_StateVariableTuple()),
+                parameter_dict=par_dict,
+                func_set=func_dict
+            )
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
@@ -1703,7 +1718,7 @@ fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months/12)), # for yearly output
+        times=range(int(cpa.number_of_months)), # for yearly output
         var_names=Observables._fields,
         tup=(mod_opt,obs)
 )
