@@ -15,6 +15,9 @@
 
 # # SDGVM model
 
+from IPython.core.display import display, HTML
+display(HTML("<style>.container { width:100% !important; }</style>"))
+
 # +
 import sys
 sys.path.insert(0,'..') # necessary to import general_helpers
@@ -335,78 +338,93 @@ print('ind_start={}'.format(ind_start))
 c_h_from_1900_after_1900=h_from_1900[ind_start:] 
 c_h_from_1900_after_1900.shape
 
+rh_h=nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc')).variables['time'][:]
+
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
 #ds.variables['rh']#[:,-56,26][20]
 #print(ds)
 
+# + endofcell="--"
+
+import matplotlib.pyplot as plt
+f=plt.figure(figsize=(15,3))
+ax=f.subplots(1,1)
+nm=37
+ny=int(nm/12)
+ax.plot(rh_h[:nm],[1 for i in range(nm)],"x",label="npp and rh times")
+ax.plot(c_h_from_1900_after_1900[:ny],[1 for i in range(ny)],"x",label="c times")
+ax.legend()
+# -
+# --
+
 # +
-def get_example_site_vars(dataPath):
-    (
-        C_litter,
-        C_soil,
-        C_veg,
-        C_root,
-        npp,
-        rh
-    )= get_variables_from_files(dataPath)
-    # pick up 1 site   wombat state forest
-    s = slice(None, None, None)  # this is the same as :
-    #t = s, 50, 33  # [t] = [:,49,325]
-    t = s, -25, 16 
-    npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
-    rh = rh[t]*86400  # per s to per day
-    #tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
-    (
-        C_litter,
-        C_soil,
-        C_veg,
-        C_root
-    ) = map(
-        lambda var: var[t],
-        (
-            C_litter,
-            C_soil,
-            C_veg,
-            C_root
-        )
-    )
+# def get_example_site_vars(dataPath):
+#     (
+#         C_litter,
+#         C_soil,
+#         C_veg,
+#         C_root,
+#         npp,
+#         rh
+#     )= get_variables_from_files(dataPath)
+#     # pick up 1 site   wombat state forest
+#     s = slice(None, None, None)  # this is the same as :
+#     #t = s, 50, 33  # [t] = [:,49,325]
+#     t = s, -25, 16 
+#     npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
+#     rh = rh[t]*86400  # per s to per day
+#     #tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
+#     (
+#         C_litter,
+#         C_soil,
+#         C_veg,
+#         C_root
+#     ) = map(
+#         lambda var: var[t],
+#         (
+#             C_litter,
+#             C_soil,
+#             C_veg,
+#             C_root
+#         )
+#     )
     
-    # the dataset is not uniform 
-    # - npp and rh start at 16-01-1900 end at 03-28-2018 and are recorded every 30 days
-    # - C_litter, C_soil, C_veg, C_root start at 06-30-1700 end at 01-12-2014 
-    #
-    # To make them uniform we will:
-    # 1. Make C_litter, C_soil, C_veg, C_root start at time 1900 (cutting of the first 200y)
-    # 2. Adapt the resolution of rh to yearly by averaging over the monthly values and
-    #    also cutting them short to 2014
-    # 3. We will cut short npp to 2014 bu will NOT change the resolution (since it is a driver)
-    #    and does not affect the data assimilation functions 
-    print(C_litter.shape)
-    (
-        C_litter,
-        C_soil,
-        C_veg,
-        C_root
-    ) = map(
-        lambda var: var[204:],
-        (
-            C_litter,
-            C_soil,
-            C_veg,
-            C_root
-        )
-    )
+#     # the dataset is not uniform 
+#     # - npp and rh start at 16-01-1900 end at 03-28-2018 and are recorded every 30 days
+#     # - C_litter, C_soil, C_veg, C_root start at 06-30-1700 end at 01-12-2014 
+#     #
+#     # To make them uniform we will:
+#     # 1. Make C_litter, C_soil, C_veg, C_root start at time 1900 (cutting of the first 200y)
+#     # 2. Adapt the resolution of rh to yearly by averaging over the monthly values and
+#     #    also cutting them short to 2014
+#     # 3. We will cut short npp to 2014 bu will NOT change the resolution (since it is a driver)
+#     #    and does not affect the data assimilation functions 
+#     print(C_litter.shape)
+#     (
+#         C_litter,
+#         C_soil,
+#         C_veg,
+#         C_root
+#     ) = map(
+#         lambda var: var[204:],
+#         (
+#             C_litter,
+#             C_soil,
+#             C_veg,
+#             C_root
+#         )
+#     )
     
-    return (Observables(C_litter, C_soil, C_veg, C_root, rh), Drivers(npp))
+#     return (Observables(C_litter, C_soil, C_veg, C_root, rh), Drivers(npp))
 
-with Path('config.json').open(mode='r') as f:
-    conf_dict=json.load(f) 
+# with Path('config.json').open(mode='r') as f:
+#     conf_dict=json.load(f) 
 
-dataPath = Path(conf_dict['dataPath'])
+# dataPath = Path(conf_dict['dataPath'])
 
-obs, dr =get_example_site_vars(dataPath)
-obs.cLitter
+# obs, dr =get_example_site_vars(dataPath)
+# obs.cLitter
 # -
 
 ds_cVeg.variables['cVeg'][ind_start:,-25,16], ds_cVeg.variables['cVeg'][ind_start:,-25,16].shape
