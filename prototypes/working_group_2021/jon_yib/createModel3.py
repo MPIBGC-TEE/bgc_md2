@@ -627,6 +627,163 @@ epa0._asdict()   #print
 # #### Create forward model function:
 
 # + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
+# Create namedtuple function for initial values
+StartVector=namedtuple(
+    "StartVector",
+    [str(v) for v in mvs.get_StateVariableTuple()]+["rh"]
+)
+
+
+#mass production of output functions
+def numfunc(expr_cont,delta_t_val):
+    # build the discrete expression (which depends on it,delta_t instead of
+    # the continius one that depends on t (TimeSymbol))
+    it=Symbol("it")           #arbitrary symbol for the step index )
+    t=mvs.get_TimeSymbol()
+    delta_t=Symbol('delta_t')
+    expr_disc = expr_cont.subs({t:delta_t*it})
+    print(expr_disc)
+    return hr.numerical_function_from_expression(
+        expr=expr_disc.subs({delta_t:delta_t_val}),
+        tup=(it, *mvs.get_StateVariableTuple()),
+        parameter_dict=par_dict,
+        func_set=func_dict
+    )
+
+
+# Construct daily iterator
+def make_daily_iterator_sym(
+                mvs,
+                V_init: StartVector,
+                par_dict,
+                func_dict
+    ):
+            
+    # 
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    sv=mvs.get_StateVariableTuple()
+    n=len(sv)
+
+    # Create numpy array from named tuple of intial values
+    V_arr=np.array(V_init).reshape(n+1,1) #reshaping is neccessary for matmux
+
+    # Define function for matrix math
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        outfluxes = B @ X
+        X_new = X + b + outfluxes
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        rh= -np.sum(outfluxes[3:n]) 
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
+        return V_new
+            
+    # 
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+        )
+
+    
+def make_iterator_sym(
+        mvs,
+        V_init: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    sv=mvs.get_StateVariableTuple()
+    n=len(sv)
+    # build an array in the correct order of the StateVariables which in our case is already correct 
+    # since V_init was built automatically but in case somebody handcrafted it and changed
+    # the order later in the symbolic formulation....
+    V_arr=np.array(
+        [V_init.__getattribute__(str(v)) for v in sv]+
+        [V_init.rh]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+    
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B @ X
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[k](it,*X)
+                for k in [c_lit_cwd,c_lit_met,c_lit_str,c_lit_mic,c_soil_met,c_soil_str,c_soil_mic,c_soil_slow,c_soil_passive] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
+        
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+
+
+
+# -
+
+func_dict["xi"]
+
+
+# +
+
+# Build environmental scaler function
+def xi_func(day):
+            return 1.0     # Set to 1 if no scaler implemented 
+
+def npp_func(day):
+    month=day_2_month_index(day)
+    return dvs.npp[month]
+    
+# Define function dictionary
+func_dict={
+    'NPP':npp_func,
+    'xi':xi_func
+}
+
+def numfunc(expr_cont,delta_t_val):
+    # build the discrete expression (which depends on it,delta_t instead of
+    # the continius one that depends on t (TimeSymbol))
+    it=Symbol("it")           #arbitrary symbol for the step index )
+    t=mvs.get_TimeSymbol()
+    delta_t=Symbol('delta_t')
+    expr_disc = expr_cont.subs({t:delta_t*it})
+    print(expr_disc)
+    return hr.numerical_function_from_expression(
+        expr=expr_disc.subs({delta_t:delta_t_val}),
+        tup=(it, *mvs.get_StateVariableTuple()),
+        parameter_dict=par_dict,
+        func_set=func_dict
+    )
+
+#numOutFluxesBySymbol={
+#        k:numfunc(expr_cont,delta_t_val=2) 
+#        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+#    } 
+
+expr_cont = mvs.get_OutFluxesBySymbol()[c_lit_cwd]
+f=numfunc(expr_cont=expr_cont,delta_t_val=3)
+f(0,*np.array(V_init))
+
+#[V_initfor f in V_init._fields()]
+# -
+
+"Jon"(2)
+
+
+# + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
 def make_param2res_sym(
         cpa: Constants
     ) -> Callable[[np.ndarray], np.ndarray]:
@@ -691,46 +848,16 @@ def make_param2res_sym(
              'xi':xi_func
         }
         
-        # Construct daily iterator
-        def make_daily_iterator_sym(
-                mvs,
-                V_init: StartVector,
-                par_dict,
-                func_dict
-            ):
-            
-            # 
-            B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-            sv=mvs.get_StateVariableTuple()
-            n=len(sv)
-
-            # Create numpy array from named tuple of intial values
-            V_arr=np.array(V_init).reshape(n+1,1) #reshaping is neccessary for matmux
-
-            # Define function for matrix math
-            def f(it,V):
-                X = V[0:n]
-                b = u_func(it,X)
-                B = B_func(it,X)
-                outfluxes = B @ X
-                X_new = X + b + outfluxes
-                # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-                rh= -np.sum(outfluxes[3:n]) 
-                V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
-                return V_new
-            
-            # 
-            return TimeStepIterator2(
-                initial_values=V_arr,
-                f=f,
-            )
-        
-        # Iterator function
-        it_sym = make_daily_iterator_sym(
+        # size of the timestep in days
+        # We could set it to 30 o
+        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
+        delta_t_val=15 
+        it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
             par_dict=par_dict,
-            func_dict=func_dict
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
         )
         
         # Now that we have the iterator we can start to compute.
@@ -771,7 +898,7 @@ def make_param2res_sym(
 const_params = cpa                               # Define constant parameters
 param2res_sym = make_param2res_sym(const_params) # Define forward model
 xs = param2res_sym(epa0)                         # Run forward model from initial conditions
-xs
+#xs
 
 # #### Create array of yearly observation data:
 
@@ -781,6 +908,9 @@ obs[:,0] = svs.cVeg                              # add yearly cVeg data to obs d
 obs[:,1] = svs.cSoil                             # add yearly cSoil data to obs data
 obs[:,2]=monthly_to_yearly(svs.rh)               # convert rh to yearly data 
 obs
+
+type(it)
+
 
 # #### Plot data-model fit:
 
