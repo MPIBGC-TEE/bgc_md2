@@ -367,7 +367,7 @@ def get_example_site_vars(dataPath):
         # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-        if vn in ["npp","gpp","rh","ra"]:
+        if vn in ["rh","ra"]:
             return ds.variables[vn][t]*86400
         else:
             return ds.variables[vn][t]
@@ -619,169 +619,45 @@ cpa._asdict()    #print - everything should have a numeric value
 
 # #### Create list of parameters to be optimized during data assimilation:
 
+# +
+EstimatedInitPools = namedtuple(
+    "EstimatedInitPools",
+        [
+            'c_leaf_0',               
+            'c_root_0',
+            'c_lit_cwd_0',
+            'c_lit_met_0',
+            'c_lit_str_0',
+            'c_lit_mic_0',
+            'c_soil_met_0',
+            'c_soil_str_0',
+            'c_soil_mic_0',
+            'c_soil_slow_0'
+        ]
+)
+
+X_init = EstimatedInitPools(
+    c_leaf_0 = svs_0.cVeg/3,        
+    c_root_0 = svs_0.cVeg/3,          
+    c_lit_cwd_0 = svs_0.cSoil/9,
+    c_lit_met_0 = svs_0.cSoil/9,
+    c_lit_str_0 = svs_0.cSoil/9,
+    c_lit_mic_0 = svs_0.cSoil/9,
+    c_soil_met_0 = svs_0.cSoil/9,
+    c_soil_str_0 = svs_0.cSoil/9,
+    c_soil_mic_0 = svs_0.cSoil/9,
+    c_soil_slow_0 = svs_0.cSoil/9
+)
+
 estimated = {**parameters._asdict(),**V_init._asdict()}            # Create dictionary of parameters and initial pools
 EstimatedParameters = namedtuple('EstimatedParameters', estimated) # Create function to convert dictionary to namedtuple
 epa0 = EstimatedParameters(**estimated)                            # Create namedtuple of all parameters optimized an initial values
 epa0._asdict()   #print
 
+
+# -
+
 # #### Create forward model function:
-
-# + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
-# Create namedtuple function for initial values
-StartVector=namedtuple(
-    "StartVector",
-    [str(v) for v in mvs.get_StateVariableTuple()]+["rh"]
-)
-
-
-#mass production of output functions
-def numfunc(expr_cont,delta_t_val):
-    # build the discrete expression (which depends on it,delta_t instead of
-    # the continius one that depends on t (TimeSymbol))
-    it=Symbol("it")           #arbitrary symbol for the step index )
-    t=mvs.get_TimeSymbol()
-    delta_t=Symbol('delta_t')
-    expr_disc = expr_cont.subs({t:delta_t*it})
-    print(expr_disc)
-    return hr.numerical_function_from_expression(
-        expr=expr_disc.subs({delta_t:delta_t_val}),
-        tup=(it, *mvs.get_StateVariableTuple()),
-        parameter_dict=par_dict,
-        func_set=func_dict
-    )
-
-
-# Construct daily iterator
-def make_daily_iterator_sym(
-                mvs,
-                V_init: StartVector,
-                par_dict,
-                func_dict
-    ):
-            
-    # 
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    sv=mvs.get_StateVariableTuple()
-    n=len(sv)
-
-    # Create numpy array from named tuple of intial values
-    V_arr=np.array(V_init).reshape(n+1,1) #reshaping is neccessary for matmux
-
-    # Define function for matrix math
-    def f(it,V):
-        X = V[0:n]
-        b = u_func(it,X)
-        B = B_func(it,X)
-        outfluxes = B @ X
-        X_new = X + b + outfluxes
-        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        rh= -np.sum(outfluxes[3:n]) 
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
-        return V_new
-            
-    # 
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-        )
-
-    
-def make_iterator_sym(
-        mvs,
-        V_init: StartVector,
-        par_dict,
-        func_dict,
-        delta_t_val=1 # defaults to 1day timestep
-    ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
-    sv=mvs.get_StateVariableTuple()
-    n=len(sv)
-    # build an array in the correct order of the StateVariables which in our case is already correct 
-    # since V_init was built automatically but in case somebody handcrafted it and changed
-    # the order later in the symbolic formulation....
-    V_arr=np.array(
-        [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.rh]
-    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
-    
-    numOutFluxesBySymbol={
-        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
-        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
-    } 
-    def f(it,V):
-        X = V[0:n]
-        b = u_func(it,X)
-        B = B_func(it,X)
-        X_new = X + b + B @ X
-        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        rh = np.sum(
-            [
-                numOutFluxesBySymbol[k](it,*X)
-                for k in [c_lit_cwd,c_lit_met,c_lit_str,c_lit_mic,c_soil_met,c_soil_str,c_soil_mic,c_soil_slow,c_soil_passive] 
-                if k in numOutFluxesBySymbol.keys()
-            ]
-        )
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
-        
-        return V_new
-    
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
-
-
-
-# -
-
-func_dict["xi"]
-
-
-# +
-
-# Build environmental scaler function
-def xi_func(day):
-            return 1.0     # Set to 1 if no scaler implemented 
-
-def npp_func(day):
-    month=day_2_month_index(day)
-    return dvs.npp[month]
-    
-# Define function dictionary
-func_dict={
-    'NPP':npp_func,
-    'xi':xi_func
-}
-
-def numfunc(expr_cont,delta_t_val):
-    # build the discrete expression (which depends on it,delta_t instead of
-    # the continius one that depends on t (TimeSymbol))
-    it=Symbol("it")           #arbitrary symbol for the step index )
-    t=mvs.get_TimeSymbol()
-    delta_t=Symbol('delta_t')
-    expr_disc = expr_cont.subs({t:delta_t*it})
-    print(expr_disc)
-    return hr.numerical_function_from_expression(
-        expr=expr_disc.subs({delta_t:delta_t_val}),
-        tup=(it, *mvs.get_StateVariableTuple()),
-        parameter_dict=par_dict,
-        func_set=func_dict
-    )
-
-#numOutFluxesBySymbol={
-#        k:numfunc(expr_cont,delta_t_val=2) 
-#        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
-#    } 
-
-expr_cont = mvs.get_OutFluxesBySymbol()[c_lit_cwd]
-f=numfunc(expr_cont=expr_cont,delta_t_val=3)
-f(0,*np.array(V_init))
-
-#[V_initfor f in V_init._fields()]
-# -
-
-"Jon"(2)
-
 
 # + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
 def make_param2res_sym(
@@ -804,9 +680,77 @@ def make_param2res_sym(
     
     # Time dependent driver function does not change with the estimated parameters
     # Defined once outside param2res function
+    seconds_per_day = 86400
+    
     def npp_func(day):
         month=day_2_month_index(day)
         return dvs.npp[month]
+    
+    # Build environmental scaler function
+    def xi_func(day):
+        return 1.0     # Set to 1 if no scaler implemented 
+
+    # Define function dictionary
+    func_dict={
+        'NPP':npp_func,
+        'xi':xi_func
+    }
+    
+    def numfunc(expr_cont,delta_t_val):
+        # build the discrete expression (which depends on it,delta_t instead of
+        # the continius one that depends on t (TimeSymbol))
+        it=Symbol("it")           #arbitrary symbol for the step index )
+        t=mvs.get_TimeSymbol()
+        delta_t=Symbol('delta_t')
+        expr_disc = expr_cont.subs({t:delta_t*it})
+        return hr.numerical_function_from_expression(
+            expr=expr_disc.subs({delta_t:delta_t_val}),
+            tup=(it, *mvs.get_StateVariableTuple()),
+            parameter_dict=par_dict,
+            func_set=func_dict
+        )
+    
+    def make_iterator_sym(
+            mvs,
+            V_init: StartVector,
+            par_dict,
+            func_dict,
+            delta_t_val=1 # defaults to 1day timestep
+        ):
+        B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+        sv=mvs.get_StateVariableTuple()
+        n=len(sv)
+        # build an array in the correct order of the StateVariables which in our case is already correct 
+        # since V_init was built automatically but in case somebody handcrafted it and changed
+        # the order later in the symbolic formulation....
+        V_arr=np.array(
+            [V_init.__getattribute__(str(v)) for v in sv]+
+            [V_init.rh]
+        ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+
+        numOutFluxesBySymbol={
+            k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+            for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+        } 
+        def f(it,V):
+            X = V[0:n]
+            b = u_func(it,X)
+            B = B_func(it,X)
+            X_new = X + b + B @ X
+            # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+            rh = np.sum(
+                [
+                    numOutFluxesBySymbol[k](it,*X)
+                    for k in [c_lit_cwd,c_lit_met,c_lit_str,c_lit_mic,c_soil_met,c_soil_str,c_soil_mic,c_soil_slow,c_soil_passive] 
+                    if k in numOutFluxesBySymbol.keys()
+                ]
+            )
+            V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
+            return V_new
+        return TimeStepIterator2(
+            initial_values=V_arr,
+            f=f,
+        )
     
     # Define actual forward simulation function
     def param2res(pa):
@@ -837,21 +781,11 @@ def make_param2res_sym(
             k:v for k,v in apa.items()
             if k in model_par_dict_keys
         }
-        
-        # Build environmental scaler function
-        def xi_func(day):
-            return 1.0     # Set to 1 if no scaler implemented 
-        
-        # Define function dictionary
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
-        
+    
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=15 
+        delta_t_val=30 
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -862,22 +796,21 @@ def make_param2res_sym(
         
         # Now that we have the iterator we can start to compute.
         # Note: check if TRENDY months are like this...
-        days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        #days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         
         #empty array for saving data
         sols=[]
-        for m in range(cpa.nyears*12):       # Loop through months
-            dpm = days_per_month[ m % 12]    # Set days for each month
-            mrh=0                            # Start respiration sum at zero each month
-            for d in range(dpm):             # Loop through days in month
-                v = it_sym.__next__()        # Update initial vector each day
-                mrh +=v[12,0]                # Sum respiration
-            V=StartVector(*v)                # 
-            o=observables(                   # 
-                cVeg=float(V.c_leaf+V.c_wood+V.c_root),
-                cSoil=float(V.c_lit_cwd+V.c_lit_met+V.c_lit_str+V.c_lit_mic+ \
+        for m in range(cpa.nyears*12):           # Loop through months
+            dpm = 30                             # Set days for each month
+            mrh = 0                              # Start respiration sum at zero each month
+            for d in range(int(dpm/delta_t_val)):    # Loop through days in month
+                v = it_sym.__next__()                # Update initial vector each day
+            V = StartVector(*v)                    
+            o = observables(                   
+                cVeg = float(V.c_leaf+V.c_wood+V.c_root),
+                cSoil = float(V.c_lit_cwd+V.c_lit_met+V.c_lit_str+V.c_lit_mic+ \
                             V.c_soil_met+V.c_soil_str+V.c_soil_mic+V.c_soil_slow+V.c_soil_passive),
-                rh=mrh,
+                rh = v[12,0]
             )
             sols.append(o) # Append monthly value to results
         sol=np.stack(sols) # Stack arrays 
@@ -895,10 +828,9 @@ def make_param2res_sym(
 # ## Forward Model Run
 # #### Run model forward:
 
-const_params = cpa                               # Define constant parameters
-param2res_sym = make_param2res_sym(const_params) # Define forward model
-xs = param2res_sym(epa0)                         # Run forward model from initial conditions
-#xs
+param2res_sym = make_param2res_sym(cpa) # Define forward model
+xs = param2res_sym(epa0)                # Run forward model from initial conditions
+xs
 
 # #### Create array of yearly observation data:
 
@@ -906,11 +838,8 @@ n = cpa.nyears                                   # define number of years
 obs = np.zeros(n*3).reshape([n,3])               # create empty yearly dataframe 
 obs[:,0] = svs.cVeg                              # add yearly cVeg data to obs data
 obs[:,1] = svs.cSoil                             # add yearly cSoil data to obs data
-obs[:,2]=monthly_to_yearly(svs.rh)               # convert rh to yearly data 
+obs[:,2] = monthly_to_yearly(svs.rh)             # convert rh to yearly data 
 obs
-
-type(it)
-
 
 # #### Plot data-model fit:
 
@@ -966,7 +895,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=costfunction,
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=20, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
@@ -991,7 +920,7 @@ fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months/12)), # for yearly output
+        times=range(int(cpa.nyears)), # for yearly output
         var_names=observables._fields,
         tup=(mod_opt,obs)
 )
@@ -1006,3 +935,6 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=','
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
+# -
+
+
