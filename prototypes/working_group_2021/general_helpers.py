@@ -372,8 +372,8 @@ def mcmc(
         proposer: Callable[[Iterable], Iterable],
         #param2res: Callable[[np.ndarray], np.ndarray],
         #costfunction: Callable[[np.ndarray], np.float64],
-        param2res, #: Callable[[np.ndarray], Observables],
-        costfunction, #: Callable[[Observables], np.float64],
+        param2res: Callable, 
+        costfunction: Callable, 
         nsimu: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
