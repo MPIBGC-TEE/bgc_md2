@@ -926,43 +926,56 @@ def make_param2res_sym(
         #   over a month
         # 
         # Note: check if TRENDY months are like this...
-        days_per_month = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+        #days_per_month = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+        rhs=np.zeros(cpa.number_of_months)
+        number_of_years=int(cpa.number_of_months/12)
+        cVegs=np.zeros(number_of_years)
+        cRoots=np.zeros(number_of_years)
+        cLitters=np.zeros(number_of_years)
+        cSoils=np.zeros(number_of_years)
         sols=[]
-        for m in range(cpa.number_of_months):
-            dpm = days_per_month[ m % 12]  
-            #mra=0
-            mrh=0
-            for d in range(dpm):
-                v = it_sym.__next__()
-                #mra +=v[9,0]
-                mrh +=v[11,0]
-            V=StartVector(*v)
-            o=Observables(
-                cVeg=float(V.C_leaf+V.C_wood+V.C_root),
-                cRoot = float(V.C_root),
-                #cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
-                cLitter=float(V.C_abvstrlit + V.C_abvmetlit + V.C_belowstrlit + V.C_belowmetlit),
-                #cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                cSoil=float(V.C_surface_microbe + V.C_soil_microbe + V.C_slowsom + V.C_passsom),
-                #ra=mra,
-                rh=mrh,
-            )
-            # equivalent
-            #o=np.array([
-            #    np.sum(v[0:3]),
-            #    np.sum(v[3:6]),
-            #    np.sum(v[6:9]),
-            #    mra,
-            #    mrh,
-            #])
-            sols.append(o)
+        m_id=0
+        dpm=30
+        dpy=30*12
+        for y in range(number_of_years):
+            cVeg=0
+            cRoot = 0
+            cLitter= 0
+            cSoil= 0
+            for m in range(12):
+                #dpm = days_per_month[ m % 12]  
+                #mra=0
+                mrh=0
+                for d in range(dpm):
+                    v = it_sym.__next__()
+                    #mra +=v[9,0]
+                    V=StartVector(*v)
+                    cVeg+=float(V.C_leaf+V.C_wood+V.C_root)
+                    cRoot+= float(V.C_root)
+                    cLitter+=float(V.C_abvstrlit + V.C_abvmetlit + V.C_belowstrlit + V.C_belowmetlit)
+                    cSoil+=float(V.C_surface_microbe + V.C_soil_microbe + V.C_slowsom + V.C_passsom)
+                    #mrh +=v[11,0]
+                    mrh +=V.rh
+                rhs[m_id]=mrh/dpm
+                m_id+=1
+            cVegs[y]=cVeg/dpy
+            cRoots[y] = cRoot/dpy
+            cLitters[y]= cLitter/dpy 
+            cSoils[y]= cSoil/dpy
+        
+        return Observables(
+            cVeg=cVegs,
+            cRoot=cRoots,
+            cLitter=cLitters,
+            cSoil=cSoils,
+            rh=rhs
+        )
             
-        sol=np.stack(sols)       
-        return sol
         
     return param2res
 # -
-
+#xs.shap,
+svs.cVeg.shape[0]
 
 
 # +
@@ -972,48 +985,70 @@ from general_helpers import plot_solutions
 const_params = cpa
 
 param2res_sym = make_param2res_sym(const_params)
-xs= param2res_sym(epa_0)
+obs_0 = param2res_sym(epa_0)
+
+
+# +
+def make_weighted_cost_func(
+        obs#: Observables
+    ) -> Callable[[Observables],np.float64]:
+    # first unpack the observation array into its parts
+    #cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
+    def costfunction(out_simu: np.ndarray) ->np.float64:
+        # fixme 
+        #   as indicated by the fact that the function lives in this  
+        #   model-specific module it is not apropriate for (all) other models.
+        #   There are model specific properties:
+        #   1.) The weight for the different observation streams
+        #   
+        number_of_ys=out_simu.cVeg.shape[0]
+        number_of_ms=out_simu.rh.shape[0]
+
+        J_obj1 = np.mean (( out_simu.cVeg - obs.cVeg )**2)/(2*np.var(obs.cVeg))
+        J_obj2 = np.mean (( out_simu.cRoot - obs.cRoot )**2)/(2*np.var(obs.cRoot))
+        J_obj3 = np.mean (( out_simu.cLitter - obs.cLitter )**2)/(2*np.var(obs.cLitter))
+        J_obj4 = np.mean (( out_simu.cSoil -  obs.cSoil )**2)/(2*np.var(obs.cSoil))
+        
+        J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
+        
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 )/200+ J_obj5/4
+        # to make this special costfunction comparable (in its effect on the
+        # acceptance rate) to the general costfunction proposed by Feng we
+        # rescale it by a factor 
+        return J_new*50.0
+    return costfunction     
+
+#test it
+cost_func = make_weighted_cost_func(svs)
+cost_func(obs_0)
+
+for f in Observables._fields:
+    print(obs_0._asdict()[f])
+
+# +
+
 
     
 day_indices=month_2_day_index(range(cpa.number_of_months)),
 
-fig = plt.figure()
-plot_solutions(
-        fig,
-        #times=day_indices,
-        times=range(cpa.number_of_months),
-        var_names=Observables._fields,
-        tup=(xs,)
-)
+out_simu_d=obs_0._asdict()
+obs_d=svs._asdict()
+fig = plt.figure(figsize=(10,50))
+axs=fig.subplots(5,1)
+for ind,f in enumerate(Observables._fields):
+    val_sim=out_simu_d[f]
+    val_obs=obs_d[f]
+    axs[ind].plot(range(len(val_sim)),val_sim,label=f+"_sim")
+    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+    axs[ind].legend()
+    
 fig.savefig('solutions_SDGVM.pdf')
-
-# +
-# now test it 
-import matplotlib.pyplot as plt
-from general_helpers import plot_solutions
-const_params = cpa
-
-param2res_sym = make_param2res_sym(const_params)
-xs= param2res_sym(epa_0)
-
-# convert model output to yearly
-mod=np.zeros(obs.shape[0]*obs.shape[1]).reshape([obs.shape[0],obs.shape[1]])  
-for i in range(obs.shape[1]):
-    mod[:,i]=monthly_to_yearly(xs[:,i])
-
-day_indices=month_2_day_index(range(cpa.number_of_months)),
-
-fig = plt.figure()
-plot_solutions(
-        fig,
-        #times=day_indices,
-        times=range(int(cpa.number_of_months/12)),
-        var_names=Observables._fields,
-        tup=(mod,obs)
-)
-fig.savefig('solutions.pdf')
-
 # -
+
+for n,i in enumerate([1,2,4]):
+    print(n,i)
+
+
 
 ns=1400
 days=list(range(ns))
@@ -1028,5 +1063,27 @@ axs[0].plot(days,npp)
 days2=list(range(70))
 axs[1].plot(days2,[day_2_month_index(d) for d in days2])
 
+# +
+from general_helpers import autostep_mcmc, make_param_filter_func
 
+isQualified = make_param_filter_func(epa_max, epa_min)
+param2res = make_param2res_sym(cpa)
+
+print("Starting data assimilation...")
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = autostep_mcmc(
+    initial_parameters=epa_0,
+    filter_func=isQualified,
+    param2res=param2res,
+    costfunction=make_weighted_cost_func(svs),
+    nsimu=2000, # for testing and tuning mcmc
+    #nsimu=20000,
+    c_max=np.array(epa_max),
+    c_min=np.array(epa_min),
+    acceptance_rate=15,   # default value | target acceptance rate in %
+    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1,   # default value | increase value to reduce initial step size
+    K=2 # default value | increase value to reduce acceptance of higher cost functions
+)
+print("Data assimilation finished!")
 

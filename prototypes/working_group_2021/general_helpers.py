@@ -370,8 +370,10 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
 def mcmc(
         initial_parameters: Iterable,
         proposer: Callable[[Iterable], Iterable],
-        param2res: Callable[[np.ndarray], np.ndarray],
-        costfunction: Callable[[np.ndarray], np.float64],
+        #param2res: Callable[[np.ndarray], np.ndarray],
+        #costfunction: Callable[[np.ndarray], np.float64],
+        param2res #: Callable[[np.ndarray], Observables],
+        costfunction #: Callable[[Observables], np.float64],
         nsimu: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
