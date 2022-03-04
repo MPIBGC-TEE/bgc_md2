@@ -24,7 +24,8 @@ def make_B_u_funcs(
 def make_B_u_funcs_2(
         mvs,
         model_params,
-        func_dict
+        func_dict,
+        delta_t_val=1
     ):
         #symbol_names = mvs.get_BibInfo().sym_dict.keys()   
         #for name in symbol_names:
@@ -32,7 +33,7 @@ def make_B_u_funcs_2(
         t = mvs.get_TimeSymbol()
         it = Symbol('it')
         delta_t=Symbol('delta_t')
-        parameter_dict = {**model_params,delta_t: 1}
+        parameter_dict = {**model_params,delta_t: delta_t_val}
         state_vector = mvs.get_StateVariableTuple()
 
         sym_B =hr.euler_forward_B_sym(
