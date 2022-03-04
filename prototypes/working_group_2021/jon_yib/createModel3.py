@@ -61,9 +61,7 @@ from general_helpers import (
     monthly_to_yearly,
     plot_solutions,
     autostep_mcmc,  
-    make_jon_cost_func
-)
-from model_specific_helpers import (
+    make_jon_cost_func,
     make_param_filter_func
 )
 from pathlib import Path
@@ -116,8 +114,7 @@ InitialPools = namedtuple(
     "InitialPools",
     [
         'c_leaf_0',               #Names: c_poolname_0
-        'c_root_0',
-        'c_wood_0',
+        'c_root_0',               #Only initial pools that are estimated
         'c_lit_cwd_0',
         'c_lit_met_0',
         'c_lit_str_0',
@@ -126,7 +123,6 @@ InitialPools = namedtuple(
         'c_soil_str_0',
         'c_soil_mic_0',
         'c_soil_slow_0',
-        'c_soil_passive_0'
     ]
 )
 
@@ -346,7 +342,7 @@ def download_my_TRENDY_output():
 # This can takes a minute to connect to the server
 # The download itself can take hours depending on internet speed.
 # If "can't connect to TRENDY server" error occurs, try again later.
-download_my_TRENDY_output()
+#download_my_TRENDY_output()
 # -
 
 # ## Connect Data and Symbols (Must Edit)
@@ -367,9 +363,15 @@ def get_example_site_vars(dataPath):
         # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-        if vn in ["rh","ra"]:
+        if vn in ["npp","gpp","rh","ra"]:
+            for name, variable in ds.variables.items():            
+                for attrname in variable.ncattrs():
+                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return ds.variables[vn][t]*86400
         else:
+            for name, variable in ds.variables.items():            
+                for attrname in variable.ncattrs():
+                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return ds.variables[vn][t]
 
     # Link symbols and data:
@@ -393,6 +395,7 @@ def get_example_site_vars(dataPath):
 #call function to link symbols and data
 svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
+# + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 #look at data
 svs,dvs
 # -
@@ -464,7 +467,7 @@ M_sym
 
 # +
 # Create a dictionary for the external and internal fluxes (flux divided by dono pool content)
-outflux_rates = {"r_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
+outflux_rates = {"r_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items() }
 internal_flux_rates = {"r_"+str(key[0])+"_2_"+str(key[1]):value/key[0] for key,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
 
 # Create dictionary of all flux rates
@@ -503,59 +506,59 @@ ParameterValues = namedtuple(
 )
 
 epa0 = ParameterValues(
-    beta_leaf=0.21,
-    beta_root=0.27,
+    beta_leaf=0.3,
+    beta_root=0.3,
     clay=0.2028,
     silt=0.2808,
-    k_leaf=0.014,
-    k_root=0.022,
-    k_wood=0.003,
-    k_cwd=0.005,
-    k_samet=0.01,
-    k_sastr=0.001,
+    k_leaf=0.020,
+    k_root=0.010,
+    k_wood=0.007,
+    k_cwd=0.01,
+    k_samet=0.05,
+    k_sastr=0.05,
     k_samic=0.05,
     k_slmet=0.040,
-    k_slstr=0.0039,
-    k_slmic=0.005,
-    k_slow=0.00001,
-    k_arm=3.27E-06,
-    f_samet_leaf=0.28,
-    f_slmet_root=0.34,
-    f_samic_cwd=0.29,
+    k_slstr=0.039,
+    k_slmic=0.05,
+    k_slow=0.0001,
+    k_arm=3.27E-04,
+    f_samet_leaf=0.50,
+    f_slmet_root=0.50,
+    f_samic_cwd=0.50,
 )
 
 old_par_dict = {
-    'k_c_leaf': 0.014, # define all k values
-    'k_c_wood': 0.003,
-    'k_c_root': 0.022,
-    'k_c_lit_cwd': 0.005,
-    'k_c_lit_met': 0.01,
-    'k_c_lit_str': 0.001,
-    'k_c_lit_mic': 0.05,
-    'k_c_soil_met': 0.040,
-    'k_c_soil_str': 0.0039,
-    'k_c_soil_mic': 0.005,
-    'k_c_soil_slow': 0.00001,
-    'k_c_soil_passive': 3.27E-06,
+    'k_c_leaf': epa0.k_leaf, # define all k values
+    'k_c_root': epa0.k_root,
+    'k_c_wood': epa0.k_wood,
+    'k_c_lit_cwd': epa0.k_cwd,
+    'k_c_lit_met': epa0.k_samet,
+    'k_c_lit_str': epa0.k_sastr,
+    'k_c_lit_mic': epa0.k_samic,
+    'k_c_soil_met': epa0.k_slmet,
+    'k_c_soil_str': epa0.k_slstr,
+    'k_c_soil_mic': epa0.k_slmic,
+    'k_c_soil_slow': epa0.k_slow,
+    'k_c_soil_passive': epa0.k_arm,
     'f_c_leaf_2_c_lit_met': epa0.f_samet_leaf,    #define all f values
-    'f_c_root_2_c_soil_met': epa0.f_slmet_root, 
-    'f_c_lit_cwd_2_c_lit_mic': epa0.f_samic_cwd,
-    'f_c_leaf_2_c_lit_str': (1-epa0.f_samet_leaf) * epa0.k_leaf,
-    'f_c_root_2_c_soil_str': (1-epa0.f_slmet_root) * epa0.k_root,
-    'f_c_wood_2_c_lit_cwd': 0.4 * epa0.k_wood,
-    'f_c_lit_cwd_2_c_soil_slow': (1-epa0.f_samic_cwd) * epa0.k_cwd,
-    'f_c_lit_met_2_c_lit_mic': 0.3 * epa0.k_samet,
-    'f_c_lit_str_2_c_lit_mic': 0.1 * epa0.k_sastr,
-    'f_c_lit_str_2_c_soil_slow': 0.1 * epa0.k_sastr,
-    'f_c_lit_mic_2_c_soil_slow': 0.1 * epa0.k_samic,
-    'f_c_soil_met_2_c_soil_mic': 0.4 * epa0.k_slmet,
-    'f_c_soil_str_2_c_soil_mic': 0.3 * epa0.k_slstr,
-    'f_c_soil_str_2_c_soil_slow': 0.2 * epa0.k_slstr,
-    'f_c_soil_mic_2_c_soil_slow': 0.4 * epa0.k_slmic,
-    'f_c_soil_mic_2_c_soil_passive': 0.4 * epa0.k_slmic,
-    'f_c_soil_slow_2_c_soil_mic': 0.10 * epa0.k_slow,
-    'f_c_soil_slow_2_c_soil_passive': 0.45*(0.003+0.009*epa0.clay) * epa0.k_slow,
-    'f_c_soil_passive_2_c_soil_mic': 0.10 * epa0.k_arm, 
+    'f_c_root_2_c_soil_met': epa0.f_slmet_root,
+    'f_c_lit_cwd_2_c_lit_mic': epa0.f_samic_cwd*0.7,
+    'f_c_leaf_2_c_lit_str': (1-epa0.f_samet_leaf),
+    'f_c_root_2_c_soil_str': (1-epa0.f_slmet_root),
+    'f_c_wood_2_c_lit_cwd': 1,
+    'f_c_lit_cwd_2_c_soil_slow': (1-epa0.f_samic_cwd),
+    'f_c_lit_met_2_c_lit_mic': 0.2,
+    'f_c_lit_str_2_c_lit_mic': 0.2,
+    'f_c_lit_str_2_c_soil_slow': 0.2,
+    'f_c_lit_mic_2_c_soil_slow': 0.2,
+    'f_c_soil_met_2_c_soil_mic': 0.2,
+    'f_c_soil_str_2_c_soil_mic': 0.2,
+    'f_c_soil_str_2_c_soil_slow': 0.2,
+    'f_c_soil_mic_2_c_soil_slow': 0.2,
+    'f_c_soil_mic_2_c_soil_passive': 0.2,
+    'f_c_soil_slow_2_c_soil_mic': 0.2,
+    'f_c_soil_slow_2_c_soil_passive': 0.2*(0.003+0.009*epa0.clay),
+    'f_c_soil_passive_2_c_soil_mic': 0.2, 
 }
 
 # Define allocation parameters to be optimized
@@ -579,26 +582,24 @@ parameters._asdict() # print - everything below should have a numeric value
 
 # ## Assign Initial Pool Values
 
-# + codehighlighter=[[5, 17], [5, 17]]
+# +
 # Create vector of initial pool values
 svs_0=observables(*map(lambda v: v[0],svs))
 
 # Assign values to initial pools using InitialPools named tuple
-V_init = InitialPools(
-    c_leaf_0 = svs_0.cVeg/3,          #set inital pool values to svs values 
-    c_root_0 = svs_0.cVeg/3,          #you can set numerical values here directly as well
-    c_wood_0 = svs_0.cVeg/3,
-    c_lit_cwd_0 = svs_0.cSoil/9,
-    c_lit_met_0 = svs_0.cSoil/9,
-    c_lit_str_0 = svs_0.cSoil/9,
-    c_lit_mic_0 = svs_0.cSoil/9,
-    c_soil_met_0 = svs_0.cSoil/9,
-    c_soil_str_0 = svs_0.cSoil/9,
-    c_soil_mic_0 = svs_0.cSoil/9,
-    c_soil_slow_0 = svs_0.cSoil/9,
-    c_soil_passive_0 = svs_0.cSoil/9
+X_init = InitialPools(
+    c_leaf_0 = svs_0.cVeg/5,          #set inital pool values to svs values 
+    c_root_0 = svs_0.cVeg/5,          #you can set numerical values here directly as well
+    c_lit_cwd_0 = svs_0.cSoil/35,
+    c_lit_met_0 = svs_0.cSoil/35,
+    c_lit_str_0 = svs_0.cSoil/35,
+    c_lit_mic_0 = svs_0.cSoil/35,
+    c_soil_met_0 = svs_0.cSoil/20,
+    c_soil_str_0 = svs_0.cSoil/15,
+    c_soil_mic_0 = svs_0.cSoil/10,
+    c_soil_slow_0 = svs_0.cSoil/3
 )
-V_init._asdict()   #print - everything should have a numeric value
+X_init._asdict()   #print - everything should have a numeric value
 # -
 
 # ## Define Forward Model
@@ -619,40 +620,29 @@ cpa._asdict()    #print - everything should have a numeric value
 
 # #### Create list of parameters to be optimized during data assimilation:
 
-# +
-EstimatedInitPools = namedtuple(
-    "EstimatedInitPools",
-        [
-            'c_leaf_0',               
-            'c_root_0',
-            'c_lit_cwd_0',
-            'c_lit_met_0',
-            'c_lit_str_0',
-            'c_lit_mic_0',
-            'c_soil_met_0',
-            'c_soil_str_0',
-            'c_soil_mic_0',
-            'c_soil_slow_0'
-        ]
-)
-
-X_init = EstimatedInitPools(
-    c_leaf_0 = svs_0.cVeg/3,        
-    c_root_0 = svs_0.cVeg/3,          
-    c_lit_cwd_0 = svs_0.cSoil/9,
-    c_lit_met_0 = svs_0.cSoil/9,
-    c_lit_str_0 = svs_0.cSoil/9,
-    c_lit_mic_0 = svs_0.cSoil/9,
-    c_soil_met_0 = svs_0.cSoil/9,
-    c_soil_str_0 = svs_0.cSoil/9,
-    c_soil_mic_0 = svs_0.cSoil/9,
-    c_soil_slow_0 = svs_0.cSoil/9
-)
-
-estimated = {**parameters._asdict(),**V_init._asdict()}            # Create dictionary of parameters and initial pools
+estimated = {**parameters._asdict(),**X_init._asdict()}            # Create dictionary of parameters and initial pools
 EstimatedParameters = namedtuple('EstimatedParameters', estimated) # Create function to convert dictionary to namedtuple
 epa0 = EstimatedParameters(**estimated)                            # Create namedtuple of all parameters optimized an initial values
 epa0._asdict()   #print
+
+
+# +
+def npp_func(day):
+        month=day_2_month_index(day)
+        return dvs.npp[month]
+
+n=cpa.nyears*12
+npp_obs = np.array([npp_func(d) for d in range(n)])
+
+# Plot simulation output for observables
+fig = plt.figure()
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=observables._fields,
+        tup=(npp_obs,)
+)
+fig.savefig('solutions.pdf')
 
 
 # -
@@ -680,7 +670,7 @@ def make_param2res_sym(
     
     # Time dependent driver function does not change with the estimated parameters
     # Defined once outside param2res function
-    seconds_per_day = 86400
+    #seconds_per_day = 86400
     
     def npp_func(day):
         month=day_2_month_index(day)
@@ -703,8 +693,10 @@ def make_param2res_sym(
         t=mvs.get_TimeSymbol()
         delta_t=Symbol('delta_t')
         expr_disc = expr_cont.subs({t:delta_t*it})
+        expr_num = expr_disc.subs({delta_t:delta_t_val})
+        #print(expr_cont,expr_disc,expr_num)
         return hr.numerical_function_from_expression(
-            expr=expr_disc.subs({delta_t:delta_t_val}),
+            expr=expr_num,
             tup=(it, *mvs.get_StateVariableTuple()),
             parameter_dict=par_dict,
             func_set=func_dict
@@ -738,14 +730,20 @@ def make_param2res_sym(
             B = B_func(it,X)
             X_new = X + b + B @ X
             # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-            rh = np.sum(
-                [
-                    numOutFluxesBySymbol[k](it,*X)
+            
+            l=[
+                    numOutFluxesBySymbol[k](it,*X.reshape(n,))
                     for k in [c_lit_cwd,c_lit_met,c_lit_str,c_lit_mic,c_soil_met,c_soil_str,c_soil_mic,c_soil_slow,c_soil_passive] 
                     if k in numOutFluxesBySymbol.keys()
-                ]
+            ]
+            rh = np.array(l).sum()
+            V_new = np.concatenate(
+                (
+                    X_new.reshape(n,1),
+                    np.array([rh]).reshape(1,1)
+                )
+                , axis=0
             )
-            V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
             return V_new
         return TimeStepIterator2(
             initial_values=V_arr,
@@ -785,7 +783,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=30 
+        delta_t_val=10
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -800,25 +798,27 @@ def make_param2res_sym(
         
         #empty array for saving data
         sols=[]
-        for m in range(cpa.nyears*12):           # Loop through months
+        for p in range(cpa.nyears):
             dpm = 30                             # Set days for each month
             mrh = 0                              # Start respiration sum at zero each month
-            for d in range(int(dpm/delta_t_val)):    # Loop through days in month
-                v = it_sym.__next__()                # Update initial vector each day
-            V = StartVector(*v)                    
+            for m in range(12):                  # Loop through months                        
+                for d in range(int(dpm/delta_t_val)):    # Loop through days in month
+                    v = it_sym.__next__()                # Us adaptive iterator
+                    mrh += (v[12,0])/((dpm/delta_t_val)*12)
+            V = StartVector(*v)                  
             o = observables(                   
                 cVeg = float(V.c_leaf+V.c_wood+V.c_root),
                 cSoil = float(V.c_lit_cwd+V.c_lit_met+V.c_lit_str+V.c_lit_mic+ \
                             V.c_soil_met+V.c_soil_str+V.c_soil_mic+V.c_soil_slow+V.c_soil_passive),
-                rh = v[12,0]
+                rh = mrh
             )
             sols.append(o) # Append monthly value to results
         sol=np.stack(sols) # Stack arrays 
         # convert to yearly output
-        sol_yr=np.zeros(cpa.nyears*sol.shape[1]).reshape([cpa.nyears,sol.shape[1]])  
-        for i in range(sol.shape[1]):
-           sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-        sol=sol_yr
+        #sol_yr=np.zeros(cpa.nyears*sol.shape[1]).reshape([cpa.nyears,sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
         return sol
     return param2res
 
@@ -838,8 +838,7 @@ n = cpa.nyears                                   # define number of years
 obs = np.zeros(n*3).reshape([n,3])               # create empty yearly dataframe 
 obs[:,0] = svs.cVeg                              # add yearly cVeg data to obs data
 obs[:,1] = svs.cSoil                             # add yearly cSoil data to obs data
-obs[:,2] = monthly_to_yearly(svs.rh)             # convert rh to yearly data 
-obs
+obs[:,2] = monthly_to_yearly(svs.rh)         # convert montly to yearly
 
 # #### Plot data-model fit:
 
@@ -852,6 +851,7 @@ plot_solutions(
         tup=(xs,obs)
 )
 fig.savefig('solutions.pdf')
+
 
 # ## Data Assimilation
 # #### Define parameter min/max values:
@@ -866,7 +866,6 @@ epa_max = epa_max._replace(beta_leaf = 0.99)
 epa_max = epa_max._replace(beta_root = 0.99)
 epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
-epa_max = epa_max._replace(c_wood_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_met_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_str_0 = svs_0.cSoil)
@@ -875,7 +874,6 @@ epa_max = epa_max._replace(c_soil_met_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_soil_str_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_soil_mic_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
-epa_max = epa_max._replace(c_soil_passive_0 = svs_0.cSoil)
 
 #print - all names should have numerical values
 epa_max._asdict()
@@ -884,7 +882,7 @@ epa_max._asdict()
 # #### Conduct data assimilation:
 
 # +
-isQualified = make_param_filter_func(epa_max, epa_min, obs[0,0], obs[0,1])
+isQualified = make_param_filter_func(epa_max, epa_min)
 param2res = make_param2res_sym(cpa)
 costfunction = make_jon_cost_func(obs)
 
@@ -895,7 +893,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=costfunction,
-    nsimu=20, # for testing and tuning mcmc
+    nsimu=200, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),

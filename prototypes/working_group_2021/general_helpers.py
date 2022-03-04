@@ -492,8 +492,8 @@ def make_jon_cost_func(
     denominators = means ** 2
 
     def costfunction(mod: np.ndarray) -> np.float64:
-        cost = (1/n) * np.sum(
-            100* np.sum((obs - mod)**2, axis=0) / denominators 
+        cost = (100/n) * np.sum(
+            100 * np.sum((obs - mod)**2, axis=0) / denominators 
             )
         return cost
     return costfunction
