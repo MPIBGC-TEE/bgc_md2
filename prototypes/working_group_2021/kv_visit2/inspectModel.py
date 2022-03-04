@@ -272,6 +272,8 @@ times
 
 times_2
 
+res[:10,10]
+
 from matplotlib import pyplot as plt
 fig = plt.figure(figsize=(5,50))
 n_coord=len(V_init)
@@ -293,7 +295,7 @@ msh.EstimatedParameters._fields
 
 
 
-cpa=msh.UnEstimatedParameters(
+cpa = msh.UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
@@ -352,35 +354,35 @@ steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVar
 
 # create a start parameter tuple for the mcmc. 
 epa_0=msh.EstimatedParameters(
- beta_leaf=0.6,
- beta_wood=0.25,
- T_0=2,
- E=4,
- KM=10,
- r_C_leaf_litter_rh=0.000415110004151100,
- r_C_wood_litter_rh=0.000124533001245330,
- r_C_root_litter_rh=0.000122042341220423,
- r_C_soil_fast_rh=0.000152207001522070,
- r_C_soil_slow_rh=2.73972602739726e-5,
- r_C_soil_passive_rh=7.82778864970646e-6,
- r_C_leaf_2_C_leaf_litter=0.00833333333333333,
- r_C_wood_2_C_wood_litter=9.13242009132420e-5,
- r_C_root_2_C_root_litter=0.000124533001245330,
- r_C_leaf_litter_2_C_soil_fast=0.000340390203403902,
- r_C_leaf_litter_2_C_soil_slow=5.81154005811540e-5,
- r_C_leaf_litter_2_C_soil_passive=1.66044001660440e-5,
- r_C_wood_litter_2_C_soil_fast=7.47198007471980e-5,
- r_C_wood_litter_2_C_soil_slow=2.98879202988792e-5,
- r_C_wood_litter_2_C_soil_passive=1.99252801992528e-5,
- r_C_root_litter_2_C_soil_fast=7.47198007471980e-5,
- r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
- r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
- C_leaf_0=steady_state_dict["C_leaf"],
- C_wood_0=steady_state_dict["C_wood"],
- C_leaf_litter_0=steady_state_dict["C_leaf_litter"],
- C_wood_litter_0=steady_state_dict["C_wood_litter"],
- C_soil_fast_0=steady_state_dict["C_soil_fast"],
- C_soil_slow_0=steady_state_dict["C_soil_slow"]
+    beta_leaf=0.6,
+    beta_wood=0.25,
+    T_0=2,
+    E=4,
+    KM=10,
+    r_C_leaf_litter_rh=0.000415110004151100,
+    r_C_wood_litter_rh=0.000124533001245330,
+    r_C_root_litter_rh=0.000122042341220423,
+    r_C_soil_fast_rh=0.000152207001522070,
+    r_C_soil_slow_rh=2.73972602739726e-5,
+    r_C_soil_passive_rh=7.82778864970646e-6,
+    r_C_leaf_2_C_leaf_litter=0.00833333333333333,
+    r_C_wood_2_C_wood_litter=9.13242009132420e-5,
+    r_C_root_2_C_root_litter=0.000124533001245330,
+    r_C_leaf_litter_2_C_soil_fast=0.000340390203403902,
+    r_C_leaf_litter_2_C_soil_slow=5.81154005811540e-5,
+    r_C_leaf_litter_2_C_soil_passive=1.66044001660440e-5,
+    r_C_wood_litter_2_C_soil_fast=7.47198007471980e-5,
+    r_C_wood_litter_2_C_soil_slow=2.98879202988792e-5,
+    r_C_wood_litter_2_C_soil_passive=1.99252801992528e-5,
+    r_C_root_litter_2_C_soil_fast=7.47198007471980e-5,
+    r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
+    r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
+    C_leaf_0=steady_state_dict["C_leaf"],
+    C_wood_0=steady_state_dict["C_wood"],
+    C_leaf_litter_0=steady_state_dict["C_leaf_litter"],
+    C_wood_litter_0=steady_state_dict["C_wood_litter"],
+    C_soil_fast_0=steady_state_dict["C_soil_fast"],
+    C_soil_slow_0=steady_state_dict["C_soil_slow"]
 )
 
 # The function `param2res` (which will be used by a general model independent mcmc) only takes the estimated parameters as arguments and produce data in the same shape as the observations.
@@ -392,8 +394,6 @@ epa_0=msh.EstimatedParameters(
 #
 # This function will be later moved to a model specific helper file, and loaded from there by the data assimilation functions.
 
-cpa
-
 # +
 # now test it 
 import matplotlib.pyplot as plt
@@ -404,7 +404,7 @@ xs= param2res_sym(epa_0)
 obs=np.column_stack([ np.array(v) for v in svs])
 
 obs=obs[0:cpa.number_of_months,:] #cut 
-obs[:,3:4]=obs[:,3:4]
+#obs[:,3:4]=obs[:,3:4]
 n=cpa.number_of_months
 
 # convert to yearly output if necessary
@@ -427,68 +427,68 @@ fig.savefig('solutions.pdf')
 
 # +
 epa_min=msh.EstimatedParameters(
- beta_leaf=0,
- beta_wood=0,
- T_0=-20,
- E=.1,
- KM=1,
- r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
- r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
- r_C_root_litter_rh=epa_0.r_C_root_litter_rh/100,
- r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh/100,
- r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh/100,
- r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh/100,
- r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter/100,       
- r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter/100,
- r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter/100,
- r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast/100,
- r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow/100,
- r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive/100,
- r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast/100,
- r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow/100,
- r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive/100,
- r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast/100,
- r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow/100,
- r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive/100,
- C_leaf_0=0,
- C_wood_0=0,
- C_leaf_litter_0=0,
- C_wood_litter_0=0,
- C_soil_fast_0=0,
- C_soil_slow_0=0,
+    beta_leaf=0,
+    beta_wood=0,
+    T_0=-20,
+    E=.1,
+    KM=1,
+    r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
+    r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
+    r_C_root_litter_rh=epa_0.r_C_root_litter_rh/100,
+    r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh/100,
+    r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh/100,
+    r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh/100,
+    r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter/100,       
+    r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter/100,
+    r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter/100,
+    r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast/100,
+    r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow/100,
+    r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive/100,
+    r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast/100,
+    r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow/100,
+    r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive/100,
+    r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast/100,
+    r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow/100,
+    r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive/100,
+    C_leaf_0=0,
+    C_wood_0=0,
+    C_leaf_litter_0=0,
+    C_wood_litter_0=0,
+    C_soil_fast_0=0,
+    C_soil_slow_0=0,
 )
 
 
 epa_max=msh.EstimatedParameters(
- beta_leaf=0.99,
- beta_wood=0.99,
- T_0=10,
- E=100,
- KM=100,
- r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
- r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
- r_C_root_litter_rh=epa_0.r_C_root_litter_rh*100,
- r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh*100,
- r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh*100,
- r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh*100,
- r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter*100,       
- r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter*100,
- r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter*100,
- r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast*100,
- r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow*100,
- r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive*100,
- r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast*100,
- r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow*100,
- r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive*100,
- r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast*100,
- r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow*100,
- r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive*100,
- C_leaf_0=svs_0.cVeg,
- C_wood_0=svs_0.cVeg,
- C_leaf_litter_0=svs_0.cLitter,
- C_wood_litter_0=svs_0.cLitter,
- C_soil_fast_0=svs_0.cSoil,
- C_soil_slow_0=svs_0.cSoil,
+    beta_leaf=0.99,
+    beta_wood=0.99,
+    T_0=10,
+    E=100,
+    KM=100,
+    r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
+    r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
+    r_C_root_litter_rh=epa_0.r_C_root_litter_rh*100,
+    r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh*100,
+    r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh*100,
+    r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh*100,
+    r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter*100,       
+    r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter*100,
+    r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter*100,
+    r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast*100,
+    r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow*100,
+    r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive*100,
+    r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast*100,
+    r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow*100,
+    r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive*100,
+    r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast*100,
+    r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow*100,
+    r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive*100,
+    C_leaf_0=svs_0.cVeg,
+    C_wood_0=svs_0.cVeg,
+    C_leaf_litter_0=svs_0.cLitter,
+    C_wood_litter_0=svs_0.cLitter,
+    C_soil_fast_0=svs_0.cSoil,
+    C_soil_slow_0=svs_0.cSoil,
 )
 # -
 
@@ -784,13 +784,11 @@ it_sym_trace = make_daily_iterator_sym_trace(
     par_dict=par_dict,
     func_dict=func_dict
 )
-# we will run the model for 15 steps
 ns=1500
 nv=len(V_init)
 res_trace= np.zeros((ns,nv))
 for i in range(ns):
     res_trace[i,:]=it_sym_trace.__next__().reshape(len(V_init),)
-    #print(it_sym_trace.__next__().shape)
 res_trace
 
 # +

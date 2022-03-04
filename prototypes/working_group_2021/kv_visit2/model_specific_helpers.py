@@ -233,14 +233,14 @@ def make_iterator_sym(
             [
               numOutFluxesBySymbol[Symbol(k)](it,*X)
                 for k in ["C_leaf","C_wood","C_root"] 
-                if k in numOutFluxesBySymbol.keys()
+                if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
                 for k in ["C_leaf_litter","C_wood_litter","C_root_litter","C_soil_fast","C_soil_slow","C_soil_passive"] 
-                if k in numOutFluxesBySymbol.keys()
+                if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
         V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
