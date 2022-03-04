@@ -849,12 +849,12 @@ axs[n,0].legend()
 
 # -
 
-#Remark:
-# For simple matrices it is possible to compute the inverse M^{-1} 
-# symbolically ONCE
-mvs.get_CompartmentalMatrix().inv()
-# and then just evaluate it for the X and t along the solution.
-# This could potentially be MUCH faster that inverting 
-# the numerical version of the matrix in every timestep.
-# However it could be very difficult to compute the symbolic inverse in 
-# some cases at all (why we will demonstrate the numeric approach) first. 
+# ###### Remark:
+# # For simple matrices it is possible to compute the inverse M^{-1} 
+# # symbolically ONCE
+# mvs.get_CompartmentalMatrix().inv()
+# # and then just evaluate it for the X and t along the solution.
+# # This could potentially be MUCH faster that inverting 
+# # the numerical version of the matrix in every timestep.
+# # However it could be very difficult to compute the symbolic inverse in 
+# # some cases at all (why we will demonstrate the numeric approach) first. 

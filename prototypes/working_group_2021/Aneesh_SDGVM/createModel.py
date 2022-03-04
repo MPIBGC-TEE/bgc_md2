@@ -302,7 +302,7 @@ def download_my_TRENDY_output():
 # Before we build a function to load the data lets look at it to get an idea.
 #
 
-# +
+# + endofcell="--"
 # this is just an analysis you dont need this code later
 dataPath=Path(conf_dict['dataPath'])
 import netCDF4 as nc
@@ -338,19 +338,21 @@ print('ind_start={}'.format(ind_start))
 c_h_from_1900_after_1900=h_from_1900[ind_start:] 
 c_h_from_1900_after_1900.shape
 
-rh_h=nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc')).variables['time'][:]
-
+rh_h=nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc')).variables['time']
+#(
+#    nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc')).variables['time'][-1]- 
+#    (nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc')).variables['time'][-1]-200*360*24)
+#)/(24*30)
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
 #ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
 #ds.variables['rh']#[:,-56,26][20]
 #print(ds)
 
-# + endofcell="--"
 
 import matplotlib.pyplot as plt
 f=plt.figure(figsize=(15,3))
 ax=f.subplots(1,1)
-nm=37
+nm=36
 ny=int(nm/12)
 ax.plot(rh_h[:nm],[1 for i in range(nm)],"x",label="npp and rh times")
 ax.plot(c_h_from_1900_after_1900[:ny],[1 for i in range(ny)],"x",label="c times")
@@ -1045,6 +1047,10 @@ for ind,f in enumerate(Observables._fields):
     axs[ind].legend()
     
 fig.savefig('solutions_SDGVM.pdf')
+# -
+
+svs_0=Observables(*map(lambda v: v[0],svs))
+
 
 # +
 epa_min=np.array(
@@ -1107,17 +1113,20 @@ epa_max=np.array(
      r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom*100,
      r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit*100,
      r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit*100,
-     C_leaf_0=svs.cVeg,
-     #C_root_0=svs_0.cVeg/3,
-     C_abvstrlit_0=svs.cLitter,
-     C_abvmetlit_0=svs.cLitter,
-     C_blwstrlit_0=svs.cLitter,
-     C_surfacemic_0=svs.cSoil,
-     C_soilmic_0=svs.cSoil,
-     C_slow_0=svs.cSoil
+     C_leaf_0=svs_0.cVeg,
+     #C_root_0=svs_0_0.cVeg/3,
+     C_abvstrlit_0=svs_0.cLitter,
+     C_abvmetlit_0=svs_0.cLitter,
+     C_blwstrlit_0=svs_0.cLitter,
+     C_surfacemic_0=svs_0.cSoil,
+     C_soilmic_0=svs_0.cSoil,
+     C_slow_0=svs_0.cSoil
     )
 )
 # -
+
+for i in range(len(epa_max)):
+    print(i,type(epa_max[i]))
 
 np.array(epa_max)
 

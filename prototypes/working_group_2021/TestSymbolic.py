@@ -19,7 +19,7 @@ from general_helpers import (
 class TestSymbolic(TestCase):
 
     def test_autostep_mcmc(self):
-        model_folders=['kv_visit2']
+        model_folders=['kv_visit2', 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 sys.path.insert(0,mf)

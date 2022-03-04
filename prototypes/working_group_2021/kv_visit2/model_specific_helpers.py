@@ -147,32 +147,32 @@ def make_xi_func(dvs,svs):
 # - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
 #   the dependence on the iteration $it$ allows us to represent drivers that
 #   are functions of time 
-# 
+#
 # So we can compute all values:
-# 
+#
 # $V_1=f(0,V_0)$
-# 
+#
 # $V_2=f(1,V_1)$
-# 
+#
 # ...
-# 
+#
 # $V_n+1=f(n,V_n)$
-# 
+#
 # Technically this can be implemented as an `iterator` object with a `__next__()` method to move our system one step forward in time. 
-# 
+#
 # What we want to build is an object `it_sym` that can use as follows.
 # ```python
 # for i in range(10):
 #     print(it_sym.__next__())
 # ```
 # to print out the first 10 values.
-# 
+#
 # If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, 
 # without all the nonessential technical details of e.g. how many steps we want to make or which of the results we want to store.
 # This is essential if we want to test and use the iterator later in different scenarios but avoid reimplemtation of the basic timestep. 
-# 
+#
 # Remark:
-# 
+#
 # If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically without the need to build an iterator ourselves. 
 # In our case we are also interested in tracking the autotrophic and heterotrophic respiration and therefore have to recreate and extend the code `bgc_md2` would use in the background.
 # We will let `bgc_md2` do part of the work and derive numeric functions for the Compartmental matrix $B$ and the input $u$ and the Outfluxes - from which to compute $ra$ $rh$ - from our symbolic description but we will build our own iterator by combining these functions.    
