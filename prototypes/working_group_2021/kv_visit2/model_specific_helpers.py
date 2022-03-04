@@ -1,861 +1,392 @@
-from typing import Callable
+import sys
+import json 
+from pathlib import Path
+from collections import namedtuple 
 import netCDF4 as nc
 import numpy as np
-from sympy import Symbol, var
-from functools import lru_cache, reduce
-import netCDF4 as nc
-from pathlib import Path
-from collections import namedtuple
+from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.TimeStepIterator import (
         TimeStepIterator2,
 )
+from copy import copy
+from typing import Callable
+from general_helpers import month_2_day_index, monthly_to_yearly
+from functools import reduce
 
-from general_helpers import (
-        day_2_month_index, 
-        month_2_day_index,
-        months_by_day_arr,
-        respiration_from_compartmental_matrix,
-        make_B_u_funcs
+sys.path.insert(0,'..') # necessary to import general_helpers
+from general_helpers import download_TRENDY_output, day_2_month_index, make_B_u_funcs_2
+
+# we will use the trendy output names directly in other parts of the output
+Observables = namedtuple(
+    'Observables',
+    ["cVeg","cLitter","cSoil","rh","ra"]
 )
+Drivers=namedtuple(
+    "Drivers",
+    ["gpp", "mrso", "tas"]
+)    
+from source import mvs
+StartVector = namedtuple(
+        "StartVector",
+        [str(v) for v in mvs.get_StateVariableTuple()]+
+        ["ra","rh"]
+    ) 
+# As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
+# They preserve order as numpy arrays which is great (and fast) for the numeric computations
+# and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
 
-from bgc_md2.resolve.mvars import NumericStartValueDict
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
-from CompartmentalSystems.discrete_model_run import DiscreteModelRun
-from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
-# fixme:
-# Your parameters will most likely differ but you can still use the
-# destinctions between different sets of parameters. The aim is to make
-# the different tasks in the code more obvious. In principal you could
-# have a lot of overlapping sets and just have to keep them consistent. 
-# 'namedtuples' can be used just as normal tuples by functions
-# that are not aware of the names. They can still use the positions like 
-# in the original code
-
-# @Kostia and the 'R'tists: 
-# It is not necessary to replicate the complete functionality of the #
-# namedtuple classes. A simple 'R'proximation is a list with named entries 
-# pa=list(C_leaf_0=2,...)
-
-
-# This set is used by the functions that produce the 
-# specific ingredients (functions) that will be run by
-# mcmc alg.
 UnEstimatedParameters = namedtuple(
     "UnEstimatedParameters",
     [
-        'C_leaf_0',
+        "cLitter_0",
+        "cSoil_0",
+        "cVeg_0",
+        "gpp_0",
+        "rh_0",
+        "ra_0",
+        "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
+        "r_C_root_litter_2_C_soil_slow",# it would be much better to know more  
+        "number_of_months" # necessary to prepare the output in the correct lenght 
+    ]
+)
+# Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
+# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
+# The destinction is only made for the data assimilation to isolate those parameters
+# that the mcmc will try to optimise 
+# It is better to start with only a few
+
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",[ 
+        "beta_leaf",
+        "beta_wood",
+        "T_0",
+        "E",
+        "KM",
+        #"r_C_leaf_rh",
+        #"r_C_wood_rh",
+        #"r_C_root_rh",
+        "r_C_leaf_litter_rh",
+        "r_C_wood_litter_rh",
+        "r_C_root_litter_rh",
+        "r_C_soil_fast_rh",
+        "r_C_soil_slow_rh",
+        "r_C_soil_passive_rh",
+        "r_C_leaf_2_C_leaf_litter",
+        "r_C_wood_2_C_wood_litter",
+        "r_C_root_2_C_root_litter",
+        "r_C_leaf_litter_2_C_soil_fast",
+        "r_C_leaf_litter_2_C_soil_slow",
+        "r_C_leaf_litter_2_C_soil_passive",
+        "r_C_wood_litter_2_C_soil_fast",
+        "r_C_wood_litter_2_C_soil_slow",
+        "r_C_wood_litter_2_C_soil_passive",
+        "r_C_root_litter_2_C_soil_fast",
+        "r_C_root_litter_2_C_soil_slow",
+        "r_C_root_litter_2_C_soil_passive",
+        'C_leaf_0',#for the trendy data also the startvalues have to be estimated but 
         'C_wood_0',
-        'C_root_0',
-        'C_litter_above_0',
-        'C_litter_below_0',
+        #C_root_0 can be inferred as cVeg_0-(C_leaf_0+C_wood_0)
+        'C_leaf_litter_0',
+        'C_wood_litter_0',
+        #C_root_litter_0 can be inferred
         'C_soil_fast_0',
         'C_soil_slow_0',
-        'C_soil_passive_0',
-        'rh_0',
-        'F_veg_lit_0',
-        'F_lit_soil_0',
-        'npp',
-        'number_of_months',
-        'mrso',
-        'tsl'
+        #C_soil_passive_0 can be inferred 
     ]
 )
+# note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
+# parameters. In this case we may use only the first entry e.g. to derive startvalues. 
+# The destinction is only made for the data assimilation to isolate those parameters
+# that the mcmc will try to optimise         
+# to guard agains accidentally changed order we use a namedtuple again. Since B_func and u_func rely 
+# on the correct ordering of the statevariables we build V dependent on this order 
 
-# This set is used (as argument) by the functions that are called
-# inside the mcmc
-EstimatedParameters = namedtuple(
-    "EstiamatedParameters",
-    [
-        "beta_leaf",    #  0 (indices uses in original code) 
-        "beta_wood",    #  1
-        'k_leaf_2_leaf_litter',#  2
-        'k_root_2_root_litter',#  3
-        'k_wood_2_wood_litter',#  4
-        'k_leaf_litter_rh',  # 5
-        'k_root_litter_rh',  # 6
-        'k_wood_litter_rh',  # 7
-        'k_soil_fast_rh',  # 8
-        'k_soil_slow_rh',  # 9
-        'k_soil_passive_rh',  # 10
-        'k_leaf_litter_2_soil_fast',       #  11
-        'k_leaf_litter_2_soil_slow',       #  12
-        'k_leaf_litter_2_soil_passive',       #  13
-        'k_wood_litter_2_soil_fast',	#  14
-        'k_wood_litter_2_soil_slow',	#  15
-        'k_wood_litter_2_soil_passive',   #  16
-        'k_root_litter_2_soil_fast',    #  17
-        'k_root_litter_2_soil_slow',	# 18
-        'k_root_litter_2_soil_passive',	# 19
-        "C_leaf_lit_0",	# 20
-        "T_0",	# 21
-        "E",	# 22
-        "KM"    # 23
-    ]
-)
+#create a small model specific function that will later be stored in the file model_specific_helpers.py
+def download_my_TRENDY_output(conf_dict):
+    download_TRENDY_output(
+        username=conf_dict["username"],
+        password=conf_dict["password"],
+        dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
+        models=['VISIT'],
+        variables = Observables._fields + Drivers._fields
+    )
 
-# This is the set off all 
-_Parameters=namedtuple(
-        "Parameters",
-        EstimatedParameters._fields + UnEstimatedParameters._fields
-)
-class Parameters(_Parameters):
-    @classmethod
-    def from_EstimatedParametersAndUnEstimatedParameters(
-            cls,
-            epa :EstimatedParameters,
-            cpa :UnEstimatedParameters
-        ):
-        return cls(*(epa + cpa))
-
-
-# This set defines the order of the c pools
-# The order is crucial for the compatibility
-# with the matrices (B and b) If you change ist
-# the matrix changes
-StateVariables = namedtuple(
-    'StateVariables',
-    [
-        'C_leaf',
-        'C_wood',
-        'C_root',
-        'C_leaf_litter',
-        'C_wood_litter',
-        'C_root_litter',
-        'C_soil_fast',
-        'C_soil_slow',
-        'C_soil_passive',
-    ]
-)
-Observables = namedtuple(
-    'Observables',
-    [
-        'C_leaf',
-        'C_wood',
-        'C_root',
-        'C_litter_above',
-        'C_litter_below',
-        'C_soil_fast',
-        'C_soil_slow',
-        'C_soil_passive',
-        'rh',
-        'F_veg2litter',
-        'F_litter2som'
-    ]
-)
-
-# We define another set of parameters which describes
-# the parameters of the matrices A,K and the vector b
-# and drivers like npp (in form of arrays)
-# but does not include start values and hyperparameters like the 'number_of_months'
-# This distinction is helpful for the forward simulation where the
-# distinction between estimated and constant is irrelevant.
-ModelParameters = namedtuple(
-    "ModelParameters",
-    [
-        name for name in Parameters._fields 
-        if name not in [
-            'C_leaf_0',
-            'C_wood_0',
-            'C_root_0',
-            'C_litter_above_0',
-            'C_litter_below_0'
-            'C_soil_fast_0',
-            'C_soil_slow_0',
-            'C_soil_passive_0',
-            'C_leaf_lit_0',
-            'rh_0',
-            'F_veg_lit_0',
-            'F_lit_soil_0'
-            'number_of_months'
-        ] 
-    ]
-)
-# to do
-# 1.) make a namedtuple for the yycable data or use xarray to create a multifile dataset
-
-def get_variables_from_files(dataPath):
-    # Read NetCDF data  ******************************************************************************************************************************
-    names = [
-        ('cLeaf', 'cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cLitterAbove', 'cLitterAbove_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cLitterBelow', 'cLitterBelow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cRoot', 'cRoot_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilFast', 'cSoilFast_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilMedium', 'cSoilMedium_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cSoilSlow', 'cSoilSlow_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('cVeg', 'cVeg_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('fLitterSoil', 'fLitterSoil_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('fVegLitter', 'fVegLitter_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('mrsos', 'mrsos_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('npp', 'npp_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('rh', 'rh_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-        ('tsl', 'tsl_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'),
-    ]
+def get_example_site_vars(dataPath):
+    # pick up 1 site
+    s = slice(None, None, None)  # this is the same as :
+    t = s, 50, 33  # [t] = [:,49,325]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
-        return ds.variables[vn][:, :, :]
+        return ds.variables[vn][t]
 
-    return map(f, names)
+    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
+    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Drivers._fields]
+    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+
+def make_npp_func(dvs,svs):
+    def func(day):
+        month=day_2_month_index(day)
+        # kg/m2/s kg/m2/day;
+        return (dvs.gpp[month]-svs.ra[month]) * 86400
+
+    return func
 
 
-def get_example_site_vars(dataPath):
-    (
-        C_leaf,
-        C_litter_above,
-        C_litter_below,
-        C_root,
-        C_fast_som,
-        C_slow_som,
-        C_pass_som,
-        C_veg,
-        f_litter2som,
-        f_veg2litter,
-        mrso,
-        npp,
-        rh,
-        tsl
-    )= get_variables_from_files(dataPath)
-    # pick up 1 site   wombat state forest
-    s = slice(None, None, None)  # this is the same as :
-    t = s, 50, 33  # [t] = [:,49,325]
-    npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
-    rh = rh[t]*86400  # per s to per day
-    f_veg2litter = f_veg2litter[t] * 86400
-    f_litter2som = f_litter2som[t] * 86400
-    tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
-    (
-        C_leaf,
-        C_litter_above,
-        C_litter_below,
-        C_root,
-        C_fast_som,
-        C_slow_som,
-        C_pass_som,
-        C_veg,
-        mrso,
-        tsl
-    ) = map(
-        lambda var: var[t],
-        (
-            C_leaf,
-            C_litter_above,
-            C_litter_below,
-            C_root,
-            C_fast_som,
-            C_slow_som,
-            C_pass_som,
-            C_veg,
-            mrso,
-            tsl_mean
+def make_xi_func(dvs,svs):
+    def func(day):
+        return 1.0 # preliminary fake for lack of better data... 
+    return func
+
+
+# We now build the essential object to run the model forward. We have a 
+# - startvector $V_0$ and 
+# - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
+#   the dependence on the iteration $it$ allows us to represent drivers that
+#   are functions of time 
+# 
+# So we can compute all values:
+# 
+# $V_1=f(0,V_0)$
+# 
+# $V_2=f(1,V_1)$
+# 
+# ...
+# 
+# $V_n+1=f(n,V_n)$
+# 
+# Technically this can be implemented as an `iterator` object with a `__next__()` method to move our system one step forward in time. 
+# 
+# What we want to build is an object `it_sym` that can use as follows.
+# ```python
+# for i in range(10):
+#     print(it_sym.__next__())
+# ```
+# to print out the first 10 values.
+# 
+# If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, 
+# without all the nonessential technical details of e.g. how many steps we want to make or which of the results we want to store.
+# This is essential if we want to test and use the iterator later in different scenarios but avoid reimplemtation of the basic timestep. 
+# 
+# Remark:
+# 
+# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically without the need to build an iterator ourselves. 
+# In our case we are also interested in tracking the autotrophic and heterotrophic respiration and therefore have to recreate and extend the code `bgc_md2` would use in the background.
+# We will let `bgc_md2` do part of the work and derive numeric functions for the Compartmental matrix $B$ and the input $u$ and the Outfluxes - from which to compute $ra$ $rh$ - from our symbolic description but we will build our own iterator by combining these functions.    
+# We will proceed as follows:
+# - create $V_0$ 
+# - build the function $f$
+
+def make_iterator_sym(
+        mvs,
+        V_init, #: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    sv=mvs.get_StateVariableTuple()
+    #mass production of output functions
+
+    def numfunc(expr_cont,delta_t_val):
+        # build the discrete expression (which depends on it,delta_t instead of
+        # the continius one that depends on t (TimeSymbol))
+        it=Symbol("it")           #arbitrary symbol for the step index )
+        t=mvs.get_TimeSymbol()
+        delta_t=Symbol('delta_t')
+        expr_disc = expr_cont.subs({t:delta_t*it})
+        return hr.numerical_function_from_expression(
+            expr=expr_disc.subs({delta_t:delta_t_val}),
+            tup=(it, *mvs.get_StateVariableTuple()),
+            parameter_dict=par_dict,
+            func_set=func_dict
         )
+
+    n=len(sv)
+    # build an array in the correct order of the StateVariables which in our case is already correct 
+    # since V_init was built automatically but in case somebody handcrafted it and changed
+    # the order later in the symbolic formulation....
+    V_arr=np.array(
+        [V_init.__getattribute__(str(v)) for v in sv]+
+        [V_init.ra,V_init.rh]
+    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+    
+
+    
+    # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
+    # We first create numerical functions for all the outfluxes from our symbolic description.
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B @ X
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        
+        ra = np.sum(
+            [
+              numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in ["C_leaf","C_wood","C_root"] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in ["C_leaf_litter","C_wood_litter","C_root_litter","C_soil_fast","C_soil_slow","C_soil_passive"] 
+                if k in numOutFluxesBySymbol.keys()
+            ]
+        )
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
     )
-    C_wood = C_veg - C_leaf - C_root
-    return (npp, C_leaf, C_wood, C_root, C_litter_above, C_litter_below, C_fast_som, C_slow_som, C_pass_som,
-            rh, f_veg2litter, f_litter2som, mrso, tsl)
-
-def make_param_filter_func(
-        c_max: np.ndarray,
-        c_min: np.ndarray
-        ) -> Callable[[np.ndarray], bool]:
-
-    def isQualified(c):
-        # fixme
-        #   this function is model specific: It discards parameter proposals
-        #   where beta1 and beta2 are >0.99
-        paramNum = len(c)
-        flag = True
-        for i in range(paramNum):
-           if(c[i] > c_max[i] or c[i] < c_min[i]):
-              flag = False
-              break
-           if(c[0] + c[1] > 0.99):
-              flag = False
-              break
-        return flag
-    
-    return isQualified
-
-def make_weighted_cost_func(
-        obs: np.ndarray
-    ) -> Callable[[np.ndarray],np.float64]:
-    # first unpack the observation array into its parts
-    cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
-    def costfunction(out_simu: np.ndarray) ->np.float64:
-        # fixme 
-        #   as indicated by the fact that the function lives in this  
-        #   model-specific module it is not apropriate for (all) other models.
-        #   There are model specific properties:
-        #   1.) The weight for the different observation streams
-        #   
-        tot_len=out_simu.shape[0]
-        # we assume the model output to be in the same shape and order 
-        # as the obeservation
-        # this convention has to be honored by the forwar_simulation as well
-        # which in this instance already compresses the 3 different litter pools
-        # to c_litter and the 3 different soil pools to one
-        c_simu = out_simu[:,0:5] 
-        
-        # we assume the rh  part to be in the remaining columns again
-        # this convention has to be honored by the forwar_simulation as well
-        rh_simu = out_simu[:,5:]
-        #from IPython import embed; embed()
-
-        J_obj1 = np.mean (( c_simu[:,0] - cleaf[0:tot_len] )**2)/(2*np.var(cleaf[0:tot_len]))
-        J_obj2 = np.mean (( c_simu[:,1] - croot[0:tot_len] )**2)/(2*np.var(croot[0:tot_len]))
-        J_obj3 = np.mean (( c_simu[:,2] - cwood[0:tot_len] )**2)/(2*np.var(cwood[0:tot_len]))
-        J_obj4 = np.mean (( c_simu[:,3]-  clitter[0:tot_len] )**2)/(2*np.var(clitter[0:tot_len]))
-        J_obj5 = np.mean (( c_simu[:,4]-  csoil[0:tot_len] )**2)/(2*np.var(csoil[0:tot_len]))
-        
-        J_obj6 = np.mean (( rh_simu[:,0] - rh[0:tot_len] )**2)/(2*np.var(rh[0:tot_len]))
-        
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 + J_obj5 )/200+ J_obj6/4
-        # to make this special costfunction comparable (in its effect on the
-        # acceptance rate) to the general costfunction proposed by Feng we
-        # rescale it by a factor 
-        return J_new*50.0
-    return costfunction     
-
-
-def make_param2res(
-        cpa
-    ) -> Callable[[np.ndarray], np.ndarray]: 
-    """The returned function 'param2res' is used by the metropolis hastings algorithm
-    to produce a result from a proposed parameter(tuple).
-    'param2res' will be called only with the parameters to be estimated 'pe'.
-    The constant parameters are the parameters of the present function 'pc' and are automatically available in the returned 'param2res' (closure).
-    
-    In the case of this model 'param2res' has to perform the following 
-    tasks.
-    -   use both sets of parameters 'pc' and 'pe' to build a forward model
-    -   run the forward model to produce output for the times 
-        when obeservations are available.(Here monthly)
-    -   project the output of the forward model to the obeserved variables.
-        (here summation of all different soil-pools to compare to the single
-        observed soil-pool and the same for the litter pools)
-        
-    In this version of the function all tasks are performed at once as in 
-    the original script.
-    See the alternative implementation to see how all the tasks can be 
-    delegated to smaller functions.
-    """
-    # fixme
-    # This function is model-specific in several ways:
-    # 0. Which are the fixed and which are the estimated variables
-    # 1. The matrices for the forward simulation 
-    # 2. the driver (here monthly npp)
-    # 3. the projection of the simulated pool values to observable variables
-    #    (here summation of   
-    def param2res(pa):
-        # pa is a numpy array when pa comes from the predictor
-        # so we transform it to be able to use names instead of positions 
-        epa=EstimatedParameters(*pa)
-        days=[31,28,31,30,31,30,31,31,30,31,30,31]
-        # Construct b vector 
-        beta1=epa.beta_leaf; beta2=epa.beta_root; beta3= 1- beta1- beta2
-        b = np.array([beta1, beta2, beta3, 0, 0, 0, 0,0,0]).reshape([9,1])   # allocation
-        # Now construct A matrix
-        lig_leaf = epa.lig_leaf
-    
-        f41 = epa.f_leaf2metlit; f42 = epa.f_root2metlit; f51 = 1-f41; f52 = 1-f42; f63 = 1;
-        f74 = 0.45; f75 = 0.45*(1-lig_leaf); 
-        f85 = 0.7*lig_leaf; f86 = 0.4*(1-cpa.lig_wood);
-        f96 = 0.7*cpa.lig_wood;  
-        f87=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.997 - 0.032*cpa.clay)
-        f97=(0.85 - 0.68 * (cpa.clay+cpa.silt))* (0.003 + 0.032*cpa.clay)
-        f98=0.45 * (0.003 + 0.009 *cpa.clay)
-    
-        A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
-                         0,  -1,   0,   0,   0,   0,   0,   0,   0,
-                         0,   0,  -1,   0,   0,   0,   0,   0,   0,
-                       f41, f42,   0,  -1,   0,   0,   0,   0,   0,
-                       f51, f52,   0,   0,  -1,   0,   0,   0,   0,
-                         0,   0, f63,   0,   0,  -1,   0,   0,   0,
-                         0,   0,   0, f74, f75,   0,  -1,   0,   0,
-                         0,   0,   0,   0, f85, f86, f87,  -1,   0,
-                         0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
-    
-        #turnover rate per day of pools: 
-        temp = [epa.k_leaf,epa.k_root,epa.k_wood, epa.k_metlit,epa.k_metlit/(5.75*np.exp(-3*epa.lig_leaf)), epa.k_metlit/20.6, epa.k_mic,epa.k_slowsom, epa.k_passsom]
-        K = np.zeros(81).reshape([9, 9])
-        for i in range(0, 9):
-            K[i][i] = temp[i]
-          
-        x_fin=np.zeros((cpa.number_of_months,9))
-        rh_fin=np.zeros((cpa.number_of_months,1))
-        # leaf, root , wood, metabolic, structural, C_CWD, microbial, slow, passive 
-        x_init = np.array(
-            [
-                cpa.C_leaf_0,
-                cpa.C_root_0,
-                cpa.C_wood_0,
-                epa.C_metlit_0,
-                epa.C_CWD_0,
-                cpa.clitter_0-epa.C_metlit_0-epa.C_CWD_0,
-                epa.C_mic_0,
-                cpa.csoil_0- epa.C_mic_0 - epa.C_passom_0,
-                epa.C_passom_0
-            ]
-        ).reshape([9, 1])   # Initial carbon pool size
-        # initialize carbon pools 
-        X=x_init   
-        
-        # initialize first respiration value 
-        co2_rh=cpa.rh_0
-        # fixme:
-        # slight change to the original
-        # I would like to start the solution with the initial values
-        # m=0 means after 0 moths = in the initial step
-        B=A@K
-        #pa=Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
-        #B=make_compartmental_matrix_func(pa)(0,X)
-
-        for m in range(0,cpa.number_of_months):
-            x_fin[m, :]=X.reshape(1,9)
-            npp_in = cpa.npp[m] 
-            rh_fin[m, 0]=co2_rh
-            co2_rh = 0   
-            for d in range(0,days[m%12]):
-                #X=X + b*npp_in + np.array(A@K@X).reshape([9,1])
-                X=X + b*npp_in + B@X
-                co2_rate = [0,0,0, (1-f74)*K[3,3],(1-f75-f85)*K[4,4],(1-f86-f96)*K[5,5], (1- f87 - f97)*K[6,6], (1-f98)*K[7,7], K[8,8] ]
-                co2=np.sum(co2_rate*X.reshape(1,9))
-                co2_rh = co2_rh + co2/days[m%12]   # monthly average rh 
-               
-        # We create an output that has the same shape
-        # as the obvervations to make the costfunctions 
-        # easier. 
-        # To this end we project our 10 output variables of the matrix simulation
-        # onto the 6 data streams by summing up the 3 litter pools into one
-        # and also the 3 soil pools into one
-        c_litter = np.sum(x_fin[:,3:6],axis=1).reshape(cpa.number_of_months,1)
-        c_soil = np.sum(x_fin[:,6:9],axis=1).reshape(cpa.number_of_months,1)
-        #from IPython import embed; embed()
-        out_simu = np.concatenate(
-            [
-                x_fin[:,0:3], # the first 3 pools are used as they are
-                c_litter,
-                c_soil,
-                rh_fin
-            ]
-            ,axis=1
-        )
-        return out_simu
-
-    return param2res
-
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-
-# alternative implementation and helper functions. If you do not want to use it # comment it.
-def make_param2res_2(
-        cpa: UnEstimatedParameters
-    ) -> Callable[[np.ndarray], np.ndarray]: 
-    # This function is an alternative implementation with the same results as 
-    # make_param2res 
-    # Internally it uses a slightly higher level of abstraction and devides the task 
-    # into more numerous but smaller testable and reusable units.
-    # Although both properties are not necessary to replicate the original
-    # code they provide a different perspective which is easier to reuse the code
-    # in  a wider range of models e.g. models with daily driver data, time
-    # dependent or even nonlinear matrices and so on. 
-    # Thus it allows to test small parts of the code against the respective parts of the 
-    # symbolic framework 
-    # 
-    # It differs in the following respects:
-    # 0.)   We use named tuples for the parameters (just for readability)
-    # 1.)   We use a seperate function to costruct the matrix which will be
-    #       a function B(i,X)  of the iteration it  and the present poolvalues X 
-    #       (althouhg in this case unnecessary since B is constant but
-    #       the dependence on 'i' becomes useful if you want to include 
-    #       an environmental scalar and the dependence on X makes it possible
-    #       to include nonlinearities.
-    # 2.)   We build a daily advancing model that can provide output for an arbitrary 
-    #       selection of days.  To do so we provide all driver data as
-    #       functions of the smalles timestep (here day with index i), which in
-    #       the case of this model means that we provide the same npp value for
-    #       all the days in a given month. 
-    # 3.)   We translate the index of a given month to the appropriate day index
-    #       and apply the dayly model of 2.). Again this seems cumbersome for this
-    #       example but allows us to reuse the daily model for all applications.
-    #       This is espacially usefull for testing since we only need some dayly timesteps.
-    #       It makes it also easier to keep an overview over the appropriate 
-    #       units: If the smallest timestep is a day, then all time related parameters
-    #       have to be provided in the corresponding  units, regardless of the
-    #       number of available datapoints 
-    #
-    def param2res(pa):
-        epa=EstimatedParameters(*pa)
-        # here we want to store only monthly values
-        # although the computation takes place on a daily basis
-        V_init = construct_V0(cpa,epa)
-        # compute the days when we need the results
-        # to be able to compare to the monthly output
-        day_indices = month_2_day_index(range(cpa.number_of_months)) 
-        apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
-
-        mpa = ModelParameters(
-            **{
-                k:v for k,v in apa._asdict().items() 
-                if k in ModelParameters._fields
-            }
-        )
-        full_res = run_forward_simulation(
-            V_init=V_init,
-            day_indices=day_indices,
-            mpa=mpa
-        )
-        
-        # project the litter and soil pools
-        tot_len=cpa.number_of_months
-        c_litter = np.sum(full_res[:,3:6],axis=1).reshape(tot_len,1)
-        c_soil = np.sum(full_res[:,6:9],axis=1).reshape(tot_len,1)
-        out_simu = np.concatenate(
-            [
-                full_res[:,0:3], # the first 3 pools are used as they are
-                c_litter,
-                c_soil,
-                full_res[:,9:10]
-            ]
-            ,axis=1
-        )
-        return out_simu
-        
-    return param2res
 
 def make_param2res_sym(
-        cpa: UnEstimatedParameters
+        cpa: UnEstimatedParameters,
+        dvs: Drivers,
+        svs: Observables
     ) -> Callable[[np.ndarray], np.ndarray]: 
-    # This function is an alternative implementation with the same results as 
-    # make_param2res but uses the symbolic model in bgc_md2
+    # To compute numeric solutions we will need to build and iterator 
+    # as we did before. As it will need numeric values for all the parameters 
+    # we will have to create a complete dictionary for all the symbols
+    # exept those for the statevariables and time.
+    # This set of symbols does not change during the mcmc procedure, since it only
+    # depends on the symbolic model.
+    # Therefore we create it outside the mcmc loop and bake the result into the 
+    # param2res function.
+    # The iterator does not care if they are estimated or constant, it only 
+    # wants a dictionary containing key: value pairs for all
+    # parameters that are not state variables or the symbol for time
+    srm=mvs.get_SmoothReservoirModel()
+    model_par_dict_keys=srm.free_symbols.difference(
+        [Symbol(str(mvs.get_TimeSymbol()))]+
+        list(mvs.get_StateVariableTuple())
+    )
+    
+    # the time dependent driver function for gpp does not change with the estimated parameters
+    # so its enough to define it once as in our test
+    seconds_per_day = 86400
+    def npp_func(day):
+        month=day_2_month_index(day)
+        return (dvs.gpp[month]-svs.ra[month]) * seconds_per_day   # kg/m2/s kg/m2/day;
+    
     def param2res(pa):
         epa=EstimatedParameters(*pa)
-        # here we want to store only monthly values
-        # although the computation takes place on a daily basis
-        V_init = construct_V0(cpa,epa)
-        # compute the days when we need the results
-        # to be able to compare to the monthly output
-        day_indices = month_2_day_index(range(cpa.number_of_months)) 
-        apa = Parameters.from_EstimatedParametersAndUnEstimatedParameters(epa,cpa)
-
-        mpa = ModelParameters(
-            **{
-                k:v for k,v in apa._asdict().items() 
-                if k in ModelParameters._fields
-            }
+        # create a startvector for the iterator from both estimated and fixed parameters 
+        # The order is important and corresponds to the order of the statevariables
+        # Our namedtuple StartVector takes care of this
+        V_init = StartVector(
+            C_leaf=epa.C_leaf_0,
+            C_wood=epa.C_wood_0,
+            C_root=cpa.cVeg_0-(epa.C_leaf_0 + epa.C_wood_0),
+            C_leaf_litter=epa.C_leaf_litter_0,
+            C_wood_litter=epa.C_wood_litter_0,
+            C_root_litter=cpa.cLitter_0-(epa.C_leaf_litter_0 + epa.C_wood_litter_0),
+            C_soil_fast=epa.C_soil_fast_0,
+            C_soil_slow=epa.C_soil_slow_0,
+            C_soil_passive=cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0),
+            ra=cpa.ra_0,
+            rh=cpa.rh_0
         )
-        full_res = run_forward_simulation_sym(
+        # next we create the parameter dict for the iterator
+        # The iterator does not care if they are estimated or not so we look for them
+        # in the combination
+        apa = {**cpa._asdict(),**epa._asdict()}
+        model_par_dict = {
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
+        }
+
+        #print(model_par_dict)
+        #from IPython import embed;embed()
+        
+        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
+        # our fake xi_func could of course be defined outside of param2res but in general it
+        # could be build from estimated parameters and would have to live here...
+        def xi_func(day):
+            return 1.0 # preliminary fake for lack of better data... 
+    
+        func_dict={
+            'NPP':npp_func,
+             'xi':xi_func
+        }
+        
+        ##mass production of output functions
+        #def numfunc(expr_cont,delta_t_val):
+        #    # build the discrete expression (which depends on it,delta_t instead of
+        #    # the continius one that depends on t (TimeSymbol))
+        #    it=Symbol("it")           #arbitrary symbol for the step index )
+        #    t=mvs.get_TimeSymbol()
+        #    delta_t=Symbol('delta_t')
+        #    expr_disc = expr_cont.subs({t:delta_t*it})
+        #    return hr.numerical_function_from_expression(
+        #        expr=expr_disc.subs({delta_t:delta_t_val}),
+        #        tup=(it, *mvs.get_StateVariableTuple()),
+        #        parameter_dict=par_dict,
+        #        func_set=func_dict
+        #    )
+        # size of the timestep in days
+        # We could set it to 30 o
+        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
+        delta_t_val=15 
+        it_sym = make_iterator_sym(
+            mvs,
             V_init=V_init,
-            day_indices=day_indices,
-            mpa=mpa
+            par_dict=model_par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
         )
         
-        # project the litter and soil pools
-        tot_len=cpa.number_of_months
-        c_litter = np.sum(full_res[:,3:6],axis=1).reshape(tot_len,1)
-        c_soil = np.sum(full_res[:,6:9],axis=1).reshape(tot_len,1)
-        out_simu = np.concatenate(
-            [
-                full_res[:,0:3], # the first 3 pools are used as they are
-                c_litter,
-                c_soil,
-                full_res[:,9:10]
-            ]
-            ,axis=1
-        )
-        return out_simu
+        # Now that we have the iterator we can start to compute.
+        # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
+        # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
+        # - for the pool contents we only need to record the last day of the month
+        # - for the respiration(s) ra and rh we want an accumulated value (unit mass) 
+        #   have to sum up the products of the values*delta_t over a month
+        # 
+        # Note: check if TRENDY months are like this...
+        # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        sols=[]
+        for m in range(cpa.number_of_months):
+            #dpm = days_per_month[ m % 12]  
+            dpm=30 # 
+            mra=0
+            mrh=0
+            for d in range(int(dpm/delta_t_val)):
+                v = it_sym.__next__()
+                #mra +=v[9,0] 
+                #mrh +=v[10,0]
+                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+                # at the moment the iterator also computes a flux but in kg^-2 ^day
+            V=StartVector(*v)
+            o=Observables(
+                cVeg=float(V.C_leaf+V.C_wood+V.C_root),
+                cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
+                cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
+                ra=v[9,0]/seconds_per_day,
+                rh=v[10,0]/seconds_per_day # the data is per second while the time units for the iterator refer to days
+                #ra=mra/dpm, # monthly respiration back to kg/m2/day units
+                #rh=mrh/dpm, # monthly respiration back to kg/m2/day units
+            )
+            sols.append(o)
+            
+        sol=np.stack(sols)       
+        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
+        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
+        return sol 
         
     return param2res
-
-def run_forward_simulation(
-        V_init,
-        day_indices,
-        mpa
-    ):
-        tsi = make_daily_iterator(
-            V_init,
-            mpa=mpa
-        )
-
-        def g(acc, i):
-            xs,co2s,acc_co2,acc_days = acc
-            v = tsi.__next__()
-            d_pools = v[0:-1,:]
-            d_co2=v[-1:,:]
-            acc_co2 += d_co2
-            acc_days += 1
-            if i in day_indices:
-                xs += [d_pools] 
-                co2s +=[acc_co2/acc_days]
-                acc_co2=np.array([0.0]).reshape(1,1)
-                acc_days = 0
-                
-            acc = (xs,co2s,acc_co2,acc_days)
-            return acc
-        xs,co2s,acc_days,_ =  reduce(g,range(max(day_indices)+1),([],[],0,0))
-                
-        def h(tup):
-            x, co2 = tup
-            return np.transpose(np.concatenate([x,co2]))
-    
-        values_with_accumulated_co2 = [v for v in  map(h,zip(xs,co2s))]
-        RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
-        return RES
-
-
-#def make_daily_iterator(
-#        V_init,
-#        mpa
-#    ):
-#         
-#        # Construct npp(day)
-#        # in general this function can depend on the day i and the state_vector X
-#        # e.g. typically the size fo X.leaf...
-#        # In this case it only depends on the day i 
-#        def npp_func(day,X):
-#            return mpa.npp[day_2_month_index(day)] 
-#
-#        # b (b vector for partial allocation) 
-#        beta_wood = 1- mpa.beta_leaf- mpa.beta_root
-#        b = np.array(
-#            [
-#                mpa.beta_leaf,
-#                mpa.beta_root,
-#                beta_wood,
-#                0,
-#                0,
-#                0,
-#                0,
-#                0,
-#                0
-#            ],
-#        ).reshape(9,1)
-#        # Now construct B matrix B=A*K 
-#        B_func  = make_compartmental_matrix_func(
-#            mpa=mpa,
-#        )
-#        # Build the iterator which is the representation of a dynamical system
-#        # for looping forward over the results of a difference equation
-#        # X_{i+1}=f(X_{i},i)
-#        # This is the discrete counterpart to the initial value problem 
-#        # of the continuous ODE  
-#        # dX/dt = f(X,t) and initial values X(t=0)=X_0
-#        
-#        def f(it,V):
-#            X = V[0:9]
-#            co2 = V[9]
-#            npp  = npp_func(it,X)
-#            B = B_func(it,X)
-#            X_new = X + npp * b + B@X
-#
-#            # we also compute the respired co2 in every (daily) timestep
-#            # and use this part of the solution later to sum up the monthly amount
-#            co2_new =  respiration_from_compartmental_matrix(B,X) 
-#            
-#            V_new = np.concatenate((X_new,np.array([co2_new]).reshape(1,1)), axis=0)
-#            return V_new
-#    
-#    
-#        #X_0 = np.array(x_init).reshape(9,1) #transform the tuple to a matrix
-#        #co2_0 = np.array([0]).reshape(1,1)
-#        #V_0 = np.concatenate((X_0, co2_0), axis=0)
-#
-#        return TimeStepIterator2(
-#                initial_values=V_init,
-#                f=f,
-#                #max_it=max(day_indices)+1
-#        )
-#    
-#
-#        
-#def construct_matrix_func_sym(pa):
-#    # we create a parameterdict for the fixed values
-#    # and extend it by the parameters provided 
-#    from bgc_md2.models.cable_yuanyuan.source import mvs 
-#    symbol_names = mvs.get_BibInfo().sym_dict.keys()   
-#    for name in symbol_names:
-#        var(name)
-#    parDict = {
-#        clay: 0.2028,
-#        silt: 0.2808,
-#        lig_wood: 0.4,
-#        f_wood2CWD: 1,
-#        f_metlit2mic: 0.45,
-#    #    NPP: npp_in
-#    }
-#    model_params = {Symbol(k): v for k,v in pa._asdict().items()}
-#    parDict.update(model_params)
-#    B_func = hr.numerical_array_func(
-#            state_vector = mvs.get_StateVariableTuple(),
-#            time_symbol=mvs.get_TimeSymbol(),
-#            expr=mvs.get_CompartmentalMatrix(),
-#            parameter_dict=parDict,
-#            func_dict={}
-#    )
-#    # in the general nonautonomous nonlinear B_func is a function of t,x
-#    # although for this example it does not depend on either t, nor x.
-#    return B_func 
-
-def run_forward_simulation_sym(
-        V_init,
-        day_indices,
-        mpa
-    ):
-        # Construct npp(day)
-        # in general this function can depend on the day i and the state_vector X
-        # e.g. typically the size fo X.leaf...
-        # In this case it only depends on the day i 
-        def npp_func(day):
-            return mpa.npp[day_2_month_index(day)] 
-
-        func_dict = {Symbol('NPP'):npp_func}
-        tsi = make_daily_iterator_sym(
-            V_init,
-            mpa=mpa,
-            func_dict=func_dict
-        )
-
-        def g(acc, i):
-            xs,co2s,acc_co2,acc_days = acc
-            v = tsi.__next__()
-            d_pools = v[0:-1,:]
-            d_co2=v[-1:,:]
-            acc_co2 += d_co2
-            acc_days += 1
-            if i in day_indices:
-                xs += [d_pools] 
-                co2s +=[acc_co2/acc_days]
-                acc_co2=np.array([0.0]).reshape(1,1)
-                acc_days = 0
-                
-            acc = (xs,co2s,acc_co2,acc_days)
-            return acc
-        xs,co2s,acc_days,_ =  reduce(g,range(max(day_indices)+1),([],[],0,0))
-                
-        def h(tup):
-            x, co2 = tup
-            return np.transpose(np.concatenate([x,co2]))
-    
-        values_with_accumulated_co2 = [v for v in  map(h,zip(xs,co2s))]
-        RES = np.concatenate(values_with_accumulated_co2 , axis=0)  
-        return RES
-
-def make_daily_iterator_sym(
-        V_init,
-        mpa,
-        func_dict
-    ):
-        from bgc_md2.models.VISIT_Kostia.source import mvs 
-        B_func, u_func = make_B_u_funcs(mvs,mpa,func_dict)  
-        
-        def f(it,V):
-            X = V[0:9]
-            co2 = V[9]
-            b = u_func(it,X)
-            B = B_func(it,X)
-            X_new = X + b + B@X
-
-            # we also compute the respired co2 in every (daily) timestep
-            # and use this part of the solution later to sum up the monthly amount
-            co2_new = -np.sum(B @ X) # fixme add computer for respirattion
-            
-            V_new = np.concatenate((X_new,np.array([co2_new]).reshape(1,1)), axis=0)
-            return V_new
-    
-        return TimeStepIterator2(
-                initial_values=V_init,
-                f=f#,
-                #max_it=max(day_indices)+1
-        )
-
-
-
-
-#def make_compartmental_matrix_func(
-#        mpa
-#    ):
-#    # Now construct A matrix
-#    # diagonal 
-#    # make sure to use 1.0 instead of 1 otherwise it will be an interger array
-#    # and round your values....
-#    A =np.diag([-1.0 for i in range(9)]) 
-#    # because of python indices starting at 0 we have A[i-1,j-1]=fij
-#    #
-#    #A = np.array([  -1,   0,   0,   0,   0,   0,   0,   0,   0,
-#    #                 0,  -1,   0,   0,   0,   0,   0,   0,   0,
-#    #                 0,   0,  -1,   0,   0,   0,   0,   0,   0,
-#    #               f41, f42,   0,  -1,   0,   0,   0,   0,   0,
-#    #               f51, f52,   0,   0,  -1,   0,   0,   0,   0,
-#    #                 0,   0, f63,   0,   0,  -1,   0,   0,   0,
-#    #                 0,   0,   0, f74, f75,   0,  -1,   0,   0,
-#    #                 0,   0,   0,   0, f85, f86, f87,  -1,   0,
-#    #                 0,   0,   0,   0,   0, f96, f97, f98,  -1 ]).reshape([9,9])   # tranfer
-#
-#    # note that the matrix description of a model is implicitly related to the
-#    # order of pools in the state_vector and not independent from it.
-#
-#    A[3,0] = mpa.f_leaf2metlit
-#    A[3,1] = mpa.f_root2metlit
-#    A[4,0] = 1.0 - mpa.f_leaf2metlit
-#    A[4,1] = 1.0 - mpa.f_root2metlit
-#    A[5,2] = mpa.f_wood2CWD 
-#    A[6,3] = mpa.f_metlit2mic 
-#    A[6,4] = mpa.f_metlit2mic * (1 - mpa.lig_leaf)
-#    A[7,4] = 0.7 * mpa.lig_leaf
-#    A[7,5] = 0.4 * (1 - mpa.lig_wood)
-#    A[8,5] = 0.7 * mpa.lig_wood
-#    A[7,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.997 - 0.032 * mpa.clay)
-#    A[8,6] = (0.85 - 0.68 * (mpa.clay+mpa.silt)) * (0.003 + 0.032 * mpa.clay)
-#    A[8,7] = 0.45 * (0.003 + 0.009 * mpa.clay)
-#
-#    #turnover rate per day of pools: 
-#    K = np.diag([
-#        mpa.k_leaf,
-#        mpa.k_root,
-#        mpa.k_wood,
-#        mpa.k_metlit,
-#        mpa.k_metlit/(5.75*np.exp(-3*mpa.lig_leaf)),
-#        mpa.k_metlit/20.6,
-#        mpa.k_mic,
-#        mpa.k_slowsom,
-#        mpa.k_passsom
-#    ])
-#    # in the general nonautonomous nonlinear case
-#    # B will depend on an it,X (althouh in this case it does not depend on either
-#    def B_func(it,X): 
-#        return A@K
-#
-#    return B_func
-
-def construct_V0(
-        cpa :UnEstimatedParameters,
-        epa :EstimatedParameters
-    ) -> np.ndarray:
-    """Construct the initial values for the forward simulation
-    from constant and eveluated parameters
-
-    param: cpa : constant parameeters
-    param: epa : estimated parameters 
-    """
-    # to make sure that we are in the right order we use the 
-    # StateVariables namedtuple 
-    X_0 = StateVariables( 
-            C_leaf=cpa.C_leaf_0,
-            C_wood=cpa.C_wood_0,
-            C_root=cpa.C_root_0,
-            C_leaf_litter=epa.C_leaf_lit_0,
-            C_wood_litter=cpa.C_litter_above_0 - epa.C_leaf_lit_0,
-            C_root_litter=cpa.C_litter_below_0,
-            C_soil_fast=cpa.C_soil_fast_0,
-            C_soil_slow=cpa.C_soil_slow_0,
-            C_soil_passive=cpa.C_soil_passive_0
-    )
-    # add the respiration start value to the tuple
-    V_0 = (*X_0,cpa.rh_0)
-    return np.array(V_0).reshape(10,1)   

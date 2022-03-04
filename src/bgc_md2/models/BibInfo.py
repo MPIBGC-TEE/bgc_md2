@@ -14,6 +14,7 @@ class BibInfo():
             'doi',
             'further_references',
             'sym_dict',
+            'func_dict',
             'exprs_dict'
         }
         keyset = set(kwargs.keys())

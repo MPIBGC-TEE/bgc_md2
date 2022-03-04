@@ -1,6 +1,7 @@
 from sympy import  Symbol, Function
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
+from bgc_md2.models.BibInfo import BibInfo
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -12,8 +13,6 @@ import bgc_md2.resolve.computers as bgc_c
 
 # Make a small dictionary for the variables we will use
 sym_dict={
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
     "r_vl_2_vw": "internal flux rate from leaf to wood", 
     "r_vw_2_vl": "internal flux rate from wood to leaf", 
     'C_soil_fast': '',
@@ -43,9 +42,8 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    'tsl': '',
+    'tas': 'air temperature',
     'mrso': '',
-    't': '',
     'T_0': '',
     'E': '',
     'KM': '',
@@ -113,6 +111,17 @@ mvs = CMTVS(
                 (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi(t),
                 (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),
             }
+        ),
+        BibInfo(# Bibliographical Information
+            name="Visit",
+            longName="",
+            version="1",
+            entryAuthor="Konstiantyn Viatkin",
+            entryAuthorOrcid="",
+            entryCreationDate="",
+            doi="",
+            sym_dict=sym_dict,
+            func_dict=func_dict
         ),
     },
 
