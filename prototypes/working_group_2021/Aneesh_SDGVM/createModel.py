@@ -121,6 +121,10 @@ sym_dict = {
 # for the moment only use the 
 var(list(sym_dict.keys()))
 
+for k in sym_dict.keys():
+    code=k+" = Symbol('{0}')".format(k)
+    exec(code)
+    
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
     'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
@@ -130,6 +134,8 @@ func_dict={
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
     exec(code)
+    
+
 
 #ls_aboveground = 0.12
 #ls_belowground = 0.35
@@ -174,6 +180,7 @@ for k in func_dict.keys():
 #r_passsom2soil_microbe =k_C_passsom * f_passsom2soil_microbe
 #r_leached = leached = (leachedwtr30)/18 * (0.01 + 0.04* (1- silt_clay))
 t=TimeSymbol("t")
+beta_root = 1.0 - (beta_leaf + beta_wood)
 mvs = CMTVS(
     {
         StateVariableTuple((C_leaf, 
@@ -577,28 +584,27 @@ all_rates.update(internal_flux_rates)
 all_rates
 
 par_dict = {
-     beta_leaf:0.15, 
-     beta_wood:0.6, 
-     beta_root:0.25,
-     r_C_leaf2abvstrlit: 0.3,
-     r_C_abvmetlit2surface_microbe:0.2,
-     r_C_abvstrlit2slowsom:0.4,
-     r_C_abvstrlit2surface_microbe:0.5,
-     r_C_belowmetlit2soil_microbe:0.4,
-     r_C_belowstrlit2slowsom:0.3,
-     r_C_belowstrlit2soil_microbe:0.4,
-     r_C_leached:0.1,
-     r_C_leaf2abvmetlit:0.6,
-     r_C_passsom2soil_microbe:0.2,
-     r_C_root2belowmetlit:0.3,
-     r_C_root2belowstrlit:0.4,
-     r_C_slowsom2passsom:0.3,
-     r_C_slowsom2soil_microbe:0.1,
-     r_C_soil_microbe2passsom:0.05,
-     r_C_soil_microbe2slowsom:0.1,
-     r_C_surface_microbe2slowsom:0.02,
-     r_C_wood2abvmetlit:0.4,
-     r_C_wood2abvstrlit:0.6}
+     beta_leaf:0.6, 
+     beta_wood:0.25, 
+     r_C_leaf2abvstrlit: 0.000415110004151100,
+     r_C_abvmetlit2surface_microbe:0.000124533001245330,
+     r_C_abvstrlit2slowsom:0.000004,
+     r_C_abvstrlit2surface_microbe:0.00005,
+     r_C_belowmetlit2soil_microbe:0.00004,
+     r_C_belowstrlit2slowsom:0.00003,
+     r_C_belowstrlit2soil_microbe:0.00004,
+     r_C_leached:0.00001,
+     r_C_leaf2abvmetlit:0.000006,
+     r_C_passsom2soil_microbe:0.00002,
+     r_C_root2belowmetlit:0.00003,
+     r_C_root2belowstrlit:0.00004,
+     r_C_slowsom2passsom:0.00003,
+     r_C_slowsom2soil_microbe:0.0001,
+     r_C_soil_microbe2passsom:0.000005,
+     r_C_soil_microbe2slowsom:0.000001,
+     r_C_surface_microbe2slowsom:0.000002,
+     r_C_wood2abvmetlit:0.00004,
+     r_C_wood2abvstrlit:0.00006}
 
 # +
 from general_helpers import make_B_u_funcs_2, day_2_month_index
@@ -760,7 +766,7 @@ EstimatedParameters = namedtuple(
     "EstimatedParameters",[ 
          'beta_leaf', 
          'beta_wood', 
-         #beta_root,
+         #'beta_root',
          'r_C_leaf2abvstrlit',
          'r_C_abvmetlit2surface_microbe',
          'r_C_abvstrlit2slowsom',
@@ -813,8 +819,8 @@ cpa=UnEstimatedParameters(
 cpa
 
 epa_0=EstimatedParameters(
-     beta_leaf=0.15, 
-     beta_wood=0.6, 
+     beta_leaf=0.6, 
+     beta_wood=0.25, 
      r_C_leaf2abvstrlit= 0.000415110004151100,
      r_C_abvmetlit2surface_microbe=0.000124533001245330,
      r_C_abvstrlit2slowsom=0.000004,
@@ -964,10 +970,10 @@ def make_param2res_sym(
                     mrh +=V.rh
                 rhs[m_id]=mrh/dpm
                 m_id+=1
-            cVegs[y]=cVeg#/dpy
-            cRoots[y] = cRoot#/dpy
-            cLitters[y]= cLitter#/dpy 
-            cSoils[y]= cSoil#/dpy
+            cVegs[y]=cVeg/dpy
+            cRoots[y] = cRoot/dpy
+            cLitters[y]= cLitter/dpy 
+            cSoils[y]= cSoil/dpy
         
         return Observables(
             cVeg=cVegs,
@@ -1123,12 +1129,13 @@ epa_max=np.array(
      C_slow_0=svs_0.cSoil
     )
 )
-# -
 
-for i in range(len(epa_max)):
-    print(i,type(epa_max[i]))
+# +
+# for i in range(len(epa_max)):
+#     print(i,type(epa_max[i]))
 
-np.array(epa_max)
+# +
+#np.array(epa_max)
 
 # +
 from general_helpers import autostep_mcmc, make_param_filter_func
@@ -1143,7 +1150,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_weighted_cost_func(svs),
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=500, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
@@ -1155,31 +1162,79 @@ C_autostep, J_autostep = autostep_mcmc(
 print("Data assimilation finished!")
 
 # +
+day_indices=month_2_day_index(range(cpa.number_of_months)),
+
+out_simu_d=obs_0._asdict()
+obs_d=svs._asdict()
+print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(10,50))
+axs=fig.subplots(5,1)
+for ind,f in enumerate(Observables._fields):
+    val_sim=out_simu_d[f]
+    val_obs=obs_d[f]
+    axs[ind].plot(range(len(val_sim)),val_sim,label=f+"_sim")
+    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+    axs[ind].legend()
+    
+fig.savefig('solutions_SDGVM_DA.pdf')
+
+# +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
 epa_opt=EstimatedParameters(*par_opt)
 mod_opt = param2res(epa_opt)  
-
+DA = mod_opt._asdict()
+obs_d=svs._asdict()
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
-fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
-        #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months)), # for yearly output
-        var_names=Observables._fields,
-        tup=(mod_opt,obs)
-)
+fig = plt.figure(figsize=(10, 50), dpi=80)
+axs_DA = fig.subplots(5,1)
 
-fig.savefig('solutions_opt.pdf')
+for a, b in enumerate(Observables._fields):
+    val_DA=DA[b]
+    val_obs=obs_d[b]
+    axs_DA[a].plot(range(len(val_DA)), val_DA, label=b+"_DA")
+    axs_DA[a].plot(range(len(val_obs)),val_obs, label=b+"_obs")
+    axs_DA[a].legend()
+
+fig.savefig('solution_opt.pdf')
+
 
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
 import pandas as pd
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('SDGVM_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('SDGVM_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('SDGVM_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('SDGVM_optimized_solutions.csv'), sep=',')
 # -
 
+
+svs
+
+print("Optimized parameters: ", epa_opt)
+par_dict_opt={
+     beta_leaf=epa_opt.beta_leaf, 
+     beta_wood=epa_opt.beta_wood, 
+     r_C_leaf2abvstrlit= epa_opt.r_C_leaf2abvmetlit,
+     r_C_abvmetlit2surface_microbe= epa_opt.r_C_abvmetlit2surface_microbe,
+     r_C_abvstrlit2slowsom=epa_opt.r_C_abvstrlit2slowsom,
+     r_C_abvstrlit2surface_microbe=epa_opt.r_C_abvstrlit2surface_microbe,
+     r_C_belowmetlit2soil_microbe=epa_opt.r_C_belowmetlit2soil_microbe,
+     r_C_belowstrlit2slowsom=epa_opt.r_C_belowstrlit2slowsom,
+     r_C_belowstrlit2soil_microbe=epa_opt.r_C_belowstrlit2soil_microbe,
+     r_C_leached=epa_opt.r_C_leached,
+     r_C_leaf2abvmetlit=epa_opt.r_C_leaf2abvmetlit,
+     r_C_passsom2soil_microbe=epa_opt.r_C_passsom2soil_microbe,
+     r_C_root2belowmetlit=epa_opt.r_C_root2belowmetlit,
+     r_C_root2belowstrlit=epa_opt.r_C_root2belowstrlit,
+     r_C_slowsom2passsom=epa_opt.r_C_slowsom2passsom,
+     r_C_slowsom2soil_microbe=epa_opt.r_C_slowsom2soil_microbe,
+     r_C_soil_microbe2passsom=epa_opt.r_C_soil_microbe2passsom,
+     r_C_soil_microbe2slowsom=epa_opt.r_C_soil_microbe2slowsom,
+     r_C_surface_microbe2slowsom=epa_opt.r_C_surface_microbe2slowsom,
+     r_C_wood2abvmetlit=epa_opt.r_C_wood2abvmetlit,
+     r_C_wood2abvstrlit=epa_opt.r_C_wood2abvstrlit
+}
+print("Optimized parameters dictionary: ", par_dict_opt)
 
