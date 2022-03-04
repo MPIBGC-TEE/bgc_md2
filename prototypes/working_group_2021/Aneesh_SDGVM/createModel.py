@@ -15,7 +15,7 @@
 
 # # SDGVM model
 
-from IPython.core.display import display, HTML
+from IPython.display import display, HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # +
@@ -596,7 +596,7 @@ par_dict = {
      r_C_leached:0.00001,
      r_C_leaf2abvmetlit:0.000006,
      r_C_passsom2soil_microbe:0.00002,
-     r_C_root2belowmetlit:0.00003,
+     r_C_root2belowmetlit:0.0003,
      r_C_root2belowstrlit:0.00004,
      r_C_slowsom2passsom:0.00003,
      r_C_slowsom2soil_microbe:0.0001,
@@ -682,9 +682,24 @@ def make_daily_iterator_sym(
         mvs,
         V_init: StartVector,
         par_dict,
-        func_dict
+        func_dict,
+        delta_t_val=1
     ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)
+    def numfunc(expr_cont,delta_t_val):
+        # build the discrete expression (which depends on it,delta_t instead of
+        # the continius one that depends on t (TimeSymbol))
+        it=Symbol("it")           #arbitrary symbol for the step index )
+        t=mvs.get_TimeSymbol()
+        delta_t=Symbol('delta_t')
+        expr_disc = expr_cont.subs({t:delta_t*it})
+        return hr.numerical_function_from_expression(
+            expr=expr_disc.subs({delta_t:delta_t_val}),
+            tup=(it, *mvs.get_StateVariableTuple()),
+            parameter_dict=par_dict,
+            func_set=func_dict
+        )
+    
     sv=mvs.get_StateVariableTuple()
     n=len(sv)
     # build an array in the correct order of the StateVariables which in our case is already correct 
@@ -695,6 +710,10 @@ def make_daily_iterator_sym(
         #[V_init.ra,V_init.rh]
         [V_init.rh]
     ).reshape(n+1,1) #reshaping is neccessary for matmux
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
     
     def f(it,V):
         X = V[0:n]
@@ -704,7 +723,21 @@ def make_daily_iterator_sym(
         X_new = X + b + outfluxes
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         #ra= -np.sum(outfluxes[0:3]) # check with  mvs.get_StateVariableTuple()[0:3]
-        rh= -np.sum(outfluxes[3:n]) # check with  mvs.get_StateVariableTuple()[3:9]
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in [
+                    "C_abvmetlit",
+                    "C_belowstrlit",
+                    "C_belowmetlit",
+                    "C_surface_microbe", 
+                    "C_soil_microbe",
+                    "C_slowsom",
+                    "C_passsom"
+                ] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
+            ]
+        )
         
         V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
         return V_new
@@ -1162,23 +1195,6 @@ C_autostep, J_autostep = autostep_mcmc(
 print("Data assimilation finished!")
 
 # +
-day_indices=month_2_day_index(range(cpa.number_of_months)),
-
-out_simu_d=obs_0._asdict()
-obs_d=svs._asdict()
-print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
-fig = plt.figure(figsize=(10,50))
-axs=fig.subplots(5,1)
-for ind,f in enumerate(Observables._fields):
-    val_sim=out_simu_d[f]
-    val_obs=obs_d[f]
-    axs[ind].plot(range(len(val_sim)),val_sim,label=f+"_sim")
-    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
-    axs[ind].legend()
-    
-fig.savefig('solutions_SDGVM_DA.pdf')
-
-# +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
 epa_opt=EstimatedParameters(*par_opt)
@@ -1196,7 +1212,7 @@ for a, b in enumerate(Observables._fields):
     axs_DA[a].plot(range(len(val_obs)),val_obs, label=b+"_obs")
     axs_DA[a].legend()
 
-fig.savefig('solution_opt.pdf')
+fig.savefig('solution_DA.pdf')
 
 
 # save the parameters and cost function values for postprocessing
@@ -1210,7 +1226,7 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('SDGVM_optimized_solutions.csv'
 # -
 
 
-svs
+
 
 print("Optimized parameters: ", epa_opt)
 par_dict_opt={
