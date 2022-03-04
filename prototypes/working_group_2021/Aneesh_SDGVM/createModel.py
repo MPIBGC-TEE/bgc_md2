@@ -277,7 +277,7 @@ with Path('config.json').open(mode='r') as f:
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cLitter", "cSoil", "cVeg", "cRoot", "rh"]
+    ["cVeg", "cRoot", "cLitter", "cSoil", "rh"]
 )
 Drivers=namedtuple(
     "Drivers",
@@ -504,6 +504,8 @@ def get_example_site_vars(dataPath):
 #obs, dr =get_example_site_vars(dataPath)
 #obs.cVeg.shape
 
+
+
 # +
 import sys 
 sys.path.insert(0,'..')
@@ -515,6 +517,8 @@ func_dict={NPP: NPP_fun}
 # -
 
 svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+
+
 
 svs.cLitter.shape
 
@@ -809,25 +813,25 @@ cpa
 epa_0=EstimatedParameters(
      beta_leaf=0.15, 
      beta_wood=0.6, 
-     r_C_leaf2abvstrlit= 0.3,
-     r_C_abvmetlit2surface_microbe=0.2,
-     r_C_abvstrlit2slowsom=0.4,
-     r_C_abvstrlit2surface_microbe=0.5,
-     r_C_belowmetlit2soil_microbe=0.4,
-     r_C_belowstrlit2slowsom=0.3,
-     r_C_belowstrlit2soil_microbe=0.4,
-     r_C_leached=0.1,
-     r_C_leaf2abvmetlit=0.6,
-     r_C_passsom2soil_microbe=0.2,
-     r_C_root2belowmetlit=0.3,
-     r_C_root2belowstrlit=0.4,
-     r_C_slowsom2passsom=0.3,
-     r_C_slowsom2soil_microbe=0.1,
-     r_C_soil_microbe2passsom=0.05,
-     r_C_soil_microbe2slowsom=0.1,
-     r_C_surface_microbe2slowsom=0.02,
-     r_C_wood2abvmetlit=0.4,
-     r_C_wood2abvstrlit=0.6,
+     r_C_leaf2abvstrlit= 0.000415110004151100,
+     r_C_abvmetlit2surface_microbe=0.000124533001245330,
+     r_C_abvstrlit2slowsom=0.000004,
+     r_C_abvstrlit2surface_microbe=0.00005,
+     r_C_belowmetlit2soil_microbe=0.00004,
+     r_C_belowstrlit2slowsom=0.00003,
+     r_C_belowstrlit2soil_microbe=0.00004,
+     r_C_leached=0.00001,
+     r_C_leaf2abvmetlit=0.000006,
+     r_C_passsom2soil_microbe=0.00002,
+     r_C_root2belowmetlit=0.00003,
+     r_C_root2belowstrlit=0.00004,
+     r_C_slowsom2passsom=0.00003,
+     r_C_slowsom2soil_microbe=0.0001,
+     r_C_soil_microbe2passsom=0.000005,
+     r_C_soil_microbe2slowsom=0.000001,
+     r_C_surface_microbe2slowsom=0.000002,
+     r_C_wood2abvmetlit=0.00004,
+     r_C_wood2abvstrlit=0.00006,
      C_leaf_0=svs_0.cVeg/3,
      #C_root_0=svs_0.cVeg/3,
      C_abvstrlit_0=svs_0.cLitter/4,
@@ -839,7 +843,7 @@ epa_0=EstimatedParameters(
 )
 
 # check initial values for the pool siz
-V_init
+epa_0
 
 # +
 from typing import Callable
@@ -958,10 +962,10 @@ def make_param2res_sym(
                     mrh +=V.rh
                 rhs[m_id]=mrh/dpm
                 m_id+=1
-            cVegs[y]=cVeg/dpy
-            cRoots[y] = cRoot/dpy
-            cLitters[y]= cLitter/dpy 
-            cSoils[y]= cSoil/dpy
+            cVegs[y]=cVeg#/dpy
+            cRoots[y] = cRoot#/dpy
+            cLitters[y]= cLitter#/dpy 
+            cSoils[y]= cSoil#/dpy
         
         return Observables(
             cVeg=cVegs,
@@ -1026,13 +1030,11 @@ for f in Observables._fields:
     print(obs_0._asdict()[f])
 
 # +
-
-
-    
 day_indices=month_2_day_index(range(cpa.number_of_months)),
 
 out_simu_d=obs_0._asdict()
 obs_d=svs._asdict()
+print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(10,50))
 axs=fig.subplots(5,1)
 for ind,f in enumerate(Observables._fields):
@@ -1043,25 +1045,81 @@ for ind,f in enumerate(Observables._fields):
     axs[ind].legend()
     
 fig.savefig('solutions_SDGVM.pdf')
+
+# +
+epa_min=np.array(
+    EstimatedParameters(
+     beta_leaf=0, 
+     beta_wood=0, 
+     r_C_leaf2abvstrlit= epa_0.r_C_leaf2abvmetlit/100,
+     r_C_abvmetlit2surface_microbe= epa_0.r_C_abvmetlit2surface_microbe/100,
+     r_C_abvstrlit2slowsom=epa_0.r_C_abvstrlit2slowsom/100,
+     r_C_abvstrlit2surface_microbe=epa_0.r_C_abvstrlit2surface_microbe/100,
+     r_C_belowmetlit2soil_microbe=epa_0.r_C_belowmetlit2soil_microbe/100,
+     r_C_belowstrlit2slowsom=epa_0.r_C_belowstrlit2slowsom/100,
+     r_C_belowstrlit2soil_microbe=epa_0.r_C_belowstrlit2soil_microbe/100,
+     r_C_leached=epa_0.r_C_leached/100,
+     r_C_leaf2abvmetlit=epa_0.r_C_leaf2abvmetlit/100,
+     r_C_passsom2soil_microbe=epa_0.r_C_passsom2soil_microbe/100,
+     r_C_root2belowmetlit=epa_0.r_C_root2belowmetlit/100,
+     r_C_root2belowstrlit=epa_0.r_C_root2belowstrlit/100,
+     r_C_slowsom2passsom=epa_0.r_C_slowsom2passsom/100,
+     r_C_slowsom2soil_microbe=epa_0.r_C_slowsom2soil_microbe/100,
+     r_C_soil_microbe2passsom=epa_0.r_C_soil_microbe2passsom/100,
+     r_C_soil_microbe2slowsom=epa_0.r_C_soil_microbe2slowsom/100,
+     r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom/100,
+     r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit/100,
+     r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit/100,
+     C_leaf_0=0,
+     #C_root_0=svs_0.cVeg/3,
+     C_abvstrlit_0=0,
+     C_abvmetlit_0=0,
+     C_blwstrlit_0=0,
+     C_surfacemic_0=0,
+     C_soilmic_0=0,
+     C_slow_0=0
+    )
+)
+
+
+
+
+epa_max=np.array(
+    EstimatedParameters(
+     beta_leaf=1, 
+     beta_wood=1, 
+     r_C_leaf2abvstrlit= epa_0.r_C_leaf2abvmetlit*100,
+     r_C_abvmetlit2surface_microbe= epa_0.r_C_abvmetlit2surface_microbe*100,
+     r_C_abvstrlit2slowsom=epa_0.r_C_abvstrlit2slowsom*100,
+     r_C_abvstrlit2surface_microbe=epa_0.r_C_abvstrlit2surface_microbe*100,
+     r_C_belowmetlit2soil_microbe=epa_0.r_C_belowmetlit2soil_microbe*100,
+     r_C_belowstrlit2slowsom=epa_0.r_C_belowstrlit2slowsom*100,
+     r_C_belowstrlit2soil_microbe=epa_0.r_C_belowstrlit2soil_microbe*100,
+     r_C_leached=epa_0.r_C_leached*100,
+     r_C_leaf2abvmetlit=epa_0.r_C_leaf2abvmetlit*100,
+     r_C_passsom2soil_microbe=epa_0.r_C_passsom2soil_microbe*100,
+     r_C_root2belowmetlit=epa_0.r_C_root2belowmetlit*100,
+     r_C_root2belowstrlit=epa_0.r_C_root2belowstrlit*100,
+     r_C_slowsom2passsom=epa_0.r_C_slowsom2passsom*100,
+     r_C_slowsom2soil_microbe=epa_0.r_C_slowsom2soil_microbe*100,
+     r_C_soil_microbe2passsom=epa_0.r_C_soil_microbe2passsom*100,
+     r_C_soil_microbe2slowsom=epa_0.r_C_soil_microbe2slowsom*100,
+     r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom*100,
+     r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit*100,
+     r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit*100,
+     C_leaf_0=svs.cVeg,
+     #C_root_0=svs_0.cVeg/3,
+     C_abvstrlit_0=svs.cLitter,
+     C_abvmetlit_0=svs.cLitter,
+     C_blwstrlit_0=svs.cLitter,
+     C_surfacemic_0=svs.cSoil,
+     C_soilmic_0=svs.cSoil,
+     C_slow_0=svs.cSoil
+    )
+)
 # -
 
-for n,i in enumerate([1,2,4]):
-    print(n,i)
-
-
-
-ns=1400
-days=list(range(ns))
-npp=[ npp_func(d) for d in days]
-
-import matplotlib.pyplot as plt
-n=len(mvs.get_StateVariableTuple())
-#fig=plt.figure(figsize=(10,(n+1)*10))
-fig=plt.figure()
-axs=fig.subplots(2,1)
-axs[0].plot(days,npp)
-days2=list(range(70))
-axs[1].plot(days2,[day_2_month_index(d) for d in days2])
+np.array(epa_max)
 
 # +
 from general_helpers import autostep_mcmc, make_param_filter_func
@@ -1086,4 +1144,33 @@ C_autostep, J_autostep = autostep_mcmc(
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
+
+# +
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
+epa_opt=EstimatedParameters(*par_opt)
+mod_opt = param2res(epa_opt)  
+
+print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        #times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months)), # for yearly output
+        var_names=Observables._fields,
+        tup=(mod_opt,obs)
+)
+
+fig.savefig('solutions_opt.pdf')
+
+# save the parameters and cost function values for postprocessing
+outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+
+import pandas as pd
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+# -
+
 
