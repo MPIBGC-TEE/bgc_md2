@@ -8,6 +8,7 @@ import json
 
 import matplotlib.pyplot as plt
 import numpy as np
+from importlib import import_module
 from general_helpers import (
     month_2_day_index,
     plot_solutions,
@@ -19,13 +20,13 @@ from general_helpers import (
 class TestSymbolic(TestCase):
 
     def test_autostep_mcmc(self):
-        model_folders=['kv_visit2', 'Aneesh_SDGVM']
+        model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 sys.path.insert(0,mf)
-                from source import mvs
-                import model_specific_helpers as msh
-                import testhelpers as th
+                mvs = import_module('{}.source'.format(mf)).mvs
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                th= import_module('{}.test_helpers'.format(mf))
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
                 test_args=th.make_test_args(conf_dict)
@@ -46,12 +47,12 @@ class TestSymbolic(TestCase):
                     filter_func=isQualified,
                     param2res=param2res,
                     costfunction=make_feng_cost_func(obs),
-                    nsimu=200, # for testing and tuning mcmc
+                    nsimu=20, # for testing and tuning mcmc
                     #nsimu=20000,
                     c_max=np.array(epa_max),
                     c_min=np.array(epa_min),
                     acceptance_rate=15,   # default value | target acceptance rate in %
-                    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+                    chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
                     D_init=1,   # default value | increase value to reduce initial step size
                     K=2 # default value | increase value to reduce acceptance of higher cost functions
                 )
@@ -62,9 +63,9 @@ class TestSymbolic(TestCase):
         for mf in model_folders:
             with self.subTest(mf=mf):
                 sys.path.insert(0,mf)
-                from source import mvs
-                import model_specific_helpers as msh
-                import testhelpers as th
+                mvs = import_module('{}.source'.format(mf)).mvs
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                th= import_module('{}.test_helpers'.format(mf))
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
                 test_args=th.make_test_args(conf_dict)
@@ -103,9 +104,8 @@ class TestSymbolic(TestCase):
             with self.subTest(mf=mf):
                 
                 sys.path.insert(0,mf)
-                from source import mvs
-                import testhelpers as th
-                import model_specific_helpers as msh
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                th= import_module('{}.test_helpers'.format(mf))
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
                 test_args=th.make_test_args(conf_dict)
@@ -126,30 +126,31 @@ class TestSymbolic(TestCase):
                     res_2[i,:]=it_sym_2.__next__().reshape(len(V_init),)
                 
     def test_symobolic_description(self):
-        model_folders=['kv_visit2']
+        model_folders=['kv_visit2', 'jon_yib']
+        #model_folders=['jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
-                sys.path.insert(0,mf)
-                from source import mvs
-                mvs.get_SmoothReservoirModel()
+                source = import_module('{}.source'.format(mf))
+                print(source.mvs.get_SmoothReservoirModel())
     
     @skip
     def test_donwload_data(self):
-        model_folders=['kv_visit2']
+        model_folders=['kv_visit2', 'jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 sys.path.insert(0,mf)
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
-                import model_specific_helpers as msh
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
                 msh.download_my_TRENDY_output(conf_dict)
 
     def test_get_example_site_vars(self):
-        model_folders=['kv_visit2']
+        model_folders=['kv_visit2', 'jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 sys.path.insert(0,mf)
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
-                import model_specific_helpers as msh
-                msh.get_example_site_vars(Path(conf_dict['dataPath']))
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
+                #print(svs)

@@ -54,7 +54,7 @@ import bgc_md2.display_helpers as dh
 import sys
 sys.path.insert(0,'..')
 from source import mvs 
-import model_specific_helpers as msh
+import model_specific_helpers_2 as msh
 from general_helpers import day_2_month_index, make_B_u_funcs_2, day_2_month_index
 # -
 
@@ -110,13 +110,12 @@ with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
 
 #msh.download_my_TRENDY_output(conf_dict)
-# -
 
 #     # Read NetCDF data  ******************************************************************************************************************************
 svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
-
 svs,dvs
+# -
 
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
