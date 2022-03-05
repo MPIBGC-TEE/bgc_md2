@@ -73,6 +73,7 @@ class TestDependencyGraphComputation(InDirTest):
                     g = gs[i]
                     g.draw_matplotlib(ax)
                 fig.savefig("depgraphs_" + root.__name__ + '.pdf')
+                plt.close(fig)
 
 
             
