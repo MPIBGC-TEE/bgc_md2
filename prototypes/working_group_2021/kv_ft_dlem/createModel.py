@@ -989,6 +989,76 @@ epa_0=EstimatedParameters(*temp_list)
 
 epa_0
 
+
+# +
+def numfunc(expr_cont,delta_t_val):
+    # build the discrete expression (which depends on it,delta_t instead of
+    # the continius one that depends on t (TimeSymbol))
+    it=Symbol("it")           #arbitrary symbol for the step index )
+    t=mvs.get_TimeSymbol()
+    delta_t=Symbol('delta_t')
+    expr_disc = expr_cont.subs({t:delta_t*it})
+    expr_num = expr_disc.subs({delta_t:delta_t_val})
+    #print(expr_cont,expr_disc,expr_num)
+    return hr.numerical_function_from_expression(
+        expr=expr_num,
+        tup=(it, *mvs.get_StateVariableTuple()),
+        parameter_dict=par_dict,
+        func_set=func_dict
+    )
+
+
+def make_iterator_sym(
+        mvs,
+        V_init: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    sv=mvs.get_StateVariableTuple()
+    n=len(sv)
+    # build an array in the correct order of the StateVariables which in our case is already correct 
+    # since V_init was built automatically but in case somebody handcrafted it and changed
+    # the order later in the symbolic formulation....
+    V_arr=np.array(
+        [V_init.__getattribute__(str(v)) for v in sv]+
+        [V_init.rh]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B @ X
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+
+        l=[
+                numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+                for k in ["C_aom1","C_aom2","C_smb1","C_smb2","C_smr","C_nom","C_dom","C_psom"] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
+        ]
+        rh = np.array(l).sum()
+        V_new = np.concatenate(
+            (
+                X_new.reshape(n,1),
+                np.array([rh]).reshape(1,1)
+            )
+            , axis=0
+        )
+        return V_new
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+
+
+# -
+
 # The function `param2res` (which will be used by a general model independent mcmc) only takes the estimated parameters as arguments and produce data in the same shape as the observations.
 # We will taylor make it by another function `make_param2res` which depends on the parameters that we decide to fix.
 # This function is the main effort to make the data assimilation possible. **Although we give the full definition here it's suggested that you incrementally build and check the code inside it before you make it a function that returns a function...** 
@@ -1053,8 +1123,8 @@ def make_param2res_sym(
         # in the combination
         apa = {**cpa._asdict(),**epa._asdict()}
         model_par_dict = {
-            k:v for k,v in apa.items()
-            if k in model_par_dict_keys
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
         }
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
@@ -1066,12 +1136,14 @@ def make_param2res_sym(
             'NPP':npp_func,
              'xi':xi_func
         }
-    
-        it_sym = make_daily_iterator_sym(
+        
+        delta_t_val=1
+        it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
-            par_dict=par_dict,
-            func_dict=func_dict
+            par_dict=model_par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
         )
         
         # Now that we have the iterator we can start to compute.
@@ -1083,41 +1155,64 @@ def make_param2res_sym(
         #   over a month
         # 
         # Note: check if TRENDY months are like this...
-        days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         sols=[]
-        for m in range(cpa.number_of_months):
-            dpm = days_per_month[ m % 12]  
-            #mra=0
-            mrh=0
-            for d in range(dpm):
-                v = it_sym.__next__()
-                #mra +=v[10,0]
-                mrh +=v[11,0]
-            V=StartVector(*v)
-            o=Observables(
+        for p in range(cpa.number_of_months):
+            dpm = 30                             # Set days for each month
+            mrh = 0                              # Start respiration sum at zero each month
+            #for m in range(12):                  # Loop through months                        
+            for d in range(int(dpm/delta_t_val)):    # Loop through days in month
+                v = it_sym.__next__()                # Us adaptive iterator
+                mrh += v[11,0]/(dpm/delta_t_val)
+            V = StartVector(*v)                  
+            o = Observables(                   
                 cVeg=float(V.C_leaf+V.C_wood+V.C_root),
                 cLitter=float(V.C_aom1+V.C_aom2),
                 cSoil=float(V.C_smb1+V.C_smb2+V.C_smr+V.C_nom+V.C_dom+V.C_psom),
-                #ra=mra,
-                rh=mrh/dpm, # monthly respiration back to kg/m2/day units
+                rh = mrh
             )
-            # equivalent
-            #o=np.array([
-            #    np.sum(v[0:3]),
-            #    np.sum(v[3:6]),
-            #    np.sum(v[6:9]),
-            #    mra,
-            #    mrh,
-            #])
-            sols.append(o)   
-        sol=np.stack(sols)
+            sols.append(o) # Append monthly value to results
+        sol=np.stack(sols) # Stack arrays 
+        # convert to yearly output
+        #sol_yr=np.zeros(cpa.nyears*sol.shape[1]).reshape([cpa.nyears,sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
+        #return sol
+        
+        #days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        #sols=[]
+        #for m in range(cpa.number_of_months):
+        #    dpm = days_per_month[ m % 12]  
+        #    #mra=0
+        #    mrh=0
+        #    for d in range(dpm):
+        #        v = it_sym.__next__()
+        #        #mra +=v[10,0]
+        #        mrh +=v[11,0]
+        #    V=StartVector(*v)
+        #    o=Observables(
+        #        cVeg=float(V.C_leaf+V.C_wood+V.C_root),
+        #        cLitter=float(V.C_aom1+V.C_aom2),
+        #        cSoil=float(V.C_smb1+V.C_smb2+V.C_smr+V.C_nom+V.C_dom+V.C_psom),
+        #        #ra=mra,
+        #        rh=mrh/dpm, # monthly respiration back to kg/m2/day units
+        #    )
+        #    # equivalent
+        #    #o=np.array([
+        #    #    np.sum(v[0:3]),
+        #    #    np.sum(v[3:6]),
+        #    #    np.sum(v[6:9]),
+        #    #    mra,
+        #    #    mrh,
+        #    #])
+        #    sols.append(o)   
+        #sol=np.stack(sols)
         #convert to yearly output
-        sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-        for i in range(sol.shape[1]):
-            sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-        sol=sol_yr
+        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #    sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
         return sol
-
     return param2res
 
 
@@ -1134,7 +1229,7 @@ print(xs)
 # -
 
 obs=np.column_stack((np.array(svs.cVeg),np.array(svs.cLitter),np.array(svs.cSoil),monthly_to_yearly(np.array(svs.rh))))
-obs=obs[0:int(cpa.number_of_months/12),:]
+obs=obs[0:int(cpa.number_of_months),:]
 #print(obs.shape)
 #print(obs[:,3])
 obs[:,3]=obs[:,3]*86400
@@ -1151,7 +1246,7 @@ xs= param2res_sym(epa_0)
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        times=range(int(cpa.number_of_months/12)),
+        times=range(int(cpa.number_of_months)),
         var_names=Observables._fields,
         tup=(xs,obs)
 )
@@ -1272,7 +1367,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=200, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
