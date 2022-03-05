@@ -105,13 +105,13 @@ class TestDependencyGraphComputation(InDirTest):
                 if time >1:
                     print("fast_graph time", root, time)
                 
-                fig=plt.figure(figsize=(20,20))
-                ax1 = fig.add_subplot(1, 1, 1)
-                fg.draw_matplotlib(
-                    ax1
-                
-                )
-                fig.savefig(root.__name__+'.pdf')
+                #fig=plt.figure(figsize=(20,20))
+                #ax1 = fig.add_subplot(1, 1, 1)
+                #fg.draw_matplotlib(
+                #    ax1
+                #
+                #)
+                #fig.savefig(root.__name__+'.pdf')
             after_dg=now()
             time=(after_dg - before_dg)
             #if time >1:
