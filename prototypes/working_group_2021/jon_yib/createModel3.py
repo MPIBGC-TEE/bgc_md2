@@ -367,7 +367,7 @@ def get_example_site_vars(dataPath):
             for name, variable in ds.variables.items():            
                 for attrname in variable.ncattrs():
                     print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return ds.variables[vn][t]*86400
+            return ds.variables[vn][t]
         else:
             for name, variable in ds.variables.items():            
                 for attrname in variable.ncattrs():
@@ -588,8 +588,8 @@ svs_0=observables(*map(lambda v: v[0],svs))
 
 # Assign values to initial pools using InitialPools named tuple
 X_init = InitialPools(
-    c_leaf_0 = svs_0.cVeg/5,          #set inital pool values to svs values 
-    c_root_0 = svs_0.cVeg/5,          #you can set numerical values here directly as well
+    c_leaf_0 = svs_0.cVeg/3,          #set inital pool values to svs values 
+    c_root_0 = svs_0.cVeg/3,          #you can set numerical values here directly as well
     c_lit_cwd_0 = svs_0.cSoil/35,
     c_lit_met_0 = svs_0.cSoil/35,
     c_lit_str_0 = svs_0.cSoil/35,
@@ -674,7 +674,7 @@ def make_param2res_sym(
     
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.npp[month]
+        return dvs.npp[month]*86400
     
     # Build environmental scaler function
     def xi_func(day):
@@ -732,9 +732,9 @@ def make_param2res_sym(
             # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
             
             l=[
-                    numOutFluxesBySymbol[k](it,*X.reshape(n,))
-                    for k in [c_lit_cwd,c_lit_met,c_lit_str,c_lit_mic,c_soil_met,c_soil_str,c_soil_mic,c_soil_slow,c_soil_passive] 
-                    if k in numOutFluxesBySymbol.keys()
+                    numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+                    for k in ["c_lit_cwd","c_lit_met","c_lit_str","c_lit_mic","c_soil_met","c_soil_str","c_soil_mic","c_soil_slow","c_soil_passive"] 
+                    if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
             rh = np.array(l).sum()
             V_new = np.concatenate(
@@ -776,10 +776,10 @@ def make_param2res_sym(
         # Parameter dictionary for the iterator
         apa = {**cpa._asdict(),**epa._asdict()}
         model_par_dict = {
-            k:v for k,v in apa.items()
-            if k in model_par_dict_keys
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
         }
-    
+        
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
@@ -787,24 +787,21 @@ def make_param2res_sym(
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
-            par_dict=par_dict,
+            par_dict=model_par_dict,
             func_dict=func_dict,
             delta_t_val=delta_t_val
         )
         
-        # Now that we have the iterator we can start to compute.
-        # Note: check if TRENDY months are like this...
-        #days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        
         #empty array for saving data
         sols=[]
-        for p in range(cpa.nyears):
+        #forward simulation by year
+        for p in range(int((cpa.nyears*12)/32)):
             dpm = 30                             # Set days for each month
             mrh = 0                              # Start respiration sum at zero each month
-            for m in range(12):                  # Loop through months                        
-                for d in range(int(dpm/delta_t_val)):    # Loop through days in month
-                    v = it_sym.__next__()                # Us adaptive iterator
-                    mrh += (v[12,0])/((dpm/delta_t_val)*12)
+            #for m in range(12):                  # Loop through months                        
+            for d in range(int(dpm/delta_t_val)):    # Loop through days in month
+                v = it_sym.__next__()                # Us adaptive iterator
+                mrh += (v[12,0])/((dpm/delta_t_val)*12)
             V = StartVector(*v)                  
             o = observables(                   
                 cVeg = float(V.c_leaf+V.c_wood+V.c_root),
@@ -834,11 +831,14 @@ xs
 
 # #### Create array of yearly observation data:
 
-n = cpa.nyears                                   # define number of years
+# +
+n = int((cpa.nyears*12)/32)                                   # define number of years
 obs = np.zeros(n*3).reshape([n,3])               # create empty yearly dataframe 
-obs[:,0] = svs.cVeg                              # add yearly cVeg data to obs data
-obs[:,1] = svs.cSoil                             # add yearly cSoil data to obs data
-obs[:,2] = monthly_to_yearly(svs.rh)         # convert montly to yearly
+
+obs[:,0] = svs.cVeg[0:n]                              # add yearly cVeg data to obs data
+obs[:,1] = svs.cSoil[0:n]                             # add yearly cSoil data to obs data
+obs[:,2] = svs.rh[0:n]*86400         # convert montly to yearly
+# -
 
 # #### Plot data-model fit:
 
@@ -918,7 +918,7 @@ fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         #times=range(cpa.number_of_months),
-        times=range(int(cpa.nyears)), # for yearly output
+        times=range(n), # for yearly output
         var_names=observables._fields,
         tup=(mod_opt,obs)
 )
