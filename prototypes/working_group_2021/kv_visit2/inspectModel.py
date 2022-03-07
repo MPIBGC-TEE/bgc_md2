@@ -19,7 +19,7 @@
 #
 # ## Preconditions
 # This is the next step after the ```createModel.py``` notebook where everything was defined in one place, the notebook.
-# In order to be able to use the symbolic descriptions and functions in other code (e.g test, scripts or other  notebooks)  
+# In order to be able to use the symbolic descriptions and functions in other code (e.g tests, scripts or other  notebooks)  
 # we have disassembled it, moving the functions into the seperate file ```model_specific_helpers.py``` and the model description to ```source.py```.
 #
 # ## Applications
@@ -294,7 +294,8 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'
 
 it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
 ns=1500
-nv=len(gh.make_StartVectorTrace(mvs)._fields)
+StartVectorTrace=gh.make_StartVectorTrace(mvs)
+nv=len(StartVectorTrace._fields)
 res_trace= np.zeros((ns,nv))
 for i in range(ns):
     res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
@@ -357,5 +358,7 @@ axs[n,0].plot(
 axs[n,0].legend()
 
 # -
+
+
 
 

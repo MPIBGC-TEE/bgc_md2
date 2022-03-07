@@ -317,7 +317,7 @@ par_dict.update(
 #parameters._asdict() # print - everything below should have a numeric value
 # -
 
-svs_0=msh.observables(*map(lambda v: v[0],svs))
+svs_0=msh.Observables(*map(lambda v: v[0],svs))
 dvs.npp
 
 # ## Define Forward Model
@@ -368,7 +368,7 @@ fig = plt.figure()
 plot_solutions(
         fig,
         times=range(n),
-        var_names=msh.observables._fields,
+        var_names=msh.Observables._fields,
         tup=(npp_obs,)
 )
 fig.savefig('solutions.pdf')
@@ -379,9 +379,7 @@ fig.savefig('solutions.pdf')
 # ## Forward Model Run
 # #### Run model forward:
 
-
-
-param2res_sym = msh.make_param2res_sym(cpa,dvs,svs) # Define forward model
+param2res_sym = msh.make_param2res_sym(mvs,cpa,dvs) # Define forward model
 obs_simu = param2res_sym(epa0)                # Run forward model from initial conditions
 
 # #### Plot data-model fit:
@@ -424,10 +422,10 @@ print("Starting data assimilation...")
 C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa0,
     filter_func=make_param_filter_func(epa_max, epa_min),
-    param2res=msh.make_param2res_sym(cpa,dvs,svs),
+    param2res=msh.make_param2res_sym(mvs,cpa,dvs),
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=20000,
+    nsimu=2000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
@@ -467,9 +465,6 @@ pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=','
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
 # -
-obs
-
-
 
 
 
