@@ -65,6 +65,8 @@ At the beginning you will only need one file in this folder.
 Before you start working on your own model you should make sure that you can run the example.
 1. Install the `bgc_md2` package as described in the instructions in the gitHub https://github.com/MPIBGC-TEE/bgc_md2#installation
    Remark: If you cloned the repo change the url to your fork, otherwise you will not see the effect of your latest codechanges immediately.
+   
+1. Update your repository everytime before you make any changes (see below)
 
 1. `cd kv_visit2` 
    ```bash
@@ -79,13 +81,17 @@ Before you start working on your own model you should make sure that you can run
 
    (Ohterwise we will have to do with notebook (`*.ipynb`) files which are difficult to handle by 
    version control systems)
+1. Also open the new file `inspectModel.py` this is how the notebook looks after the refactoring.
 
 
 ### Adapt the code to your own needs
 1. Create a folder for your model. We call it `{your_model}` from now on.
 1. Copy the `createModel.py` file into your new folder and open it with `jupyter`
 1. Start changing the code as described in the notebook.
-1. Later we will outsource the code into different files and streamline the notebooks a bit and add more functionality.
+   The instructions will ask you to create two new files in the same folder `source.py` and `model_specific_helpers_2.py`
+   The example contains instructions to outsource the code into different those files and streamline the notebook.
+1. Although the example is very long since it covers ALL the steps that were necessary for the visit model, YOUR version
+   should be very short in the end. (Like instpectModel.py) 
 
 ### General Remarks and Additional information
 
