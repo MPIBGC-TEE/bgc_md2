@@ -3,10 +3,7 @@ from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
 import json 
-import model_specific_helpers_2 as msh
-
-from source import mvs
-def make_test_args(conf_dict):
+def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
         [
@@ -53,8 +50,8 @@ def make_test_args(conf_dict):
     func_dict={
         Function(k):v
         for k,v in {
-            'NPP':msh.make_npp_func(dvs,svs),
-            'xi':msh.make_xi_func(dvs,svs)
+            'NPP':msh.make_npp_func(dvs),
+            'xi':msh.make_xi_func(dvs)
         }.items()
     }
     svs_0=msh.Observables(*map(lambda v: v[0],svs))
@@ -154,11 +151,11 @@ def make_test_args(conf_dict):
         C_soil_fast_0=svs_0.cSoil,
         C_soil_slow_0=svs_0.cSoil,
     )    
-    cpa = msh.UnEstimatedParameters(
+    cpa = msh.Constants(
         cVeg_0=svs_0.cVeg,
         cLitter_0=svs_0.cLitter,
         cSoil_0=svs_0.cSoil,
-        gpp_0=dvs.gpp[0] * 86400,   # kg/m2/s kg/m2/day
+        npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
         rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
         ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
         r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
@@ -166,8 +163,9 @@ def make_test_args(conf_dict):
         #number_of_months=len(svs.rh)
         number_of_months=24 # for testing and tuning mcmc
     )
-    
-    V_init= msh.StartVector(
+
+    StartVector = msh.make_StartVector(mvs) 
+    V_init= StartVector(
         C_leaf=svs_0.cVeg/3,
         C_wood=svs_0.cVeg/3,
         C_root=svs_0.cVeg/3,

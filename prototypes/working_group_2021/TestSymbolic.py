@@ -29,7 +29,7 @@ class TestSymbolic(TestCase):
                 th= import_module('{}.test_helpers'.format(mf))
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict)
+                test_args=th.make_test_args(conf_dict,msh,mvs)
                 cpa = test_args.cpa
                 dvs = test_args.dvs
                 svs = test_args.svs
@@ -38,7 +38,7 @@ class TestSymbolic(TestCase):
                 epa_0 = test_args.epa_0
 
                 isQualified = make_param_filter_func(epa_max, epa_min)
-                param2res = msh.make_param2res_sym(cpa,dvs,svs)
+                param2res = msh.make_param2res_sym( mvs, cpa, dvs)
                 obs=np.column_stack([ np.array(v) for v in svs])
                 obs=obs[0:cpa.number_of_months,:] #cut
                 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
@@ -59,43 +59,25 @@ class TestSymbolic(TestCase):
 
 
     def test_param2res_sym(self):
-        model_folders=['kv_visit2']
+        model_folders=['kv_visit2','jon_yib']
+        #model_folders=['kv_visit2']
+        #model_folders=['jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
-                sys.path.insert(0,mf)
+                #sys.path.insert(0,mf)
                 mvs = import_module('{}.source'.format(mf)).mvs
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
                 th= import_module('{}.test_helpers'.format(mf))
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict)
+                test_args=th.make_test_args(conf_dict,msh,mvs)
 
                 cpa = test_args.cpa
                 dvs = test_args.dvs
                 svs = test_args.svs
-                param2res_sym = msh.make_param2res_sym(
-                    cpa,
-                    dvs,
-                    svs
-                )
-                xs= param2res_sym(test_args.epa_0)
-                obs=np.column_stack([ np.array(v) for v in svs])
-                
-                obs=obs[0:cpa.number_of_months,:] #cut 
-                obs[:,3:4]=obs[:,3:4]
-                n=cpa.number_of_months
-                
-                
-                print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
-                fig = plt.figure(figsize=(12, 4), dpi=80)
-                plot_solutions(
-                        fig,
-                        times=range(n),
-                        var_names=msh.Observables._fields,
-                        tup=(xs,obs)
-                        #tup=(obs,)
-                )
-                fig.savefig('solutions.pdf')
+                epa_0 = test_args.epa_0
+                param2res_sym = msh.make_param2res_sym( mvs, cpa, dvs)
+                xs= param2res_sym(epa_0)
 
     #@skip
     def test_make_iterator_sym(self):
@@ -103,12 +85,13 @@ class TestSymbolic(TestCase):
         for mf in model_folders:
             with self.subTest(mf=mf):
                 
-                sys.path.insert(0,mf)
+                #sys.path.insert(0,mf)
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
                 th= import_module('{}.test_helpers'.format(mf))
+                mvs = import_module('{}.source'.format(mf)).mvs
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict)
+                test_args=th.make_test_args(conf_dict,msh,mvs)
                 delta_t_val=30 #n_day iterator
                 V_init=test_args.V_init
                 it_sym_2 = msh.make_iterator_sym(
@@ -127,18 +110,18 @@ class TestSymbolic(TestCase):
                 
     def test_symobolic_description(self):
         model_folders=['kv_visit2', 'jon_yib']
-        #model_folders=['jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 source = import_module('{}.source'.format(mf))
                 print(source.mvs.get_SmoothReservoirModel())
     
     @skip
-    def test_donwload_data(self):
+    def test_download_data(self):
         model_folders=['kv_visit2', 'jon_yib']
+        #model_folders=['jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
-                sys.path.insert(0,mf)
+                #sys.path.insert(0,mf)
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
@@ -146,6 +129,7 @@ class TestSymbolic(TestCase):
 
     def test_get_example_site_vars(self):
         model_folders=['kv_visit2', 'jon_yib']
+        #model_folders=['jon_yib']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 sys.path.insert(0,mf)

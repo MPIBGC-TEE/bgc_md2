@@ -15,34 +15,32 @@ from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
-from general_helpers import download_TRENDY_output, day_2_month_index, make_B_u_funcs_2
+import general_helpers as gh
 
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
     ["cVeg","cLitter","cSoil","rh","ra"]
 )
-Drivers=namedtuple(
-    "Drivers",
+OrgDrivers=namedtuple(
+    "OrgDrivers",
     ["gpp", "mrso", "tas"]
 )    
-from source import mvs
-StartVector = namedtuple(
-        "StartVector",
-        [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["ra","rh"]
-    ) 
+Drivers=namedtuple(
+    "Drivers",
+    ("npp",) + OrgDrivers._fields[1:]
+)    
 # As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
 # They preserve order as numpy arrays which is great (and fast) for the numeric computations
 # and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
 
-UnEstimatedParameters = namedtuple(
-    "UnEstimatedParameters",
+Constants = namedtuple(
+    "Constants",
     [
         "cLitter_0",
         "cSoil_0",
         "cVeg_0",
-        "gpp_0",
+        "npp_0",
         "rh_0",
         "ra_0",
         "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
@@ -104,12 +102,12 @@ EstimatedParameters = namedtuple(
 
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
 def download_my_TRENDY_output(conf_dict):
-    download_TRENDY_output(
+    gh.download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['VISIT'],
-        variables = Observables._fields + Drivers._fields
+        variables = Observables._fields + OrgDrivers._fields
     )
 
 def get_example_site_vars(dataPath):
@@ -124,23 +122,101 @@ def get_example_site_vars(dataPath):
         return ds.variables[vn][t]
 
     o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Drivers._fields]
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
 
-def make_npp_func(dvs,svs):
+    # we want to drive with npp and can create it from gpp and ra 
+    # observables
+    odvs=OrgDrivers(*map(f,d_names))
+    obss=Observables(*map(f, o_names))
+
+    dvs=Drivers(
+        npp=odvs.gpp-obss.ra,
+        mrso=odvs.mrso,
+        tas=odvs.tas
+    )
+    return (obss, dvs)
+
+def make_npp_func(dvs):
     def func(day):
-        month=day_2_month_index(day)
+        month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
-        return (dvs.gpp[month]-svs.ra[month]) * 86400
+        return (dvs.npp[month]) * 86400
 
     return func
 
 
-def make_xi_func(dvs,svs):
+def make_xi_func(dvs):
     def func(day):
         return 1.0 # preliminary fake for lack of better data... 
     return func
 
+
+def make_func_dict(mvs,dvs):
+    return {
+        "NPP": make_npp_func(dvs),
+        "xi": make_xi_func(dvs)
+    }
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    par_dict={
+    Symbol(k): v for k,v in {
+        "beta_leaf": epa.beta_leaf,
+        "beta_wood": epa.beta_wood,
+        "T_0": epa.T_0,
+        "E": epa.E,
+        "KM": epa.KM,
+        #"r_C_leaf_rh": 0,
+        #"r_C_wood_rh": 0,
+        #"r_C_root_rh": 0,
+        "r_C_leaf_litter_rh": epa.r_C_leaf_litter_rh,
+        "r_C_wood_litter_rh": epa.r_C_wood_litter_rh,
+        "r_C_root_litter_rh": epa.r_C_root_litter_rh,
+        "r_C_soil_fast_rh": epa.r_C_soil_fast_rh,
+        "r_C_soil_slow_rh": epa.r_C_soil_slow_rh,
+        "r_C_soil_passive_rh": epa.r_C_soil_passive_rh,
+        "r_C_leaf_2_C_leaf_litter": epa.r_C_leaf_2_C_leaf_litter,
+        "r_C_wood_2_C_wood_litter": epa.r_C_wood_2_C_wood_litter,
+        "r_C_root_2_C_root_litter": epa.r_C_root_2_C_root_litter,
+        "r_C_leaf_litter_2_C_soil_fast": epa.r_C_leaf_litter_2_C_soil_fast,
+        "r_C_leaf_litter_2_C_soil_slow": epa.r_C_leaf_litter_2_C_soil_slow,
+        "r_C_leaf_litter_2_C_soil_passive": epa.r_C_leaf_litter_2_C_soil_passive,
+        "r_C_wood_litter_2_C_soil_fast": epa.r_C_wood_litter_2_C_soil_fast,
+        "r_C_wood_litter_2_C_soil_slow": epa.r_C_wood_litter_2_C_soil_slow,
+        "r_C_wood_litter_2_C_soil_passive": epa.r_C_wood_litter_2_C_soil_passive,
+        "r_C_root_litter_2_C_soil_fast": epa.r_C_root_litter_2_C_soil_fast,
+        "r_C_root_litter_2_C_soil_slow": epa.r_C_root_litter_2_C_soil_slow,
+        "r_C_root_litter_2_C_soil_passive": epa.r_C_root_litter_2_C_soil_passive
+    }.items()
+}
+    X_0_dict={
+        "C_leaf": epa.C_leaf_0,
+        "C_wood": epa.C_wood_0,
+        "C_root": cpa.cVeg_0-(epa.C_leaf_0 + epa.C_wood_0),
+        "C_leaf_litter": epa.C_leaf_litter_0,
+        "C_wood_litter": epa.C_wood_litter_0,
+        "C_root_litter": cpa.cLitter_0-(epa.C_leaf_litter_0 + epa.C_wood_litter_0),
+        "C_soil_fast": epa.C_soil_fast_0,
+        "C_soil_slow": epa.C_soil_slow_0,
+        "C_soil_passive": cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0)
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(9,1)
+    fd=make_func_dict(mvs,dvs)
+    V_init=gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
 
 # We now build the essential object to run the model forward. We have a 
 # - startvector $V_0$ and 
@@ -187,23 +263,10 @@ def make_iterator_sym(
         func_dict,
         delta_t_val=1 # defaults to 1day timestep
     ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
     sv=mvs.get_StateVariableTuple()
     #mass production of output functions
 
-    def numfunc(expr_cont,delta_t_val):
-        # build the discrete expression (which depends on it,delta_t instead of
-        # the continius one that depends on t (TimeSymbol))
-        it=Symbol("it")           #arbitrary symbol for the step index )
-        t=mvs.get_TimeSymbol()
-        delta_t=Symbol('delta_t')
-        expr_disc = expr_cont.subs({t:delta_t*it})
-        return hr.numerical_function_from_expression(
-            expr=expr_disc.subs({delta_t:delta_t_val}),
-            tup=(it, *mvs.get_StateVariableTuple()),
-            parameter_dict=par_dict,
-            func_set=func_dict
-        )
 
     n=len(sv)
     # build an array in the correct order of the StateVariables which in our case is already correct 
@@ -219,7 +282,7 @@ def make_iterator_sym(
     # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
     # We first create numerical functions for all the outfluxes from our symbolic description.
     numOutFluxesBySymbol={
-        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        k:gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
         for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
     } 
     def f(it,V):
@@ -252,10 +315,18 @@ def make_iterator_sym(
         f=f,
     )
 
+def make_StartVector(mvs):
+    return namedtuple(
+        "StartVector",
+        [str(v) for v in mvs.get_StateVariableTuple()]+
+        ["ra","rh"]
+    ) 
+
+
 def make_param2res_sym(
-        cpa: UnEstimatedParameters,
-        dvs: Drivers,
-        svs: Observables
+        mvs,
+        cpa: Constants,
+        dvs: Drivers
     ) -> Callable[[np.ndarray], np.ndarray]: 
     # To compute numeric solutions we will need to build and iterator 
     # as we did before. As it will need numeric values for all the parameters 
@@ -268,6 +339,7 @@ def make_param2res_sym(
     # The iterator does not care if they are estimated or constant, it only 
     # wants a dictionary containing key: value pairs for all
     # parameters that are not state variables or the symbol for time
+    StartVector=make_StartVector(mvs)
     srm=mvs.get_SmoothReservoirModel()
     model_par_dict_keys=srm.free_symbols.difference(
         [Symbol(str(mvs.get_TimeSymbol()))]+
@@ -278,8 +350,8 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     seconds_per_day = 86400
     def npp_func(day):
-        month=day_2_month_index(day)
-        return (dvs.gpp[month]-svs.ra[month]) * seconds_per_day   # kg/m2/s kg/m2/day;
+        month=gh.day_2_month_index(day)
+        return dvs.npp[month] * seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -344,26 +416,24 @@ def make_param2res_sym(
         # Note: check if TRENDY months are like this...
         # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         sols=[]
+        dpm=30 # 
+        n=len(V_init)
         for m in range(cpa.number_of_months):
             #dpm = days_per_month[ m % 12]  
-            dpm=30 # 
             mra=0
             mrh=0
             for d in range(int(dpm/delta_t_val)):
-                v = it_sym.__next__()
-                #mra +=v[9,0] 
-                #mrh +=v[10,0]
+                v = it_sym.__next__().reshape(n,)
                 # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
                 # at the moment the iterator also computes a flux but in kg^-2 ^day
             V=StartVector(*v)
+            #from IPython import embed;embed()
             o=Observables(
                 cVeg=float(V.C_leaf+V.C_wood+V.C_root),
                 cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
                 cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                ra=v[9,0]/seconds_per_day,
-                rh=v[10,0]/seconds_per_day # the data is per second while the time units for the iterator refer to days
-                #ra=mra/dpm, # monthly respiration back to kg/m2/day units
-                #rh=mrh/dpm, # monthly respiration back to kg/m2/day units
+                ra=V.ra/seconds_per_day,
+                rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
             )
             sols.append(o)
             
@@ -376,3 +446,22 @@ def make_param2res_sym(
         return sol 
         
     return param2res
+
+def make_param_filter_func(
+        c_max: EstimatedParameters,
+        c_min: EstimatedParameters 
+        ) -> Callable[[np.ndarray], bool]:
+
+    # find position of beta_leaf and beta_wood
+    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    beta_wood_ind=EstimatedParameters._fields.index("beta_wood")
+
+    def isQualified(c):
+        beta_leaf_ind
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] <=1  
+        return (cond1 and cond2 and cond3)
+        
+    
+    return isQualified

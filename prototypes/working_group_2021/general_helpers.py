@@ -5,6 +5,8 @@ from functools import reduce, lru_cache
 from copy import copy
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
+from collections import namedtuple
+
 import CompartmentalSystems.helpers_reservoir as hr
 from pathlib import Path
 import json 
@@ -65,6 +67,24 @@ def make_B_u_funcs_2(
                 func_dict=func_dict
         )
         return (B_func,u_func)
+
+
+def numfunc(expr_cont, mvs ,delta_t_val, par_dict, func_dict):
+    # This function 
+    # build the discrete expression (which depends on it,delta_t instead of
+    # the continius one that depends on t (TimeSymbol))
+    t=mvs.get_TimeSymbol()
+    it=Symbol("it")           #arbitrary symbol for the step index )
+    delta_t=Symbol('delta_t')
+    expr_disc = expr_cont.subs({t:delta_t*it})
+    expr_num = expr_disc.subs({delta_t:delta_t_val})
+    #print(expr_cont,expr_disc,expr_num)
+    return hr.numerical_function_from_expression(
+        expr=expr_num,
+        tup=(it, *mvs.get_StateVariableTuple()),
+        parameter_dict=par_dict,
+        func_set=func_dict
+    )
 
 def make_uniform_proposer(
         c_max: Iterable,
@@ -664,6 +684,23 @@ def plot_solutions(
                 axs[j].set_title(var_names[j])
                 axs[j].legend()
 
+def plot_observations_vs_simulations(
+        fig,
+        svs_cut,
+        obs_simu
+    ):
+    # svn and obs_simu are both 
+    n_plots=len(svs_cut)
+    fig.set_figheight(n_plots* fig.get_figwidth())
+    axs=fig.subplots(n_plots)
+    for i,name in enumerate(svs_cut.__class__._fields):
+        var=svs_cut[i]
+        var_simu=obs_simu[i]
+        axs[i].plot(range(len(var_simu)),var_simu,label="simulation")
+        axs[i].plot(range(len(var)),var,label='observation')
+        axs[i].legend()
+        axs[i].set_title(name)
+
 
 
 
@@ -908,3 +945,75 @@ def make_param_filter_func(
     
     return isQualified
 
+def make_StartVectorTrace(mvs):
+    svt=mvs.get_StateVariableTuple()
+    return namedtuple(
+        "StartVectorTrace",
+         [str(v) for v in svt]+
+         [str(v)+"_p" for v in svt]+
+         [str(v)+"_c" for v in svt]+
+         [str(v)+"_RT" for v in svt]
+    )
+
+def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
+    # test the new iterator
+
+    # we make the X_p and X_c  parts compatible with the ones computed by the iterator
+    # for following timesteps (to keep it)
+    # As you can see in the definition of the iterator these values have no impact on further results
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    I = u_func(0,X_0)
+    u=I.sum()
+    b=I/u
+    B = B_func(0,X_0)
+    B_inf = np.linalg.inv(B)
+    X_p_0 = B_inf@I
+    X_c_0 = X_0+X_p_0
+    RT_0 = B_inf@b
+    # combine the three
+    #here we rely on order to be consistent
+    #(although we could use also the names of the namedtuple)
+    V_arr=np.concatenate((X_0,X_p_0,X_c_0,RT_0),axis=0 )
+    StartVectorTrace=make_StartVectorTrace(mvs)
+    V_init=StartVectorTrace(*V_arr)
+    return V_init
+
+def make_daily_iterator_sym_trace(
+        mvs,
+        V_init, #: StartVectorTrace,
+        par_dict,
+        func_dict
+    ):
+    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+    
+    n=len(mvs.get_StateVariableTuple())
+    def f(it,V):
+        #the pools are the first n values
+        X = V[0:n] 
+        I = I_func(it,X) 
+        # we decompose I
+        u=I.sum()
+        b=I/u
+        B = B_func(it,X)
+        B_inf = np.linalg.inv(B)
+        X_new = X + I + B @ X
+        X_p = B_inf @ I
+        X_c = X_new+X_p
+        RT = B_inf @ b
+        V_new = np.concatenate(
+            (
+                X_new.reshape(n,1),
+                X_p.reshape(n,1),
+                X_c.reshape(n,1),
+                RT.reshape(n,1),
+            ),
+            axis=0
+        )
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+    
