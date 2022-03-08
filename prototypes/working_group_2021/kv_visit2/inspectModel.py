@@ -292,6 +292,7 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'
 #
 #
 
+# +
 it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
 ns=1500
 StartVectorTrace=gh.make_StartVectorTrace(mvs)
@@ -299,9 +300,8 @@ nv=len(StartVectorTrace._fields)
 res_trace= np.zeros((ns,nv))
 for i in range(ns):
     res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
-res_trace
+#res_trace
 
-# +
 import matplotlib.pyplot as plt
 n=len(mvs.get_StateVariableTuple())
 fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
@@ -358,6 +358,7 @@ axs[n,0].plot(
 axs[n,0].legend()
 
 # -
+
 
 
 

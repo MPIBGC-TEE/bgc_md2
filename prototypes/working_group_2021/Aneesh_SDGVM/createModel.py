@@ -1075,9 +1075,6 @@ day_indices=month_2_day_index(range(cpa.number_of_months)),
 out_simu_d=obs_0._asdict()
 obs_d=svs._asdict()
 print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
-s,e=10,90
-len(val_sim[s:e])
-#np.array([1,2,3,4])[1:3]
 
 # +
 fig = plt.figure(figsize=(10,50))
@@ -1132,9 +1129,6 @@ epa_min=np.array(
     )
 )
 
-
-
-
 epa_max=np.array(
     EstimatedParameters(
      beta_leaf=1, 
@@ -1169,9 +1163,6 @@ epa_max=np.array(
     )
 )
 # -
-
-for i in range(len(epa_max)):
-    print(i,type(epa_max[i]))
 
 np.array(epa_max)
 
@@ -1225,6 +1216,3 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
-# -
-
-

@@ -113,209 +113,7 @@ svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 dvs.npp
 # -
 
-# ## Create Symbols for $\xi$, $K$, and $A$ (No Edits)
-# Setup Yiqi matrix format:
-
-# +
-sv=mvs.get_StateVariableTuple()                            # Get state variables from symbolic matrix code
-n=len(sv)                                                  # Count number of pools
-srm = mvs.get_SmoothReservoirModel()                       # Create smooth resevoir model
-_,A,N,_,_=srm.xi_T_N_u_representation(factor_out_xi=False) # Create A and N symbols
-BI=mvs.get_BibInfo()
-for k in BI.sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-t=TimeSymbol("t")
-beta_wood = 1.0-(beta_leaf+beta_root)
-beta_wood = 1.0-(beta_leaf+beta_root)
-
-#create symbols for scaler and input functions
-func_dict={
-    'xi': 'Environmental scaler as a function of time',
-    'NPP': 'Inputs as a function of time',
-}
-for k in BI.func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-# -
-
-# $\xi$ Matrix:
-
-# Create environmental scaler matrix
-xi_d=diag([1,1,1]+[xi(t) for i in range(n-3)],unpack=True)
-xi_d
-
-# $K$ Matrix:
-
-# +
-# Create empty K matrix
-K=xi_d.inv()*N
-# Create new symbols for the k_{i}
-for i in range(n):
-    if K[i,i]!=0:
-        name="k_{0}".format(sv[i])
-        code="{0}=Symbol('{0}')".format(name)
-        #print(code)
-        exec(code)
-
-# Create $K$ matrix      
-K_sym=ImmutableMatrix(
-    n,n,
-    lambda i,j: Symbol("k_" + str(sv[i])) if i==j else 0
-)
-K_sym
-# -
-
-# $f$ symbols in $A$ Matrix:
-
-# +
-# Create new symbols for the f_{i,j}
-for i in range(n):
-    for j in range(n):
-        if A[i,j]!=0 and i!=j:
-            name="f_" + str(sv[j]) + "_2_" + str(sv[i])
-            code="{0}=Symbol('{0}')".format(name)
-            #print(code)
-            exec(code)
-
-# Place $f$ values in $A$ matrix            
-A_sym=ImmutableMatrix(
-    n,n,
-    lambda i,j:  -1 if i==j else (
-        0 if A[i,j]==0 else Symbol("f_" + str(sv[j]) + "_2_" + str(sv[i]))
-    )
-)
-A_sym
-# -
-
-# $A$ matrix:
-
-# Create A matrix
-M_sym=A_sym*K_sym
-M_sym
-
-# ## Create Dictionary of All Fluxes (No Edits)
-
-# +
-# Create a dictionary for the external and internal fluxes (flux divided by dono pool content)
-outflux_rates = {"r_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items() }
-internal_flux_rates = {"r_"+str(key[0])+"_2_"+str(key[1]):value/key[0] for key,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
-
-# Create dictionary of all flux rates
-all_rates=deepcopy(outflux_rates)
-all_rates.update(internal_flux_rates)
-all_rates
-# -
-
-# ## Calculate Rates from $f$ and $k$ values (Must Edit)
-# I have $k$ and $f$ values describing my model. we can define them here and use them to assign values to $r$s
-
-# + codehighlighter=[[3, 22], [26, 45], [48, 79], [83, 85], [3, 22], [26, 45], [48, 79], [83, 85]]
-# fixme mm
-# The followiwng namedtuple is only used once.
-# It would be much simpler to just add the values directly to old_par_dict
-# Is this a reference to the old implementation?
-ParameterValues = namedtuple(
-    "ParameterValues",
-    [
-        "beta_leaf",
-        "beta_root",
-        "clay",
-        "silt",
-        "k_leaf",
-        "k_root",
-        "k_wood",
-        "k_cwd",
-        "k_samet",
-        "k_sastr",
-        "k_samic",
-        "k_slmet",
-        "k_slstr",
-        "k_slmic",
-        "k_slow",
-        "k_arm",
-        "f_samet_leaf",
-        "f_slmet_root",
-        "f_samic_cwd",
-    ]
-)
-
-epa0 = ParameterValues(
-    beta_leaf=0.3,
-    beta_root=0.3,
-    clay=0.2028,
-    silt=0.2808,
-    k_leaf=0.020,
-    k_root=0.010,
-    k_wood=0.007,
-    k_cwd=0.01,
-    k_samet=0.05,
-    k_sastr=0.05,
-    k_samic=0.05,
-    k_slmet=0.040,
-    k_slstr=0.039,
-    k_slmic=0.05,
-    k_slow=0.0001,
-    k_arm=3.27E-04,
-    f_samet_leaf=0.50,
-    f_slmet_root=0.50,
-    f_samic_cwd=0.50,
-)
-
-old_par_dict = {
-    'k_c_leaf': epa0.k_leaf, # define all k values
-    'k_c_root': epa0.k_root,
-    'k_c_wood': epa0.k_wood,
-    'k_c_lit_cwd': epa0.k_cwd,
-    'k_c_lit_met': epa0.k_samet,
-    'k_c_lit_str': epa0.k_sastr,
-    'k_c_lit_mic': epa0.k_samic,
-    'k_c_soil_met': epa0.k_slmet,
-    'k_c_soil_str': epa0.k_slstr,
-    'k_c_soil_mic': epa0.k_slmic,
-    'k_c_soil_slow': epa0.k_slow,
-    'k_c_soil_passive': epa0.k_arm,
-    'f_c_leaf_2_c_lit_met': epa0.f_samet_leaf,    #define all f values
-    'f_c_root_2_c_soil_met': epa0.f_slmet_root,
-    'f_c_lit_cwd_2_c_lit_mic': epa0.f_samic_cwd*0.7,
-    'f_c_leaf_2_c_lit_str': (1-epa0.f_samet_leaf),
-    'f_c_root_2_c_soil_str': (1-epa0.f_slmet_root),
-    'f_c_wood_2_c_lit_cwd': 1,
-    'f_c_lit_cwd_2_c_soil_slow': (1-epa0.f_samic_cwd),
-    'f_c_lit_met_2_c_lit_mic': 0.2,
-    'f_c_lit_str_2_c_lit_mic': 0.2,
-    'f_c_lit_str_2_c_soil_slow': 0.2,
-    'f_c_lit_mic_2_c_soil_slow': 0.2,
-    'f_c_soil_met_2_c_soil_mic': 0.2,
-    'f_c_soil_str_2_c_soil_mic': 0.2,
-    'f_c_soil_str_2_c_soil_slow': 0.2,
-    'f_c_soil_mic_2_c_soil_slow': 0.2,
-    'f_c_soil_mic_2_c_soil_passive': 0.2,
-    'f_c_soil_slow_2_c_soil_mic': 0.2,
-    'f_c_soil_slow_2_c_soil_passive': 0.2*(0.003+0.009*epa0.clay),
-    'f_c_soil_passive_2_c_soil_mic': 0.2, 
-}
-
-# Define allocation parameters to be optimized
-par_dict = {
-    'beta_leaf': epa0.beta_leaf,
-    'beta_root': epa0.beta_root,
-}
-
-# translate rates from previous parameters to create dictionary of rates to optimize
-par_dict.update(
-    {str(k):v.subs(old_par_dict) for k,v in all_rates.items()}
-)
-
-# Create namedtuple of parameters to optimize and their translated values
-#makeTuple = namedtuple('makeTuple', par_dict)
-#parameters = makeTuple(**par_dict)
-
-#If symbols remain in output below then set them to numerical values in old_par_dict.
-#parameters._asdict() # print - everything below should have a numeric value
-# -
+msh.EstimatedParameters._fields
 
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
 dvs.npp
@@ -338,20 +136,52 @@ cpa._asdict()    #print - everything should have a numeric value
 
 # #### Create start values for parameters to be optimized during data assimilation:
 
-epa0 = msh.EstimatedParameters(
-    **{
-        "c_leaf_0": svs_0.cVeg/3,          #set inital pool values to svs values 
-        "c_root_0": svs_0.cVeg/3,          #you can set numerical values here directly as well
-        "c_lit_cwd_0": svs_0.cSoil/35,
-        "c_lit_met_0": svs_0.cSoil/35,
-        "c_lit_str_0": svs_0.cSoil/35,
-        "c_lit_mic_0": svs_0.cSoil/35,
-        "c_soil_met_0": svs_0.cSoil/20,
-        "c_soil_str_0": svs_0.cSoil/15,
-        "c_soil_mic_0": svs_0.cSoil/10,
-        "c_soil_slow_0": svs_0.cSoil/3
-    },
-    **par_dict
+# how we transform given startvalues for the f and k to these is shown in createModel
+# but once we have them, we can print them out and use them from now on directly
+epa0 =msh.EstimatedParameters(
+    c_leaf_0=svs_0.cVeg/3,          #set inital pool values to svs values 
+    c_root_0=svs_0.cVeg/3,          #you can set numerical values here directly as well
+    c_lit_cwd_0=svs_0.cSoil/35,
+    c_lit_met_0=svs_0.cSoil/35,
+    c_lit_str_0=svs_0.cSoil/35,
+    c_lit_mic_0=svs_0.cSoil/35,
+    c_soil_met_0=svs_0.cSoil/20,
+    c_soil_str_0=svs_0.cSoil/15,
+    c_soil_mic_0=svs_0.cSoil/10,
+    c_soil_slow_0=svs_0.cSoil/3,
+    beta_leaf=0.3,
+    beta_root=0.3,
+    r_c_leaf_rh=0,
+    r_c_root_rh=0,
+    r_c_wood_rh=0,
+    r_c_lit_cwd_rh=0.00150000000000000,
+    r_c_lit_met_rh=0.0400000000000000,
+    r_c_lit_str_rh=0.0300000000000000,
+    r_c_lit_mic_rh=0.0400000000000000,
+    r_c_soil_met_rh=0.0320000000000000,
+    r_c_soil_str_rh=0.0234000000000000,
+    r_c_soil_mic_rh=0.0300000000000000,
+    r_c_soil_slow_rh=7.99034960000000e-5,
+    r_c_soil_passive_rh=0.000261600000000000,
+    r_c_leaf_2_c_lit_met=0.0100000000000000,
+    r_c_leaf_2_c_lit_str=0.0100000000000000,
+    r_c_root_2_c_soil_met=0.00500000000000000,
+    r_c_root_2_c_soil_str=0.00500000000000000,
+    r_c_wood_2_c_lit_cwd=0.00700000000000000,
+    r_c_lit_cwd_2_c_lit_mic=0.00350000000000000,
+    r_c_lit_cwd_2_c_soil_slow=0.00500000000000000,
+    r_c_lit_met_2_c_lit_mic=0.0100000000000000,
+    r_c_lit_str_2_c_lit_mic=0.0100000000000000,
+    r_c_lit_str_2_c_soil_slow=0.0100000000000000,
+    r_c_lit_mic_2_c_soil_slow=0.0100000000000000,
+    r_c_soil_met_2_c_soil_mic=0.00800000000000000,
+    r_c_soil_str_2_c_soil_mic=0.00780000000000000,
+    r_c_soil_str_2_c_soil_slow=0.00780000000000000,
+    r_c_soil_mic_2_c_soil_slow=0.0100000000000000,
+    r_c_soil_mic_2_c_soil_passive=0.0100000000000000,
+    r_c_soil_slow_2_c_soil_mic=2.00000000000000e-5,
+    r_c_soil_slow_2_c_soil_passive=9.65040000000000e-8,
+    r_c_soil_passive_2_c_soil_mic=6.54000000000000e-5,
 )    
 
 
@@ -412,20 +242,21 @@ epa_max = epa_max._replace(c_soil_mic_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
 
 #print - all names should have numerical values
-epa_max._asdict()
+#epa_max._asdict()
 # -
 
 # #### Conduct data assimilation:
 
+param2res=msh.make_param2res_sym(mvs,cpa,dvs)
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
 C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa0,
-    filter_func=make_param_filter_func(epa_max, epa_min),
-    param2res=msh.make_param2res_sym(mvs,cpa,dvs),
+    filter_func=msh.make_param_filter_func(epa_max, epa_min),
+    param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=2000,
+    nsimu=200,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
@@ -445,15 +276,11 @@ mod_opt = param2res(epa_opt)
 
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
+plot_observations_vs_simulations(
         fig,
-        #times=range(cpa.number_of_months),
-        times=range(n), # for yearly output
-        var_names=msh.observables._fields,
-        tup=(mod_opt,obs)
-        #tup=(obs,)
-)
-
+        svs,
+        mod_opt
+    )
 fig.savefig('solutions_opt.pdf')
 
 # save the parameters and cost function values for postprocessing
@@ -464,7 +291,70 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=','
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
-# -
+# +
+import model_specific_helpers_2 as msh
+import general_helpers as gh
+it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
+ns=1500
+StartVectorTrace=gh.make_StartVectorTrace(mvs)
+nv=len(StartVectorTrace._fields)
+res_trace= np.zeros((ns,nv))
+for i in range(ns):
+    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
+#res_trace
+
+import matplotlib.pyplot as plt
+n=len(mvs.get_StateVariableTuple())
+fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
+axs=fig.subplots(n+1,2)
+days=list(range(ns))
 
 
+for i in range(n):
+    
+    ax = axs[i,0]
+    #  the solution
+    pos=i
+    ax.plot(
+        days,
+        res_trace[:,i],
+        label=StartVectorTrace._fields[pos],
+        color='blue'
+    )
+    # X_p
+    pos=i+n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='red'
+    )
+    # X_c
+    pos=i+2*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='yellow'
+    )
+    ax.legend()
+    
+    ax = axs[i,1]
+    # RT
+    pos=i+3*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='black'
+    )
+    ax.legend()
+    
+axs[n,0].plot(
+    days,
+    [msh.make_npp_func(dvs)(d) for d in days],
+    label='NPP',
+    color='green'
+)
+axs[n,0].legend()
 

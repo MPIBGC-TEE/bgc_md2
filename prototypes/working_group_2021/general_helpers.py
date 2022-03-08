@@ -86,6 +86,22 @@ def numfunc(expr_cont, mvs ,delta_t_val, par_dict, func_dict):
         func_set=func_dict
     )
 
+
+def make_param_dict(mvs,cpa,epa):
+    srm=mvs.get_SmoothReservoirModel()
+    model_par_dict_keys=srm.free_symbols.difference(
+        [Symbol(str(mvs.get_TimeSymbol()))]+
+        list(mvs.get_StateVariableTuple())
+    )
+    # Parameter dictionary for the iterator
+    apa = {**cpa._asdict(),**epa._asdict()}
+    model_par_dict = {
+        Symbol(k):v for k,v in apa.items()
+        if Symbol(k) in model_par_dict_keys
+    }
+    return model_par_dict
+
+
 def make_uniform_proposer(
         c_max: Iterable,
         c_min: Iterable,
