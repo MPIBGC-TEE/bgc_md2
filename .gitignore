@@ -155,6 +155,8 @@ prototypes/working_group_2021/.idea/modules.xml
 prototypes/working_group_2021/.idea/vcs.xml
 prototypes/working_group_2021/.idea/working_group_2021.iml
 prototypes/working_group_2021/.idea/workspace.xml
+prototypes/working_group_2021/*/*.pdf
+prototypes/working_group_2021/*/*.csv
 *.xml
 *.iml
 prototypes/working_group_2021/.idea/.name

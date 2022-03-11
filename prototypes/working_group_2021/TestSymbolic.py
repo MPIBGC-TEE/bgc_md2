@@ -16,9 +16,97 @@ from general_helpers import (
     make_param_filter_func,
     make_feng_cost_func
 )
+model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM']
 
 class TestSymbolic(TestCase):
 
+    def test_symobolic_description(self):
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                source = import_module('{}.source'.format(mf))
+                print(source.mvs.get_SmoothReservoirModel())
+    
+    #@skip
+    def test_download_data(self):
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                #sys.path.insert(0,mf)
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                msh.download_my_TRENDY_output(conf_dict)
+
+    def test_get_example_site_vars(self):
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                sys.path.insert(0,mf)
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
+                #print(svs)
+    
+    def test_make_func_dict(self):
+        model_folders=['kv_visit2', 'Aneesh_SDGVM']
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                
+                #sys.path.insert(0,mf)
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                mvs = import_module('{}.source'.format(mf)).mvs
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
+                msh.make_func_dict(mvs,dvs)
+    #@skip
+    def test_make_iterator_sym(self):
+        model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                
+                #sys.path.insert(0,mf)
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                th= import_module('{}.test_helpers'.format(mf))
+                mvs = import_module('{}.source'.format(mf)).mvs
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                test_args=th.make_test_args(conf_dict,msh,mvs)
+                delta_t_val=30 #n_day iterator
+                V_init=test_args.V_init
+                it_sym_2 = msh.make_iterator_sym(
+                    mvs=test_args.mvs,
+                    V_init=V_init,
+                    par_dict=test_args.par_dict,
+                    func_dict=test_args.func_dict,
+                    delta_t_val=delta_t_val
+                )
+                ns=delta_t_val*3
+                times_2= np.arange(0,ns,delta_t_val)
+                res_2= np.zeros((len(times_2),len(V_init)))
+                res_2[0,:]=V_init
+                for i in range(1,len(times_2)-1):
+                    res_2[i,:]=it_sym_2.__next__().reshape(len(V_init),)
+
+    def test_param2res_sym(self):
+        model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                #sys.path.insert(0,mf)
+                mvs = import_module('{}.source'.format(mf)).mvs
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                th= import_module('{}.test_helpers'.format(mf))
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                test_args=th.make_test_args(conf_dict,msh,mvs)
+
+                cpa = test_args.cpa
+                dvs = test_args.dvs
+                svs = test_args.svs
+                epa_0 = test_args.epa_0
+                param2res_sym = msh.make_param2res_sym( mvs, cpa, dvs)
+                xs= param2res_sym(epa_0)
+
+                
     def test_autostep_mcmc(self):
         model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
         for mf in model_folders:
@@ -58,83 +146,3 @@ class TestSymbolic(TestCase):
                 )
 
 
-    def test_param2res_sym(self):
-        model_folders=['kv_visit2','jon_yib']
-        #model_folders=['kv_visit2']
-        #model_folders=['jon_yib']
-        for mf in model_folders:
-            with self.subTest(mf=mf):
-                #sys.path.insert(0,mf)
-                mvs = import_module('{}.source'.format(mf)).mvs
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                th= import_module('{}.test_helpers'.format(mf))
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
-
-                cpa = test_args.cpa
-                dvs = test_args.dvs
-                svs = test_args.svs
-                epa_0 = test_args.epa_0
-                param2res_sym = msh.make_param2res_sym( mvs, cpa, dvs)
-                xs= param2res_sym(epa_0)
-
-    #@skip
-    def test_make_iterator_sym(self):
-        model_folders=['kv_visit2']
-        for mf in model_folders:
-            with self.subTest(mf=mf):
-                
-                #sys.path.insert(0,mf)
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                th= import_module('{}.test_helpers'.format(mf))
-                mvs = import_module('{}.source'.format(mf)).mvs
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
-                delta_t_val=30 #n_day iterator
-                V_init=test_args.V_init
-                it_sym_2 = msh.make_iterator_sym(
-                    mvs=test_args.mvs,
-                    V_init=V_init,
-                    par_dict=test_args.par_dict,
-                    func_dict=test_args.func_dict,
-                    delta_t_val=delta_t_val
-                )
-                ns=delta_t_val*3
-                times_2= np.arange(0,ns,delta_t_val)
-                res_2= np.zeros((len(times_2),len(V_init)))
-                res_2[0,:]=V_init
-                for i in range(1,len(times_2)-1):
-                    res_2[i,:]=it_sym_2.__next__().reshape(len(V_init),)
-                
-    def test_symobolic_description(self):
-        model_folders=['kv_visit2', 'jon_yib']
-        for mf in model_folders:
-            with self.subTest(mf=mf):
-                source = import_module('{}.source'.format(mf))
-                print(source.mvs.get_SmoothReservoirModel())
-    
-    @skip
-    def test_download_data(self):
-        model_folders=['kv_visit2', 'jon_yib']
-        #model_folders=['jon_yib']
-        for mf in model_folders:
-            with self.subTest(mf=mf):
-                #sys.path.insert(0,mf)
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                msh.download_my_TRENDY_output(conf_dict)
-
-    def test_get_example_site_vars(self):
-        model_folders=['kv_visit2', 'jon_yib']
-        #model_folders=['jon_yib']
-        for mf in model_folders:
-            with self.subTest(mf=mf):
-                sys.path.insert(0,mf)
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
-                #print(svs)
