@@ -15,6 +15,9 @@
 
 # # SDGVM model
 
+from IPython.display import HTML
+display(HTML("<style>.container { width:100% !important; }</style>"))
+
 # +
 import sys
 sys.path.insert(0,'..') # necessary to import general_helpers
@@ -274,7 +277,7 @@ with Path('config.json').open(mode='r') as f:
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cLitter", "cSoil", "cVeg", "cRoot", "rh"]
+    ["cVeg", "cRoot", "cLitter", "cSoil", "rh"]
 )
 Drivers=namedtuple(
     "Drivers",
@@ -291,7 +294,9 @@ def download_my_TRENDY_output():
         variables = Observables._fields + Drivers._fields
     )
 #call it to test that the download works the data
-download_my_TRENDY_output()
+#download_my_TRENDY_output()
+
+
 # -
 
 # Before we build a function to load the data lets look at it to get an idea.
@@ -333,15 +338,102 @@ print('ind_start={}'.format(ind_start))
 c_h_from_1900_after_1900=h_from_1900[ind_start:] 
 c_h_from_1900_after_1900.shape
 
-rh_h=nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc')).variables['time'][:]
+rh_h=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc')).variables['time']
+# -
+
+rh=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc')).variables['rh'][:,-25,16]
+rh.shape
+
+# + endofcell="--"
+#(
+#    nc.Dataset(dataPath.joinpath('SDGVM_S2_npp.nc')).variables['time'][-1]- 
+#    (nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc')).variables['time'][-1]-200*360*24)
+#)/(24*30)
+#ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc'))
+#ds=nc.Dataset(dataPath.joinpath('SDGVM_S2_rh.nc'))
+#ds.variables['rh']#[:,-56,26][20]
+#print(ds)
+
+
 import matplotlib.pyplot as plt
 f=plt.figure(figsize=(15,3))
-ax=f.subplots(1,1)
-nm=37
+axs=f.subplots(2,1)
+nm=36
 ny=int(nm/12)
-ax.plot(rh_h[:nm],[1 for i in range(nm)],"x",label="npp and rh times")
-ax.plot(c_h_from_1900_after_1900[:ny],[1 for i in range(ny)],"x",label="c times")
-ax.legend()
+axs[0].plot(rh_h[:nm],[1 for i in range(nm)],"x",label="npp and rh times")
+axs[0].plot(c_h_from_1900_after_1900[:ny],[1 for i in range(ny)],"x",label="c times")
+axs[0].legend()
+# -
+axs[1].plot(list(range(nm)),rh[:nm],"x",label="rh")
+# --
+
+# +
+# def get_example_site_vars(dataPath):
+#     (
+#         C_litter,
+#         C_soil,
+#         C_veg,
+#         C_root,
+#         npp,
+#         rh
+#     )= get_variables_from_files(dataPath)
+#     # pick up 1 site   wombat state forest
+#     s = slice(None, None, None)  # this is the same as :
+#     #t = s, 50, 33  # [t] = [:,49,325]
+#     t = s, -25, 16 
+#     npp = npp[t] * 86400   # kg/m2/s kg/m2/day;
+#     rh = rh[t]*86400  # per s to per day
+#     #tsl_mean = np.mean(tsl, axis=1)  # average soil temperature at different depth
+#     (
+#         C_litter,
+#         C_soil,
+#         C_veg,
+#         C_root
+#     ) = map(
+#         lambda var: var[t],
+#         (
+#             C_litter,
+#             C_soil,
+#             C_veg,
+#             C_root
+#         )
+#     )
+    
+#     # the dataset is not uniform 
+#     # - npp and rh start at 16-01-1900 end at 03-28-2018 and are recorded every 30 days
+#     # - C_litter, C_soil, C_veg, C_root start at 06-30-1700 end at 01-12-2014 
+#     #
+#     # To make them uniform we will:
+#     # 1. Make C_litter, C_soil, C_veg, C_root start at time 1900 (cutting of the first 200y)
+#     # 2. Adapt the resolution of rh to yearly by averaging over the monthly values and
+#     #    also cutting them short to 2014
+#     # 3. We will cut short npp to 2014 bu will NOT change the resolution (since it is a driver)
+#     #    and does not affect the data assimilation functions 
+#     print(C_litter.shape)
+#     (
+#         C_litter,
+#         C_soil,
+#         C_veg,
+#         C_root
+#     ) = map(
+#         lambda var: var[204:],
+#         (
+#             C_litter,
+#             C_soil,
+#             C_veg,
+#             C_root
+#         )
+#     )
+    
+#     return (Observables(C_litter, C_soil, C_veg, C_root, rh), Drivers(npp))
+
+# with Path('config.json').open(mode='r') as f:
+#     conf_dict=json.load(f) 
+
+# dataPath = Path(conf_dict['dataPath'])
+
+# obs, dr =get_example_site_vars(dataPath)
+# obs.cLitter
 # -
 
 ds_cVeg.variables['cVeg'][ind_start:,-25,16], ds_cVeg.variables['cVeg'][ind_start:,-25,16].shape
@@ -421,6 +513,8 @@ def get_example_site_vars(dataPath):
 #obs, dr =get_example_site_vars(dataPath)
 #obs.cVeg.shape
 
+
+
 # +
 import sys 
 sys.path.insert(0,'..')
@@ -432,6 +526,8 @@ func_dict={NPP: NPP_fun}
 # -
 
 svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+
+
 
 svs.cLitter.shape
 
@@ -585,11 +681,26 @@ from copy import copy
 
 def make_daily_iterator_sym(
         mvs,
-        V_init: StartVector,
+        V_init,
         par_dict,
-        func_dict
+        func_dict,
+        delta_t_val=1
     ):
     B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    def numfunc(expr_cont,delta_t_val):
+        # build the discrete expression (which depends on it,delta_t instead of
+        # the continius one that depends on t (TimeSymbol))
+        it=Symbol("it")           #arbitrary symbol for the step index )
+        t=mvs.get_TimeSymbol()
+        delta_t=Symbol('delta_t')
+        expr_disc = expr_cont.subs({t:delta_t*it})
+        return hr.numerical_function_from_expression(
+            expr=expr_disc.subs({delta_t:delta_t_val}),
+            tup=(it, *mvs.get_StateVariableTuple()),
+            parameter_dict=par_dict,
+            func_set=func_dict
+        )
+
     sv=mvs.get_StateVariableTuple()
     n=len(sv)
     # build an array in the correct order of the StateVariables which in our case is already correct 
@@ -600,16 +711,32 @@ def make_daily_iterator_sym(
         #[V_init.ra,V_init.rh]
         [V_init.rh]
     ).reshape(n+1,1) #reshaping is neccessary for matmux
-    
+    numOutFluxesBySymbol={
+        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+
     def f(it,V):
         X = V[0:n]
         b = u_func(it,X)
         B = B_func(it,X)
         outfluxes = B @ X
         X_new = X + b + outfluxes
-        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        #ra= -np.sum(outfluxes[0:3]) # check with  mvs.get_StateVariableTuple()[0:3]
-        rh= -np.sum(outfluxes[3:n]) # check with  mvs.get_StateVariableTuple()[3:9]
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in [
+                    "C_abvmetlit",
+                    "C_belowstrlit",
+                    "C_belowmetlit",
+                    "C_surface_microbe", 
+                    "C_soil_microbe",
+                    "C_slowsom",
+                    "C_passsom"
+                ] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
+            ]
+        )
         
         V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
         return V_new
@@ -622,7 +749,7 @@ def make_daily_iterator_sym(
 
 # -
 
-V_init
+print(mvs.get_StateVariableTuple())
 
 np.array(V_init).shape
 
@@ -726,25 +853,25 @@ cpa
 epa_0=EstimatedParameters(
      beta_leaf=0.15, 
      beta_wood=0.6, 
-     r_C_leaf2abvstrlit= 0.3,
-     r_C_abvmetlit2surface_microbe=0.2,
-     r_C_abvstrlit2slowsom=0.4,
-     r_C_abvstrlit2surface_microbe=0.5,
-     r_C_belowmetlit2soil_microbe=0.4,
-     r_C_belowstrlit2slowsom=0.3,
-     r_C_belowstrlit2soil_microbe=0.4,
-     r_C_leached=0.1,
-     r_C_leaf2abvmetlit=0.6,
-     r_C_passsom2soil_microbe=0.2,
-     r_C_root2belowmetlit=0.3,
-     r_C_root2belowstrlit=0.4,
-     r_C_slowsom2passsom=0.3,
-     r_C_slowsom2soil_microbe=0.1,
-     r_C_soil_microbe2passsom=0.05,
-     r_C_soil_microbe2slowsom=0.1,
-     r_C_surface_microbe2slowsom=0.02,
-     r_C_wood2abvmetlit=0.4,
-     r_C_wood2abvstrlit=0.6,
+     r_C_leaf2abvstrlit= 0.000415110004151100,
+     r_C_abvmetlit2surface_microbe=0.000124533001245330,
+     r_C_abvstrlit2slowsom=0.000004,
+     r_C_abvstrlit2surface_microbe=0.00005,
+     r_C_belowmetlit2soil_microbe=0.00004,
+     r_C_belowstrlit2slowsom=0.00003,
+     r_C_belowstrlit2soil_microbe=0.00004,
+     r_C_leached=0.00001,
+     r_C_leaf2abvmetlit=0.000006,
+     r_C_passsom2soil_microbe=0.00002,
+     r_C_root2belowmetlit=0.00003,
+     r_C_root2belowstrlit=0.00004,
+     r_C_slowsom2passsom=0.00003,
+     r_C_slowsom2soil_microbe=0.0001,
+     r_C_soil_microbe2passsom=0.000005,
+     r_C_soil_microbe2slowsom=0.000001,
+     r_C_surface_microbe2slowsom=0.000002,
+     r_C_wood2abvmetlit=0.00004,
+     r_C_wood2abvstrlit=0.00006,
      C_leaf_0=svs_0.cVeg/3,
      #C_root_0=svs_0.cVeg/3,
      C_abvstrlit_0=svs_0.cLitter/4,
@@ -756,7 +883,7 @@ epa_0=EstimatedParameters(
 )
 
 # check initial values for the pool siz
-V_init
+epa_0
 
 # +
 from typing import Callable
@@ -843,41 +970,56 @@ def make_param2res_sym(
         #   over a month
         # 
         # Note: check if TRENDY months are like this...
-        days_per_month = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+        #days_per_month = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+        rhs=np.zeros(cpa.number_of_months)
+        number_of_years=int(cpa.number_of_months/12)
+        cVegs=np.zeros(number_of_years)
+        cRoots=np.zeros(number_of_years)
+        cLitters=np.zeros(number_of_years)
+        cSoils=np.zeros(number_of_years)
         sols=[]
-        for m in range(cpa.number_of_months):
-            dpm = days_per_month[ m % 12]  
-            #mra=0
-            mrh=0
-            for d in range(dpm):
-                v = it_sym.__next__()
-                #mra +=v[9,0]
-                mrh +=v[11,0]
-            V=StartVector(*v)
-            o=Observables(
-                cVeg=float(V.C_leaf+V.C_wood+V.C_root),
-                cRoot = float(V.C_root),
-                #cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
-                cLitter=float(V.C_abvstrlit + V.C_abvmetlit + V.C_belowstrlit + V.C_belowmetlit),
-                #cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                cSoil=float(V.C_surface_microbe + V.C_soil_microbe + V.C_slowsom + V.C_passsom),
-                #ra=mra,
-                rh=mrh,
-            )
-            # equivalent
-            #o=np.array([
-            #    np.sum(v[0:3]),
-            #    np.sum(v[3:6]),
-            #    np.sum(v[6:9]),
-            #    mra,
-            #    mrh,
-            #])
-            sols.append(o)
+        m_id=0
+        dpm=30
+        dpy=30*12
+        for y in range(number_of_years):
+            cVeg=0
+            cRoot = 0
+            cLitter= 0
+            cSoil= 0
+            for m in range(12):
+                #dpm = days_per_month[ m % 12]  
+                #mra=0
+                mrh=0
+                for d in range(dpm):
+                    v = it_sym.__next__()
+                    #mra +=v[9,0]
+                    V=StartVector(*v)
+                    cVeg+=float(V.C_leaf+V.C_wood+V.C_root)
+                    cRoot+= float(V.C_root)
+                    cLitter+=float(V.C_abvstrlit + V.C_abvmetlit + V.C_belowstrlit + V.C_belowmetlit)
+                    cSoil+=float(V.C_surface_microbe + V.C_soil_microbe + V.C_slowsom + V.C_passsom)
+                    #mrh +=v[11,0]
+                    mrh +=V.rh
+                rhs[m_id]=mrh/dpm
+                m_id+=1
+            cVegs[y]=cVeg#/dpy
+            cRoots[y] = cRoot#/dpy
+            cLitters[y]= cLitter#/dpy 
+            cSoils[y]= cSoil#/dpy
+        
+        return Observables(
+            cVeg=cVegs,
+            cRoot=cRoots,
+            cLitter=cLitters,
+            cSoil=cSoils,
+            rh=rhs
+        )
             
-        sol=np.stack(sols)       
-        return sol
         
     return param2res
+# -
+#xs.shap,
+svs.cVeg.shape[0]
 
 
 # +
@@ -887,33 +1029,202 @@ from general_helpers import plot_solutions
 const_params = cpa
 
 param2res_sym = make_param2res_sym(const_params)
-xs= param2res_sym(epa_0)
+obs_0 = param2res_sym(epa_0)
 
+
+# +
+def make_weighted_cost_func(
+        obs#: Observables
+    ) -> Callable[[Observables],np.float64]:
+    # first unpack the observation array into its parts
+    #cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
+    def costfunction(out_simu: np.ndarray) ->np.float64:
+        # fixme 
+        #   as indicated by the fact that the function lives in this  
+        #   model-specific module it is not apropriate for (all) other models.
+        #   There are model specific properties:
+        #   1.) The weight for the different observation streams
+        #   
+        number_of_ys=out_simu.cVeg.shape[0]
+        number_of_ms=out_simu.rh.shape[0]
+
+        J_obj1 = np.mean (( out_simu.cVeg - obs.cVeg )**2)/(2*np.var(obs.cVeg))
+        J_obj2 = np.mean (( out_simu.cRoot - obs.cRoot )**2)/(2*np.var(obs.cRoot))
+        J_obj3 = np.mean (( out_simu.cLitter - obs.cLitter )**2)/(2*np.var(obs.cLitter))
+        J_obj4 = np.mean (( out_simu.cSoil -  obs.cSoil )**2)/(2*np.var(obs.cSoil))
+        
+        J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
+        
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 )/200+ J_obj5/4
+        # to make this special costfunction comparable (in its effect on the
+        # acceptance rate) to the general costfunction proposed by Feng we
+        # rescale it by a factor 
+        return J_new*50.0
+    return costfunction     
+
+#test it
+cost_func = make_weighted_cost_func(svs)
+cost_func(obs_0)
+
+for f in Observables._fields:
+    print(obs_0._asdict()[f])
+
+# +
 day_indices=month_2_day_index(range(cpa.number_of_months)),
 
-fig = plt.figure()
+out_simu_d=obs_0._asdict()
+obs_d=svs._asdict()
+print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
+s,e=10,90
+len(val_sim[s:e])
+#np.array([1,2,3,4])[1:3]
+
+# +
+fig = plt.figure(figsize=(10,50))
+axs=fig.subplots(5,1)
+
+
+for ind,f in enumerate(Observables._fields):
+    val_sim=out_simu_d[f]
+    val_obs=obs_d[f]
+    axs[ind].plot(range(e-s),val_sim[s:e],label=f+"_sim")
+    axs[ind].plot(range(e-s),val_obs[s:e],label=f+"_obs")
+    axs[ind].legend()
+    
+fig.savefig('solutions_SDGVM.pdf')
+# -
+
+svs_0=Observables(*map(lambda v: v[0],svs))
+
+
+# +
+epa_min=np.array(
+    EstimatedParameters(
+     beta_leaf=0, 
+     beta_wood=0, 
+     r_C_leaf2abvstrlit= epa_0.r_C_leaf2abvmetlit/100,
+     r_C_abvmetlit2surface_microbe= epa_0.r_C_abvmetlit2surface_microbe/100,
+     r_C_abvstrlit2slowsom=epa_0.r_C_abvstrlit2slowsom/100,
+     r_C_abvstrlit2surface_microbe=epa_0.r_C_abvstrlit2surface_microbe/100,
+     r_C_belowmetlit2soil_microbe=epa_0.r_C_belowmetlit2soil_microbe/100,
+     r_C_belowstrlit2slowsom=epa_0.r_C_belowstrlit2slowsom/100,
+     r_C_belowstrlit2soil_microbe=epa_0.r_C_belowstrlit2soil_microbe/100,
+     r_C_leached=epa_0.r_C_leached/100,
+     r_C_leaf2abvmetlit=epa_0.r_C_leaf2abvmetlit/100,
+     r_C_passsom2soil_microbe=epa_0.r_C_passsom2soil_microbe/100,
+     r_C_root2belowmetlit=epa_0.r_C_root2belowmetlit/100,
+     r_C_root2belowstrlit=epa_0.r_C_root2belowstrlit/100,
+     r_C_slowsom2passsom=epa_0.r_C_slowsom2passsom/100,
+     r_C_slowsom2soil_microbe=epa_0.r_C_slowsom2soil_microbe/100,
+     r_C_soil_microbe2passsom=epa_0.r_C_soil_microbe2passsom/100,
+     r_C_soil_microbe2slowsom=epa_0.r_C_soil_microbe2slowsom/100,
+     r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom/100,
+     r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit/100,
+     r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit/100,
+     C_leaf_0=0,
+     #C_root_0=svs_0.cVeg/3,
+     C_abvstrlit_0=0,
+     C_abvmetlit_0=0,
+     C_blwstrlit_0=0,
+     C_surfacemic_0=0,
+     C_soilmic_0=0,
+     C_slow_0=0
+    )
+)
+
+
+
+
+epa_max=np.array(
+    EstimatedParameters(
+     beta_leaf=1, 
+     beta_wood=1, 
+     r_C_leaf2abvstrlit= epa_0.r_C_leaf2abvmetlit*100,
+     r_C_abvmetlit2surface_microbe= epa_0.r_C_abvmetlit2surface_microbe*100,
+     r_C_abvstrlit2slowsom=epa_0.r_C_abvstrlit2slowsom*100,
+     r_C_abvstrlit2surface_microbe=epa_0.r_C_abvstrlit2surface_microbe*100,
+     r_C_belowmetlit2soil_microbe=epa_0.r_C_belowmetlit2soil_microbe*100,
+     r_C_belowstrlit2slowsom=epa_0.r_C_belowstrlit2slowsom*100,
+     r_C_belowstrlit2soil_microbe=epa_0.r_C_belowstrlit2soil_microbe*100,
+     r_C_leached=epa_0.r_C_leached*100,
+     r_C_leaf2abvmetlit=epa_0.r_C_leaf2abvmetlit*100,
+     r_C_passsom2soil_microbe=epa_0.r_C_passsom2soil_microbe*100,
+     r_C_root2belowmetlit=epa_0.r_C_root2belowmetlit*100,
+     r_C_root2belowstrlit=epa_0.r_C_root2belowstrlit*100,
+     r_C_slowsom2passsom=epa_0.r_C_slowsom2passsom*100,
+     r_C_slowsom2soil_microbe=epa_0.r_C_slowsom2soil_microbe*100,
+     r_C_soil_microbe2passsom=epa_0.r_C_soil_microbe2passsom*100,
+     r_C_soil_microbe2slowsom=epa_0.r_C_soil_microbe2slowsom*100,
+     r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom*100,
+     r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit*100,
+     r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit*100,
+     C_leaf_0=svs_0.cVeg,
+     #C_root_0=svs_0_0.cVeg/3,
+     C_abvstrlit_0=svs_0.cLitter,
+     C_abvmetlit_0=svs_0.cLitter,
+     C_blwstrlit_0=svs_0.cLitter,
+     C_surfacemic_0=svs_0.cSoil,
+     C_soilmic_0=svs_0.cSoil,
+     C_slow_0=svs_0.cSoil
+    )
+)
+# -
+
+for i in range(len(epa_max)):
+    print(i,type(epa_max[i]))
+
+np.array(epa_max)
+
+# +
+from general_helpers import autostep_mcmc, make_param_filter_func
+
+isQualified = make_param_filter_func(epa_max, epa_min)
+param2res = make_param2res_sym(cpa)
+
+print("Starting data assimilation...")
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = autostep_mcmc(
+    initial_parameters=epa_0,
+    filter_func=isQualified,
+    param2res=param2res,
+    costfunction=make_weighted_cost_func(svs),
+    nsimu=2000, # for testing and tuning mcmc
+    #nsimu=20000,
+    c_max=np.array(epa_max),
+    c_min=np.array(epa_min),
+    acceptance_rate=15,   # default value | target acceptance rate in %
+    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1,   # default value | increase value to reduce initial step size
+    K=2 # default value | increase value to reduce acceptance of higher cost functions
+)
+print("Data assimilation finished!")
+
+# +
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
+epa_opt=EstimatedParameters(*par_opt)
+mod_opt = param2res(epa_opt)  
+
+print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
+fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        #times=day_indices,
-        times=range(cpa.number_of_months),
+        #times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months)), # for yearly output
         var_names=Observables._fields,
-        tup=(xs,)
+        tup=(mod_opt,obs)
 )
-fig.savefig('solutions_SDGVM.pdf')
 
+fig.savefig('solutions_opt.pdf')
+
+# save the parameters and cost function values for postprocessing
+outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+
+import pandas as pd
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
 # -
-ns=1400
-days=list(range(ns))
-npp=[ npp_func(d) for d in days]
-
-import matplotlib.pyplot as plt
-n=len(mvs.get_StateVariableTuple())
-#fig=plt.figure(figsize=(10,(n+1)*10))
-fig=plt.figure()
-axs=fig.subplots(2,1)
-axs[0].plot(days,npp)
-days2=list(range(70))
-axs[1].plot(days2,[day_2_month_index(d) for d in days2])
-
 
 

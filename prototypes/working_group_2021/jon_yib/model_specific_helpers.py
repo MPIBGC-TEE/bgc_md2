@@ -230,11 +230,9 @@ def make_param_filter_func(
                 break
         if(c[0] + c[1] > 0.99):
             flag = False
-        if(np.sum(c[17:18]) > 0.99*c_veg):
+        if(np.sum(c[30:33]) > 0.99*c_veg):
             flag = False
-        if(np.sum(c[19:26]) > 0.99*c_soil):
-            flag = False
-        if((c[14] > 0.99) or (c[15] > 0.99) or (c[16] > 0.99)):
+        if(np.sum(c[33:45]) > 0.99*c_soil):
             flag = False
         return flag
     
@@ -331,47 +329,47 @@ def make_param2res(
         b[2] = beta_wood
 
         # define transfer values for A matrix    
-        f_samet_leaf = epa.f_samet_leaf * epa.k_leaf     #optimized: leaf -> surface metabolic
-        f_sastr_leaf = (1-f_samet_leaf) * epa.k_leaf     #remainder to surface str 
-        f_slmet_root = epa.f_slmet_root * epa.k_root     #optimized: root -> soil metabolic
-        f_slstr_root = (1-f_slmet_root) * epa.k_root     #remainder to soil str 
-        f_cwd_wood = 0.4 * epa.k_wood                    #fixed - made up values so far
-        f_samic_cwd = epa.f_samic_cwd * epa.k_cwd        #optimized: cwd ->  surface microbial
-        f_slow_cwd = (1-f_samic_cwd) * epa.k_cwd         #remainder to slow soil 
-        f_samic_samet = 0.3 * epa.k_samet                #fixed - made up values so far
-        f_samic_sastr = 0.1 * epa.k_sastr                #fixed - made up values so far
-        f_slow_sastr = 0.1 * epa.k_sastr                 #fixed - made up values so far
-        f_slow_samic = 0.1 * epa.k_samic                 #fixed - made up values so far
-        f_slmic_slmet = 0.4 * epa.k_slmet                #fixed - made up values so far
-        f_slmic_slstr = 0.3 * epa.k_slstr                #fixed - made up values so far
-        f_slow_slstr = 0.2 * epa.k_slstr                 #fixed - made up values so far
-        f_slow_slmic = 0.4 * epa.k_slmic                 #fixed - made up values so far
-        f_arm_slmic = 0.4 * epa.k_slmic                  #fixed - made up values so far
-        f_slmic_slow = 0.10 * epa.k_slow                 #fixed - made up values so far
-        f_arm_slow = 0.45*(0.003+0.009*cpa.clay) * epa.k_slow	#copied CABLES slow to passive
-        f_slmic_arm = 0.10 * epa.k_arm                   #fixed - made up values so far
+        f_samet_leaf = epa.f_samet_leaf     #optimized: leaf -> surface metabolic
+        f_sastr_leaf = (1-f_samet_leaf)     #remainder to surface str 
+        f_slmet_root = epa.f_slmet_root     #optimized: root -> soil metabolic
+        f_slstr_root = (1-f_slmet_root)     #remainder to soil str 
+        f_cwd_wood = 0.4 * epa.k_wood       #fixed - made up values so far
+        f_samic_cwd = epa.f_samic_cwd       #optimized: cwd ->  surface microbial
+        f_slow_cwd = (1-f_samic_cwd)        #remainder to slow soil 
+        f_samic_samet = 0.3                 #fixed - made up values so far
+        f_samic_sastr = 0.1                 #fixed - made up values so far
+        f_slow_sastr = 0.1                  #fixed - made up values so far
+        f_slow_samic = 0.1                  #fixed - made up values so far
+        f_slmic_slmet = 0.4                 #fixed - made up values so far
+        f_slmic_slstr = 0.3                 #fixed - made up values so far
+        f_slow_slstr = 0.2                  #fixed - made up values so far
+        f_slow_slmic = 0.4                  #fixed - made up values so far
+        f_arm_slmic = 0.4                   #fixed - made up values so far
+        f_slmic_slow = 0.10                 #fixed - made up values so far
+        f_arm_slow = 0.45*(0.003+0.009*cpa.clay)	#copied CABLES slow to passive
+        f_slmic_arm = 0.10                  #fixed - made up values so far
         
         #place transfer rates in A matrix
         A = np.zeros(abh*aw).reshape([abh,aw])  #create empty A matrix
-        A[4,0] = f_samet_leaf   	#f5_1 #add in transfers - A is a zero ordered matrix
-        A[5,0] = f_sastr_leaf   	#f6_1 #minus one from matrix position for [row,col]
-        A[7,1] = f_slmet_root   	#f8_2 #f8_2, to pool8 from pool2 matrix pos [7,1]
-        A[8,1] = f_slstr_root   	#f9_2
-        A[3,2] = f_cwd_wood             #f4_3
-        A[6,3] = f_samic_cwd            #f7_4
-        A[10,3] = f_slow_cwd    	#f11_4
-        A[6,4] = f_samic_samet          #f7_5
-        A[6,5] = f_samic_sastr          #f7_6
-        A[10,5] = f_slow_sastr          #f11_6
-        A[10,6] = f_slow_samic          #f11_7
-        A[9,7] = f_slmic_slmet          #f10_8
-        A[9,8] = f_slmic_slstr          #f10_9
-        A[10,8] = f_slow_slstr          #f11_9
-        A[10,9] = f_slow_slmic          #f11_10
-        A[11,9] = f_arm_slmic   	#f12_10
-        A[9,10] = f_slmic_slow          #f10_11
-        A[11,10] = f_arm_slow  	        #f12_11
-        A[9,11] =f_slmic_arm    	#f10_12
+        A[4,0] = f_samet_leaf   #f5_1 #add in transfers - A is a zero ordered matrix
+        A[5,0] = f_sastr_leaf   #f6_1 #minus one from matrix position for [row,col]
+        A[7,1] = f_slmet_root   #f8_2 #f8_2, to pool8 from pool2 matrix pos [7,1]
+        A[8,1] = f_slstr_root   #f9_2
+        A[3,2] = f_cwd_wood     #f4_3
+        A[6,3] = f_samic_cwd    #f7_4
+        A[10,3] = f_slow_cwd    #f11_4
+        A[6,4] = f_samic_samet  #f7_5
+        A[6,5] = f_samic_sastr  #f7_6
+        A[10,5] = f_slow_sastr  #f11_6
+        A[10,6] = f_slow_samic  #f11_7
+        A[9,7] = f_slmic_slmet  #f10_8
+        A[9,8] = f_slmic_slstr  #f10_9
+        A[10,8] = f_slow_slstr  #f11_9
+        A[10,9] = f_slow_slmic  #f11_10
+        A[11,9] = f_arm_slmic   #f12_10
+        A[9,10] = f_slmic_slow  #f10_11
+        A[11,10] = f_arm_slow   #f12_11
+        A[9,11] =f_slmic_arm    #f10_12
         
         #turnover rate per day of pools:
         #leaf(p1),root(p2),wood(p3),cwd(p4),samet(p5),sastr(p6),samic(p7),
@@ -396,7 +394,7 @@ def make_param2res(
         np.fill_diagonal(K, k_val)
         
         #create final A*K matrix
-        B = A
+        B = np.array(A@K) 
         neg_k_val = [-x for x in k_val]
         np.fill_diagonal(B, neg_k_val)
         

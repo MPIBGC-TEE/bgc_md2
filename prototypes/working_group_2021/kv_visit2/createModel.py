@@ -13,20 +13,36 @@
 #     name: python3
 # ---
 
-# This illustrative notebook shows how to create a representation for a new model.
+# # Goals of this notebook:
+# This illustrative notebook shows how to achieve the following 
 #
-# For the sake of simplicity we assume here that we start with a description of pools and fluxes.
+# ## Create a symbolic representation 
+# for a new model and source it out
+# into a file `source.py` that we can  `import` into ohter code.
+# This will do this in steps
+# 1. use a minimal model as template
+# 1. inspect it with some of the tools 
+# 1. expand it.
+# 1. source it out.
+# ### Notes:
+# For the sake of simplicity we assume here that we start 
+# with a description of pools and fluxes.
 # This is the form the models are usually described in the literature.
-# We will see that the framework can derive a matrix representation automatically. 
-#
+# We will see that the framework can derive a matrix 
+# representation automatically.
 # It would also be possible to start from the matrices or even
 # mix the two approaches. 
-# We will point to some more advanced examples where you can see this in action. If you get familiar with the framework you will find many more combinations than we can cover. 
-#
-# ## Inspect a minimal model
-#
-# We will start with an extremely simple model.
-# and copy its contents into a new cell. (we will later save it under a new name) 
+# We will point to some more advanced examples 
+# where you can see this in action. 
+# If you get familiar with the framework you will 
+# find many more combinations than we can cover. 
+#    
+# ## Create a set of helper functions 
+# for connecting the model to data and source them out into a model specific file `model_specific_helpers_2.py` 
+
+# ### Inspect a minimal model
+# We will start with an extremely simple model and extend it.
+# In this tutorial we will copy contents into new cells as we progress but you **can change it in place**. 
 
 # +
 from sympy import  Symbol, Function 
@@ -465,47 +481,6 @@ mvs = CMTVS(
     computers=module_computers(bgc_c)
 )
 # -
-h.compartmental_graph(mvs)
-
-dh.mass_balance_equation(mvs)
-
-# ### Add information specific to the tracability analysis.
-#
-# We are aiming for a decomposition of the compartmental matrix $B$ into three factors 
-# $B(t)= \xi(t)  A K $ 
-# with $ \xi$ and $K$ diagonal. 
-# `bgc_md2` can automatically compute a decomposition into $ B=A N(t)$ where $N(t)=\xi(t)K$ but
-# which part of $N(t)$ should go into $\xi(t)$ is easier to specify manually. 
-#
-# We will first compute the $B=A N$ decomposition and then specify $\xi$.
-#
-#
-
-# +
-srm = mvs.get_SmoothReservoirModel()
-
-# The matrices T and N in the function refer to what in Yiqi Luo's group is usually called A and K
-# and xi is a single scalar (not the diagonal matrix we are looking for here)
-# The function has documentation which you can see by typing the following
-# # ?srm.xi_T_N_u_representation
-_,A,N,_,_=srm.xi_T_N_u_representation(factor_out_xi=False) 
-# -
-
-mvs.computable_mvar_types()
-
-# We can see that we can easily decompose N manually into $N= \xi K $.
-# We also see that we have a symbol $\xi$ alreasince the model has actually been specified with $\xi in mind
-
-from sympy import diag
-xi_d=diag([1,1,1]+[xi(t) for i in range(6)],unpack=True)
-xi_d
-
-# We can go on and decompose N =\xi K -> K=\xi^{-1}N
-K=xi_d.inv()*N
-K
-# we now have the (symbolic) ingredients for the traceability analysis.
-#xi_d,K,A
-
 # We can store the symbolic representation in a file that we can use in for several purposes later.
 # Copy your version of the following cell into a text editor and save the file in the current directory as `source.py`)
 
@@ -513,6 +488,8 @@ K
 from sympy import Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
+from bgc_md2.models.BibInfo import BibInfo
+
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -626,16 +603,87 @@ mvs = CMTVS(
                 (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),
             }
         ),
+        BibInfo(# Bibliographical Information
+            name="Visit",
+            longName="",
+            version="1",
+            entryAuthor="Konstiantyn Viatkin",
+            entryAuthorOrcid="",
+            entryCreationDate="",
+            doi="",
+            sym_dict=sym_dict,
+            func_dict=func_dict
+        ),
+
     },
     computers=module_computers(bgc_c)
 )
 # -
 
+# After creating the file `source.py` you can `import` it. 
+
+from source import mvs
+
+# Afterwards you can remove the cells of previous phases. 
+
+h.compartmental_graph(mvs)
+
+dh.mass_balance_equation(mvs)
+
+# ### Connect to the form ispecific to the tracability analysis.
+#
+# We are aiming for a decomposition of the compartmental matrix $B$ into three factors 
+# $B(t)= \xi(t)  A K $ 
+# with $ \xi$ and $K$ diagonal. 
+# `bgc_md2` can automatically compute a decomposition into $ B=A N(t)$ where $N(t)=\xi(t)K$ but
+# which part of $N(t)$ should go into $\xi(t)$ is easier to specify manually. 
+#
+# We will first compute the $B=A N$ decomposition and then specify $\xi$.
+#
+#
+
+# be able to refer to the symbols and functions in the symbolic description
+# we recreate them here.
+BI=mvs.get_BibInfo()
+for k in BI.sym_dict.keys():
+    code=k+" = Symbol('{0}')".format(k)
+    exec(code)
+for k in BI.func_dict.keys():
+    code=k+" = Function('{0}')".format(k)
+    exec(code)
+
+
+# +
+srm = mvs.get_SmoothReservoirModel()
+
+# The matrices T and N in the function refer to what in Yiqi Luo's group is usually called A and K
+# and xi is a single scalar (not the diagonal matrix we are looking for here)
+# The function has documentation which you can see by typing the following
+# # ?srm.xi_T_N_u_representation
+_,A,N,_,_=srm.xi_T_N_u_representation(factor_out_xi=False) 
+# -
+
+mvs.computable_mvar_types()
+
+# We can see that we can easily decompose N manually into $N= \xi K $.
+# We also see that we have a symbol $\xi$ alreasince the model has actually been specified with $\xi in mind
+
+from sympy import diag
+xi_d=diag([1,1,1]+[xi(t) for i in range(6)],unpack=True)
+xi_d
+
+# We can go on and decompose N =\xi K -> K=\xi^{-1}N
+K=xi_d.inv()*N
+K
+# we now have the (symbolic) ingredients for the traceability analysis.
+#xi_d,K,A
+
 mvs.get_StateVariableTuple()
 
 # #### Intermediate summary:
 # We have achieved the symbolic formulation of the model. We can use it to check the structure and compute derived diagnostic variables including the matrices used for the traceability analysis, but up to now only in symbolic form.
-#
+
+# The next stage is:
 # ## Connecting symbolic description and data
 # The next goal is to connect the symbolic formulation to the data.
 # Since the data comes in several shapes this involves several steps. 
@@ -667,7 +715,6 @@ mvs.get_StateVariableTuple()
 # This function **saves us a lot of time** when we want to reproduce your results and run your model since finding the correct dataset can be a time consuming task.
 # There is a helper function `download_TRENDY_output` in `../general_helpers.py` that you can probably use within your `download_my_TRENDY_output`.
 # If it's not general enough to be called it should at least give you an idea. 
-#
 
 # +
 import sys
@@ -677,21 +724,21 @@ import json
 from pathlib import Path
 from collections import namedtuple 
 
-with Path('config.json').open(mode='r') as f:
-    conf_dict=json.load(f) 
-
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
     ["cVeg","cLitter","cSoil","rh","ra"]
 )
-Drivers=namedtuple(
-    "Drivers",
+OrgDrivers=namedtuple(
+    "OrgDrivers",
     ["gpp", "mrso", "tas"]
 )    
-    
+Drivers=namedtuple(
+    "Drivers",
+    ("npp",) + OrgDrivers._fields[1:]
+)    
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
-def download_my_TRENDY_output():
+def download_my_TRENDY_output(conf_dict):
     download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
@@ -699,43 +746,69 @@ def download_my_TRENDY_output():
         models=['VISIT'],
         variables = Observables._fields + Drivers._fields
     )
+
+
+# +
 #call it to test that the download works the data
+
+with Path('config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
+
 #download_my_TRENDY_output()
 # -
 
+# Copy the content of the above cell into a file `model_specific_helpers_2.py` 
+# and then import it and call the function to check that it works.
+
+import model_specific_helpers_2 as msh
+#msh.download_my_TRENDY_output(conf_dict)
+
 # #### provide functions to read the data
 #
-
-
 
 # +
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
 import json 
+
+# Read NetCDF data  ******************************************************************************************************************************
+
 def get_example_site_vars(dataPath):
-    # pick up 1 site   
+    # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
     t = s, 50, 33  # [t] = [:,49,325]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them 
+        # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
         return ds.variables[vn][t]
 
     o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Drivers._fields]
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+
+    # we want to drive with npp and can create it from gpp and ra 
+    # observables
+    odvs=OrgDrivers(*map(f,d_names))
+    obss=Observables(*map(f, o_names))
+
+    dvs=Drivers(
+        npp=odvs.gpp-obss.ra,
+        mrso=odvs.mrso,
+        tas=odvs.tas
+    )
+    return (obss, dvs)
 
 
-#     # Read NetCDF data  ******************************************************************************************************************************
 # -
 
 svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 
-svs,dvs
+# Copy the code into `model_specific_helpers_2.py` and call the function again...
+
+svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # +
 sys.path.insert(0,'..')
@@ -745,9 +818,6 @@ def NPP_fun(day ):
 
 func_dict={NPP: NPP_fun}
 # -
-
-
-
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
 # So we need:
@@ -875,7 +945,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
+    return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day;
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -949,31 +1019,32 @@ C_leaf_litter_func = hr.numerical_function_from_expression(
 # call it for testing
 C_leaf_litter_func(0,*X_0)
 
-
 # +
-#mass production of output functions
-def numfunc(expr_cont,delta_t_val):
-    # build the discrete expression (which depends on it,delta_t instead of
-    # the continius one that depends on t (TimeSymbol))
-    it=Symbol("it")           #arbitrary symbol for the step index )
-    t=mvs.get_TimeSymbol()
-    delta_t=Symbol('delta_t')
-    expr_disc = expr_cont.subs({t:delta_t*it})
-    return hr.numerical_function_from_expression(
-        expr=expr_disc.subs({delta_t:delta_t_val}),
-        tup=(it, *mvs.get_StateVariableTuple()),
-        parameter_dict=par_dict,
-        func_set=func_dict
-    )
-    
+# mass production of output functions
+# We have a special function in geneneral_helpers.py
+from general_helpers import numfunc
+
 numOutFluxesBySymbol={
-    k:numfunc(expr_cont,1) 
+    k:numfunc(
+        expr_cont,
+        mvs,
+        delta_t_val=1,
+        par_dict=par_dict,
+        func_dict=func_dict
+    ) 
     for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
 } 
 numOutFluxesBySymbol2={
-    k:numfunc(expr_cont,2) 
+    k:numfunc(
+        expr_cont,
+        mvs,
+        delta_t_val=2,
+        par_dict=par_dict,
+        func_dict=func_dict
+    ) 
     for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
 } 
+
 
 # now we can compute ra 
 # apply all the outfluxfunctions of the veg pools and add up the result
@@ -1046,6 +1117,23 @@ StartVector=namedtuple(
 )
 StartVector._fields
 
+
+# Again we source this out to a function.
+# Put the following into `model_specific_helpers_2.py`
+#
+
+def make_StartVector(mvs):
+    return namedtuple(
+        "StartVector",
+        [str(v) for v in mvs.get_StateVariableTuple()]+
+        ["ra","rh"]
+    ) 
+
+
+
+# you can call it instead
+StartVector=msh.make_StartVector(mvs)
+
 V_init= StartVector(
     C_leaf=svs_0.cVeg/3,
     C_wood=svs_0.cVeg/3,
@@ -1067,15 +1155,18 @@ from CompartmentalSystems.TimeStepIterator import (
         TimeStepIterator2,
 )
 from copy import copy
-
-def make_daily_iterator_sym(
+def make_iterator_sym(
         mvs,
-        V_init: StartVector,
+        V_init, #: StartVector,
         par_dict,
-        func_dict
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
     ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val=1)  
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
     sv=mvs.get_StateVariableTuple()
+    #mass production of output functions
+
+
     n=len(sv)
     # build an array in the correct order of the StateVariables which in our case is already correct 
     # since V_init was built automatically but in case somebody handcrafted it and changed
@@ -1083,10 +1174,14 @@ def make_daily_iterator_sym(
     V_arr=np.array(
         [V_init.__getattribute__(str(v)) for v in sv]+
         [V_init.ra,V_init.rh]
-    ).reshape(n+2,1) #reshaping is neccessary for matmul
+    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
     
+
+    
+    # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
+    # We first create numerical functions for all the outfluxes from our symbolic description.
     numOutFluxesBySymbol={
-        k:numfunc(expr_cont,delta_t_val=1) 
+        k:numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
         for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
     } 
     def f(it,V):
@@ -1098,19 +1193,20 @@ def make_daily_iterator_sym(
         
         ra = np.sum(
             [
-              numOutFluxesBySymbol[k](it,*X) 
-                for k in [C_leaf,C_wood,C_root] 
-                if k in numOutFluxesBySymbol.keys()
+              numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in ["C_leaf","C_wood","C_root"] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
         rh = np.sum(
             [
-                numOutFluxesBySymbol[k](it,*X) 
-                for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
-                if k in numOutFluxesBySymbol.keys()
+                numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in ["C_leaf_litter","C_wood_litter","C_root_litter","C_soil_fast","C_soil_slow","C_soil_passive"] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
         V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        
         return V_new
     
     return TimeStepIterator2(
@@ -1119,19 +1215,21 @@ def make_daily_iterator_sym(
     )
 
 
+
 # -
-V_init
+# Add the above function to `model_specific_helpers_2.py` and call it.
 
 np.array(V_init).shape
 
 # +
 # test the daily iterator
     
-it_sym = make_daily_iterator_sym(
+it_sym = msh.make_iterator_sym(
     mvs,
     V_init=V_init,
     par_dict=par_dict,
-    func_dict=func_dict
+    func_dict=func_dict,
+    delta_t_val=1
 )
 # we will run the model for 15 steps
 ns=15
@@ -1208,17 +1306,17 @@ def make_iterator_sym(
 
 
 # +
-
-# test the different iterators
+# test iterators wiht different time steps 
     
-it_sym = make_daily_iterator_sym(
+delta_t_val=1 #n_day iterator
+it_sym = msh.make_iterator_sym(
     mvs,
     V_init=V_init,
     par_dict=par_dict,
     func_dict=func_dict
 )
 delta_t_val=30 #n_day iterator
-it_sym_2 = make_iterator_sym(
+it_sym_2 = msh.make_iterator_sym(
     mvs,
     V_init=V_init,
     par_dict=par_dict,
@@ -1336,13 +1434,13 @@ EstimatedParameters = namedtuple(
 
 EstimatedParameters._fields
 
-dvs.gpp[1:100]
+dvs.npp[1:100]
 
 cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- gpp_0=dvs.gpp[0] * 86400,   # kg/m2/s kg/m2/day
+ gpp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
  rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
  ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
  r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
@@ -1353,6 +1451,9 @@ cpa=UnEstimatedParameters(
 
 len(svs.rh)
 
+
+# ### Finding better start values for the data assimilation
+# You don't have to do this. It's a heuristic approach to find a better starting position.
 
 # +
 def make_steady_state_iterator_sym(
@@ -1438,15 +1539,134 @@ epa_0=EstimatedParameters(
 # - then produce `param2res` automatically by code
 # - them wrap this code into `make_param2res` so that you can change the unestimated parameters easily.
 #
-# This function will be later moved to a model specific helper file, and loaded from there by the data assimilation functions.
+# Move this function will to a `model_specific_helpers_2.py`
 
 # +
 from typing import Callable
-from general_helpers import month_2_day_index, monthly_to_yearly
-from functools import reduce
 
+Constants = namedtuple(
+    "Constants",
+    [
+        "cLitter_0",
+        "cSoil_0",
+        "cVeg_0",
+        "npp_0",
+        "rh_0",
+        "ra_0",
+        "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
+        "r_C_root_litter_2_C_soil_slow",# it would be much better to know more  
+        "number_of_months" # necessary to prepare the output in the correct lenght 
+    ]
+)
+# Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
+# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
+# The destinction is only made for the data assimilation to isolate those parameters
+# that the mcmc will try to optimise 
+# It is better to start with only a few
+
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",[ 
+        "beta_leaf",
+        "beta_wood",
+        "T_0",
+        "E",
+        "KM",
+        #"r_C_leaf_rh",
+        #"r_C_wood_rh",
+        #"r_C_root_rh",
+        "r_C_leaf_litter_rh",
+        "r_C_wood_litter_rh",
+        "r_C_root_litter_rh",
+        "r_C_soil_fast_rh",
+        "r_C_soil_slow_rh",
+        "r_C_soil_passive_rh",
+        "r_C_leaf_2_C_leaf_litter",
+        "r_C_wood_2_C_wood_litter",
+        "r_C_root_2_C_root_litter",
+        "r_C_leaf_litter_2_C_soil_fast",
+        "r_C_leaf_litter_2_C_soil_slow",
+        "r_C_leaf_litter_2_C_soil_passive",
+        "r_C_wood_litter_2_C_soil_fast",
+        "r_C_wood_litter_2_C_soil_slow",
+        "r_C_wood_litter_2_C_soil_passive",
+        "r_C_root_litter_2_C_soil_fast",
+        "r_C_root_litter_2_C_soil_slow",
+        "r_C_root_litter_2_C_soil_passive",
+        'C_leaf_0',#for the trendy data also the startvalues have to be estimated but 
+        'C_wood_0',
+        #C_root_0 can be inferred as cVeg_0-(C_leaf_0+C_wood_0)
+        'C_leaf_litter_0',
+        'C_wood_litter_0',
+        #C_root_litter_0 can be inferred
+        'C_soil_fast_0',
+        'C_soil_slow_0',
+        #C_soil_passive_0 can be inferred 
+    ]
+)
+
+Constants = namedtuple(
+    "Constants",
+    [
+        "cLitter_0",
+        "cSoil_0",
+        "cVeg_0",
+        "npp_0",
+        "rh_0",
+        "ra_0",
+        "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
+        "r_C_root_litter_2_C_soil_slow",# it would be much better to know more  
+        "number_of_months" # necessary to prepare the output in the correct lenght 
+    ]
+)
+# Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
+# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
+# The destinction is only made for the data assimilation to isolate those parameters
+# that the mcmc will try to optimise 
+# It is better to start with only a few
+
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",[ 
+        "beta_leaf",
+        "beta_wood",
+        "T_0",
+        "E",
+        "KM",
+        #"r_C_leaf_rh",
+        #"r_C_wood_rh",
+        #"r_C_root_rh",
+        "r_C_leaf_litter_rh",
+        "r_C_wood_litter_rh",
+        "r_C_root_litter_rh",
+        "r_C_soil_fast_rh",
+        "r_C_soil_slow_rh",
+        "r_C_soil_passive_rh",
+        "r_C_leaf_2_C_leaf_litter",
+        "r_C_wood_2_C_wood_litter",
+        "r_C_root_2_C_root_litter",
+        "r_C_leaf_litter_2_C_soil_fast",
+        "r_C_leaf_litter_2_C_soil_slow",
+        "r_C_leaf_litter_2_C_soil_passive",
+        "r_C_wood_litter_2_C_soil_fast",
+        "r_C_wood_litter_2_C_soil_slow",
+        "r_C_wood_litter_2_C_soil_passive",
+        "r_C_root_litter_2_C_soil_fast",
+        "r_C_root_litter_2_C_soil_slow",
+        "r_C_root_litter_2_C_soil_passive",
+        'C_leaf_0',#for the trendy data also the startvalues have to be estimated but 
+        'C_wood_0',
+        #C_root_0 can be inferred as cVeg_0-(C_leaf_0+C_wood_0)
+        'C_leaf_litter_0',
+        'C_wood_litter_0',
+        #C_root_litter_0 can be inferred
+        'C_soil_fast_0',
+        'C_soil_slow_0',
+        #C_soil_passive_0 can be inferred 
+    ]
+)
 def make_param2res_sym(
-        cpa: UnEstimatedParameters
+        mvs,
+        cpa: Constants,
+        dvs: Drivers
     ) -> Callable[[np.ndarray], np.ndarray]: 
     # To compute numeric solutions we will need to build and iterator 
     # as we did before. As it will need numeric values for all the parameters 
@@ -1456,9 +1676,10 @@ def make_param2res_sym(
     # depends on the symbolic model.
     # Therefore we create it outside the mcmc loop and bake the result into the 
     # param2res function.
-    # The iterator does not care if they are estimated or not it only 
+    # The iterator does not care if they are estimated or constant, it only 
     # wants a dictionary containing key: value pairs for all
     # parameters that are not state variables or the symbol for time
+    StartVector=make_StartVector(mvs)
     srm=mvs.get_SmoothReservoirModel()
     model_par_dict_keys=srm.free_symbols.difference(
         [Symbol(str(mvs.get_TimeSymbol()))]+
@@ -1470,7 +1691,7 @@ def make_param2res_sym(
     seconds_per_day = 86400
     def npp_func(day):
         month=day_2_month_index(day)
-        return (dvs.gpp[month]-svs.ra[month]) * seconds_per_day   # kg/m2/s kg/m2/day;
+        return dvs.npp[month] * seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -1495,9 +1716,13 @@ def make_param2res_sym(
         # in the combination
         apa = {**cpa._asdict(),**epa._asdict()}
         model_par_dict = {
-            k:v for k,v in apa.items()
-            if k in model_par_dict_keys
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
         }
+
+        #print(model_par_dict)
+        #from IPython import embed;embed()
+        
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
@@ -1508,6 +1733,7 @@ def make_param2res_sym(
             'NPP':npp_func,
              'xi':xi_func
         }
+        
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
@@ -1515,7 +1741,7 @@ def make_param2res_sym(
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
-            par_dict=par_dict,
+            par_dict=model_par_dict,
             func_dict=func_dict,
             delta_t_val=delta_t_val
         )
@@ -1530,26 +1756,24 @@ def make_param2res_sym(
         # Note: check if TRENDY months are like this...
         # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         sols=[]
+        dpm=30 # 
+        n=len(V_init)
         for m in range(cpa.number_of_months):
             #dpm = days_per_month[ m % 12]  
-            dpm=30 # 
             mra=0
             mrh=0
             for d in range(int(dpm/delta_t_val)):
-                v = it_sym.__next__()
-                #mra +=v[9,0] 
-                #mrh +=v[10,0]
+                v = it_sym.__next__().reshape(n,)
                 # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
                 # at the moment the iterator also computes a flux but in kg^-2 ^day
             V=StartVector(*v)
+            #from IPython import embed;embed()
             o=Observables(
                 cVeg=float(V.C_leaf+V.C_wood+V.C_root),
                 cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
                 cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                ra=v[9,0]/seconds_per_day,
-                rh=v[10,0]/seconds_per_day # the data is per second while the time units for the iterator refer to days
-                #ra=mra/dpm, # monthly respiration back to kg/m2/day units
-                #rh=mrh/dpm, # monthly respiration back to kg/m2/day units
+                ra=V.ra/seconds_per_day,
+                rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
             )
             sols.append(o)
             
@@ -1563,15 +1787,18 @@ def make_param2res_sym(
         
     return param2res
 
+
+
+
 # +
 # now test it 
 import matplotlib.pyplot as plt
 from general_helpers import plot_solutions
 
-param2res_sym = make_param2res_sym(cpa)
+param2res_sym = msh.make_param2res_sym(mvs,cpa,dvs)
 xs= param2res_sym(epa_0)
 obs=np.column_stack([ np.array(v) for v in svs])
-xs.shape
+#xs.shape
 
 # +
 obs=obs[0:cpa.number_of_months,:] #cut 
@@ -1672,7 +1899,7 @@ np.array(epa_max)
 from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
 
 isQualified = make_param_filter_func(epa_max, epa_min)
-param2res = make_param2res_sym(cpa)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
@@ -1681,7 +1908,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=200, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
@@ -1703,7 +1930,7 @@ fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months/12)), # for yearly output
+        times=range(int(cpa.number_of_months)), # for yearly output
         var_names=Observables._fields,
         tup=(mod_opt,obs)
 )
@@ -2030,9 +2257,3 @@ mvs.get_CompartmentalMatrix().inv()
 # the numerical version of the matrix in every timestep.
 # However it could be very difficult to compute the symbolic inverse in 
 # some cases at all (why we will demonstrate the numeric approach) first. 
-
-
-
-
-
-
