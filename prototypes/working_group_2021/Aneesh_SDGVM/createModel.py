@@ -74,30 +74,84 @@ cpa=msh.Constants(
 
 cpa
 
+# +
+#r_C_leaf2abvstrlit=k_C_leaf *f_leaf2abvstrlit
+#r_leaf2abvmetlit = k_C_leaf *f_leaf2abvmetlit
+#r_wood2abvstrlit = k_C_wood *f_wood2abvstrlit
+#r_wood2abvmetlit = k_C_wood *f_wood2abvmetlit
+#r_root2belowstrlit = k_C_root * f_root2belowstrlit
+#r_root2belowmetlit = k_C_root * f_root2belowmetlit
+#r_abvstrlit2surface_microbe = k_C_abvstrlit *f_abvstrlit2surface_microbe
+#r_abvmetlit2surface_microbe = k_C_abvmetlit *f_abvmetlit2surface_microbe
+#r_abvstrlit2slowsom = k_C_abvstrlit*f_abvstrlit2slowsom
+#r_belowstrlit2soil_microbe = k_C_belowstrlit * f_belowstrlit2soil_microbe
+#r_belowmetlit2soil_microbe = k_C_belowmetlit  * f_belowmetlit2soil_microbe
+#r_belowstrlit2slowsom = k_C_belowstrlit *f_belowstrlit2slowsom
+#r_surface_microbe2slowsom = k_C_surface_microbe*f_surface_microbe2slowsom
+#r_soil_microbe2slowsom = k_C_soil_microbe *f_soil_microbe2slowsom
+#r_slowsom2soil_microbe = k_C_slowsom *f_slowsom2soil_microbe
+#r_soil_microbe2passsom = k_C_soil_microbe*f_soil_microbe2passsom
+#r_slowsom2passsom = k_C_slowsom*f_slowsom2passsom
+#r_passsom2soil_microbe =k_C_passsom * f_passsom2soil_microbe
+#r_leached = leached = (leachedwtr30)/18 * (0.01 + 0.04* (1- silt_clay))
+
+# r_C_leaf2abvstrlit=1/360*60*0.2 #k_C_leaf *f_leaf2abvstrlit
+# r_leaf2abvmetlit = 1/360*60*0.8 #k_C_leaf *f_leaf2abvmetlit
+# r_wood2abvstrlit = 1/360*30*0.2 #k_C_wood *f_wood2abvstrlit
+# r_wood2abvmetlit = 1/(360*30)*0.8 #k_C_wood *f_wood2abvmetlit
+# r_root2belowstrlit = 1/(360*22)*0.2#k_C_root * f_root2belowstrlit
+# r_root2belowmetlit = 1/(360*60)*0.8 #k_C_root * f_root2belowmetlit
+# r_abvstrlit2surface_microbe = #k_C_abvstrlit *f_abvstrlit2surface_microbe
+# r_abvmetlit2surface_microbe = k_C_abvmetlit *f_abvmetlit2surface_microbe
+# r_abvstrlit2slowsom = k_C_abvstrlit*f_abvstrlit2slowsom
+# r_belowstrlit2soil_microbe = k_C_belowstrlit * f_belowstrlit2soil_microbe
+# r_belowmetlit2soil_microbe = k_C_belowmetlit  * f_belowmetlit2soil_microbe
+# r_belowstrlit2slowsom = k_C_belowstrlit *f_belowstrlit2slowsom
+# r_surface_microbe2slowsom = k_C_surface_microbe*f_surface_microbe2slowsom
+# r_soil_microbe2slowsom = k_C_soil_microbe *f_soil_microbe2slowsom
+# r_slowsom2soil_microbe = k_C_slowsom *f_slowsom2soil_microbe
+# r_soil_microbe2passsom = k_C_soil_microbe*f_soil_microbe2passsom
+# r_slowsom2passsom = k_C_slowsom*f_slowsom2passsom
+# r_passsom2soil_microbe =k_C_passsom * f_passsom2soil_microbe
+# r_leached = leached = (leachedwtr30)/18 * (0.01 + 0.04* (1- silt_clay))
+# -
+
 epa_0=msh.EstimatedParameters(
-     beta_leaf=0.6, 
-     beta_wood=0.25, 
-     r_C_leaf2abvstrlit= 0.000415110004151100,
-     r_C_abvmetlit2surface_microbe=0.000124533001245330,
+     beta_leaf=0.44, 
+     beta_wood=0.3, 
+     r_C_leaf2abvstrlit= 0.00045/3,
+     r_C_leaf2abvmetlit=0.00006/3,
+     r_C_wood2abvmetlit=0.00004*2.5,
+     r_C_wood2abvstrlit=0.000006*2.5,
+     r_C_root2belowmetlit=0.000009*9,
+     r_C_root2belowstrlit=0.000009*9,
+    
      r_C_abvstrlit2slowsom=0.000004,
-     r_C_abvstrlit2surface_microbe=0.00005,
+     r_C_abvstrlit2surface_microbe=0.000005,
+     r_C_abvmetlit2surface_microbe=0.00000012453,
      r_C_belowmetlit2soil_microbe=0.00004,
-     r_C_belowstrlit2slowsom=0.00003,
+     r_C_belowstrlit2slowsom=0.0000030,
      r_C_belowstrlit2soil_microbe=0.00004,
-     r_C_leached=0.00001,
-     r_C_leaf2abvmetlit=0.000006,
-     r_C_passsom2soil_microbe=0.00002,
-     r_C_root2belowmetlit=0.0003,
-     r_C_root2belowstrlit=0.00004,
-     r_C_slowsom2passsom=0.00003,
-     r_C_slowsom2soil_microbe=0.0001,
-     r_C_soil_microbe2passsom=0.000005,
-     r_C_soil_microbe2slowsom=0.000001,
-     r_C_surface_microbe2slowsom=0.000002,
-     r_C_wood2abvmetlit=0.00004,
-     r_C_wood2abvstrlit=0.00006,
+    
+     r_C_leached=0.0001,
+    
+     r_C_passsom2soil_microbe=0.0000002,
+     r_C_slowsom2passsom=0.0000003,
+     r_C_slowsom2soil_microbe=0.0000001,
+     r_C_soil_microbe2passsom=0.00005/1000,
+     r_C_soil_microbe2slowsom=0.0001/1000,
+     r_C_surface_microbe2slowsom=0.0002/1000,
+    
+     r_C_abvstrlit_rh=0.00975/10,
+     r_C_abvmetlit_rh=0.024667/75,
+     r_C_belowstrlit_rh=0.011333/50,
+     r_C_belowmetlit_rh=0.028264/30,
+
+     r_C_surface_microbe_rh=0.01/100000,
+     r_C_slowsom_rh=0.0000306/10,
+     r_C_passsom_rh=0.0000006875/10,
+    
      C_leaf_0=svs_0.cVeg/3,
-     #C_root_0=svs_0.cVeg/3,
      C_abvstrlit_0=svs_0.cLitter/4,
      C_abvmetlit_0=svs_0.cLitter/4,
      C_blwstrlit_0=svs_0.cLitter/4,
@@ -161,6 +215,13 @@ epa_min=np.array(
      r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom/100,
      r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit/100,
      r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit/100,
+     r_C_abvstrlit_rh=epa_0.r_C_abvstrlit_rh/100,
+     r_C_abvmetlit_rh=epa_0.r_C_abvmetlit_rh/100,
+     r_C_belowstrlit_rh=epa_0.r_C_belowstrlit_rh/100,
+     r_C_belowmetlit_rh=epa_0.r_C_belowmetlit_rh/100,
+     r_C_surface_microbe_rh=epa_0.r_C_surface_microbe_rh/100,
+     r_C_slowsom_rh=epa_0.r_C_slowsom_rh/100,
+     r_C_passsom_rh=epa_0.r_C_passsom_rh/100,
      C_leaf_0=0,
      #C_root_0=svs_0.cVeg/3,
      C_abvstrlit_0=0,
@@ -195,6 +256,13 @@ epa_max=np.array(
      r_C_surface_microbe2slowsom=epa_0.r_C_surface_microbe2slowsom*100,
      r_C_wood2abvmetlit=epa_0.r_C_wood2abvmetlit*100,
      r_C_wood2abvstrlit=epa_0.r_C_wood2abvstrlit*100,
+     r_C_abvstrlit_rh=epa_0.r_C_abvstrlit_rh*100,
+     r_C_abvmetlit_rh=epa_0.r_C_abvmetlit_rh*100,
+     r_C_belowstrlit_rh=epa_0.r_C_belowstrlit_rh*100,
+     r_C_belowmetlit_rh=epa_0.r_C_belowmetlit_rh*100,
+     r_C_surface_microbe_rh=epa_0.r_C_surface_microbe_rh*100,
+     r_C_slowsom_rh=epa_0.r_C_slowsom_rh*100,
+     r_C_passsom_rh=epa_0.r_C_passsom_rh*100,
      C_leaf_0=svs_0.cVeg,
      #C_root_0=svs_0_0.cVeg/3,
      C_abvstrlit_0=svs_0.cLitter,
@@ -219,13 +287,13 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=100, # for testing and tuning mcmc
+    nsimu=6000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,   # default value | increase value to reduce initial step size
+    D_init=10,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
