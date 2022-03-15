@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.1
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -296,10 +296,13 @@ mvs = CMTVS(
     },
     computers=module_computers(bgc_c)
 )
+
 # -
 
 # ## Model Figure and Matrix Equations
 # #### Model Figure:
+
+type(xi)
 
 h.compartmental_graph(mvs)
 
@@ -741,6 +744,17 @@ plot_solutions(
 fig.savefig('solutions.pdf')
 # -
 
+{t: flux for t,flux in mvs.get_InternalFluxesBySymbol().items()
+ if str(t[0]) in ["c_leaf","c_wood","c_root"]
+ and str(t[1]) in ["c_DPM","c_RPM"]
+}
+    
+
+b=Symbol("a")
+ex=b**2
+ex
+ex.subs({b:4})
+
 # #### Create forward model function:
 
 # + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
@@ -807,6 +821,54 @@ def make_iterator_sym(
 
 
 # +
+from sympy import lambdify,symbols, Function, sin
+import numpy as np
+x,y,s,t=symbols("x y,s,t")
+z=Function("z")
+f_ex=x**2+y**2+z(t,s)
+f_ex
+def z_num(a1,a2):
+    return a1**2+a2
+
+func_dict={"z":z_num}
+#par_dict={x:2,y:3}
+#f_ex.subs(par_dict)
+f=lambdify((x,y,s,t),f_ex,[func_dict,'numpy'])
+f(2,3,3,4)
+np.array([1,2,3])<2
+
+# +
+from general_helpers import day_2_month_index
+def xi_maker(tsl, Mw, mrso, landCoverFrac):
+    def xi_func( day):
+        mi = day_2_month_index(day)
+        FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
+        FV = 0.6 + 0.4 * (1 - landCoverFrac[mi] / 100)  # effect of vegetation cover
+        # Mw is soil moisture at wilting point as a fraction of saturation
+        S0 = 0.5* (1 + Mw)  # optimum soil moisture
+        Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
+        if S0 > Smin:
+            FS = 1 - 0.8 * (mrso[mi] - S0)  # effect of soil moisture
+        if (Smin < mrso[mi]) and (mrso[mi] <= S0):
+            FS = 0.2 + 0.8 * (mrso[mi] - Smin) / (S0 - Smin)
+        if mrso[mi] <= Smin:
+            FS = 0.2
+        rh_factor = FT * FV * FS
+        return rh_factor # 1.0     # Set to 1 if no scaler implemented 
+        
+    return xi_func 
+
+xi = xi_maker(
+    tsl=np.array([1,2,3,4]),
+    Mw=0.5,
+    mrso=np.array([0.1,0.2,0.3,0.5]),
+    landCoverFrac=np.array([10,20,40,80])
+)
+
+cpa._fields
+
+
+# +
 def make_param2res_sym(
         mvs,
         cpa: Constants,
@@ -832,105 +894,90 @@ def npp_func(day):
 
 ########### Ask Markus here
 # Build environmental scaler function  ############### day or monthly, monthly inputs here, Mw is the to-be-estimated parameter 
-def xi_func(tsl, Mw, mrso, landCoverFrac, day):
-    FT = 2.0 ** ((tsl - 298.15) / 10)  # temperature rate modifier
-    FV = 0.6 + 0.4 * (1 - landCoverFrac / 100)  # effect of vegetation cover
-    # Mw is soil moisture at wilting point as a fraction of saturation
-    S0 = 0.5* (1 + Mw)  # optimum soil moisture
-    Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
-    if S0 > Smin:
-        FS = 1 - 0.8 * (mrso - S0)  # effect of soil moisture
-    if (Smin < mrso) and (mrso <= S0):
-        FS = 0.2 + 0.8 * (mrso - Smin) / (S0 - Smin)
-    if mrso <= Smin:
-        FS = 0.2
-    rh_factor = FT * FV * FS
-    return rh_factor # 1.0     # Set to 1 if no scaler implemented 
-
-# Define function dictionary
-func_dict={
-    'NPP':npp_func,
-    'xi':xi_func
-}
 
 
-# Define actual forward simulation function
-def param2res(pa):
-
-    # Parameter vector
-    epa=EstimatedParameters(*pa)
-
-    # Create a startvector for the iterator 
-    V_init = StartVector(
-        c_leaf = epa.c_leaf_0,
-        c_wood = epa.c_wood_0,
-        c_root = cpa.c_veg_0 - (epa.c_leaf_0 + epa.c_wood_0),
-
-        c_DPM = epa.c_DPM_0,
-        c_RPM = epa.c_RPM_0,
-        c_BIO = epa.c_BIO_0,
-        c_HUM = cpa.c_soil_0-(epa.c_DPM_0 + epa.c_RPM_0 + epa.c_BIO_0) ,
-
-        rh=cpa.rh_0
-    )
-
-    # Parameter dictionary for the iterator
-    apa = {**cpa._asdict(),**epa._asdict()}
-    model_par_dict = {
-        Symbol(k):v for k,v in apa.items()
-        if Symbol(k) in model_par_dict_keys
-    }
-
-    # size of the timestep in days
-    # We could set it to 30 o
-    # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-    delta_t_val=15 
-    it_sym = make_iterator_sym(
-        mvs,
-        V_init=V_init,
-        par_dict=model_par_dict,
-        func_dict=func_dict,
-        delta_t_val=delta_t_val
-    )
-
-    # Now that we have the iterator we can start to compute.
-    # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
-    # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
-    # - for the pool contents we only need to record the last day of the month
-    # - for the respiration(s) ra and rh we want an accumulated value (unit mass) 
-    #   have to sum up the products of the values*delta_t over a month
-    # 
-    # Note: check if TRENDY months are like this...
-    # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    sols=[]
-    dpm=30 # 
-    n=len(V_init)
-    for m in range(cpa.number_of_months):
-        #dpm = days_per_month[ m % 12]  
-        mrh=0
-        for d in range(int(dpm/delta_t_val)):
-            v = it_sym.__next__().reshape(n,)
-            # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
-            # at the moment the iterator also computes a flux but in kg^-2 ^day
-        V=StartVector(*v)
-        #from IPython import embed;embed()
-        o=Observables(
-            cVeg=float(V.c_leaf+V.c_wood+V.c_root),
-            cSoil = float(V.c_DPM + V.c_RPM + V.c_BIO + V.c_HUM),
-            rh = V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
-
-            ########### Ask Markus here
-            #fVegSoil =  #Total carbon mass from vegetation directly into the soil
+    # Define actual forward simulation function
+    def param2res(pa):
+        # Define function dictionary
+        func_dict={
+            'NPP':npp_func,
+            'xi': xi_maker(dvs.tsl, pa.Mw, dvs.mrso, dvs.landCoverFrac)
+        }
+    
+        # Parameter vector
+        epa=EstimatedParameters(*pa)
+    
+        # Create a startvector for the iterator 
+        V_init = StartVector(
+            c_leaf = epa.c_leaf_0,
+            c_wood = epa.c_wood_0,
+            c_root = cpa.c_veg_0 - (epa.c_leaf_0 + epa.c_wood_0),
+    
+            c_DPM = epa.c_DPM_0,
+            c_RPM = epa.c_RPM_0,
+            c_BIO = epa.c_BIO_0,
+            c_HUM = cpa.c_soil_0-(epa.c_DPM_0 + epa.c_RPM_0 + epa.c_BIO_0) ,
+    
+            rh=cpa.rh_0
         )
-        sols.append(o)
-
-    sol=np.stack(sols)       
-    #convert to yearly output if necessary (the monthly pool data looks very "yearly")
-    #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-    #for i in range(sol.shape[1]):
-    #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-    #sol=sol_yr
-    return sol 
+    
+        # Parameter dictionary for the iterator
+        apa = {**cpa._asdict(),**epa._asdict()}
+        model_par_dict = {
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
+        }
+    
+        # size of the timestep in days
+        # We could set it to 30 o
+        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
+        delta_t_val=15 
+        it_sym = make_iterator_sym(
+            mvs,
+            V_init=V_init,
+            par_dict=model_par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+    
+        # Now that we have the iterator we can start to compute.
+        # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
+        # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
+        # - for the pool contents we only need to record the last day of the month
+        # - for the respiration(s) ra and rh we want an accumulated value (unit mass) 
+        #   have to sum up the products of the values*delta_t over a month
+        # 
+        # Note: check if TRENDY months are like this...
+        # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        sols=[]
+        dpm=30 # 
+        n=len(V_init)
+        for m in range(cpa.number_of_months):
+            #dpm = days_per_month[ m % 12]  
+            mrh=0
+            for d in range(int(dpm/delta_t_val)):
+                v = it_sym.__next__().reshape(n,)
+                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+                # at the moment the iterator also computes a flux but in kg^-2 ^day
+            V=StartVector(*v)
+            #from IPython import embed;embed()
+            o=Observables(
+                cVeg=float(V.c_leaf+V.c_wood+V.c_root),
+                cSoil = float(V.c_DPM + V.c_RPM + V.c_BIO + V.c_HUM),
+                rh = V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
+    
+                ########### Ask Markus here
+                #fVegSoil =  #Total carbon mass from vegetation directly into the soil
+            )
+            sols.append(o)
+    
+        sol=np.stack(sols)       
+        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
+        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
+        return sol 
 
 return param2res
 
