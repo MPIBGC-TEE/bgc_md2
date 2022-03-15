@@ -96,11 +96,11 @@ EstimatedParameters = namedtuple(
 )
 
 
-#when downloading data make sure model names match TRENDY server names:
-#"CABLE-POP","CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP",
-#"JSBACH","JULES-ES-1.0","LPJ-GUESS","LPJwsl","LPX-Bern","OCN",
-#"ORCHIDEE","ORCHIDEE-CNP","ORCHIDEEv3","ORCHIDEEv3_0.5deg"
-#"SDGVM","VISIT","YIBs"
+# when downloading data make sure model names match TRENDY server names:
+# "CABLE-POP","CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP",
+# "JSBACH","JULES-ES-1.0","LPJ-GUESS","LPJwsl","LPX-Bern","OCN",
+# "ORCHIDEE","ORCHIDEE-CNP","ORCHIDEEv3","ORCHIDEEv3_0.5deg"
+# "SDGVM","VISIT","YIBs"
 
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
 def download_my_TRENDY_output(conf_dict):
@@ -128,7 +128,7 @@ def get_example_site_vars(dataPath):
             for name, variable in ds.variables.items():            
                 for attrname in variable.ncattrs():
                     print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return ds.variables[vn][t]
+            return ds.variables[vn][t]*86400
         else:
             for name, variable in ds.variables.items():            
                 for attrname in variable.ncattrs():
@@ -233,7 +233,7 @@ def make_param2res_sym(
     
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.npp[month]*86400
+        return dvs.npp[month]
     
     # Build environmental scaler function
     def xi_func(day):
@@ -328,9 +328,10 @@ def make_param2res_sym(
                     rh_avg=V.rh/steps_per_month
                     cVeg_avg += cVegF(V)/steps_per_year
                     cSoil_avg += cSoilF(V)/steps_per_year
-                rh_arr[im] = rh_avg/(24*60*60) #convert to kg/s from kg/day
+                rh_arr[im] = rh_avg #/(24*60*60) #convert to kg/s from kg/day
                 im += 1
-                
+            #if(y == 100):
+            #    print(V)
             cVeg_arr[y] = cVeg_avg
             cSoil_arr[y] = cSoil_avg
         return Observables(cVeg=cVeg_arr,cSoil=cSoil_arr,rh=rh_arr)
@@ -353,9 +354,8 @@ def make_weighted_cost_func(
 
         J_obj1 = np.mean (( out_simu.cVeg - obs.cVeg )**2)/(2*np.var(obs.cVeg))
         J_obj2 = np.mean (( out_simu.cSoil -  obs.cSoil )**2)/(2*np.var(obs.cSoil))
-
         J_obj3 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
 
-        J_new = (J_obj1 + J_obj2)+ J_obj3/12 #the 12 is purely conjectural
+        J_new = (J_obj1 + J_obj2 + J_obj3/12)*100 #the 12 is purely conjectural
         return J_new
     return costfunction

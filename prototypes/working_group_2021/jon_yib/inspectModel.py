@@ -265,18 +265,18 @@ epa0 = ParameterValues(
 )
 
 old_par_dict = {
-    'k_c_leaf': epa0.k_leaf, # define all k values
-    'k_c_root': epa0.k_root,
-    'k_c_wood': epa0.k_wood,
-    'k_c_lit_cwd': epa0.k_cwd,
-    'k_c_lit_met': epa0.k_samet,
-    'k_c_lit_str': epa0.k_sastr,
-    'k_c_lit_mic': epa0.k_samic,
-    'k_c_soil_met': epa0.k_slmet,
+    'k_c_leaf': epa0.k_leaf/1.2, # define all k values
+    'k_c_root': epa0.k_root/1.2,
+    'k_c_wood': epa0.k_wood/2,
+    'k_c_lit_cwd': epa0.k_cwd*2,
+    'k_c_lit_met': epa0.k_samet*2,
+    'k_c_lit_str': epa0.k_sastr*2,
+    'k_c_lit_mic': epa0.k_samic*2,
+    'k_c_soil_met': epa0.k_slmet*2,
     'k_c_soil_str': epa0.k_slstr,
-    'k_c_soil_mic': epa0.k_slmic,
-    'k_c_soil_slow': epa0.k_slow,
-    'k_c_soil_passive': epa0.k_arm,
+    'k_c_soil_mic': epa0.k_slmic*2,
+    'k_c_soil_slow': epa0.k_slow*1.2,
+    'k_c_soil_passive': epa0.k_arm/10,
     'f_c_leaf_2_c_lit_met': epa0.f_samet_leaf,    #define all f values
     'f_c_root_2_c_soil_met': epa0.f_slmet_root,
     'f_c_lit_cwd_2_c_lit_mic': epa0.f_samic_cwd*0.7,
@@ -293,8 +293,8 @@ old_par_dict = {
     'f_c_soil_str_2_c_soil_slow': 0.2,
     'f_c_soil_mic_2_c_soil_slow': 0.2,
     'f_c_soil_mic_2_c_soil_passive': 0.2,
-    'f_c_soil_slow_2_c_soil_mic': 0.2,
-    'f_c_soil_slow_2_c_soil_passive': 0.2*(0.003+0.009*epa0.clay),
+    'f_c_soil_slow_2_c_soil_mic': 0.4,
+    'f_c_soil_slow_2_c_soil_passive': 0.4*(0.003+0.009*epa0.clay),
     'f_c_soil_passive_2_c_soil_mic': 0.2, 
 }
 
@@ -315,6 +315,7 @@ par_dict.update(
 
 #If symbols remain in output below then set them to numerical values in old_par_dict.
 #parameters._asdict() # print - everything below should have a numeric value
+par_dict
 # -
 
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
@@ -340,16 +341,16 @@ cpa._asdict()    #print - everything should have a numeric value
 
 epa0 = msh.EstimatedParameters(
     **{
-        "c_leaf_0": svs_0.cVeg/3,          #set inital pool values to svs values 
-        "c_root_0": svs_0.cVeg/3,          #you can set numerical values here directly as well
-        "c_lit_cwd_0": svs_0.cSoil/35,
-        "c_lit_met_0": svs_0.cSoil/35,
-        "c_lit_str_0": svs_0.cSoil/35,
-        "c_lit_mic_0": svs_0.cSoil/35,
-        "c_soil_met_0": svs_0.cSoil/20,
-        "c_soil_str_0": svs_0.cSoil/15,
-        "c_soil_mic_0": svs_0.cSoil/10,
-        "c_soil_slow_0": svs_0.cSoil/3
+        "c_leaf_0": 0.05976344, #svs_0.cVeg/3,          #set inital pool values to svs values 
+        "c_root_0": 0.12748267, #svs_0.cVeg/3,          #you can set numerical values here directly as well
+        "c_lit_cwd_0": 0.17862565, #svs_0.cSoil/35,
+        "c_lit_met_0": 0.01510779, #svs_0.cSoil/35,
+        "c_lit_str_0": 0.01007186, #svs_0.cSoil/35,
+        "c_lit_mic_0": 0.01776581, #svs_0.cSoil/35,
+        "c_soil_met_0": 0.01990258, #svs_0.cSoil/20,
+        "c_soil_str_0": 0.01361861, #svs_0.cSoil/15,
+        "c_soil_mic_0": 0.01135312, #svs_0.cSoil/10,
+        "c_soil_slow_0": 13.65076221 #svs_0.cSoil/3
     },
     **par_dict
 )    
@@ -437,25 +438,17 @@ print("Data assimilation finished!")
 
 # #### Graph data assimilation results:
 
-# +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
 epa_opt=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 mod_opt = param2res(epa_opt)  
-
+#obs = msh.Observables(cVeg=svs.cVeg,cSoil=svs.cSoil,rh=svs.rh)
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
-        #times=range(cpa.number_of_months),
-        times=range(n), # for yearly output
-        var_names=msh.observables._fields,
-        tup=(mod_opt,obs)
-        #tup=(obs,)
-)
-
+plot_observations_vs_simulations(fig,svs,mod_opt)
 fig.savefig('solutions_opt.pdf')
-
+# +
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 

@@ -1016,4 +1016,4 @@ def make_daily_iterator_sym_trace(
         initial_values=V_arr,
         f=f,
     )
-    
+
