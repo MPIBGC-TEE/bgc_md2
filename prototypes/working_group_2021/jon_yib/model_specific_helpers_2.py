@@ -11,11 +11,10 @@ from CompartmentalSystems.TimeStepIterator import (
 )
 from copy import copy
 from typing import Callable
-from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
-from general_helpers import download_TRENDY_output, day_2_month_index, make_B_u_funcs_2, numfunc
+import general_helpers as gh
 
 Observables_annual = namedtuple(
     'Observables_annual',
@@ -104,7 +103,7 @@ EstimatedParameters = namedtuple(
 
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
 def download_my_TRENDY_output(conf_dict):
-    download_TRENDY_output(
+    gh.download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
@@ -161,7 +160,7 @@ def make_iterator_sym(
         func_dict,
         delta_t_val=1 # defaults to 1day timestep
     ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
 
     sv=mvs.get_StateVariableTuple()
     n=len(sv)
@@ -174,7 +173,7 @@ def make_iterator_sym(
     ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
 
     numOutFluxesBySymbol={
-        k: numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
+        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
     
         for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
     } 
@@ -211,6 +210,7 @@ def make_StartVector(mvs):
         [str(v) for v in mvs.get_StateVariableTuple()]+
         ["rh"]
     ) 
+
 
 def make_param2res_sym(
         mvs,
@@ -359,3 +359,90 @@ def make_weighted_cost_func(
         J_new = (J_obj1 + J_obj2 + J_obj3/12)*100 #the 12 is purely conjectural
         return J_new
     return costfunction
+
+def make_param_filter_func(
+        c_max: EstimatedParameters,
+        c_min: EstimatedParameters 
+        ) -> Callable[[np.ndarray], bool]:
+
+    # find position of beta_leaf and beta_wood
+    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    beta_wood_ind=EstimatedParameters._fields.index("beta_root")
+
+    def isQualified(c):
+        beta_leaf_ind
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] <=1  
+        return (cond1 and cond2 and cond3)
+        
+    
+    return isQualified
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "c_leaf": epa.c_leaf_0,     
+        "c_root": epa.c_root_0,     
+        "c_wood": cpa.c_veg_0 - (epa.c_leaf_0 +  epa.c_root_0),  
+        "c_lit_cwd": epa.c_lit_cwd_0,
+        "c_lit_met": epa.c_lit_met_0,
+        "c_lit_str": epa.c_lit_str_0,
+        "c_lit_mic": epa.c_lit_mic_0,
+        "c_soil_met": epa.c_soil_met_0,
+        "c_soil_str": epa.c_soil_str_0,
+        "c_soil_mic": epa.c_soil_mic_0,
+        "c_soil_slow": epa.c_soil_slow_0,
+        "c_soil_passive": cpa.c_soil_0 - (
+                              epa.c_lit_cwd_0 
+                            + epa.c_lit_met_0 
+                            + epa.c_lit_str_0 
+                            + epa.c_lit_mic_0 
+                            + epa.c_soil_met_0 
+                            + epa.c_soil_str_0 
+                            + epa.c_soil_mic_0 
+                            + epa.c_soil_slow_0
+                        )
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    fd=make_func_dict(mvs,dvs)
+    V_init = gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
+
+def make_npp_func(dvs):
+    def func(day):
+        month=gh.day_2_month_index(day)
+        # kg/m2/s kg/m2/day;
+        return (dvs.npp[month]) * 86400
+
+    return func
+
+
+def make_xi_func(dvs):
+    def func(day):
+        return 1.0 # preliminary fake for lack of better data... 
+    return func
+
+
+def make_func_dict(mvs,dvs):
+    return {
+        "NPP": make_npp_func(dvs),
+        "xi": make_xi_func(dvs)
+    }
+
+
