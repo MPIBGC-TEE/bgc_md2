@@ -325,7 +325,7 @@ def make_param2res_sym(
                 rh_avg=0
                 for d in range(steps_per_month):    
                     V = StartVector(*it_sym.__next__())                  
-                    rh_avg=V.rh/steps_per_month
+                    rh_avg += V.rh/steps_per_month
                     cVeg_avg += cVegF(V)/steps_per_year
                     cSoil_avg += cSoilF(V)/steps_per_year
                 rh_arr[im] = rh_avg #/(24*60*60) #convert to kg/s from kg/day
