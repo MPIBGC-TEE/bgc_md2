@@ -265,12 +265,12 @@ print("Data assimilation finished!")
 
 # #### Graph data assimilation results:
 
-# +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
 epa_opt=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 mod_opt = param2res(epa_opt)  
-
+#obs = msh.Observables(cVeg=svs.cVeg,cSoil=svs.cSoil,rh=svs.rh)
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_observations_vs_simulations(
@@ -279,7 +279,7 @@ plot_observations_vs_simulations(
         mod_opt
     )
 fig.savefig('solutions_opt.pdf')
-
+# +
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
