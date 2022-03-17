@@ -139,49 +139,49 @@ cpa._asdict()    #print - everything should have a numeric value
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
-    c_leaf_0 = 0.0449431, #svs_0.cVeg/4,          #set inital pool values to svs values 
-    c_root_0 = 0.03471476, #svs_0.cVeg/5,          #you can set numerical values here directly as well
-    c_lit_cwd_0 = 0.12045422, #svs_0.cSoil/35,
-    c_lit_met_0 = 0.01062729, #svs_0.cSoil/35,
-    c_lit_str_0 = 0.01321171, #svs_0.cSoil/35,
-    c_lit_mic_0 = 0.02217908, #svs_0.cSoil/35,
-    c_soil_met_0 = 0.01225129, #svs_0.cSoil/20,
-    c_soil_str_0 = 0.00389448, #svs_0.cSoil/10,
-    c_soil_mic_0 = 0.02058883, #svs_0.cSoil/7,
-    c_soil_slow_0 = 13.3329366, #svs_0.cSoil/3,
-    beta_leaf = 0.308187384,
-    beta_root = 0.301999241,
+    c_leaf_0 = 0.046217948, #svs_0.cVeg/4,          #set inital pool values to svs values 
+    c_root_0 = 0.034494723, #svs_0.cVeg/5,          #you can set numerical values here directly as well
+    c_lit_cwd_0 = 0.115676886, #svs_0.cSoil/35,
+    c_lit_met_0 = 0.018785184, #svs_0.cSoil/35,
+    c_lit_str_0 = 0.069926084, #svs_0.cSoil/35,
+    c_lit_mic_0 = 0.025343432, #svs_0.cSoil/35,
+    c_soil_met_0 = 0.021987798, #svs_0.cSoil/20,
+    c_soil_str_0 = 0.030108476, #svs_0.cSoil/10,
+    c_soil_mic_0 = 0.03253288, #svs_0.cSoil/7,
+    c_soil_slow_0 = 13.34303461, #svs_0.cSoil/3,
+    beta_leaf = 0.306395619,
+    beta_root = 0.302147905,
     r_c_leaf_rh = 0,
     r_c_root_rh = 0,
     r_c_wood_rh = 0,
-    r_c_lit_cwd_rh = 0.0031654,
-    r_c_lit_met_rh = 0.053189666,
-    r_c_lit_str_rh = 0.012380104,
-    r_c_lit_mic_rh = 0.053299593,
-    r_c_soil_met_rh = 0.073121485,
-    r_c_soil_str_rh = 0.00151622,
-    r_c_soil_mic_rh = 0.014039478,
-    r_c_soil_slow_rh = 4.27E-05,
-    r_c_soil_passive_rh = 8.57E-06,
-    r_c_leaf_2_c_lit_met = 0.021900579,
-    r_c_leaf_2_c_lit_str = 0.022644933,
-    r_c_root_2_c_soil_met = 0.040676971,
-    r_c_root_2_c_soil_str = 0.00221457,
-    r_c_wood_2_c_lit_cwd = 0.002518487,
-    r_c_lit_cwd_2_c_lit_mic = 0.008132606,
-    r_c_lit_cwd_2_c_soil_slow = 0.003219468,
-    r_c_lit_met_2_c_lit_mic = 0.004251068,
-    r_c_lit_str_2_c_lit_mic = 0.013486702,
-    r_c_lit_str_2_c_soil_slow = 0.023376078,
-    r_c_lit_mic_2_c_soil_slow = 0.001511667,
-    r_c_soil_met_2_c_soil_mic = 0.019407116,
-    r_c_soil_str_2_c_soil_mic = 0.010605124,
-    r_c_soil_str_2_c_soil_slow = 0.001438887,
-    r_c_soil_mic_2_c_soil_slow = 0.02007731,
-    r_c_soil_mic_2_c_soil_passive = 0.003545916,
-    r_c_soil_slow_2_c_soil_mic = 2.40E-05,
-    r_c_soil_slow_2_c_soil_passive = 1.05E-07,
-    r_c_soil_passive_2_c_soil_mic = 5.92E-05,
+    r_c_lit_cwd_rh = 0.00315795,
+    r_c_lit_met_rh = 0.056982784,
+    r_c_lit_str_rh = 0.016264145,
+    r_c_lit_mic_rh = 0.058255599,
+    r_c_soil_met_rh = 0.051242832,
+    r_c_soil_str_rh = 0.001376288,
+    r_c_soil_mic_rh = 0.015213601,
+    r_c_soil_slow_rh = 4.74E-05,
+    r_c_soil_passive_rh = 1.12E-05,
+    r_c_leaf_2_c_lit_met = 0.015381679,
+    r_c_leaf_2_c_lit_str = 0.02296452,
+    r_c_root_2_c_soil_met = 0.034687096,
+    r_c_root_2_c_soil_str = 0.002530891,
+    r_c_wood_2_c_lit_cwd = 0.002701611,
+    r_c_lit_cwd_2_c_lit_mic = 0.00771338,
+    r_c_lit_cwd_2_c_soil_slow = 0.002579358,
+    r_c_lit_met_2_c_lit_mic = 0.004026102,
+    r_c_lit_str_2_c_lit_mic = 0.014441804,
+    r_c_lit_str_2_c_soil_slow = 0.019660937,
+    r_c_lit_mic_2_c_soil_slow = 0.000891402,
+    r_c_soil_met_2_c_soil_mic = 0.016296601,
+    r_c_soil_str_2_c_soil_mic = 0.010191809,
+    r_c_soil_str_2_c_soil_slow = 0.001508638,
+    r_c_soil_mic_2_c_soil_slow = 0.019088577,
+    r_c_soil_mic_2_c_soil_passive = 0.003794951,
+    r_c_soil_slow_2_c_soil_mic = 3.05E-05,
+    r_c_soil_slow_2_c_soil_passive = 1.14E-07,
+    r_c_soil_passive_2_c_soil_mic = 4.64E-05,
 )    
 
 # +
@@ -225,8 +225,8 @@ epa_min=msh.EstimatedParameters._make(tuple(np.array(epa0)*0.01))
 epa_max=msh.EstimatedParameters._make(tuple(np.array(epa0)*100))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.99)
-epa_max = epa_max._replace(beta_root = 0.99)
+epa_max = epa_max._replace(beta_leaf = 0.60)
+epa_max = epa_max._replace(beta_root = 0.60)
 epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
@@ -253,12 +253,12 @@ C_autostep, J_autostep = autostep_mcmc(
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=200,
+    nsimu=2000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,   # default value | increase value to reduce initial step size
+    D_init=25,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")

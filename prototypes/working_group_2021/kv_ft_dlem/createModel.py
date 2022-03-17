@@ -29,6 +29,8 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
+import sys
+sys.path.insert(0,'..') # necessary to import general_helpers
 
 # Make a small dictionary for the variables we will use
 sym_dict={
@@ -259,8 +261,6 @@ K
 #
 
 # +
-import sys
-sys.path.insert(0,'..') # necessary to import general_helpers
 from general_helpers import download_TRENDY_output
 import json 
 from pathlib import Path
@@ -311,7 +311,10 @@ def get_example_site_vars(dataPath):
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
-        return ds.variables[vn][t]
+        if vn in ["npp", "rh"]:
+            return ds.variables[vn][t]*86400
+        else:
+            return ds.variables[vn][t]
 
     o_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Observables._fields]
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
@@ -328,11 +331,34 @@ svs,dvs
 
 # +
 sys.path.insert(0,'..')
-from general_helpers import day_2_month_index
-def NPP_fun(day ):
-    return npp[day_2_month_index(day)] * 86400   # kg/m2/s kg/m2/day 
+from general_helpers import (
+    day_2_month_index,
+    plot_observations_vs_simulations,
+    plot_solutions
+)
+import general_helpers as gh
+import matplotlib.pyplot as plt
 
-func_dict={NPP: NPP_fun}
+#def NPP_fun(day):
+#    return npp[day_2_month_index(day)]   # kg/m2/s kg/m2/day 
+
+def npp_func(day):
+    month = gh.day_2_month_index(day)
+    return (dvs.npp[month])
+
+func_dict={NPP: npp_func}
+
+n = 320*12*30
+npp_obs = np.array([npp_func(d) for d in range(n)])
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=Drivers._fields,
+        tup=(npp_obs,)
+)
 # -
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
@@ -475,7 +501,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day
+    return dvs.npp[month]    # kg/m2/s kg/m2/day
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -844,11 +870,11 @@ cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
- rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
+ npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
+ rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
  #mrso_0=dvs.mrso[0],
  #tsl_0=dvs.tsl[0],
- number_of_months=120 # for testing and tuning mcmc
+ number_of_months=320*12 # for testing and tuning mcmc
  #number_of_months=len(svs.rh)
 )
 print(cpa)
@@ -1097,7 +1123,7 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day
+        return dvs.npp[month]   # kg/m2/s kg/m2/day
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -1232,7 +1258,7 @@ obs=np.column_stack((np.array(svs.cVeg),np.array(svs.cLitter),np.array(svs.cSoil
 obs=obs[0:int(cpa.number_of_months),:]
 #print(obs.shape)
 #print(obs[:,3])
-obs[:,3]=obs[:,3]*86400
+obs[:,3]=obs[:,3]
 #print(obs[:,3])
 
 # +

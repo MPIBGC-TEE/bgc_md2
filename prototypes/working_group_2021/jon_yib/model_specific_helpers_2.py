@@ -281,7 +281,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=10 #time step length in days
+        delta_t_val=15 #time step length in days
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -354,10 +354,9 @@ def make_weighted_cost_func(
 
         J_obj1 = np.mean (( out_simu.cVeg - obs.cVeg )**2)/(2*np.var(obs.cVeg))
         J_obj2 = np.mean (( out_simu.cSoil -  obs.cSoil )**2)/(2*np.var(obs.cSoil))
-
         J_obj3 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
 
-        J_new = 200 * ((J_obj1 + J_obj2)+ J_obj3/12) #the 12 is purely conjectural
+        J_new = 10 * ((J_obj1 + J_obj2)+ J_obj3/12) #the 12 is purely conjectural
         return J_new
     return costfunction
 
@@ -374,7 +373,7 @@ def make_param_filter_func(
         beta_leaf_ind
         cond1 =  (c >= c_min).all() 
         cond2 =  (c <= c_max).all() 
-        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <=1  
+        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.98  
         return (cond1 and cond2 and cond3)
         
     
