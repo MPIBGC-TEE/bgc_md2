@@ -426,12 +426,12 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
     return it_sym_trace
 
 def make_npp_func(dvs):
-    def func(day):
+    def npp_func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month])
 
-    return func
+    return npp_func
 
 
 def make_xi_func(dvs):

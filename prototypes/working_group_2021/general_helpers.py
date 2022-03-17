@@ -537,7 +537,7 @@ def make_jon_cost_func(
     return costfunction
 
 def day_2_month_index(d):
-    return months_by_day_arr()[(d % days_per_year)]
+    return int(d/30)
 
 
 @lru_cache
@@ -1032,4 +1032,4 @@ def make_daily_iterator_sym_trace(
         initial_values=V_arr,
         f=f,
     )
-    
+
