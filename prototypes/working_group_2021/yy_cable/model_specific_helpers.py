@@ -31,7 +31,6 @@ from ParameterMappings import (
     Parameters
 )
 
-# 1.) make a namedtuple for the yycable data or use xarray to create a multifile dataset
 def get_variables_from_files(dataPath):
     # Read NetCDF data  ******************************************************************************************************************************
     path = dataPath.joinpath("npp_Lmon_ACCESS-ESM1-5_1pctCO2-bgc_r1i1p1f1_gn_010101-025012.nc")

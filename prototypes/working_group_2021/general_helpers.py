@@ -7,10 +7,17 @@ from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
 
-import CompartmentalSystems.helpers_reservoir as hr
 from pathlib import Path
 import json 
 import netCDF4 as nc
+
+from ComputabilityGraphs.CMTVS import CMTVS
+import CompartmentalSystems.helpers_reservoir as hr
+from bgc_md2.resolve.mvars import (
+        OutFluxesBySymbol,
+        InternalFluxesBySymbol
+)
+from bgc_md2.helper import bgc_md2_computers
 
 days_per_year = 365 
 
@@ -1033,3 +1040,41 @@ def make_daily_iterator_sym_trace(
         f=f,
     )
 
+#def make_fluxrates_from_kf(mvs_kv,xi_d):    
+#    #compute rate based formulation
+#    # we create a dictionary for the outfluxrates (flux divided by dono pool content)
+#    def ouflux_rate_str(dp):
+#        return "r_"+str(dp)+"_2_out"
+#
+#    def internal_flux_rate_str(dp, rp):
+#        return "r_"+str(dp)+"_2_"+str(rp)
+#
+#    sv = mvs_kf.get_StateVariableTuple()
+#    M_sym=mvs_kf.get_CompartmentalMatrix()*xi_d.inv()
+#    outflux_rates = {ouflux_rate_str(dp):value/dp for dp,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
+#    internal_flux_rates = {:value/dp[0] for dp,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
+#    all_rates = {**internal_flux_rates, ** outflux_rates}
+#    
+#    mvs_new = CMTVS(
+#        {
+#            mvs.get_InFluxesBySymbol(),
+#            mvs.get_TimeSymbol(),
+#            mvs.get_StateVariableTuple(),
+#            OutFluxesBySymbol(
+#                {
+#                    dp :
+#                    Symbol(ouflux_rate_str(dp))*dp
+#                    for dp in mvs.get_OutFluxesBySymbol().keys()
+#                }
+#            ),
+#            InternalFluxesBySymbol(
+#                {
+#                    (dp,rp) : Symbol(internal_flux_rate_str(dp,rp)*dp
+#                    for dp,rp in mvs.get_InternalFluxesBySymbol().keys()
+#                }
+#            )
+#        },
+#        bgc_md2_computers()
+#    )
+#    def fk_pardict_2_r_pardict
+#    return mvs_new
