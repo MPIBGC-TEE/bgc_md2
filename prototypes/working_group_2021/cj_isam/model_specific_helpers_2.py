@@ -1,0 +1,448 @@
+import sys
+import json 
+from pathlib import Path
+from collections import namedtuple 
+import netCDF4 as nc
+import numpy as np
+from sympy import Symbol
+from CompartmentalSystems import helpers_reservoir as hr
+from CompartmentalSystems.TimeStepIterator import (
+        TimeStepIterator2,
+)
+from copy import copy
+from typing import Callable
+from general_helpers import month_2_day_index, monthly_to_yearly
+from functools import reduce
+
+sys.path.insert(0,'..') # necessary to import general_helpers
+import general_helpers as gh
+
+# we will use the trendy output names directly in other parts of the output
+Observables = namedtuple(
+    'Observables',
+    ["cVeg","cLitter","cSoil","rh","ra"]
+)
+OrgDrivers=namedtuple(
+    "OrgDrivers",
+    ["gpp", "mrso", "tas"]
+)    
+Drivers=namedtuple(
+    "Drivers",
+    ("npp",) + OrgDrivers._fields[1:]
+)    
+# As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
+# They preserve order as numpy arrays which is great (and fast) for the numeric computations
+# and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
+
+Constants = namedtuple(
+    "Constants",
+    [   
+        "cLitter_0",
+        "cSoil_0",
+        "cVeg_0",
+        "gpp_0",
+        "rh_0",
+        "ra_0",
+        "r_C_NWT_rh",
+        "r_C_AGWT_rh",
+        "r_C_TR_rh",
+        "r_C_GVF_rh",
+        "r_C_GVR_rh",
+        "r_C_AGML_rh",
+        "r_C_AGSL_rh",
+        "r_C_AGMS_rh",
+        "r_C_YHMS_rh",
+        "k_C_BGDL",
+        "k_C_BGRL",
+        "k_C_BGMS",
+        "k_C_SHMS",
+        "r_C_AGML_2_C_AGMS",
+        "r_C_AGMS_2_C_YHMS",
+        "r_C_YHMS_2_C_AGMS",
+        "r_C_YHMS_2_C_SHMS",
+        "number_of_months" # necessary to prepare the output in the correct lenght 
+    ]
+)
+
+# Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
+# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
+# The destinction is only made for the data assimilation to isolate those parameters
+# that the mcmc will try to optimise 
+# It is better to start with only a few
+
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",[ 
+        "fwt",
+        "fgv",
+        "fco",
+        "fml",
+        "fd",
+        "k_C_NWT",
+        "k_C_AGWT",
+        "k_C_TR",
+        "k_C_GVF",
+        "k_C_GVR",
+        "f_C_AGSL_2_C_AGMS",
+        "f_C_BGRL_2_C_SHMS",
+        'C_NWT_0',#for the trendy data also the startvalues have to be estimated but 
+        'C_AGWT_0',
+        'C_GVF_0',
+        'C_GVR_0',
+        'C_AGML_0',
+        'C_AGSL_0',
+        'C_BGDL_0',
+        'C_AGMS_0',
+        'C_YHMS_0',
+        'C_SHMS_0',
+    ]
+)
+
+# note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
+# parameters. In this case we may use only the first entry e.g. to derive startvalues. 
+# The destinction is only made for the data assimilation to isolate those parameters
+# that the mcmc will try to optimise         
+# to guard agains accidentally changed order we use a namedtuple again. Since B_func and u_func rely 
+# on the correct ordering of the statevariables we build V dependent on this order 
+
+#create a small model specific function that will later be stored in the file model_specific_helpers.py
+def download_my_TRENDY_output(conf_dict):
+    gh.download_TRENDY_output(
+        username=conf_dict["username"],
+        password=conf_dict["password"],
+        dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
+        models=['ISAM'],
+        variables = Observables._fields + OrgDrivers._fields
+    )
+
+def get_example_site_vars(dataPath):
+    # pick up 1 site
+    s = slice(None, None, None)  # this is the same as :
+    t = s, 50, 33  # [t] = [:,49,325]
+    def f(tup):
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them
+        ds = nc.Dataset(str(path))
+        return ds.variables[vn][t]
+
+    o_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Observables._fields]
+    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+
+    # we want to drive with npp and can create it from gpp and ra 
+    # observables
+    odvs=OrgDrivers(*map(f,d_names))
+    obss=Observables(*map(f, o_names))
+
+    dvs=Drivers(
+        npp=odvs.gpp-obss.ra,
+        mrso=odvs.mrso,
+        tas=odvs.tas
+    )
+    return (obss, dvs)
+
+def make_npp_func(dvs):
+    def func(day):
+        month=gh.day_2_month_index(day)
+        # kg/m2/s kg/m2/day;
+        return (dvs.npp[month]) * 86400
+
+    return func
+
+
+def make_xi_func(dvs):
+    def func(day):
+        return 1.0 # preliminary fake for lack of better data... 
+    return func
+
+
+def make_func_dict(mvs,dvs):
+    return {
+        "NPP": make_npp_func(dvs),
+        "xi": make_xi_func(dvs)
+    }
+
+# We now build the essential object to run the model forward. We have a 
+# - startvector $V_0$ and 
+# - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
+#   the dependence on the iteration $it$ allows us to represent drivers that
+#   are functions of time 
+#
+# So we can compute all values:
+#
+# $V_1=f(0,V_0)$
+#
+# $V_2=f(1,V_1)$
+#
+# ...
+#
+# $V_n+1=f(n,V_n)$
+#
+# Technically this can be implemented as an `iterator` object with a `__next__()` method to move our system one step forward in time. 
+#
+# What we want to build is an object `it_sym` that can use as follows.
+# ```python
+# for i in range(10):
+#     print(it_sym.__next__())
+# ```
+# to print out the first 10 values.
+#
+# If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, 
+# without all the nonessential technical details of e.g. how many steps we want to make or which of the results we want to store.
+# This is essential if we want to test and use the iterator later in different scenarios but avoid reimplemtation of the basic timestep. 
+#
+# Remark:
+#
+# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically without the need to build an iterator ourselves. 
+# In our case we are also interested in tracking the autotrophic and heterotrophic respiration and therefore have to recreate and extend the code `bgc_md2` would use in the background.
+# We will let `bgc_md2` do part of the work and derive numeric functions for the Compartmental matrix $B$ and the input $u$ and the Outfluxes - from which to compute $ra$ $rh$ - from our symbolic description but we will build our own iterator by combining these functions.    
+# We will proceed as follows:
+# - create $V_0$ 
+# - build the function $f$
+
+def make_iterator_sym(
+        mvs,
+        V_init, #: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+    sv=mvs.get_StateVariableTuple()
+    #mass production of output functions
+
+
+    n=len(sv)
+    # build an array in the correct order of the StateVariables which in our case is already correct 
+    # since V_init was built automatically but in case somebody handcrafted it and changed
+    # the order later in the symbolic formulation....
+    V_arr=np.array(
+        [V_init.__getattribute__(str(v)) for v in sv]+
+        [V_init.ra,V_init.rh]
+    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+    
+
+    
+    # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
+    # We first create numerical functions for all the outfluxes from our symbolic description.
+    numOutFluxesBySymbol={
+        k:gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B @ X
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        
+        ra = np.sum(
+            [
+              numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in ['C_NWT','C_AGWT','C_TR','C_GVF','C_GVR'] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
+            ]
+        )
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in ['C_AGML','C_AGSL','C_BGDL','C_BGRL','C_AGMS','C_YHMS','C_SHMS','C_BGMS'] 
+                if Symbol(k) in numOutFluxesBySymbol.keys()
+            ]
+        )
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+
+
+def make_StartVector(mvs):
+    return namedtuple(
+        "StartVector",
+        [str(v) for v in mvs.get_StateVariableTuple()]+
+        ["ra","rh"]
+    ) 
+
+
+def make_param2res_sym(
+        mvs,
+        cpa: Constants,
+        dvs: Drivers
+    ) -> Callable[[np.ndarray], np.ndarray]: 
+    # To compute numeric solutions we will need to build and iterator 
+    # as we did before. As it will need numeric values for all the parameters 
+    # we will have to create a complete dictionary for all the symbols
+    # exept those for the statevariables and time.
+    # This set of symbols does not change during the mcmc procedure, since it only
+    # depends on the symbolic model.
+    # Therefore we create it outside the mcmc loop and bake the result into the 
+    # param2res function.
+    # The iterator does not care if they are estimated or constant, it only 
+    # wants a dictionary containing key: value pairs for all
+    # parameters that are not state variables or the symbol for time
+    StartVector=make_StartVector(mvs)
+    srm=mvs.get_SmoothReservoirModel()
+    model_par_dict_keys=srm.free_symbols.difference(
+        [Symbol(str(mvs.get_TimeSymbol()))]+
+        list(mvs.get_StateVariableTuple())
+    )
+    
+    # the time dependent driver function for gpp does not change with the estimated parameters
+    # so its enough to define it once as in our test
+    seconds_per_day = 86400
+    def npp_func(day):
+        month=gh.day_2_month_index(day)
+        return dvs.npp[month] * seconds_per_day   # kg/m2/s kg/m2/day;
+    
+    def param2res(pa):
+        epa=EstimatedParameters(*pa)
+        # create a startvector for the iterator from both estimated and fixed parameters 
+        # The order is important and corresponds to the order of the statevariables
+        # Our namedtuple StartVector takes care of this
+        V_init = StartVector(
+            C_NWT=epa.C_NWT_0,
+            C_AGWT=epa.C_AGWT_0,
+            C_GVF=epa.C_GVF_0,
+            C_GVR=epa.C_GVR_0,
+            C_TR=cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
+            C_AGML=epa.C_AGML_0,
+            C_AGSL=epa.C_AGSL_0,
+            C_BGDL=epa.C_BGDL_0,
+            C_BGRL=cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
+            C_AGMS=epa.C_AGMS_0,
+            C_YHMS=epa.C_YHMS_0,
+            C_SHMS=epa.C_SHMS_0,
+            C_BGMS=cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
+            ra=cpa.ra_0,
+            rh=cpa.rh_0
+        )
+        # next we create the parameter dict for the iterator
+        # The iterator does not care if they are estimated or not so we look for them
+        # in the combination
+        apa = {**cpa._asdict(),**epa._asdict()}
+        #model_par_dict = {
+        #    Symbol(k):v for k,v in apa.items()
+        #    if Symbol(k) in model_par_dict_keys
+        #}
+        model_par_dict = {
+            'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
+            'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
+            'beta_TR':1-epa.fgv-epa.fwt,
+            'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
+            'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
+            'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
+            'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
+            'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
+            'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
+            'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
+            'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
+            'beta_GVF':epa.fgv*0.5,
+            'r_C_AGML_rh':cpa.r_C_AGML_rh,
+            'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
+            'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
+            'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
+            'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
+            'beta_NWT':epa.fwt*0.5,
+            'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
+            'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
+            'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
+            'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
+            'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
+            'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
+            'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
+            'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
+            'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
+            'beta_AGWT':epa.fwt*0.5,
+            'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
+            'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
+            'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
+        }
+        
+        #print(model_par_dict)
+        #from IPython import embed;embed()
+        
+        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
+        # our fake xi_func could of course be defined outside of param2res but in general it
+        # could be build from estimated parameters and would have to live here...
+        def xi_func(day):
+            return 1.0 # preliminary fake for lack of better data... 
+    
+        func_dict={
+            'NPP':npp_func,
+             'xi':xi_func
+        }
+        
+        # size of the timestep in days
+        # We could set it to 30 o
+        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
+        delta_t_val=15 
+        it_sym = make_iterator_sym(
+            mvs,
+            V_init=V_init,
+            par_dict=model_par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+        
+        # Now that we have the iterator we can start to compute.
+        # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
+        # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
+        # - for the pool contents we only need to record the last day of the month
+        # - for the respiration(s) ra and rh we want an accumulated value (unit mass) 
+        #   have to sum up the products of the values*delta_t over a month
+        # 
+        # Note: check if TRENDY months are like this...
+        # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        sols=[]
+        dpm=30 # 
+        n=len(V_init)
+        for m in range(cpa.number_of_months):
+            #dpm = days_per_month[ m % 12]  
+            mra=0
+            mrh=0
+            for d in range(int(dpm/delta_t_val)):
+                v = it_sym.__next__().reshape(n,)
+                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+                # at the moment the iterator also computes a flux but in kg^-2 ^day
+            V=StartVector(*v)
+            #from IPython import embed;embed()
+            o=Observables(
+                cVeg=float(V.C_NWT+V.C_AGWT+V.C_GVF+V.C_TR+V.C_GVR),
+                cLitter=float(V.C_AGML+V.C_AGSL+V.C_BGDL+V.C_BGRL),
+                cSoil=float(V.C_AGMS+V.C_YHMS+V.C_BGMS+V.C_SHMS),
+                ra=V.ra/seconds_per_day,
+                rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
+            )
+            sols.append(o)
+            
+        sol=np.stack(sols)       
+        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
+        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
+        #for i in range(sol.shape[1]):
+        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+        #sol=sol_yr
+        return sol 
+        
+    return param2res
+
+def make_param_filter_func(
+        c_max: EstimatedParameters,
+        c_min: EstimatedParameters 
+        ) -> Callable[[np.ndarray], bool]:
+
+    # find position of beta_leaf and beta_wood
+    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    beta_wood_ind=EstimatedParameters._fields.index("beta_wood")
+
+    def isQualified(c):
+        beta_leaf_ind
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] <=1  
+        return (cond1 and cond2 and cond3)
+        
+    
+    return isQualified
