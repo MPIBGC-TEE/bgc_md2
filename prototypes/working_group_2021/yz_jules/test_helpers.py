@@ -2,7 +2,7 @@
 from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
-import json 
+import json
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
@@ -80,7 +80,11 @@ def make_test_args(conf_dict,msh,mvs):
     #     C_leaf_litter_0=0.5202311902470766,
     #     C_wood_litter_0=0.7225433197876749,
     #     C_soil_fast_0=1.7309510511856925,
+<<<<<<< HEAD
     #     C_soil_slow_0=2.4435101360092473        
+=======
+    #     C_soil_slow_0=2.4435101360092473
+>>>>>>> b0899face51395bcec9f666c1dd804cec3d09515
     # )
     # epa_min=msh.EstimatedParameters(
     #     beta_leaf=0,
@@ -94,7 +98,11 @@ def make_test_args(conf_dict,msh,mvs):
     #     r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh/100,
     #     r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh/100,
     #     r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh/100,
+<<<<<<< HEAD
     #     r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter/100,       
+=======
+    #     r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter/100,
+>>>>>>> b0899face51395bcec9f666c1dd804cec3d09515
     #     r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter/100,
     #     r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter/100,
     #     r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast/100,
@@ -127,7 +135,7 @@ def make_test_args(conf_dict,msh,mvs):
     #     r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh*100,
     #     r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh*100,
     #     r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh*100,
-    #     r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter*100,       
+    #     r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter*100,
     #     r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter*100,
     #     r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter*100,
     #     r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast*100,
@@ -145,7 +153,7 @@ def make_test_args(conf_dict,msh,mvs):
     #     C_wood_litter_0=svs_0.cLitter,
     #     C_soil_fast_0=svs_0.cSoil,
     #     C_soil_slow_0=svs_0.cSoil,
-    # )    
+    # )
     # cpa = msh.Constants(
     #     cVeg_0=svs_0.cVeg,
     #     cLitter_0=svs_0.cLitter,
@@ -159,7 +167,7 @@ def make_test_args(conf_dict,msh,mvs):
     #     number_of_months=24 # for testing and tuning mcmc
     # )
 
-    # StartVector = msh.make_StartVector(mvs) 
+    # StartVector = msh.make_StartVector(mvs)
     # V_init= StartVector(
     #     C_leaf=svs_0.cVeg/3,
     #     C_wood=svs_0.cVeg/3,
@@ -185,5 +193,3 @@ def make_test_args(conf_dict,msh,mvs):
         #epa_max=epa_max,
         #cpa=cpa
     )
-
-

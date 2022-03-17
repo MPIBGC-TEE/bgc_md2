@@ -1,6 +1,6 @@
-# Packages for symbolic code: 
 import sys
 from collections import namedtuple
+# Packages for symbolic code:
 from sympy import Symbol, Function, diag, ImmutableMatrix 
 from pathlib import Path
 from copy import copy, deepcopy
@@ -47,7 +47,8 @@ from general_helpers import (
 sym_dict={
     'mrso': 'Total Soil Moisture Content, in kg m-2',
     'tsl': 'Temperature of Soil - layer, four layers, in K',
-    'Mw': 'soil moisture contetnt at the wilting point',
+    'Mw': 'soil moisture at wilting point as a fraction of saturation',
+    'Ms': 'soil moisture content at saturation',
     'beta_leaf': 'NPP allocation fraction to leaf',
     'beta_wood': 'NPP allocation fraction to wood',
     #'beta_root': 'NPP allocation fraction to root',
@@ -64,10 +65,10 @@ sym_dict={
     'r_c_HUM_rh': '',
     'r_c_leaf_2_c_DPM': '',  # Pool transfer paths
     'r_c_leaf_2_c_RPM': '',  # Names: r_c_donorPool_2_recievingPool
-    'r_c_wood_2_c_DPM': '',  
-    'r_c_wood_2_c_RPM': '',  
-    'r_c_root_2_c_DPM': '',  
-    'r_c_root_2_c_RPM': '',  
+    'r_c_wood_2_c_DPM': '',
+    'r_c_wood_2_c_RPM': '',
+    'r_c_root_2_c_DPM': '',
+    'r_c_root_2_c_RPM': '',
     'r_c_DPM_2_c_BIO': '',
     'r_c_DPM_2_c_HUM': '',
     'r_c_RPM_2_c_BIO': '',
@@ -161,4 +162,3 @@ mvs = CMTVS(
     },
     computers=module_computers(bgc_c)
 )
-
