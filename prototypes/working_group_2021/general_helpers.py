@@ -544,7 +544,7 @@ def make_jon_cost_func(
     return costfunction
 
 def day_2_month_index(d):
-    return months_by_day_arr()[(d % days_per_year)]
+    return int(d/30)
 
 
 @lru_cache
@@ -719,8 +719,8 @@ def plot_observations_vs_simulations(
     for i,name in enumerate(svs_cut.__class__._fields):
         var=svs_cut[i]
         var_simu=obs_simu[i]
-        axs[i].plot(range(len(var_simu)),var_simu,label="simulation")
-        axs[i].plot(range(len(var)),var,label='observation')
+        axs[i].plot(range(len(var_simu)),var_simu,label="simulation", zorder=2)
+        axs[i].plot(range(len(var)),var,label='observation', zorder=1)
         axs[i].legend()
         axs[i].set_title(name)
 
@@ -1040,7 +1040,7 @@ def make_daily_iterator_sym_trace(
         f=f,
     )
 
-#def make_fluxrates_from_kf(mvs_kv,xi_d):    
+# def make_fluxrates_from_kf(mvs_kv,xi_d):    
 #    #compute rate based formulation
 #    # we create a dictionary for the outfluxrates (flux divided by dono pool content)
 #    def ouflux_rate_str(dp):
@@ -1078,5 +1078,3 @@ def make_daily_iterator_sym_trace(
 #    )
 #    def fk_pardict_2_r_pardict
 #    return mvs_new
-
-

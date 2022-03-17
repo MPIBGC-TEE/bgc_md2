@@ -163,10 +163,10 @@ epa0 =msh.EstimatedParameters(
     r_c_soil_mic_rh = 0.014039478,
     r_c_soil_slow_rh = 4.27E-05,
     r_c_soil_passive_rh = 8.57E-06,
-    r_c_leaf_2_c_lit_met = 0.011900579,
-    r_c_leaf_2_c_lit_str = 0.012644933,
-    r_c_root_2_c_soil_met = 0.030676971,
-    r_c_root_2_c_soil_str = 0.00121457,
+    r_c_leaf_2_c_lit_met = 0.021900579,
+    r_c_leaf_2_c_lit_str = 0.022644933,
+    r_c_root_2_c_soil_met = 0.040676971,
+    r_c_root_2_c_soil_str = 0.00221457,
     r_c_wood_2_c_lit_cwd = 0.002518487,
     r_c_lit_cwd_2_c_lit_mic = 0.008132606,
     r_c_lit_cwd_2_c_soil_slow = 0.003219468,
@@ -184,17 +184,14 @@ epa0 =msh.EstimatedParameters(
     r_c_soil_passive_2_c_soil_mic = 5.92E-05,
 )    
 
-
 # +
-def npp_func(day):
-        month=day_2_month_index(day)
-        return dvs.npp[month]
+npp_func = msh.make_npp_func(dvs)
 
-n=cpa.nyears*12
+n = cpa.nyears*12*30
 npp_obs = np.array([npp_func(d) for d in range(n)])
 
 # Plot simulation output for observables
-fig = plt.figure()
+fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         times=range(n),
