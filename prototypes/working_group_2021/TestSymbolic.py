@@ -16,15 +16,17 @@ from general_helpers import (
     make_param_filter_func,
     make_feng_cost_func
 )
-model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM']
+model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop']
+model_folders=['cable-pop']
 
 class TestSymbolic(TestCase):
 
     def test_symobolic_description(self):
         for mf in model_folders:
             with self.subTest(mf=mf):
-                source = import_module('{}.source'.format(mf))
-                print(source.mvs.get_SmoothReservoirModel())
+                mvs= import_module('{}.source'.format(mf)).mvs
+                print(mvs.get_SmoothReservoirModel())
+                print(mvs.get_BibInfo())
     
     #@skip
     def test_download_data(self):
@@ -39,7 +41,6 @@ class TestSymbolic(TestCase):
     def test_get_example_site_vars(self):
         for mf in model_folders:
             with self.subTest(mf=mf):
-                sys.path.insert(0,mf)
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
@@ -47,7 +48,7 @@ class TestSymbolic(TestCase):
                 #print(svs)
     
     def test_make_func_dict(self):
-        model_folders=['kv_visit2', 'Aneesh_SDGVM']
+        model_folders=['kv_visit2', 'Aneesh_SDGVM', 'cable-pop']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 
@@ -60,7 +61,7 @@ class TestSymbolic(TestCase):
                 msh.make_func_dict(mvs,dvs)
     #@skip
     def test_make_iterator_sym(self):
-        model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
+        model_folders=['kv_visit2','cable-pop']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 

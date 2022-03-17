@@ -139,49 +139,49 @@ cpa._asdict()    #print - everything should have a numeric value
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
-    c_leaf_0=svs_0.cVeg/3,          #set inital pool values to svs values 
-    c_root_0=svs_0.cVeg/3,          #you can set numerical values here directly as well
-    c_lit_cwd_0=svs_0.cSoil/35,
-    c_lit_met_0=svs_0.cSoil/35,
-    c_lit_str_0=svs_0.cSoil/35,
-    c_lit_mic_0=svs_0.cSoil/35,
-    c_soil_met_0=svs_0.cSoil/20,
-    c_soil_str_0=svs_0.cSoil/15,
-    c_soil_mic_0=svs_0.cSoil/10,
-    c_soil_slow_0=svs_0.cSoil/3,
-    beta_leaf=0.3,
-    beta_root=0.3,
-    r_c_leaf_rh=0,
-    r_c_root_rh=0,
-    r_c_wood_rh=0,
-    r_c_lit_cwd_rh=0.00150000000000000,
-    r_c_lit_met_rh=0.0400000000000000,
-    r_c_lit_str_rh=0.0300000000000000,
-    r_c_lit_mic_rh=0.0400000000000000,
-    r_c_soil_met_rh=0.0320000000000000,
-    r_c_soil_str_rh=0.0234000000000000,
-    r_c_soil_mic_rh=0.0300000000000000,
-    r_c_soil_slow_rh=7.99034960000000e-5,
-    r_c_soil_passive_rh=0.000261600000000000,
-    r_c_leaf_2_c_lit_met=0.0100000000000000,
-    r_c_leaf_2_c_lit_str=0.0100000000000000,
-    r_c_root_2_c_soil_met=0.00500000000000000,
-    r_c_root_2_c_soil_str=0.00500000000000000,
-    r_c_wood_2_c_lit_cwd=0.00700000000000000,
-    r_c_lit_cwd_2_c_lit_mic=0.00350000000000000,
-    r_c_lit_cwd_2_c_soil_slow=0.00500000000000000,
-    r_c_lit_met_2_c_lit_mic=0.0100000000000000,
-    r_c_lit_str_2_c_lit_mic=0.0100000000000000,
-    r_c_lit_str_2_c_soil_slow=0.0100000000000000,
-    r_c_lit_mic_2_c_soil_slow=0.0100000000000000,
-    r_c_soil_met_2_c_soil_mic=0.00800000000000000,
-    r_c_soil_str_2_c_soil_mic=0.00780000000000000,
-    r_c_soil_str_2_c_soil_slow=0.00780000000000000,
-    r_c_soil_mic_2_c_soil_slow=0.0100000000000000,
-    r_c_soil_mic_2_c_soil_passive=0.0100000000000000,
-    r_c_soil_slow_2_c_soil_mic=2.00000000000000e-5,
-    r_c_soil_slow_2_c_soil_passive=9.65040000000000e-8,
-    r_c_soil_passive_2_c_soil_mic=6.54000000000000e-5,
+    c_leaf_0 = 0.0449431, #svs_0.cVeg/4,          #set inital pool values to svs values 
+    c_root_0 = 0.03471476, #svs_0.cVeg/5,          #you can set numerical values here directly as well
+    c_lit_cwd_0 = 0.12045422, #svs_0.cSoil/35,
+    c_lit_met_0 = 0.01062729, #svs_0.cSoil/35,
+    c_lit_str_0 = 0.01321171, #svs_0.cSoil/35,
+    c_lit_mic_0 = 0.02217908, #svs_0.cSoil/35,
+    c_soil_met_0 = 0.01225129, #svs_0.cSoil/20,
+    c_soil_str_0 = 0.00389448, #svs_0.cSoil/10,
+    c_soil_mic_0 = 0.02058883, #svs_0.cSoil/7,
+    c_soil_slow_0 = 13.3329366, #svs_0.cSoil/3,
+    beta_leaf = 0.308187384,
+    beta_root = 0.301999241,
+    r_c_leaf_rh = 0,
+    r_c_root_rh = 0,
+    r_c_wood_rh = 0,
+    r_c_lit_cwd_rh = 0.0031654,
+    r_c_lit_met_rh = 0.053189666,
+    r_c_lit_str_rh = 0.012380104,
+    r_c_lit_mic_rh = 0.053299593,
+    r_c_soil_met_rh = 0.073121485,
+    r_c_soil_str_rh = 0.00151622,
+    r_c_soil_mic_rh = 0.014039478,
+    r_c_soil_slow_rh = 4.27E-05,
+    r_c_soil_passive_rh = 8.57E-06,
+    r_c_leaf_2_c_lit_met = 0.011900579,
+    r_c_leaf_2_c_lit_str = 0.012644933,
+    r_c_root_2_c_soil_met = 0.030676971,
+    r_c_root_2_c_soil_str = 0.00121457,
+    r_c_wood_2_c_lit_cwd = 0.002518487,
+    r_c_lit_cwd_2_c_lit_mic = 0.008132606,
+    r_c_lit_cwd_2_c_soil_slow = 0.003219468,
+    r_c_lit_met_2_c_lit_mic = 0.004251068,
+    r_c_lit_str_2_c_lit_mic = 0.013486702,
+    r_c_lit_str_2_c_soil_slow = 0.023376078,
+    r_c_lit_mic_2_c_soil_slow = 0.001511667,
+    r_c_soil_met_2_c_soil_mic = 0.019407116,
+    r_c_soil_str_2_c_soil_mic = 0.010605124,
+    r_c_soil_str_2_c_soil_slow = 0.001438887,
+    r_c_soil_mic_2_c_soil_slow = 0.02007731,
+    r_c_soil_mic_2_c_soil_passive = 0.003545916,
+    r_c_soil_slow_2_c_soil_mic = 2.40E-05,
+    r_c_soil_slow_2_c_soil_passive = 1.05E-07,
+    r_c_soil_passive_2_c_soil_mic = 5.92E-05,
 )    
 
 
@@ -261,7 +261,7 @@ C_autostep, J_autostep = autostep_mcmc(
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,   # default value | increase value to reduce initial step size
+    D_init=10,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
@@ -357,4 +357,7 @@ axs[n,0].plot(
     color='green'
 )
 axs[n,0].legend()
+
+# -
+
 
