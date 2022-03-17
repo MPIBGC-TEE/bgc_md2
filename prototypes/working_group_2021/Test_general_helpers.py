@@ -11,6 +11,9 @@ from general_helpers import (
         make_pixel_area_on_unit_spehre
 )
 class Test_general_helpers(InDirTest):
+
+    def test_make_fluxrates_from_kf(,xi_d):    
+    def make_fluxrates_from_kf(mvs_kv,xi_d):    
     def test_month_2_day_index(self):
         self.assertEqual(
                 month_2_day_index([0]),
