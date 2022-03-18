@@ -124,7 +124,7 @@ def get_example_site_vars(dataPath):
             #for name, variable in ds.variables.items():            
             #    for attrname in variable.ncattrs():
             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return ds.variables[vn][t]*86400
+            return (ds.variables[vn][t]*24*60*60)
         else:
             #for name, variable in ds.variables.items():            
             #    for attrname in variable.ncattrs():
@@ -223,14 +223,13 @@ def make_param2res_sym(
         list(mvs.get_StateVariableTuple())
     )
     
-    
     # Time dependent driver function does not change with the estimated parameters
     # Defined once outside param2res function
     #seconds_per_day = 86400
     
     def npp_func(day):
         month=gh.day_2_month_index(day)
-        return dvs.npp[month]
+        return (dvs.npp[month])
     
     # Build environmental scaler function
     def xi_func(day):
@@ -278,7 +277,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=10 #time step length in days
+        delta_t_val=15 #time step length in days
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -371,10 +370,9 @@ def make_param_filter_func(
         beta_leaf_ind
         cond1 =  (c >= c_min).all() 
         cond2 =  (c <= c_max).all() 
-        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.98  
+        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.99  
         return (cond1 and cond2 and cond3)
         
-    
     return isQualified
 
 

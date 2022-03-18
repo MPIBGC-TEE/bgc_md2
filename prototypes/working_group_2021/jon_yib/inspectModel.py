@@ -60,7 +60,7 @@ from general_helpers import (
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions,
-    autostep_mcmc,  
+    autostep_mcmc_2,  
     make_jon_cost_func,
     make_param_filter_func
 )
@@ -80,10 +80,7 @@ import model_specific_helpers_2 as msh
 # ## Model Figure and Matrix Equations
 # #### Model Figure:
 
-# +
-
 h.compartmental_graph(mvs)
-# -
 
 # #### Matrix equations:
 
@@ -113,10 +110,8 @@ svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 dvs.npp
 # -
 
-msh.EstimatedParameters._fields
-
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
-dvs.npp
+svs_0
 
 # ## Define Forward Model
 # #### Create constants for forward sim:
@@ -139,46 +134,46 @@ cpa._asdict()    #print - everything should have a numeric value
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
-    c_leaf_0 = 0.261728257, #svs_0.cVeg/4,          #set inital pool values to svs values 
-    c_root_0 = 0.288148194, #svs_0.cVeg/5,          #you can set numerical values here directly as well
-    c_lit_cwd_0 = 0.121792946, #svs_0.cSoil/35,
-    c_lit_met_0 = 0.007370259, #svs_0.cSoil/35,
-    c_lit_str_0 = 0.008649399, #svs_0.cSoil/35,
-    c_lit_mic_0 = 0.051081693, #svs_0.cSoil/35,
-    c_soil_met_0 = 0.030655261, #svs_0.cSoil/20,
-    c_soil_str_0 = 0.031655383, #svs_0.cSoil/10,
-    c_soil_mic_0 = 0.075459116, #svs_0.cSoil/7,
-    c_soil_slow_0 = 10.38563285, #svs_0.cSoil/3,
-    beta_leaf = 0.406395619,
-    beta_root = 0.302147905,
-    r_c_lit_cwd_rh = 0.002294156,
-    r_c_lit_met_rh = 0.073263109,
-    r_c_lit_str_rh = 0.019908285,
-    r_c_lit_mic_rh = 0.062311289,
-    r_c_soil_met_rh = 0.042301001,
-    r_c_soil_str_rh = 0.001663615,
-    r_c_soil_mic_rh = 0.022487078,
-    r_c_soil_slow_rh = 4.29E-05,
-    r_c_soil_passive_rh = 1.72E-05,
-    r_c_leaf_2_c_lit_met = 0.02,
-    r_c_leaf_2_c_lit_str = 0.02,
-    r_c_root_2_c_soil_met = 0.02,
-    r_c_root_2_c_soil_str = 0.02,
-    r_c_wood_2_c_lit_cwd = 0.002,
-    r_c_lit_cwd_2_c_lit_mic = 0.007414968,
-    r_c_lit_cwd_2_c_soil_slow = 0.002290355,
-    r_c_lit_met_2_c_lit_mic = 0.002977914,
-    r_c_lit_str_2_c_lit_mic = 0.01682365,
-    r_c_lit_str_2_c_soil_slow = 0.028780194,
-    r_c_lit_mic_2_c_soil_slow = 0.00130375,
-    r_c_soil_met_2_c_soil_mic = 0.01920087,
-    r_c_soil_str_2_c_soil_mic = 0.012330149,
-    r_c_soil_str_2_c_soil_slow = 0.001113525,
-    r_c_soil_mic_2_c_soil_slow = 0.019503534,
-    r_c_soil_mic_2_c_soil_passive = 0.004265887,
-    r_c_soil_slow_2_c_soil_mic = 5.81E-05,
-    r_c_soil_slow_2_c_soil_passive = 1.72E-07,
-    r_c_soil_passive_2_c_soil_mic = 4.65E-05
+    c_leaf_0 = 0.205902852, #svs_0.cVeg/4,          #set inital pool values to svs values 
+    c_root_0 = 0.1349886, #svs_0.cVeg/5,          #you can set numerical values here directly as well
+    c_lit_cwd_0 = 0.120871995, #svs_0.cSoil/35,
+    c_lit_met_0 = 0.004454257, #svs_0.cSoil/35,
+    c_lit_str_0 = 0.004377044, #svs_0.cSoil/35,
+    c_lit_mic_0 = 0.033078009, #svs_0.cSoil/35,
+    c_soil_met_0 = 0.034884004, #svs_0.cSoil/20,
+    c_soil_str_0 = 0.046215648, #svs_0.cSoil/10,
+    c_soil_mic_0 = 0.050922934, #svs_0.cSoil/7,
+    c_soil_slow_0 = 13.36265586, #svs_0.cSoil/3,
+    beta_leaf = 0.398720497,
+    beta_root = 0.426397009,
+    r_c_lit_cwd_rh = 0.002823994,
+    r_c_lit_met_rh = 0.052945641,
+    r_c_lit_str_rh = 0.026894913,
+    r_c_lit_mic_rh = 0.054510185,
+    r_c_soil_met_rh = 0.053926964,
+    r_c_soil_str_rh = 0.00124833,
+    r_c_soil_mic_rh = 0.020526394,
+    r_c_soil_slow_rh = 5.26E-05,
+    r_c_soil_passive_rh = 2.11E-05,
+    r_c_leaf_2_c_lit_met = 0.01425813,
+    r_c_leaf_2_c_lit_str = 0.013345793,
+    r_c_root_2_c_soil_met = 0.027411196,
+    r_c_root_2_c_soil_str = 0.009990048,
+    r_c_wood_2_c_lit_cwd = 0.001299102,
+    r_c_lit_cwd_2_c_lit_mic = 0.010228895,
+    r_c_lit_cwd_2_c_soil_slow = 0.002114581,
+    r_c_lit_met_2_c_lit_mic = 0.002955735,
+    r_c_lit_str_2_c_lit_mic = 0.015866482,
+    r_c_lit_str_2_c_soil_slow = 0.031221657,
+    r_c_lit_mic_2_c_soil_slow = 0.000936147,
+    r_c_soil_met_2_c_soil_mic = 0.013505919,
+    r_c_soil_str_2_c_soil_mic = 0.012626401,
+    r_c_soil_str_2_c_soil_slow = 0.001434367,
+    r_c_soil_mic_2_c_soil_slow = 0.029803007,
+    r_c_soil_mic_2_c_soil_passive = 0.007509519,
+    r_c_soil_slow_2_c_soil_mic = 4.89E-05,
+    r_c_soil_slow_2_c_soil_passive = 1.38E-07,
+    r_c_soil_passive_2_c_soil_mic = 2.89E-05
 )    
 
 # +
@@ -244,18 +239,18 @@ epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
 param2res=msh.make_param2res_sym(mvs,cpa,dvs)
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = autostep_mcmc_2(
     initial_parameters=epa0,
     filter_func=msh.make_param_filter_func(epa_max, epa_min),
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=200,
+    nsimu=2000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=23,   # default value | target acceptance rate in %
+    acceptance_rate=0.23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,   # default value | increase value to reduce initial step size
+    D_init=0.10,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")

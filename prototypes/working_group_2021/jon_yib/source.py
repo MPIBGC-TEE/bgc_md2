@@ -14,6 +14,16 @@ import bgc_md2.resolve.computers as bgc_c
 # Make a dictionary for the variables we will use
 # The variables should be described
 sym_dict={
+    'c_leaf_0': '',               #Names: c_poolname_0
+    'c_root_0': '',               #Only initial pools that are estimated
+    'c_lit_cwd_0': '',
+    'c_lit_met_0': '',
+    'c_lit_str_0': '',
+    'c_lit_mic_0': '',
+    'c_soil_met_0': '',
+    'c_soil_str_0': '',
+    'c_soil_mic_0': '',
+    'c_soil_slow_0': '',
     'c_leaf': 'carbon content of leaf pool',
     'c_root': '',
     'c_wood': '',
@@ -26,6 +36,9 @@ sym_dict={
     'c_soil_mic': '',
     'c_soil_slow': '',
     'c_soil_passive': '',
+    'r_c_leaf_rh': '',
+    'r_c_root_rh': '',
+    'r_c_wood_rh': '',
     'r_c_lit_cwd_rh': '',
     'r_c_lit_met_rh': '',
     'r_c_lit_str_rh': '',
@@ -63,10 +76,6 @@ for k in sym_dict.keys():
     code=k+" = Symbol('{0}')".format(k)
     exec(code)
 
-t=TimeSymbol("t")
-beta_wood = 1.0-(beta_leaf+beta_root)
-beta_wood = 1.0-(beta_leaf+beta_root)
-
 #create symbols for scaler and input functions
 func_dict={
     'xi': 'Environmental scaler as a function of time',
@@ -76,7 +85,6 @@ for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
     exec(code)
 
-#define t as a symbol for time
 t=TimeSymbol("t")
 
 mvs = CMTVS(
@@ -101,7 +109,7 @@ mvs = CMTVS(
                 #RecievingPool: Input * Allocation
                 c_leaf: NPP(t) * beta_leaf,
                 c_root: NPP(t) * beta_root,
-                c_wood: NPP(t) * beta_wood
+                c_wood: NPP(t) * (1-beta_leaf-beta_root)
             }
         ),
         OutFluxesBySymbol(

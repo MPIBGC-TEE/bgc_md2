@@ -130,11 +130,44 @@ def make_uniform_proposer(
 
     g = np.random.default_rng()
 
-    def GenerateParamValues(c_op):
+    def GenerateParamValues(c_op, D):
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max - c_min) / D)
+            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max-c_min)/D)
+            if filter_func(c_new):
+                keep_searching = False
+        return c_new
+
+    return GenerateParamValues
+
+
+def make_uniform_proposer_2(
+        c_max: Iterable,
+        c_min: Iterable,
+        D: float,
+        filter_func: Callable[[np.ndarray], bool],
+) -> Callable[[Iterable], Iterable]:
+    """Returns a function that will be used by the mcmc algorithm to propose
+    a new parameter value tuple based on a given one. 
+    The two arrays c_max and c_min define the boundaries
+    of the n-dimensional rectangular domain for the parameters and must be of
+    the same shape.  After a possible parameter value has been sampled the
+    filter_func will be applied to it to either accept or discard it.  So
+    filter func must accept parameter array and return either True or False
+    :param c_max: array of maximum parameter values
+    :param c_min: array of minimum parameter values
+    :param D: a parameter to regulate the proposer step. Higher D means smaller step size
+    :param filter_func: model-specific function to filter out impossible parameter combinations
+    """
+
+    g = np.random.default_rng()
+
+    def GenerateParamValues(c_op, D):
+        paramNum = len(c_op)
+        keep_searching = True
+        while keep_searching:
+            c_new = c_op + (np.random.uniform(-0.5,0.5,paramNum) * c_op * D)
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -236,7 +269,7 @@ def autostep_mcmc(
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
     D = D_init
-    proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
+    proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
     # for simu in tqdm(range(nsimu)):
     st = time()
     accepted_current = 0
@@ -251,11 +284,11 @@ def autostep_mcmc(
             if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
                 D = (1 / paramNum)
             accepted_current = 0
-            proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
+            #proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
         if simu % (chunk_size * 20) == 0:  # every 20 chunks - return to the initial step size (to avoid local minimum)
             D = D_init
 
-        c_new = proposer(C_op)
+        c_new = proposer(C_op, D)
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
 
@@ -303,6 +336,134 @@ def autostep_mcmc(
     # remove the part of the arrays that is still filled with zeros
     useful_slice = slice(0, upgraded)
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
+
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+def autostep_mcmc_2(
+        initial_parameters: Iterable,
+        filter_func: Callable,
+        param2res: Callable[[np.ndarray], np.ndarray],
+        costfunction: Callable[[np.ndarray], np.float64],
+        nsimu: int,
+        c_max: np.ndarray,
+        c_min: np.ndarray,
+        acceptance_rate=0.23,
+        chunk_size=100,
+        D_init=0.10, 
+        K=1 
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
+    with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
+
+    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
+    :param filter_func: model-specific function to filter out impossible parameter combinations
+    :param param2res: A function that given a parameter(tuple) returns
+    the model output, which has to be an array of the same shape as the observations used to
+    build the cost function.
+    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a
+    specific set of observations, which is why they do not appear as an argument.
+    :param nsimu: The length of the chain
+    :param c_max: Array of maximum values for each parameter
+    :param c_min: Array of minimum values for each parameter
+    :param acceptance_rate: Target acceptance rate in %, default is 20%
+    :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
+    Set to 0 for constant step size. Default is 100.
+    :param D_init: initial D value (increase to get a smaller step size), default = 1
+    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions), default = 1
+    """
+    np.random.seed(seed=10)
+
+    paramNum = len(initial_parameters)
+
+    upgraded = 0
+    C_op = initial_parameters
+    tb = time()
+    first_out = param2res(C_op)
+    J_last = costfunction(first_out)
+    J_min = J_last
+    J_min_simu = 0
+    print('First_iteration done after ' + str( round(time() - tb, 2)) + 's')
+    print('Status update every 10 iterations:')
+    # J_last = 400 # original code
+
+    # initialize the result arrays to the maximum length
+    # Depending on many of the parameters will be accepted only
+    # a part of them will be filled with real values
+    C_upgraded = np.zeros((paramNum, nsimu))
+    J_upgraded = np.zeros((2, nsimu))
+    D = D_init
+    proposer = make_uniform_proposer_2(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+    # for simu in tqdm(range(nsimu)):
+    st = time()
+    accepted_current = 0
+    if chunk_size == 0:
+        chunk_size = nsimu  # if chunk_size is set to 0 - proceed without updating step size.
+    for simu in range(nsimu):
+        if (simu > 0) and (simu % chunk_size == 0):  # every chunk size (e.g. 100 iterations) update the proposer step
+            if accepted_current == 0:
+                accepted_current = 1  # to avoid division by 0
+            if accepted_current/chunk_size > acceptance_rate:
+                D = D * (1 + 0.2)
+            else:
+                D = D * (1 - 0.2)
+            #D = D * np.sqrt(
+            #    acceptance_rate / (accepted_current / chunk_size * 100))  # compare acceptance and update step
+            #if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
+            #    D = (1 / paramNum)
+            accepted_current = 0
+            #proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+        if simu % (chunk_size * 20) == 0:  # every 20 chunks - return to the initial step size (to avoid local minimum)
+            D = D_init
+
+        c_new = proposer(C_op, D)
+        out_simu = param2res(c_new)
+        J_new = costfunction(out_simu)
+
+        if accept_costfunction (J_last=J_last, J_new=J_new, K=K):
+            C_op = c_new
+            J_last = J_new
+            if J_last < J_min:
+                J_min = J_last
+                J_min_simu = simu
+            C_upgraded[:, upgraded] = C_op
+            J_upgraded[1, upgraded] = J_last
+            J_upgraded[0, upgraded] = simu
+            upgraded = upgraded + 1
+            accepted_current = accepted_current + 1
+
+        # print some metadata
+        # (This could be added to the output file later)
+        if simu % 10 == 0 or simu == (nsimu - 1):
+            print(
+                """ 
+               #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
+               progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+               time elapsed: {minutes:02d}:{sec:02d}
+               overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
+               """.format(
+                    n=upgraded,
+                    r=int(upgraded / (simu + 1) * 100),
+                    simu=simu,
+                    nsimu=nsimu,
+                    pbs='|' + int(50 * simu / (nsimu - 1)) * '#' + int((1 - simu / (nsimu - 1)) * 50) * ' ' + '|',
+                    p=int(simu / (nsimu - 1) * 100),
+                    minutes=int((time() - st) / 60),
+                    sec=int((time() - st) % 60),
+                    cost=round(J_min, 2),
+                    cost2=round(J_last, 2),
+                    ac=accepted_current/chunk_size*100,
+                    # rr=int(accepted_current / chunk_size * 100),
+                    ch=chunk_size,
+                    d=round(D, 3),
+                    s=J_min_simu
+                ),
+                end='\033[5A'  # print always on the same spot of the screen...
+            )
+
+    # remove the part of the arrays that is still filled with zeros
+    useful_slice = slice(0, upgraded)
+    return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
+
 
 # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 def adaptive_mcmc(

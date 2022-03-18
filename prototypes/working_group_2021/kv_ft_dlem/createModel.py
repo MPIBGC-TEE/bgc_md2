@@ -103,7 +103,7 @@ for k in func_dict.keys():
     exec(code)
 
 t=TimeSymbol("t")
-beta_root = 1.0- (beta_leaf+beta_wood)
+
 mvs = CMTVS(
     {
         t,
@@ -126,7 +126,7 @@ mvs = CMTVS(
             {
                 #vl: I_vl, vw: I_vw
                 C_leaf: NPP(t) * beta_leaf, 
-                C_root: NPP(t) * beta_root, 
+                C_root: NPP(t) * (1.0-beta_leaf-beta_wood), 
                 C_wood: NPP(t) * beta_wood
             }
         ),
@@ -493,41 +493,41 @@ list(par_dict.keys())[4]
 par_dict
 
 par_dict.update({
-    beta_leaf: 0.29238118,
-    beta_wood: 0.396513481,
-    Theta_sat: 0.098684485,
-    Theta_fc: 0.209465639,
-    r_C_aom1_rh: 0.000188649,
-    r_C_aom2_rh: 0.000188433,
-    r_C_smb1_rh: 1.77E-05,
-    r_C_smb2_rh: 3.02E-05,
-    r_C_smr_rh: 1.06E-05,
-    r_C_nom_rh: 1.26E-05,
-    r_C_dom_rh: 1.99E-05,
-    r_C_psom_rh: 4.67E-05,
-    r_C_leaf_2_C_aom1: 0.021253231,
-    r_C_leaf_2_C_aom2: 0.020372204,
-    r_C_wood_2_C_aom1: 0.000575634,
-    r_C_wood_2_C_aom2: 0.000526592,
-    r_C_root_2_C_aom1: 0.000419671,
-    r_C_root_2_C_aom2: 0.000275171,
-    r_C_aom1_2_C_smb1: 0.000392039,
-    r_C_aom1_2_C_smb2: 0.000275716,
-    r_C_aom1_2_C_nom: 0.000215369,
-    r_C_aom1_2_C_dom: 0.000261821,
-    r_C_aom2_2_C_smb1: 4.56E-05,
-    r_C_aom2_2_C_smb2: 4.07E-05,
-    r_C_aom2_2_C_dom: 7.44E-05,
-    r_C_smb1_2_C_nom: 2.89E-05,
-    r_C_smb1_2_C_psom: 4.16E-05,
-    r_C_smb2_2_C_smr: 2.70E-05,
-    r_C_smr_2_C_smb1: 5.07E-05,
-    r_C_nom_2_C_smb1: 1.28E-05,
-    r_C_nom_2_C_dom: 2.59E-05,
-    r_C_nom_2_C_psom: 1.34E-05,
-    r_C_dom_2_C_smb1: 2.40E-05,
-    r_C_dom_2_C_nom: 2.85E-05,
-    r_C_psom_2_C_smb1: 1.32E-06
+    beta_leaf: 0.341237021,
+    beta_wood: 0.268607324,
+    Theta_sat: 0.131798755,
+    Theta_fc: 0.15388483,
+    r_C_aom1_rh: 0.000201402,
+    r_C_aom2_rh: 0.000260096,
+    r_C_smb1_rh: 1.53E-05,
+    r_C_smb2_rh: 8.63E-05,
+    r_C_smr_rh: 8.40E-06,
+    r_C_nom_rh: 1.40E-05,
+    r_C_dom_rh: 1.38E-05,
+    r_C_psom_rh: 2.92E-05,
+    r_C_leaf_2_C_aom1: 0.0246648,
+    r_C_leaf_2_C_aom2: 0.019347073,
+    r_C_wood_2_C_aom1: 0.000655524,
+    r_C_wood_2_C_aom2: 0.000552772,
+    r_C_root_2_C_aom1: 0.000405747,
+    r_C_root_2_C_aom2: 0.000253508,
+    r_C_aom1_2_C_smb1: 0.000357059,
+    r_C_aom1_2_C_smb2: 0.00031828,
+    r_C_aom1_2_C_nom: 0.00016201,
+    r_C_aom1_2_C_dom: 0.00025169,
+    r_C_aom2_2_C_smb1: 2.77E-05,
+    r_C_aom2_2_C_smb2: 2.00E-05,
+    r_C_aom2_2_C_dom: 3.55E-05,
+    r_C_smb1_2_C_nom: 2.10E-05,
+    r_C_smb1_2_C_psom: 3.08E-05,
+    r_C_smb2_2_C_smr: 1.98E-05,
+    r_C_smr_2_C_smb1: 3.93E-05,
+    r_C_nom_2_C_smb1: 1.00E-05,
+    r_C_nom_2_C_dom: 2.78E-05,
+    r_C_nom_2_C_psom: 1.46E-05,
+    r_C_dom_2_C_smb1: 1.54E-05,
+    r_C_dom_2_C_nom: 1.63E-05,
+    r_C_psom_2_C_smb1: 1.64E-06
 })
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
@@ -1443,7 +1443,7 @@ epa_max = np.array(
 
 
 # +
-from general_helpers import autostep_mcmc, make_jon_cost_func
+from general_helpers import autostep_mcmc_2, make_jon_cost_func
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
@@ -1467,18 +1467,18 @@ param2res = make_param2res_sym(cpa)
 print(isQualified(epa_0))
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = autostep_mcmc_2(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_jon_cost_func(obs),
-    nsimu=200, # for testing and tuning mcmc
+    nsimu=2000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=23,   # default value | target acceptance rate in %
+    acceptance_rate=0.23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,  # default value | increase value to reduce initial step size
+    D_init=0.10,  # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
