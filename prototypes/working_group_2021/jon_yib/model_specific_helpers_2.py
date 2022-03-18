@@ -60,9 +60,6 @@ EstimatedParameters = namedtuple(
         'c_soil_slow_0',
         'beta_leaf',
         'beta_root',
-        'r_c_leaf_rh',
-        'r_c_root_rh',
-        'r_c_wood_rh',
         'r_c_lit_cwd_rh',
         'r_c_lit_met_rh',
         'r_c_lit_str_rh',
@@ -281,7 +278,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=15 #time step length in days
+        delta_t_val=10 #time step length in days
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -349,14 +346,15 @@ def make_weighted_cost_func(
         #   There are model specific properties:
         #   1.) The weight for the different observation streams
         #
-        number_of_ys=out_simu.cVeg.shape[0]
-        number_of_ms=out_simu.rh.shape[0]
+        #number_of_ys=out_simu.cVeg.shape[0]
+        #number_of_ms=out_simu.rh.shape[0]
+        
 
-        J_obj1 = np.mean (( out_simu.cVeg - obs.cVeg )**2)/(2*np.var(obs.cVeg))
-        J_obj2 = np.mean (( out_simu.cSoil -  obs.cSoil )**2)/(2*np.var(obs.cSoil))
-        J_obj3 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
+        J_obj1 = (100/obs.cVeg.shape[0]) * np.sum((out_simu.cVeg - obs.cVeg)**2, axis=0) / (obs.cVeg.mean(axis=0)**2)
+        J_obj2 = (100/obs.cSoil.shape[0]) * np.sum((out_simu.cSoil -  obs.cSoil)**2, axis=0) / (obs.cSoil.mean(axis=0)**2)
+        J_obj3 = (100/obs.rh.shape[0]) * np.sum((out_simu.rh - obs.rh)**2, axis=0) / (obs.rh.mean(axis=0)**2)
 
-        J_new = 10 * ((J_obj1 + J_obj2)+ J_obj3/12) #the 12 is purely conjectural
+        J_new = 100 * (J_obj1*5 + J_obj2 + J_obj3)
         return J_new
     return costfunction
 

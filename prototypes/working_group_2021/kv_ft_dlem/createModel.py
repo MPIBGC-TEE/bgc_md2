@@ -492,6 +492,44 @@ par_dict.update(
 list(par_dict.keys())[4]
 par_dict
 
+par_dict.update({
+    beta_leaf: 0.29238118,
+    beta_wood: 0.396513481,
+    Theta_sat: 0.098684485,
+    Theta_fc: 0.209465639,
+    r_C_aom1_rh: 0.000188649,
+    r_C_aom2_rh: 0.000188433,
+    r_C_smb1_rh: 1.77E-05,
+    r_C_smb2_rh: 3.02E-05,
+    r_C_smr_rh: 1.06E-05,
+    r_C_nom_rh: 1.26E-05,
+    r_C_dom_rh: 1.99E-05,
+    r_C_psom_rh: 4.67E-05,
+    r_C_leaf_2_C_aom1: 0.021253231,
+    r_C_leaf_2_C_aom2: 0.020372204,
+    r_C_wood_2_C_aom1: 0.000575634,
+    r_C_wood_2_C_aom2: 0.000526592,
+    r_C_root_2_C_aom1: 0.000419671,
+    r_C_root_2_C_aom2: 0.000275171,
+    r_C_aom1_2_C_smb1: 0.000392039,
+    r_C_aom1_2_C_smb2: 0.000275716,
+    r_C_aom1_2_C_nom: 0.000215369,
+    r_C_aom1_2_C_dom: 0.000261821,
+    r_C_aom2_2_C_smb1: 4.56E-05,
+    r_C_aom2_2_C_smb2: 4.07E-05,
+    r_C_aom2_2_C_dom: 7.44E-05,
+    r_C_smb1_2_C_nom: 2.89E-05,
+    r_C_smb1_2_C_psom: 4.16E-05,
+    r_C_smb2_2_C_smr: 2.70E-05,
+    r_C_smr_2_C_smb1: 5.07E-05,
+    r_C_nom_2_C_smb1: 1.28E-05,
+    r_C_nom_2_C_dom: 2.59E-05,
+    r_C_nom_2_C_psom: 1.34E-05,
+    r_C_dom_2_C_smb1: 2.40E-05,
+    r_C_dom_2_C_nom: 2.85E-05,
+    r_C_psom_2_C_smb1: 1.32E-06
+})
+
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
 # We will later store these functions in  `model_specific_helpers.py` which resides in the same folder as this notebook. You will have to adapt them to your data set. 
@@ -644,7 +682,7 @@ V_init= StartVector(
     C_dom=svs_0.cSoil/6,
     C_nom=svs_0.cSoil/6,
     C_psom=svs_0.cSoil/6,
-    rh=svs_0.rh * 86400   # kg/m2/s kg/m2/day        
+    rh=svs_0.rh   # kg/m2/s kg/m2/day        
 )
 #V_init.__getattribute__("rh")
 V_init
@@ -908,7 +946,7 @@ it_sym = make_steady_state_iterator_sym(
 )
 Bs=[]
 bs=[]
-for i in range(cpa.number_of_months*30):
+for i in range(int(cpa.number_of_months/12)):
     bs.append(it_sym.__next__()[1])
     Bs.append(it_sym.__next__()[2])
 B_mean=np.stack(Bs).mean(axis=0)
@@ -1405,7 +1443,7 @@ epa_max = np.array(
 
 
 # +
-from general_helpers import autostep_mcmc, make_feng_cost_func
+from general_helpers import autostep_mcmc, make_jon_cost_func
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
@@ -1433,21 +1471,17 @@ C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=make_feng_cost_func(obs),
+    costfunction=make_jon_cost_func(obs),
     nsimu=200, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=15,   # default value | target acceptance rate in %
+    acceptance_rate=23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=10,  # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
-# -
-
-len(epa_0)
-C_autostep
 
 # +
 # optimized parameter set (lowest cost function)
@@ -1459,7 +1493,7 @@ print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months/12)),
         var_names=Observables._fields,
         tup=(mod_opt,obs)
 )
@@ -1470,10 +1504,10 @@ fig.savefig('solutions_opt.pdf')
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
 import pandas as pd
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('DLEM_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('DLEM_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('DLEM_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('DLEM_optimized_solutions.csv'), sep=',')
 # -
 
 print("Optimized parameters: ", epa_opt)
