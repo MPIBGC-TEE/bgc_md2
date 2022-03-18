@@ -13,126 +13,31 @@
 #     name: python3
 # ---
 
-# This illustrative notebook shows how to create a representation for a new model.
+# # Minimal Code Example: Symbolic JULES Model
+# ## Python/Jupyter Setup (No edits)
+# Jupyter Settings:
 #
-# For the sake of simplicity we assume here that we start with a description of pools and fluxes.
-# This is the form the models are usually described in the literature.
-# We will see that the framework can derive a matrix representation automatically. 
+# Notes:
+# 2020-02-18: copied from jon_yib/createModel3.py
 #
-# It would also be possible to start from the matrices or even
-# mix the two approaches. 
-# We will point to some more advanced examples where you can see this in action. If you get familiar with the framework you will find many more combinations than we can cover. 
-#
-# ## Inspect a minimal model
-#
-# We will start with an extremely simple model.
-# and copy its contents into a new cell. (we will later save it under a new name) 
 
 # +
-from sympy import  Symbol, Function 
-from ComputabilityGraphs.CMTVS import CMTVS
-from bgc_md2.helper import module_computers
-from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
-    TimeSymbol,
-    StateVariableTuple,
-)
-import bgc_md2.resolve.computers as bgc_c
-
-# Make a small dictionary for the variables we will use
-sym_dict={
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "I_vw": "Influx into vegetation wood pool",
-    "r_vw_o": "out flux rate of wood pool",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-}
-# Make symbols from  the strings that we can later use in expressions  
-# vl, vw,...
-for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-# some we will also use some symbols for functions (which appear with an argument) 
-func_dict={
-    "I_vl": "Influx into vegetation leaf pool",
-    "r_vl_o": "out flux rate of leaf pool",
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-t=TimeSymbol("t")
-
-mvs = CMTVS(
-    {
-        StateVariableTuple((vl, vw)),
-        t,
-        InFluxesBySymbol({vl: I_vl(t), vw: I_vw}),
-        OutFluxesBySymbol({vl: r_vl_o(t) * vl, vw: r_vw_o * vw}),
-        InternalFluxesBySymbol({(vl, vw): r_vl_2_vw * vl, (vw, vl): r_vw_2_vl * vw}),
-    },
-
-    computers=module_computers(bgc_c)
-)
-# -
-
-# The last statement in the code defines a variable `mvs` which is 
-# an instance of CMTVS which stands for `C`onnected`M`ulti`T`ype`V`ariable`S`et".
-# It contains information in two forms. 
-# 1. Variables of certain type (like InFluxesBySymbol)
-# 2. a set of functions that "connect" these Variables and to other results we did not specify but which can be computed.
-#
-#
-# Taks:
-# To see what it can do with this information add a new cell an type `mvs.` and press the `tab` key `->`. This will show you the available methods, in other words what can be computed from the provided information.
-#
-# I wanted to see the compartmental the pools, the matrix and the inputs.
-
-mvs.get_StateVariableTuple()
-
-mvs.get_CompartmentalMatrix()
-
-mvs.get_InputTuple()
-
-# we can also print the whole mass balance equation
-import bgc_md2.display_helpers as dh
-dh.mass_balance_equation(mvs)
-
-# we can also plot a picture
-import bgc_md2.helper as h
-h.compartmental_graph(mvs)
-
-# +
-# adjust the output to full width
+# load HTML to adjust jupyter settings
 from IPython.display import HTML
-display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# make changes to imported files immidiately available 
-# avoiding the need to reload (in most cases)
+# adjust jupyter display to full screen width
+#display(HTML("<style>.container { width:100% !important; }</style>"))
+
+# set auto reload for notebook
 # %load_ext autoreload
 # %autoreload 2
-# -
-
-# ## Extend the minimal model
-#
-# ### add more state variables and add a small description
-#
-# In a first step I will 
-# - add new symbols to desricbe pools and parameters for the VISIT  model (from Kostias code) but
-#   leave the old ones there since they are presently used in the fluxes.
-#   We will replace them one bye one later 
-#   but this way we are not forced to replace all the fluxes at
-#   once.It's always good to be able to make small steps...
-# - Note that for the following steps you **do not** have to copy and paste the previous cell
-#   as I did to show the incremental progress.
 
 # +
-from sympy import Symbol, Function 
+# Packages for symbolic code:
+from sympy import Symbol, Function
 from ComputabilityGraphs.CMTVS import CMTVS
+from sympy import Symbol, Function, diag, ImmutableMatrix
+
 from bgc_md2.helper import module_computers
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
@@ -143,1740 +48,1213 @@ from bgc_md2.resolve.mvars import (
 )
 import bgc_md2.resolve.computers as bgc_c
 
-# Make a small dictionary for the variables we will use
-sym_dict={
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
-    'C_leaf': '',
-    'C_root': '',
-    'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
-    'r_C_soil_slow_rh': '',
-    'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
-    'mrso': '',
-    't': '',
-    'T_0': '',
-    'E': '',
-    'KM': '',
-    'beta_leaf': '',
-    'beta_wood': '',
-}
-for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-# some we will also use some symbols for functions (which appear with an argument) 
-func_dict={
-    "I_vl": "Influx into vegetation leaf pool",
-    "r_vl_o": "out flux rate of leaf pool",
-    'xi': '',
-    'NPP': '',
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-
-
-t=TimeSymbol("t")
-
-mvs = CMTVS(
-    {
-        StateVariableTuple((vl, vw)),
-        t,
-        InFluxesBySymbol({vl: I_vl(t), vw: I_vw}),
-        OutFluxesBySymbol({vl: r_vl_o(t) * vl, vw: r_vw_o * vw}),
-        InternalFluxesBySymbol({(vl, vw): r_vl_2_vw * vl, (vw, vl): r_vw_2_vl * vw}),
-    },
-
-    computers=module_computers(bgc_c)
-)
-
-# -
-
-# Nothing has changed in the model description but be have some more symbols to work with.
-# We can now use the new symbols in expression without errors since they are now defined.
-# In the next step we add the new state variables.
-# For the moment we leave the old ones (vl and vw) in to have a template for how to formulate fluxes)
-
-# +
-from sympy import Symbol, Function 
-from ComputabilityGraphs.CMTVS import CMTVS
-from bgc_md2.helper import module_computers
-from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
-    TimeSymbol,
-    StateVariableTuple,
-)
+from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
+import CompartmentalSystems.helpers_reservoir as hr
 import bgc_md2.resolve.computers as bgc_c
+import bgc_md2.display_helpers as dh
+import bgc_md2.helper as h
+from collections import namedtuple
+
+# Other packages
+import sys
+
+sys.path.insert(0, '..')  # necessary to import general_helpers
+from general_helpers import (
+    download_TRENDY_output,
+    day_2_month_index,
+    month_2_day_index,
+    make_B_u_funcs_2,
+    monthly_to_yearly,
+    plot_solutions
+)
+from pathlib import Path
+from copy import copy, deepcopy
+from functools import reduce
+from typing import Callable
+from pprint import pprint
+import json
+import netCDF4 as nc
+import numpy as np
+import matplotlib.pyplot as plt
 
 # Make a small dictionary for the variables we will use
-sym_dict={
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
-    'C_leaf': '',
-    'C_root': '',
-    'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
-    'r_C_soil_slow_rh': '',
-    'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
-    'mrso': '',
-    't': '',
-    'T_0': '',
-    'E': '',
-    'KM': '',
-    'beta_leaf': '',
-    'beta_wood': '',
-}
-for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-# some we will also use some symbols for functions (which appear with an argument) 
-func_dict={
-    "I_vl": "Influx into vegetation leaf pool",
-    "k_vl_o": "out flux rate of leaf pool",
-    'xi': '',
-    'NPP': '',
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-t =  TimeSymbol("t")
-mvs = CMTVS(
-    {
-        t,
-        StateVariableTuple((
-            vl, 
-            vw, 
-            C_leaf,
-	        C_wood,
-	        C_root,
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
-	        C_soil_slow,
-	        C_soil_passive,
-        )),
-        InFluxesBySymbol({vl: I_vl(t), vw: I_vw}),
-        OutFluxesBySymbol({vl: r_vl_o(t) * vl, vw: r_vw_o * vw}),
-        InternalFluxesBySymbol({(vl, vw): r_vl_2_vw * vl, (vw, vl): r_vw_2_vl * vw}),
-    },
-
-    computers=module_computers(bgc_c)
-)
+# sym_dict={
+#    # "vl": "vegegation leaf pool",
+#    # "vl": "vegegation leaf pool",
+#    # "vw": "vegetation wood pool content",
+#    # "I_vw": "Influx into vegetation wood pool",
+#    # "k_vw_o": "out flux rate of wood pool",
+#    # "k_vl_2_vw": "internal flux rate from leaf to wood",
+#    # "k_vw_2_vl": "internal flux rate from wood to leaf",
+#    "vl": "vegegation leaf pool",
+#    "vw": "vegetation wood pool content",
+#    "r_vl_2_vw": "internal flux rate from leaf to wood",
+#    "r_vw_2_vl": "internal flux rate from wood to leaf",
+#    'C_soil_fast': '',
+#    'C_soil_slow': '',
+#    'C_soil_passive': '',
+#    'C_leaf': '',
+#    'C_root': '',
+#    'C_wood': '',
+#    'C_leaf_litter': '',
+#    'C_root_litter': '',
+#    'C_wood_litter': '',
+#    'r_C_leaf_2_C_leaf_litter': '',
+#    'r_C_root_2_C_root_litter': '',
+#    'r_C_wood_2_C_wood_litter': '',
+#    'r_C_leaf_litter_rh': '',
+#    'r_C_root_litter_rh': '',
+#    'r_C_wood_litter_rh': '',
+#    'r_C_soil_fast_rh': '',
+#    'r_C_soil_slow_rh': '',
+#    'r_C_soil_passive_rh': '',
+#    'r_C_leaf_litter_2_C_soil_fast': '',
+#    'r_C_leaf_litter_2_C_soil_slow': '',
+#    'r_C_leaf_litter_2_C_soil_passive': '',
+#    'r_C_wood_litter_2_C_soil_fast': '',
+#    'r_C_wood_litter_2_C_soil_slow': '',
+#    'r_C_wood_litter_2_C_soil_passive': '',
+#    'r_C_root_litter_2_C_soil_fast': '',
+#    'r_C_root_litter_2_C_soil_slow': '',
+#    'r_C_root_litter_2_C_soil_passive': '',
+#
+#    'mrso': 'Total Soil Moisture Content, in kg m-2',
+#    'tsl': 'Temperature of Soil - layer, four layers, in K',
+#    'Mw': 'soil moisture contetnt at the wilting point',
+#    'beta_leaf': 'NPP allocation fraction to leaf',
+#    'beta_wood': 'NPP allocation fraction to wood',
+#    'beta_root': 'NPP allocation fraction to root',
+# }
+#
+## Create namedtuple of allocation coefficients
+# Allocation = namedtuple(
+#    "Allocation",
+#    [
+#        'beta_leaf',  # Names: beta_poolname
+#        'beta_wood',
+#        'beta_root'
+#    ]
+# )
+#
+## Create namedtuple of pools
+# Pools = namedtuple(
+#    "Pools",
+#    [
+#        'c_leaf',  # Names: c_poolname
+#        'c_wood',
+#        'c_root',
+#        'c_DPM',  # full name: decomposable plant material
+#        'c_RPM',  # full name: resistant plant material
+#        'c_BIO',  # full name: microbial biomass
+#        'c_HUM'   # full name: long-lived humified
+#    ]
+# )
+#
+## Create namedtuple of initial pools
+# InitialPools = namedtuple(
+#    "InitialPools",
+#    [
+#        'c_leaf_0',  # Names: c_poolname_0
+#        'c_root_0',
+#        'c_wood_0',
+#        'c_DPM_0',
+#        'c_RPM_0',
+#        'c_BIO_0',
+#        'c_HUM_0'
+#    ]
+# )
+#
+## Create namedtuple of flux rates leaving the system
+# FluxRates = namedtuple(
+#    "FluxRates",
+#    [
+#        'r_c_DPM_rh',  # Pools with loss from system will be listed here
+#        'r_c_RPM_rh',  # Names: r_c_poolname_rh
+#        'r_c_BIO_rh',
+#        'r_c_HUM_rh',
+#        'r_c_leaf_2_c_DPM',  # Pool transfer paths
+#        'r_c_leaf_2_c_RPM',  # Names: r_c_donorPool_2_recievingPool
+#        'r_c_wood_2_c_DPM',
+#        'r_c_wood_2_c_RPM',
+#        'r_c_root_2_c_DPM',
+#        'r_c_root_2_c_RPM',
+#        'r_c_DPM_2_c_BIO',
+#        'r_c_DPM_2_c_HUM',
+#        'r_c_RPM_2_c_BIO',
+#        'r_c_RPM_2_c_HUM',
+#        'r_c_BIO_2_c_HUM',
+#        'r_c_HUM_2_c_BIO'
+#    ]
+# )
+#
+## define time
+# Time = namedtuple(
+#    "Time",
+#    ['t']
+# )
+#
+## Create namedtuple of constants used in model
+# Constants = namedtuple(
+#    "Constants",
+#    [
+#        'npp_0',  # Initial input/pools
+#        'rh_0',
+#        'c_veg_0',
+#        'c_soil_0',
+#        'f_veg2soil_0',  # Total carbon mass from vegetation directly into the soil
+#        'nyears'  # Run time (years for my model)
+#    ]
+# )
+#
+## Combine all named tuples to create symbols
+# Symbols = namedtuple(
+#    "Symbols",
+#    Allocation._fields + Pools._fields + InitialPools._fields + \
+#    FluxRates._fields + Time._fields + Constants._fields
+# )
+#
+## Create symbols
+# for k in Symbols._fields:
+#    code = k + " = Symbol('{0}')".format(k)
+#    exec(code)
+#
+## define beta wood from other allocation values
+# beta_wood = 1.0 - (beta_leaf + beta_root)
+#
+## create symbols for scaler and input functions
+# func_dict = {
+#    'xi': 'Environmental scaler as a function of time',
+#    'NPP': 'Inputs as a function of time',
+# }
+# for k in func_dict.keys():
+#    code = k + " = Function('{0}')".format(k)
+#    exec(code)
+#
+## define t as a symbol for time
+# t = TimeSymbol("t")
+#
+### Symbolic Model Description (Must Edit)
+# Define your model using sympy:
+#
+## define model in sympy format
+# mvs = CMTVS(
+#    {
+#        t,
+#        StateVariableTuple(
+#            # Define State variables
+#            Pools._fields
+#        ),
+#        InFluxesBySymbol(
+#            {  # define input/allocation
+#                # RecievingPool: Input * Allocation
+#                c_leaf: NPP(t) * beta_leaf,
+#                c_root: NPP(t) * beta_root,
+#                c_wood: NPP(t) * beta_wood
+#            }
+#        ),
+#        OutFluxesBySymbol(
+#            {  # define fluxes leaving the system
+#                # Fluxes leaving the system: FluRate * DonorPool * EnvironmentalScaler
+#                c_DPM: r_c_DPM_rh * c_DPM * xi(t),
+#                c_RPM: r_c_RPM_rh * c_RPM * xi(t),
+#                c_BIO: r_c_BIO_rh * c_BIO * xi(t),
+#                c_HUM: r_c_HUM_rh * c_HUM * xi(t)
+#            }
+#        ),
+#        InternalFluxesBySymbol(
+#            {  # define fluxes between pools
+#                # (Donor pool, recieving pool): FluxRate * DonorPool
+#                (c_leaf, c_DPM): r_c_leaf_2_c_DPM * c_leaf,
+#                (c_leaf, c_RPM): r_c_leaf_2_c_RPM * c_leaf,
+#                (c_wood, c_DPM): r_c_wood_2_c_DPM * c_wood,
+#                (c_wood, c_RPM): r_c_wood_2_c_RPM * c_wood,
+#                (c_root, c_DPM): r_c_root_2_c_DPM * c_root,
+#                (c_root, c_RPM): r_c_root_2_c_RPM * c_root,
+#                (c_DPM,  c_BIO): r_c_DPM_2_c_BIO  * c_DPM  * xi(t),
+#                (c_DPM,  c_HUM): r_c_DPM_2_c_HUM  * c_DPM  * xi(t),
+#                (c_RPM,  c_BIO): r_c_RPM_2_c_BIO  * c_RPM  * xi(t),
+#                (c_RPM,  c_HUM): r_c_RPM_2_c_HUM  * c_RPM  * xi(t),
+#                (c_BIO,  c_HUM): r_c_BIO_2_c_HUM  * c_BIO  * xi(t),
+#                (c_HUM,  c_BIO): r_c_HUM_2_c_BIO  * c_HUM  * xi(t)
+#            }
+#        ),
+#    },
+#    computers=module_computers(bgc_c)
+# )
+#
 # -
+
+from source import mvs
+
+# ## Model Figure and Matrix Equations
+# #### Model Figure:
 
 h.compartmental_graph(mvs)
 
-dh.mass_balance_equation(mvs)
+# #### Matrix equations:
 
-# We can see only the old fluxes.
-# Now we add more fluxes according to the description of the model and remove the old ones, along with the symbols and fucntions that we do no longer need
-#
-#
-
-# +
-from sympy import Symbol, Function 
-from ComputabilityGraphs.CMTVS import CMTVS
-from bgc_md2.helper import module_computers
-from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
-    TimeSymbol,
-    StateVariableTuple,
-)
-import bgc_md2.resolve.computers as bgc_c
-
-# Make a small dictionary for the variables we will use
-sym_dict={
-    # "vl": "vegegation leaf pool",
-    # "vl": "vegegation leaf pool",
-    # "vw": "vegetation wood pool content",
-    # "I_vw": "Influx into vegetation wood pool",
-    # "k_vw_o": "out flux rate of wood pool",
-    # "k_vl_2_vw": "internal flux rate from leaf to wood", 
-    # "k_vw_2_vl": "internal flux rate from wood to leaf", 
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
-    'C_leaf': '',
-    'C_root': '',
-    'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
-    'r_C_soil_slow_rh': '',
-    'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
-    'mrso': '',
-    't': '',
-    'T_0': '',
-    'E': '',
-    'KM': '',
-    'beta_leaf': '',
-    'beta_wood': '',
-}
-for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-# some we will also use some symbols for functions (which appear with an argument) 
-func_dict={
-    #"I_vl": "Influx into vegetation leaf pool",
-    #"k_vl_o": "out flux rate of leaf pool",
-    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
-    'NPP': '',
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-t=TimeSymbol("t")
-beta_root = 1.0- (beta_leaf+beta_wood)
-mvs = CMTVS(
-    {
-        t,
-        StateVariableTuple((
-            #vl, 
-            #vw, 
-            C_leaf,
-	        C_wood,
-	        C_root,
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
-	        C_soil_slow,
-	        C_soil_passive,
-        )),
-        InFluxesBySymbol(
-            {
-                #vl: I_vl, vw: I_vw
-                C_leaf: NPP(t) * beta_leaf, 
-                C_root: NPP(t) * beta_root, 
-                C_wood: NPP(t) * beta_wood
-            }
-        ),
-        OutFluxesBySymbol(
-            {
-                #vl: k_vl_o * vl, vw: k_vw_o * vw
-                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),
-                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),
-                C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),
-                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi(t),
-                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi(t),
-                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi(t),
-            }
-        ),
-        InternalFluxesBySymbol(
-            {
-                #(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw
-                (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
-                (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
-                (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
-                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi(t),
-                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi(t),
-                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi(t),
-                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi(t),
-                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi(t),
-                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi(t),
-                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi(t),
-                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi(t),
-                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),
-            }
-        ),
-    },
-
-
-    computers=module_computers(bgc_c)
-)
-# -
-h.compartmental_graph(mvs)
-
-dh.mass_balance_equation(mvs)
-
-# ### Add information specific to the tracability analysis.
-#
-# We are aiming for a decomposition of the compartmental matrix $B$ into three factors 
-# $B(t)= \xi(t)  A K $ 
-# with $ \xi$ and $K$ diagonal. 
-# `bgc_md2` can automatically compute a decomposition into $ B=A N(t)$ where $N(t)=\xi(t)K$ but
-# which part of $N(t)$ should go into $\xi(t)$ is easier to specify manually. 
-#
-# We will first compute the $B=A N$ decomposition and then specify $\xi$.
-#
-#
-
-# +
-srm = mvs.get_SmoothReservoirModel()
-
-# The matrices T and N in the function refer to what in Yiqi Luo's group is usually called A and K
-# and xi is a single scalar (not the diagonal matrix we are looking for here)
-# The function has documentation which you can see by typing the following
-# # ?srm.xi_T_N_u_representation
-_,A,N,_,_=srm.xi_T_N_u_representation(factor_out_xi=False) 
-# -
-
-mvs.computable_mvar_types()
-
-# We can see that we can easily decompose N manually into $N= \xi K $.
-# We also see that we have a symbol $\xi$ alreasince the model has actually been specified with $\xi in mind
-
-from sympy import diag
-xi_d=diag([1,1,1]+[xi(t) for i in range(6)],unpack=True)
-xi_d
-
-# We can go on and decompose N =\xi K -> K=\xi^{-1}N
-K=xi_d.inv()*N
-K
-# we now have the (symbolic) ingredients for the traceability analysis.
-#xi_d,K,A
-
-# We can store the symbolic representation in a file that we can use in for several purposes later.
-# Copy your version of the following cell into a text editor and save the file in the current directory as `source.py`)
-
-# +
-from sympy import Symbol, Function 
-from ComputabilityGraphs.CMTVS import CMTVS
-from bgc_md2.helper import module_computers
-from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
-    TimeSymbol,
-    StateVariableTuple,
-)
-import bgc_md2.resolve.computers as bgc_c
-
-# Make a small dictionary for the variables we will use
-sym_dict={
-    "vl": "vegegation leaf pool",
-    "vw": "vegetation wood pool content",
-    "r_vl_2_vw": "internal flux rate from leaf to wood", 
-    "r_vw_2_vl": "internal flux rate from wood to leaf", 
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
-    'C_leaf': '',
-    'C_root': '',
-    'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
-    'r_C_soil_slow_rh': '',
-    'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'tas': '',
-    'mrso': '',
-    't': '',
-    'T_0': '',
-    'E': '',
-    'KM': '',
-    'beta_leaf': '',
-    'beta_wood': '',
-}
-for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-# some we will also use some symbols for functions (which appear with an argument) 
-func_dict={
-    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
-    'NPP': '',
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-t=TimeSymbol("t")
-beta_root = 1.0- (beta_leaf+beta_wood)
-mvs = CMTVS(
-    {
-        t,
-        StateVariableTuple((
-            C_leaf,
-	        C_wood,
-	        C_root,
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
-	        C_soil_slow,
-	        C_soil_passive,
-        )),
-        InFluxesBySymbol(
-            {
-                C_leaf: NPP(t) * beta_leaf, 
-                C_root: NPP(t) * beta_root, 
-                C_wood: NPP(t) * beta_wood
-            }
-        ),
-        OutFluxesBySymbol(
-            {
-                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),
-                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),
-                C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),
-                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi(t),
-                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi(t),
-                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi(t),
-            }
-        ),
-        InternalFluxesBySymbol(
-            {
-                (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
-                (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
-                (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
-                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi(t),
-                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi(t),
-                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi(t),
-                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi(t),
-                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi(t),
-                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi(t),
-                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi(t),
-                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi(t),
-                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),
-            }
-        ),
-    },
-    computers=module_computers(bgc_c)
-)
-# -
-
-mvs.get_StateVariableTuple()
-
-# #### Intermediate summary:
+# + active=""
+# # #### Intermediate summary:
 # We have achieved the symbolic formulation of the model. We can use it to check the structure and compute derived diagnostic variables including the matrices used for the traceability analysis, but up to now only in symbolic form.
 #
 # ## Connecting symbolic description and data
 # The next goal is to connect the symbolic formulation to the data.
-# Since the data comes in several shapes this involves several steps. 
+# Since the data comes in several shapes this involves several steps.
 # We also want to be able to make this step portable across different models and computers.
 # The endproduct is a collection of models that everybody can run who installes the package and executes the code we provide
 #
-# We will have to: 
-# 1. Find as many model parameters as possible in the model description (in the literature or in communication with the modeling group) so that we do not have to estimate them from the model output. 
-# 1. provide code to download the output for your model.
-# 1. implement functions for the drivers (using the data)
-# 1. run the model forward with a possible set of parameters.
-# 1. infer unknown parameters by data assimilation.
+# We will have to:
+# 1. Find as many model parameters as possible in the model description (in the literature or in communication with the modeling group) so that we do not have to estimate them from the model output.
+# 2. provide code to download the output for your model.
+# 3. implement functions for the drivers (using the data)
+# 4. run the model forward with a possible set of parameters.
+# 5. infer unknown parameters by data assimilation.
+
+# + [markdown] codehighlighter=[[0, 0]]
+# ## Download Data (Must Edit)
+# #### TRENDY Data
+# Make sure you have a config.json file in your model folder: <br>
+# Config.jon file contents: `{"username": "trendy-v9", "password": "gcb-2020", "dataPath": "/path/to/data/folder"}`
+
+# + codehighlighter=[[11, 12], [16, 17], [8, 28], [41, 43], [8, 24], [42, 44]]
+# import sys
+# sys.path.insert(0,'..') # necessary to import general_helpers
+# from general_helpers import download_TRENDY_output
+# import json
+# from pathlib import Path
+# from collections import namedtuple
 #
-# ### downloading the data
-# #### create a small site specific config file 
-# This file specifies:
-# - a username and password to download the data 
-# - the location where you want to download the data to 
-#   which will differ depending on the machine you are using (your laptop or a supercomputer) and     also accross users. You will have to have one everywhere you want to work with the model.
-# Here comes a template from my laptop (content of file `../config.json`):
-# `{"username": "trendy-v9", "password": "gcb-2020", "dataPath": "/home/data/VISIT_data_CMIP6"}`
+## Read username, password, dataPath from config.json file
+# with Path('config.json').open(mode='r') as f:
+#    conf_dict = json.load(f)
 #
-# Note that 
-# - the file resides one level above your current folder since it is not modelspecific
-#   (This is a change from the first round of model gathering)
+## Create tuples of data streams
+## For YIBs I have annual and monthly file names so I defined them separately
+## If all your data is similarly named this would be a single "observables" tuple
 #
-# #### create a small model specific function to download the data
-# This function  will later be stored in the file `model_specific_helpers.py` 
-# This function **saves us a lot of time** when we want to reproduce your results and run your model since finding the correct dataset can be a time consuming task.
-# There is a helper function `download_TRENDY_output` in `../general_helpers.py` that you can probably use within your `download_my_TRENDY_output`.
-# If it's not general enough to be called it should at least give you an idea. 
 #
+## Monthly data streams on TRENDY server
+# Observables = namedtuple(
+#    'observables_monthly',
+#    ["cVeg", "cSoil", "rh", "fVegSoil"]
+# )
+#
+## Driver data streams on TRENDY server
+# Drivers = namedtuple(
+#    "drivers",
+#    ["npp","mrso", "tsl","landCoverFrac"]
+# )
+#
+## when downloading data make sure model names match TRENDY server names:
+## "CABLE-POP","CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP",
+## "JSBACH","JULES-ES","LPJ-GUESS","LPJwsl","LPX-Bern","OCN",
+## "ORCHIDEE","ORCHIDEE-CNP","ORCHIDEEv3","ORCHIDEEv3_0.5deg"
+## "SDGVM","VISIT","YIBs"
+#
+## Define function to download data from TRENDY server
+# def download_my_TRENDY_output():
+#    download_TRENDY_output(
+#        username=conf_dict["username"],
+#        password=conf_dict["password"],
+#        dataPath=Path(conf_dict["dataPath"]),  # platform independent path desc. (Windows vs. linux)
+#        models=["JULES-ES"],
+#        variables=Observables._fields + Drivers._fields
+#    )
+#
+## call above function to download TRENDY data
+## This can takes a minute to connect to the server
+## The download itself can take hours depending on internet speed.
+## If "can't connect to TRENDY server" error occurs, try again later.
+# download_my_TRENDY_output()
 
 # +
-import sys
-sys.path.insert(0,'..') # necessary to import general_helpers
-from general_helpers import download_TRENDY_output
-import json 
-from pathlib import Path
-from collections import namedtuple 
+import json
 
+# Read username, password, dataPath from config.json file
 with Path('config.json').open(mode='r') as f:
-    conf_dict=json.load(f) 
-
-# we will use the trendy output names directly in other parts of the output
-Observables = namedtuple(
-    'Observables',
-    ["cVeg","cLitter","cSoil","rh","ra"]
-)
-Drivers=namedtuple(
-    "Drivers",
-    ["gpp", "mrso", "tas"]
-)    
-    
-#create a small model specific function that will later be stored in the file model_specific_helpers.py
-def download_my_TRENDY_output():
-    download_TRENDY_output(
-        username=conf_dict["username"],
-        password=conf_dict["password"],
-        dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
-        models=['VISIT'],
-        variables = Observables._fields + Drivers._fields
-    )
-#call it to test that the download works the data
-#download_my_TRENDY_output()
+    conf_dict = json.load(f)
+import model_specific_helpers_2 as msh
 # -
 
-# #### provide functions to read the data
+msh.download_my_TRENDY_output(conf_dict)
+# #%pwd
+
+# ## Connect Data and Symbols (Must Edit)
+# Define function to subset netCDF files and link to data symbols:
+
+# + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
+# import netCDF4 as nc
+# import numpy as np
+# from pathlib import Path
+# import json
+## Define function to download, scale, map TRENDY data
+# def get_example_site_vars(dataPath):
+#    # Define single geospatial cell from (3840, 144, 192)
+#    s = slice(None, None, None)  # this is the same as :
+#    t = s, 70, 160  # a site in South America
+#
+#    # Define function to select geospatial cell and scale data
+#    def f(tup):
+#        vn, fn = tup
+#        path = dataPath.joinpath(fn)
+#        # Read NetCDF data but only at the point where we want them
+#        ds = nc.Dataset(str(path))
+#
+#        if vn in ["gpp", "rh", "ra","f_veg2soil"]: # (3840, 144, 192), kg m-2 s-1
+#                                                   # f_veg2soil: Total carbon mass from vegetation directly into the soil
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)
+#            return ds.variables[vn][t] * 86400 # convert from kg/m2/s to kg/m2/day
+#        elif vn in ["npp"]:
+#            print("reading ", vn, ", size is ", ds.variables["npp_nlim"].shape)
+#            return ds.variables["npp_nlim"][t] * 86400
+#        elif vn in ["tsl"]: # Temperature of Soil - layer, 192x144x4 (depth) x3840, 'K'
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
+#            tmp = np.mean(ds.variables[vn], axis = 1)
+#            return  tmp[t] # average soil temperature at different depth
+#            print("converted size is ", tmp.shape)
+#        elif vn in ["landCoverFrac"]: # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
+#            tmp = np.sum(ds.variables[vn][:, 0:13, :, :], axis = 1)
+#            print("converted size is ", tmp.shape)
+#            return tmp[t]  # sum the vegetation coverages
+#        else:
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)
+#            return ds.variables[vn][t]
+#
+#    # Link symbols and data:
+#
+#    # Create file names (single step if files similarly named)
+#    o_names = [(f, "JULES-ES-1p0_S2_{}.nc".format(f)) for f in Observables._fields]
+#    d_names = [(f, "JULES-ES-1p0_S2_{}.nc".format(f)) for f in Drivers._fields]
+#
+#    # Link symbols and data for observables/drivers
+#    return (Observables(*map(f, o_names)), Drivers(*map(f, d_names)))
+#
+#
+## call function to link symbols and data
+svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+
+# look at data
+# svs, dvs
+# -
+
+# ## Create Symbols for $\xi$, $K$, and $A$ (No Edits)
+# Setup Yiqi matrix format:
+
+# +
+# sv = mvs.get_StateVariableTuple()  # Get state variables from symbolic matrix code
+# n = len(sv)  # Count number of pools
+# srm = mvs.get_SmoothReservoirModel()  # Create smooth resevoir model
+# _, A, N, _, _ = srm.xi_T_N_u_representation(factor_out_xi=False)  # Create A and N symbols
+# t=Symbol("t")
+
+# BI=mvs.get_BibInfo()
+# for k in BI.func_dict.keys():
+#    code = k + " = Function('{0}')".format(k)
+#    exec(code)
 #
 
+## Create environmental scaler matrix
+## Set as for YIBs model; JULES will add a xi(t) function (Rh_scaler) in the forward modeling
+# xi_d=diag([1,1,1]+[xi(t) for i in range(n-3)],unpack=True)
+# xi_d
 
-
-# +
-import netCDF4 as nc
-import numpy as np
-from pathlib import Path
-import json 
-def get_example_site_vars(dataPath):
-    # pick up 1 site   
-    s = slice(None, None, None)  # this is the same as :
-    t = s, 50, 33  # [t] = [:,49,325]
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them 
-        ds = nc.Dataset(str(path))
-        return ds.variables[vn][t]
-
-    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Drivers._fields]
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
-
-
-#     # Read NetCDF data  ******************************************************************************************************************************
-# -
-
-svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
-
-
-svs,dvs
-
-# +
-sys.path.insert(0,'..')
-from general_helpers import day_2_month_index
-def NPP_fun(day ):
-    return npp[day_2_month_index(day)] 
-
-func_dict={NPP: NPP_fun}
-# -
-
-
-
-# ### Forward run
-# The next goal is to run the model forward with a given set of parameters.
-# So we need:
-# 1. values for all the parameters 
-# 1. implementations for the symbolic functions 
-# 1. start values for all the pool contents
-
-# In this example we have the initial values for the elements of the K and A matrices ($k_i$ and $f_{i,j}$ ) but we want the values for the individual flux rates. 
-# So we first create the symbolic $k_{i}$ and $f_{i,j}$ which gives us an alternative description 
-# of the product $M = K A=K_{sym} A_{sym}$ from this matrix we can compute the outfluxes and internal fluxes. If we assume that the same fluxes could be expressed as $flux=fluxrate * donorpoolcontent$ we can compute the fluxrates 
+## Create empty K matrix
+# K = xi_d.inv() * N
+## Create new symbols for the k_{i}
+# for i in range(n):
+#    if K[i, i] != 0:
+#        name = "k_{0}".format(sv[i])
+#        code = "{0}=Symbol('{0}')".format(name)
+#        # print(code)
+#        exec(code)
 #
-# **The next few steps until the next heading are hopefully not necessarry for your model since you should find parameters directly**
-# Since we only had parameters for a different parameterisation, we have to convert  
+## Create $K$ matrix
+# K_sym = ImmutableMatrix(
+#    n, n,
+#    lambda i, j: Symbol("k_" + str(sv[i])) if i == j else 0
+# )
+# K_sym
+
+## Create new symbols for the f_{i,j}
+# for i in range(n):
+#    for j in range(n):
+#        if A[i, j] != 0 and i != j:
+#            name = "f_" + str(sv[j]) + "_2_" + str(sv[i])
+#            code = "{0}=Symbol('{0}')".format(name)
+#            # print(code)
+#            exec(code)
 #
+## Place $f$ values in $A$ matrix
+# A_sym = ImmutableMatrix(
+#    n, n,
+#    lambda i, j: -1 if i == j else (
+#        0 if A[i, j] == 0 else Symbol("f_" + str(sv[j]) + "_2_" + str(sv[i]))
+#    )
+# )
+# A_sym
 
-# +
-from sympy import ImmutableMatrix
-sv=mvs.get_StateVariableTuple()
-n=len(sv)
-# create new symbols for the f_{i,j}
-for i in range(n):
-    for j in range(n):
-        if A[i,j]!=0 and i!=j:
-            name="f_" + str(sv[j]) + "_2_" + str(sv[i])
-            code="{0}=Symbol('{0}')".format(name)
-            print(code)
-            exec(code)
-            
-A_sym=ImmutableMatrix(
-    n,n,
-    lambda i,j:  -1 if i==j else (
-        0 if A[i,j]==0 else Symbol("f_" + str(sv[j]) + "_2_" + str(sv[i]))
-    )
-)
-A_sym
+## Create A matrix
+# M_sym = A_sym * K_sym
+# M_sym
 
-# +
-# create new symbols for the k_{i}
-for i in range(n):
-    if K[i,i]!=0:
-        name="k_{0}".format(sv[i])
-        code="{0}=Symbol('{0}')".format(name)
-        print(code)
-        exec(code)
-        
-K_sym=ImmutableMatrix(
-    n,n,
-    lambda i,j: Symbol("k_" + str(sv[i])) if i==j else 0
-)
-K_sym
-# -
+## Create a dictionary for the external and internal fluxes (flux divided by dono pool content)
+# outflux_rates = {"r_" + str(key) + "_rh": value / key for key, value in hr.out_fluxes_by_symbol(sv, M_sym).items()}
+# internal_flux_rates = {"r_" + str(key[0]) + "_2_" + str(key[1]): value / key[0] for key, value in
+#                       hr.internal_fluxes_by_symbol(sv, M_sym).items()}
+#
+# from copy import  deepcopy
+## Create dictionary of all flux rates
+# all_rates = deepcopy(outflux_rates)
+# all_rates.update(internal_flux_rates)
+# all_rates
 
-M_sym=A_sym*K_sym
-M_sym
+# ParameterValues = namedtuple(
+#    "ParameterValues",
+#    [
+#        "beta_leaf",    # 0 (indices uses in original code)
+#        "beta_wood",    # 1
+#        "f_leaf2DPM",   # 2, f41
+#        # "f_leaf2RPM",   #  f51
+#        "f_wood2DPM",   # 3, f42
+#        # "f_wood2RPM",   #  f52
+#        "f_root2DPM",   # 4, f43
+#        # "f_root2RPM",   #  f53
+#        "f_DPM2BIO",    # 5, f64
+#        "f_DPM2HUM",    # 6, f74
+#        "f_RPM2BIO",    # 7, f65
+#        "f_RPM2HUM",    # 8, f75
+#        "f_BIO2HUM",    # 9, f76
+#        "f_HUM2BIO",    # 10, f67
+#        "k_leaf",       # 11
+#        "k_wood",       # 12
+#        "k_root",       # 13
+#        "k_DPM",        # 14
+#        "k_RPM",        # 15
+#        "k_BIO",        # 16
+#        "k_HUM",        # 17
+#        "c_leaf0",      # 18
+#        "c_wood0",      # 19
+#        "c_RPM0",       # 20
+#        "c_DPM0",       # 21
+#        "c_BIO0",       # 22
+#        'Mw'            # 23, soil moisture content at the wilting point
+#    ]
+# )
+#
+# epa0 = ParameterValues( ## need to modify!!
+#    beta_leaf = 1/3,
+#    beta_wood = 1/3,
+#    f_leaf2DPM=0.1,
+#    f_wood2DPM=0.01,
+#    f_root2DPM=0.001,
+#    f_DPM2BIO =0.1,
+#    f_DPM2HUM =0.01,
+#    f_RPM2BIO =0.001,
+#    f_RPM2HUM =0.1,
+#    f_BIO2HUM =0.01,
+#    f_HUM2BIO =0.001,
+#    k_leaf = 1 / (365 * 2),
+#    k_wood=1 / (365 * 60),
+#    k_root=1 / (365 * 30),
+#    k_DPM=1 / (365 * 60),
+#    k_RPM=1 / (365 * 30),
+#    k_BIO=1 / (365 * 30),
+#    k_HUM=1 / (365 * 200),
+#
+#    c_leaf0=0,
+#    c_wood0=0,
+#    c_RPM0=0,
+#    c_DPM0=0,
+#    c_BIO0=0,
+#    Mw=0.01
+# )
+#
+## need to check here!!
+# old_par_dict = {
+#     # define all k values
+#    'k_c_leaf': epa0.k_leaf,
+#    'k_c_wood': epa0.k_wood,
+#    'k_c_root': epa0.k_root,
+#    'k_c_DPM':  epa0.k_DPM,
+#    'k_c_RPM':  epa0.k_RPM,
+#    'k_c_BIO':  epa0.k_BIO,
+#    'k_c_HUM':  epa0.k_HUM,
+#     # define all f values
+#    'f_c_leaf_2_c_DPM': epa0.f_leaf2DPM,
+#    'f_c_leaf_2_c_RPM': 1 - epa0.f_leaf2DPM,
+#    'f_c_wood_2_c_DPM': epa0.f_wood2DPM,
+#    'f_c_wood_2_c_RPM': 1 - epa0.f_wood2DPM,
+#    'f_c_root_2_c_DPM': epa0.f_root2DPM,
+#    'f_c_root_2_c_RPM': 1 - epa0.f_root2DPM,
+#    'f_c_DPM_2_c_BIO': epa0.f_DPM2BIO,
+#    'f_c_DPM_2_c_HUM': (1 - epa0.f_DPM2BIO),
+#    'f_c_RPM_2_c_BIO': epa0.f_RPM2BIO ,
+#    'f_c_RPM_2_c_HUM': (1 - epa0.f_RPM2BIO),
+#    'f_c_BIO_2_c_HUM': epa0.f_BIO2HUM ,
+#    'f_c_HUM_2_c_BIO': epa0.f_HUM2BIO
+# }
+#
+## Define allocation parameters to be optimized
+# par_dict = {
+#    'beta_leaf': epa0.beta_leaf,
+#    'beta_root': epa0.beta_wood,
+# }
+#
+## translate rates from previous parameters to create dictionary of rates to optimize
+# par_dict.update(
+#    {str(k):v.subs(old_par_dict) for k,v in all_rates.items()}
+# )
 
-import  CompartmentalSystems.helpers_reservoir as hr
-hr.out_fluxes_by_symbol(sv,M_sym)
-
-# we create a dictionary for the outfluxrates (flux divided by dono pool content)
-outflux_rates = {"r_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
-internal_flux_rates = {"r_"+str(key[0])+"_2_"+str(key[1]):value/key[0] for key,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
-from copy import  deepcopy
-all_rates=deepcopy(outflux_rates)
-all_rates.update(internal_flux_rates)
-all_rates
-
-# +
-# and one for the internal fluxrates
-# -
-
-old_par_dict = {
-    beta_leaf: 0.6,
-    beta_wood: 0.25,
-    T_0: 2,
-    E: 4,
-    KM: 10,
-    f_C_leaf_2_C_leaf_litter: 1,
-    f_C_wood_2_C_wood_litter: 1,
-    f_C_root_2_C_root_litter: 1,
-    f_C_leaf_litter_2_C_soil_fast: 0.41,
-    f_C_leaf_litter_2_C_soil_slow: 0.07,
-    f_C_leaf_litter_2_C_soil_passive: 0.02,
-    f_C_wood_litter_2_C_soil_fast: 0.30,
-    f_C_wood_litter_2_C_soil_slow: 0.12,
-    f_C_wood_litter_2_C_soil_passive: 0.08,
-    f_C_root_litter_2_C_soil_fast: 0.30,
-    f_C_root_litter_2_C_soil_slow: 0.14,
-    f_C_root_litter_2_C_soil_passive: 0.07,
-    k_C_leaf: 1 / (60 * 2),
-    k_C_wood: 1 / (365 * 30),
-    k_C_root: 1 / (365 * 22),
-    k_C_leaf_litter: 1 / (365 * 3.3),
-    k_C_wood_litter: 1 / (365 * 11),
-    k_C_root_litter: 1 / (365 * 11),
-    k_C_soil_fast: 1 / (365 * 18),
-    k_C_soil_slow: 1 / (365 * 100),
-    k_C_soil_passive: 1 / (365 * 350),
+# + codehighlighter=[[3, 22], [26, 45], [48, 79], [83, 85], [3, 22], [26, 45], [48, 79], [83, 85]]
+par_dict = {
+    Symbol(k): v
+    for k, v in {
+        'beta_leaf': 0.3333333333333333,
+        'beta_wood': 0.3333333333333333,
+        # 'r_c_leaf_rh': 0,
+        # 'r_c_wood_rh': 0,
+        # 'r_c_root_rh': 0,
+        'r_c_DPM_rh': 1e-4,
+        'r_c_RPM_rh': 1e-4,
+        'r_c_BIO_rh': 9.04109589041096e-5,
+        'r_c_HUM_rh': 1.36849315068493e-5,
+        'r_c_leaf_2_c_DPM': 0.000136986301369863,
+        'r_c_leaf_2_c_RPM': 0.00123287671232877,
+        'r_c_wood_2_c_DPM': 4.56621004566210e-7,
+        'r_c_wood_2_c_RPM': 4.52054794520548e-5,
+        'r_c_root_2_c_DPM': 9.13242009132420e-8,
+        'r_c_root_2_c_RPM': 9.12328767123288e-5,
+        'r_c_DPM_2_c_BIO': 4.56621004566210e-6,
+        'r_c_DPM_2_c_HUM': 4.10958904109589e-5,
+        'r_c_RPM_2_c_BIO': 9.13242009132420e-8,
+        'r_c_RPM_2_c_HUM': 9.12328767123288e-5,
+        'r_c_BIO_2_c_HUM': 9.13242009132420e-7,
+        'r_c_HUM_2_c_BIO': 1.36986301369863e-8
+    }.items()
 }
-
-
-# Now we can translate the old paramterisation to the new one.
-#
-# ### Providing dictionaries  for the parameters and functions.
-#
-
-par_dict={
-    beta_leaf: 0.6,
-    beta_wood: 0.25,
-    T_0: 2, 
-    E: 4, 
-    KM: 10 
-}
-par_dict.update(
-    {Symbol(k):v.subs(old_par_dict) for k,v in all_rates.items()}
-)
 par_dict
 
-# To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
-# In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
-# We will later store these functions in  `model_specific_helpers.py` which resides in the same folder as this notebook. You will have to adapt them to your data set. 
-
-# +
-from general_helpers import make_B_u_funcs_2, day_2_month_index
-# check the numeric functions for B and u
-
-def npp_func(day):
-    month=day_2_month_index(day)
-    return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
-
-def xi_func(day):
-    return 1.0 # preliminary fake for lack of better data... 
-
-func_dict={
-    'NPP':npp_func,
-     'xi':xi_func
-}
-# for the next line to work the 
-# two dictionaries par_dict and func_dict have to be complete.
-# In sympy terms this means that the expressions for 
-B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-# we create a numeric startvector for the compartmental system
-# 
-svs_0=Observables(*map(lambda v: v[0],svs))
-
-X_0= np.array((
-    svs_0.cVeg/3,
-    svs_0.cVeg/3,
-    svs_0.cVeg/3,
-    svs_0.cLitter/3,
-    svs_0.cLitter/3,
-    svs_0.cLitter/3,
-    svs_0.cSoil/3,
-    svs_0.cSoil/3,
-    svs_0.cSoil/3,
-))#.reshape(9,)
-# in general B and u are nonlinear and can depend on X, thats why we have to test them with index and X arguments
-u_func(0,X_0),B_func(0,X_0)
-
-# +
-import CompartmentalSystems.helpers_reservoir as hr
-
-# To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
-# We first create numerical functions for all the outfluxes from our symbolic description.
-# lets do it for the outflux of one pool first (and then for the whole lot of them)
-expr_cont=mvs.get_OutFluxesBySymbol()[C_leaf_litter]
-
-# this is the momentary outflux as a function of t,C_leaf_litter as it would occure in the differential equation
-expr_cont
-
 # -
 
-# what we want is acutally the accumulated flux over one timestep in the simplest approximation (euler forward)
-# the framework has a helper function to create an euler forward discretization of a flux
-delta_t=Symbol("delta_t")
-it=Symbol("it") #arbitrary symbol (in our case it=days_since_start )
-expr_disc=hr.euler_forward_net_flux_sym(
-    flux_sym_cont=expr_cont,
-    cont_time=t,
-    delta_t=delta_t,
-    iteration=it #arbitrary
-)
-# If you look at the result you see that the euler forwar approximation assumes the flux at time t to be constant for the timestep  
-expr_disc
 
-# if we assume tat delta_t is 1 day and it counts days 
-# it becomes even simpler
-expr_disc.subs({delta_t:1})
-#Which is the same as if we had 't' replaced in the above formula wiht 'it'
+for k, v in mvs.get_OutFluxesBySymbol().items():
+    display(v)
+
+par_dict
 
 # +
-# this expression we turn now into a numeric funciton of it
-# although in our example it depends only on t and C_leaf_litter we make it a function of ALL state variables to be able to call it in the same way as u_func and B_func 
-argtup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple())
-
-C_leaf_litter_func = hr.numerical_function_from_expression(
-    expr=expr_cont,
-    tup=argtup, 
-    parameter_dict=par_dict,
-    func_set=func_dict
-)
-# call it for testing
-C_leaf_litter_func(0,*X_0)
-
-
-# +
-#mass production of output functions
-def numfunc(expr):
-    return hr.numerical_function_from_expression(
-    expr=expr,
-    tup=(mvs.get_TimeSymbol(), *mvs.get_StateVariableTuple()),
-    parameter_dict=par_dict,
-    func_set=func_dict
-)
-    
-numOutFluxesBySymbol={k:numfunc(expr) for k,expr in mvs.get_OutFluxesBySymbol().items()} 
-
-# now we can compute ra 
-# apply all the outfluxfunctions of the veg pools and add up the result
-ra_0=np.sum(
-    [
-        numOutFluxesBySymbol[k](0,*X_0) 
-        for k in [C_leaf,C_wood,C_root] 
-        if k in numOutFluxesBySymbol.keys()
-    ]
-)
-rh_0=np.sum(
-    [
-        numOutFluxesBySymbol[k](0,*X_0) 
-        for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
-        if k in numOutFluxesBySymbol.keys()
-    ]
-)
-ra_0,rh_0
+# import model_specific_helpers_2 as msh
+# import test_helpers as th
+# par_dict=th.make_test_args(conf_dict,msh,mvs)
 # -
 
-OutFluxesBySymbol
+svs_0 = msh.Observables(*map(lambda v: v[0], svs))
+svs_0.fVegSoil
 
-# We now build the essential object to run the model forward. Technically it supports the `iterator` interface which means that we can later call its `__next__()` method to move our system one step forward in time. If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, where we have a startvector $V_0$ and a function $f$ to compute the next value: $V_{i+1} =f(V_{i})$ without all the nonessential technical details of e.g. where to store the results and so on.
-# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically wihtout the need to build an iterator.
-#
-# In our case we are also interested in tracking the autotrophic and heterotrophic respiration.
-#
-# So we will let `bgc_md2` derive numeric functions for the Compartmental matrix $B$ and the input $u$ , $ra$ $rh$ from our symbolic description 
-# but build our own iterator by combining these functions.    
-# We will start by creating $V_0$ and then build the function $f$
+# ## Assign Initial Values for the iterator
 
-# to guard agains accidentally changed order we use a namedtuple again. Since B_func and u_func rely 
-# on the correct ordering of the statevariables we build V dependent on this order 
-StartVector=namedtuple(
-    "StartVector",
-    [str(v) for v in mvs.get_StateVariableTuple()]+
-    ["ra","rh"]
-)
+# + codehighlighter=[[5, 17], [5, 17]]
+# Create vector of initial pool values
+svs_0 = msh.Observables(*map(lambda v: v[0], svs))
+
+StartVector = msh.make_StartVector(mvs)
 StartVector._fields
 
-V_init= StartVector(
-    C_leaf=svs_0.cVeg/3,
-    C_wood=svs_0.cVeg/3,
-    C_root=svs_0.cVeg/3,
-    C_leaf_litter=svs_0.cLitter/3,
-    C_wood_litter=svs_0.cLitter/3,
-    C_root_litter=svs_0.cLitter/3,
-    C_soil_fast=svs_0.cSoil/3,
-    C_soil_slow=svs_0.cSoil/3,
-    C_soil_passive=svs_0.cSoil/3,
-    ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
-    rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;        
+# + codehighlighter=[[5, 17], [5, 17]]
+# Assign values to initial pools using InitialPools named tuple
+V_init = StartVector(
+    c_leaf=svs_0.cVeg / 3,  # set inital pool values to svs values
+    c_root=svs_0.cVeg / 3,  # you can set numerical values here directly as well
+    c_wood=svs_0.cVeg / 3,
+    c_DPM=svs_0.cSoil / 4,
+    c_RPM=svs_0.cSoil / 4,
+    c_BIO=svs_0.cSoil / 4,
+    c_HUM=svs_0.cSoil / 4,
+    rh=svs_0.rh,
+    fVegSoil=svs_0.fVegSoil
+    # f_veg2soil=svs_0.f_veg2soil# add the fraction
 )
-V_init.__getattribute__("C_leaf")
-
-# +
-from CompartmentalSystems import helpers_reservoir as hr
-from CompartmentalSystems.TimeStepIterator import (
-        TimeStepIterator2,
-)
-from copy import copy
-
-def make_daily_iterator_sym(
-        mvs,
-        V_init: StartVector,
-        par_dict,
-        func_dict
-    ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    sv=mvs.get_StateVariableTuple()
-    n=len(sv)
-    # build an array in the correct order of the StateVariables which in our case is already correct 
-    # since V_init was built automatically but in case somebody handcrafted it and changed
-    # the order later in the symbolic formulation....
-    V_arr=np.array(
-        [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.ra,V_init.rh]
-    ).reshape(n+2,1) #reshaping is neccessary for matmul
-    
-    def f(it,V):
-        X = V[0:n]
-        b = u_func(it,X)
-        B = B_func(it,X)
-        X_new = X + b + B @ X
-        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        
-        ra = np.sum(
-            [
-              numOutFluxesBySymbol[k](0,*X_0) 
-                for k in [C_leaf,C_wood,C_root] 
-                if k in numOutFluxesBySymbol.keys()
-            ]
-        )
-        rh = np.sum(
-            [
-                numOutFluxesBySymbol[k](0,*X_0) 
-                for k in [C_leaf_litter,C_wood_litter,C_root_litter,C_soil_fast,C_soil_slow,C_soil_passive] 
-                if k in numOutFluxesBySymbol.keys()
-            ]
-        )
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
-        return V_new
-    
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
+V_init._asdict()  # print - everything should have a numeric value
 # -
 
+# ## Define Forward Model
+# #### Create constants for forward sim:
 
-
-V_init
-
-np.array(V_init).shape
-
-# +
-# test the daily iterator
-    
-it_sym = make_daily_iterator_sym(
-    mvs,
-    V_init=V_init,
-    par_dict=par_dict,
-    func_dict=func_dict
+# + codehighlighter=[[1, 9], [1, 8]]
+cpa = msh.Constants(
+    # use Constants namedtuple to define constant values #Define the constant values of parameters NOT affected by data assimilation
+    npp_0=dvs.npp[0],
+    rh_0=svs_0.rh,
+    c_veg_0=svs_0.cVeg,
+    c_soil_0=svs_0.cSoil,
+    fVegSoil_0=svs_0.fVegSoil,  # add the fraction
+    nyears=320
 )
-# we will run the model for 15 steps
-ns=15
-res= np.zeros((ns,len(V_init)))
-res_sym = copy(res)
-for i in range(ns):
-    res_sym[i,:]=it_sym.__next__().reshape(len(V_init),)
-res_sym
+cpa._asdict()  # print - everything should have a numeric value
 # -
 
-# ## Data assimilation
-# Until now we have used only the initial values of the observations. 
-# The next step is to decide which parameters we want to consider fixed and which to be estimated.
-# This distinction helps, to keep the to create a function which only takes the estimated parameters and thus can be used by a generalized mcmc as will become clear.
+# #### Create list of parameters to be optimized during data assimilation:
+
+# +
+# estimated = {**parameters._asdict(), **V_init._asdict()}  # Create dictionary of parameters and initial pools
+# OptimizedParameters = namedtuple('OptimizedParameters',
+#                                 estimated)  # Create function to convert dictionary to namedtuple
+# epa0 = OptimizedParameters(**estimated)  # Create namedtuple of all parameters optimized an initial values
+# epa0._asdict()  # print
+
+# +
+# EstimatedParameters = namedtuple(
+#    'EstimatedParameters',
+#    [
+#        'c_leaf_0',               #Names: c_poolname_0
+#        'c_wood_0',               #Only initial pools that are estimated
+#        'c_DPM_0',
+#        'c_RPM_0',
+#        'c_BIO_0',
 #
-# We can change which parameters we fix and which we estimate later or can have several approaches for the same symbolic model.
-# The distinction is not model inherent but just a reflection of our choice for data assimilation.
-# The more parameter values we can find out from the literature the fewer values we have to estimate.  
-
-# +
-# As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
-# They preserve order as numpy arrays which is great (and fast) for the numeric computations
-# and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
-
-UnEstimatedParameters = namedtuple(
-    "UnEstimatedParameters",
-    [
-        "cLitter_0",
-        "cSoil_0",
-        "cVeg_0",
-        "gpp_0",
-        "rh_0",
-        "ra_0",
-        "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
-        "r_C_root_litter_2_C_soil_slow",# it would be much better to know more  
-        "number_of_months" # necessary to prepare the output in the correct lenght 
-    ]
-)
-# Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
-# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
-# The destinction is only made for the data assimilation to isolate those parameters
-# that the mcmc will try to optimise 
-# It is better to start with only a few
-
-EstimatedParameters = namedtuple(
-    "EstimatedParameters",[ 
-        "beta_leaf",
-        "beta_wood",
-        "T_0",
-        "E",
-        "KM",
-        #"r_C_leaf_rh",
-        #"r_C_wood_rh",
-        #"r_C_root_rh",
-        "r_C_leaf_litter_rh",
-        "r_C_wood_litter_rh",
-        "r_C_root_litter_rh",
-        "r_C_soil_fast_rh",
-        "r_C_soil_slow_rh",
-        "r_C_soil_passive_rh",
-        "r_C_leaf_2_C_leaf_litter",
-        "r_C_wood_2_C_wood_litter",
-        "r_C_root_2_C_root_litter",
-        "r_C_leaf_litter_2_C_soil_fast",
-        "r_C_leaf_litter_2_C_soil_slow",
-        "r_C_leaf_litter_2_C_soil_passive",
-        "r_C_wood_litter_2_C_soil_fast",
-        "r_C_wood_litter_2_C_soil_slow",
-        "r_C_wood_litter_2_C_soil_passive",
-        "r_C_root_litter_2_C_soil_fast",
-        "r_C_root_litter_2_C_soil_slow",
-        "r_C_root_litter_2_C_soil_passive",
-        'C_leaf_0',#for the trendy data also the startvalues have to be estimated but 
-        'C_wood_0',
-        #C_root_0 can be inferred as cVeg_0-(C_leaf_0+C_wood_0)
-        'C_leaf_litter_0',
-        'C_wood_litter_0',
-        #C_root_litter_0 can be inferred
-        'C_soil_fast_0',
-        'C_soil_slow_0',
-        #C_soil_passive_0 can be inferred 
-    ]
-)
-# note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
-# parameters. In this case we may use only the first entry e.g. to derive startvalues. 
-# The destinction is only made for the data assimilation to isolate those parameters
-# that the mcmc will try to optimise 
-
-
-# -
-
-EstimatedParameters._fields
-
-dvs.gpp[1:100]
-
-cpa=UnEstimatedParameters(
- cVeg_0=svs_0.cVeg,
- cLitter_0=svs_0.cLitter,
- cSoil_0=svs_0.cSoil,
- gpp_0=dvs.gpp[0] * 86400,   # kg/m2/s kg/m2/day
- rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
- ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
- r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
- r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
- #number_of_months=len(svs.rh)
- number_of_months=120 # for testing and tuning mcmc
-)
-
-len(svs.rh)
-
-
-# +
-def make_steady_state_iterator_sym(
-        mvs,
-        V_init,
-        par_dict,
-        func_dict
-    ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    def f(it,tup):
-        X,_,_=tup
-        b = u_func(it,X)
-        B = B_func(it,X)
-        return (X,b,B)
-  
-    return TimeStepIterator2(
-        initial_values=V_init,
-        f=f)
-# calculate steady state
-  
-it_sym = make_steady_state_iterator_sym(
-    mvs,
-    V_init=(X_0,u_func(0,X_0),B_func(0,X_0)),
-    par_dict=par_dict,
-    func_dict=func_dict
-)
-Bs=[]
-bs=[]
-for i in range(cpa.number_of_months*30):
-    bs.append(it_sym.__next__()[1])
-    Bs.append(it_sym.__next__()[2])
-B_mean=np.stack(Bs).mean(axis=0)
-b_mean=np.stack(bs).mean(axis=0)
-B_mean,b_mean
-np.linalg.inv(Bs[0])
-
-
-# +
-# calculate pseudo steady state
-X_ss = np.linalg.solve(B_mean, (-b_mean))
-
-steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVariableTuple())}
-# -
-
-# create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
-# If you don't you get a "TypeError". 
-epa_0=EstimatedParameters(
- beta_leaf=0.6,
- beta_wood=0.25,
- T_0=2,
- E=4,
- KM=10,
- r_C_leaf_litter_rh=0.000415110004151100,
- r_C_wood_litter_rh=0.000124533001245330,
- r_C_root_litter_rh=0.000122042341220423,
- r_C_soil_fast_rh=0.000152207001522070,
- r_C_soil_slow_rh=2.73972602739726e-5,
- r_C_soil_passive_rh=7.82778864970646e-6,
- r_C_leaf_2_C_leaf_litter=0.00833333333333333,
- r_C_wood_2_C_wood_litter=9.13242009132420e-5,
- r_C_root_2_C_root_litter=0.000124533001245330,
- r_C_leaf_litter_2_C_soil_fast=0.000340390203403902,
- r_C_leaf_litter_2_C_soil_slow=5.81154005811540e-5,
- r_C_leaf_litter_2_C_soil_passive=1.66044001660440e-5,
- r_C_wood_litter_2_C_soil_fast=7.47198007471980e-5,
- r_C_wood_litter_2_C_soil_slow=2.98879202988792e-5,
- r_C_wood_litter_2_C_soil_passive=1.99252801992528e-5,
- r_C_root_litter_2_C_soil_fast=7.47198007471980e-5,
- r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
- r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
- C_leaf_0=steady_state_dict["C_leaf"],
- C_wood_0=steady_state_dict["C_wood"],
- C_leaf_litter_0=steady_state_dict["C_leaf_litter"],
- C_wood_litter_0=steady_state_dict["C_wood_litter"],
- C_soil_fast_0=steady_state_dict["C_soil_fast"],
- C_soil_slow_0=steady_state_dict["C_soil_slow"]
-)
-
-# The function `param2res` (which will be used by a general model independent mcmc) only takes the estimated parameters as arguments and produce data in the same shape as the observations.
-# We will taylor make it by another function `make_param2res` which depends on the parameters that we decide to fix.
-# This function is the main effort to make the data assimilation possible. **Although we give the full definition here it's suggested that you incrementally build and check the code inside it before you make it a function that returns a function...** 
-# - You can start with sets of  `UnEstimatedParameters` and `EstimatedParameter` (e.g.  `epa0` from the test above) and try to produce a set of observations by running the model. 
-# - then produce `param2res` automatically by code
-# - them wrap this code into `make_param2res` so that you can change the unestimated parameters easily.
+#        'beta_leaf',
+#        'beta_wood',
+#        'Mw',
 #
-# This function will be later moved to a model specific helper file, and loaded from there by the data assimilation functions.
+#        'r_c_DPM_rh',
+#        'r_c_RPM_rh',
+#        'r_c_BIO_rh',
+#        'r_c_HUM_rh',
+#
+#        'r_c_leaf_2_c_DPM',
+#        'r_c_leaf_2_c_RPM',
+#        'r_c_wood_2_c_DPM',
+#        'r_c_wood_2_c_RPM',
+#        'r_c_root_2_c_DPM',
+#        'r_c_root_2_c_RPM',
+#        'r_c_DPM_2_c_BIO',
+#        'r_c_DPM_2_c_HUM',
+#        'r_c_RPM_2_c_BIO',
+#        'r_c_RPM_2_c_HUM',
+#        'r_c_BIO_2_c_HUM',
+#        'r_c_HUM_2_c_BIO',
+#    ]
+# )
+# -
+
+
+epa_0 = msh.EstimatedParameters(
+    **{
+        'c_leaf_0': svs_0.cVeg / 3,  # set inital pool values to svs values
+        'c_wood_0': svs_0.cVeg / 3,  # you can set numerical values here directly as well
+        'c_DPM_0': svs_0.cSoil / 4,
+        'c_RPM_0': svs_0.cSoil / 4,
+        'c_BIO_0': svs_0.cSoil / 4
+    },
+    **{
+        'beta_leaf': 0.3333333333333333,
+        'beta_wood': 0.3333333333333333,
+        'Mw': 0.1,
+        'Ms': np.max(dvs.mrso)+500, #, may need add a condition here ## ASK MARKUS
+        # 'r_c_leaf_rh': 0,
+        # 'r_c_wood_rh': 0,
+        # 'r_c_root_rh': 0,
+        'r_c_DPM_rh': 1e-4,
+        'r_c_RPM_rh': 1e-4,
+        'r_c_BIO_rh': 9.04109589041096e-5,
+        'r_c_HUM_rh': 1.36849315068493e-5,
+        'r_c_leaf_2_c_DPM': 0.000136986301369863,
+        'r_c_leaf_2_c_RPM': 0.00123287671232877,
+        'r_c_wood_2_c_DPM': 4.56621004566210e-7,
+        'r_c_wood_2_c_RPM': 4.52054794520548e-5,
+        'r_c_root_2_c_DPM': 9.13242009132420e-8,
+        'r_c_root_2_c_RPM': 9.12328767123288e-5,
+        'r_c_DPM_2_c_BIO': 4.56621004566210e-6,
+        'r_c_DPM_2_c_HUM': 4.10958904109589e-5,
+        'r_c_RPM_2_c_BIO': 9.13242009132420e-8,
+        'r_c_RPM_2_c_HUM': 9.12328767123288e-5,
+        'r_c_BIO_2_c_HUM': 9.13242009132420e-7,
+        'r_c_HUM_2_c_BIO': 1.36986301369863e-8
+    }
+    # **{str(key): value for key,value in  par_dict.items() if}
+)
 
 # +
-from typing import Callable
-from general_helpers import month_2_day_index, monthly_to_yearly
-from functools import reduce
-
-def make_param2res_sym(
-        cpa: UnEstimatedParameters
-    ) -> Callable[[np.ndarray], np.ndarray]: 
-    # To compute numeric solutions we will need to build and iterator 
-    # as we did before. As it will need numeric values for all the parameters 
-    # we will have to create a complete dictionary for all the symbols
-    # exept those for the statevariables and time.
-    # This set of symbols does not change during the mcmc procedure, since it only
-    # depends on the symbolic model.
-    # Therefore we create it outside the mcmc loop and bake the result into the 
-    # param2res function.
-    # The iterator does not care if they are estimated or not it only 
-    # wants a dictionary containing key: value pairs for all
-    # parameters that are not state variables or the symbol for time
-    srm=mvs.get_SmoothReservoirModel()
-    model_par_dict_keys=srm.free_symbols.difference(
-        [Symbol(str(mvs.get_TimeSymbol()))]+
-        list(mvs.get_StateVariableTuple())
-    )
-    
-    # the time dependent driver function for gpp does not change with the estimated parameters
-    # so its enough to define it once as in our test
-    def npp_func(day):
-        month=day_2_month_index(day)
-        return (dvs.gpp[month]-svs.ra[month]) * 86400   # kg/m2/s kg/m2/day;
-    
-    def param2res(pa):
-        epa=EstimatedParameters(*pa)
-        # create a startvector for the iterator from both estimated and fixed parameters 
-        # The order is important and corresponds to the order of the statevariables
-        # Our namedtuple StartVector takes care of this
-        V_init = StartVector(
-            C_leaf=epa.C_leaf_0,
-            C_wood=epa.C_wood_0,
-            C_root=cpa.cVeg_0-(epa.C_leaf_0 + epa.C_wood_0),
-            C_leaf_litter=epa.C_leaf_litter_0,
-            C_wood_litter=epa.C_wood_litter_0,
-            C_root_litter=cpa.cLitter_0-(epa.C_leaf_litter_0 + epa.C_wood_litter_0),
-            C_soil_fast=epa.C_soil_fast_0,
-            C_soil_slow=epa.C_soil_slow_0,
-            C_soil_passive=cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0),
-            ra=cpa.ra_0,
-            rh=cpa.rh_0
-        )
-        # next we create the parameter dict for the iterator
-        # The iterator does not care if they are estimated or not so we look for them
-        # in the combination
-        apa = {**cpa._asdict(),**epa._asdict()}
-        model_par_dict = {
-            k:v for k,v in apa.items()
-            if k in model_par_dict_keys
-        }
-        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
-        # our fake xi_func could of course be defined outside of param2res but in general it
-        # could be build from estimated parameters and would have to live here...
-        def xi_func(day):
-            return 1.0 # preliminary fake for lack of better data... 
-    
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
-    
-        it_sym = make_daily_iterator_sym(
-            mvs,
-            V_init=V_init,
-            par_dict=par_dict,
-            func_dict=func_dict
-        )
-        
-        # Now that we have the iterator we can start to compute.
-        # the first thing to notice is that we don't need to store all daily values,
-        # since the observations are recorded monthly while our iterator has a
-        # daily timestep.
-        # - for the pool contents we only need to record the last day of the month
-        # - for the respiration(s) ra and rh we have to sum up the daily values 
-        #   over a month
-        # 
-        # Note: check if TRENDY months are like this...
-        days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        sols=[]
-        for m in range(cpa.number_of_months):
-            dpm = days_per_month[ m % 12]  
-            mra=0
-            mrh=0
-            for d in range(dpm):
-                v = it_sym.__next__()
-                mra +=v[9,0]
-                mrh +=v[10,0]
-            V=StartVector(*v)
-            o=Observables(
-                cVeg=float(V.C_leaf+V.C_wood+V.C_root),
-                cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
-                cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                ra=mra/dpm, # monthly respiration back to kg/m2/day units
-                rh=mrh/dpm, # monthly respiration back to kg/m2/day units
-            )
-            # equivalent
-            #o=np.array([
-            #    np.sum(v[0:3]),
-            #    np.sum(v[3:6]),
-            #    np.sum(v[6:9]),
-            #    mra,
-            #    mrh,
-            #])
-            sols.append(o)
-            
-        sol=np.stack(sols)       
-        # convert to yearly output if necessary
-        sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-        for i in range(sol.shape[1]):
-           sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-        sol=sol_yr
-        return sol 
-        
-    return param2res
+def npp_func(day):
+    month = day_2_month_index(day)
+    return dvs.npp[month]
 
 
+n_days = cpa.nyears * 12 * 30  # 0
+days = range(n_days)
+npp_obs = np.array([npp_func(d) for d in days])
+npp_obs.shape
+# -
 
-# +
-# now test it 
-import matplotlib.pyplot as plt
-from general_helpers import plot_solutions
-
-param2res_sym = make_param2res_sym(cpa)
-xs= param2res_sym(epa_0)
-obs=np.column_stack([ np.array(v) for v in svs])
-xs.shape
-
-# +
-obs=obs[0:cpa.number_of_months,:] #cut 
-obs[:,3:4]=obs[:,3:4]*86400 # kg/m2/s kg/m2/day;
-n=cpa.number_of_months
-
-# convert to yearly output if necessary
-obs_yr=np.zeros(int(cpa.number_of_months/12)*obs.shape[1]).reshape([int(cpa.number_of_months/12),obs.shape[1]])  
-for i in range(obs.shape[1]):
-    obs_yr[:,i]=monthly_to_yearly(obs[:,i])
-obs=obs_yr
-n=int(cpa.number_of_months/12)
-
-print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
-fig = plt.figure(figsize=(12, 4), dpi=80)
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4))
 plot_solutions(
-        fig,
-        times=range(n),
-        var_names=Observables._fields,
-        tup=(xs,obs)
-        #tup=(obs,)
+    fig,
+    times=days,
+    var_names=["npp"],
+    tup=(npp_obs,)
 )
-fig.savefig('solutions.pdf')
+# fig.savefig('solutions.pdf')
+
+# Plot simulation output for observables
+c_obs = np.array(dvs.npp) # dvs.npp
+c_obs.shape
+
+n_days = cpa.nyears * 12  # 0
+days = range(n_days)
+fig = plt.figure(figsize=(12, 4))
+plot_solutions(
+    fig,
+    times=days,
+    var_names=["NPP"],
+    tup=(c_obs,)
+)
+
+# #### Create forward model function:
+
+# + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
+func_dict = msh.make_func_dict(mvs, dvs, cpa, epa_0)
+
+# import general_helpers as gh
+## Create namedtuple function for initial values
+# StartVector=namedtuple(
+#    "StartVector",
+#        [str(v) for v in mvs.get_StateVariableTuple()]+["rh"]
+# )
+#
+# def make_iterator_sym(
+#        mvs,
+#        V_init: StartVector,
+#        par_dict,
+#        func_dict,
+#        delta_t_val=1 # defaults to 1day timestep
+#    ):
+#    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)
+#    sv=mvs.get_StateVariableTuple()
+#    n=len(sv)
+#    # build an array in the correct order of the StateVariables which in our case is already correct
+#    # since V_init was built automatically but in case somebody handcrafted it and changed
+#    # the order later in the symbolic formulation....
+#    V_arr=np.array(
+#        [V_init.__getattribute__(str(v)) for v in sv]+
+#        [V_init.rh]
+#    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+#
+#    #numOutFluxesBySymbol={
+#    #    k:numfunc(expr_cont,delta_t_val=delta_t_val)
+#    #    for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+#    #}
+#    numOutFluxesBySymbol={
+#        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict)
+#
+#        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+#    }
+#
+#    def f(it,V):
+#        X = V[0:n]
+#        b = u_func(it,X)
+#        B = B_func(it,X)
+#        X_new = X + b + B @ X
+#        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+#
+#        l=[
+#                numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+#                for k in ["c_DPM","c_RPM","c_BIO","c_HUM"]
+#                if Symbol(k) in numOutFluxesBySymbol.keys()
+#        ]
+#        rh = np.array(l).sum()
+#        V_new = np.concatenate(
+#            (
+#                X_new.reshape(n,1),
+#                np.array([rh]).reshape(1,1)
+#            )
+#            , axis=0
+#        )
+#        return V_new
+#    return TimeStepIterator2(
+#        initial_values=V_arr,
+#        f=f,
+#    )
+
+# + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
+import general_helpers as gh
+mvs.get_InternalFluxesBySymbol()
+#v2sfl={k:v for k,v in ifl.items() if k[0] in map(Symbol,["c_leaf","c_wood","c_root"])}
+#delta_t_val=1
+#numv2sfl = {
+#    k: gh.numfunc(
+#        expr_cont,
+#        mvs,delta_t_val=delta_t_val,
+#        par_dict=par_dict,
+#        func_dict=func_dict
+#    )
+#    for k, expr_cont in v2sfl.items()
+#}
+#it=1
+#X=np.ones(7)
+#f=numv2sfl[(Symbol("c_leaf"),Symbol("c_DPM"))]
+#f(it, *X.reshape(7, )) 
+#np.array([
+#    f(it, *X.reshape(7, )) 
+#    for f in numv2sfl.values()
+#]).sum()
+
+# + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
+import model_specific_helpers_2 as msh
+it_sym = msh.make_iterator_sym(mvs, V_init, par_dict, func_dict, delta_t_val=2)
+V_init
+#
+#for i in range(10):
+#    print(it_sym.__next__())
 
 # +
-epa_min=EstimatedParameters(
- beta_leaf=0,
- beta_wood=0,
- T_0=-20,
- E=.1,
- KM=1,
- r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
- r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
- r_C_root_litter_rh=epa_0.r_C_root_litter_rh/100,
- r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh/100,
- r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh/100,
- r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh/100,
- r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter/100,       
- r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter/100,
- r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter/100,
- r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast/100,
- r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow/100,
- r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive/100,
- r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast/100,
- r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow/100,
- r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive/100,
- r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast/100,
- r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow/100,
- r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive/100,
- C_leaf_0=0,
- C_wood_0=0,
- C_leaf_litter_0=0,
- C_wood_litter_0=0,
- C_soil_fast_0=0,
- C_soil_slow_0=0,
-)
+# from sympy import lambdify,symbols, Function, sin
+# import numpy as np
+# x,y,s,t=symbols("x y,s,t")
+# z=Function("z")
+# f_ex=x**2+y**2+z(t,s)
+# f_ex
+# def z_num(a1,a2):
+#    return a1**2+a2
+#
+# func_dict={"z":z_num}
+##par_dict={x:2,y:3}
+##f_ex.subs(par_dict)
+# f=lambdify((x,y,s,t),f_ex,[func_dict,'numpy'])
+# f(2,3,3,4)
 
+# +
+#from general_helpers import day_2_month_index
+#
+#
+#def xi_maker(tsl, Mw, Ms, mrso, landCoverFrac):  # check the mrso unit here!!, in kg m-2
+#    def xi_func(day):
+#        mi = day_2_month_index(day)
+#        FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
+#        FV = 0.6 + 0.4 * (1 - landCoverFrac[mi] / 100)  # effect of vegetation cover
+#        # Mw is soil moisture at wilting point as a fraction of saturation
+#        # Ms is soil moisture content at satration 
+#        S0 = 0.5 * (1 + Mw)  # optimum soil moisture
+#        Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
+#        if S0 > Smin:
+#            FS = 1 - 0.8 * (mrso[mi]/Ms - S0)  # effect of soil moisture
+#        if (Smin < mrso[mi]/Ms) and (mrso[mi]/Ms <= S0):
+#            FS = 0.2 + 0.8 * (mrso[mi]/Ms - Smin) / (S0 - Smin)
+#        if mrso[mi]/Ms <= Smin:
+#            FS = 0.2
+#        rh_factor = FT * FV * FS
+#        return rh_factor  # 1.0     # Set to 1 if no scaler implemented
+#
+#    return xi_func
+#
+#
+#xi = xi_maker(
+#    tsl=np.array([1, 2, 3, 4]),
+#    Mw=0.5,
+#    Ms= 2000,
+#    mrso=np.array([0.1, 0.2, 0.3, 0.5]),
+#    landCoverFrac=np.array([10, 20, 40, 80])
+#)
+#
+#cpa._fields
 
-epa_max=EstimatedParameters(
- beta_leaf=0.99,
- beta_wood=0.99,
- T_0=10,
- E=100,
- KM=100,
- r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
- r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
- r_C_root_litter_rh=epa_0.r_C_root_litter_rh*100,
- r_C_soil_fast_rh=epa_0.r_C_soil_fast_rh*100,
- r_C_soil_slow_rh=epa_0.r_C_soil_slow_rh*100,
- r_C_soil_passive_rh=epa_0.r_C_soil_passive_rh*100,
- r_C_leaf_2_C_leaf_litter=epa_0.r_C_leaf_2_C_leaf_litter*100,       
- r_C_wood_2_C_wood_litter=epa_0.r_C_wood_2_C_wood_litter*100,
- r_C_root_2_C_root_litter=epa_0.r_C_root_2_C_root_litter*100,
- r_C_leaf_litter_2_C_soil_fast=epa_0.r_C_leaf_litter_2_C_soil_fast*100,
- r_C_leaf_litter_2_C_soil_slow=epa_0.r_C_leaf_litter_2_C_soil_slow*100,
- r_C_leaf_litter_2_C_soil_passive=epa_0.r_C_leaf_litter_2_C_soil_passive*100,
- r_C_wood_litter_2_C_soil_fast=epa_0.r_C_wood_litter_2_C_soil_fast*100,
- r_C_wood_litter_2_C_soil_slow=epa_0.r_C_wood_litter_2_C_soil_slow*100,
- r_C_wood_litter_2_C_soil_passive=epa_0.r_C_wood_litter_2_C_soil_passive*100,
- r_C_root_litter_2_C_soil_fast=epa_0.r_C_root_litter_2_C_soil_fast*100,
- r_C_root_litter_2_C_soil_slow=epa_0.r_C_root_litter_2_C_soil_slow*100,
- r_C_root_litter_2_C_soil_passive=epa_0.r_C_root_litter_2_C_soil_passive*100,
- C_leaf_0=svs_0.cVeg,
- C_wood_0=svs_0.cVeg,
- C_leaf_litter_0=svs_0.cLitter,
- C_wood_litter_0=svs_0.cLitter,
- C_soil_fast_0=svs_0.cSoil,
- C_soil_slow_0=svs_0.cSoil,
-)
+# +
+# def make_param2res_sym(
+#        mvs,
+#        cpa: msh.Constants,
+#        dvs,# : drivers,
+#    ) -> Callable[[np.ndarray], np.ndarray]:
+#
+#    # Build iterator
+#    # Need dictionary of numeric values for all parameters that are not state variables/time
+#    srm=mvs.get_SmoothReservoirModel()
+#    model_par_dict_keys=srm.free_symbols.difference(
+#        [Symbol(str(mvs.get_TimeSymbol()))]+
+#        list(mvs.get_StateVariableTuple())
+#    )
+## Time dependent driver function does not change with the estimated parameters
+## Defined once outside param2res function
+##seconds_per_day = 86400
+#
+#    def npp_func(day):
+#        month=day_2_month_index(day)
+#        return dvs.npp[month]   # kg/m2/s kg/m2/day;
+#
+############ Ask Markus here
+## Build environmental scaler function  ############### day or monthly, monthly inputs here, Mw is the to-be-estimated parameter
+#
+#
+#    # Define actual forward simulation function
+#    def param2res(pa):
+#        # Define function dictionary
+#        func_dict={
+#            'NPP':npp_func,
+#            'xi': xi_maker(dvs.tsl, pa.Mw, dvs.mrso, dvs.landCoverFrac)
+#        }
+#
+#        # Parameter vector
+#        epa=EstimatedParameters(*pa)
+#
+#        # Create a startvector for the iterator
+#        V_init = StartVector(
+#            c_leaf = epa.c_leaf_0,
+#            c_wood = epa.c_wood_0,
+#            c_root = cpa.c_veg_0 - (epa.c_leaf_0 + epa.c_wood_0),
+#
+#            c_DPM = epa.c_DPM_0,
+#            c_RPM = epa.c_RPM_0,
+#            c_BIO = epa.c_BIO_0,
+#            c_HUM = cpa.c_soil_0-(epa.c_DPM_0 + epa.c_RPM_0 + epa.c_BIO_0) ,
+#
+#            rh=cpa.rh_0
+#        )
+#
+#        # Parameter dictionary for the iterator
+#        apa = {**cpa._asdict(),**epa._asdict()}
+#        model_par_dict = {
+#            Symbol(k):v for k,v in apa.items()
+#            if Symbol(k) in model_par_dict_keys
+#        }
+#
+#        # size of the timestep in days
+#        # We could set it to 30 o
+#        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2)
+#        delta_t_val=15
+#        it_sym = make_iterator_sym(
+#            mvs,
+#            V_init=V_init,
+#            par_dict=model_par_dict,
+#            func_dict=func_dict,
+#            delta_t_val=delta_t_val
+#        )
+#
+#        # Now that we have the iterator we can start to compute.
+#        # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
+#        # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
+#        # - for the pool contents we only need to record the last day of the month
+#        # - for the respiration(s) ra and rh we want an accumulated value (unit mass)
+#        #   have to sum up the products of the values*delta_t over a month
+#        #
+#        # Note: check if TRENDY months are like this...
+#        # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+#        sols=[]
+#        dpm=30 #
+#        n=len(V_init)
+#        for m in range(cpa.number_of_months):
+#            #dpm = days_per_month[ m % 12]
+#            mrh=0
+#            for d in range(int(dpm/delta_t_val)):
+#                v = it_sym.__next__().reshape(n,)
+#                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+#                # at the moment the iterator also computes a flux but in kg^-2 ^day
+#            V=StartVector(*v)
+#            #from IPython import embed;embed()
+#            o=Observables(
+#                cVeg=float(V.c_leaf+V.c_wood+V.c_root),
+#                cSoil = float(V.c_DPM + V.c_RPM + V.c_BIO + V.c_HUM),
+#                rh = V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
+#                ########### Ask Markus here
+#                #fVegSoil =  #Total carbon mass from vegetation directly into the soil
+#            )
+#            sols.append(o)
+#
+#        sol=np.stack(sols)
+#        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
+#        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])
+#        #for i in range(sol.shape[1]):
+#        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+#        #sol=sol_yr
+#        return sol
+#
+#    return param2res
+#
+## Observables = namedtuple('observables_monthly', ["cVeg", "cSoil", "rh", "fVegSoil"]) # all monthly
 # -
 
-# ### mcmc to optimize parameters 
-#
-
-np.array(epa_max)
+# ## Forward Model Run
+# #### Run model forward:
 
 # +
-from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
+import model_specific_helpers_2 as msh
+param2res = msh.make_param2res_sym(mvs, cpa, dvs)  # Define forward model
+obs_simu = param2res(epa_0)  # Run forward model from initial conditions
 
-isQualified = make_param_filter_func(epa_max, epa_min)
-param2res = make_param2res_sym(cpa)
+obs_simu
+# -
 
+svs_cut = msh.Observables(
+    cVeg=svs.cVeg[:cpa.nyears * 12],
+    cSoil=svs.cSoil[:cpa.nyears * 12],
+    rh=svs.rh[:cpa.nyears * 12],
+    fVegSoil =svs.fVegSoil[:cpa.nyears*12]
+)
+svs_cut.rh
+
+# +
+#def make_weighted_cost_func(
+#        obs: Observables
+#) -> Callable[[Observables], np.float64]:
+#    # first unpack the observation array into its parts
+#    # cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
+#    def costfunction(out_simu: Observables) -> np.float64:
+#        # fixme
+#        #   as indicated by the fact that the function lives in this
+#        #   model-specific module it is NOT apropriate for (all) other models.
+#        #   There are model specific properties:
+#        #   1.) The weight for the different observation streams
+#        #
+#        number_of_ys = out_simu.cVeg.shape[0]
+#        number_of_ms = out_simu.rh.shape[0]
+#
+#        J_obj1 = np.mean((out_simu.cVeg - obs.cVeg) ** 2) / (2 * np.var(obs.cVeg))
+#        J_obj2 = np.mean((out_simu.cSoil - obs.cSoil) ** 2) / (2 * np.var(obs.cSoil))
+#
+#        J_obj3 = np.mean((out_simu.rh - obs.rh) ** 2) / (2 * np.var(obs.rh))
+#        J_obj3 = np.mean((out_simu.rh - obs.rh) ** 2) / (2 * np.var(obs.rh))
+#
+#        J_new = (J_obj1 + J_obj2) + J_obj3 #/ 12  # the 12 is purely conjectural
+#        return J_new
+#
+#    return costfunction
+#
+#
+## test it
+cost_func = msh.make_weighted_cost_func(svs_cut)
+cost_func(obs_simu)
+
+# for f in Observables._fields:
+#    print(obs_0._asdict()[f])
+# -
+
+sols=[msh.Observables(cVeg=1,cSoil=2,rh=2,fVegSoil=3),msh.Observables(cVeg=1,cSoil=2,rh=2,fVegSoil=3)]
+sols
+ref=msh.Observables(cVeg=np.array([1,1]),cSoil=np.array([2,2]),rh=np.array([2,2]),fVegSoil=np.array([3,3]))
+def arr(field):
+    n=len(sols)
+    a=np.zeros(n)
+    for i in range(n):
+        a[i]=sols[i].__getattribute__(field)
+    return a
+msh.Observables(*( arr(field) for field in msh.Observables._fields))
+
+# #### Create array of yearly observation data:
+
+# +
+fig = plt.figure()
+from general_helpers import plot_observations_vs_simulations
+
+gh.plot_observations_vs_simulations(fig, svs_cut, obs_simu)
+#fig.savefig("test.pdf")
+# -
+
+gh.plot_observations_vs_simulations(fig, svs_cut, obs_simu)
+fig.savefig("test.pdf")
+
+len(svs_cut)
+
+# #### Plot data-model fit:
+
+# +
+# Plot simulation output for observables
+# n_plots = len(svs_cut)
+# fig = plt.figure(figsize=(10, n_plots * 5))
+# axs = fig.subplots(n_plots)
+# for i, name in enumerate(msh.Observables._fields):
+#     var = svs_cut[i]
+#     var_simu = obs_simu[i]
+#     axs[i].plot(range(len(var_simu)), var_simu, label="simulation")
+#     axs[i].plot(range(len(var)), var, label='observation')
+#     axs[i].legend()
+#     axs[i].set_title(name)
+# -
+
+# ## Data Assimilation
+# #### Define parameter min/max values:
+
+Test=namedtuple("Test",["a","b"])
+t1=Test(a=1,b=3)
+t1*2
+t1.__class__._fields
+
+# +
+# set min/max parameters to +- 100 times initial values
+epa_min = msh.EstimatedParameters(* tuple(np.array(epa_0) * 0.01))
+epa_max = msh.EstimatedParameters(* tuple(np.array(epa_0) * 100))
+
+# fix values that are problematic from calculation
+epa_max = epa_max._replace(beta_leaf = 0.9)
+epa_max = epa_max._replace(beta_wood = 0.9)
+epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg * 0.9)
+epa_max = epa_max._replace(c_wood_0 = svs_0.cVeg * 0.9)
+epa_max = epa_max._replace(c_DPM_0=svs_0.cSoil)
+epa_max = epa_max._replace(c_RPM_0=svs_0.cSoil)
+epa_max = epa_max._replace(c_BIO_0=svs_0.cSoil)
+epa_max = epa_max._replace(Mw = 0.8)
+epa_max = epa_max._replace(Ms = (max(dvs.mrso)+500) * 2) # max(dvs.mrso) * 2
+
+
+# print - all names should have numerical values
+epa_max._asdict()
+# -
+
+# #### Conduct data assimilation:
+
+import general_helpers as gh
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = gh.autostep_mcmc(
     initial_parameters=epa_0,
-    filter_func=isQualified,
-    param2res=param2res,
-    costfunction=make_feng_cost_func(obs),
-    nsimu=2000, # for testing and tuning mcmc
-    #nsimu=20000,
+    filter_func=gh.make_param_filter_func_2(epa_max, epa_min,["beta_leaf","beta_wood"]),
+    param2res=msh.make_param2res_sym(mvs, cpa, dvs),
+    costfunction=msh.make_weighted_cost_func(svs),
+    nsimu=200,  # for testing and tuning mcmc
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=15,   # default value | target acceptance rate in %
+    acceptance_rate=15,  # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,   # default value | increase value to reduce initial step size
-    K=2 # default value | increase value to reduce acceptance of higher cost functions
+    D_init=1,  # default value | increase value to reduce initial step size
+    K=2  # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
+# #### Graph data assimilation results:
+
 # +
 # optimized parameter set (lowest cost function)
-par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(EstimatedParameters._fields),1),axis=1)
-epa_opt=EstimatedParameters(*par_opt)
-mod_opt = param2res(epa_opt)  
+par_opt = np.min(
+    C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields), 1),
+    axis=1)
+epa_opt = msh.EstimatedParameters(*par_opt)
+mod_opt = param2res(epa_opt)
 
+n_plots = len(svs)
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
-fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
-        #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months/12)), # for yearly output
-        var_names=Observables._fields,
-        tup=(mod_opt,obs)
-)
+fig = plt.figure(figsize=(10, n_plots * 5))
+# Plot simulation output for observables
+# n_plots=len(svs_cut)
+fig = plt.figure(figsize=(10, 10 * n_plots))
+axs = fig.subplots(n_plots)
+for i, name in enumerate(msh.Observables._fields):
+    var_simu = mod_opt[i]
+    var = svs[i]
+    axs[i].plot(range(len(var_simu)), var_simu, label='simulation(opt)')
+    axs[i].plot(range(len(var)), var, label='observation')
+    axs[i].set_title(name)
+    axs[i].legend()
 
 fig.savefig('solutions_opt.pdf')
 
 # save the parameters and cost function values for postprocessing
-outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+outputPath = Path(conf_dict["dataPath"])  # save output to data directory (or change it)
 
 import pandas as pd
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
 # -
-
-print("Optimized parameters: ", epa_opt)
-par_dict_opt={
-    beta_leaf: epa_opt.beta_leaf,
-    beta_wood: epa_opt.beta_wood,
-    T_0: epa_opt.T_0,
-    E: epa_opt.E,
-    KM: epa_opt.KM,
-    #r_C_leaf_rh: 0,
-    #r_C_wood_rh: 0,
-    #r_C_root_rh: 0,
-    r_C_leaf_litter_rh: epa_opt.r_C_leaf_litter_rh,
-    r_C_wood_litter_rh: epa_opt.r_C_wood_litter_rh,
-    r_C_root_litter_rh: epa_opt.r_C_root_litter_rh,
-    r_C_soil_fast_rh: epa_opt.r_C_soil_fast_rh,
-    r_C_soil_slow_rh: epa_opt.r_C_soil_slow_rh,
-    r_C_soil_passive_rh: epa_opt.r_C_soil_passive_rh,
-    r_C_leaf_2_C_leaf_litter: epa_opt.r_C_leaf_2_C_leaf_litter,
-    r_C_wood_2_C_wood_litter: epa_opt.r_C_wood_2_C_wood_litter,
-    r_C_root_2_C_root_litter: epa_opt.r_C_root_2_C_root_litter,
-    r_C_leaf_litter_2_C_soil_fast: epa_opt.r_C_leaf_litter_2_C_soil_fast,
-    r_C_leaf_litter_2_C_soil_slow: epa_opt.r_C_leaf_litter_2_C_soil_slow,
-    r_C_leaf_litter_2_C_soil_passive: epa_opt.r_C_leaf_litter_2_C_soil_passive,
-    r_C_wood_litter_2_C_soil_fast: epa_opt.r_C_wood_litter_2_C_soil_fast,
-    r_C_wood_litter_2_C_soil_slow: epa_opt.r_C_wood_litter_2_C_soil_slow,
-    r_C_wood_litter_2_C_soil_passive: epa_opt.r_C_wood_litter_2_C_soil_passive,
-    r_C_root_litter_2_C_soil_fast: epa_opt.r_C_root_litter_2_C_soil_fast,
-    r_C_root_litter_2_C_soil_slow: epa_opt.r_C_root_litter_2_C_soil_slow,
-    r_C_root_litter_2_C_soil_passive: epa_opt.r_C_root_litter_2_C_soil_passive 
-}
-print("Optimized parameters dictionary: ", par_dict_opt)
-
-# ### Traceability analysis  
-#
-# #### Outline
-# The traceability analysis defines several diagnostic variables using as much algebraic structure of the mass balance equation as is available.
-# Not all diagnostic variables are possible for all compartmental models. 
-#
-# We chose here to introduce the diagnostic variables not all at once but rather in the order of decreasing generality.
-#
-# The first diagnostic variables are available for all compartmental models and need no additional assumptions. 
-# In the later parts of this section we then assume to be able to identify more and more specific terms in the mass balance equation and use those to derive and trace ever more specific diagnostics.
-# Thus the very first part is valid for all models but how many of the later parts are applicable to a specific model  depends on how much we know about it.  
-#
-#
-# #### Derivation of the matrix decomposition 
-# Compartmental models (well mixed mass balanced) can be written in as an ordinary differential equation in matrix form that relates the momentary value of the (time) derivative $\frac{d X}{d t}$ of an yet unknown function $X$ to the momentary value of $X$ itself.   
-# $$
-# \frac{d X}{d t}= M(X,t) X + I(X,t) \quad (1)   
-# $$ 
-# where $X$ is the statevector representing the pool contents, $M$ the "Compartmental matrix" and $I$ the input vector.
-# Together with a startvalue $X_0$ it constitutes an "initial value problem" (ivp) which can be solved numerically by moving step by step forward in time.
-#
-# Note: 
-#
-# It is mathematical standard notation to use $X$ in the *formulation* of the ivp (representing the momentary value) althoug *after we have solved it* the solution is expressed as function of time $X(t)$. This avoids confusion since everything appering with arguments is recognizable as explicitly calculable *before* we have solved the ivp.
-#
-# The system "nonautonomous" (if they depend on time $t$) and "nonlinear" if the dependent on $X$.
-# It is always possible to factorize $M(X,t)$ into a product $M=A(X,t) K(X,t)$ where $K$ is a  diagonal matrix.
-# and $I=B(t)*u(t)$ where $u$ is a scalar.
-# Using these we arrive at 
-# $$
-# \frac{d X}{d t}= A(X,t) K(X,t) X + B(X,t) u(X,t)  
-# $$
-# ##### Linearity assumption
-# If we assume the model to be linear and nonautonomous the dependency on $X$ vanishes and we have
-#
-# $$
-# \frac{d X}{d t}= A(t) K(t) X + B(t) u(t) . 
-# $$
-#
-# ##### Factorizability  assumption
-# Although this is not possible in general in many published models the nonautonous part  can be further localized into a diagonal matrix $\xi(t)$ so that we can achieve constant $A$ and $K$ which allows more specific interpretation.
-#
-# $$
-# \frac{d X}{d t}= A \xi(t) K X + B(t)u(t)
-# $$
-#
-# ##### Factorizability of $\xi$ assumption 
-# In some cases we can resolve $\xi$ further.
-# $$
-# \frac{d X}{d t}= A \xi_temp(t) \xi_mois(t) K X + B(t)u(t)
-# $$
-#
-# #### Definition of diagnostic variables
-#
-# ##### Storage capacity $X_c$ and storage potential $X_p$
-# These variables can be defined for any compartmental system and do not require either linearity nor factorizability. 
-# We can rearrange eq. $(1)$ and give names to the two summands. 
-# $$
-# X = M^{-1}(X,t) \left( \frac{d X}{d t}-I(X,t) \right) \\ 
-#   = \underbrace{M^{-1}(X,t) \frac{d X}{d t}}_{X_c} - \underbrace{M^{-1}(X,t)I(X,t)}_{X_p} \\
-#   = X_c - X_p
-# $$
-# Note:
-# This is not to be read as a recipe to compute $X$.
-# The equation becomes a bit clearer if we adapt the nomenclature to express that we *have solved the ivp* and know its solution $X(t)$  
-# <!-- and therefore also  the derivative $\frac{d X}{d t}=M(X(t),t) X(t) + I(X(t),t)=\prime{X}(t)$ -->
-# By substituting the solution $X(t)$ we get the recipes to compute:
-# $$
-# X_p(t) = M^{-1}(X(t),t)I(X(t),t)  \\ 
-# X_c(t) = X(t)-X_p(t) \\ 
-# $$
-# we see that all the ingredients become explicit functions of time.   
-# Since all values are taken at the same time $t$ we can drop the time dependence
-# in the notation and write an equation we can use in the iterator.
-# $$
-# X_p = M^{-1}I(X,t)  \\ 
-# X_c = X + X_p \\ 
-# $$
-#
-# ##### Residence time
-# The influx $I$ can always be written as $I=b u$ where the scalar $u=\sum_{k=1\dots n} I_k$  and the dimensionless vector $b=I/u$ where $\sum_{k=1\dots n} b_k =1$.
-# Assumimg that the pool contents (the components of $X$)  have dimension $mass$ we can infer from eq. (1) that $M$ has dimension $\frac{1}{time}$.
-# The components of the (inverse) matrix $M^{-1}$ have therefore dimension $time$. Accordingly the product $RT= M^{-1} b$ is a vector of the same shape as $X$  whose components have dimesion $time$.
-# In the context of the Traceability Framework $RT$ is therefore called *residence time*.
-#
-# Notes on nomenclature: 
-# 1. The term *residence time* is not universally used with the same connotation outside the context of the *Traceability Analysis*.
-#
-# 1. It is not *the time of residence* of the particles in the system for the following reasons:
-#     1. In well mixed systems particles can reside in a pool for different times from zero to infinity.
-#     1. You could compute the mean of these times over all particles exiting a pool, but even then the result is in general not equal to the above mentioned $rt$.
-#     1. The mean residence time would only coincide with the definition above if the system was in equilibrium (which it clearly is not as e.g $NPP(t)$ shows.)
-#     1. The origin of the term is probably most easily understood as the generalization of a one dimensional rate equation $\frac{d}{dt} x = m x + u$ 
-#        If $r$ and $u$ are constant then the mean residence time is $rt= m^{-1}$. If we start with the rate as property of the model the *residence time* 
-#        can be defined as the inverse of this rate. The above definition is the generalization of this simple relationship to matrices and vectors.
-#        The matrix $M^{-1}$ takes the role of the number $\frac{1}{m}$ . In the context of the *Traceability Analysis* $M^{-1}$ is called *Chasing Time*. 
-#
-
-# +
-# lets build an iterator to trace  X, X_c and X_p
-# we will extend it further later (for more )
-# but we can also make it faster because we are not interested in
-# the respiration this time
-
-# build a new template for the StartVector 
-# at the moment 3 times the length of the vector of pool contents.
-# we will add more components later
-svt=mvs.get_StateVariableTuple()
-
-StartVectorTrace=namedtuple(
-    "StartVectorTrace",
-    [str(v) for v in svt]+
-    [str(v)+"_p" for v in svt]+
-    [str(v)+"_c" for v in svt]+
-    [str(v)+"_RT" for v in svt]
-)
-
-
-# -
-
-# now build the iterator to deal with such vectors
-def make_daily_iterator_sym_trace(
-        mvs,
-        V_init: StartVectorTrace,
-        par_dict,
-        func_dict
-    ):
-    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
-    
-    n=len(mvs.get_StateVariableTuple())
-    def f(it,V):
-        #the pools are the first n values
-        X = V[0:n] 
-        I = I_func(it,X) 
-        # we decompose I
-        u=I.sum()
-        b=I/u
-        B = B_func(it,X)
-        B_inf = np.linalg.inv(B)
-        X_new = X + I + B @ X
-        X_p = B_inf @ I
-        X_c = X_new+X_p
-        RT = B_inf @ b
-        V_new = np.concatenate(
-            (
-                X_new.reshape(n,1),
-                X_p.reshape(n,1),
-                X_c.reshape(n,1),
-                RT.reshape(n,1),
-            ),
-            axis=0
-        )
-        return V_new
-    
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
-
-
-# +
-# test the new iterator
-
-# first build a new s
-# actually we realy can choose only the startvalues for the pools
-# but the iterator now produces a 3 times longer vector 
-X_0= np.array((
-    svs_0.cVeg/3,
-    svs_0.cVeg/3,
-    svs_0.cVeg/3,
-    svs_0.cLitter/3,
-    svs_0.cLitter/3,
-    svs_0.cLitter/3,
-    svs_0.cSoil/3,
-    svs_0.cSoil/3,
-    svs_0.cSoil/3,
-)).reshape(9,1)
-# we make the X_p and X_c  parts compatible with the ones computed by the iterator 
-# for following timesteps (to keep it) 
-# As you can see in the definition of the iterator these values have no impact on further results  
-I = u_func(0,X_0)
-u=I.sum()
-b=I/u
-B = B_func(0,X_0)
-B_inf = np.linalg.inv(B)
-X_p_0 = B_inf@I
-X_c_0 = X_0+X_p_0
-RT_0 = B_inf@b
-# combine the three 
-#here we rely on order to be consistent 
-#(although we could use also the names of the namedtuple)
-V_arr=np.concatenate((X_0,X_p_0,X_c_0,RT_0),axis=0 )
-V_init=StartVectorTrace(*V_arr)
-
-# -
-
-it_sym_trace = make_daily_iterator_sym_trace(
-    mvs,
-    V_init=V_init,
-    par_dict=par_dict,
-    func_dict=func_dict
-)
-# we will run the model for 15 steps
-ns=1500
-nv=len(V_init)
-res_trace= np.zeros((ns,nv))
-for i in range(ns):
-    res_trace[i,:]=it_sym_trace.__next__().reshape(len(V_init),)
-    #print(it_sym_trace.__next__().shape)
-res_trace
-
-# +
-import matplotlib.pyplot as plt
-n=len(mvs.get_StateVariableTuple())
-fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
-axs=fig.subplots(n+1,2)
-days=list(range(ns))
-
-
-for i in range(n):
-    
-    ax = axs[i,0]
-    #  the solution
-    pos=i
-    ax.plot(
-        days,
-        res_trace[:,i],
-        label=StartVectorTrace._fields[pos],
-        color='blue'
-    )
-    # X_p
-    pos=i+n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='red'
-    )
-    # X_c
-    pos=i+2*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='yellow'
-    )
-    ax.legend()
-    
-    ax = axs[i,1]
-    # RT
-    pos=i+3*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='black'
-    )
-    ax.legend()
-    
-axs[n,0].plot(
-    days,
-    [npp_func(d) for d in days],
-    label='NPP',
-    color='green'
-)
-axs[n,0].legend()
-
-# -
-
-#Remark:
-# For simple matrices it is possible to compute the inverse M^{-1} 
-# symbolically ONCE
-mvs.get_CompartmentalMatrix().inv()
-# and then just evaluate it for the X and t along the solution.
-# This could potentially be MUCH faster that inverting 
-# the numerical version of the matrix in every timestep.
-# However it could be very difficult to compute the symbolic inverse in 
-# some cases at all (why we will demonstrate the numeric approach) first. 
-
-
-
-
+mod_opt.rh
 
 

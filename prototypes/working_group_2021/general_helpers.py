@@ -968,6 +968,23 @@ def make_param_filter_func(
     
     return isQualified
 
+def make_param_filter_func_2(
+        c_max,
+        c_min, 
+        betas: List[str]
+    ) -> Callable[[np.ndarray], bool]:
+
+    positions=[c_max.__class__._fields.index(beta) for beta in betas]
+    
+    def isQualified(c):
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+
+        cond3 =  np.sum([ c[p] for p in positions])  <=1  
+        return (cond1 and cond2 and cond3)
+        
+    return isQualified
+
 def make_StartVectorTrace(mvs):
     svt=mvs.get_StateVariableTuple()
     return namedtuple(

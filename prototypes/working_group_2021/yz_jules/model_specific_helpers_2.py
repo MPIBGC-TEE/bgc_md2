@@ -127,17 +127,17 @@ def get_example_site_vars(dataPath):
             for vn in [ "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
        }
     }
-    d_name2varname_in_file = {
-        "npp":'npp_nlim',
-        **{
-             vn: vn
-             for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
-        "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
-        **{
-            vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
-            for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
-        }
-    }
+    #d_name2varname_in_file = {
+    #    "npp":'npp_nlim',
+    #    **{
+    #         vn: vn
+    #         for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
+    #    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
+    #    **{
+    #        vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
+    #        for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
+    #    }
+    #}
     d_name2varname_in_file = {
         "npp": 'npp_nlim',
         **{
@@ -177,7 +177,7 @@ def make_StartVector(mvs):
     return namedtuple(
         "StartVector",
         [str(v) for v in mvs.get_StateVariableTuple()] +
-        ["rh"]
+        ["rh","fVegSoil"]
     )
 
 
@@ -239,17 +239,35 @@ def make_iterator_sym(
     # the order later in the symbolic formulation....
     V_arr = np.array(
         [V_init.__getattribute__(str(v)) for v in sv] +
-        [V_init.rh]
-    ).reshape(n + 1, 1)  # reshaping is neccessary for matmul (the @ in B @ X)
+        [V_init.rh, V_init.fVegSoil]
+    ).reshape(n + 2, 1)  # reshaping is neccessary for matmul (the @ in B @ X)
 
     # numOutFluxesBySymbol={
     #    k:numfunc(expr_cont,delta_t_val=delta_t_val)
     #    for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
     # }
     numOutFluxesBySymbol = {
-        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict)
-
+        k: gh.numfunc(
+            expr_cont, 
+            mvs,
+            delta_t_val=delta_t_val,
+            par_dict=par_dict,
+            func_dict=func_dict
+        )
         for k, expr_cont in mvs.get_OutFluxesBySymbol().items()
+    }
+    v2sfl = {
+        k:v for k,v in mvs.get_InternalFluxesBySymbol().items() 
+        if k[0] in map(Symbol,["c_leaf","c_wood","c_root"])
+    }
+    numv2sfl = {
+        k: gh.numfunc(
+            expr_cont,
+            mvs,delta_t_val=delta_t_val,
+            par_dict=par_dict,
+            func_dict=func_dict
+        )
+        for k, expr_cont in v2sfl.items()
     }
 
     def f(it, V):
@@ -259,16 +277,24 @@ def make_iterator_sym(
         X_new = X + b + B @ X
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
 
-        l = [
-            numOutFluxesBySymbol[Symbol(k)](it, *X.reshape(n, ))
-            for k in ["c_DPM", "c_RPM", "c_BIO", "c_HUM"]
-            if Symbol(k) in numOutFluxesBySymbol.keys()
-        ]
-        rh = np.array(l).sum()
+        rh=np.array([
+            f(it, *X.reshape(n, ))
+            for k,f in numOutFluxesBySymbol.items()
+            if str(k) in ["c_DPM", "c_RPM", "c_BIO", "c_HUM"]
+        ]).sum()
+        fVegSoil=np.array(
+            [
+                f(it, *(X.reshape(n, )))
+                for f in numv2sfl.values()
+            ]
+        ).sum()
+
+
         V_new = np.concatenate(
             (
                 X_new.reshape(n,1),
-                np.array([rh]).reshape(1,1)
+                np.array([rh]).reshape(1,1),
+                np.array([fVegSoil]).reshape(1,1)
             )
             , axis=0
         )
@@ -290,7 +316,6 @@ def make_param2res_sym(
         [Symbol(str(mvs.get_TimeSymbol()))] +
         list(mvs.get_StateVariableTuple())
     )
-    print(model_par_dict_keys)
     StartVector = make_StartVector(mvs)
 
     # Time dependent driver function does not change with the estimated parameters
@@ -318,7 +343,8 @@ def make_param2res_sym(
             c_BIO=epa.c_BIO_0,
             c_HUM=cpa.c_soil_0 - (epa.c_DPM_0 + epa.c_RPM_0 + epa.c_BIO_0),
 
-            rh=cpa.rh_0
+            rh=cpa.rh_0,
+            fVegSoil=cpa.fVegSoil_0
         )
 
         # Parameter dictionary for the iterator
@@ -348,10 +374,14 @@ def make_param2res_sym(
         #
         # Note: check if TRENDY months are like this...
         # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        
+        # fixme mm:
+        # - We want monthly averages instead of the presently implemented last value of the month
+        # - We want to compute the flux from Veg 2 Soil.
         sols = []
         dpm = 30  #
         n = len(V_init)
-        for m in range(cpa.number_of_months):
+        for m in range(cpa.nyears*12):
             # dpm = days_per_month[ m % 12]
             mrh = 0
             for d in range(int(dpm / delta_t_val)):
@@ -363,21 +393,46 @@ def make_param2res_sym(
             o = Observables(
                 cVeg=float(V.c_leaf + V.c_wood + V.c_root),
                 cSoil=float(V.c_DPM + V.c_RPM + V.c_BIO + V.c_HUM),
-                rh=V.rh / seconds_per_day  # the data is per second while the time units for the iterator refer to days
-
-                ########### Ask Markus here
-                # fVegSoil =  #Total carbon mass from vegetation directly into the soil
+                rh=V.rh,
+                fVegSoil=V.fVegSoil #Total carbon mass from vegetation directly into the soil
             )
             sols.append(o)
 
-        sol = np.stack(sols)
+        # quick conversion of the list of observables into an  Observables tuple of arrays 
+        def arr(field):
+            n=len(sols)
+            a=np.zeros(n)
+            for i in range(n):
+                a[i]=sols[i].__getattribute__(field)
+            return a
+
+        return Observables(*( arr(field) for field in Observables._fields))
+        # sol = np.stack(sols)
         # convert to yearly output if necessary (the monthly pool data looks very "yearly")
         # sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])
         # for i in range(sol.shape[1]):
         #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
         # sol=sol_yr
-        return sol
+        # return sol
 
     return param2res
 
-# Observables = namedtuple('observables_monthly', ["cVeg", "cSoil", "rh", "fVegSoil"]) # all monthly
+def make_weighted_cost_func(
+        obs: Observables
+) -> Callable[[Observables], np.float64]:
+    # first unpack the observation array into its parts
+    # cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
+    def costfunction(out_simu: Observables) -> np.float64:
+        # fixme
+        # loop over the fields and move to general_helpers
+
+        J_obj1 = np.mean((out_simu.cVeg - obs.cVeg) ** 2) / (2 * np.var(obs.cVeg))
+        J_obj2 = np.mean((out_simu.cSoil - obs.cSoil) ** 2) / (2 * np.var(obs.cSoil))
+
+        J_obj3 = np.mean((out_simu.rh - obs.rh) ** 2) / (2 * np.var(obs.rh))
+        J_obj4 = np.mean((out_simu.fVegSoil - obs.fVegSoil) ** 2) / (2 * np.var(obs.fVegSoil))
+
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)
+        return J_new
+
+    return costfunction
