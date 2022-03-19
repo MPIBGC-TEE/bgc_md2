@@ -414,6 +414,6 @@ def make_weighted_cost_func(
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*300
+        return J_new*400
     return costfunction
 
