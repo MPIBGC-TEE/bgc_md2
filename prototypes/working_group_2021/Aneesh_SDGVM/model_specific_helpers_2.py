@@ -52,7 +52,7 @@ EstimatedParameters = namedtuple(
          'r_C_belowmetlit2soil_microbe',
          'r_C_belowstrlit2slowsom',
          'r_C_belowstrlit2soil_microbe',
-         'r_C_leached',
+         #'r_C_leached',
          'r_C_leaf2abvmetlit',
          'r_C_passsom2soil_microbe',
          'r_C_root2belowmetlit',
@@ -68,7 +68,7 @@ EstimatedParameters = namedtuple(
          'r_C_abvmetlit_rh',
          'r_C_belowstrlit_rh',
          'r_C_belowmetlit_rh',
-         #'r_C_surface_microbe_rh',
+         'r_C_surface_microbe_rh',
          'r_C_slowsom_rh',
          'r_C_passsom_rh',
          'r_C_soil_microbe_rh',
@@ -165,7 +165,7 @@ def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
-        return (dvs.npp[month])* 60*60*24#* 86400
+        return (dvs.npp[month])
 
     return func
 
@@ -308,7 +308,7 @@ def make_param2res_sym(
             cRoot=cRoots,
             cLitter=cLitters,
             cSoil=cSoils,
-            rh=rhs/(60*60*24)
+            rh=rhs#/(60*60*24)
         )
             
         
@@ -414,6 +414,6 @@ def make_weighted_cost_func(
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*50.0
+        return J_new*300
     return costfunction
 

@@ -81,12 +81,12 @@ sym_dict = {
         'r_C_soil_microbe2passsom':'',
         'r_C_slowsom2passsom':'',
         'r_C_passsom2soil_microbe':'',
-        'r_C_leached': '',
+        #'r_C_leached': '',
         'r_C_abvstrlit_rh':'',
         'r_C_abvmetlit_rh':'',
         'r_C_belowstrlit_rh':'',
         'r_C_belowmetlit_rh':'',
-        #'r_C_surface_microbe_rh':'',
+        'r_C_surface_microbe_rh':'',
         'r_C_slowsom_rh':'',
         'r_C_passsom_rh':'',
         'r_C_soil_microbe_rh' :''
@@ -134,7 +134,7 @@ mvs = CMTVS(
                 C_abvmetlit: r_C_abvmetlit_rh * C_abvmetlit, 
                 C_belowstrlit: r_C_belowstrlit_rh * C_belowstrlit, 
                 C_belowmetlit: r_C_belowmetlit_rh * C_belowmetlit, 
-                C_surface_microbe: r_C_leached* C_surface_microbe, 
+                C_surface_microbe: r_C_surface_microbe_rh * C_surface_microbe,  #r_C_leached* C_surface_microbe, 
                 C_soil_microbe: r_C_soil_microbe_rh * C_soil_microbe, 
                 C_slowsom: r_C_slowsom_rh * C_slowsom, 
                 C_passsom: r_C_passsom_rh * C_passsom
