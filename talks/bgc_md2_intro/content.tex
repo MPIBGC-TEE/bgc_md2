@@ -81,14 +81,15 @@
   \caption{Suggested methods automatically created by a graph library}
   \end{figure}
   \note{
+  \begin{tiny}
     \begin{enumerate}
-    %\item
-    %The figure shows IPythons options for callable methods on a variable called \texttt{mvs} 
+    \item
+    The figure shows IPythons options for callable methods on a variable called \texttt{mvs} 
     \item
     This is standard for mehtods of a python object. 
     In this case the methods are automatically created and added by a graphalgorithm that computes 
     which variables can be computed form the set of provided model properties.
-    %\item 
+    \item 
     This has far reaching consequences.
     Models can be compared with respect to all variables in the "convex hull under computability', 
     with respect to all \emph{computable variables} not just the ones provided in the data base record.
@@ -100,7 +101,11 @@
     There is no need to force the user into a rigid record format.
     Another consequence is that records do not have to be complete. The framework accepts all information
     about a model and (computes what it can do with it).
+    \item
+    The set of computable properties can be used to query the database (e.g. which models have a vegetation part)
+    \dots
     \end{enumerate}
+  \end{tiny}
   }
 \end{frame}
 
@@ -114,7 +119,7 @@
         e(b),
         f(b)
   and the target variable {\color{red}B}
-  (e.g \texttt{CompartmentalMatrix}),
+  e.g. \texttt{CompartmentalMatrix},
   The algorithm computes all possible combinations
   and paths from which {\color{red}B} can be computed.
   \end{column}
@@ -127,6 +132,16 @@
        \end{center}
   \end{column}
 \end{columns}
+  \note{
+    \begin{enumerate}
+    \item
+    It is not only possible to compute what can be computed from a given model description,
+    It is also possible to do the opposite and ask the algorithm what missing information has to be 
+    provided to compute a target property of a  model.
+    \item
+    The algorithm finds a path (a combination of functions that can be applied recursively) and automatically computes intermediate results. 
+    \end{enumerate}
+  }
 \end{frame}
 
 \begin{frame}
