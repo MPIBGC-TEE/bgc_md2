@@ -1,0 +1,239 @@
+
+\usepackage[utf8]{inputenc}
+\usepackage[round]{natbib}
+%Information to be included in the title page:
+\title{The Biogeochemical Model Database}
+\subtitle{A set of python packages for Model intercomparison}
+\author{Markus Müller}
+%\institute{Overleaf}
+\date{11-16-2021}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\begin{document}
+\begin{frame}
+\frametitle{The Biogeochemical Model Database \texttt{bgc\_md2} }
+	\includegraphics[width=\textwidth]{ModelTable.png}
+\note{
+	\begin{enumerate}
+	\item
+	bgc\_md2 is an open source python package availabe on GitHub, developed at the Max-Planck-Institut for BioGeoChemistry in Jena and more recently  in Yiqi Luo's Ecolab at NAU in Flagstaff
+	\item
+	A set of libraries that can be used in other python scripts or interactively (jupyter or IPython )
+	The picture shows a jupiter widget showing a table of models. The orange buttons can be clicked to 
+	expand or collape a more detailed view of the particular model.
+	\item
+	$>$ 30 published vegetation, soil or ecosystems models in a format that
+	for symbolic and numeric computations
+	\item
+	A set of special datatypes that describe components of the models and functions that operate on these datatypes
+	\item 
+	A userinterface that uses a graph library to compute what is computable and can be used for comparisons.
+	\end{enumerate}
+}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Analysis with symbolic tools \dots}
+	\includegraphics[width=\textwidth]{mvsTabScreen.png}
+	\note{
+	\begin{enumerate}
+	\item 
+	the structure (graph both in the mathematical and visual sense) can be derived from the symbolic description
+	\item other properties are flux equations the compartmental matrix
+
+	\end{enumerate}
+	}
+\end{frame}
+
+\begin{frame}
+	\frametitle{\dots or numerically }
+	\includegraphics[width=\textwidth]{DataAssimilation.png}
+	\note{
+	\begin{enumerate}
+	\item 
+	the symbolic model description can be parameterized and transformed into a numeric model
+	\item The picture shows the data assimilation result for the above model using trendy data.
+
+	\end{enumerate}
+	}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Diagnostic Variables implemented once, available for all models}
+	\begin{figure}
+	\includegraphics[width=\textwidth]{TracebilityAnalysis.png}
+	\caption{pool content + Tracebility Analysis: carbon storage potential , carbon storage capacity and residence time}
+	\end{figure}
+	\note{
+	\begin{enumerate}
+	\item 
+	Diagnostic Variables can be computed for any model  
+	\item The picture shows the Leaf pool
+
+	\end{enumerate}
+	}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Userinterface using computability graphs}
+  \begin{figure}
+  \includegraphics[height=0.8\textheight]{mvsTabScreenBig.png}
+  \caption{Suggested methods automatically created by a graph library}
+  \end{figure}
+  \note{
+    \begin{enumerate}
+    %\item
+    %The figure shows IPythons options for callable methods on a variable called \texttt{mvs} 
+    \item
+    This is standard for mehtods of a python object. 
+    In this case the methods are automatically created and added by a graphalgorithm that computes 
+    which variables can be computed form the set of provided model properties.
+    %\item 
+    This has far reaching consequences.
+    Models can be compared with respect to all variables in the "convex hull under computability', 
+    with respect to all \emph{computable variables} not just the ones provided in the data base record.
+    \item
+    As an example the matrix formulation of models A and B  can be compared even if neither A nor B defines
+    the matrix as long as it can be computed from other variable (in this case the internal and outfluxes and an ordering of the statevariables)
+    \item
+    An obvious consequence is that the information about a model can be provided in different ways.
+    There is no need to force the user into a rigid record format.
+    Another consequence is that records do not have to be complete. The framework accepts all information
+    about a model and (computes what it can do with it).
+    \end{enumerate}
+  }
+\end{frame}
+
+\begin{frame}
+\frametitle{Finding what's missing}
+\begin{columns}
+  \begin{column}{0.3\textwidth}
+  given a set of functions:\\
+        a(i), b(c,d), b(e,f), c(b),
+        d(b), d(g,h),
+        e(b),
+        f(b)
+  and the target variable {\color{red}B}
+  (e.g \texttt{CompartmentalMatrix}),
+  The algorithm computes all possible combinations
+  and paths from which {\color{red}B} can be computed.
+  \end{column}
+  \begin{column}{0.7\textwidth}
+      \begin{center}
+      \begin{figure}
+  	\includegraphics[width=\textwidth]{StartNodes.pdf}
+	%\caption{The computability Graph for variable B (e.g. \texttt{CompartmentalMatrix}}
+      \end{figure}
+       \end{center}
+  \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}
+\frametitle{Internal Structure of \texttt{bgc\_md2}}
+\begin{tikzpicture}[sibling distance=12em,
+  every node/.style = {shape=rectangle, rounded corners,
+    draw, align=center,
+    top color=white, bottom color=blue!20}]]
+  \tikzstyle{level 1}=[sibling distance=14em]
+  \tikzstyle{level 2}=[sibling distance=5em]
+  \tikzstyle{level 3}=[sibling distance=3em]
+  \tikzstyle{level 4}=[sibling distance=1.75em]
+    \node {% <- this 'right of' is inherited; how to avoid?
+    \begin{tikzpicture}[anchor=center]
+      \node {\texttt{bgc\_md2}
+      %\draw (0,0) -- (0,1);
+      %\node[fill] at (0,.5) {};
+      } 
+      child{ node {models}
+	 child{ node{rothC}
+	    child{node {Fluxes}}
+	    child{node {Pools}}
+	    child{node {\dots}}
+	}
+      	child{ node {Wang}
+	%    child{node {Fluxes}}
+	%    child{node {Pools}}
+	%    child{node {\dots}}
+	}
+      	child{ node {\dots}}
+      }
+      child{ node {computers}
+	 child{node {Matrix(Fluxes)}}
+	 %child{node {Fluxes(Matrix,Pools)}}
+	 child{node {\dots}}
+      };
+    \end{tikzpicture}
+    };
+\end{tikzpicture}
+\note{
+\begin{enumerate}
+  \item
+  \texttt{bgc\_md2} is not just a collection of models, described as sets of varible of special type like fluxes or matrice, but also 
+  a collection of functions whose arguments and return values have these types.
+  These functions are here called \texttt{computers} and use python type annotations.
+  The computability graph used in the user interface and queries is derived from the 
+  annotations of a set of functions.
+  The set of properties (defined by the types) is growing as well as the functions connecting them.
+\end{enumerate}
+}
+\end{frame}
+\begin{frame}
+\frametitle{Database records are python modules}
+  \includegraphics[width=\textwidth]{source.py.png}
+  \note{
+  \begin{enumerate}
+    \item
+    The picture shows the screen shot of the source code of the above model using sympy and some datatypes provided by \texttt{bgc\_md2}  .
+    \item
+    The entries of the database dont even have to be complete models. They are implemented in normal python and 
+    have in common that they define a set of model properties and a set of functions to connect them.
+    There is no special format necessary. 
+    The creation of the symbolic formulation can be automated bye all means available in python.
+    Extra information can but does not have to be provided.
+  \end{enumerate}
+}
+\end{frame}
+\begin{frame}
+\frametitle{Relation to other Python Packages}
+\begin{tikzpicture}[sibling distance=15em,
+  every node/.style = {shape=rectangle, rounded corners,
+    draw, align=center,
+    top color=white, bottom color=blue!20}]]
+    \node {
+    	\texttt{bgc\_md2}
+    }
+    child { node {\texttt{ComputabilityGraphs}} }
+	child { node[sibling distance=5em]{CompartmentalSystems}
+	child { node (LAPM){\texttt{LAPM}} }
+	%child [level distance=10em]{ node [style ={top color=white,bottom color=black!10}](SymPy){\texttt{SymPy}} }
+	%child [level distance=10em]{ node [style ={top color=white,bottom color=black!10}](SymPy){\texttt{nupy}} }
+   };
+	%\draw[->] (LAPM) -- (SymPy); 
+\end{tikzpicture}
+  \note{
+  \begin{enumerate}
+    \item
+    The graph computation is outsourced into our package \texttt{ComputabilityGraphs} 
+    \item
+	    Many of the advanced diagnostic variables (age and transittime distributions) are computed using our other packages \texttt{LAPM} and \texttt{CompartmentalSystems} for which \texttt{bgc\_md2} acts as interface.
+  \end{enumerate}
+}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Applications}
+	\begin{figure}
+	\includegraphics[height=0.5\textheight]{atmosphere_nonlinear.pdf}
+		\caption{age distribuition of a pool as function of time}
+	\end{figure}
+	\begin{thebibliography}{}
+	\bibitem[Metzler, Müller, Sierra, 2018]{Metzler2018PNAS}
+	Metzler, H., M{\"u}ller, M., and Sierra, C. (2018).
+	\newblock Transit-time and age distributions for nonlinear time-dependent
+	  compartmental systems.
+	\newblock {\em Proceedings of the National Academy of Sciences}, 115:201705296.
+	\end{thebibliography}
+\end{frame}
+
+\end{document}
