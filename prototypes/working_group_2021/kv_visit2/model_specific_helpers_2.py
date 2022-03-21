@@ -24,7 +24,7 @@ Observables = namedtuple(
 )
 OrgDrivers=namedtuple(
     "OrgDrivers",
-    ["gpp", "mrso", "tas"]
+    ["gpp", "mrso", "tas", "xi"]
 )    
 Drivers=namedtuple(
     "Drivers",
@@ -41,6 +41,7 @@ Constants = namedtuple(
         "cSoil_0",
         "cVeg_0",
         "npp_0",
+        "xi_0",
         "rh_0",
         "ra_0",
         "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
@@ -61,6 +62,7 @@ EstimatedParameters = namedtuple(
         "T_0",
         "E",
         "KM",
+        "env_modifier",
         #"r_C_leaf_rh",
         #"r_C_wood_rh",
         #"r_C_root_rh",
@@ -132,7 +134,8 @@ def get_example_site_vars(dataPath):
     dvs=Drivers(
         npp=odvs.gpp-obss.ra,
         mrso=odvs.mrso,
-        tas=odvs.tas
+        tas=odvs.tas,
+        xi=odvs.xi
     )
     return (obss, dvs)
 
@@ -147,7 +150,9 @@ def make_npp_func(dvs):
 
 def make_xi_func(dvs):
     def func(day):
-        return 1.0 # preliminary fake for lack of better data... 
+        month=gh.day_2_month_index(day)
+        return (dvs.xi[month])
+        # return 1.0 # preliminary fake for lack of better data... 
     return func
 
 
@@ -166,6 +171,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
         "T_0": epa.T_0,
         "E": epa.E,
         "KM": epa.KM,
+        "env_modifier": epa.env_modifier,
         #"r_C_leaf_rh": 0,
         #"r_C_wood_rh": 0,
         #"r_C_root_rh": 0,
@@ -388,8 +394,10 @@ def make_param2res_sym(
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
         def xi_func(day):
-            return 1.0 # preliminary fake for lack of better data... 
-    
+            month=gh.day_2_month_index(day)
+            return dvs.xi[month]
+            # return 1.0 # preliminary fake for lack of better data... 
+        
         func_dict={
             'NPP':npp_func,
              'xi':xi_func
