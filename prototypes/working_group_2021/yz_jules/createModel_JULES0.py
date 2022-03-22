@@ -126,8 +126,8 @@ sym_dict={
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
 
-    'mrso': 'Total Soil Moisture Content, in kg m-2',
-    'tsl': 'Temperature of Soil - layer, four layers, in K',
+    'mrsos': 'Moisture in top soil (10cm) layer, in kg m-2',
+    'tsl': 'Temperature of Soil - top layer, four layers, in K',
     'Mw': 'soil moisture contetnt at the wilting point',
     'beta_leaf': 'NPP allocation fraction to leaf',
     'beta_wood': 'NPP allocation fraction to wood',
@@ -356,7 +356,7 @@ Observables = namedtuple(
 # Driver data streams on TRENDY server
 Drivers = namedtuple(
     "drivers",
-    ["npp","mrso", "tsl","landCoverFrac"]
+    ["npp","mrsos", "tsl","landCoverFrac"]
 )
 
 # when downloading data make sure model names match TRENDY server names:
@@ -393,33 +393,40 @@ import json
 # Define function to download, scale, map TRENDY data
 def get_example_site_vars(dataPath):
     # Define single geospatial cell from (3840, 144, 192)
-    s = slice(None, None, None)  # this is the same as :
-    t = s, 70, 160  # a site in South America
+    slayer = slice(None, None, None)  # this is the same as :
+    slat = 120
+    slon = 50
+    t = slayer, slat, slon  # a site in South America
 
     # Define function to select geospatial cell and scale data
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them 
+        # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
-        
-        if vn in ["gpp", "rh", "ra","f_veg2soil"]: # (3840, 144, 192), kg m-2 s-1
-                                                   # f_veg2soil: Total carbon mass from vegetation directly into the soil
+
+        if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
+            # f_veg2soil: Total carbon mass from vegetation directly into the soil
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return ds.variables[vn][t] * 86400 # convert from kg/m2/s to kg/m2/day
-        elif vn in ["npp"]:
-            print("reading ", vn, ", size is ", ds.variables["npp_nlim"].shape)
-            return ds.variables["npp_nlim"][t] * 86400
-        elif vn in ["tsl"]: # Temperature of Soil - layer, 192x144x4 (depth) x3840, 'K'
+            return ds.variables[vn][t] * 86400  # convert from kg/m2/s to kg/m2/day
+        elif vn in ["tsl"]:  # Temperature of Soil - layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
-            tmp = np.mean(ds.variables[vn], axis = 1) 
-            return  tmp[t] # average soil temperature at different depth
+            tmp = ds.variables[vn][:, 0, slat, slon]
+            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
+            return tmp  # average soil temperature at different depth
             print("converted size is ", tmp.shape)
-        elif vn in ["landCoverFrac"]: # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
+        elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
-            tmp = np.sum(ds.variables[vn][:, 0:13, :, :], axis = 1)
+            # from IPython import embed;embed()
+            var = ds.variables[vn]
+            sh = var.shape
+            tmp = np.sum(var[:, 0:13, slat, slon], axis=1)
             print("converted size is ", tmp.shape)
-            return tmp[t]  # sum the vegetation coverages           
+            #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
+            print("Forest cover (t=0) is ", np.sum(var[1, 0:5, slat, slon]))
+            print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
+            print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
+            return tmp  # sum the vegetation coverages
         else:
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
             return ds.variables[vn][t]
@@ -427,18 +434,63 @@ def get_example_site_vars(dataPath):
     # Link symbols and data:
 
     # Create file names (single step if files similarly named)
-    o_names = [(f, "JULES-ES-1p0_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names = [(f, "JULES-ES-1p0_S2_{}.nc".format(f)) for f in Drivers._fields]
+
+    file_name_from_var_name = {
+       "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
+       **{
+            vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
+            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
+       }
+    }
+    #d_name2varname_in_file = {
+    #    "npp":'npp_nlim',
+    #    **{
+    #         vn: vn
+    #         for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
+    #    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
+    #    **{
+    #        vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
+    #        for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
+    #    }
+    #}
+    d_name2varname_in_file = {
+        "npp": 'npp_nlim',
+        **{
+            vn: vn
+            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
+        }
+
+    }
+
+    o_tuples = [
+        (
+            d_name2varname_in_file[f],
+            file_name_from_var_name[d_name2varname_in_file[f]]
+        )
+        for f in Observables._fields
+    ]
+
+    d_tuples = [
+        (
+            d_name2varname_in_file[f],
+            file_name_from_var_name[d_name2varname_in_file[f]]
+        )
+        for f in Drivers._fields
+    ]
 
     # Link symbols and data for observables/drivers
-    return (Observables(*map(f, o_names)), Drivers(*map(f, d_names)))
+    # print(o_tuples)
+    return (
+        Observables(*map(f, o_tuples)),
+        Drivers(*map(f, d_tuples))
+    )
 
 
 # call function to link symbols and data
 svs, dvs = get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # look at data
-svs, dvs
+# svs, dvs
 # -
 
 # ## Create Symbols for $\xi$, $K$, and $A$ (No Edits)
@@ -560,28 +612,29 @@ ParameterValues = namedtuple(
 epa0 = ParameterValues( ## need to modify!!
     beta_leaf = 1/3,
     beta_wood = 1/3,
-    f_leaf2DPM=0.1,
-    f_wood2DPM=0.01,
-    f_root2DPM=0.001,
-    f_DPM2BIO =0.1,
-    f_DPM2HUM =0.01,
-    f_RPM2BIO =0.001,
-    f_RPM2HUM =0.1,
-    f_BIO2HUM =0.01,
-    f_HUM2BIO =0.001,
-    k_leaf = 1 / (365 * 2),
-    k_wood=1 / (365 * 60),
-    k_root=1 / (365 * 30),
-    k_DPM=1 / (365 * 60),
-    k_RPM=1 / (365 * 30),
-    k_BIO=1 / (365 * 30),
-    k_HUM=1 / (365 * 200),
+    f_leaf2DPM = 0.33,
+    f_wood2DPM = 0.33,
+    f_root2DPM = 0.33,
+    f_DPM2BIO = 0.46*0.99,
+    f_DPM2HUM = 0.54*0.99,
+    f_RPM2BIO = 0.46*0.99,
+    f_RPM2HUM = 0.54*0.99,
+    f_BIO2HUM = 0.01,
+    f_HUM2BIO = 0.001,
+    k_leaf = 1 / (365 * 4), # day -1
+    k_wood=1 / (365 * 100),
+    k_root=1 / (365 * 4),
+    k_DPM= 0.0278,  # 1 / (365 * 60), # 3.22 * 10**(-7) s-1 ## this value is from Clark et al 2011
+    k_RPM= 8.3376 * 10 ** (-4), #1 / (365 * 30), # 9.65 * 10**(-9) s-1
+    k_BIO= 0.0018, #1 / (365 * 30), # 2.12 * 10**(-8) s-1
+    k_HUM= 5.5555 * 10 ** (-5), #1 / (365 * 200), # 6.43 *10(-10) s-1
 
-    c_leaf0=0,
-    c_wood0=0,
-    c_RPM0=0,
-    c_DPM0=0,
-    c_BIO0=0,
+    c_leaf0 = svs.cVeg[0] *0.2, #/ 3,  # set inital pool values to svs values
+    c_wood0 = svs.cVeg[0] *0.6, # / 3,
+    c_DPM0 = svs.cSoil[0] *0.0025,
+    c_RPM0 = svs.cSoil[0] *0.22,
+    c_BIO0 = svs.cSoil[0] *0.02,
+
     Mw=0.01
 )
 
@@ -603,9 +656,9 @@ old_par_dict = {
     'f_c_root_2_c_DPM': epa0.f_root2DPM,  
     'f_c_root_2_c_RPM': 1 - epa0.f_root2DPM,
     'f_c_DPM_2_c_BIO': epa0.f_DPM2BIO,
-    'f_c_DPM_2_c_HUM': (1 - epa0.f_DPM2BIO),
+    'f_c_DPM_2_c_HUM': (0.9 - epa0.f_DPM2BIO), # cannot be 1-f_DPM2BIO because of RH
     'f_c_RPM_2_c_BIO': epa0.f_RPM2BIO ,
-    'f_c_RPM_2_c_HUM': (1 - epa0.f_RPM2BIO),
+    'f_c_RPM_2_c_HUM': (0.9 - epa0.f_RPM2BIO),
     'f_c_BIO_2_c_HUM': epa0.f_BIO2HUM ,
     'f_c_HUM_2_c_BIO': epa0.f_HUM2BIO
 }
@@ -613,7 +666,7 @@ old_par_dict = {
 # Define allocation parameters to be optimized
 par_dict = {
     'beta_leaf': epa0.beta_leaf,
-    'beta_root': epa0.beta_wood,
+    'beta_wood': epa0.beta_wood,
 }
 
 # translate rates from previous parameters to create dictionary of rates to optimize
@@ -622,6 +675,14 @@ par_dict.update(
 )
 par_dict
 
+# -
+
+(c_leaf_0=0.6817478392908138, c_wood_0=2.235037912121442, c_DPM_0=0.6150228959577384, c_RPM_0=3.4206963428475654, c_BIO_0=0.2806084608206477, beta_leaf=0.3615681692392115, beta_wood=0.34426826587002796, Mw=0.08409847267944814, Ms=512.0535665550946, r_c_DPM_rh=0.013779681470873023, r_c_RPM_rh=0.00019419761042855038, r_c_BIO_rh=0.009931040040128954, r_c_HUM_rh=0.0001119936491921345, r_c_leaf_2_c_DPM=0.0009914696627915344, r_c_leaf_2_c_RPM=0.0004662348578176721, r_c_wood_2_c_DPM=4.731833496691258e-05, r_c_wood_2_c_RPM=6.0464848575904364e-05, r_c_root_2_c_DPM=0.0005809097431403182, r_c_root_2_c_RPM=0.000708766072775527, r_c_DPM_2_c_BIO=0.04904413404986645, r_c_DPM_2_c_HUM=0.03038077001366149, r_c_RPM_2_c_BIO=0.0014230350391730563, r_c_RPM_2_c_HUM=0.0010688883979771174, r_c_BIO_2_c_HUM=2.1470079326731046e-05, r_c_HUM_2_c_BIO=2.813025203923101e-07)
+
+0.000226027397260274 + 0.000458904109589041 + 9.04109589041096e-6 + 1.83561643835616e-5 + 0.000226027397260274 + 0.000458904109589041
+
+# +
+########### Current usage of this script ends here...
 # -
 
 import test_helpers as th
@@ -635,17 +696,17 @@ svs_0
 
 # + codehighlighter=[[5, 17], [5, 17]]
 # Create vector of initial pool values
-svs_0 = observables(*map(lambda v: v[0], svs))
+svs_0 = Observables(*map(lambda v: v[0], svs))
 
 # Assign values to initial pools using InitialPools named tuple
 V_init = InitialPools(
-    c_leaf_0=svs_0.cVeg / 3,  # set inital pool values to svs values
-    c_root_0=svs_0.cVeg / 3,  # you can set numerical values here directly as well
-    c_wood_0=svs_0.cVeg / 3,
-    c_DPM_0=svs_0.cSoil / 4,
-    c_RPM_0=svs_0.cSoil / 4,
-    c_BIO_0=svs_0.cSoil / 4,
-    c_HUM_0=svs_0.cSoil / 4
+    c_leaf_0=svs_0.cVeg * 0.25,  # set inital pool values to svs values
+    c_root_0=svs_0.cVeg * 0.25,  # you can set numerical values here directly as well
+    c_wood_0=svs_0.cVeg * 0.5,
+    c_DPM_0=svs_0.cSoil * 0.02,
+    c_RPM_0=svs_0.cSoil * 0.22,
+    c_BIO_0=svs_0.cSoil * 0.1,
+    c_HUM_0=svs_0.cSoil * 0.66
 )
 V_init._asdict()  # print - everything should have a numeric value
 # -
@@ -832,17 +893,17 @@ def npp_func(day):
 
 ########### Ask Markus here
 # Build environmental scaler function  ############### day or monthly, monthly inputs here, Mw is the to-be-estimated parameter 
-def xi_func(tsl, Mw, mrso, landCoverFrac, day):
+def xi_func(tsl, Mw, mrsos, landCoverFrac, day):
     FT = 2.0 ** ((tsl - 298.15) / 10)  # temperature rate modifier
     FV = 0.6 + 0.4 * (1 - landCoverFrac / 100)  # effect of vegetation cover
     # Mw is soil moisture at wilting point as a fraction of saturation
     S0 = 0.5* (1 + Mw)  # optimum soil moisture
     Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
     if S0 > Smin:
-        FS = 1 - 0.8 * (mrso - S0)  # effect of soil moisture
-    if (Smin < mrso) and (mrso <= S0):
-        FS = 0.2 + 0.8 * (mrso - Smin) / (S0 - Smin)
-    if mrso <= Smin:
+        FS = 1 - 0.8 * (mrsos - S0)  # effect of soil moisture
+    if (Smin < mrsos) and (mrsos <= S0):
+        FS = 0.2 + 0.8 * (mrsos - Smin) / (S0 - Smin)
+    if mrsos <= Smin:
         FS = 0.2
     rh_factor = FT * FV * FS
     return rh_factor # 1.0     # Set to 1 if no scaler implemented 
