@@ -23,7 +23,7 @@ Observables = namedtuple(
 # Driver data streams on TRENDY server
 Drivers = namedtuple(
     "Drivers",
-    ["npp", "mrso", "tsl", "landCoverFrac"]
+    ["npp", "mrsos", "tsl", "landCoverFrac"]
 )
 
 Constants = namedtuple(
@@ -84,8 +84,8 @@ def download_my_TRENDY_output(conf_dict):
 def get_example_site_vars(dataPath):
     # Define single geospatial cell from (3840, 144, 192)
     slayer = slice(None, None, None)  # this is the same as :
-    slat = 70
-    slon = 160
+    slat = 120
+    slon = 50
     t = slayer, slat, slon  # a site in South America
 
     # Define function to select geospatial cell and scale data
@@ -95,13 +95,14 @@ def get_example_site_vars(dataPath):
         # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
 
-        if vn in ["npp_nlim", "gpp", "rh", "ra", "f_veg2soil"]:  # (3840, 144, 192), kg m-2 s-1
+        if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
             # f_veg2soil: Total carbon mass from vegetation directly into the soil
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
             return ds.variables[vn][t] * 86400  # convert from kg/m2/s to kg/m2/day
-        elif vn in ["tsl"]:  # Temperature of Soil - layer, 192x144x4 (depth) x3840, 'K'
+        elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
-            tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
+            tmp = ds.variables[vn][:, 0, slat, slon]
+            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
             return tmp  # average soil temperature at different depth
             print("converted size is ", tmp.shape)
         elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
@@ -111,6 +112,10 @@ def get_example_site_vars(dataPath):
             sh = var.shape
             tmp = np.sum(var[:, 0:13, slat, slon], axis=1)
             print("converted size is ", tmp.shape)
+            #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
+            print("Forest cover (t=0) is ", np.sum(var[1, 0:5, slat, slon]))
+            print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
+            print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
             return tmp  # sum the vegetation coverages
         else:
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
@@ -124,7 +129,7 @@ def get_example_site_vars(dataPath):
        "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
        **{
             vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
-            for vn in [ "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
+            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
        }
     }
     #d_name2varname_in_file = {
@@ -142,7 +147,112 @@ def get_example_site_vars(dataPath):
         "npp": 'npp_nlim',
         **{
             vn: vn
-            for vn in ["fVegSoil", "mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
+            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
+        }
+
+    }
+
+    o_tuples = [
+        (
+            d_name2varname_in_file[f],
+            file_name_from_var_name[d_name2varname_in_file[f]]
+        )
+        for f in Observables._fields
+    ]
+
+    d_tuples = [
+        (
+            d_name2varname_in_file[f],
+            file_name_from_var_name[d_name2varname_in_file[f]]
+        )
+        for f in Drivers._fields
+    ]
+
+    # Link symbols and data for observables/drivers
+    # print(o_tuples)
+    return (
+        Observables(*map(f, o_tuples)),
+        Drivers(*map(f, d_tuples))
+    )
+
+
+def get_global_mean_vars(dataPath):
+    # Define single geospatial cell from (3840, 144, 192)
+    #slayer = slice(None, None, None)  # this is the same as :
+    #slat = 120
+    #slon = 50
+    #t = slayer, slat, slon  # a site in South America
+ 
+    
+    # Define function to select geospatial cell and scale data
+    def f(tup):
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them
+        ds = nc.Dataset(str(path))
+        lats = ds.variables["latitude"]
+        lons = ds.variables["longitude"]
+
+        if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
+            # f_veg2soil: Total carbon mass from vegetation directly into the soil
+            print("reading ", vn, ", size is ", ds.variables[vn].shape)
+            return gh.global_mean_JULES(lats, lons, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
+        
+        elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
+            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
+            tmp = ds.variables[vn][:, 0, :, :]
+            print("converted size is ", tmp.shape)
+            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
+            return gh.global_mean_JULES(lats, lons, tmp)  # average soil temperature at different depth
+            
+    
+        elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
+            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
+            # from IPython import embed;embed()
+            var = ds.variables[vn]
+            sh = var.shape
+            tmp = np.zeros(shape = var[:, 0, :, :].shape)
+            print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
+            for i in range(13):
+                tmp = tmp + var[:, i, :, :]
+                # print("converted size is ", tmp.shape)
+            #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
+            # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
+            # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
+            # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
+            return gh.global_mean_JULES(lats, lons, tmp)  # sum the vegetation coverages
+        
+        else:
+            print("reading ", vn, ", size is ", ds.variables[vn].shape)
+            return gh.global_mean_JULES(lats, lons, ds.variables[vn])
+
+    # Link symbols and data:
+
+    # Create file names (single step if files similarly named)
+
+    file_name_from_var_name = {
+       "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
+       **{
+            vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
+            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
+       }
+    }
+    #d_name2varname_in_file = {
+    #    "npp":'npp_nlim',
+    #    **{
+    #         vn: vn
+    #         for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
+    #    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
+    #    **{
+    #        vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
+    #        for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
+    #    }
+    #}
+    d_name2varname_in_file = {
+        "npp": 'npp_nlim',
+        **{
+            vn: vn
+            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
         }
 
     }
@@ -181,7 +291,7 @@ def make_StartVector(mvs):
     )
 
 
-def make_xi_func(tsl, Mw, Ms, mrso, landCoverFrac):
+def make_xi_func(tsl, Mw, Ms, mrsos, landCoverFrac):
     def xi_func(day):
         mi = gh.day_2_month_index(day)
         # alternative FT
@@ -195,10 +305,10 @@ def make_xi_func(tsl, Mw, Ms, mrso, landCoverFrac):
         S0 = 0.5 * (1 + Mw)  # optimum soil moisture
         Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
         if S0 > Smin:
-            FS = 1 - 0.8 * (mrso[mi]/Ms - S0)  # effect of soil moisture
-        if (Smin < mrso[mi]/Ms) and (mrso[mi]/Ms <= S0):
-            FS = 0.2 + 0.8 * (mrso[mi]/Ms - Smin) / (S0 - Smin)
-        if mrso[mi] <= Smin:
+            FS = 1 - 0.8 * (mrsos[mi]/Ms - S0)  # effect of soil moisture
+        if (Smin < mrsos[mi]/Ms) and (mrsos[mi]/Ms <= S0):
+            FS = 0.2 + 0.8 * (mrsos[mi]/Ms - Smin) / (S0 - Smin)
+        if mrsos[mi] <= Smin:
             FS = 0.2
         # print("FT,FV,FS", FT, FV, FS)
         rh_factor = FT * FV * FS
@@ -220,7 +330,7 @@ def make_npp_func(dvs):
 def make_func_dict(mvs, dvs, cpa, epa):
     return {
         "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs.tsl, epa.Mw, epa.Ms, dvs.mrso, dvs.landCoverFrac)
+        "xi": make_xi_func(dvs.tsl, epa.Mw, epa.Ms, dvs.mrsos, dvs.landCoverFrac)
     }
 
 
@@ -432,7 +542,7 @@ def make_weighted_cost_func(
         J_obj3 = np.mean((out_simu.rh - obs.rh) ** 2) / (2 * np.var(obs.rh))
         J_obj4 = np.mean((out_simu.fVegSoil - obs.fVegSoil) ** 2) / (2 * np.var(obs.fVegSoil))
 
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)
+        J_new = (J_obj1 + J_obj2*2 + J_obj3 + J_obj4)
         return J_new
 
     return costfunction

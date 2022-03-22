@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.13.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -432,10 +432,26 @@ msh.download_my_TRENDY_output(conf_dict)
 #
 #
 ## call function to link symbols and data
-svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+#svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
+svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 # look at data
 # svs, dvs
+
+# +
+# Plot simulation output for observables
+c_obs = np.array(svs.rh) # dvs.npp
+c_obs.shape
+
+n_days = 320 * 12  # 0
+days = range(n_days)
+fig = plt.figure(figsize=(12, 4))
+plot_solutions(
+    fig,
+    times=days,
+    var_names=["rh"],
+    tup=(c_obs,)
+)
 # -
 
 # ## Create Symbols for $\xi$, $K$, and $A$ (No Edits)
@@ -554,13 +570,13 @@ svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 #    f_RPM2HUM =0.1,
 #    f_BIO2HUM =0.01,
 #    f_HUM2BIO =0.001,
-#    k_leaf = 1 / (365 * 2),
+#    k_leaf = 1 / (365 * 2), # day -1
 #    k_wood=1 / (365 * 60),
 #    k_root=1 / (365 * 30),
-#    k_DPM=1 / (365 * 60),
-#    k_RPM=1 / (365 * 30),
-#    k_BIO=1 / (365 * 30),
-#    k_HUM=1 / (365 * 200),
+#    k_DPM= 0.0278,  # 1 / (365 * 60), # 3.22 * 10**(-7) s-1 ## this value is from Clark et al 2011
+#    k_RPM= 8.3376 * 10 ** (-4), #1 / (365 * 30), # 9.65 * 10**(-9) s-1
+#    k_BIO= 0.0018, #1 / (365 * 30), # 2.12 * 10**(-8) s-1
+#    k_HUM= 5.5555 * 10 ** (-5), #1 / (365 * 200), # 6.43 *10(-10) s-1
 #
 #    c_leaf0=0,
 #    c_wood0=0,
@@ -610,27 +626,24 @@ svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 par_dict = {
     Symbol(k): v
     for k, v in {
-        'beta_leaf': 0.3333333333333333,
-        'beta_wood': 0.3333333333333333,
-        # 'r_c_leaf_rh': 0,
-        # 'r_c_wood_rh': 0,
-        # 'r_c_root_rh': 0,
-        'r_c_DPM_rh': 1e-4,
-        'r_c_RPM_rh': 1e-4,
-        'r_c_BIO_rh': 9.04109589041096e-5,
-        'r_c_HUM_rh': 1.36849315068493e-5,
-        'r_c_leaf_2_c_DPM': 0.000136986301369863,
-        'r_c_leaf_2_c_RPM': 0.00123287671232877,
-        'r_c_wood_2_c_DPM': 4.56621004566210e-7,
-        'r_c_wood_2_c_RPM': 4.52054794520548e-5,
-        'r_c_root_2_c_DPM': 9.13242009132420e-8,
-        'r_c_root_2_c_RPM': 9.12328767123288e-5,
-        'r_c_DPM_2_c_BIO': 4.56621004566210e-6,
-        'r_c_DPM_2_c_HUM': 4.10958904109589e-5,
-        'r_c_RPM_2_c_BIO': 9.13242009132420e-8,
-        'r_c_RPM_2_c_HUM': 9.12328767123288e-5,
-        'r_c_BIO_2_c_HUM': 9.13242009132420e-7,
-        'r_c_HUM_2_c_BIO': 1.36986301369863e-8
+        'beta_leaf': 0.33,
+        'beta_wood': 0.38,
+        'r_c_DPM_rh': 0.00036551,
+        'r_c_RPM_rh': 0.000518173,
+        'r_c_BIO_rh': 0.000246165,
+        'r_c_HUM_rh': 7.76e-05,
+        'r_c_leaf_2_c_DPM': 0.000259686,
+        'r_c_leaf_2_c_RPM': 0.006112809,
+        'r_c_wood_2_c_DPM': 3.95e-07,
+        'r_c_wood_2_c_RPM': 0.000114536,
+        'r_c_root_2_c_DPM': 1.88e-07,
+        'r_c_root_2_c_RPM': 0.000147164,
+        'r_c_DPM_2_c_BIO': 0.00778322,
+        'r_c_DPM_2_c_HUM': 0.040097969,
+        'r_c_RPM_2_c_BIO': 2.78e-06,
+        'r_c_RPM_2_c_HUM': 0.000116877,
+        'r_c_BIO_2_c_HUM': 7.68e-05,
+        'r_c_HUM_2_c_BIO': 1.98e-07
     }.items()
 }
 par_dict
@@ -664,13 +677,13 @@ StartVector._fields
 # + codehighlighter=[[5, 17], [5, 17]]
 # Assign values to initial pools using InitialPools named tuple
 V_init = StartVector(
-    c_leaf=svs_0.cVeg / 3,  # set inital pool values to svs values
-    c_root=svs_0.cVeg / 3,  # you can set numerical values here directly as well
-    c_wood=svs_0.cVeg / 3,
-    c_DPM=svs_0.cSoil / 4,
-    c_RPM=svs_0.cSoil / 4,
-    c_BIO=svs_0.cSoil / 4,
-    c_HUM=svs_0.cSoil / 4,
+    c_leaf=svs_0.cVeg *0.2, #/ 3,  # set inital pool values to svs values
+    c_root=svs_0.cVeg *0.2, #/ 3,  # you can set numerical values here directly as well
+    c_wood=svs_0.cVeg *0.6, # / 3,
+    c_DPM=svs_0.cSoil *0.0025,
+    c_RPM=svs_0.cSoil *0.22,
+    c_BIO=svs_0.cSoil *0.02,
+    c_HUM=svs_0.cSoil *0.7575,
     rh=svs_0.rh,
     fVegSoil=svs_0.fVegSoil
     # f_veg2soil=svs_0.f_veg2soil# add the fraction
@@ -739,41 +752,46 @@ cpa._asdict()  # print - everything should have a numeric value
 # -
 
 
+svs_0.cSoil
+
 epa_0 = msh.EstimatedParameters(
     **{
-        'c_leaf_0': svs_0.cVeg / 3,  # set inital pool values to svs values
-        'c_wood_0': svs_0.cVeg / 3,  # you can set numerical values here directly as well
-        'c_DPM_0': svs_0.cSoil / 4,
-        'c_RPM_0': svs_0.cSoil / 4,
-        'c_BIO_0': svs_0.cSoil / 4
+        'c_leaf_0': svs_0.cVeg * 0.15,  # set inital pool values to svs values
+        'c_wood_0': svs_0.cVeg * 0.70,  # you can set numerical values here directly as well
+        'c_DPM_0': svs_0.cSoil * 0.05,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
+        'c_RPM_0': svs_0.cSoil * 0.22,
+        'c_BIO_0': svs_0.cSoil * 0.05
     },
     **{
         'beta_leaf': 0.3333333333333333,
         'beta_wood': 0.3333333333333333,
         'Mw': 0.1,
-        'Ms': np.max(dvs.mrso)+500, #, may need add a condition here ## ASK MARKUS
+        'Ms': np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
         # 'r_c_leaf_rh': 0,
         # 'r_c_wood_rh': 0,
         # 'r_c_root_rh': 0,
-        'r_c_DPM_rh': 1e-4,
-        'r_c_RPM_rh': 1e-4,
-        'r_c_BIO_rh': 9.04109589041096e-5,
-        'r_c_HUM_rh': 1.36849315068493e-5,
-        'r_c_leaf_2_c_DPM': 0.000136986301369863,
-        'r_c_leaf_2_c_RPM': 0.00123287671232877,
-        'r_c_wood_2_c_DPM': 4.56621004566210e-7,
-        'r_c_wood_2_c_RPM': 4.52054794520548e-5,
-        'r_c_root_2_c_DPM': 9.13242009132420e-8,
-        'r_c_root_2_c_RPM': 9.12328767123288e-5,
-        'r_c_DPM_2_c_BIO': 4.56621004566210e-6,
-        'r_c_DPM_2_c_HUM': 4.10958904109589e-5,
-        'r_c_RPM_2_c_BIO': 9.13242009132420e-8,
-        'r_c_RPM_2_c_HUM': 9.12328767123288e-5,
-        'r_c_BIO_2_c_HUM': 9.13242009132420e-7,
-        'r_c_HUM_2_c_BIO': 1.36986301369863e-8
+        'r_c_DPM_rh': 0.001,
+        'r_c_RPM_rh': 0.001,
+        'r_c_BIO_rh': 0.0075,
+        'r_c_HUM_rh': 9.54994450000000e-5,
+        'r_c_leaf_2_c_DPM': 0.000226027397260274,
+        'r_c_leaf_2_c_RPM': 0.000458904109589041,
+        'r_c_wood_2_c_DPM': 9.04109589041096e-5,
+        'r_c_wood_2_c_RPM': 1.83561643835616e-5,
+        'r_c_root_2_c_DPM': 0.000226027397260274,
+        'r_c_root_2_c_RPM': 0.000458904109589041,
+        'r_c_DPM_2_c_BIO': 0.0126601200000000,
+        'r_c_DPM_2_c_HUM': 0.0123598800000000,
+        'r_c_RPM_2_c_BIO': 0.000379694304000000,
+        'r_c_RPM_2_c_HUM': 0.000370689696000000,
+        'r_c_BIO_2_c_HUM': 2.80000000000000e-5,
+        'r_c_HUM_2_c_BIO': 5.55550000000000e-6
     }
     # **{str(key): value for key,value in  par_dict.items() if}
 )
+
+epa_0._asdict()
+
 
 # +
 def npp_func(day):
@@ -797,8 +815,9 @@ plot_solutions(
 )
 # fig.savefig('solutions.pdf')
 
+# +
 # Plot simulation output for observables
-c_obs = np.array(dvs.npp) # dvs.npp
+c_obs = np.array(dvs.landCoverFrac) # dvs.npp
 c_obs.shape
 
 n_days = cpa.nyears * 12  # 0
@@ -807,7 +826,20 @@ fig = plt.figure(figsize=(12, 4))
 plot_solutions(
     fig,
     times=days,
-    var_names=["NPP"],
+    var_names=["vegetation fraction (%)"],
+    tup=(c_obs,)
+)
+# -
+
+c_obs = np.array(svs.rh)/np.array(svs.cSoil)*100 # dvs.npp
+c_obs.shape 
+n_days = cpa.nyears * 12  # 0
+days = range(n_days)
+fig = plt.figure(figsize=(12, 4))
+plot_solutions(
+    fig,
+    times=days,
+    var_names=["rh / cSoil * 100%"],
     tup=(c_obs,)
 )
 
@@ -1075,14 +1107,6 @@ V_init
 # ## Forward Model Run
 # #### Run model forward:
 
-# +
-import model_specific_helpers_2 as msh
-param2res = msh.make_param2res_sym(mvs, cpa, dvs)  # Define forward model
-obs_simu = param2res(epa_0)  # Run forward model from initial conditions
-
-obs_simu
-# -
-
 svs_cut = msh.Observables(
     cVeg=svs.cVeg[:cpa.nyears * 12],
     cSoil=svs.cSoil[:cpa.nyears * 12],
@@ -1090,6 +1114,28 @@ svs_cut = msh.Observables(
     fVegSoil =svs.fVegSoil[:cpa.nyears*12]
 )
 svs_cut.rh
+
+# +
+import model_specific_helpers_2 as msh
+param2res = msh.make_param2res_sym(mvs, cpa, dvs)  # Define forward model
+obs_simu = param2res(epa_0)  # Run forward model from initial conditions
+
+obs_simu
+
+# +
+# Plot simulation output for observables
+c_obs = np.array(svs.cVeg) - np.array(obs_simu.cVeg)# dvs.npp
+c_obs.shape
+
+n_days = cpa.nyears * 12  # 0
+days = range(n_days)
+fig = plt.figure(figsize=(12, 4))
+plot_solutions(
+    fig,
+    times=days,
+    var_names=["Check cVeg Obs - Sim"],
+    tup=(c_obs,)
+)
 
 # +
 #def make_weighted_cost_func(
@@ -1143,15 +1189,13 @@ msh.Observables(*( arr(field) for field in msh.Observables._fields))
 # +
 fig = plt.figure()
 from general_helpers import plot_observations_vs_simulations
+plot_observations_vs_simulations(fig,svs,obs_simu)
 
-gh.plot_observations_vs_simulations(fig, svs_cut, obs_simu)
 #fig.savefig("test.pdf")
 # -
 
 gh.plot_observations_vs_simulations(fig, svs_cut, obs_simu)
 fig.savefig("test.pdf")
-
-len(svs_cut)
 
 # #### Plot data-model fit:
 
@@ -1179,24 +1223,25 @@ t1.__class__._fields
 
 # +
 # set min/max parameters to +- 100 times initial values
-epa_min = msh.EstimatedParameters(* tuple(np.array(epa_0) * 0.01))
-epa_max = msh.EstimatedParameters(* tuple(np.array(epa_0) * 100))
+epa_min = msh.EstimatedParameters(* tuple(np.array(epa_0) * 0.001)) # for fluxes 
+epa_max = msh.EstimatedParameters(* tuple(np.array(epa_0) * 150))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.9)
-epa_max = epa_max._replace(beta_wood = 0.9)
-epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg * 0.9)
+epa_max = epa_max._replace(beta_leaf = 0.8)
+epa_max = epa_max._replace(beta_wood = 0.8)
+epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg * 0.3)
 epa_max = epa_max._replace(c_wood_0 = svs_0.cVeg * 0.9)
-epa_max = epa_max._replace(c_DPM_0=svs_0.cSoil)
-epa_max = epa_max._replace(c_RPM_0=svs_0.cSoil)
-epa_max = epa_max._replace(c_BIO_0=svs_0.cSoil)
+epa_max = epa_max._replace(c_DPM_0 = svs_0.cSoil * 0.5)
+epa_max = epa_max._replace(c_RPM_0 = svs_0.cSoil * 0.5)
+epa_max = epa_max._replace(c_BIO_0 = svs_0.cSoil * 0.5)
 epa_max = epa_max._replace(Mw = 0.8)
-epa_max = epa_max._replace(Ms = (max(dvs.mrso)+500) * 2) # max(dvs.mrso) * 2
-
+epa_max = epa_max._replace(Ms = (max(dvs.mrsos) + 500) * 2) # max(dvs.mrso) * 2
+# -
 
 # print - all names should have numerical values
+epa_min._asdict()
+
 epa_max._asdict()
-# -
 
 # #### Conduct data assimilation:
 
@@ -1204,17 +1249,17 @@ import general_helpers as gh
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
 C_autostep, J_autostep = gh.autostep_mcmc(
-    initial_parameters=epa_0,
-    filter_func=gh.make_param_filter_func_2(epa_max, epa_min,["beta_leaf","beta_wood"]),
-    param2res=msh.make_param2res_sym(mvs, cpa, dvs),
-    costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=200,  # for testing and tuning mcmc
-    c_max=np.array(epa_max),
-    c_min=np.array(epa_min),
-    acceptance_rate=15,  # default value | target acceptance rate in %
-    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,  # default value | increase value to reduce initial step size
-    K=2  # default value | increase value to reduce acceptance of higher cost functions
+    initial_parameters = epa_0,
+    filter_func = gh.make_param_filter_func_2(epa_max, epa_min,["beta_leaf","beta_wood"]),
+    param2res = msh.make_param2res_sym(mvs, cpa, dvs),
+    costfunction = msh.make_weighted_cost_func(svs),
+    nsimu = 5000,  # for testing and tuning mcmc
+    c_max = np.array(epa_max),
+    c_min = np.array(epa_min),
+    acceptance_rate = 15,  # default value | target acceptance rate in %
+    chunk_size = 100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init = 1,  # default value | increase value to reduce initial step size
+    K = 2  # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -1229,32 +1274,49 @@ epa_opt = msh.EstimatedParameters(*par_opt)
 mod_opt = param2res(epa_opt)
 
 n_plots = len(svs)
-print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
-fig = plt.figure(figsize=(10, n_plots * 5))
-# Plot simulation output for observables
-# n_plots=len(svs_cut)
-fig = plt.figure(figsize=(10, 10 * n_plots))
-axs = fig.subplots(n_plots)
-for i, name in enumerate(msh.Observables._fields):
-    var_simu = mod_opt[i]
-    var = svs[i]
-    axs[i].plot(range(len(var_simu)), var_simu, label='simulation(opt)')
-    axs[i].plot(range(len(var)), var, label='observation')
-    axs[i].set_title(name)
-    axs[i].legend()
-
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_observations_vs_simulations(
+        fig,
+        svs,
+        mod_opt
+    )
 fig.savefig('solutions_opt.pdf')
 
+# # n_plots=len(svs_cut)
+#fig = plt.figure(figsize=(10, 10 * n_plots))
+#axs = fig.subplots(n_plots)
+#for i, name in enumerate(msh.Observables._fields):
+#    var_simu = mod_opt[i]
+#    var = svs[i]
+#    axs[i].plot(range(len(var_simu)), var_simu, label='simulation(opt)')
+#    axs[i].plot(range(len(var)), var, label='observation')
+#    axs[i].set_title(name)
+#    axs[i].legend()
+
+#fig.savefig('solutions_opt.pdf')
+
+
+# -
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_observations_vs_simulations(
+        fig,
+        svs,
+        mod_opt
+    )
+fig.savefig('solutions_opt.pdf')
+
+# +
 # save the parameters and cost function values for postprocessing
 outputPath = Path(conf_dict["dataPath"])  # save output to data directory (or change it)
 
 import pandas as pd
 
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('JULES_da_pars.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('JULES_da_cost.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('JULES_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('JULES_optimized_solutions.csv'), sep=',')
 # -
-mod_opt.rh
 
+mod_opt.fVegSoil[10*12:320*12].shape 
 
+epa_opt

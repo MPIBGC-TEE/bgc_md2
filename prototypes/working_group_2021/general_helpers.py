@@ -755,6 +755,32 @@ def global_mean(lats,lons,arr):
     return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
 
 
+def global_mean_JULES(lats,lons,arr):
+    # assuming an equidistant grid.
+    delta_lat=(np.array(lats).max() - np.array(lats).min())/(len(np.array(lats))-1)
+    delta_lon=(np.array(lons).max() - np.array(lons).min())/(len(np.array(lons))-1)
+
+    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+    
+    #copy the mask from the array (first time step) 
+    weight_mask=arr[0,:,:].mask #if  arr.mask.any() else False
+
+    weight_mat= np.ma.array(
+        np.array(
+            [
+                    [   
+                        pixel_area(lats[lat_ind]) 
+                        for lon_ind in range(len(lons))    
+                    ]
+                for lat_ind in range(len(lats))    
+            ]
+        ),
+        mask = weight_mask 
+    )
+    
+    # to compute the sum of weights we add only those weights that
+    # do not correspond to an unmasked grid cell
+    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
 
 
 def grad2rad(alpha_in_grad):
