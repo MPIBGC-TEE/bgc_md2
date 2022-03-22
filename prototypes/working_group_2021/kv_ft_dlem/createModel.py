@@ -492,43 +492,52 @@ par_dict.update(
 list(par_dict.keys())[4]
 par_dict
 
-par_dict.update({
-    beta_leaf: 0.341237021,
-    beta_wood: 0.268607324,
-    Theta_sat: 0.131798755,
-    Theta_fc: 0.15388483,
-    r_C_aom1_rh: 0.000201402,
-    r_C_aom2_rh: 0.000260096,
-    r_C_smb1_rh: 1.53E-05,
-    r_C_smb2_rh: 8.63E-05,
-    r_C_smr_rh: 8.40E-06,
-    r_C_nom_rh: 1.40E-05,
-    r_C_dom_rh: 1.38E-05,
-    r_C_psom_rh: 2.92E-05,
-    r_C_leaf_2_C_aom1: 0.0246648,
-    r_C_leaf_2_C_aom2: 0.019347073,
-    r_C_wood_2_C_aom1: 0.000655524,
-    r_C_wood_2_C_aom2: 0.000552772,
-    r_C_root_2_C_aom1: 0.000405747,
-    r_C_root_2_C_aom2: 0.000253508,
-    r_C_aom1_2_C_smb1: 0.000357059,
-    r_C_aom1_2_C_smb2: 0.00031828,
-    r_C_aom1_2_C_nom: 0.00016201,
-    r_C_aom1_2_C_dom: 0.00025169,
-    r_C_aom2_2_C_smb1: 2.77E-05,
-    r_C_aom2_2_C_smb2: 2.00E-05,
-    r_C_aom2_2_C_dom: 3.55E-05,
-    r_C_smb1_2_C_nom: 2.10E-05,
-    r_C_smb1_2_C_psom: 3.08E-05,
-    r_C_smb2_2_C_smr: 1.98E-05,
-    r_C_smr_2_C_smb1: 3.93E-05,
-    r_C_nom_2_C_smb1: 1.00E-05,
-    r_C_nom_2_C_dom: 2.78E-05,
-    r_C_nom_2_C_psom: 1.46E-05,
-    r_C_dom_2_C_smb1: 1.54E-05,
-    r_C_dom_2_C_nom: 1.63E-05,
-    r_C_psom_2_C_smb1: 1.64E-06
-})
+# +
+par_dict_2 = {
+    beta_leaf: 0.3028851224272647,
+    beta_wood: 0.4564030561461778,
+    Theta_sat: 0.09469315267122164,
+    Theta_fc: 0.0795237425542056,
+    r_C_aom1_rh: 0.0003037126928450523,
+    r_C_aom2_rh: 0.00029780017612134036,
+    r_C_smb1_rh: 1.0689106224513612e-05,
+    r_C_smb2_rh: 0.00017382741384128404,
+    r_C_smr_rh: 7.29448370877164e-06,
+    r_C_nom_rh: 1.0164098602070474e-05,
+    r_C_dom_rh: 1.1500691016736846e-05,
+    r_C_psom_rh: 1.7644513592821266e-05,
+    r_C_leaf_2_C_aom1: 0.01970013741245839,
+    r_C_leaf_2_C_aom2: 0.015317429471496852,
+    r_C_wood_2_C_aom1: 0.0004097261277630772,
+    r_C_wood_2_C_aom2: 0.0003689152669226263,
+    r_C_root_2_C_aom1: 0.0006603079638088481,
+    r_C_root_2_C_aom2: 0.00043562236684542056,
+    r_C_aom1_2_C_smb1: 0.00023145662814734428,
+    r_C_aom1_2_C_smb2: 0.0002977928058255672,
+    r_C_aom1_2_C_nom: 0.00015287835816890072,
+    r_C_aom1_2_C_dom: 0.0001781924058628594,
+    r_C_aom2_2_C_smb1: 2.0810976139531716e-05,
+    r_C_aom2_2_C_smb2: 2.8349756784116157e-05,
+    r_C_aom2_2_C_dom: 2.14750752962314e-05,
+    r_C_smb1_2_C_nom: 2.3404172674296687e-05,
+    r_C_smb1_2_C_psom: 3.3408243666981594e-05,
+    r_C_smb2_2_C_smr: 1.2338527499527314e-05,
+    r_C_smr_2_C_smb1: 4.801573811093888e-05,
+    r_C_nom_2_C_smb1: 1.0587791011076786e-05,
+    r_C_nom_2_C_dom: 2.551756974855787e-05,
+    r_C_nom_2_C_psom: 1.307830769309431e-05,
+    r_C_dom_2_C_smb1: 1.0950958379980324e-05,
+    r_C_dom_2_C_nom: 1.4109489107131771e-05,
+    r_C_psom_2_C_smb1: 2.222172994302753e-06
+}
+
+for i in par_dict_2:
+    par_dict.update(
+        {i: par_dict_2[i]}
+)
+
+par_dict
+# -
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
@@ -1050,6 +1059,7 @@ epa_0=EstimatedParameters(*temp_list)
 #  C_soil_fast_0=svs_0.cSoil/3,
 #  C_soil_slow_0=svs_0.cSoil/3,
 # )
+par_dict
 # -
 
 epa_0
@@ -1510,53 +1520,7 @@ pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('DLEM_optimized_pars.csv'), sep
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('DLEM_optimized_solutions.csv'), sep=',')
 # -
 
-print("Optimized parameters: ", epa_opt)
-par_dict_opt={
-        beta_leaf: epa_opt.beta_leaf, 
-        beta_wood: epa_opt.beta_wood, 
-        Theta_sat: epa_opt.Theta_sat, 
-        Theta_fc: epa_opt.Theta_fc,  
-        r_C_aom1_rh: epa_opt.r_C_aom1_rh, 
-        r_C_aom2_rh: epa_opt.r_C_aom2_rh, 
-        r_C_smb1_rh: epa_opt.r_C_smb1_rh, 
-        r_C_smb2_rh: epa_opt.r_C_smb2_rh, 
-        r_C_smr_rh: epa_opt.r_C_smr_rh, 
-        r_C_nom_rh: epa_opt.r_C_nom_rh, 
-        r_C_dom_rh: epa_opt.r_C_dom_rh, 
-        r_C_psom_rh: epa_opt.r_C_psom_rh, 
-        r_C_leaf_2_C_aom1: epa_opt.r_C_leaf_2_C_aom1, 
-        r_C_leaf_2_C_aom2: epa_opt.r_C_leaf_2_C_aom2, 
-        r_C_wood_2_C_aom1: epa_opt.r_C_wood_2_C_aom1,
-        r_C_wood_2_C_aom2: epa_opt.r_C_wood_2_C_aom2, 
-        r_C_root_2_C_aom1: epa_opt.r_C_root_2_C_aom1,
-        r_C_root_2_C_aom2: epa_opt.r_C_root_2_C_aom2, 
-        r_C_aom1_2_C_smb1: epa_opt.r_C_aom1_2_C_smb1,
-        r_C_aom1_2_C_smb2: epa_opt.r_C_aom1_2_C_smb2, 
-        r_C_aom1_2_C_nom: epa_opt.r_C_aom1_2_C_nom, 
-        r_C_aom1_2_C_dom: epa_opt.r_C_aom1_2_C_dom, 
-        r_C_aom2_2_C_smb1: epa_opt.r_C_aom2_2_C_smb1, 
-        r_C_aom2_2_C_smb2: epa_opt.r_C_aom2_2_C_smb2, 
-        r_C_aom2_2_C_dom: epa_opt.r_C_aom2_2_C_dom, 
-        r_C_smb1_2_C_nom: epa_opt.r_C_smb1_2_C_nom,
-        r_C_smb1_2_C_psom: epa_opt.r_C_smb1_2_C_psom, 
-        r_C_smb2_2_C_smr: epa_opt.r_C_smb2_2_C_smr, 
-        r_C_smr_2_C_smb1: epa_opt.r_C_smr_2_C_smb1, 
-        r_C_nom_2_C_smb1: epa_opt.r_C_nom_2_C_smb1,
-        r_C_nom_2_C_dom: epa_opt.r_C_nom_2_C_dom, 
-        r_C_nom_2_C_psom: epa_opt.r_C_nom_2_C_psom,
-        r_C_dom_2_C_smb1: epa_opt.r_C_dom_2_C_smb1, 
-        r_C_dom_2_C_nom: epa_opt.r_C_dom_2_C_nom, 
-        r_C_psom_2_C_smb1: epa_opt.r_C_psom_2_C_smb1, 
-        C_leaf_0: epa_opt.C_leaf_0, 
-        C_wood_0: epa_opt.C_wood_0, 
-        C_aom1_0: epa_opt.C_aom1_0, 
-        C_smb1_0: epa_opt.C_smb1_0, 
-        C_smb2_0: epa_opt.C_smb2_0, 
-        C_smr_0: epa_opt.C_smr_0, 
-        C_nom_0: epa_opt.C_nom_0, 
-        C_dom_0: epa_opt.C_dom_0
-}
-print("Optimized parameters dictionary: ", par_dict_opt)
+epa_opt._asdict()
 
 # ### Traceability analysis  
 #

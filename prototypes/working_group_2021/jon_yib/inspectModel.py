@@ -27,9 +27,6 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #set auto reload for notebook
 # %load_ext autoreload
 # %autoreload 2
-# -
-
-# Python Packages:
 
 # +
 # Packages for symbolic code: 
@@ -86,6 +83,8 @@ h.compartmental_graph(mvs)
 
 dh.mass_balance_equation(mvs)
 
+# Python Packages:
+
 # + [markdown] codehighlighter=[[0, 0]]
 # ## Download Data (Must Edit)
 # #### TRENDY Data
@@ -95,7 +94,6 @@ dh.mass_balance_equation(mvs)
 # + codehighlighter=[[11, 12], [16, 17], [8, 28], [41, 43], [8, 24], [42, 44]]
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-
 #msh.download_my_TRENDY_output(conf_dict)
 # -
 
@@ -119,12 +117,13 @@ svs_0
 # + codehighlighter=[[1, 9], [1, 8]]
 cpa = msh.Constants(             #use Constants namedtuple to define constant values
     npp_0 = dvs.npp[0],
-    rh_0 = svs.rh[0],   
+    rh_0 = svs.rh[0],
+    ra_0 = svs.ra[0],
     c_veg_0 = svs.cVeg[0],
     c_soil_0 = svs.cSoil[0],
     clay = 0.2028,
     silt = 0.2808,
-    nyears = 320
+    nyears = 320,
 )
 cpa._asdict()    #print - everything should have a numeric value
 # -
@@ -134,64 +133,92 @@ cpa._asdict()    #print - everything should have a numeric value
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
-    c_leaf_0 = 0.205902852, #svs_0.cVeg/4,          #set inital pool values to svs values 
-    c_root_0 = 0.1349886, #svs_0.cVeg/5,          #you can set numerical values here directly as well
-    c_lit_cwd_0 = 0.120871995, #svs_0.cSoil/35,
-    c_lit_met_0 = 0.004454257, #svs_0.cSoil/35,
-    c_lit_str_0 = 0.004377044, #svs_0.cSoil/35,
-    c_lit_mic_0 = 0.033078009, #svs_0.cSoil/35,
-    c_soil_met_0 = 0.034884004, #svs_0.cSoil/20,
-    c_soil_str_0 = 0.046215648, #svs_0.cSoil/10,
-    c_soil_mic_0 = 0.050922934, #svs_0.cSoil/7,
-    c_soil_slow_0 = 13.36265586, #svs_0.cSoil/3,
-    beta_leaf = 0.398720497,
-    beta_root = 0.426397009,
-    r_c_lit_cwd_rh = 0.002823994,
-    r_c_lit_met_rh = 0.052945641,
-    r_c_lit_str_rh = 0.026894913,
-    r_c_lit_mic_rh = 0.054510185,
-    r_c_soil_met_rh = 0.053926964,
-    r_c_soil_str_rh = 0.00124833,
-    r_c_soil_mic_rh = 0.020526394,
-    r_c_soil_slow_rh = 5.26E-05,
-    r_c_soil_passive_rh = 2.11E-05,
-    r_c_leaf_2_c_lit_met = 0.01425813,
-    r_c_leaf_2_c_lit_str = 0.013345793,
-    r_c_root_2_c_soil_met = 0.027411196,
-    r_c_root_2_c_soil_str = 0.009990048,
-    r_c_wood_2_c_lit_cwd = 0.001299102,
-    r_c_lit_cwd_2_c_lit_mic = 0.010228895,
-    r_c_lit_cwd_2_c_soil_slow = 0.002114581,
-    r_c_lit_met_2_c_lit_mic = 0.002955735,
-    r_c_lit_str_2_c_lit_mic = 0.015866482,
-    r_c_lit_str_2_c_soil_slow = 0.031221657,
-    r_c_lit_mic_2_c_soil_slow = 0.000936147,
-    r_c_soil_met_2_c_soil_mic = 0.013505919,
-    r_c_soil_str_2_c_soil_mic = 0.012626401,
-    r_c_soil_str_2_c_soil_slow = 0.001434367,
-    r_c_soil_mic_2_c_soil_slow = 0.029803007,
-    r_c_soil_mic_2_c_soil_passive = 0.007509519,
-    r_c_soil_slow_2_c_soil_mic = 4.89E-05,
-    r_c_soil_slow_2_c_soil_passive = 1.38E-07,
-    r_c_soil_passive_2_c_soil_mic = 2.89E-05
-)    
+    c_leaf_0=0.11934574325601431,
+    c_root_0=0.006793074629361561,
+    beta_leaf=0.6757466559750366,
+    beta_root=0.05876687333136758,
+    r_c_leaf_rh=0.016700660434714746,
+    r_c_root_rh=0.019942367049073872,
+    r_c_wood_rh=0.0019402384855432195,
+    r_c_lit_cwd_rh=0.0009730016902211099,
+    r_c_lit_met_rh=0.07002926006944982,
+    r_c_lit_str_rh=0.03459128990999148,
+    r_c_lit_mic_rh=0.06496258804231679, 
+    r_c_soil_met_rh=0.05283019624678767,
+    r_c_soil_str_rh=0.0015550260079549095,
+    r_c_soil_mic_rh=0.014976016198231856,
+    r_c_soil_slow_rh=9.561359665073253e-05,
+    r_c_soil_passive_rh=0.0001554724909932264,
+    r_c_leaf_2_c_lit_met=0.015163076798849949,
+    r_c_leaf_2_c_lit_str=0.05519637426787492,
+    r_c_root_2_c_soil_met=0.02809207220975982,
+    r_c_root_2_c_soil_str=0.02795375188378404,
+    r_c_wood_2_c_lit_cwd=0.0008902772702585985, 
+    r_c_lit_cwd_2_c_lit_mic=0.002666130148133097,
+    r_c_lit_cwd_2_c_soil_slow=0.003132779629682739,
+    r_c_lit_met_2_c_lit_mic=0.0010359522559848344, 
+    r_c_lit_str_2_c_lit_mic=0.008930543749313994,
+    r_c_lit_str_2_c_soil_slow=0.06956056931813782,
+    r_c_lit_mic_2_c_soil_slow=0.000982832457403613,
+    r_c_soil_met_2_c_soil_mic=0.00494305460211622,
+    r_c_soil_str_2_c_soil_mic=0.017939031246948314,
+    r_c_soil_str_2_c_soil_slow=0.0012026215328729533,
+    r_c_soil_mic_2_c_soil_slow=0.009376182185796474,
+    r_c_soil_mic_2_c_soil_passive=0.0021203823995936096,
+    r_c_soil_slow_2_c_soil_mic=3.2760504386493467e-05,
+    r_c_soil_slow_2_c_soil_passive=5.146635398790735e-08,
+    r_c_soil_passive_2_c_soil_mic=9.889917586471123e-06,
+    c_lit_cwd_0=0.06866899816851733,
+    c_lit_met_0=0.020539099064198253,
+    c_lit_str_0=0.003781467337857978,
+    c_lit_mic_0=0.016646995368000368,
+    c_soil_met_0=0.049561307262804985,
+    c_soil_str_0=0.025006435484893126, 
+    c_soil_mic_0=0.013016442169970078,
+    c_soil_slow_0=12.39010616633247
+)
 
 # +
+gpp_func = msh.make_gpp_func(dvs)
 npp_func = msh.make_npp_func(dvs)
+temp_func = msh.make_temp_func(dvs)
 
 n = cpa.nyears*12*30
+
+gpp_obs = np.array([gpp_func(d) for d in range(n)])
 npp_obs = np.array([npp_func(d) for d in range(n)])
+temp_obs = np.array([temp_func(d) for d in range(n)])
 
 # Plot simulation output for observables
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         times=range(n),
-        var_names=msh.Observables._fields,
+        var_names=msh.Drivers._fields,
         tup=(npp_obs,)
 )
-fig.savefig('solutions.pdf')
+fig.savefig('npp.pdf')
 # -
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Drivers._fields[1],
+        tup=(temp_obs,)
+)
+fig.savefig('temp.pdf')
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Drivers._fields[2],
+        tup=(gpp_obs,)
+)
+fig.savefig('gpp.pdf')
 
 # #### Create forward model function:
 
@@ -217,8 +244,8 @@ epa_min=msh.EstimatedParameters._make(tuple(np.array(epa0)*0.01))
 epa_max=msh.EstimatedParameters._make(tuple(np.array(epa0)*100))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.60)
-epa_max = epa_max._replace(beta_root = 0.60)
+epa_max = epa_max._replace(beta_leaf = 0.9)
+epa_max = epa_max._replace(beta_root = 0.9)
 epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
@@ -250,7 +277,7 @@ C_autostep, J_autostep = autostep_mcmc_2(
     c_min=np.array(epa_min),
     acceptance_rate=0.23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=0.10,   # default value | increase value to reduce initial step size
+    D_init=0.05,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
@@ -280,6 +307,8 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=','
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
+
+epa_opt
 # +
 import model_specific_helpers_2 as msh
 import general_helpers as gh
@@ -348,5 +377,7 @@ axs[n,0].plot(
 axs[n,0].legend()
 
 # -
+
+
 
 
