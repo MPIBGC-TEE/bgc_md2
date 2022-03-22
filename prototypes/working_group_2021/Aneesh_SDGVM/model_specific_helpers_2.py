@@ -52,7 +52,7 @@ EstimatedParameters = namedtuple(
          'r_C_belowmetlit2soil_microbe',
          'r_C_belowstrlit2slowsom',
          'r_C_belowstrlit2soil_microbe',
-         'r_C_leached',
+         #'r_C_leached',
          'r_C_leaf2abvmetlit',
          'r_C_passsom2soil_microbe',
          'r_C_root2belowmetlit',
@@ -64,21 +64,29 @@ EstimatedParameters = namedtuple(
          'r_C_surface_microbe2slowsom',
          'r_C_wood2abvmetlit',
          'r_C_wood2abvstrlit',
-        'C_leaf_0',
+         'r_C_abvstrlit_rh',
+         'r_C_abvmetlit_rh',
+         'r_C_belowstrlit_rh',
+         'r_C_belowmetlit_rh',
+         'r_C_surface_microbe_rh',
+         'r_C_slowsom_rh',
+         'r_C_passsom_rh',
+         'r_C_soil_microbe_rh',
+         'C_leaf_0',
         #'C_root_0',
-        'C_abvstrlit_0',
-        'C_abvmetlit_0',
-        'C_blwstrlit_0',
-        'C_surfacemic_0',
-        'C_soilmic_0',
-        'C_slow_0'
+         'C_abvstrlit_0',
+         'C_abvmetlit_0',
+         'C_blwstrlit_0',
+         'C_surfacemic_0',
+         'C_soilmic_0',
+         'C_slow_0'
     ]
 )
 # note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated)
 # parameters. In this case we may use only the first entry e.g. to derive startvalues.
 # The destinction is only made for the data assimilation to isolate those parameters
 # that the mcmc will try to optimise
-    
+
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
 def download_my_TRENDY_output(conf_dict):
     gh.download_TRENDY_output(
@@ -157,7 +165,7 @@ def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
-        return (dvs.npp[month])* 60*60*24#* 86400
+        return (dvs.npp[month])
 
     return func
 
@@ -300,7 +308,7 @@ def make_param2res_sym(
             cRoot=cRoots,
             cLitter=cLitters,
             cSoil=cSoils,
-            rh=rhs/(60*60*24)
+            rh=rhs#/(60*60*24)
         )
             
         
@@ -378,7 +386,7 @@ def make_daily_iterator_sym(
         initial_values=V_arr,
         f=f,
     )
-    
+
 
 def make_weighted_cost_func(
         obs#: Observables
@@ -406,6 +414,6 @@ def make_weighted_cost_func(
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*50.0
+        return J_new*400
     return costfunction
 
