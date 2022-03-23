@@ -3,13 +3,19 @@
 \usepackage[round]{natbib}
 %Information to be included in the title page:
 \title{The Biogeochemical Model Database}
-\subtitle{A set of python packages for Model intercomparison}
+\subtitle{A set of python packages for model intercomparison}
 \author{Markus Müller}
 %\institute{Overleaf}
 \date{11-16-2021}
 \usepackage{tikz}
 \usetikzlibrary{positioning}
 \begin{document}
+\begin{frame}
+\frametitle{Overview}
+\tableofcontents
+\end{frame}
+\section{\texttt{bgc\_md2} in Action}
+\subsection{Views}
 \begin{frame}
 \frametitle{The Biogeochemical Model Database \texttt{bgc\_md2} }
 	\includegraphics[width=\textwidth]{ModelTable.png}
@@ -32,6 +38,7 @@
 }
 \end{frame}
 
+\subsection{Single Model Inspection}
 \begin{frame}
 	\frametitle{Analysis with symbolic tools \dots}
 	\includegraphics[width=\textwidth]{mvsTabScreen.png}
@@ -74,6 +81,8 @@
 	}
 \end{frame}
 
+\section{User Interface and Queries}
+\subsection{Invisible Graphs}
 \begin{frame}
   \frametitle{Userinterface using computability graphs}
   \begin{figure}
@@ -109,6 +118,7 @@
   }
 \end{frame}
 
+\subsection{Making them Visible }
 \begin{frame}
 \frametitle{Finding what's missing}
 \begin{columns}
@@ -144,6 +154,8 @@
   }
 \end{frame}
 
+\section{Structure}
+\subsection{Classes \emph{and} Functions}
 \begin{frame}
 \frametitle{Internal Structure of \texttt{bgc\_md2}}
 \begin{tikzpicture}[sibling distance=12em,
@@ -182,17 +194,19 @@
     };
 \end{tikzpicture}
 \note{
-\begin{enumerate}
-  \item
-  \texttt{bgc\_md2} is not just a collection of models, described as sets of varible of special type like fluxes or matrice, but also 
-  a collection of functions whose arguments and return values have these types.
-  These functions are here called \texttt{computers} and use python type annotations.
-  The computability graph used in the user interface and queries is derived from the 
-  annotations of a set of functions.
-  The set of properties (defined by the types) is growing as well as the functions connecting them.
-\end{enumerate}
+  \begin{enumerate}
+    \item
+    \texttt{bgc\_md2} is not just a collection of models, described as sets of varible of special type like fluxes or matrice, but also 
+    a collection of functions whose arguments and return values have these types.
+    These functions are here called \texttt{computers} and use python type annotations.
+    The computability graph used in the user interface and queries is derived from the 
+    annotations of a set of functions.
+    The set of properties (defined by the types) is growing as well as the functions connecting them.
+  \end{enumerate}
 }
 \end{frame}
+
+\subsection{A Record}
 \begin{frame}
 \frametitle{Database records are python modules}
   \includegraphics[width=\textwidth]{source.py.png}
@@ -209,6 +223,8 @@
   \end{enumerate}
 }
 \end{frame}
+
+\subsection{Relation to other Python Packages}
 \begin{frame}
 \frametitle{Relation to other Python Packages}
 \begin{tikzpicture}[sibling distance=15em,
@@ -235,7 +251,7 @@
   \end{enumerate}
 }
 \end{frame}
-
+\section{Applications}
 \begin{frame}
 	\frametitle{Applications}
 	\begin{figure}
@@ -249,6 +265,49 @@
 	  compartmental systems.
 	\newblock {\em Proceedings of the National Academy of Sciences}, 115:201705296.
 	\end{thebibliography}
+\end{frame}
+
+\begin{frame}
+\frametitle{Summary: Give me what you have and I"ll show you what I can do with it} 
+  \texttt{bgc\_md} is a library providing:
+  \begin{enumerate}
+    \item
+      Datatypes defining building blocks of models e.g.\ \texttt{CompartmentalMatrix}, \texttt{InternalFluxesBySymbol}, \dots     
+    \item
+      Functions operating on those properties (forming the edges of the graph where the Datatypes are nodes) 
+    \item
+      A user interface based on graph algorithms to  
+    \begin{enumerate}
+      \item
+        compute the set of computable properties (e.g. the comparable criteria for a set of models, database queries ) 
+      \item
+        actually compute the desired properties by recursively connecting several function applications.
+      \item
+        show what is missing to compute a desired property.
+    \end{enumerate}
+    \item
+    $30+$ vegetation, soil or ecosystem models for carbon and nitrogen cycling
+      as reusable python modules using the building blocks in a flexible way. 
+    \item 
+      An interface to \emph{many  algorithms} in \texttt{CompartmentalSystems} to compute diagnostic variables
+      for \emph{many models} in \texttt{bgc\_md2}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Links}
+  \begin{itemize}
+    \item
+      The README of the package on github (wiht installation instructions):
+      \url{https://github.com/MPIBGC-TEE/bgc_md2}
+    \item
+      Work in progress using and extending the package:
+      \url{https://github.com/MPIBGC-TEE/bgc_md2/tree/master/prototypes/working_group_2021}
+    \item
+      An incomplete tutorial (jupyter notebook) for the creation of a new model.
+      The package has to be installed.
+      \url{https://github.com/MPIBGC-TEE/bgc_md2/blob/master/prototypes/working_group_2021/kv_visit2/createModel.py}
+  \end{itemize}
 \end{frame}
 
 \end{document}
