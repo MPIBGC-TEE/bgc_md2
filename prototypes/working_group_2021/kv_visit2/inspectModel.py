@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.13.7
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -80,7 +80,7 @@ h.compartmental_graph(mvs)
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
 
-#msh.download_my_TRENDY_output(conf_dict)
+# msh.download_my_TRENDY_output(conf_dict)
 
 #     # Read NetCDF data  ******************************************************************************************************************************
 svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
@@ -99,6 +99,7 @@ cpa = msh.Constants(
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
  npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
+ xi_0=dvs.xi[0],
  rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
  ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
  r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
@@ -115,6 +116,7 @@ epa_0=msh.EstimatedParameters(
     T_0=2,
     E=4,
     KM=10,
+    env_modifier=1,
     r_C_leaf_litter_rh=0.0004151100041511,
     r_C_wood_litter_rh=0.00012453300124533,
     r_C_root_litter_rh=0.000122042341220423,
@@ -144,26 +146,26 @@ epa_0=msh.EstimatedParameters(
 
 # +
 ## now test it 
-#import matplotlib.pyplot as plt
-#from general_helpers import plot_solutions
-#
-#param2res_sym = msh.make_param2res_sym(mvs,cpa,dvs)
-#xs= param2res_sym(epa_0)
-#obs=np.column_stack([ np.array(v) for v in svs])
-#obs=obs[0:cpa.number_of_months,:] #cut 
-##obs[:,3:4]=obs[:,3:4]
-#n=cpa.number_of_months
-#
-#
-#fig = plt.figure(figsize=(12, 4), dpi=80)
-#gh.plot_solutions(
-#        fig,
-#        times=range(n),
-#        var_names=msh.Observables._fields,
-#        tup=(xs,obs)
-#        #tup=(obs,)
-#)
-#fig.savefig('solutions.pdf')
+import matplotlib.pyplot as plt
+from general_helpers import plot_solutions
+
+param2res_sym = msh.make_param2res_sym(mvs,cpa,dvs)
+xs= param2res_sym(epa_0)
+obs=np.column_stack([ np.array(v) for v in svs])
+obs=obs[0:cpa.number_of_months,:] #cut 
+#obs[:,3:4]=obs[:,3:4]
+n=cpa.number_of_months
+
+
+fig = plt.figure(figsize=(12, 4), dpi=80)
+gh.plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Observables._fields,
+        tup=(xs,obs)
+        #tup=(obs,)
+)
+# fig.savefig('solutions_10.pdf')
 
 # +
 epa_min=msh.EstimatedParameters(
@@ -172,6 +174,7 @@ epa_min=msh.EstimatedParameters(
     T_0=-20,
     E=.1,
     KM=1,
+    env_modifier=0,
     r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
     r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
     r_C_root_litter_rh=epa_0.r_C_root_litter_rh/100,
@@ -205,6 +208,7 @@ epa_max=msh.EstimatedParameters(
     T_0=10,
     E=100,
     KM=100,
+    env_modifier=10,
     r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
     r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
     r_C_root_litter_rh=epa_0.r_C_root_litter_rh*100,
