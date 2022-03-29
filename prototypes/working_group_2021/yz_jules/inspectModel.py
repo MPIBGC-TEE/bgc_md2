@@ -26,7 +26,7 @@
 from IPython.display import HTML
 
 # adjust jupyter display to full screen width
-#display(HTML("<style>.container { width:100% !important; }</style>"))
+display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # set auto reload for notebook
 # %load_ext autoreload
@@ -90,10 +90,12 @@ ta=th.make_test_args(conf_dict,msh,mvs)
 
 h.compartmental_graph(mvs)
 
-# #### Matrix equations:
+mvs.get_CompartmentalMatrix()
+
+mvs.ge
 
 # + [markdown] codehighlighter=[[0, 0]]
-# ## Download Data (Must Edit)
+# ## Download Data
 # #### TRENDY Data
 # Make sure you have a config.json file in your model folder: <br>
 # Config.jon file contents: `{"username": "trendy-v9", "password": "gcb-2020", "dataPath": "/path/to/data/folder"}`

@@ -16,8 +16,8 @@ from general_helpers import (
     make_param_filter_func,
     make_feng_cost_func
 )
-model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop']
-model_folders=['cable-pop']
+#model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam']
+model_folders=['cj_isam']
 
 class TestSymbolic(TestCase):
 
