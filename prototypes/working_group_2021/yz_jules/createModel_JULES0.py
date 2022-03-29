@@ -390,46 +390,57 @@ import netCDF4 as nc
 import numpy as np
 from pathlib import Path
 import json 
+import model_specific_helpers_2 as msh
 # Define function to download, scale, map TRENDY data
-def get_example_site_vars(dataPath):
+def get_global_mean_vars(dataPath):
     # Define single geospatial cell from (3840, 144, 192)
-    slayer = slice(None, None, None)  # this is the same as :
-    slat = 120
-    slon = 50
-    t = slayer, slat, slon  # a site in South America
-
+    #slayer = slice(None, None, None)  # this is the same as :
+    #slat = 120
+    #slon = 50
+    #t = slayer, slat, slon  # a site in South America
+ 
+    
     # Define function to select geospatial cell and scale data
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
+        lats = ds.variables["latitude"]
+        lons = ds.variables["longitude"]
 
         if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
             # f_veg2soil: Total carbon mass from vegetation directly into the soil
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return ds.variables[vn][t] * 86400  # convert from kg/m2/s to kg/m2/day
-        elif vn in ["tsl"]:  # Temperature of Soil - layer, 192x144x4 (depth) x3840, 'K'
+            return gh.global_mean_JULES(lats, lons, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
+        
+        elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
-            tmp = ds.variables[vn][:, 0, slat, slon]
-            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
-            return tmp  # average soil temperature at different depth
+            tmp = ds.variables[vn][:, 0, :, :]
             print("converted size is ", tmp.shape)
+            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
+            return gh.global_mean_JULES(lats, lons, tmp)  # average soil temperature at different depth
+            
+    
         elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
             # from IPython import embed;embed()
             var = ds.variables[vn]
             sh = var.shape
-            tmp = np.sum(var[:, 0:13, slat, slon], axis=1)
-            print("converted size is ", tmp.shape)
+            tmp = np.zeros(shape = var[:, 0, :, :].shape)
+            print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
+            for i in range(13):
+                tmp = tmp + var[:, i, :, :]
+                # print("converted size is ", tmp.shape)
             #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
-            print("Forest cover (t=0) is ", np.sum(var[1, 0:5, slat, slon]))
-            print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
-            print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
-            return tmp  # sum the vegetation coverages
+            # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
+            # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
+            # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
+            return gh.global_mean_JULES(lats, lons, tmp)  # sum the vegetation coverages
+        
         else:
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return ds.variables[vn][t]
+            return gh.global_mean_JULES(lats, lons, ds.variables[vn])
 
     # Link symbols and data:
 
@@ -485,9 +496,8 @@ def get_example_site_vars(dataPath):
         Drivers(*map(f, d_tuples))
     )
 
-
 # call function to link symbols and data
-svs, dvs = get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # look at data
 # svs, dvs
@@ -608,36 +618,36 @@ ParameterValues = namedtuple(
         'Mw'            # 23, soil moisture content at the wilting point
     ]
 )
-
+betaR = 0.295
 epa0 = ParameterValues( ## need to modify!!
-    beta_leaf = 1/3,
-    beta_wood = 1/3,
-    f_leaf2DPM = 0.33,
-    f_wood2DPM = 0.33,
-    f_root2DPM = 0.33,
-    f_DPM2BIO = 0.46*0.99,
-    f_DPM2HUM = 0.54*0.99,
-    f_RPM2BIO = 0.46*0.99,
-    f_RPM2HUM = 0.54*0.99,
-    f_BIO2HUM = 0.01,
-    f_HUM2BIO = 0.001,
-    k_leaf = 1 / (365 * 4), # day -1
-    k_wood=1 / (365 * 100),
-    k_root=1 / (365 * 4),
-    k_DPM= 0.0278,  # 1 / (365 * 60), # 3.22 * 10**(-7) s-1 ## this value is from Clark et al 2011
-    k_RPM= 8.3376 * 10 ** (-4), #1 / (365 * 30), # 9.65 * 10**(-9) s-1
-    k_BIO= 0.0018, #1 / (365 * 30), # 2.12 * 10**(-8) s-1
-    k_HUM= 5.5555 * 10 ** (-5), #1 / (365 * 200), # 6.43 *10(-10) s-1
+    beta_leaf = 0.35,
+    beta_wood = 0.3,
+    f_leaf2DPM = 0.22,
+    f_wood2DPM = 0.22,
+    f_root2DPM = 0.22,
+    f_DPM2BIO = 0.46*betaR,
+    f_DPM2HUM = 0.54*betaR,
+    f_RPM2BIO = 0.46*betaR,
+    f_RPM2HUM = 0.54*betaR,
+    f_BIO2HUM = 0.54*betaR,
+    f_HUM2BIO = 0.46*betaR,
+    k_leaf = (1 / 4) / (360),
+    k_wood = (1 / 30.5)/ (360),
+    k_root = (1 / 4) /360,
+    k_DPM  = (1 / 0.065) / 360,
+    k_RPM = (1 / 2.5) / 360,
+    k_BIO = (1 / 0.85) / 360,
+    k_HUM = (1 / 30) / 360,
 
-    c_leaf0 = svs.cVeg[0] *0.2, #/ 3,  # set inital pool values to svs values
-    c_wood0 = svs.cVeg[0] *0.6, # / 3,
-    c_DPM0 = svs.cSoil[0] *0.0025,
+
+    c_leaf0 = svs.cVeg[0] *0.12, #/ 3,  # set inital pool values to svs values
+    c_wood0 = svs.cVeg[0] *0.76, # / 3,
+    c_DPM0 = svs.cSoil[0] *0.005,
     c_RPM0 = svs.cSoil[0] *0.22,
     c_BIO0 = svs.cSoil[0] *0.02,
 
     Mw=0.01
 )
-
 # need to check here!!
 old_par_dict = {
      # define all k values
@@ -655,12 +665,12 @@ old_par_dict = {
     'f_c_wood_2_c_RPM': 1 - epa0.f_wood2DPM,
     'f_c_root_2_c_DPM': epa0.f_root2DPM,  
     'f_c_root_2_c_RPM': 1 - epa0.f_root2DPM,
-    'f_c_DPM_2_c_BIO': epa0.f_DPM2BIO,
-    'f_c_DPM_2_c_HUM': (0.9 - epa0.f_DPM2BIO), # cannot be 1-f_DPM2BIO because of RH
-    'f_c_RPM_2_c_BIO': epa0.f_RPM2BIO ,
-    'f_c_RPM_2_c_HUM': (0.9 - epa0.f_RPM2BIO),
-    'f_c_BIO_2_c_HUM': epa0.f_BIO2HUM ,
-    'f_c_HUM_2_c_BIO': epa0.f_HUM2BIO
+    'f_c_DPM_2_c_BIO': epa0.f_DPM2BIO, #f_DPM2BIO = 0.46*betaR
+    'f_c_DPM_2_c_HUM': epa0.f_DPM2HUM, # cannot be 1-f_DPM2BIO because of RH
+    'f_c_RPM_2_c_BIO': epa0.f_RPM2BIO , # f_RPM2BIO = 0.46*betaR
+    'f_c_RPM_2_c_HUM': epa0.f_RPM2HUM, # RPM2HUM = 0.54*betaR
+    'f_c_BIO_2_c_HUM': epa0.f_BIO2HUM , # f_BIO2HUM = 0.54*betaR
+    'f_c_HUM_2_c_BIO': epa0.f_HUM2BIO # _HUM2BIO = 0.46*betaR
 }
 
 # Define allocation parameters to be optimized
@@ -677,9 +687,7 @@ par_dict
 
 # -
 
-(c_leaf_0=0.6817478392908138, c_wood_0=2.235037912121442, c_DPM_0=0.6150228959577384, c_RPM_0=3.4206963428475654, c_BIO_0=0.2806084608206477, beta_leaf=0.3615681692392115, beta_wood=0.34426826587002796, Mw=0.08409847267944814, Ms=512.0535665550946, r_c_DPM_rh=0.013779681470873023, r_c_RPM_rh=0.00019419761042855038, r_c_BIO_rh=0.009931040040128954, r_c_HUM_rh=0.0001119936491921345, r_c_leaf_2_c_DPM=0.0009914696627915344, r_c_leaf_2_c_RPM=0.0004662348578176721, r_c_wood_2_c_DPM=4.731833496691258e-05, r_c_wood_2_c_RPM=6.0464848575904364e-05, r_c_root_2_c_DPM=0.0005809097431403182, r_c_root_2_c_RPM=0.000708766072775527, r_c_DPM_2_c_BIO=0.04904413404986645, r_c_DPM_2_c_HUM=0.03038077001366149, r_c_RPM_2_c_BIO=0.0014230350391730563, r_c_RPM_2_c_HUM=0.0010688883979771174, r_c_BIO_2_c_HUM=2.1470079326731046e-05, r_c_HUM_2_c_BIO=2.813025203923101e-07)
 
-0.000226027397260274 + 0.000458904109589041 + 9.04109589041096e-6 + 1.83561643835616e-5 + 0.000226027397260274 + 0.000458904109589041
 
 # +
 ########### Current usage of this script ends here...
