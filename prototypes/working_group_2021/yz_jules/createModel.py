@@ -627,7 +627,7 @@ par_dict = {
     Symbol(k): v
     for k, v in {
         'beta_leaf': 0.33,
-        'beta_wood': 0.38,
+        'beta_wood': 0.34,
         'r_c_DPM_rh': 0.00036551,
         'r_c_RPM_rh': 0.000518173,
         'r_c_BIO_rh': 0.000246165,
@@ -715,82 +715,237 @@ cpa._asdict()  # print - everything should have a numeric value
 #                                 estimated)  # Create function to convert dictionary to namedtuple
 # epa0 = OptimizedParameters(**estimated)  # Create namedtuple of all parameters optimized an initial values
 # epa0._asdict()  # print
-
-# +
-# EstimatedParameters = namedtuple(
-#    'EstimatedParameters',
-#    [
-#        'c_leaf_0',               #Names: c_poolname_0
-#        'c_wood_0',               #Only initial pools that are estimated
-#        'c_DPM_0',
-#        'c_RPM_0',
-#        'c_BIO_0',
-#
-#        'beta_leaf',
-#        'beta_wood',
-#        'Mw',
-#
-#        'r_c_DPM_rh',
-#        'r_c_RPM_rh',
-#        'r_c_BIO_rh',
-#        'r_c_HUM_rh',
-#
-#        'r_c_leaf_2_c_DPM',
-#        'r_c_leaf_2_c_RPM',
-#        'r_c_wood_2_c_DPM',
-#        'r_c_wood_2_c_RPM',
-#        'r_c_root_2_c_DPM',
-#        'r_c_root_2_c_RPM',
-#        'r_c_DPM_2_c_BIO',
-#        'r_c_DPM_2_c_HUM',
-#        'r_c_RPM_2_c_BIO',
-#        'r_c_RPM_2_c_HUM',
-#        'r_c_BIO_2_c_HUM',
-#        'r_c_HUM_2_c_BIO',
-#    ]
-# )
 # -
-
 
 svs_0.cSoil
 
+# +
+# 'r_c_DPM_rh': k_c_DPM*(-f_c_DPM_2_c_BIO - f_c_DPM_2_c_HUM + 1),
+# 'r_c_RPM_rh': k_c_RPM*(-f_c_RPM_2_c_BIO - f_c_RPM_2_c_HUM + 1),
+# 'r_c_BIO_rh': k_c_BIO*(1 - f_c_BIO_2_c_HUM),
+# 'r_c_HUM_rh': k_c_HUM*(1 - f_c_HUM_2_c_BIO),
+# 'r_c_leaf_2_c_DPM': f_c_leaf_2_c_DPM*k_c_leaf,
+# 'r_c_leaf_2_c_RPM': f_c_leaf_2_c_RPM*k_c_leaf,
+# 'r_c_wood_2_c_DPM': f_c_wood_2_c_DPM*k_c_wood,
+# 'r_c_wood_2_c_RPM': f_c_wood_2_c_RPM*k_c_wood,
+# 'r_c_root_2_c_DPM': f_c_root_2_c_DPM*k_c_root,
+# 'r_c_root_2_c_RPM': f_c_root_2_c_RPM*k_c_root,
+# 'r_c_DPM_2_c_BIO': f_c_DPM_2_c_BIO*k_c_DPM,
+# 'r_c_DPM_2_c_HUM': f_c_DPM_2_c_HUM*k_c_DPM,
+# 'r_c_RPM_2_c_BIO': f_c_RPM_2_c_BIO*k_c_RPM,
+# 'r_c_RPM_2_c_HUM': f_c_RPM_2_c_HUM*k_c_RPM,
+# 'r_c_BIO_2_c_HUM': f_c_BIO_2_c_HUM*k_c_BIO,
+# 'r_c_HUM_2_c_BIO': f_c_HUM_2_c_BIO*k_c_HUM
+
+
 epa_0 = msh.EstimatedParameters(
     **{
-        'c_leaf_0': svs_0.cVeg * 0.15,  # set inital pool values to svs values
-        'c_wood_0': svs_0.cVeg * 0.70,  # you can set numerical values here directly as well
-        'c_DPM_0': svs_0.cSoil * 0.05,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
+        'c_leaf_0': svs_0.cVeg * 0.12,  # set inital pool values to svs values
+        'c_wood_0': svs_0.cVeg * 0.76,  # you can set numerical values here directly as well
+        'c_DPM_0': svs_0.cSoil * 0.01,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
         'c_RPM_0': svs_0.cSoil * 0.22,
-        'c_BIO_0': svs_0.cSoil * 0.05
+        'c_BIO_0': svs_0.cSoil * 0.02
     },
     **{
-        'beta_leaf': 0.3333333333333333,
-        'beta_wood': 0.3333333333333333,
+        'beta_leaf': 0.35,
+        'beta_wood': 0.3,
         'Mw': 0.1,
         'Ms': np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
         # 'r_c_leaf_rh': 0,
         # 'r_c_wood_rh': 0,
         # 'r_c_root_rh': 0,
-        'r_c_DPM_rh': 0.001,
-        'r_c_RPM_rh': 0.001,
-        'r_c_BIO_rh': 0.0075,
-        'r_c_HUM_rh': 9.54994450000000e-5,
-        'r_c_leaf_2_c_DPM': 0.000226027397260274,
-        'r_c_leaf_2_c_RPM': 0.000458904109589041,
-        'r_c_wood_2_c_DPM': 9.04109589041096e-5,
-        'r_c_wood_2_c_RPM': 1.83561643835616e-5,
-        'r_c_root_2_c_DPM': 0.000226027397260274,
-        'r_c_root_2_c_RPM': 0.000458904109589041,
-        'r_c_DPM_2_c_BIO': 0.0126601200000000,
-        'r_c_DPM_2_c_HUM': 0.0123598800000000,
-        'r_c_RPM_2_c_BIO': 0.000379694304000000,
-        'r_c_RPM_2_c_HUM': 0.000370689696000000,
-        'r_c_BIO_2_c_HUM': 2.80000000000000e-5,
-        'r_c_HUM_2_c_BIO': 5.55550000000000e-6
+ 'r_c_DPM_rh': 0.0301282051282051,
+ 'r_c_RPM_rh': 0.000783333333333333,
+ 'r_c_BIO_rh': 0.00274738562091503,
+ 'r_c_HUM_rh': 8.00277777777778e-5,
+ 'r_c_leaf_2_c_DPM': 0.000152777777777778,
+ 'r_c_leaf_2_c_RPM': 0.000541666666666667,
+ 'r_c_wood_2_c_DPM': 2.00364298724954e-5,
+ 'r_c_wood_2_c_RPM': 7.10382513661202e-5,
+ 'r_c_root_2_c_DPM': 0.000152777777777778,
+ 'r_c_root_2_c_RPM': 0.000541666666666667,
+ 'r_c_DPM_2_c_BIO': 0.00579914529914530,
+ 'r_c_DPM_2_c_HUM': 0.00680769230769231,
+ 'r_c_RPM_2_c_BIO': 0.000150777777777778,
+ 'r_c_RPM_2_c_HUM': 0.000177000000000000,
+ 'r_c_BIO_2_c_HUM': 0.000520588235294118,
+ 'r_c_HUM_2_c_BIO': 1.25648148148148e-5
     }
     # **{str(key): value for key,value in  par_dict.items() if}
 )
+func_dict = msh.make_func_dict(mvs, dvs, cpa, epa_0)
+import general_helpers as gh
+mvs.get_InternalFluxesBySymbol()
 
-epa_0._asdict()
+import model_specific_helpers_2 as msh
+param2res = msh.make_param2res_sym(mvs, cpa, dvs)  # Define forward model
+obs_simu = param2res(epa_0)  # Run forward model from initial conditions
+
+obs_simu
+
+# +
+fig = plt.figure()
+from general_helpers import plot_observations_vs_simulations
+plot_observations_vs_simulations(fig,svs,obs_simu)
+
+obs_simu.cSoil
+
+# +
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
+
+
+fig, ax = plt.subplots() #[(12*10-1):12*30]
+ax.scatter(np.array(svs.rh[(12*10-1):12*30])*1000, np.array(obs_simu.rh[(12*10-1):12*30])*1000, c='black')
+lims = [
+    np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+    np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+]
+
+# now plot both limits against eachother
+ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+ax.set_aspect('equal')
+ax.set_xlim(lims)
+ax.set_ylim(lims)
+plt.show()
+
+# +
+plt.plot(list(range(0, 12*20)), np.array(svs.rh[(12*300):12*320])*1000, label = "observation")
+plt.plot(list(range(0, 12*20)), np.array(obs_simu.rh[(12*300):12*320])*1000, label = "simulation")
+plt.plot(list(range(0, 12*20)), np.array(dvs.npp[(12*300):12*320])*1000, label = "NPP")
+
+#plt.plot(list(range(0, 12*320)), np.array(dvs.npp) - np.array(svs.fVegSoil), label = "net change in veg C")
+#plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "net veg C")
+plt.legend()
+plt.plot()
+plt.show()
+# -
+
+np.array(svs.cVeg)[0] - np.array(svs.cVeg)[320*12-1]
+
+np.sum(np.array(dvs.npp) - np.array(0))
+
+# +
+fig, ax1 = plt.subplots()
+ax2 = ax1.twinx()
+#ax1.plot(list(range(0, 12*320)), np.array(obs_simu.rh), 'r-')
+#FT = 2.0 ** ((np.array(dvs.tsl) - 298.15) / 10)
+FT = 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85)))
+FV = 0.6 + 0.4 * (1 - np.array(dvs.landCoverFrac) / 100)
+
+Mw = 0.01
+Ms = np.max(dvs.mrsos) + 50
+S0 = 0.5 * (1 + Mw)  # optimum soil moisture
+Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
+mois = np.array(dvs.mrsos)
+FS = np.zeros(shape=mois.shape)
+
+for mi in range(len(mois)):
+    if S0 < mois[mi]/Ms:
+        FS[mi] = 1 - 0.8 * (mois[mi]/Ms - S0)  # effect of soil moisture
+    if (Smin < mois[mi]/Ms) and (mois[mi]/Ms <= S0):
+        FS[mi] = 0.2 + 0.8 * (mois[mi]/Ms - Smin) / (S0 - Smin)
+    if mois[mi]/Ms <= Smin:
+        FS[mi] = 0.2
+
+
+ax2.plot(list(range(0, 12*20)), (FT * FV * FS )[(12*300):12*320], 'b-',)
+ax1.set_ylabel('Rh simulation', color='r')
+ax2.set_ylabel('Environmental scaler i', color='b')
+plt.show()
+
+# +
+## fixme: 
+
+#### semi-analytical solution of steady state, haven't implemented this part to proposer yet
+#### may need work with Marks and/or Feng
+beta_leaf = 0.35
+beta_wood = 0.3
+f_leaf2DPM = 0.22
+f_wood2DPM = 0.22
+f_root2DPM = 0.22
+betaR = 0.295
+f_DPM2BIO = 0.46*betaR
+f_DPM2HUM = 0.54*betaR
+f_RPM2BIO = 0.46*betaR
+f_RPM2HUM = 0.54*betaR
+f_BIO2HUM = 0.54*betaR
+f_HUM2BIO = 0.46*betaR
+k_leaf = (1 / 4) / (360)
+k_wood = (1 / 30.5)/ (360)
+k_root = (1 / 4) /360
+k_DPM  = (1 / 0.065) / 360
+k_RPM = (1 / 2.5) / 360
+k_BIO = (1 / 0.85) / 360
+k_HUM = (1 / 30) / 360
+
+Bmat = np.array([[beta_leaf,         0,                      0,  0,  0,  0,   0],
+                  [0,        beta_wood,                      0,  0,  0,  0,   0],
+                  [0,                0,  1-beta_leaf-beta_wood,  0,  0,  0,   0],
+                  [0,  0,  0, 0,  0,  0,   0],
+                  [0,  0,  0,  0, 0,  0,   0],
+                  [0,  0,  0,  0,  0, 0,   0],
+                  [0,  0,  0,  0,  0,  0,  0]])
+k = [k_leaf, k_wood, k_root, k_DPM, k_RPM, k_BIO, k_HUM]
+Kmat = np.diag(k)
+xi = np.mean(FT * FV * FS)
+ximat = np.array([[1,  0,  0,  0,  0,  0,   0],
+                  [0,  1,  0,  0,  0,  0,   0],
+                  [0,  0,  1,  0,  0,  0,   0],
+                  [0,  0,  0, xi,  0,  0,   0],
+                  [0,  0,  0,  0, xi,  0,   0],
+                  [0,  0,  0,  0,  0, xi,   0],
+                  [0,  0,  0,  0,  0,  0,  xi]])
+Amat = np.array([[-1,  0,  0,  0,  0,  0,   0], 
+              [0,  -1,  0,  0,  0,  0,   0],
+              [0,  0,  -1,  0,  0,  0,   0],
+              [f_leaf2DPM,      f_wood2DPM,    f_root2DPM,         -1,          0,          0,           0],
+              [1-f_leaf2DPM,  1-f_wood2DPM,  1-f_root2DPM,          0,         -1,          0,           0],
+              [0,                        0,             0,  f_DPM2BIO,  f_RPM2BIO,         -1,   f_HUM2BIO],
+              [0,                        0,             0,  f_DPM2HUM,  f_RPM2HUM,  f_BIO2HUM,         -1]])
+U = np.mean(dvs.npp)
+Umat = np.diag([U, U, U, U, U, U, U])
+# -
+
+ximat * Kmat * Amat * Xcarbonpools
+
+# +
+## fixme: 
+########### SASU-inferred steady state 
+
+for i in range(10):
+    X = - np.linalg.inv(ximat * A * Kmat) * Bmat * Umat
+    U = X
+   
+Xcarbonpools = np.zeros(7)
+carbonpools = np.zeros(shape = [14, 400])
+
+
+for i_spinup in range(0, 1):
+    if i_spinup == 1:
+        for i_year in range(0, 80):
+            Xcarbonpools = Xcarbonpools +  Bmat * U + ximat * Kmat * Amat * Xcarbonpools;
+            # carbonpools(:,i_spinup) = Xcarbonpools;
+    else:
+        for i_year in range(0, 8):
+            Xcarbonpools = - np.linalg.inv(ximat * A * Kmat) * Bmat * Xcarbonpools
+    
+Xcarbonpools
+
+# +
+fig, ax = plt.subplots()
+ax.scatter(np.array(svs.fVegSoil), np.array(obs_simu.fVegSoil), c='black')
+lims = [
+    np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+    np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+]
+
+# now plot both limits against eachother
+ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+ax.set_aspect('equal')
+ax.set_xlim(lims)
+ax.set_ylim(lims)
+plt.show()
 
 
 # +
@@ -804,44 +959,6 @@ days = range(n_days)
 npp_obs = np.array([npp_func(d) for d in days])
 npp_obs.shape
 # -
-
-# Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4))
-plot_solutions(
-    fig,
-    times=days,
-    var_names=["npp"],
-    tup=(npp_obs,)
-)
-# fig.savefig('solutions.pdf')
-
-# +
-# Plot simulation output for observables
-c_obs = np.array(dvs.landCoverFrac) # dvs.npp
-c_obs.shape
-
-n_days = cpa.nyears * 12  # 0
-days = range(n_days)
-fig = plt.figure(figsize=(12, 4))
-plot_solutions(
-    fig,
-    times=days,
-    var_names=["vegetation fraction (%)"],
-    tup=(c_obs,)
-)
-# -
-
-c_obs = np.array(svs.rh)/np.array(svs.cSoil)*100 # dvs.npp
-c_obs.shape 
-n_days = cpa.nyears * 12  # 0
-days = range(n_days)
-fig = plt.figure(figsize=(12, 4))
-plot_solutions(
-    fig,
-    times=days,
-    var_names=["rh / cSoil * 100%"],
-    tup=(c_obs,)
-)
 
 # #### Create forward model function:
 
@@ -1123,21 +1240,6 @@ obs_simu = param2res(epa_0)  # Run forward model from initial conditions
 obs_simu
 
 # +
-# Plot simulation output for observables
-c_obs = np.array(svs.cVeg) - np.array(obs_simu.cVeg)# dvs.npp
-c_obs.shape
-
-n_days = cpa.nyears * 12  # 0
-days = range(n_days)
-fig = plt.figure(figsize=(12, 4))
-plot_solutions(
-    fig,
-    times=days,
-    var_names=["Check cVeg Obs - Sim"],
-    tup=(c_obs,)
-)
-
-# +
 #def make_weighted_cost_func(
 #        obs: Observables
 #) -> Callable[[Observables], np.float64]:
@@ -1224,19 +1326,21 @@ t1.__class__._fields
 # +
 # set min/max parameters to +- 100 times initial values
 epa_min = msh.EstimatedParameters(* tuple(np.array(epa_0) * 0.001)) # for fluxes 
-epa_max = msh.EstimatedParameters(* tuple(np.array(epa_0) * 150))
+epa_max = msh.EstimatedParameters(* tuple(np.array(epa_0) * 200))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.8)
-epa_max = epa_max._replace(beta_wood = 0.8)
-epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg * 0.3)
-epa_max = epa_max._replace(c_wood_0 = svs_0.cVeg * 0.9)
-epa_max = epa_max._replace(c_DPM_0 = svs_0.cSoil * 0.5)
-epa_max = epa_max._replace(c_RPM_0 = svs_0.cSoil * 0.5)
-epa_max = epa_max._replace(c_BIO_0 = svs_0.cSoil * 0.5)
-epa_max = epa_max._replace(Mw = 0.8)
+epa_max = epa_max._replace(beta_leaf = epa_0.beta_leaf * 1.5)
+epa_max = epa_max._replace(beta_wood = epa_0.beta_wood * 1.5)
+epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg * epa_0.c_leaf_0 * 1.5)
+epa_max = epa_max._replace(c_wood_0 = svs_0.cVeg * epa_0.c_wood_0 * 1.5)
+epa_max = epa_max._replace(c_DPM_0 = svs_0.cSoil * epa_0.c_DPM_0 * 10)
+epa_max = epa_max._replace(c_RPM_0 = svs_0.cSoil * epa_0.c_RPM_0 * 10)
+epa_max = epa_max._replace(c_BIO_0 = svs_0.cSoil * epa_0.c_BIO_0 * 10)
+epa_max = epa_max._replace(Mw = 0.5)
 epa_max = epa_max._replace(Ms = (max(dvs.mrsos) + 500) * 2) # max(dvs.mrso) * 2
 # -
+
+epa_0
 
 # print - all names should have numerical values
 epa_min._asdict()
@@ -1253,7 +1357,7 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     filter_func = gh.make_param_filter_func_2(epa_max, epa_min,["beta_leaf","beta_wood"]),
     param2res = msh.make_param2res_sym(mvs, cpa, dvs),
     costfunction = msh.make_weighted_cost_func(svs),
-    nsimu = 5000,  # for testing and tuning mcmc
+    nsimu = 20000,  # for testing and tuning mcmc
     c_max = np.array(epa_max),
     c_min = np.array(epa_min),
     acceptance_rate = 15,  # default value | target acceptance rate in %
@@ -1275,11 +1379,13 @@ mod_opt = param2res(epa_opt)
 
 n_plots = len(svs)
 fig = plt.figure(figsize=(12, 4), dpi=80)
+plt.rcParams['font.size'] = 18
 plot_observations_vs_simulations(
         fig,
         svs,
         mod_opt
     )
+#plt.rcParams.update({'font.size': 22})
 fig.savefig('solutions_opt.pdf')
 
 # # n_plots=len(svs_cut)
@@ -1296,14 +1402,36 @@ fig.savefig('solutions_opt.pdf')
 #fig.savefig('solutions_opt.pdf')
 
 
-# -
+# +
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
+
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_observations_vs_simulations(
-        fig,
-        svs,
-        mod_opt
-    )
-fig.savefig('solutions_opt.pdf')
+plt.rcParams['font.size'] = 15
+fig, ax = plt.subplots() #[(12*10-1):12*30]
+ax.scatter(np.array(svs.rh)*1000, np.array(mod_opt.rh)*1000, c='black')
+lims = [
+    np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+    np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+]
+
+# now plot both limits against eachother
+ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+ax.set_aspect('equal')
+ax.set_xlim(lims)
+ax.set_ylim(lims)
+plt.show()
+
+# +
+plt.plot(list(range(0, 12*20)), np.array(svs.rh[(12*300):12*320])*1000, label = "observation")
+plt.plot(list(range(0, 12*20)), np.array(mod_opt.rh[(12*300):12*320])*1000, label = "simulation")
+#plt.plot(list(range(0, 12*20)), np.array(dvs.npp[(12*300):12*320])*1000, label = "NPP")
+
+#plt.plot(list(range(0, 12*320)), np.array(dvs.npp) - np.array(svs.fVegSoil), label = "net change in veg C")
+#plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "net veg C")
+plt.legend()
+plt.plot()
+plt.show()
 
 # +
 # save the parameters and cost function values for postprocessing
@@ -1316,7 +1444,5 @@ pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('JULES_da_cost.csv'), sep=',
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('JULES_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('JULES_optimized_solutions.csv'), sep=',')
 # -
-
-mod_opt.fVegSoil[10*12:320*12].shape 
 
 epa_opt

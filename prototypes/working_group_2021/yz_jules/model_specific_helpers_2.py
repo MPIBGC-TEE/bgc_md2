@@ -295,20 +295,20 @@ def make_xi_func(tsl, Mw, Ms, mrsos, landCoverFrac):
     def xi_func(day):
         mi = gh.day_2_month_index(day)
         # alternative FT
-            # Q10 function
-        FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
+            # Q10 function (this is not what Clark et al 2011 Fig. 2 presented, the equation must be wrong)
+        #FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
             # RothC temperature function (Jenkinson 1990)
-        #FT = 47.9 / (1 + np.exp(106/(tsl[mi] - 254.85)))
+        FT = 47.9 / (1 + np.exp(106/(tsl[mi] - 254.85)))
         FV = 0.6 + 0.4 * (1 - landCoverFrac[mi] / 100)  # effect of vegetation cover
         # Mw is soil moisture at wilting point as a fraction of saturation
         # Ms is soil moisture content at saturation
         S0 = 0.5 * (1 + Mw)  # optimum soil moisture
         Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
-        if S0 > Smin:
+        if S0 < mrsos[mi]/Ms:
             FS = 1 - 0.8 * (mrsos[mi]/Ms - S0)  # effect of soil moisture
         if (Smin < mrsos[mi]/Ms) and (mrsos[mi]/Ms <= S0):
             FS = 0.2 + 0.8 * (mrsos[mi]/Ms - Smin) / (S0 - Smin)
-        if mrsos[mi] <= Smin:
+        if mrsos[mi]/Ms <= Smin:
             FS = 0.2
         # print("FT,FV,FS", FT, FV, FS)
         rh_factor = FT * FV * FS
@@ -367,8 +367,10 @@ def make_iterator_sym(
         for k, expr_cont in mvs.get_OutFluxesBySymbol().items()
     }
     v2sfl = {
-        k:v for k,v in mvs.get_InternalFluxesBySymbol().items() 
-        if k[0] in map(Symbol,["c_leaf","c_wood","c_root"])
+        k:v for k,v in mvs.get_InternalFluxesBySymbol().items()
+        # included DPM and RPM as donor pools 
+        # becaue the previous list didn't have mass balance between increase of cVeg (~1kg) and (NPP - fVegSoil) (0.09kg)
+        if k[0] in map(Symbol,["c_leaf","c_wood","c_root"])  # ,"c_DPM","c_RPM"
     }
     numv2sfl = {
         k: gh.numfunc(
@@ -392,6 +394,7 @@ def make_iterator_sym(
             for k,f in numOutFluxesBySymbol.items()
             if str(k) in ["c_DPM", "c_RPM", "c_BIO", "c_HUM"]
         ]).sum()
+        
         fVegSoil=np.array(
             [
                 f(it, *(X.reshape(n, )))
