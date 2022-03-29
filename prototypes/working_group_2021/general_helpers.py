@@ -890,13 +890,19 @@ def plot_observations_vs_simulations(
 
 def global_mean(lats,lons,arr):
     # assuming an equidistant grid.
-    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
-    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
+    delta_lat=(
+        np.array(lats).max() - 
+        np.array(lats).min()
+        )/(len(np.array(lats))-1)
+    delta_lon=(
+        np.array(lons).max() - 
+        np.array(lons).min()
+        )/(len(np.array(lons))-1)
 
     pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
     
     #copy the mask from the array (first time step) 
-    weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
+    weight_mask=arr[0,:,:].mask  #arr.mask[0,:,:] if  arr.mask.any() else False
 
     weight_mat= np.ma.array(
         np.array(

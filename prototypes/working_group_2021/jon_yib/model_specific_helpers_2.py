@@ -44,18 +44,24 @@ Constants = namedtuple(
         'clay',        #Constants like clay
         'silt',
         'nyears',       #Run time (years for my model)
+        'beta_leaf',
+        'beta_root'
+        
     ]
 )
 EstimatedParameters = namedtuple(
     'EstimatedParameters', 
     [
-        'c_leaf_0',               
-        'c_root_0',
-        'beta_leaf',
-        'beta_root',
         'r_c_leaf_rh',
         'r_c_root_rh',
         'r_c_wood_rh',
+        'r_c_leaf_2_c_lit_met',
+        'r_c_leaf_2_c_lit_str',
+        'r_c_root_2_c_soil_met',
+        'r_c_root_2_c_soil_str',
+        'r_c_wood_2_c_lit_cwd',
+        'c_leaf_0',               
+        'c_root_0',
         'r_c_lit_cwd_rh',
         'r_c_lit_met_rh',
         'r_c_lit_str_rh',
@@ -65,11 +71,6 @@ EstimatedParameters = namedtuple(
         'r_c_soil_mic_rh',
         'r_c_soil_slow_rh',
         'r_c_soil_passive_rh',
-        'r_c_leaf_2_c_lit_met',
-        'r_c_leaf_2_c_lit_str',
-        'r_c_root_2_c_soil_met',
-        'r_c_root_2_c_soil_str',
-        'r_c_wood_2_c_lit_cwd',
         'r_c_lit_cwd_2_c_lit_mic',
         'r_c_lit_cwd_2_c_soil_slow',
         'r_c_lit_met_2_c_lit_mic',
@@ -83,7 +84,7 @@ EstimatedParameters = namedtuple(
         'r_c_soil_mic_2_c_soil_passive',
         'r_c_soil_slow_2_c_soil_mic',
         'r_c_soil_slow_2_c_soil_passive',
-        'r_c_soil_passive_2_c_soil_mic',         
+        'r_c_soil_passive_2_c_soil_mic',
         'c_lit_cwd_0',
         'c_lit_met_0',
         'c_lit_str_0',
@@ -91,7 +92,7 @@ EstimatedParameters = namedtuple(
         'c_soil_met_0',
         'c_soil_str_0',
         'c_soil_mic_0',
-        'c_soil_slow_0'
+        'c_soil_slow_0',
     ]
 )
 
@@ -132,6 +133,48 @@ def get_example_site_vars(dataPath):
             #    for attrname in variable.ncattrs():
             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return ds.variables[vn][t]
+
+    # Link symbols and data:
+    # YIBS has annual vs monthly file names so they are linked separately
+    # If all your data is similarly named you can do this in one step
+
+    # Create annual file names (single step if files similarly named)
+    o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
+
+    # Create monthly file names (can remove if done in one step above)
+    monthly_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Observables_monthly._fields]
+    # Extend name list with monthly names
+    o_names.extend(monthly_names)
+
+    # create file names for Drivers
+    d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
+
+    # Link symbols and data for Observables/Drivers
+    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+
+
+def get_globalmean_vars(dataPath):
+    
+    #define function to average variables
+    def f(tup):
+        #define parts of function from nc file
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        ds = nc.Dataset(str(path))
+        lats = ds.variables["latitude"]
+        lons = ds.variables["longitude"]
+        
+        #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
+        if vn in ["npp","gpp","rh","ra"]:
+            #for name, variable in ds.variables.items():            
+            #    for attrname in variable.ncattrs():
+            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            return (gh.global_mean(lats, lons, ds.variables[vn])*24*60*60)
+        else:
+            #for name, variable in ds.variables.items():            
+            #    for attrname in variable.ncattrs():
+            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            return (gh.global_mean(lats, lons, ds.variables[vn]))
 
     # Link symbols and data:
     # YIBS has annual vs monthly file names so they are linked separately
@@ -245,23 +288,26 @@ def make_temp_func(dvs):
 
 
 def make_xi_func_soil(dvs):
-    t_ref = 273.15 + 18
+    t_ref = 273.15 + 28
     t_half = 273.15 + 0
+    t_exp = 1.9
     def xi_func_soil(day):
         month = gh.day_2_month_index(day)
-        s_t = 1.2 ** ((dvs.tas[month] - t_ref)/10)
+        s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
         s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
         return s_t * s_f 
     return xi_func_soil
 
 
 def make_xi_func_leaf(dvs):
-    t_ref = 273.15 + 18
-    t_half = 273.15 + 27
+    t_ref = 273.15 + 24
+    t_half = 273.15 + 33
+    t_exp = 1.8
+    tf_frac = 0.2
     def xi_func_leaf(day):
         month = gh.day_2_month_index(day)
-        s_t = 2 ** ((dvs.tas[month] - t_ref)/10)
-        s_f = (1 + np.exp(0.2*(dvs.tas[month]-t_half)))
+        s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+        s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
         return s_t / s_f 
     return xi_func_leaf
 
@@ -426,15 +472,14 @@ def make_param_filter_func(
         ) -> Callable[[np.ndarray], bool]:
 
     # find position of beta_leaf and beta_wood
-    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
-    beta_root_ind=EstimatedParameters._fields.index("beta_root")
+    #beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    #beta_root_ind=EstimatedParameters._fields.index("beta_root")
 
     def isQualified(c):
-        beta_leaf_ind
         cond1 =  (c >= c_min).all() 
         cond2 =  (c <= c_max).all() 
-        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.99  
-        return (cond1 and cond2 and cond3)
+        #cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.99  
+        return (cond1 and cond2) # and cond3)
         
     return isQualified
 

@@ -101,7 +101,7 @@ with Path('config.json').open(mode='r') as f:
 # Define function to subset netCDF files and link to data symbols:
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
-svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 #look at data
@@ -124,59 +124,105 @@ cpa = msh.Constants(             #use Constants namedtuple to define constant va
     clay = 0.2028,
     silt = 0.2808,
     nyears = 320,
+    beta_leaf=0.37152535661667285,
+    beta_root=0.2118738332472721
 )
 cpa._asdict()    #print - everything should have a numeric value
 # -
 
 # #### Create start values for parameters to be optimized during data assimilation:
 
+# +
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
-    c_leaf_0=0.11934574325601431,
-    c_root_0=0.006793074629361561,
-    beta_leaf=0.6757466559750366,
-    beta_root=0.05876687333136758,
-    r_c_leaf_rh=0.016700660434714746,
-    r_c_root_rh=0.019942367049073872,
-    r_c_wood_rh=0.0019402384855432195,
-    r_c_lit_cwd_rh=0.0009730016902211099,
-    r_c_lit_met_rh=0.07002926006944982,
-    r_c_lit_str_rh=0.03459128990999148,
-    r_c_lit_mic_rh=0.06496258804231679, 
-    r_c_soil_met_rh=0.05283019624678767,
-    r_c_soil_str_rh=0.0015550260079549095,
-    r_c_soil_mic_rh=0.014976016198231856,
-    r_c_soil_slow_rh=9.561359665073253e-05,
-    r_c_soil_passive_rh=0.0001554724909932264,
-    r_c_leaf_2_c_lit_met=0.015163076798849949,
-    r_c_leaf_2_c_lit_str=0.05519637426787492,
-    r_c_root_2_c_soil_met=0.02809207220975982,
-    r_c_root_2_c_soil_str=0.02795375188378404,
-    r_c_wood_2_c_lit_cwd=0.0008902772702585985, 
-    r_c_lit_cwd_2_c_lit_mic=0.002666130148133097,
-    r_c_lit_cwd_2_c_soil_slow=0.003132779629682739,
-    r_c_lit_met_2_c_lit_mic=0.0010359522559848344, 
-    r_c_lit_str_2_c_lit_mic=0.008930543749313994,
-    r_c_lit_str_2_c_soil_slow=0.06956056931813782,
-    r_c_lit_mic_2_c_soil_slow=0.000982832457403613,
-    r_c_soil_met_2_c_soil_mic=0.00494305460211622,
-    r_c_soil_str_2_c_soil_mic=0.017939031246948314,
-    r_c_soil_str_2_c_soil_slow=0.0012026215328729533,
-    r_c_soil_mic_2_c_soil_slow=0.009376182185796474,
-    r_c_soil_mic_2_c_soil_passive=0.0021203823995936096,
-    r_c_soil_slow_2_c_soil_mic=3.2760504386493467e-05,
-    r_c_soil_slow_2_c_soil_passive=5.146635398790735e-08,
-    r_c_soil_passive_2_c_soil_mic=9.889917586471123e-06,
-    c_lit_cwd_0=0.06866899816851733,
-    c_lit_met_0=0.020539099064198253,
-    c_lit_str_0=0.003781467337857978,
-    c_lit_mic_0=0.016646995368000368,
-    c_soil_met_0=0.049561307262804985,
-    c_soil_str_0=0.025006435484893126, 
-    c_soil_mic_0=0.013016442169970078,
-    c_soil_slow_0=12.39010616633247
+    r_c_leaf_rh=0.0022972292016441116,
+    r_c_root_rh=0.0015470633697005037,
+    r_c_wood_rh=0.0003981642399033648,
+    r_c_leaf_2_c_lit_met=0.0008419144443122888, 
+    r_c_leaf_2_c_lit_str=7.253712507163508e-05,
+    r_c_root_2_c_soil_met=0.0007599224861792184,
+    r_c_root_2_c_soil_str=0.0007161706404910827,
+    r_c_wood_2_c_lit_cwd=0.0009217945194693122,
+    c_leaf_0=0.11328379866881665,
+    c_root_0=0.14464613373390392,
+    r_c_lit_cwd_rh=0.02026318476587012, 
+    r_c_lit_met_rh=0.00340079410753037, 
+    r_c_lit_str_rh=0.008989119944533677,
+    r_c_lit_mic_rh=0.011276949417831122,
+    r_c_soil_met_rh=0.0006741622348146495,
+    r_c_soil_str_rh=0.00017592886085999286,
+    r_c_soil_mic_rh=0.000519741477608671,
+    r_c_soil_slow_rh=1.0255263440555624e-06,
+    r_c_soil_passive_rh=3.881935738016802e-07,
+    r_c_lit_cwd_2_c_lit_mic=1.3188464625334016e-05,
+    r_c_lit_cwd_2_c_soil_slow=1.6316549662914743e-05,
+    r_c_lit_met_2_c_lit_mic=2.9433144645429653e-06,
+    r_c_lit_str_2_c_lit_mic=0.00010298015064924245,
+    r_c_lit_str_2_c_soil_slow=0.0016579805745133146,
+    r_c_lit_mic_2_c_soil_slow=0.0011840494205249575,
+    r_c_soil_met_2_c_soil_mic=7.861811338124696e-05,
+    r_c_soil_str_2_c_soil_mic=2.578967926776423e-05,
+    r_c_soil_str_2_c_soil_slow=1.7394627034766953e-06,
+    r_c_soil_mic_2_c_soil_slow=0.00021605360652605818,
+    r_c_soil_mic_2_c_soil_passive=4.569266267503945e-05,
+    r_c_soil_slow_2_c_soil_mic=4.1146075824754925e-07,
+    r_c_soil_slow_2_c_soil_passive=2.9993396188473066e-08,
+    r_c_soil_passive_2_c_soil_mic=2.751360714464457e-06,
+    c_lit_cwd_0=0.011122590276073926, 
+    c_lit_met_0=0.04563448012195457,
+    c_lit_str_0=0.022083588329899793,
+    c_lit_mic_0=0.011910319433275054,
+    c_soil_met_0=0.048208986458370635,
+    c_soil_str_0=0.6643525311241724,
+    c_soil_mic_0=0.05837121211447685,
+    c_soil_slow_0=0.3228602860446373
 )
+
+#initial globalmean hand-tuning
+#beta_leaf=0.3,
+#beta_root=0.3,
+#r_c_leaf_rh=0.0008,
+#r_c_root_rh=0.0008,
+#r_c_wood_rh=0.0009,
+#r_c_lit_cwd_rh=0.009730016902211099,
+#r_c_lit_met_rh=0.007002926006944982,
+#r_c_lit_str_rh=0.003459128990999148,
+#r_c_lit_mic_rh=0.006496258804231679, 
+#r_c_soil_met_rh=0.0005283019624678767,
+#r_c_soil_str_rh=0.00015550260079549095,
+#r_c_soil_mic_rh=0.0014976016198231856,
+#r_c_soil_slow_rh=8e-6,
+#r_c_soil_passive_rh=7e-07,
+#r_c_leaf_2_c_lit_met=0.001,
+#r_c_leaf_2_c_lit_str=0.0002,
+#r_c_root_2_c_soil_met=0.001,
+#r_c_root_2_c_soil_str=0.0005,
+#r_c_wood_2_c_lit_cwd=0.0002, 
+#r_c_lit_cwd_2_c_lit_mic=0.00002666130148133097,
+#r_c_lit_cwd_2_c_soil_slow=0.00003132779629682739,
+#r_c_lit_met_2_c_lit_mic=0.000010359522559848344, 
+#r_c_lit_str_2_c_lit_mic=0.00008930543749313994,
+#r_c_lit_str_2_c_soil_slow=0.0006956056931813782,
+#r_c_lit_mic_2_c_soil_slow=0.000982832457403613,
+#r_c_soil_met_2_c_soil_mic=0.000494305460211622,
+#r_c_soil_str_2_c_soil_mic=0.000017939031246948314,
+#r_c_soil_str_2_c_soil_slow=0.000012026215328729533,
+#r_c_soil_mic_2_c_soil_slow=0.0009376182185796474,
+#r_c_soil_mic_2_c_soil_passive=0.00021203823995936096,
+#r_c_soil_slow_2_c_soil_mic=1.2760504386493467e-06,
+#r_c_soil_slow_2_c_soil_passive=4.146635398790735e-08,
+#r_c_soil_passive_2_c_soil_mic=7.889917586471123e-06,
+#c_leaf_0=0.2,
+#c_root_0=0.2,
+#c_lit_cwd_0=0.2,
+#c_lit_met_0=0.2,
+#c_lit_str_0=0.2,
+#c_lit_mic_0=0.2,
+#c_soil_met_0=0.2,
+#c_soil_str_0=0.2, 
+#c_soil_mic_0=0.2,
+#c_soil_slow_0=0.5,
 
 # +
 gpp_func = msh.make_gpp_func(dvs)
@@ -244,10 +290,10 @@ epa_min=msh.EstimatedParameters._make(tuple(np.array(epa0)*0.01))
 epa_max=msh.EstimatedParameters._make(tuple(np.array(epa0)*100))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.9)
-epa_max = epa_max._replace(beta_root = 0.9)
-epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
-epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
+#epa_max = epa_max._replace(beta_leaf = 0.9)
+#epa_max = epa_max._replace(beta_root = 0.9)
+#epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
+#epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_met_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_str_0 = svs_0.cSoil)
@@ -272,7 +318,7 @@ C_autostep, J_autostep = autostep_mcmc_2(
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=2000,
+    nsimu=4000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=0.23,   # default value | target acceptance rate in %
