@@ -45,36 +45,36 @@ from general_helpers import (
 
 # Make a small dictionary for the variables we will use
 sym_dict={
-    'mrso': 'Total Soil Moisture Content, in kg m-2',
-    'tsl': 'Temperature of Soil - layer, four layers, in K',
+    'mrsos': 'Moisture in top soil (10cm) layer, in kg m-2',
+    'tsl': 'Temperature of Soil - layer, top layer extracted from a four-layer data, in K',
     'Mw': 'soil moisture at wilting point as a fraction of saturation',
     'Ms': 'soil moisture content at saturation',
     'beta_leaf': 'NPP allocation fraction to leaf',
     'beta_wood': 'NPP allocation fraction to wood',
     #'beta_root': 'NPP allocation fraction to root',
-    'c_leaf': '',  # Names: c_poolname
-    'c_wood': '',
-    'c_root': '',
-    'c_DPM': '',  # full name: decomposable plant material
-    'c_RPM': '',  # full name: resistant plant material
-    'c_BIO': '',  # full name: microbial biomass
-    'c_HUM': '',   # full name: long-lived humified
-    'r_c_DPM_rh': '',  # Pools with loss from system will be listed here
-    'r_c_RPM_rh': '',  # Names: r_c_poolname_rh
-    'r_c_BIO_rh': '',
-    'r_c_HUM_rh': '',
-    'r_c_leaf_2_c_DPM': '',  # Pool transfer paths
-    'r_c_leaf_2_c_RPM': '',  # Names: r_c_donorPool_2_recievingPool
-    'r_c_wood_2_c_DPM': '',
-    'r_c_wood_2_c_RPM': '',
-    'r_c_root_2_c_DPM': '',
-    'r_c_root_2_c_RPM': '',
-    'r_c_DPM_2_c_BIO': '',
-    'r_c_DPM_2_c_HUM': '',
-    'r_c_RPM_2_c_BIO': '',
-    'r_c_RPM_2_c_HUM': '',
-    'r_c_BIO_2_c_HUM': '',
-    'r_c_HUM_2_c_BIO': ''
+    'c_leaf': 'leaf carbon pool',  # Names: c_poolname
+    'c_wood': 'wood carbon pool',
+    'c_root': 'root carbon pool',
+    'c_DPM': 'decomposable plant material carbon pool',  
+    'c_RPM': 'resistant plant material carbon pool', 
+    'c_BIO': 'microbial biomass carbon pool',  
+    'c_HUM': 'long-lived humified carbon',  
+    'r_c_DPM_rh': 'heterotrophic respiration from DPM',  # Pools with loss from system will be listed here
+    'r_c_RPM_rh': 'heterotrophic respiration from RPM',  # Names: r_c_poolname_rh
+    'r_c_BIO_rh': 'heterotrophic respiration from BIO',
+    'r_c_HUM_rh': 'heterotrophic respiration from HUM',
+    'r_c_leaf_2_c_DPM': 'internal C flux/transfer from leaf to DPM',  # Pool transfer paths
+    'r_c_leaf_2_c_RPM': 'internal C flux/transfer from leaf to RPM',  # Names: r_c_donorPool_2_recievingPool
+    'r_c_wood_2_c_DPM': 'internal C flux/transfer from wood to DPM',
+    'r_c_wood_2_c_RPM': 'internal C flux/transfer from wood to RPM',
+    'r_c_root_2_c_DPM': 'internal C flux/transfer from root to DPM',
+    'r_c_root_2_c_RPM': 'internal C flux/transfer from root to RPM',
+    'r_c_DPM_2_c_BIO':  'internal C flux/transfer from DPM to BIO',
+    'r_c_DPM_2_c_HUM':  'internal C flux/transfer from DPM to HUM',
+    'r_c_RPM_2_c_BIO':  'internal C flux/transfer from RPM to BIO',
+    'r_c_RPM_2_c_HUM':  'internal C flux/transfer from RPM to HUM',
+    'r_c_BIO_2_c_HUM':  'internal C flux/transfer from BIO to HUM',
+    'r_c_HUM_2_c_BIO':  'internal C flux/transfer from HUM to BIO'
 }
 
 for k in sym_dict.keys():
@@ -149,12 +149,12 @@ mvs = CMTVS(
             }
         ),
         BibInfo(# Bibliographical Information
-            name="Visit",
-            longName="",
+            name="JULES",
+            longName="Joint UK Land Environment Simulator",
             version="1",
-            entryAuthor="",
-            entryAuthorOrcid="",
-            entryCreationDate="",
+            entryAuthor="Yu Zhou",
+            entryAuthorOrcid="0000-0002-5544-8342",
+            entryCreationDate="2022-03-21",
             doi="",
             sym_dict=sym_dict,
             func_dict=func_dict
