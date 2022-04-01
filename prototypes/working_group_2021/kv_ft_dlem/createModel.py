@@ -325,7 +325,31 @@ def get_example_site_vars(dataPath):
 #     # Read NetCDF data  ******************************************************************************************************************************
 # -
 
-svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+def get_globalmean_vars(dataPath):
+    # pick up 1 site   
+    #s = slice(None, None, None)  # this is the same as :
+    #t = s, 50, 33  # [t] = [:,49,325]
+    def f(tup):
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them 
+        ds = nc.Dataset(str(path))
+        #print(ds.variables)
+        # access lat/long of netCDF file
+        lats= ds.variables["lat"]
+        lons= ds.variables["lon"]
+        #scale fluxes vs pools
+        if vn in ["npp", "rh"]:
+            return gh.global_mean_JULES(lats,lons,ds.variables[vn])*86400
+        else:
+            return gh.global_mean_JULES(lats,lons,ds.variables[vn])
+    #map variables to data
+    o_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Observables._fields]
+    d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
+    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+
+
+svs,dvs=get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 
 svs,dvs
