@@ -29,6 +29,9 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
+import sys
+sys.path.insert(0,'..') # necessary to import general_helpers
+import general_helpers as gh
 
 # Make a small dictionary for the variables we will use
 sym_dict={
@@ -100,7 +103,7 @@ for k in func_dict.keys():
     exec(code)
 
 t=TimeSymbol("t")
-beta_root = 1.0- (beta_leaf+beta_wood)
+
 mvs = CMTVS(
     {
         t,
@@ -123,7 +126,7 @@ mvs = CMTVS(
             {
                 #vl: I_vl, vw: I_vw
                 C_leaf: NPP(t) * beta_leaf, 
-                C_root: NPP(t) * beta_root, 
+                C_root: NPP(t) * (1.0-beta_leaf-beta_wood), 
                 C_wood: NPP(t) * beta_wood
             }
         ),
@@ -259,8 +262,6 @@ K
 #
 
 # +
-import sys
-sys.path.insert(0,'..') # necessary to import general_helpers
 from general_helpers import download_TRENDY_output
 import json 
 from pathlib import Path
@@ -311,7 +312,10 @@ def get_example_site_vars(dataPath):
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
-        return ds.variables[vn][t]
+        if vn in ["npp", "rh"]:
+            return ds.variables[vn][t]*86400
+        else:
+            return ds.variables[vn][t]
 
     o_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Observables._fields]
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
@@ -328,11 +332,34 @@ svs,dvs
 
 # +
 sys.path.insert(0,'..')
-from general_helpers import day_2_month_index
-def NPP_fun(day ):
-    return npp[day_2_month_index(day)] * 86400   # kg/m2/s kg/m2/day 
+from general_helpers import (
+    day_2_month_index,
+    plot_observations_vs_simulations,
+    plot_solutions
+)
+import general_helpers as gh
+import matplotlib.pyplot as plt
 
-func_dict={NPP: NPP_fun}
+#def NPP_fun(day):
+#    return npp[day_2_month_index(day)]   # kg/m2/s kg/m2/day 
+
+def npp_func(day):
+    month = gh.day_2_month_index(day)
+    return (dvs.npp[month])
+
+func_dict={NPP: npp_func}
+
+n = 320*12*30
+npp_obs = np.array([npp_func(d) for d in range(n)])
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=Drivers._fields,
+        tup=(npp_obs,)
+)
 # -
 # ### Forward run
 # The next goal is to run the model forward with a given set of parameters.
@@ -434,17 +461,17 @@ old_par_dict = {
     f_C_nom_2_C_smb1: 0.2,
     f_C_psom_2_C_smb1: 0.2,
     
-    k_C_leaf: 1 / (60 * 2),
-    k_C_wood: 1 / (365 * 30),
-    k_C_root: 1 / (365 * 22),
-    k_C_aom1: 1 / (365 * 4.5),
-    k_C_aom2: 1 / (365 * 18),
-    k_C_smb1: 1 / (365 * 1.5),
-    k_C_smb2: 1 / (365 * 6),
-    k_C_smr: 1 / (365 * 7.3),
-    k_C_dom: 1 / (365 * 0.003),
-    k_C_nom: 1 / (365 * 0.25),
-    k_C_psom: 1 / (365 * 1.25),
+    k_C_leaf: 1 * 4 / (60 * 2),
+    k_C_wood: 1 * 6 / (365 * 30),
+    k_C_root: 1 * 4 / (365 * 22),
+    k_C_aom1: 1 * 2 / (365 * 4.5),
+    k_C_aom2: 1 * 2 / (365 * 18),
+    k_C_smb1: 1 / (365 * 45.5),
+    k_C_smb2: 1 / (365 * 45),
+    k_C_smr: 1 / (365 * 45.3),
+    k_C_dom: 1 / (365 * 44.003),
+    k_C_nom: 1 / (365 * 44.25),
+    k_C_psom: 1 / (365 * 55.25),
 }
 
 
@@ -465,6 +492,53 @@ par_dict.update(
 list(par_dict.keys())[4]
 par_dict
 
+# +
+par_dict_2 = {
+    beta_leaf: 0.3028851224272647,
+    beta_wood: 0.4564030561461778,
+    Theta_sat: 0.09469315267122164,
+    Theta_fc: 0.0795237425542056,
+    r_C_aom1_rh: 0.0003037126928450523,
+    r_C_aom2_rh: 0.00029780017612134036,
+    r_C_smb1_rh: 1.0689106224513612e-05,
+    r_C_smb2_rh: 0.00017382741384128404,
+    r_C_smr_rh: 7.29448370877164e-06,
+    r_C_nom_rh: 1.0164098602070474e-05,
+    r_C_dom_rh: 1.1500691016736846e-05,
+    r_C_psom_rh: 1.7644513592821266e-05,
+    r_C_leaf_2_C_aom1: 0.01970013741245839,
+    r_C_leaf_2_C_aom2: 0.015317429471496852,
+    r_C_wood_2_C_aom1: 0.0004097261277630772,
+    r_C_wood_2_C_aom2: 0.0003689152669226263,
+    r_C_root_2_C_aom1: 0.0006603079638088481,
+    r_C_root_2_C_aom2: 0.00043562236684542056,
+    r_C_aom1_2_C_smb1: 0.00023145662814734428,
+    r_C_aom1_2_C_smb2: 0.0002977928058255672,
+    r_C_aom1_2_C_nom: 0.00015287835816890072,
+    r_C_aom1_2_C_dom: 0.0001781924058628594,
+    r_C_aom2_2_C_smb1: 2.0810976139531716e-05,
+    r_C_aom2_2_C_smb2: 2.8349756784116157e-05,
+    r_C_aom2_2_C_dom: 2.14750752962314e-05,
+    r_C_smb1_2_C_nom: 2.3404172674296687e-05,
+    r_C_smb1_2_C_psom: 3.3408243666981594e-05,
+    r_C_smb2_2_C_smr: 1.2338527499527314e-05,
+    r_C_smr_2_C_smb1: 4.801573811093888e-05,
+    r_C_nom_2_C_smb1: 1.0587791011076786e-05,
+    r_C_nom_2_C_dom: 2.551756974855787e-05,
+    r_C_nom_2_C_psom: 1.307830769309431e-05,
+    r_C_dom_2_C_smb1: 1.0950958379980324e-05,
+    r_C_dom_2_C_nom: 1.4109489107131771e-05,
+    r_C_psom_2_C_smb1: 2.222172994302753e-06
+}
+
+for i in par_dict_2:
+    par_dict.update(
+        {i: par_dict_2[i]}
+)
+
+par_dict
+# -
+
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
 # We will later store these functions in  `model_specific_helpers.py` which resides in the same folder as this notebook. You will have to adapt them to your data set. 
@@ -475,7 +549,7 @@ from general_helpers import make_B_u_funcs_2, day_2_month_index
 
 def npp_func(day):
     month=day_2_month_index(day)
-    return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day
+    return dvs.npp[month]    # kg/m2/s kg/m2/day
 
 def xi_func(day):
     return 1.0 # preliminary fake for lack of better data... 
@@ -617,7 +691,7 @@ V_init= StartVector(
     C_dom=svs_0.cSoil/6,
     C_nom=svs_0.cSoil/6,
     C_psom=svs_0.cSoil/6,
-    rh=svs_0.rh * 86400   # kg/m2/s kg/m2/day        
+    rh=svs_0.rh   # kg/m2/s kg/m2/day        
 )
 #V_init.__getattribute__("rh")
 V_init
@@ -844,11 +918,11 @@ cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
- rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
+ npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
+ rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
  #mrso_0=dvs.mrso[0],
  #tsl_0=dvs.tsl[0],
- number_of_months=120 # for testing and tuning mcmc
+ number_of_months=int(320*12) # for testing and tuning mcmc
  #number_of_months=len(svs.rh)
 )
 print(cpa)
@@ -881,7 +955,7 @@ it_sym = make_steady_state_iterator_sym(
 )
 Bs=[]
 bs=[]
-for i in range(cpa.number_of_months*30):
+for i in range(int(cpa.number_of_months/12)):
     bs.append(it_sym.__next__()[1])
     Bs.append(it_sym.__next__()[2])
 B_mean=np.stack(Bs).mean(axis=0)
@@ -985,6 +1059,7 @@ epa_0=EstimatedParameters(*temp_list)
 #  C_soil_fast_0=svs_0.cSoil/3,
 #  C_soil_slow_0=svs_0.cSoil/3,
 # )
+par_dict
 # -
 
 epa_0
@@ -1027,9 +1102,10 @@ def make_iterator_sym(
     ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
 
     numOutFluxesBySymbol={
-        k:numfunc(expr_cont,delta_t_val=delta_t_val) 
+        k:gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
         for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
-    } 
+    }
+    
     def f(it,V):
         X = V[0:n]
         b = u_func(it,X)
@@ -1097,7 +1173,7 @@ def make_param2res_sym(
     # so its enough to define it once as in our test
     def npp_func(day):
         month=day_2_month_index(day)
-        return dvs.npp[month] * 86400   # kg/m2/s kg/m2/day
+        return dvs.npp[month]   # kg/m2/s kg/m2/day
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -1137,7 +1213,7 @@ def make_param2res_sym(
              'xi':xi_func
         }
         
-        delta_t_val=1
+        delta_t_val=15
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -1145,6 +1221,15 @@ def make_param2res_sym(
             func_dict=func_dict,
             delta_t_val=delta_t_val
         )
+        
+        def cVegF(V):
+            return float(V.C_leaf+V.C_wood+V.C_root)
+        
+        def cLitF(V):
+            return float(V.C_aom1+V.C_aom2)
+        
+        def cSoilF(V): 
+            return float(V.C_smb1+V.C_smb2+V.C_smr+V.C_nom+V.C_dom+V.C_psom)
         
         # Now that we have the iterator we can start to compute.
         # the first thing to notice is that we don't need to store all daily values,
@@ -1154,21 +1239,36 @@ def make_param2res_sym(
         # - for the respiration(s) ra and rh we have to sum up the daily values 
         #   over a month
         # 
-        # Note: check if TRENDY months are like this...
+        nyears = int(cpa.number_of_months/12)
+        #empty arrays for saving data
+        cVeg_arr=np.zeros(nyears)
+        cLit_arr=np.zeros(nyears)
+        cSoil_arr=np.zeros(nyears)
+        rh_arr=np.zeros(nyears)
         sols=[]
-        for p in range(cpa.number_of_months):
-            dpm = 30                             # Set days for each month
-            mrh = 0                              # Start respiration sum at zero each month
-            #for m in range(12):                  # Loop through months                        
-            for d in range(int(dpm/delta_t_val)):    # Loop through days in month
-                v = it_sym.__next__()                # Us adaptive iterator
-                mrh += v[11,0]/(dpm/delta_t_val)
-            V = StartVector(*v)                  
+        #constants for forward simulation
+        n=len(V_init)
+        dpm = 30
+        steps_per_month=int(dpm/delta_t_val)
+        steps_per_year=int((dpm/delta_t_val)*12)
+        #forward sim
+        for y in range(nyears):
+            cVeg_avg= 0  
+            cSoil_avg = 0
+            cLit_avg = 0
+            rh_avg = 0
+            for m in range(12):      
+                for d in range(steps_per_month):    # Loop through days in month
+                    V = StartVector(*it_sym.__next__())    # Us adaptive iterator
+                    rh_avg += float(V.rh)/steps_per_year
+                    cVeg_avg += cVegF(V)/steps_per_year
+                    cLit_avg += cLitF(V)/steps_per_year
+                    cSoil_avg += cSoilF(V)/steps_per_year                 
             o = Observables(                   
-                cVeg=float(V.C_leaf+V.C_wood+V.C_root),
-                cLitter=float(V.C_aom1+V.C_aom2),
-                cSoil=float(V.C_smb1+V.C_smb2+V.C_smr+V.C_nom+V.C_dom+V.C_psom),
-                rh = mrh
+                cVeg=cVeg_avg,
+                cLitter=cLit_avg,
+                cSoil=cSoil_avg,
+                rh=rh_avg
             )
             sols.append(o) # Append monthly value to results
         sol=np.stack(sols) # Stack arrays 
@@ -1218,21 +1318,19 @@ def make_param2res_sym(
 
 # +
 # now test it 
-import matplotlib.pyplot as plt
-from general_helpers import plot_solutions
+#import matplotlib.pyplot as plt
+#from general_helpers import plot_solutions
 
-param2res_sym = make_param2res_sym(cpa)
-xs= param2res_sym(epa_0)
-print(xs.shape)
-print(xs)
-#print(cpa)
+#param2res_sym = make_param2res_sym(cpa)
+#xs= param2res_sym(epa_0)
+#xs[0,:]
 # -
 
 obs=np.column_stack((np.array(svs.cVeg),np.array(svs.cLitter),np.array(svs.cSoil),monthly_to_yearly(np.array(svs.rh))))
-obs=obs[0:int(cpa.number_of_months),:]
+obs=obs[0:int(cpa.number_of_months/12),:]
 #print(obs.shape)
 #print(obs[:,3])
-obs[:,3]=obs[:,3]*86400
+obs[:,3]=obs[:,3]
 #print(obs[:,3])
 
 # +
@@ -1246,7 +1344,7 @@ xs= param2res_sym(epa_0)
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        times=range(int(cpa.number_of_months)),
+        times=range(int(cpa.number_of_months/12)),
         var_names=Observables._fields,
         tup=(xs,obs)
 )
@@ -1355,31 +1453,45 @@ epa_max = np.array(
 
 
 # +
-from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
+from general_helpers import autostep_mcmc_2, make_jon_cost_func
+
+def make_param_filter_func(
+        c_max: EstimatedParameters,
+        c_min: EstimatedParameters 
+        ) -> Callable[[np.ndarray], bool]:
+
+    # find position of beta_leaf and beta_wood
+    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    beta_wood_ind=EstimatedParameters._fields.index("beta_wood")
+
+    def isQualified(c):
+        beta_leaf_ind
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] <=1  
+        return (cond1 and cond2 and cond3)
+    return isQualified
 
 isQualified = make_param_filter_func(epa_max, epa_min)
 param2res = make_param2res_sym(cpa)
 print(isQualified(epa_0))
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = autostep_mcmc_2(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=make_feng_cost_func(obs),
-    nsimu=200, # for testing and tuning mcmc
+    costfunction=make_jon_cost_func(obs),
+    nsimu=2000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=15,   # default value | target acceptance rate in %
+    acceptance_rate=0.23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,  # default value | increase value to reduce initial step size
+    D_init=0.10,  # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
-# -
-
-len(epa_0)
 
 # +
 # optimized parameter set (lowest cost function)
@@ -1391,7 +1503,7 @@ print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
-        times=range(cpa.number_of_months),
+        times=range(int(cpa.number_of_months/12)),
         var_names=Observables._fields,
         tup=(mod_opt,obs)
 )
@@ -1402,59 +1514,13 @@ fig.savefig('solutions_opt.pdf')
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
 import pandas as pd
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('DLEM_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('DLEM_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('DLEM_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('DLEM_optimized_solutions.csv'), sep=',')
 # -
 
-print("Optimized parameters: ", epa_opt)
-par_dict_opt={
-        beta_leaf=epa_opt.beta_leaf, 
-        beta_wood=epa_opt.beta_wood, 
-        Theta_sat=epa_opt.Theta_sat, 
-        Theta_fc=epa_opt.Theta_fc,  
-        r_C_aom1_rh=epa_opt.r_C_aom1_rh, 
-        r_C_aom2_rh=epa_opt.r_C_aom2_rh, 
-        r_C_smb1_rh=epa_opt.r_C_smb1_rh, 
-        r_C_smb2_rh=epa_opt.r_C_smb2_rh, 
-        r_C_smr_rh=epa_opt.r_C_smr_rh, 
-        r_C_nom_rh=epa_opt.r_C_nom_rh, 
-        r_C_dom_rh=epa_opt.r_C_dom_rh, 
-        r_C_psom_rh=epa_opt.r_C_psom_rh, 
-        r_C_leaf_2_C_epa_opt.r_C_leaf_2_C_epa_opt, 
-        r_C_leaf_2_C_aom2=epa_opt.r_C_leaf_2_C_aom2, 
-        r_C_wood_2_C_aom1=epa_opt.r_C_wood_2_C_aom1,
-        r_C_wood_2_C_aom2=epa_opt.r_C_wood_2_C_aom2, 
-        r_C_root_2_C_aom1=epa_opt.r_C_root_2_C_aom1,
-        r_C_root_2_C_aom2=epa_opt.r_C_root_2_C_aom2, 
-        r_C_aom1_2_C_smb1=epa_opt.r_C_aom1_2_C_smb1,
-        r_C_aom1_2_C_smb2=epa_opt.r_C_aom1_2_C_smb2, 
-        r_C_aom1_2_C_nom=epa_opt.r_C_aom1_2_C_nom, 
-        r_C_aom1_2_C_dom=epa_opt.r_C_aom1_2_C_dom, 
-        r_C_aom2_2_C_smb1=epa_opt.r_C_aom2_2_C_smb1, 
-        r_C_aom2_2_C_smb2=epa_opt.r_C_aom2_2_C_smb2, 
-        r_C_aom2_2_C_dom=epa_opt.r_C_aom2_2_C_dom, 
-        r_C_smb1_2_C_nom=epa_opt.r_C_smb1_2_C_nom,
-        r_C_smb1_2_C_psom=epa_opt.r_C_smb1_2_C_psom, 
-        r_C_smb2_2_C_smr=epa_opt.r_C_smb2_2_C_smr, 
-        r_C_smr_2_C_smb1=epa_opt.r_C_smr_2_C_smb1, 
-        r_C_nom_2_C_smb1=epa_opt.r_C_nom_2_C_smb1,
-        r_C_nom_2_C_dom=epa_opt.r_C_nom_2_C_dom, 
-        r_C_nom_2_C_psom=epa_opt.r_C_nom_2_C_psom,
-        r_C_dom_2_C_smb1=epa_opt.r_C_dom_2_C_smb1, 
-        r_C_dom_2_C_nom=epa_opt.r_C_dom_2_C_nom, 
-        r_C_psom_2_C_smb1=epa_opt.r_C_psom_2_C_smb1, 
-        C_leaf_0=epa_opt.C_leaf_0, 
-        C_wood_0=epa_opt.C_wood_0, 
-        C_aom1_0=epa_opt.C_aom1_0, 
-        C_smb1_0=epa_opt.C_smb1_0, 
-        C_smb2_0=epa_opt.C_smb2_0, 
-        C_smr_0=epa_opt.C_smr_0, 
-        C_nom_0=epa_opt.C_nom_0, 
-        C_dom_0=epa_opt.C_dom_0
-}
-print("Optimized parameters dictionary: ", par_dict_opt)
+epa_opt._asdict()
 
 # ### Traceability analysis  
 #

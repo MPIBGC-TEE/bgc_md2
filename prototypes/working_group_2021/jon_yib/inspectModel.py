@@ -27,9 +27,6 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #set auto reload for notebook
 # %load_ext autoreload
 # %autoreload 2
-# -
-
-# Python Packages:
 
 # +
 # Packages for symbolic code: 
@@ -60,7 +57,7 @@ from general_helpers import (
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions,
-    autostep_mcmc,  
+    autostep_mcmc_2,  
     make_jon_cost_func,
     make_param_filter_func
 )
@@ -80,14 +77,13 @@ import model_specific_helpers_2 as msh
 # ## Model Figure and Matrix Equations
 # #### Model Figure:
 
-# +
-
 h.compartmental_graph(mvs)
-# -
 
 # #### Matrix equations:
 
 dh.mass_balance_equation(mvs)
+
+# Python Packages:
 
 # + [markdown] codehighlighter=[[0, 0]]
 # ## Download Data (Must Edit)
@@ -98,7 +94,6 @@ dh.mass_balance_equation(mvs)
 # + codehighlighter=[[11, 12], [16, 17], [8, 28], [41, 43], [8, 24], [42, 44]]
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-
 #msh.download_my_TRENDY_output(conf_dict)
 # -
 
@@ -106,17 +101,15 @@ with Path('config.json').open(mode='r') as f:
 # Define function to subset netCDF files and link to data symbols:
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
-svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 #look at data
 dvs.npp
 # -
 
-msh.EstimatedParameters._fields
-
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
-dvs.npp
+svs_0
 
 # ## Define Forward Model
 # #### Create constants for forward sim:
@@ -124,82 +117,154 @@ dvs.npp
 # + codehighlighter=[[1, 9], [1, 8]]
 cpa = msh.Constants(             #use Constants namedtuple to define constant values
     npp_0 = dvs.npp[0],
-    rh_0 = svs.rh[0],   
+    rh_0 = svs.rh[0],
+    ra_0 = svs.ra[0],
     c_veg_0 = svs.cVeg[0],
     c_soil_0 = svs.cSoil[0],
     clay = 0.2028,
     silt = 0.2808,
-    nyears = 320
+    nyears = 320,
+    beta_leaf=0.37152535661667285,
+    beta_root=0.2118738332472721
 )
 cpa._asdict()    #print - everything should have a numeric value
 # -
 
 # #### Create start values for parameters to be optimized during data assimilation:
 
+# +
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
-    c_leaf_0 = 0.0449431, #svs_0.cVeg/4,          #set inital pool values to svs values 
-    c_root_0 = 0.03471476, #svs_0.cVeg/5,          #you can set numerical values here directly as well
-    c_lit_cwd_0 = 0.12045422, #svs_0.cSoil/35,
-    c_lit_met_0 = 0.01062729, #svs_0.cSoil/35,
-    c_lit_str_0 = 0.01321171, #svs_0.cSoil/35,
-    c_lit_mic_0 = 0.02217908, #svs_0.cSoil/35,
-    c_soil_met_0 = 0.01225129, #svs_0.cSoil/20,
-    c_soil_str_0 = 0.00389448, #svs_0.cSoil/10,
-    c_soil_mic_0 = 0.02058883, #svs_0.cSoil/7,
-    c_soil_slow_0 = 13.3329366, #svs_0.cSoil/3,
-    beta_leaf = 0.308187384,
-    beta_root = 0.301999241,
-    r_c_leaf_rh = 0,
-    r_c_root_rh = 0,
-    r_c_wood_rh = 0,
-    r_c_lit_cwd_rh = 0.0031654,
-    r_c_lit_met_rh = 0.053189666,
-    r_c_lit_str_rh = 0.012380104,
-    r_c_lit_mic_rh = 0.053299593,
-    r_c_soil_met_rh = 0.073121485,
-    r_c_soil_str_rh = 0.00151622,
-    r_c_soil_mic_rh = 0.014039478,
-    r_c_soil_slow_rh = 4.27E-05,
-    r_c_soil_passive_rh = 8.57E-06,
-    r_c_leaf_2_c_lit_met = 0.021900579,
-    r_c_leaf_2_c_lit_str = 0.022644933,
-    r_c_root_2_c_soil_met = 0.040676971,
-    r_c_root_2_c_soil_str = 0.00221457,
-    r_c_wood_2_c_lit_cwd = 0.002518487,
-    r_c_lit_cwd_2_c_lit_mic = 0.008132606,
-    r_c_lit_cwd_2_c_soil_slow = 0.003219468,
-    r_c_lit_met_2_c_lit_mic = 0.004251068,
-    r_c_lit_str_2_c_lit_mic = 0.013486702,
-    r_c_lit_str_2_c_soil_slow = 0.023376078,
-    r_c_lit_mic_2_c_soil_slow = 0.001511667,
-    r_c_soil_met_2_c_soil_mic = 0.019407116,
-    r_c_soil_str_2_c_soil_mic = 0.010605124,
-    r_c_soil_str_2_c_soil_slow = 0.001438887,
-    r_c_soil_mic_2_c_soil_slow = 0.02007731,
-    r_c_soil_mic_2_c_soil_passive = 0.003545916,
-    r_c_soil_slow_2_c_soil_mic = 2.40E-05,
-    r_c_soil_slow_2_c_soil_passive = 1.05E-07,
-    r_c_soil_passive_2_c_soil_mic = 5.92E-05,
-)    
+    r_c_leaf_rh=0.0022972292016441116,
+    r_c_root_rh=0.0015470633697005037,
+    r_c_wood_rh=0.0003981642399033648,
+    r_c_leaf_2_c_lit_met=0.0008419144443122888, 
+    r_c_leaf_2_c_lit_str=7.253712507163508e-05,
+    r_c_root_2_c_soil_met=0.0007599224861792184,
+    r_c_root_2_c_soil_str=0.0007161706404910827,
+    r_c_wood_2_c_lit_cwd=0.0009217945194693122,
+    c_leaf_0=0.11328379866881665,
+    c_root_0=0.14464613373390392,
+    r_c_lit_cwd_rh=0.02026318476587012, 
+    r_c_lit_met_rh=0.00340079410753037, 
+    r_c_lit_str_rh=0.008989119944533677,
+    r_c_lit_mic_rh=0.011276949417831122,
+    r_c_soil_met_rh=0.0006741622348146495,
+    r_c_soil_str_rh=0.00017592886085999286,
+    r_c_soil_mic_rh=0.000519741477608671,
+    r_c_soil_slow_rh=1.0255263440555624e-06,
+    r_c_soil_passive_rh=3.881935738016802e-07,
+    r_c_lit_cwd_2_c_lit_mic=1.3188464625334016e-05,
+    r_c_lit_cwd_2_c_soil_slow=1.6316549662914743e-05,
+    r_c_lit_met_2_c_lit_mic=2.9433144645429653e-06,
+    r_c_lit_str_2_c_lit_mic=0.00010298015064924245,
+    r_c_lit_str_2_c_soil_slow=0.0016579805745133146,
+    r_c_lit_mic_2_c_soil_slow=0.0011840494205249575,
+    r_c_soil_met_2_c_soil_mic=7.861811338124696e-05,
+    r_c_soil_str_2_c_soil_mic=2.578967926776423e-05,
+    r_c_soil_str_2_c_soil_slow=1.7394627034766953e-06,
+    r_c_soil_mic_2_c_soil_slow=0.00021605360652605818,
+    r_c_soil_mic_2_c_soil_passive=4.569266267503945e-05,
+    r_c_soil_slow_2_c_soil_mic=4.1146075824754925e-07,
+    r_c_soil_slow_2_c_soil_passive=2.9993396188473066e-08,
+    r_c_soil_passive_2_c_soil_mic=2.751360714464457e-06,
+    c_lit_cwd_0=0.011122590276073926, 
+    c_lit_met_0=0.04563448012195457,
+    c_lit_str_0=0.022083588329899793,
+    c_lit_mic_0=0.011910319433275054,
+    c_soil_met_0=0.048208986458370635,
+    c_soil_str_0=0.6643525311241724,
+    c_soil_mic_0=0.05837121211447685,
+    c_soil_slow_0=0.3228602860446373
+)
+
+#initial globalmean hand-tuning
+#beta_leaf=0.3,
+#beta_root=0.3,
+#r_c_leaf_rh=0.0008,
+#r_c_root_rh=0.0008,
+#r_c_wood_rh=0.0009,
+#r_c_lit_cwd_rh=0.009730016902211099,
+#r_c_lit_met_rh=0.007002926006944982,
+#r_c_lit_str_rh=0.003459128990999148,
+#r_c_lit_mic_rh=0.006496258804231679, 
+#r_c_soil_met_rh=0.0005283019624678767,
+#r_c_soil_str_rh=0.00015550260079549095,
+#r_c_soil_mic_rh=0.0014976016198231856,
+#r_c_soil_slow_rh=8e-6,
+#r_c_soil_passive_rh=7e-07,
+#r_c_leaf_2_c_lit_met=0.001,
+#r_c_leaf_2_c_lit_str=0.0002,
+#r_c_root_2_c_soil_met=0.001,
+#r_c_root_2_c_soil_str=0.0005,
+#r_c_wood_2_c_lit_cwd=0.0002, 
+#r_c_lit_cwd_2_c_lit_mic=0.00002666130148133097,
+#r_c_lit_cwd_2_c_soil_slow=0.00003132779629682739,
+#r_c_lit_met_2_c_lit_mic=0.000010359522559848344, 
+#r_c_lit_str_2_c_lit_mic=0.00008930543749313994,
+#r_c_lit_str_2_c_soil_slow=0.0006956056931813782,
+#r_c_lit_mic_2_c_soil_slow=0.000982832457403613,
+#r_c_soil_met_2_c_soil_mic=0.000494305460211622,
+#r_c_soil_str_2_c_soil_mic=0.000017939031246948314,
+#r_c_soil_str_2_c_soil_slow=0.000012026215328729533,
+#r_c_soil_mic_2_c_soil_slow=0.0009376182185796474,
+#r_c_soil_mic_2_c_soil_passive=0.00021203823995936096,
+#r_c_soil_slow_2_c_soil_mic=1.2760504386493467e-06,
+#r_c_soil_slow_2_c_soil_passive=4.146635398790735e-08,
+#r_c_soil_passive_2_c_soil_mic=7.889917586471123e-06,
+#c_leaf_0=0.2,
+#c_root_0=0.2,
+#c_lit_cwd_0=0.2,
+#c_lit_met_0=0.2,
+#c_lit_str_0=0.2,
+#c_lit_mic_0=0.2,
+#c_soil_met_0=0.2,
+#c_soil_str_0=0.2, 
+#c_soil_mic_0=0.2,
+#c_soil_slow_0=0.5,
 
 # +
+gpp_func = msh.make_gpp_func(dvs)
 npp_func = msh.make_npp_func(dvs)
+temp_func = msh.make_temp_func(dvs)
 
 n = cpa.nyears*12*30
+
+gpp_obs = np.array([gpp_func(d) for d in range(n)])
 npp_obs = np.array([npp_func(d) for d in range(n)])
+temp_obs = np.array([temp_func(d) for d in range(n)])
 
 # Plot simulation output for observables
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         times=range(n),
-        var_names=msh.Observables._fields,
+        var_names=msh.Drivers._fields,
         tup=(npp_obs,)
 )
-fig.savefig('solutions.pdf')
+fig.savefig('npp.pdf')
 # -
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Drivers._fields[1],
+        tup=(temp_obs,)
+)
+fig.savefig('temp.pdf')
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Drivers._fields[2],
+        tup=(gpp_obs,)
+)
+fig.savefig('gpp.pdf')
 
 # #### Create forward model function:
 
@@ -225,10 +290,10 @@ epa_min=msh.EstimatedParameters._make(tuple(np.array(epa0)*0.01))
 epa_max=msh.EstimatedParameters._make(tuple(np.array(epa0)*100))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.99)
-epa_max = epa_max._replace(beta_root = 0.99)
-epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
-epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
+#epa_max = epa_max._replace(beta_leaf = 0.9)
+#epa_max = epa_max._replace(beta_root = 0.9)
+#epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
+#epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_met_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_str_0 = svs_0.cSoil)
@@ -247,30 +312,30 @@ epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
 param2res=msh.make_param2res_sym(mvs,cpa,dvs)
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = autostep_mcmc_2(
     initial_parameters=epa0,
     filter_func=msh.make_param_filter_func(epa_max, epa_min),
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=200,
+    nsimu=4000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=15,   # default value | target acceptance rate in %
+    acceptance_rate=0.23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,   # default value | increase value to reduce initial step size
+    D_init=0.05,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
 # #### Graph data assimilation results:
 
-# +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
 epa_opt=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 mod_opt = param2res(epa_opt)  
-
+#obs = msh.Observables(cVeg=svs.cVeg,cSoil=svs.cSoil,rh=svs.rh)
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_observations_vs_simulations(
@@ -279,7 +344,7 @@ plot_observations_vs_simulations(
         mod_opt
     )
 fig.savefig('solutions_opt.pdf')
-
+# +
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
@@ -288,6 +353,8 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=','
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
+
+epa_opt
 # +
 import model_specific_helpers_2 as msh
 import general_helpers as gh
@@ -356,5 +423,7 @@ axs[n,0].plot(
 axs[n,0].legend()
 
 # -
+
+
 
 
