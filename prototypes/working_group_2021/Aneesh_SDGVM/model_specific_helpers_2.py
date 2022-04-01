@@ -193,6 +193,7 @@ from typing import Callable
 from general_helpers import month_2_day_index
 from functools import reduce
 
+
 def make_param2res_sym(
         mvs,
         cpa: Constants,
@@ -367,6 +368,7 @@ def make_daily_iterator_sym(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
                 for k in [
+                    "C_abvstrlit",
                     "C_abvmetlit",
                     "C_belowstrlit",
                     "C_belowmetlit",
