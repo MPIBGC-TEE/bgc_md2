@@ -10,14 +10,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from importlib import import_module
 from general_helpers import (
-    month_2_day_index,
     plot_solutions,
     autostep_mcmc,
     make_param_filter_func,
     make_feng_cost_func
 )
-#model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam']
-model_folders=['cj_isam']
+model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules']
+#model_folders=['cj_isam']
 
 class TestSymbolic(TestCase):
 
@@ -61,7 +60,7 @@ class TestSymbolic(TestCase):
                 msh.make_func_dict(mvs,dvs)
     #@skip
     def test_make_iterator_sym(self):
-        model_folders=['kv_visit2','cable-pop']#, 'Aneesh_SDGVM']
+        #model_folders=['kv_visit2','cable-pop']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 
@@ -107,12 +106,20 @@ class TestSymbolic(TestCase):
                 param2res_sym = msh.make_param2res_sym( mvs, cpa, dvs)
                 xs= param2res_sym(epa_0)
 
-                
+    def test_get_global_mean_vars(self):
+        model_folders=['yz_jules']#, 'Aneesh_SDGVM']
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                    svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
+
     def test_autostep_mcmc(self):
         model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
-                sys.path.insert(0,mf)
+                #sys.path.insert(0,mf)
                 mvs = import_module('{}.source'.format(mf)).mvs
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
                 th= import_module('{}.test_helpers'.format(mf))
