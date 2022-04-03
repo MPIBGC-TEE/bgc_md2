@@ -708,7 +708,7 @@ def day_2_month_index(d):
     #this is the trendy version with always 30 days per month
     return int(d/30)
 
-#def month_2_day_index(ns):
+# def month_2_day_index(ns):
 #    """ computes the index of the day at the end of the month n in ns
 #    this works on vectors """
 #    return 30*ns
@@ -941,7 +941,7 @@ def global_mean(
     return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
 
 
-#def global_mean_JULES(lats,lons,arr):
+# def global_mean_JULES(lats,lons,arr):
 #    """please do not use this function since it ignores the mask of a possible masked array
 #    and 
 #    """

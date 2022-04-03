@@ -200,9 +200,9 @@ def get_globalmean_vars(dataPath):
     t_c = s_c
     print(t_c)
     ds = nc.Dataset(str(dataPath.joinpath('SDGVM_S2_cLitter.nc')))
-    lats = ds.variables["latitude"]
-    lons = ds.variables["longitude"]
-    gm = gh.global_mean_JULES
+    lats = ds.variables["latitude"].__array__()
+    lons = ds.variables["longitude"].__array__()
+    gm = gh.global_mean
     
     # Read NetCDF data and slice out our site
     arr_dict={
@@ -216,7 +216,7 @@ def get_globalmean_vars(dataPath):
             }.items()
         },
         **{
-            vn:gm(lats,lons, nc.Dataset(str(dataPath.joinpath(fn))).variables[vn][t_rh])*86400   # kg/m2/s kg/m2/day;
+            vn:gm(lats,lons, nc.Dataset(str(dataPath.joinpath(fn))).variables[vn].__array__())*86400   # kg/m2/s kg/m2/day;
             for vn,fn in {
                 'npp': 'SDGVM_S2_npp.nc',
                 'rh': 'SDGVM_S2_rh.nc'
@@ -259,7 +259,7 @@ def make_StartVector(mvs):
     ) 
 
 from typing import Callable
-from general_helpers import month_2_day_index
+from general_helpers import month_2_day_index_vm
 from functools import reduce
 
 

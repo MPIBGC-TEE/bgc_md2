@@ -175,7 +175,7 @@ def get_example_site_vars(dataPath):
         Drivers(*map(f, d_tuples))
     )
 
-#def get_global_mean_vars_old(dataPath):
+# def get_global_mean_vars_old(dataPath):
 #    """This function is deprecated since it uses the also deprecated function global_mean_JULES from general_helpers.py which ignores the mask of the array
 #    """
 #    # Define single geospatial cell from (3840, 144, 192)
@@ -183,7 +183,7 @@ def get_example_site_vars(dataPath):
 #    #slat = 120
 #    #slon = 50
 #    #t = slayer, slat, slon  # a site in South America
-# 
+#
 #    
 #    # Define function to select geospatial cell and scale data
 #    def f(tup):
