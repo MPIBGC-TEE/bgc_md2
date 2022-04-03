@@ -16,7 +16,7 @@ from general_helpers import (
     make_feng_cost_func
 )
 model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules']
-#model_folders=['cj_isam']
+model_folders=['cj_isam']
 
 class TestSymbolic(TestCase):
 
@@ -47,7 +47,7 @@ class TestSymbolic(TestCase):
                 #print(svs)
     
     def test_make_func_dict(self):
-        model_folders=['kv_visit2', 'Aneesh_SDGVM', 'cable-pop']
+        #model_folders=['kv_visit2', 'Aneesh_SDGVM', 'cable-pop']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 
@@ -88,7 +88,7 @@ class TestSymbolic(TestCase):
                     res_2[i,:]=it_sym_2.__next__().reshape(len(V_init),)
 
     def test_param2res_sym(self):
-        model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
+        #model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
@@ -107,7 +107,7 @@ class TestSymbolic(TestCase):
                 xs= param2res_sym(epa_0)
 
     def test_get_global_mean_vars(self):
-        model_folders=['yz_jules']#, 'Aneesh_SDGVM']
+        #model_folders=['yz_jules']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
@@ -116,7 +116,7 @@ class TestSymbolic(TestCase):
                     svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
     def test_autostep_mcmc(self):
-        model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
+        #model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
         for mf in model_folders:
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
