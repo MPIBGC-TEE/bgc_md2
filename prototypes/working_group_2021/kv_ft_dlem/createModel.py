@@ -349,7 +349,7 @@ def get_globalmean_vars(dataPath):
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
 
-svs,dvs=get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 
 svs,dvs
