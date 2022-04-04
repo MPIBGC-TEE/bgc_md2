@@ -53,7 +53,6 @@ sys.path.insert(0,'..') # necessary to import general_helpers
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
-    month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions,
@@ -95,13 +94,10 @@ with Path('config.json').open(mode='r') as f:
 
 # Subset data to site for simulation:
 
-svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
 # Look at data
 svs
 
-# +
-# Subset inital conditions:
-# -
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
 
 # ## Define Forward Model
@@ -221,7 +217,7 @@ C_autostep, J_autostep = autostep_mcmc_2(
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=4000,
+    nsimu=200,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=0.23,   # default value | target acceptance rate in %

@@ -27,7 +27,7 @@ Drivers=namedtuple(
     "Drivers",
     ["npp","mrso"]
 )    
-  
+
 
 Constants = namedtuple(
     "Constants",
@@ -136,13 +136,13 @@ def get_globalmean_vars(dataPath):
         ds = nc.Dataset(str(path))
         #print(ds.variables)
         # access lat/long of netCDF file
-        lats= ds.variables["lat"]
-        lons= ds.variables["lon"]
+        lats= ds.variables["lat"].__array__()
+        lons= ds.variables["lon"].__array__()
         #scale fluxes vs pools
         if vn in ["npp", "rh"]:
-            return gh.global_mean_JULES(lats,lons,ds.variables[vn])*86400
+            return gh.global_mean(lats,lons,ds.variables[vn].__array__())*86400
         else:
-            return gh.global_mean_JULES(lats,lons,ds.variables[vn])
+            return gh.global_mean(lats,lons,ds.variables[vn].__array__())
     #map variables to data
     o_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Observables._fields]
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]

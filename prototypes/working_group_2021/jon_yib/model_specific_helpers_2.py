@@ -161,20 +161,14 @@ def get_globalmean_vars(dataPath):
         vn, fn = tup
         path = dataPath.joinpath(fn)
         ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"]
-        lons = ds.variables["longitude"]
+        lats = ds.variables["latitude"].__array__()
+        lons = ds.variables["longitude"].__array__()
         
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
         if vn in ["npp","gpp","rh","ra"]:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean_JULES(lats, lons, ds.variables[vn])*24*60*60)
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
         else:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean_JULES(lats, lons, ds.variables[vn]))
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
 
     # Link symbols and data:
     # YIBS has annual vs monthly file names so they are linked separately
@@ -383,7 +377,7 @@ def make_param2res_sym(
         )
         
         # define time step and iterator
-        delta_t_val=10 
+        delta_t_val=15 
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
