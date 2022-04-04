@@ -175,35 +175,122 @@ def get_example_site_vars(dataPath):
         Drivers(*map(f, d_tuples))
     )
 
+# def get_global_mean_vars_old(dataPath):
+#    """This function is deprecated since it uses the also deprecated function global_mean_JULES from general_helpers.py which ignores the mask of the array
+#    """
+#    # Define single geospatial cell from (3840, 144, 192)
+#    #slayer = slice(None, None, None)  # this is the same as :
+#    #slat = 120
+#    #slon = 50
+#    #t = slayer, slat, slon  # a site in South America
+#
+#    
+#    # Define function to select geospatial cell and scale data
+#    def f(tup):
+#        vn, fn = tup
+#        path = dataPath.joinpath(fn)
+#        # Read NetCDF data but only at the point where we want them
+#        ds = nc.Dataset(str(path))
+#        lats = ds.variables["latitude"]
+#        lons = ds.variables["longitude"]
+#
+#        if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
+#            # f_veg2soil: Total carbon mass from vegetation directly into the soil
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)
+#            return gh.global_mean_JULES(lats, lons, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
+#        
+#        elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
+#            tmp = ds.variables[vn][:, 0, :, :]
+#            print("converted size is ", tmp.shape)
+#            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
+#            return gh.global_mean_JULES(lats, lons, tmp)  # average soil temperature at different depth
+#            
+#    
+#        elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
+#            # from IPython import embed;embed()
+#            var = ds.variables[vn]
+#            sh = var.shape
+#            tmp = np.zeros(shape = var[:, 0, :, :].shape)
+#            print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
+#            for i in range(13):
+#                tmp = tmp + var[:, i, :, :]
+#                # print("converted size is ", tmp.shape)
+#            #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
+#            # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
+#            # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
+#            # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
+#            return gh.global_mean_JULES(lats, lons, tmp)  # sum the vegetation coverages
+#        
+#        else:
+#            print("reading ", vn, ", size is ", ds.variables[vn].shape)
+#            return gh.global_mean_JULES(lats, lons, ds.variables[vn])
+#
+#    # Link symbols and data:
+#
+#    # Create file names (single step if files similarly named)
+#
+#    file_name_from_var_name = {
+#       "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
+#       **{
+#            vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
+#            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
+#       }
+#    }
+#    d_name2varname_in_file = {
+#        "npp": 'npp_nlim',
+#        **{
+#            vn: vn
+#            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
+#        }
+#
+#    }
+#
+#    o_tuples = [
+#        (
+#            d_name2varname_in_file[f],
+#            file_name_from_var_name[d_name2varname_in_file[f]]
+#        )
+#        for f in Observables._fields
+#    ]
+#
+#    d_tuples = [
+#        (
+#            d_name2varname_in_file[f],
+#            file_name_from_var_name[d_name2varname_in_file[f]]
+#        )
+#        for f in Drivers._fields
+#    ]
+#
+#    # Link symbols and data for observables/drivers
+#    # print(o_tuples)
+#    return (
+#        Observables(*map(f, o_tuples)),
+#        Drivers(*map(f, d_tuples))
+#    )
 
 def get_global_mean_vars(dataPath):
-    # Define single geospatial cell from (3840, 144, 192)
-    #slayer = slice(None, None, None)  # this is the same as :
-    #slat = 120
-    #slon = 50
-    #t = slayer, slat, slon  # a site in South America
- 
-    
     # Define function to select geospatial cell and scale data
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"]
-        lons = ds.variables["longitude"]
+        lats = ds.variables["latitude"].__array__()
+        lons = ds.variables["longitude"].__array__()
 
         if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
             # f_veg2soil: Total carbon mass from vegetation directly into the soil
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean_JULES(lats, lons, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
+            return gh.global_mean(lats, lons, ds.variables[vn].__array__()) * 86400  # convert from kg/m2/s to kg/m2/day
         
         elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
             tmp = ds.variables[vn][:, 0, :, :]
             print("converted size is ", tmp.shape)
             # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
-            return gh.global_mean_JULES(lats, lons, tmp)  # average soil temperature at different depth
+            return gh.global_mean(lats, lons, tmp)  # average soil temperature at different depth
             
     
         elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
@@ -220,11 +307,11 @@ def get_global_mean_vars(dataPath):
             # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
             # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
             # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
-            return gh.global_mean_JULES(lats, lons, tmp)  # sum the vegetation coverages
+            return gh.global_mean(lats, lons, tmp)  # sum the vegetation coverages
         
         else:
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean_JULES(lats, lons, ds.variables[vn])
+            return gh.global_mean(lats, lons, ds.variables[vn].__array__())
 
     # Link symbols and data:
 
@@ -237,17 +324,6 @@ def get_global_mean_vars(dataPath):
             for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
        }
     }
-    #d_name2varname_in_file = {
-    #    "npp":'npp_nlim',
-    #    **{
-    #         vn: vn
-    #         for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
-    #    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
-    #    **{
-    #        vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
-    #        for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
-    #    }
-    #}
     d_name2varname_in_file = {
         "npp": 'npp_nlim',
         **{

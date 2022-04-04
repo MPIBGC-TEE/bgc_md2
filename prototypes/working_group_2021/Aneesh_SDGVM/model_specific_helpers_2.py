@@ -161,6 +161,75 @@ def get_example_site_vars(dataPath):
         Drivers(*(arr_dict[k] for k in Drivers._fields))
     )
 
+def get_globalmean_vars(dataPath):
+    # According to the netcdf metadata the datasets are not uniform
+    # - npp and rh start at 360h (15 days) after 01-01-1900 and are recorded every 30 days
+    #   these are interpreted as mid-monthly
+    # - C_litter, C_soil, C_veg, C_root start at 4320 h = 180 days = 6 months after 01-01-1700
+    #   These can be seen at midyearly values since there are 6 (midmonth) times of the npp and rh measurements after the last (midyear)
+    #   measurement of C_litter, C_soil, C_veg, C_root
+
+    # To combine these streams into a consistent array of observations we will:
+    # 1. Make C_litter, C_soil, C_veg, C_root refer to hours after 01/01/1900 (as npp and rh)
+    #
+    # 2. cut away everything before 1900 from them (cutting of the first 200y)
+    #
+    # Note:
+    #    We will have to adapt the costfunction and param2res later to accommodate the different
+    #    resolution of the C_pool and rh observations.
+
+
+
+    # 1.)
+    # pick one of the 1700 yearly example ds to get at the times
+    # convert time to refer to the same starting point (from h after 1700 to h after 1900)
+    hs_from_1900=nc.Dataset(dataPath.joinpath('SDGVM_S2_cLitter.nc')).variables['time'][:]-200*12*30*24
+
+    #2.)
+    # find the index after which we are after 01/01 1900
+    ind_start = 200
+    c_h_from_1900_after_1900=hs_from_1900[ind_start:]
+    c_h_from_1900_after_1900.shape
+
+    # pick up 1 site   wombat state forest for the spacial selection
+    s_rh  = slice(None, None, None)  # this is the same as :
+    s_c  = slice(ind_start, None, None)  # this is the same as ind_start:
+    #t = s, 50, 33  # [t] = [:,49,325]
+    #loc=(-25,16)
+    t_rh = s_rh
+    t_c = s_c
+    print(t_c)
+    ds = nc.Dataset(str(dataPath.joinpath('SDGVM_S2_cLitter.nc')))
+    lats = ds.variables["latitude"].__array__()
+    lons = ds.variables["longitude"].__array__()
+    gm = gh.global_mean
+    
+    # Read NetCDF data and slice out our site
+    arr_dict={
+        **{
+            vn:gm(lats,lons,nc.Dataset(str(dataPath.joinpath(fn))).variables[vn][t_c])
+            for vn,fn in  {
+                'cLitter': 'SDGVM_S2_cLitter.nc',
+                'cSoil': 'SDGVM_S2_cSoil.nc',
+                'cVeg': 'SDGVM_S2_cVeg.nc',
+                'cRoot': 'SDGVM_S2_cRoot.nc',
+            }.items()
+        },
+        **{
+            vn:gm(lats,lons, nc.Dataset(str(dataPath.joinpath(fn))).variables[vn].__array__())*86400   # kg/m2/s kg/m2/day;
+            for vn,fn in {
+                'npp': 'SDGVM_S2_npp.nc',
+                'rh': 'SDGVM_S2_rh.nc'
+            }.items()
+        }
+    }
+
+    return (
+        Observables(*(arr_dict[k] for k in Observables._fields)),
+        Drivers(*(arr_dict[k] for k in Drivers._fields))
+    )
+
+
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
@@ -190,7 +259,7 @@ def make_StartVector(mvs):
     ) 
 
 from typing import Callable
-from general_helpers import month_2_day_index
+from general_helpers import month_2_day_index_vm
 from functools import reduce
 
 
@@ -391,7 +460,7 @@ def make_daily_iterator_sym(
 
 
 def make_weighted_cost_func(
-        obs#: Observables
+        obs: Observables
     ) -> Callable[[Observables],np.float64]:
     # first unpack the observation array into its parts
     #cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
@@ -412,10 +481,27 @@ def make_weighted_cost_func(
 
         J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
 
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4 )/200+ J_obj5/4
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4) + J_obj5/12
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*400
+        return J_new*100
     return costfunction
 
+
+def make_param_filter_func(
+        c_max: EstimatedParameters,
+        c_min: EstimatedParameters 
+        ) -> Callable[[np.ndarray], bool]:
+
+    # find position of beta_leaf and beta_wood
+    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    beta_wood_ind=EstimatedParameters._fields.index("beta_wood")
+
+    def isQualified(c):
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] <= 0.99  
+        return (cond1 and cond2 and cond3)
+        
+    return isQualified

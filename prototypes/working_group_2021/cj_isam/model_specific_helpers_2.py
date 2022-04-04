@@ -11,7 +11,6 @@ from CompartmentalSystems.TimeStepIterator import (
 )
 from copy import copy
 from typing import Callable
-from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
@@ -40,7 +39,7 @@ Constants = namedtuple(
         "cLitter_0",
         "cSoil_0",
         "cVeg_0",
-        "gpp_0",
+        "npp_0",
         "rh_0",
         "ra_0",
         "r_C_NWT_rh",
@@ -117,7 +116,9 @@ def download_my_TRENDY_output(conf_dict):
 def get_example_site_vars(dataPath):
     # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
-    t = s, 50, 33  # [t] = [:,49,325]
+    lat=180
+    lon=200
+    t = s, lat, lon  # [t] = [:,lat,lon]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)

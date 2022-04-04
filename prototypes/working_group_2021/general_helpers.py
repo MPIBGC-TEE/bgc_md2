@@ -130,7 +130,7 @@ def make_uniform_proposer(
 
     g = np.random.default_rng()
 
-    def GenerateParamValues(c_op, D):
+    def GenerateParamValues(c_op):
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
@@ -269,7 +269,7 @@ def autostep_mcmc(
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
     D = D_init
-    proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+    proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
     # for simu in tqdm(range(nsimu)):
     st = time()
     accepted_current = 0
@@ -284,11 +284,11 @@ def autostep_mcmc(
             if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
                 D = (1 / paramNum)
             accepted_current = 0
-            #proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+            proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
         if simu % (chunk_size * 20) == 0:  # every 20 chunks - return to the initial step size (to avoid local minimum)
             D = D_init
 
-        c_new = proposer(C_op, D)
+        c_new = proposer(C_op)
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
 
@@ -705,7 +705,17 @@ def make_jon_cost_func(
     return costfunction
 
 def day_2_month_index(d):
+    #this is the trendy version with always 30 days per month
     return int(d/30)
+
+# def month_2_day_index(ns):
+#    """ computes the index of the day at the end of the month n in ns
+#    this works on vectors """
+#    return 30*ns
+
+def day_2_month_index_vm(d):
+    # vm for variable months
+    return months_by_day_arr()[(d % days_per_year)] + int(d/days_per_year)*12
 
 
 @lru_cache
@@ -736,7 +746,8 @@ def day_2_year_index(ns):
     return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
 
 
-def month_2_day_index(ns):
+
+def month_2_day_index_vm(ns):
     """ computes the index of the day at the end of the month n in ns
     this works on vectors and is faster than a recursive version working
     on a single index (since the smaller indices are handled anyway)
@@ -888,21 +899,29 @@ def plot_observations_vs_simulations(
 
 
 
-def global_mean(lats,lons,arr):
+def global_mean(
+        lats: np.ma.core.MaskedArray,
+        lons: np.ma.core.MaskedArray,
+        arr: np.ma.core.MaskedArray
+    ):
+    """As the signature shows this function expects masked arrays.
+    These occure naturaly if netCDF4.Variables are sliced.
+    e.g. 
+    ds = nc.Dataset("example.nc")
+    var=ds.variables['npp'] #->type(var)=netCDF4._netCDF4.Variable
+    arr=var[:,:,;] # type(arr)=np.ma.core.MaskedArray
+    # or if we don't know the shape
+    arr=var.__array__()
+    The important thing is not to call this functions with the variables but the arrays.
+    """
     # assuming an equidistant grid.
-    delta_lat=(
-        np.array(lats).max() - 
-        np.array(lats).min()
-        )/(len(np.array(lats))-1)
-    delta_lon=(
-        np.array(lons).max() - 
-        np.array(lons).min()
-        )/(len(np.array(lons))-1)
+    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
+    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
 
     pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
     
     #copy the mask from the array (first time step) 
-    weight_mask=arr[0,:,:].mask  #arr.mask[0,:,:] if  arr.mask.any() else False
+    weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
 
     weight_mat= np.ma.array(
         np.array(
@@ -922,32 +941,37 @@ def global_mean(lats,lons,arr):
     return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
 
 
-def global_mean_JULES(lats,lons,arr):
-    # assuming an equidistant grid.
-    delta_lat=(np.array(lats).max() - np.array(lats).min())/(len(np.array(lats))-1)
-    delta_lon=(np.array(lons).max() - np.array(lons).min())/(len(np.array(lons))-1)
-
-    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
-    
-    #copy the mask from the array (first time step) 
-    weight_mask=arr[0,:,:].mask #if  arr.mask.any() else False
-
-    weight_mat= np.ma.array(
-        np.array(
-            [
-                    [   
-                        pixel_area(lats[lat_ind]) 
-                        for lon_ind in range(len(lons))    
-                    ]
-                for lat_ind in range(len(lats))    
-            ]
-        ),
-        mask = weight_mask 
-    )
-    
-    # to compute the sum of weights we add only those weights that
-    # do not correspond to an unmasked grid cell
-    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+# def global_mean_JULES(lats,lons,arr):
+#    """please do not use this function since it ignores the mask of a possible masked array
+#    and 
+#    """
+#    # assuming an equidistant grid.
+#    delta_lat=(np.array(lats).max() - np.array(lats).min())/(len(np.array(lats))-1)
+#    delta_lon=(np.array(lons).max() - np.array(lons).min())/(len(np.array(lons))-1)
+#
+#    #from IPython import embed;embed()
+#
+#    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+#    
+#    #copy the mask from the array (first time step) 
+#    weight_mask=arr[0,:,:].mask #if  arr.mask.any() else False
+#
+#    weight_mat= np.ma.array(
+#        np.array(
+#            [
+#                    [   
+#                        pixel_area(lats[lat_ind]) 
+#                        for lon_ind in range(len(lons))    
+#                    ]
+#                for lat_ind in range(len(lats))    
+#            ]
+#        ),
+#        mask = weight_mask 
+#    )
+#    
+#    # to compute the sum of weights we add only those weights that
+#    # do not correspond to an unmasked grid cell
+#    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
 
 
 def grad2rad(alpha_in_grad):

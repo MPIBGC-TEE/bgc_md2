@@ -1177,7 +1177,7 @@ steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVar
 # +
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
-epa_0=EstimatedParameters(
+epa_0=msh.EstimatedParameters(
  fwt=0.62,
  fgv=0.3,
  fco=0.95,

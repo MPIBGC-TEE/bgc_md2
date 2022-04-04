@@ -27,7 +27,7 @@ from source import mvs
 
 mvs.get_CompartmentalMatrix()
 
-mvs.get_InputT
+mvs.get_InputTuple()
 
 # we can also print the whole mass balance equation
 import bgc_md2.display_helpers as dh
@@ -62,6 +62,7 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # be able to refer to the symbols and functions in the symbolic description
 # we recreate them here.
+from sympy import Symbol, Function
 BI=mvs.get_BibInfo()
 for k in BI.sym_dict.keys():
     code=k+" = Symbol('{0}')".format(k)
@@ -177,8 +178,12 @@ download_my_TRENDY_output(conf_dict)
 # Copy the content of the above cell into a file `model_specific_helpers_2.py` 
 # and then import it and call the function to check that it works.
 
+from pathlib import Path
+import json
 import model_specific_helpers_2 as msh
-#msh.download_my_TRENDY_output(conf_dict)
+with Path('config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
+msh.download_my_TRENDY_output(conf_dict)
 
 # #### provide functions to read the data
 #
@@ -221,8 +226,10 @@ def get_example_site_vars(dataPath):
 
 # -
 
-svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
-svs,dvs
+import model_specific_helpers_2 as msh
+svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs_0 = msh.Observables(*map(lambda v: v[0],svs))
+dvs_0 = msh.Drivers(*map(lambda v: v[0],dvs))
 
 
 # Copy the code into `model_specific_helpers_2.py` and call the function again...
@@ -303,18 +310,21 @@ all_rates
 
 # +
 # and one for the internal fluxrates
-# -
 
+# +
+
+fwt= 0.6
+fgv= 0.3
 old_par_dict = {
-    fwt: 0.6,
-    fgv: 0.3,
+    #fwt: 0.6,
+    #fgv: 0.3,
     fco: 0.73,
     fml: 0.85,
     fd: 0.74,
     #T_0: 2,
     #E: 4,
     #KM: 10,
-    beta_NWT: fwt*0.5,
+    beta_NWT: fwt*0.5, #this is very unlikely
     beta_AGWT: fwt*0.5,
     beta_TR: 1-fwt-fgv,
     beta_GVF: fgv*0.5,
@@ -353,6 +363,7 @@ old_par_dict = {
     k_C_BGMS: 0.66 / 365,
     k_C_SHMS: 0.02 / 365,
 }
+# -
 
 
 # Now we can translate the old paramterisation to the new one.
@@ -361,21 +372,68 @@ old_par_dict = {
 #
 
 par_dict={
-    fwt: 0.6,
-    fgv: 0.3,
+    #fwt: 0.6,
+    #fgv: 0.3,
     beta_NWT: fwt*0.5,
     beta_AGWT: fwt*0.5,
     beta_TR: 1-fwt-fgv,
     beta_GVF: fgv*0.5,
     beta_GVR: fgv*0.5,
-    fco: 0.73,
-    fml: 0.85,
-    fd: 0.74,
+    #fco: 0.73,
+    #fml: 0.85,
+    #fd: 0.74,
 }
 par_dict.update(
     {Symbol(k):v.subs(old_par_dict) for k,v in all_rates.items()}
 )
 par_dict
+
+mvs.get_SmoothReservoirModel().free_symbols
+
+from sympy import Symbol
+par_dict={
+    Symbol(k):v for k,v in 
+    {
+        "beta_NWT": 0.3,
+        "beta_AGWT": 0.3,
+        "beta_TR": 0.10000000000000003,
+        "beta_GVF": 0.15,
+        "beta_GVR": 0.15,
+        "r_C_NWT_rh": 0,
+        "r_C_AGWT_rh": 0,
+        "r_C_TR_rh": 0,
+        "r_C_GVF_rh": 0,
+        "r_C_GVR_rh": 0,
+        "r_C_AGML_rh": 0.00678082191780822,
+        "r_C_AGSL_rh": 0.0354794520547945,
+        "r_C_AGMS_rh": 0.00800000000000000,
+        "r_C_YHMS_rh": 0.00246575342465753,
+        "r_C_BGDL_rh": 0.0200000000000000,
+        "r_C_BGRL_rh": 0.000600000000000000,
+        "r_C_BGMS_rh": 0.00132000000000000,
+        "r_C_SHMS_rh": 4.00000000000000e-5,
+        "r_C_NWT_2_C_AGML": 0.00116438356164384,
+        "r_C_NWT_2_C_AGSL": 0.000205479452054795,
+        "r_C_AGWT_2_C_AGSL": 9.13242009132420e-5,
+        "r_C_TR_2_C_BGDL": 9.21544209215442e-5,
+        "r_C_TR_2_C_BGRL": 3.23785803237858e-5,
+        "r_C_GVF_2_C_AGML": 7.76255707762557e-5,
+        "r_C_GVF_2_C_AGSL": 1.36986301369863e-5,
+        "r_C_GVR_2_C_BGDL": 9.21544209215442e-5,
+        "r_C_GVR_2_C_BGRL": 3.23785803237858e-5,
+        "r_C_AGML_2_C_AGMS": 0.00554794520547945,
+        "r_C_AGSL_2_C_AGMS": 0.00760273972602740,
+        "r_C_AGSL_2_C_YHMS": 0.00760273972602740,
+        "r_C_AGMS_2_C_YHMS": 0.0120000000000000,
+        "r_C_YHMS_2_C_AGMS": 0.00271232876712329,
+        "r_C_YHMS_2_C_SHMS": 0.000301369863013699,
+        "r_C_BGDL_2_C_SHMS": 0.00739726027397260,
+        "r_C_BGRL_2_C_BGMS": 0.000110958904109589,
+        "r_C_BGRL_2_C_SHMS": 0.000110958904109589,
+        "r_C_BGMS_2_C_SHMS": 0.000488219178082192,
+        "r_C_SHMS_2_C_BGMS": 1.47945205479452e-5 
+    }.items()    
+}
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
@@ -401,8 +459,15 @@ func_dict={
 # In sympy terms this means that the expressions for 
 B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
 # we create a numeric startvector for the compartmental system
-# 
-svs_0=Observables(*map(lambda v: v[0],svs))
+#
+# -
+
+svs
+
+
+# +
+import numpy as np 
+#svs_0=msh.Observables(*map(lambda v: v[0],svs))
 
 X_0= np.array((
     svs_0.cVeg/5,
@@ -419,6 +484,8 @@ X_0= np.array((
     svs_0.cSoil/4,
     svs_0.cSoil/4,
 ))#.reshape(9,)
+# -
+
 # in general B and u are nonlinear and can depend on X, thats why we have to test them with index and X arguments
 u_func(0,X_0),B_func(0,X_0)
 
@@ -577,6 +644,9 @@ def make_StartVector(mvs):
 
 
 
+# +
+
+StartVector=msh.make_StartVector(mvs)
 V_init= StartVector(
     C_NWT=svs_0.cVeg/5,
     C_AGWT=svs_0.cVeg/5,
@@ -808,85 +878,12 @@ for coord in range(n_coord):
 # The distinction is not model inherent but just a reflection of our choice for data assimilation.
 # The more parameter values we can find out from the literature the fewer values we have to estimate.  
 
-# +
-# As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
-# They preserve order as numpy arrays which is great (and fast) for the numeric computations
-# and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
-
-UnEstimatedParameters = namedtuple(
-    "UnEstimatedParameters",
-    [
-        "cLitter_0",
-        "cSoil_0",
-        "cVeg_0",
-        "npp_0",
-        "rh_0",
-        "ra_0",
-        "r_C_NWT_rh",
-        "r_C_AGWT_rh",
-        "r_C_TR_rh",
-        "r_C_GVF_rh",
-        "r_C_GVR_rh",
-        "r_C_AGML_rh",
-        "r_C_AGSL_rh",
-        "r_C_AGMS_rh",
-        "r_C_YHMS_rh",
-        "k_C_BGDL",
-        "k_C_BGRL",
-        "k_C_BGMS",
-        "k_C_SHMS",
-        "r_C_AGML_2_C_AGMS",
-        "r_C_AGMS_2_C_YHMS",
-        "r_C_YHMS_2_C_AGMS",
-        "r_C_YHMS_2_C_SHMS",
-        "number_of_months" # necessary to prepare the output in the correct lenght 
-    ]
-)
-# Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
-# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
-# The destinction is only made for the data assimilation to isolate those parameters
-# that the mcmc will try to optimise 
-# It is better to start with only a few
-
-EstimatedParameters = namedtuple(
-    "EstimatedParameters",[ 
-        "fwt",
-        "fgv",
-        "fco",
-        "fml",
-        "fd",
-        "k_C_NWT",
-        "k_C_AGWT",
-        "k_C_TR",
-        "k_C_GVF",
-        "k_C_GVR",
-        "f_C_AGSL_2_C_AGMS",
-        "f_C_BGRL_2_C_SHMS",
-        'C_NWT_0',#for the trendy data also the startvalues have to be estimated but 
-        'C_AGWT_0',
-        'C_GVF_0',
-        'C_GVR_0',
-        'C_AGML_0',
-        'C_AGSL_0',
-        'C_BGDL_0',
-        'C_AGMS_0',
-        'C_YHMS_0',
-        'C_SHMS_0',
-    ]
-)
-# note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
-# parameters. In this case we may use only the first entry e.g. to derive startvalues. 
-# The destinction is only made for the data assimilation to isolate those parameters
-# that the mcmc will try to optimise 
-
-
-# -
 
 
 
 dvs.npp[1:100]
 
-cpa=UnEstimatedParameters(
+cpa=msh.Constants(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
@@ -916,18 +913,22 @@ cpa=UnEstimatedParameters(
 
 len(svs.rh)
 
-
 # ### Finding better start values for the data assimilation
 # You don't have to do this. It's a heuristic approach to find a better starting position.
 
 # +
+import sys
+sys.path.insert(0,'..') # necessary to import general_helpers
+import general_helpers as gh
+from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
+
 def make_steady_state_iterator_sym(
         mvs,
         V_init,
         par_dict,
         func_dict
     ):
-    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict)  
     def f(it,tup):
         X,_,_=tup
         b = u_func(it,X)
@@ -938,6 +939,8 @@ def make_steady_state_iterator_sym(
         initial_values=V_init,
         f=f)
 # calculate steady state
+func_dict=msh.make_func_dict(svs,dvs)
+B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict)  
   
 it_sym = make_steady_state_iterator_sym(
     mvs,
@@ -965,7 +968,7 @@ steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVar
 # +
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
-epa_0=EstimatedParameters(
+epa_0=msh.EstimatedParameters(
  fwt=0.62,
  fgv=0.3,
  fco=0.95,
