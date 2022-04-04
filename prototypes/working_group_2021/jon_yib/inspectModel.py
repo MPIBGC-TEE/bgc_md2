@@ -83,8 +83,6 @@ h.compartmental_graph(mvs)
 
 dh.mass_balance_equation(mvs)
 
-# Python Packages:
-
 # + [markdown] codehighlighter=[[0, 0]]
 # ## Download Data (Must Edit)
 # #### TRENDY Data
