@@ -62,7 +62,7 @@ sys.path.insert(0, '..')  # necessary to import general_helpers
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
-    month_2_day_index,
+    # month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions
@@ -437,6 +437,17 @@ msh.download_my_TRENDY_output(conf_dict)
 svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 # look at data
 # svs, dvs
+# -
+
+Path(conf_dict["dataPath"])
+
+# +
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
+
+
+fig, ax = plt.subplots() #[(12*10-1):12*30]
+plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "observation")
 
 # +
 # Plot simulation output for observables
@@ -558,33 +569,37 @@ plot_solutions(
 #    ]
 # )
 #
-# epa0 = ParameterValues( ## need to modify!!
-#    beta_leaf = 1/3,
-#    beta_wood = 1/3,
-#    f_leaf2DPM=0.1,
-#    f_wood2DPM=0.01,
-#    f_root2DPM=0.001,
-#    f_DPM2BIO =0.1,
-#    f_DPM2HUM =0.01,
-#    f_RPM2BIO =0.001,
-#    f_RPM2HUM =0.1,
-#    f_BIO2HUM =0.01,
-#    f_HUM2BIO =0.001,
-#    k_leaf = 1 / (365 * 2), # day -1
-#    k_wood=1 / (365 * 60),
-#    k_root=1 / (365 * 30),
-#    k_DPM= 0.0278,  # 1 / (365 * 60), # 3.22 * 10**(-7) s-1 ## this value is from Clark et al 2011
-#    k_RPM= 8.3376 * 10 ** (-4), #1 / (365 * 30), # 9.65 * 10**(-9) s-1
-#    k_BIO= 0.0018, #1 / (365 * 30), # 2.12 * 10**(-8) s-1
-#    k_HUM= 5.5555 * 10 ** (-5), #1 / (365 * 200), # 6.43 *10(-10) s-1
-#
-#    c_leaf0=0,
-#    c_wood0=0,
-#    c_RPM0=0,
-#    c_DPM0=0,
-#    c_BIO0=0,
-#    Mw=0.01
-# )
+## save a good hand-tuned parameter in case it's needed in the future
+## only for save, if run here, got error
+epa0 = ParameterValues( ## need to modify!!
+    beta_leaf = 0.35,
+    beta_wood = 0.3,
+    f_leaf2DPM = 0.22,
+    f_wood2DPM = 0.22,
+    f_root2DPM = 0.22,
+    f_DPM2BIO = 0.46*betaR,
+    f_DPM2HUM = 0.54*betaR,
+    f_RPM2BIO = 0.46*betaR,
+    f_RPM2HUM = 0.54*betaR,
+    f_BIO2HUM = 0.54*betaR,
+    f_HUM2BIO = 0.46*betaR,
+    k_leaf = (1 / 4) / (360),
+    k_wood = (1 / 30.5)/ (360),
+    k_root = (1 / 4) /360,
+    k_DPM  = (1 / 0.065) / 360,
+    k_RPM = (1 / 2.5) / 360,
+    k_BIO = (1 / 0.85) / 360,
+    k_HUM = (1 / 30) / 360,
+
+
+    c_leaf0 = svs.cVeg[0] *0.12, #/ 3,  # set inital pool values to svs values
+    c_wood0 = svs.cVeg[0] *0.76, # / 3,
+    c_DPM0 = svs.cSoil[0] *0.005,
+    c_RPM0 = svs.cSoil[0] *0.22,
+    c_BIO0 = svs.cSoil[0] *0.02,
+
+    Mw=0.01
+)
 #
 ## need to check here!!
 # old_par_dict = {
@@ -742,7 +757,7 @@ epa_0 = msh.EstimatedParameters(
     **{
         'c_leaf_0': svs_0.cVeg * 0.12,  # set inital pool values to svs values
         'c_wood_0': svs_0.cVeg * 0.76,  # you can set numerical values here directly as well
-        'c_DPM_0': svs_0.cSoil * 0.01,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
+        'c_DPM_0': svs_0.cSoil * 0.0011,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
         'c_RPM_0': svs_0.cSoil * 0.22,
         'c_BIO_0': svs_0.cSoil * 0.02
     },
@@ -788,7 +803,7 @@ fig = plt.figure()
 from general_helpers import plot_observations_vs_simulations
 plot_observations_vs_simulations(fig,svs,obs_simu)
 
-obs_simu.cSoil
+svs_0.cSoil * 0.0011
 
 # +
 import matplotlib.lines as mlines
@@ -823,7 +838,10 @@ plt.show()
 
 np.array(svs.cVeg)[0] - np.array(svs.cVeg)[320*12-1]
 
-np.sum(np.array(dvs.npp) - np.array(0))
+FT = 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85)))
+plt.plot(np.array(dvs.tsl), 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85))), label = "254.85")
+plt.plot(np.array(dvs.tsl), 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 264.85))), label = "264.85")
+
 
 # +
 fig, ax1 = plt.subplots()

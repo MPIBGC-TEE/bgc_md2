@@ -36,7 +36,7 @@ sys.path.insert(0, '..')  # necessary to import general_helpers
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
-    month_2_day_index,
+    # month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions

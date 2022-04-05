@@ -65,7 +65,7 @@ sys.path.insert(0, '..')  # necessary to import general_helpers
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
-    month_2_day_index,
+    # month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions
@@ -393,33 +393,26 @@ import json
 import model_specific_helpers_2 as msh
 # Define function to download, scale, map TRENDY data
 def get_global_mean_vars(dataPath):
-    # Define single geospatial cell from (3840, 144, 192)
-    #slayer = slice(None, None, None)  # this is the same as :
-    #slat = 120
-    #slon = 50
-    #t = slayer, slat, slon  # a site in South America
- 
-    
     # Define function to select geospatial cell and scale data
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"]
-        lons = ds.variables["longitude"]
+        lats = ds.variables["latitude"].__array__()
+        lons = ds.variables["longitude"].__array__()
 
         if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
             # f_veg2soil: Total carbon mass from vegetation directly into the soil
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean_JULES(lats, lons, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
+            return gh.global_mean(lats, lons, ds.variables[vn].__array__()) * 86400  # convert from kg/m2/s to kg/m2/day
         
         elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
             tmp = ds.variables[vn][:, 0, :, :]
             print("converted size is ", tmp.shape)
             # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
-            return gh.global_mean_JULES(lats, lons, tmp)  # average soil temperature at different depth
+            return gh.global_mean(lats, lons, tmp)  # average soil temperature at different depth
             
     
         elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
@@ -436,11 +429,11 @@ def get_global_mean_vars(dataPath):
             # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
             # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
             # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
-            return gh.global_mean_JULES(lats, lons, tmp)  # sum the vegetation coverages
+            return gh.global_mean(lats, lons, tmp)  # sum the vegetation coverages
         
         else:
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean_JULES(lats, lons, ds.variables[vn])
+            return gh.global_mean(lats, lons, ds.variables[vn].__array__())
 
     # Link symbols and data:
 
@@ -453,17 +446,6 @@ def get_global_mean_vars(dataPath):
             for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
        }
     }
-    #d_name2varname_in_file = {
-    #    "npp":'npp_nlim',
-    #    **{
-    #         vn: vn
-    #         for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
-    #    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
-    #    **{
-    #        vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
-    #        for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
-    #    }
-    #}
     d_name2varname_in_file = {
         "npp": 'npp_nlim',
         **{
@@ -642,7 +624,7 @@ epa0 = ParameterValues( ## need to modify!!
 
     c_leaf0 = svs.cVeg[0] *0.12, #/ 3,  # set inital pool values to svs values
     c_wood0 = svs.cVeg[0] *0.76, # / 3,
-    c_DPM0 = svs.cSoil[0] *0.005,
+    c_DPM0 = svs.cSoil[0] *0.002,
     c_RPM0 = svs.cSoil[0] *0.22,
     c_BIO0 = svs.cSoil[0] *0.02,
 
@@ -685,6 +667,7 @@ par_dict.update(
 )
 par_dict
 
+0.015 / svs.cSoil[0]
 # -
 
 

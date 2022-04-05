@@ -621,7 +621,39 @@ def make_weighted_cost_func(
         J_obj3 = np.mean((out_simu.rh - obs.rh) ** 2) / (2 * np.var(obs.rh))
         J_obj4 = np.mean((out_simu.fVegSoil - obs.fVegSoil) ** 2) / (2 * np.var(obs.fVegSoil))
 
-        J_new = (J_obj1 + J_obj2*2 + J_obj3 + J_obj4)
+        J_new = (J_obj1 + J_obj2*2 + J_obj3) #  + J_obj4 removed because of the issues about fVegSoil definition and mass balance 
         return J_new
 
     return costfunction
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "c_leaf": apa['c_leaf_0'],     
+        "c_wood": apa['c_wood_0'],     
+        "c_root": apa['c_veg_0'] - (apa['c_leaf_0'] +  apa['c_wood_0']),  
+        "c_DPM": apa['c_DPM_0'],
+        "c_RPM": apa['c_RPM_0'],
+        "c_BIO": apa['c_BIO_0'],
+        "c_HUM": apa['c_soil_0'] - (apa['c_DPM_0'] + apa['c_RPM_0'] + apa['c_BIO_0'])
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    fd = make_func_dict(mvs, dvs, cpa, epa)
+    V_init = gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
