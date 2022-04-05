@@ -117,6 +117,7 @@ cpa
 # -
 
 epa_0=msh.EstimatedParameters(
+    
      beta_leaf=0.5, 
      beta_wood=0.4, 
      r_C_leaf2abvstrlit= 0.0003*0.85,
@@ -290,7 +291,7 @@ C_autostep, J_autostep = autostep_mcmc_2(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=5000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
