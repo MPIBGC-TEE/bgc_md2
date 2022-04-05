@@ -169,12 +169,12 @@ def get_globalmean_vars(dataPath):
             #for name, variable in ds.variables.items():            
             #    for attrname in variable.ncattrs():
             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean(lats, lons, ds.variables[vn])*24*60*60)
+            return (gh.global_mean_JULES(lats, lons, ds.variables[vn])*24*60*60)
         else:
             #for name, variable in ds.variables.items():            
             #    for attrname in variable.ncattrs():
             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean(lats, lons, ds.variables[vn]))
+            return (gh.global_mean_JULES(lats, lons, ds.variables[vn]))
 
     # Link symbols and data:
     # YIBS has annual vs monthly file names so they are linked separately
