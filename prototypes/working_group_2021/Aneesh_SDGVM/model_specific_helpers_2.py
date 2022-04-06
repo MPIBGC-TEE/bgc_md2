@@ -566,3 +566,71 @@ def make_param_filter_func(
         return (cond1 and cond2 and cond3)
         
     return isQualified
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    par_dict={
+    Symbol(k): v for k,v in {
+         "beta_leaf":epa.beta_leaf,
+         "beta_wood":epa.beta_wood,
+         "r_C_leaf2abvstrlit":epa.r_C_leaf2abvstrlit,
+         "r_C_abvmetlit2surface_microbe":epa.r_C_abvmetlit2surface_microbe,
+         "r_C_abvstrlit2slowsom":epa.r_C_abvstrlit2slowsom,
+         "r_C_abvstrlit2surface_microbe":epa.r_C_abvstrlit2surface_microbe,
+         "r_C_belowmetlit2soil_microbe":epa.r_C_belowmetlit2soil_microbe,
+         "r_C_belowstrlit2slowsom":epa.r_C_belowstrlit2slowsom,
+         "r_C_belowstrlit2soil_microbe":epa.r_C_belowstrlit2soil_microbe,
+         "r_C_leaf2abvmetlit":epa.r_C_leaf2abvmetlit,
+         "r_C_passsom2soil_microbe":epa.r_C_passsom2soil_microbe,
+         "r_C_root2belowmetlit":epa.r_C_root2belowmetlit,
+         "r_C_root2belowstrlit":epa.r_C_root2belowstrlit,
+         "r_C_slowsom2passsom":epa.r_C_slowsom2passsom,
+         "r_C_slowsom2soil_microbe":epa.r_C_slowsom2soil_microbe,
+         "r_C_soil_microbe2passsom":epa.r_C_soil_microbe2passsom,
+         "r_C_soil_microbe2slowsom":epa.r_C_soil_microbe2slowsom,
+         "r_C_surface_microbe2slowsom":epa.r_C_surface_microbe2slowsom,
+         "r_C_wood2abvmetlit":epa.r_C_wood2abvmetlit,
+         "r_C_wood2abvstrlit":epa.r_C_wood2abvstrlit,
+         "r_C_abvstrlit_rh":epa.r_C_abvstrlit_rh,
+         "r_C_abvmetlit_rh":epa.r_C_abvmetlit_rh,
+         "r_C_belowstrlit_rh":epa.r_C_belowstrlit_rh,
+         "r_C_belowmetlit_rh":epa.r_C_belowmetlit_rh,
+         "r_C_surface_microbe_rh":epa.r_C_surface_microbe_rh,
+         "r_C_slowsom_rh":epa.r_C_slowsom_rh,
+         "r_C_passsom_rh":epa.r_C_passsom_rh,
+         "r_C_soil_microbe_rh":epa.r_C_soil_microbe_rh,
+    }.items()
+}
+    X_0_dict={
+        "C_leaf":  epa.C_leaf_0,
+        "C_root" :cpa.cRoot_0,
+        "C_wood"  :cpa.cVeg_0 - epa.C_leaf_0 - cpa.cRoot_0,
+        "C_abvstrlit" : epa.C_abvstrlit_0,
+        "C_abvmetlit" : epa.C_abvmetlit_0,
+        "C_belowstrlit" : epa.C_blwstrlit_0,
+        "C_belowmetlit" : cpa.cLitter_0 - epa.C_abvstrlit_0 - epa.C_abvmetlit_0 - epa.C_blwstrlit_0,
+        "C_surface_microbe" :epa.C_surfacemic_0,
+        "C_soil_microbe" : epa.C_soilmic_0,
+        "C_slowsom" : epa.C_slow_0,
+        "C_passsom" :cpa.cSoil_0 - epa.C_surfacemic_0 - epa.C_soilmic_0 - epa.C_slow_0,
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(11,1)
+    fd=make_func_dict(mvs,dvs)
+    V_init=gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
+
+
