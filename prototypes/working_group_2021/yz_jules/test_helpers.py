@@ -27,22 +27,22 @@ def make_test_args(conf_dict,msh,mvs):
             # 'r_c_leaf_rh': 0,
             # 'r_c_wood_rh': 0,
             # 'r_c_root_rh': 0,
-            'r_c_DPM_rh': 0.0301282051282051,
-            'r_c_RPM_rh': 0.000783333333333333,
-            'r_c_BIO_rh': 0.00274738562091503,
-            'r_c_HUM_rh': 8.00277777777778e-5,
-            'r_c_leaf_2_c_DPM': 0.000152777777777778,
-            'r_c_leaf_2_c_RPM': 0.000541666666666667,
-            'r_c_wood_2_c_DPM': 2.00364298724954e-5,
-            'r_c_wood_2_c_RPM': 7.10382513661202e-5,
-            'r_c_root_2_c_DPM': 0.000152777777777778,
-            'r_c_root_2_c_RPM': 0.000541666666666667,
-            'r_c_DPM_2_c_BIO': 0.00579914529914530,
-            'r_c_DPM_2_c_HUM': 0.00680769230769231,
-            'r_c_RPM_2_c_BIO': 0.000150777777777778,
-            'r_c_RPM_2_c_HUM': 0.000177000000000000,
-            'r_c_BIO_2_c_HUM': 0.000520588235294118,
-            'r_c_HUM_2_c_BIO': 1.25648148148148e-5
+            'r_c_DPM_rh':0.0218855218855219,
+            'r_c_RPM_rh':0.000866666666666667,
+            'r_c_BIO_rh':0.00174841269841270,
+            'r_c_HUM_rh':5.87450980392157e-5,
+            'r_c_leaf_2_c_DPM':0.000152777777777778,
+            'r_c_leaf_2_c_RPM':0.000541666666666667,
+            'r_c_wood_2_c_DPM':2.00364298724954e-5,
+            'r_c_wood_2_c_RPM':7.10382513661202e-5,
+            'r_c_root_2_c_DPM':0.000152777777777778,
+            'r_c_root_2_c_RPM':0.000541666666666667,
+            'r_c_DPM_2_c_BIO':0.00283950617283951,
+            'r_c_DPM_2_c_HUM':0.00333333333333333,
+            'r_c_RPM_2_c_BIO':0.000112444444444444,
+            'r_c_RPM_2_c_HUM':0.000132000000000000,
+            'r_c_BIO_2_c_HUM':0.000235714285714286,
+            'r_c_HUM_2_c_BIO':6.61437908496732e-6
         }.items()
     }
     svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
@@ -59,34 +59,36 @@ def make_test_args(conf_dict,msh,mvs):
     **{
             'c_leaf_0': svs_0.cVeg * 0.12,  # set inital pool values to svs values
             'c_wood_0': svs_0.cVeg * 0.76,  # you can set numerical values here directly as well
-            'c_DPM_0': svs_0.cSoil * 0.01,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
-            'c_RPM_0': svs_0.cSoil * 0.22,
-            'c_BIO_0': svs_0.cSoil * 0.02
+            'c_DPM_0': svs_0.cSoil * 0.0025,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
+            'c_RPM_0': svs_0.cSoil * 0.248,
+            'c_BIO_0': svs_0.cSoil * 0.022
          },
          **{
             'beta_leaf': 0.35,
             'beta_wood': 0.3,
             'Mw': 0.1,
             'Ms': np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
+            'Topt': 18.32,
+            'Tcons': 47.91,
             # 'r_c_leaf_rh': 0,
             # 'r_c_wood_rh': 0,
             # 'r_c_root_rh': 0,
-            'r_c_DPM_rh': 0.0301282051282051,
-            'r_c_RPM_rh': 0.000783333333333333,
-            'r_c_BIO_rh': 0.00274738562091503,
-            'r_c_HUM_rh': 8.00277777777778e-5,
-            'r_c_leaf_2_c_DPM': 0.000152777777777778,
-            'r_c_leaf_2_c_RPM': 0.000541666666666667,
-            'r_c_wood_2_c_DPM': 2.00364298724954e-5,
-            'r_c_wood_2_c_RPM': 7.10382513661202e-5,
-            'r_c_root_2_c_DPM': 0.000152777777777778,
-            'r_c_root_2_c_RPM': 0.000541666666666667,
-            'r_c_DPM_2_c_BIO': 0.00579914529914530,
-            'r_c_DPM_2_c_HUM': 0.00680769230769231,
-            'r_c_RPM_2_c_BIO': 0.000150777777777778,
-            'r_c_RPM_2_c_HUM': 0.000177000000000000,
-            'r_c_BIO_2_c_HUM': 0.000520588235294118,
-            'r_c_HUM_2_c_BIO': 1.25648148148148e-5
+            'r_c_DPM_rh':0.0218855218855219,
+            'r_c_RPM_rh':0.000866666666666667,
+            'r_c_BIO_rh':0.00174841269841270,
+            'r_c_HUM_rh':5.87450980392157e-5,
+            'r_c_leaf_2_c_DPM':0.000152777777777778,
+            'r_c_leaf_2_c_RPM':0.000541666666666667,
+            'r_c_wood_2_c_DPM':2.00364298724954e-5,
+            'r_c_wood_2_c_RPM':7.10382513661202e-5,
+            'r_c_root_2_c_DPM':0.000152777777777778,
+            'r_c_root_2_c_RPM':0.000541666666666667,
+            'r_c_DPM_2_c_BIO':0.00283950617283951,
+            'r_c_DPM_2_c_HUM':0.00333333333333333,
+            'r_c_RPM_2_c_BIO':0.000112444444444444,
+            'r_c_RPM_2_c_HUM':0.000132000000000000,
+            'r_c_BIO_2_c_HUM':0.000235714285714286,
+            'r_c_HUM_2_c_BIO':6.61437908496732e-6
          }
     )
     
@@ -104,6 +106,10 @@ def make_test_args(conf_dict,msh,mvs):
     epa_max = epa_max._replace(c_BIO_0 = svs_0.cSoil * epa_0.c_BIO_0 * 10)
     epa_max = epa_max._replace(Mw = 0.5)
     epa_max = epa_max._replace(Ms = (max(dvs.mrsos) + 500) * 2) # max(dvs.mrso) * 2
+    epa_min = epa_min._replace(Topt = epa_0.Topt - 5)
+    epa_max = epa_max._replace(Topt = epa_0.Topt + 5)
+    epa_min = epa_min._replace(Tcons = epa_0.Tcons / 1.2)
+    epa_max = epa_max._replace(Tcons = epa_0.Tcons * 1.2)
     
     cpa = msh.Constants(
         # use Constants namedtuple to define constant values #Define the constant values of parameters NOT affected by data assimilation
@@ -120,10 +126,10 @@ def make_test_args(conf_dict,msh,mvs):
         c_leaf=svs_0.cVeg * 0.12,  # set inital pool values to svs values
         c_root=svs_0.cVeg * 0.12,  # you can set numerical values here directly as well
         c_wood=svs_0.cVeg * 0.76,
-        c_DPM=svs_0.cSoil * 0.01,
-        c_RPM=svs_0.cSoil * 0.22,
-        c_BIO=svs_0.cSoil * 0.02,
-        c_HUM=svs_0.cSoil * 0.75,
+        c_DPM=svs_0.cSoil * 0.0025,
+        c_RPM=svs_0.cSoil * 0.248,
+        c_BIO=svs_0.cSoil * 0.022,
+        c_HUM=svs_0.cSoil * 0.7275,
         rh=svs_0.rh,
         fVegSoil=svs_0.fVegSoil
         # f_veg2soil=svs_0.f_veg2soil# add the fraction
