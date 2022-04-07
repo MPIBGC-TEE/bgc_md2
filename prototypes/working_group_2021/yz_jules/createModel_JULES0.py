@@ -597,13 +597,17 @@ ParameterValues = namedtuple(
         "c_RPM0",       # 20
         "c_DPM0",       # 21
         "c_BIO0",       # 22
-        'Mw'            # 23, soil moisture content at the wilting point
+        'Mw',            # 23, soil moisture content at the wilting point
+        'Ms', 
+        'Topt',
+        'Tcons'
     ]
 )
-betaR = 0.295
+betaR = 0.22   # was derived from clay content(RothC model): 1/(x + 1) , where x = 1.67*(1.85 + 1.60exp(-0.0786%clay))
 epa0 = ParameterValues( ## need to modify!!
     beta_leaf = 0.35,
     beta_wood = 0.3,
+    
     f_leaf2DPM = 0.22,
     f_wood2DPM = 0.22,
     f_root2DPM = 0.22,
@@ -616,10 +620,10 @@ epa0 = ParameterValues( ## need to modify!!
     k_leaf = (1 / 4) / (360),
     k_wood = (1 / 30.5)/ (360),
     k_root = (1 / 4) /360,
-    k_DPM  = (1 / 0.065) / 360,
+    k_DPM  = (1 / 0.099) / 360,
     k_RPM = (1 / 2.5) / 360,
-    k_BIO = (1 / 0.85) / 360,
-    k_HUM = (1 / 30) / 360,
+    k_BIO = (1 / 1.4) / 360,
+    k_HUM = (1 / 42) / 360,
 
 
     c_leaf0 = svs.cVeg[0] *0.12, #/ 3,  # set inital pool values to svs values
@@ -628,7 +632,10 @@ epa0 = ParameterValues( ## need to modify!!
     c_RPM0 = svs.cSoil[0] *0.22,
     c_BIO0 = svs.cSoil[0] *0.02,
 
-    Mw=0.01
+    Mw=0.1,
+    Ms=np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
+    Topt=18.32,
+    Tcons=47.91
 )
 # need to check here!!
 old_par_dict = {
@@ -667,7 +674,7 @@ par_dict.update(
 )
 par_dict
 
-0.015 / svs.cSoil[0]
+
 # -
 
 
