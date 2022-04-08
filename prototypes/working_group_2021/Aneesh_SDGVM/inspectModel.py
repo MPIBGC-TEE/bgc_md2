@@ -117,6 +117,7 @@ cpa
 # -
 
 epa_0=msh.EstimatedParameters(
+    
      beta_leaf=0.5, 
      beta_wood=0.4, 
      r_C_leaf2abvstrlit= 0.0003*0.85,
@@ -290,7 +291,7 @@ C_autostep, J_autostep = autostep_mcmc_2(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=5000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
@@ -331,6 +332,71 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('SDGVM_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('SDGVM_da_j_aa.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('SDGVM_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('SDGVM_optimized_solutions.csv'), sep=',')
+# +
+it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
+ns=1500
+StartVectorTrace=gh.make_StartVectorTrace(mvs)
+nv=len(StartVectorTrace._fields)
+res_trace= np.zeros((ns,nv))
+for i in range(ns):
+    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
+#res_trace
+
+import matplotlib.pyplot as plt
+n=len(mvs.get_StateVariableTuple())
+fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
+axs=fig.subplots(n+1,2)
+days=list(range(ns))
+
+
+for i in range(n):
+    
+    ax = axs[i,0]
+    #  the solution
+    pos=i
+    ax.plot(
+        days,
+        res_trace[:,i],
+        label=StartVectorTrace._fields[pos],
+        color='blue'
+    )
+    # X_p
+    pos=i+n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='red'
+    )
+    # X_c
+    pos=i+2*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='yellow'
+    )
+    ax.legend()
+    
+    ax = axs[i,1]
+    # RT
+    pos=i+3*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='black'
+    )
+    ax.legend()
+    
+axs[n,0].plot(
+    days,
+    [msh.make_npp_func(dvs)(d) for d in days],
+    label='NPP',
+    color='green'
+)
+axs[n,0].legend()
 # -
+
 
 
