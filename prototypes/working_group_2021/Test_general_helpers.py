@@ -1,17 +1,9 @@
 import numpy as np
+import netCDF4 as nc
 from unittest import TestCase, skip
 from testinfrastructure.InDirTest import InDirTest
-from general_helpers import (
-        day_2_month_index, 
-        #month_2_day_index,
-        day_2_month_index_vm, 
-        month_2_day_index_vm,
-        months_by_day_arr,
-        TimeStepIterator2,
-        respiration_from_compartmental_matrix,
-        global_mean,
-        make_pixel_area_on_unit_spehre
-)
+import general_helpers as gh
+
 class Test_general_helpers(InDirTest):
 
     #def test_make_fluxrates_from_kf(,xi_d):    
@@ -41,40 +33,40 @@ class Test_general_helpers(InDirTest):
     
     def test_day_2_month_index(self):
         # note that days are counted from zero so day 29 is January 30.
-        self.assertEqual(day_2_month_index( 0), 0) 
-        self.assertEqual(day_2_month_index(30), 1) 
-        self.assertEqual(day_2_month_index(31), 1) 
-        self.assertEqual(day_2_month_index(60), 2) 
+        self.assertEqual(gh.day_2_month_index( 0), 0) 
+        self.assertEqual(gh.day_2_month_index(30), 1) 
+        self.assertEqual(gh.day_2_month_index(31), 1) 
+        self.assertEqual(gh.day_2_month_index(60), 2) 
 
     
     def test_month_2_day_index_vm(self):
         self.assertEqual(
-                month_2_day_index_vm([0]),
+                gh.month_2_day_index_vm([0]),
                 [0]
         ) 
         self.assertEqual(
-                month_2_day_index_vm([1]),
+                gh.month_2_day_index_vm([1]),
                 [31]
         ) 
         self.assertEqual(
-                month_2_day_index_vm([2]),
+                gh.month_2_day_index_vm([2]),
                 [59]
         ) 
         self.assertEqual(
-                month_2_day_index_vm([3]),
+                gh.month_2_day_index_vm([3]),
                 [90]
         ) 
         self.assertEqual(
-                month_2_day_index_vm([1,3]),
+                gh.month_2_day_index_vm([1,3]),
                 [31,90]
         ) 
     
     def test_day_2_month_index_vm(self):
         # note that days are counted from zero so day 30 is January 31.
-        self.assertEqual(day_2_month_index_vm( 0), 0) 
-        self.assertEqual(day_2_month_index_vm(30), 0) 
-        self.assertEqual(day_2_month_index_vm(31), 1) 
-        self.assertEqual(day_2_month_index_vm(60), 2) 
+        self.assertEqual(gh.day_2_month_index_vm( 0), 0) 
+        self.assertEqual(gh.day_2_month_index_vm(30), 0) 
+        self.assertEqual(gh.day_2_month_index_vm(31), 1) 
+        self.assertEqual(gh.day_2_month_index_vm(60), 2) 
 
 
     def test_pixel_area_on_unit_sphere(self):
@@ -89,8 +81,8 @@ class Test_general_helpers(InDirTest):
         delta_lat=(lats.max()- lats.min())/(len(lats)-1)
         delta_lon=(lons.max() -lons.min())/(len(lons)-1)
 
-        puaf_sym= make_pixel_area_on_unit_spehre(delta_lat, delta_lon,sym=True)
-        puaf= make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+        puaf_sym= gh.make_pixel_area_on_unit_spehre(delta_lat, delta_lon,sym=True)
+        puaf= gh.make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
 
         # assert identical values
         lw=np.array(
@@ -177,7 +169,7 @@ class Test_general_helpers(InDirTest):
         lons=np.ma.masked_array(np.linspace(-179.5,179.5,lon_len))
         arr=np.ma.ones(shape=(time_len,lat_len,lon_len))
         
-        res = global_mean(lats,lons,arr)
+        res = gh.global_mean(lats,lons,arr)
         self.assertEqual(
             res.shape,
             (time_len,)
@@ -215,7 +207,7 @@ class Test_general_helpers(InDirTest):
             np.ones(shape=(time_len,lat_len,lon_len)),
             mask=mask
         )
-        res = global_mean(lats,lons,arr)
+        res = gh.global_mean(lats,lons,arr)
         self.assertTrue(
             np.allclose(
                 res,
@@ -238,9 +230,57 @@ class Test_general_helpers(InDirTest):
         # we assert that the average of a constant field is the constant value
         self.assertTrue(
             np.allclose(
-                global_mean(lats,lons,arr),
+                gh.global_mean(lats,lons,arr),
                 np.ones((time_len,))
             )
         )
 
-     
+    def test_get_nan_pixels(self):
+        n_t=2
+        n_lats=3
+        n_lons=4
+        ref= np.zeros((n_t,n_lats,n_lons))
+        ref[0,2,3]=np.nan
+        ref[1,1,3]=np.nan
+        mask=np.zeros((n_t,n_lats,n_lons))
+        ma_arr=np.ma.array(ref,mask=mask)
+        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=True)
+        time = ds.createDimension('time',size=n_t)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+        test=ds.createVariable("test",np.float64,['time','lat','lon'])
+        test[:,:,:]=ma_arr
+
+        self.assertEqual(
+            ((1,3),(2,3)),
+            gh.get_nan_pixels(test)
+        )
+
+    def test_get_nan_pixel_mask(self):
+        n_t=2
+        n_lats=3
+        n_lons=4
+        arg= np.zeros((n_t,n_lats,n_lons))
+        arg[0,2,3]=np.nan
+        arg[1,1,3]=np.nan
+        mask=np.zeros((n_t,n_lats,n_lons),dtype=np.bool_)
+        mask[:,0,0]=True
+        ma_arr=np.ma.array(arg,mask=mask)
+        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=True)
+        time = ds.createDimension('time',size=n_t)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+        test_var=ds.createVariable("test_var",np.float64,['time','lat','lon'])
+        test_var[:,:,:]=ma_arr
+
+
+        ref_mask=np.zeros((n_lats,n_lons),dtype=np.bool_) #2 dimensional
+        ref_mask[0,0]=True
+        ref_mask[2,3]=True
+        ref_mask[1,3]=True
+        #from IPython import embed;embed()
+        self.assertTrue(
+            (ref_mask == gh.get_nan_pixel_mask(test_var)).all()
+        )
+
+    #def make_ncvar():

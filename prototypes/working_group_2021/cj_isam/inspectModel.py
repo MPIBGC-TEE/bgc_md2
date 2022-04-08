@@ -435,6 +435,11 @@ par_dict={
     }.items()    
 }
 
+import test_helpers as th
+test_args=th.make_test_args(conf_dict,msh,mvs)
+
+par_dict_2=test_args.par_dict_2
+
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
 # We will later store these functions in  `model_specific_helpers.py` which resides in the same folder as this notebook. You will have to adapt them to your data set. 
@@ -994,6 +999,9 @@ epa_0=msh.EstimatedParameters(
 
 )
 # -
+
+epa_0=msh.
+
 
 # The function `param2res` (which will be used by a general model independent mcmc) only takes the estimated parameters as arguments and produce data in the same shape as the observations.
 # We will taylor make it by another function `make_param2res` which depends on the parameters that we decide to fix.
