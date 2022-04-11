@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.7
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -83,9 +83,11 @@ with Path('config.json').open(mode='r') as f:
 # msh.download_my_TRENDY_output(conf_dict)
 
 #     # Read NetCDF data  ******************************************************************************************************************************
-svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_vars(dataPath=Path(conf_dict["dataPath"]))
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
 # -
+
+dvs
 
 # ## Data assimilation
 #
@@ -98,14 +100,14 @@ cpa = msh.Constants(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
- xi_0=dvs.xi[0],
- rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
- ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
- r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
- r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
- #number_of_months=len(svs.rh)
- number_of_months=120 # for testing and tuning mcmc
+ npp_0=dvs.npp[0],# * 86400,   # kg/m2/s kg/m2/day
+ #xi_0=dvs.xi[0],
+ rh_0=svs_0.rh,# * 86400,   # kg/m2/s kg/m2/day
+ ra_0=svs_0.ra,# * 86400,   # kg/m2/s kg/m2/day
+ #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
+ #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
+ number_of_months=len(svs.rh)
+ #number_of_months=120 # for testing and tuning mcmc
 )
 
 # provide an inital guess for the paramters to be estimated by the data assimilation
@@ -150,22 +152,66 @@ import matplotlib.pyplot as plt
 from general_helpers import plot_solutions
 
 param2res_sym = msh.make_param2res_sym(mvs,cpa,dvs)
-xs= param2res_sym(epa_0)
-obs=np.column_stack([ np.array(v) for v in svs])
-obs=obs[0:cpa.number_of_months,:] #cut 
+obs_simu= param2res_sym(epa_0)
+#obs=np.column_stack([ np.array(v) for v in svs])
+#obs=obs[0:cpa.number_of_months,:] #cut 
 #obs[:,3:4]=obs[:,3:4]
-n=cpa.number_of_months
+#n=cpa.number_of_months
 
 
 fig = plt.figure(figsize=(12, 4), dpi=80)
-gh.plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Observables._fields,
-        tup=(xs,obs)
-        #tup=(obs,)
-)
-# fig.savefig('solutions_10.pdf')
+
+#fig = plt.figure()
+from general_helpers import plot_observations_vs_simulations
+plot_observations_vs_simulations(fig,svs,obs_simu)
+# gh.plot_solutions(
+#         fig,
+#         times=range(n),
+#         var_names=msh.Observables._fields,
+#         tup=(obs_simu,obs)
+#         #tup=(obs,)
+# )
+fig.savefig('solutions_10.pdf')
+# -
+
+
+
+def make_feng_cost_func_2(
+    svs #: Observables
+    ):
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    # The denominators in this case are actually the TEMPORAL variances of the data streams
+    obs_arr=np.stack([ arr for arr in svs],axis=1)
+    means = obs_arr.mean(axis=0)
+    mean_centered_obs= obs_arr - means
+    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+
+    def feng_cost_func_2(simu: msh.Observables):
+        def f(i):
+            arr=simu[i]
+            obs=obs_arr[:,i]
+            diff=((arr-obs)**2).sum()/denominators[i]*100 
+            return diff
+        return np.array([f(i) for i  in range(len(simu))]).mean()
+    
+    return feng_cost_func_2
+
+feng_cost_function_2=make_feng_cost_func_2(svs)
+feng_cost_function_2(obs_simu)    
+
+obs_arr=np.stack([ arr for arr in svs],axis=1)
+sim_arr=np.stack([ arr for arr in obs_simu],axis=1)
+sim_arr.shape
+fcf=gh.make_feng_cost_func(obs_arr)
+fcf(sim_arr)
+
+obs_arr.shape,sim_arr.shape
+
+obs=np.column_stack([ np.array(v) for v in svs])
+#obs=obs[0:cpa.number_of_months,:] #cut 
+obs.shape
 
 # +
 epa_min=msh.EstimatedParameters(
@@ -242,20 +288,20 @@ epa_max=msh.EstimatedParameters(
 # +
 from general_helpers import autostep_mcmc, make_feng_cost_func 
 
-obs=np.column_stack([ np.array(v) for v in svs])
+#obs=np.column_stack([ np.array(v) for v in svs])
 #
-obs=obs[0:cpa.number_of_months,:] #cut 
+#obs=obs[0:cpa.number_of_months,:] #cut 
 isQualified = msh.make_param_filter_func(epa_max, epa_min)
 param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = gh.autostep_mcmc_2(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=make_feng_cost_func(obs),
-    nsimu=2000, # for testing and tuning mcmc
+    costfunction=make_feng_cost_func_2(svs),
+    nsimu=200, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
@@ -270,17 +316,24 @@ print("Data assimilation finished!")
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
 epa_opt=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 mod_opt = param2res(epa_opt)  
 
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
-gh.plot_solutions(
+plot_observations_vs_simulations(
         fig,
-        #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months)), # for yearly output
-        var_names=msh.Observables._fields,
-        tup=(mod_opt,obs)
-)
+        svs,
+        mod_opt
+    )
+
+# gh.plot_solutions(
+#         fig,
+#         #times=range(cpa.number_of_months),
+#         times=range(int(cpa.number_of_months)), # for yearly output
+#         var_names=msh.Observables._fields,
+#         tup=(mod_opt,obs)
+# )
 
 fig.savefig('solutions_opt.pdf')
 
@@ -300,7 +353,7 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'
 
 # +
 it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
-ns=1500
+ns=10*360 #1500
 StartVectorTrace=gh.make_StartVectorTrace(mvs)
 nv=len(StartVectorTrace._fields)
 res_trace= np.zeros((ns,nv))
@@ -362,3 +415,6 @@ axs[n,0].plot(
     color='green'
 )
 axs[n,0].legend()
+# -
+
+

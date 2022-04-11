@@ -11,10 +11,10 @@ from CompartmentalSystems.TimeStepIterator import (
 )
 from copy import copy
 from typing import Callable
-from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
+from general_helpers import monthly_to_yearly #, month_2_day_index
 import general_helpers as gh
 
 # we will use the trendy output names directly in other parts of the output
@@ -24,7 +24,7 @@ Observables = namedtuple(
 )
 OrgDrivers=namedtuple(
     "OrgDrivers",
-    ["gpp", "mrso", "tas", "xi"]
+    ["gpp", "mrso", "tas"]#, "xi_t", "xi_w"]
 )    
 Drivers=namedtuple(
     "Drivers",
@@ -41,11 +41,11 @@ Constants = namedtuple(
         "cSoil_0",
         "cVeg_0",
         "npp_0",
-        "xi_0",
+        #"xi_0",
         "rh_0",
         "ra_0",
-        "r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates 
-        "r_C_root_litter_2_C_soil_slow",# it would be much better to know more  
+        #"r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates
+        #"r_C_root_litter_2_C_soil_slow",# it would be much better to know more
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
 )
@@ -134,16 +134,50 @@ def get_example_site_vars(dataPath):
     dvs=Drivers(
         npp=odvs.gpp-obss.ra,
         mrso=odvs.mrso,
-        tas=odvs.tas,
-        xi=odvs.xi
+        tas=odvs.tas#,
+        #xi=odvs.xi_t*odvs.xi_w
     )
     return (obss, dvs)
+
+def get_global_vars(dataPath):
+    # pick up 1 site
+    # s = slice(None, None, None)  # this is the same as :
+    # t = s, 50, 33  # [t] = [:,49,325]
+    def f(tup):
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them
+        ds = nc.Dataset(str(path))
+        lats = ds.variables["lat"].__array__()
+        lons = ds.variables["lon"].__array__()
+        if vn in ["npp","gpp","rh","ra"]:
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
+        else:
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+        #return ds.variables[vn][t]
+
+    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
+    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+
+    # we want to drive with npp and can create it from gpp and ra
+    # observables
+    odvs=OrgDrivers(*map(f,d_names))
+    obss=Observables(*map(f, o_names))
+
+    dvs=Drivers(
+        npp=odvs.gpp-obss.ra,
+        mrso=odvs.mrso,
+        tas=odvs.tas#,
+        #xi=odvs.xi_t*odvs.xi_w
+    )
+    return (obss, dvs)
+
 
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
-        return (dvs.npp[month]) * 86400
+        return (dvs.npp[month]) #* 86400
 
     return func
 
@@ -151,8 +185,8 @@ def make_npp_func(dvs):
 def make_xi_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
-        return (dvs.xi[month])
-        # return 1.0 # preliminary fake for lack of better data... 
+        #return (dvs.xi[month])
+        return 1.0 # preliminary fake for lack of better data...
     return func
 
 
@@ -358,7 +392,7 @@ def make_param2res_sym(
     seconds_per_day = 86400
     def npp_func(day):
         month=gh.day_2_month_index(day)
-        return dvs.npp[month] * seconds_per_day   # kg/m2/s kg/m2/day;
+        return dvs.npp[month] #* seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -395,7 +429,7 @@ def make_param2res_sym(
         # could be build from estimated parameters and would have to live here...
         def xi_func(day):
             month=gh.day_2_month_index(day)
-            return dvs.xi[month]
+            return 1#dvs.xi[month]
             # return 1.0 # preliminary fake for lack of better data... 
         
         func_dict={
@@ -424,37 +458,111 @@ def make_param2res_sym(
         # 
         # Note: check if TRENDY months are like this...
         # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        sols=[]
-        dpm=30 # 
-        n=len(V_init)
-        for m in range(cpa.number_of_months):
-            #dpm = days_per_month[ m % 12]  
-            mra=0
-            mrh=0
-            for d in range(int(dpm/delta_t_val)):
-                v = it_sym.__next__().reshape(n,)
-                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
-                # at the moment the iterator also computes a flux but in kg^-2 ^day
-            V=StartVector(*v)
-            #from IPython import embed;embed()
-            o=Observables(
-                cVeg=float(V.C_leaf+V.C_wood+V.C_root),
-                cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
-                cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-                ra=V.ra/seconds_per_day,
-                rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
-            )
-            sols.append(o)
-            
-        sol=np.stack(sols)       
-        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
-        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-        #for i in range(sol.shape[1]):
-        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-        #sol=sol_yr
-        return sol 
-        
+        #sols=[]
+
+        # empty arrays for saving data
+        cVeg_arr = np.zeros(cpa.number_of_months)
+        cLitter_arr = np.zeros(cpa.number_of_months)
+        cSoil_arr = np.zeros(cpa.number_of_months)
+        rh_arr = np.zeros(cpa.number_of_months)
+        ra_arr = np.zeros(cpa.number_of_months)
+        im = 0
+        dpm = 30
+        steps_per_month = int(dpm / delta_t_val)
+        #n=len(V_init)
+        # forward simulation by year
+        for y in range(int(cpa.number_of_months/12)):
+            for m in range(12):
+                cVeg_avg = 0
+                cLitter_avg = 0
+                cSoil_avg = 0
+                rh_avg = 0
+                ra_avg = 0
+                for d in range(steps_per_month):
+                    V = StartVector(*it_sym.__next__())
+                    rh_avg += V.rh
+                    ra_avg += V.ra
+                    cVeg_avg += float(V.C_leaf+V.C_wood+V.C_root)
+                    cLitter_avg += float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter)
+                    cSoil_avg += float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive)
+                rh_arr[im] = rh_avg / steps_per_month
+                ra_arr[im] = ra_avg / steps_per_month
+                cVeg_arr[im] = cVeg_avg / steps_per_month
+                cLitter_arr[im] = cLitter_avg / steps_per_month
+                cSoil_arr[im] = cSoil_avg / steps_per_month
+                im += 1
+            # if y == 100:
+            #    print(V)
+        return Observables(
+            cVeg=cVeg_arr,
+            cLitter=cLitter_arr,
+            cSoil=cSoil_arr,
+            rh=rh_arr,
+            ra=ra_arr)
     return param2res
+
+def make_feng_cost_func2(
+            obs: Observables,
+    ) -> Callable[[Observables], np.float64]:
+        # Note:
+        # in our code the dimension 0 is the time
+        # and dimension 1 the pool index
+        means = obs.mean(axis=0)
+        mean_centered_obs = obs - means
+        # now we compute a scaling factor per observable stream
+        # fixme mm 10-28-2021
+        #   The denominators in this case are actually the TEMPORAL variances of the data streams
+        denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+        #   The desired effect of automatically adjusting weight could be achieved
+        #   by the mean itself.
+        # dominators = means
+        def costfunction(mod: Observables) -> np.float64:
+            mod=mod.T
+            cost = np.mean(
+                np.sum((obs - mod) ** 2, axis=0) / denominators * 100
+            )
+            #J_obj1 = np.sum((mod.cVeg - obs.cVeg) ** 2, axis=0) / np.sum(mean_centered_obs ** 2, axis=0)
+            return cost
+
+        return costfunction
+
+    #     for m in range(cpa.number_of_months):
+    #         #dpm = days_per_month[ m % 12]
+    #         mra=0
+    #         mrh=0
+    #         for d in range(int(dpm/delta_t_val)):
+    #             v = it_sym.__next__().reshape(n,)
+    #             # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+    #             # at the moment the iterator also computes a flux but in kg^-2 ^day
+    #         V=StartVector(*v)
+    #         #from IPython import embed;embed()
+    #         o=Observables(
+    #             cVeg=float(V.C_leaf+V.C_wood+V.C_root),
+    #             cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
+    #             cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
+    #             ra=V.ra,#/seconds_per_day,
+    #             rh=V.rh#/seconds_per_day # the data is per second while the time units for the iterator refer to days
+    #         )
+    #         sols.append(o)
+    #
+    #     sol=np.stack(sols)
+    #     #convert to yearly output if necessary (the monthly pool data looks very "yearly")
+    #     #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])
+    #     #for i in range(sol.shape[1]):
+    #     #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
+    #     #sol=sol_yr
+    #     cVeg_arr=float(V.C_leaf + V.C_wood + V.C_root)
+    #
+    #
+    #     return Observables(
+    #         cVeg=cVeg_arr,
+    #         cSoil=cSoil_arr,
+    #         rh=rh_arr,
+    #         ra=ra_arr)
+    #     #return sol
+    #
+    # return param2res
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
@@ -469,7 +577,7 @@ def make_param_filter_func(
         beta_leaf_ind
         cond1 =  (c >= c_min).all() 
         cond2 =  (c <= c_max).all() 
-        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] <=1  
+        cond3 =  c[beta_leaf_ind]+c[beta_wood_ind] < 1
         return (cond1 and cond2 and cond3)
         
     
