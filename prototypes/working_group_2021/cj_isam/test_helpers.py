@@ -122,8 +122,30 @@ def make_test_args(conf_dict,msh,mvs):
 
 
     epa_max=msh.EstimatedParameters(
-
-    )    
+        fwt=0.8,
+        fgv=0.3,
+        fco=0.99,
+        fml=0.9,
+        fd=0.9,
+        k_C_NWT=1/(365*1),
+        k_C_AGWT=1/(365*10),
+        k_C_TR=1/(365*10),
+        k_C_GVF=1/(365*10),
+        k_C_GVR=1/(365*10),
+        f_C_AGSL_2_C_AGMS=0.9*0.3,
+        f_C_BGRL_2_C_SHMS=0.9,
+        C_NWT_0=svs_0.cVeg,
+        C_AGWT_0=svs_0.cVeg,
+        C_GVF_0=svs_0.cVeg,
+        C_GVR_0=svs_0.cVeg,
+        C_AGML_0=svs_0.cLitter,
+        C_AGSL_0=svs_0.cLitter,
+        C_BGDL_0=svs_0.cLitter,
+        C_AGMS_0=svs_0.cSoil,
+        C_YHMS_0=svs_0.cSoil,
+        C_SHMS_0=svs_0.cSoil,
+    )
+    
     cpa = msh.Constants(
         cVeg_0=svs_0.cVeg,
         cLitter_0=svs_0.cLitter,
@@ -151,18 +173,21 @@ def make_test_args(conf_dict,msh,mvs):
         #number_of_months=len(svs.rh)
         number_of_months=120 # for testing and tuning mcmc
     )
-
     StartVector = msh.make_StartVector(mvs) 
     V_init= StartVector(
-        C_leaf=svs_0.cVeg/3,
-        C_wood=svs_0.cVeg/3,
-        C_root=svs_0.cVeg/3,
-        C_leaf_litter=svs_0.cLitter/3,
-        C_wood_litter=svs_0.cLitter/3,
-        C_root_litter=svs_0.cLitter/3,
-        C_soil_fast=svs_0.cSoil/3,
-        C_soil_slow=svs_0.cSoil/3,
-        C_soil_passive=svs_0.cSoil/3,
+        C_NWT=svs_0.cVeg/5,
+        C_AGWT=svs_0.cVeg/5,
+        C_TR=svs_0.cVeg/5,
+        C_GVF=svs_0.cVeg/5,
+        C_GVR=svs_0.cVeg/5,
+        C_AGML=svs_0.cLitter/4,
+        C_AGSL=svs_0.cLitter/4,
+        C_BGDL=svs_0.cLitter/4,
+        C_BGRL=svs_0.cLitter/4,
+        C_AGMS=svs_0.cSoil/4,
+        C_YHMS=svs_0.cSoil/4,
+        C_SHMS=svs_0.cSoil/4,
+        C_BGMS=svs_0.cSoil/4,
         ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
         rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;
     )
