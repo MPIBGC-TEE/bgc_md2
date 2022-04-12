@@ -80,9 +80,6 @@ import general_helpers as gh
 import model_specific_helpers_2 as msh
 import test_helpers as th
 from source import mvs
-
-
-ta=th.make_test_args(conf_dict,msh,mvs)
 # -
 
 # ## Model Figure and Matrix Equations
@@ -92,7 +89,7 @@ h.compartmental_graph(mvs)
 
 mvs.get_CompartmentalMatrix()
 
-mvs.ge
+mvs.get_InternalFluxesBySymbol()
 
 # + [markdown] codehighlighter=[[0, 0]]
 # ## Download Data
@@ -106,17 +103,29 @@ import json
 # Read username, password, dataPath from config.json file
 with Path('config.json').open(mode='r') as f:
     conf_dict = json.load(f)
-
-# +
-#msh.download_my_TRENDY_output(conf_dict)
+    
 # -
+
+#msh.download_my_TRENDY_output(conf_dict)
+ta=th.make_test_args(conf_dict,msh,mvs)
 
 # ## Connect Data and Symbols (Must Edit)
 # Define function to subset netCDF files and link to data symbols:
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 ## call function to link symbols and data
-svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
+# -
+
+Path(conf_dict["dataPath"])
+
+# +
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
+
+
+fig, ax = plt.subplots() #[(12*10-1):12*30]
+plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "observation")
 # -
 
 # ## Create Symbols for $\xi$, $K$, and $A$ (No Edits)
@@ -126,27 +135,27 @@ svs, dvs = msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 par_dict = {
     Symbol(k): v
     for k, v in {
-        'beta_leaf': 0.3333333333333333,
-        'beta_wood': 0.3333333333333333,
+        'beta_leaf': 0.35,
+        'beta_wood': 0.30,
         # 'r_c_leaf_rh': 0,
         # 'r_c_wood_rh': 0,
         # 'r_c_root_rh': 0,
-        'r_c_DPM_rh': 1e-4,
-        'r_c_RPM_rh': 1e-4,
-        'r_c_BIO_rh': 9.04109589041096e-5,
-        'r_c_HUM_rh': 1.36849315068493e-5,
-        'r_c_leaf_2_c_DPM': 0.000136986301369863,
-        'r_c_leaf_2_c_RPM': 0.00123287671232877,
-        'r_c_wood_2_c_DPM': 4.56621004566210e-7,
-        'r_c_wood_2_c_RPM': 4.52054794520548e-5,
-        'r_c_root_2_c_DPM': 9.13242009132420e-8,
-        'r_c_root_2_c_RPM': 9.12328767123288e-5,
-        'r_c_DPM_2_c_BIO': 4.56621004566210e-6,
-        'r_c_DPM_2_c_HUM': 4.10958904109589e-5,
-        'r_c_RPM_2_c_BIO': 9.13242009132420e-8,
-        'r_c_RPM_2_c_HUM': 9.12328767123288e-5,
-        'r_c_BIO_2_c_HUM': 9.13242009132420e-7,
-        'r_c_HUM_2_c_BIO': 1.36986301369863e-8
+        'r_c_DPM_rh':0.0218855218855219,
+        'r_c_RPM_rh':0.000866666666666667,
+        'r_c_BIO_rh':0.00174841269841270,
+        'r_c_HUM_rh':5.87450980392157e-5,
+        'r_c_leaf_2_c_DPM':0.000152777777777778,
+        'r_c_leaf_2_c_RPM':0.000541666666666667,
+        'r_c_wood_2_c_DPM':2.00364298724954e-5,
+        'r_c_wood_2_c_RPM':7.10382513661202e-5,
+        'r_c_root_2_c_DPM':0.000152777777777778,
+        'r_c_root_2_c_RPM':0.000541666666666667,
+        'r_c_DPM_2_c_BIO':0.00283950617283951,
+        'r_c_DPM_2_c_HUM':0.00333333333333333,
+        'r_c_RPM_2_c_BIO':0.000112444444444444,
+        'r_c_RPM_2_c_HUM':0.000132000000000000,
+        'r_c_BIO_2_c_HUM':0.000235714285714286,
+        'r_c_HUM_2_c_BIO':6.61437908496732e-6
     }.items()
 }
 #par_dict
@@ -155,7 +164,7 @@ par_dict = {
 
 
 svs_0 = msh.Observables(*map(lambda v: v[0], svs))
-svs_0.fVegSoil
+svs_0.cSoil
 
 # ## Assign Initial Values for the iterator
 
@@ -169,13 +178,13 @@ StartVector._fields
 # + codehighlighter=[[5, 17], [5, 17]]
 # Assign values to initial pools using InitialPools named tuple
 V_init = StartVector(
-    c_leaf=svs_0.cVeg / 3,  # set inital pool values to svs values
-    c_root=svs_0.cVeg / 3,  # you can set numerical values here directly as well
-    c_wood=svs_0.cVeg / 3,
-    c_DPM=svs_0.cSoil / 4,
-    c_RPM=svs_0.cSoil / 4,
-    c_BIO=svs_0.cSoil / 4,
-    c_HUM=svs_0.cSoil / 4,
+    c_leaf=svs_0.cVeg * 0.12,  # set inital pool values to svs values
+    c_root=svs_0.cVeg * 0.12,  # you can set numerical values here directly as well
+    c_wood=svs_0.cVeg * 0.76,
+    c_DPM=svs_0.cSoil * 0.0025,
+    c_RPM=svs_0.cSoil * 0.248,
+    c_BIO=svs_0.cSoil * 0.022,
+    c_HUM=svs_0.cSoil * 0.7275,
     rh=svs_0.rh,
     fVegSoil=svs_0.fVegSoil
     # f_veg2soil=svs_0.f_veg2soil# add the fraction
@@ -203,72 +212,78 @@ cpa._asdict()  # print - everything should have a numeric value
 
 epa_0 = msh.EstimatedParameters(
     **{
-        'c_leaf_0': svs_0.cVeg / 3,  # set inital pool values to svs values
-        'c_wood_0': svs_0.cVeg / 3,  # you can set numerical values here directly as well
-        'c_DPM_0': svs_0.cSoil / 4,
-        'c_RPM_0': svs_0.cSoil / 4,
-        'c_BIO_0': svs_0.cSoil / 4
+        'c_leaf_0': svs_0.cVeg * 0.12,  # set inital pool values to svs values
+        'c_wood_0': svs_0.cVeg * 0.76,  # you can set numerical values here directly as well
+        'c_DPM_0': svs_0.cSoil * 0.0025,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
+        'c_RPM_0': svs_0.cSoil * 0.248,
+        'c_BIO_0': svs_0.cSoil * 0.022
     },
     **{
-        'beta_leaf': 0.3333333333333333,
-        'beta_wood': 0.3333333333333333,
+        'beta_leaf': 0.35,
+        'beta_wood': 0.3,
         'Mw': 0.1,
-        'Ms': np.max(dvs.mrso)+500, #, may need add a condition here ## ASK MARKUS
+        'Ms': np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
+        'Topt': 18.32,
+        'Tcons': 47.91,
         # 'r_c_leaf_rh': 0,
         # 'r_c_wood_rh': 0,
         # 'r_c_root_rh': 0,
-        'r_c_DPM_rh': 1e-4,
-        'r_c_RPM_rh': 1e-4,
-        'r_c_BIO_rh': 9.04109589041096e-5,
-        'r_c_HUM_rh': 1.36849315068493e-5,
-        'r_c_leaf_2_c_DPM': 0.000136986301369863,
-        'r_c_leaf_2_c_RPM': 0.00123287671232877,
-        'r_c_wood_2_c_DPM': 4.56621004566210e-7,
-        'r_c_wood_2_c_RPM': 4.52054794520548e-5,
-        'r_c_root_2_c_DPM': 9.13242009132420e-8,
-        'r_c_root_2_c_RPM': 9.12328767123288e-5,
-        'r_c_DPM_2_c_BIO': 4.56621004566210e-6,
-        'r_c_DPM_2_c_HUM': 4.10958904109589e-5,
-        'r_c_RPM_2_c_BIO': 9.13242009132420e-8,
-        'r_c_RPM_2_c_HUM': 9.12328767123288e-5,
-        'r_c_BIO_2_c_HUM': 9.13242009132420e-7,
-        'r_c_HUM_2_c_BIO': 1.36986301369863e-8
+        'r_c_DPM_rh':0.0218855218855219,
+        'r_c_RPM_rh':0.000866666666666667,
+        'r_c_BIO_rh':0.00174841269841270,
+        'r_c_HUM_rh':5.87450980392157e-5,
+        'r_c_leaf_2_c_DPM':0.000152777777777778,
+        'r_c_leaf_2_c_RPM':0.000541666666666667,
+        'r_c_wood_2_c_DPM':2.00364298724954e-5,
+        'r_c_wood_2_c_RPM':7.10382513661202e-5,
+        'r_c_root_2_c_DPM':0.000152777777777778,
+        'r_c_root_2_c_RPM':0.000541666666666667,
+        'r_c_DPM_2_c_BIO':0.00283950617283951,
+        'r_c_DPM_2_c_HUM':0.00333333333333333,
+        'r_c_RPM_2_c_BIO':0.000112444444444444,
+        'r_c_RPM_2_c_HUM':0.000132000000000000,
+        'r_c_BIO_2_c_HUM':0.000235714285714286,
+        'r_c_HUM_2_c_BIO':6.61437908496732e-6
     }
     # **{str(key): value for key,value in  par_dict.items() if}
 )
-
-
 
 # #### Create forward model function:
 
 # + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
 func_dict = msh.make_func_dict(mvs, dvs, cpa, epa_0)
+
+# +
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
+
+
+fig, ax = plt.subplots() #[(12*10-1):12*30]
+plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "observation")
 # -
 
 # ## Forward Model Run
 # #### Run model forward:
 
-
-
 # +
-epa_0=ta.epa_0
-cpa=ta.cpa
-dvs=ta.dvs
-mvs=ta.mvs
-svs=ta.svs
+epa_0 = ta.epa_0
+cpa = ta.cpa
+dvs = ta.dvs
+mvs = ta.mvs
+svs = ta.svs
 param2res = msh.make_param2res_sym(mvs, cpa, dvs)  # Define forward model
 obs_simu = param2res(epa_0)  # Run forward model from initial conditions
 
 obs_simu
 
 svs_cut = msh.Observables(
-    cVeg=svs.cVeg[:cpa.nyears * 12],
-    cSoil=svs.cSoil[:cpa.nyears * 12],
-    rh=svs.rh[:cpa.nyears * 12],
-    fVegSoil =svs.fVegSoil[:cpa.nyears*12]
+    cVeg = svs.cVeg[:cpa.nyears * 12],
+    cSoil = svs.cSoil[:cpa.nyears * 12],
+    rh = svs.rh[:cpa.nyears * 12],
+    fVegSoil = svs.fVegSoil[:cpa.nyears*12]
 )
 svs_cut.rh
-cost_func = msh.make_weighted_cost_func(svs_cut)
+cost_func = msh.make_weighted_cost_func_2(svs_cut)
 cost_func(obs_simu)
 # -
 
@@ -282,6 +297,7 @@ cost_func(obs_simu)
 
 # #### Plot data-model fit:
 
+# +
 # Plot simulation output for observables
 n_plots = len(svs_cut)
 fig = plt.figure(figsize=(10, n_plots * 5))
@@ -293,6 +309,9 @@ for i, name in enumerate(msh.Observables._fields):
     axs[i].plot(range(len(var)), var, label='observation')
     axs[i].legend()
     axs[i].set_title(name)
+
+sum((np.array(svs.rh) - np.array(obs_simu.rh))**2)
+# -
 
 # ## Data Assimilation
 # #### Define parameter min/max values:
@@ -307,8 +326,8 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     initial_parameters=ta.epa_0,
     filter_func=gh.make_param_filter_func_2(ta.epa_max, ta.epa_min,["beta_leaf","beta_wood"]),
     param2res=msh.make_param2res_sym(mvs, cpa, dvs),
-    costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=200,  # for testing and tuning mcmc
+    costfunction=msh.make_weighted_cost_func_2(svs),
+    nsimu=5000,  # for testing and tuning mcmc
     c_max=np.array(ta.epa_max),
     c_min=np.array(ta.epa_min),
     acceptance_rate=15,  # default value | target acceptance rate in %
@@ -336,6 +355,7 @@ fig = plt.figure(figsize=(10, n_plots * 5))
 # n_plots=len(svs_cut)
 fig = plt.figure(figsize=(10, 10 * n_plots))
 axs = fig.subplots(n_plots)
+plt.rcParams['font.size'] = 18
 for i, name in enumerate(msh.Observables._fields):
     var_simu = mod_opt[i]
     var = svs[i]
@@ -351,12 +371,17 @@ outputPath = Path(conf_dict["dataPath"])  # save output to data directory (or ch
 
 import pandas as pd
 
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('JULES_da_pars.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('JULES_da_cost.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('JULES_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('JULES_optimized_solutions.csv'), sep=',')
+# -
+ta.epa_min
+
 # +
-it_sym_trace = msh.make_traceability_iterator(ta.mvs,ta.dvs,ta.cpa,epa_opt)
+import model_specific_helpers_2 as msh
+import general_helpers as gh
+it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
 ns=1500
 StartVectorTrace=gh.make_StartVectorTrace(mvs)
 nv=len(StartVectorTrace._fields)
@@ -367,8 +392,10 @@ for i in range(ns):
 
 import matplotlib.pyplot as plt
 n=len(mvs.get_StateVariableTuple())
-fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
+fig=plt.figure(figsize=(20,(n+1)*10), dpi = 400)
 axs=fig.subplots(n+1,2)
+plt.rcParams['font.size'] = 20
+
 days=list(range(ns))
 
 
@@ -419,7 +446,4 @@ axs[n,0].plot(
     color='green'
 )
 axs[n,0].legend()
-
-# -
-
 

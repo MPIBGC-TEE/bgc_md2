@@ -36,7 +36,7 @@ sys.path.insert(0, '..')  # necessary to import general_helpers
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
-    month_2_day_index,
+    # month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions
@@ -49,6 +49,8 @@ sym_dict={
     'tsl': 'Temperature of Soil - layer, top layer extracted from a four-layer data, in K',
     'Mw': 'soil moisture at wilting point as a fraction of saturation',
     'Ms': 'soil moisture content at saturation',
+    'Topt': 'optimal soil temperature for heterotrophic respiration (deg C)',
+    'Tcons': 'constant value in temperature scaler',
     'beta_leaf': 'NPP allocation fraction to leaf',
     'beta_wood': 'NPP allocation fraction to wood',
     #'beta_root': 'NPP allocation fraction to root',

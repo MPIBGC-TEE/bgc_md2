@@ -51,6 +51,8 @@ EstimatedParameters = namedtuple(
         'beta_wood',
         'Mw',
         'Ms',
+        'Topt',
+        'Tcons',
 
         'r_c_DPM_rh',
         'r_c_RPM_rh',
@@ -367,14 +369,14 @@ def make_StartVector(mvs):
     )
 
 
-def make_xi_func(tsl, Mw, Ms, mrsos, landCoverFrac):
+def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
     def xi_func(day):
         mi = gh.day_2_month_index(day)
         # alternative FT
             # Q10 function (this is not what Clark et al 2011 Fig. 2 presented, the equation must be wrong)
         #FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
             # RothC temperature function (Jenkinson 1990)
-        FT = 47.9 / (1 + np.exp(106/(tsl[mi] - 254.85)))
+        FT = Tcons / (1 + np.exp(106/(tsl[mi] - 273.1 + Topt)))
         FV = 0.6 + 0.4 * (1 - landCoverFrac[mi] / 100)  # effect of vegetation cover
         # Mw is soil moisture at wilting point as a fraction of saturation
         # Ms is soil moisture content at saturation
@@ -406,7 +408,7 @@ def make_npp_func(dvs):
 def make_func_dict(mvs, dvs, cpa, epa):
     return {
         "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs.tsl, epa.Mw, epa.Ms, dvs.mrsos, dvs.landCoverFrac)
+        "xi": make_xi_func(dvs.tsl, epa.Mw, epa.Ms, epa.Topt, epa.Tcons, dvs.mrsos, dvs.landCoverFrac)
     }
 
 
@@ -621,7 +623,69 @@ def make_weighted_cost_func(
         J_obj3 = np.mean((out_simu.rh - obs.rh) ** 2) / (2 * np.var(obs.rh))
         J_obj4 = np.mean((out_simu.fVegSoil - obs.fVegSoil) ** 2) / (2 * np.var(obs.fVegSoil))
 
-        J_new = (J_obj1 + J_obj2*2 + J_obj3 + J_obj4)
+        J_new = (J_obj1 + J_obj2 + J_obj3*2) #  + J_obj4 removed because of the issues about fVegSoil definition and mass balance 
+        print("cVeg J1 = ", J_obj1, "c Soil J2 = ", J_obj2, "rh J3 = ", J_obj3*2)
         return J_new
 
     return costfunction
+
+
+def make_weighted_cost_func_2(
+        obs: Observables
+) -> Callable[[Observables], np.float64]:
+    # first unpack the observation array into its parts
+    # cleaf, croot, cwood, clitter, csoil, rh = np.split(obs,indices_or_sections=6,axis=1)
+    
+    denominator_cVeg = np.sum((obs.cVeg - np.mean(obs.cVeg)) ** 2)
+    denominator_cSoil = np.sum((obs.cSoil - np.mean(obs.cSoil)) ** 2)
+    denominator_rh = np.sum((obs.rh - np.mean(obs.rh)) ** 2)
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    #   The denominators in this case are actually the TEMPORAL variances of the data streams
+
+    #   The desired effect of automatically adjusting weight could be achieved
+    #   by the mean itself.
+    # dominators = means
+    def costfunction(out_simu: Observables) -> np.float64:
+        J1 = np.sum((obs.cVeg - out_simu.cVeg) ** 2, axis=0) / denominator_cVeg
+        J2 = np.sum((obs.cSoil - out_simu.cSoil) ** 2, axis=0) / denominator_cSoil
+        J3 = np.sum((obs.rh - out_simu.rh) ** 2, axis=0) / denominator_rh
+        cost = J1 + J2 + J3
+        print("cVeg J1 = ", J1, "c Soil J2 = ", J2, "rh J3 = ", J3)
+        #cost = np.mean(
+        #    np.sum((obs - mod) ** 2, axis=0) / denominators * 100
+        #)
+        return cost
+    return costfunction
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "c_leaf": apa['c_leaf_0'],     
+        "c_wood": apa['c_wood_0'],     
+        "c_root": apa['c_veg_0'] - (apa['c_leaf_0'] +  apa['c_wood_0']),  
+        "c_DPM": apa['c_DPM_0'],
+        "c_RPM": apa['c_RPM_0'],
+        "c_BIO": apa['c_BIO_0'],
+        "c_HUM": apa['c_soil_0'] - (apa['c_DPM_0'] + apa['c_RPM_0'] + apa['c_BIO_0'])
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    fd = make_func_dict(mvs, dvs, cpa, epa)
+    V_init = gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
