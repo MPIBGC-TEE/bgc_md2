@@ -928,24 +928,35 @@ def get_nan_pixels(
 def get_nan_pixel_mask(
         var: nc._netCDF4.Variable
     ):
-    # We use a netCDF4.Variable to avoid having to load the whole array into memory 
-    # since it is too big e.g. for the dlm files 
+    ## We use a netCDF4.Variable to avoid having to load the whole array into memory 
+    ## since it is too big e.g. for the dlm files 
 
     N_t,N_lat,N_lon = var.shape
-    nan_mask=np.zeros(shape=(N_lat,N_lon),dtype=np.bool_)
-    cs=30
-    for I_lat in tqdm(range(0,N_lat,cs)):
-        for I_lon in range(0,N_lon,cs):
-            n_lat = min(cs,N_lat-I_lat)
-            n_lon = min(cs,N_lon-I_lon)
-            chunk = var[:,I_lat:I_lat+n_lat,I_lon:I_lon+n_lon]
-            for i_lat in range(n_lat): 
-                for i_lon in range(n_lon):
-                    if np.isnan( chunk[:,i_lat,i_lon]).any(): 
-                        nan_mask[I_lat + i_lat, I_lon + i_lon]=True 
+    #nan_mask=np.zeros(shape=(N_lat,N_lon),dtype=np.bool_)
+    #cs=30
+    #for I_lat in tqdm(range(0,N_lat,cs)):
+    #    for I_lon in range(0,N_lon,cs):
+    #        n_lat = min(cs,N_lat-I_lat)
+    #        n_lon = min(cs,N_lon-I_lon)
+    #        chunk = var[:,I_lat:I_lat+n_lat,I_lon:I_lon+n_lon]
+    #        for i_lat in range(n_lat): 
+    #            for i_lon in range(n_lon):
+    #                if np.isnan( chunk[:,i_lat,i_lon]).any(): 
+    #                    nan_mask[I_lat + i_lat, I_lon + i_lon]=True 
+    #
     
     var_mask= var[0,:,:].mask #either False or a boolean array
-    return  nan_mask if isinstance(var_mask,bool) else np.logical_or(nan_mask, var_mask)
+    start_mask = np.zeros((N_lat,N_lon),dtype=np.bool_) if isinstance(var_mask,bool) else  var_mask
+
+    return np.array(
+        reduce(
+            lambda acc,i: np.logical_or(acc,~np.isfinite(var[i,:,:])),
+            tqdm(range(var.shape[0])),
+            start_mask
+        )
+    )
+
+
 
 
 def get_weight_mat(

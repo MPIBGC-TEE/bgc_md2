@@ -59,7 +59,8 @@ with Path('config.json').open(mode='r') as f:
 msh.download_my_TRENDY_output(conf_dict)
 
 import model_specific_helpers_2 as msh
-svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+#svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"])) #also works
+svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
 svs_0 = msh.Observables(*map(lambda v: v[0],svs))
 dvs_0 = msh.Drivers(*map(lambda v: v[0],dvs))
 
@@ -109,10 +110,13 @@ par_dict={
     }.items()    
 }
 
-import test_helpers as th
-test_args=th.make_test_args(conf_dict,msh,mvs)
+# +
+#import test_helpers as th
+#test_args=th.make_test_args(conf_dict,msh,mvs)
 
-par_dict_2=test_args.par_dict
+# +
+#par_dict_2=test_args.par_dict
+# -
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
@@ -173,7 +177,7 @@ cpa=msh.Constants(
  r_C_YHMS_2_C_AGMS=0.9*0.55*2.0/365,
  r_C_YHMS_2_C_SHMS=0.1*0.55*2.0/365,
  #number_of_months=len(svs.rh)
- number_of_months=120 # for testing and tuning mcmc
+ number_of_months=3840 # for testing and tuning mcmc
 )
 
 # ### Finding better start values for the data assimilation
@@ -387,10 +391,11 @@ epa_max=msh.EstimatedParameters(
     C_YHMS_0=svs_0.cSoil,
     C_SHMS_0=svs_0.cSoil,
 )
-# -
 
-import test_helpers as th
-ta=th.make_test_args(conf_dict,msh,mvs)
+# +
+#import test_helpers as th
+#ta=th.make_test_args(conf_dict,msh,mvs)
+# -
 
 # ### mcmc to optimize parameters 
 #
@@ -408,7 +413,7 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=200, # for testing and tuning mcmc
+    nsimu=2000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),

@@ -16,7 +16,7 @@ from general_helpers import (
     make_feng_cost_func
 )
 model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules','kv_ft_dlem']
-#model_folders=['cj_isam']
+model_folders=['cj_isam']
 #model_folders=['kv_ft_dlem']
 
 class TestSymbolic(TestCase):
@@ -37,7 +37,7 @@ class TestSymbolic(TestCase):
                     conf_dict=json.load(f) 
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
                 msh.download_my_TRENDY_output(conf_dict)
-
+    
     def test_get_example_site_vars(self):
         for mf in model_folders:
             with self.subTest(mf=mf):
@@ -47,6 +47,17 @@ class TestSymbolic(TestCase):
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
                 #print(svs)
     
+
+    def test_get_globalmean_vars(self):
+        for mf in model_folders:
+            with self.subTest(mf=mf):
+                with Path(mf).joinpath('config.json').open(mode='r') as f:
+                    conf_dict=json.load(f) 
+                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                svs, dvs = msh.get_globalmean_vars(Path(conf_dict['dataPath']))
+                #print(svs)
+    
+
     def test_make_func_dict(self):
         #model_folders=['kv_visit2', 'Aneesh_SDGVM', 'cable-pop']
         for mf in model_folders:

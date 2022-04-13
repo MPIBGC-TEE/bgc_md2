@@ -266,21 +266,34 @@ class Test_general_helpers(InDirTest):
         mask=np.zeros((n_t,n_lats,n_lons),dtype=np.bool_)
         mask[:,0,0]=True
         ma_arr=np.ma.array(arg,mask=mask)
-        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=True)
+        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=False)
         time = ds.createDimension('time',size=n_t)
         lat = ds.createDimension('lat',size=n_lats)
         lon = ds.createDimension('lon',size=n_lons)
         test_var=ds.createVariable("test_var",np.float64,['time','lat','lon'])
         test_var[:,:,:]=ma_arr
 
-
         ref_mask=np.zeros((n_lats,n_lons),dtype=np.bool_) #2 dimensional
         ref_mask[0,0]=True
         ref_mask[2,3]=True
         ref_mask[1,3]=True
-        #from IPython import embed;embed()
+        res = gh.get_nan_pixel_mask(test_var)
         self.assertTrue(
-            (ref_mask == gh.get_nan_pixel_mask(test_var)).all()
+            (ref_mask == res).all()
         )
 
+        ma_arr=np.ma.array(arg,mask=False)
+        ds = nc.Dataset('diskless_example1.nc','w',diskless=True,persist=False)
+        time = ds.createDimension('time',size=n_t)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+        test_var=ds.createVariable("test_var",np.float64,['time','lat','lon'])
+        test_var[:,:,:]=ma_arr
+        ref_mask=np.zeros((n_lats,n_lons),dtype=np.bool_) #2 dimensional
+        ref_mask[2,3]=True
+        ref_mask[1,3]=True
+        res = gh.get_nan_pixel_mask(test_var)
+        self.assertTrue(
+            (ref_mask == res).all()
+        )
     #def make_ncvar():

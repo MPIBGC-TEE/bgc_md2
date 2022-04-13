@@ -141,6 +141,49 @@ def get_example_site_vars(dataPath):
     )
     return (obss, dvs)
 
+
+def nc_file_name(nc_var_name):
+    return "ISAM_S2_{}.nc".format(nc_var_name)
+
+
+def get_globalmean_vars(dataPath):
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+
+
+    def get_var(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        #scale fluxes vs pools
+        return ds.variables[vn]
+
+    # we first check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    print("computing masks, this may take some minutes...")
+    def f(name):
+        print(name)
+        return gh.get_nan_pixel_mask(get_var(name))
+
+    masks=[ f(name)    for name in names ]
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+    print("computing means, this may also take some minutes...")
+
+    def f(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        vs=ds.variables
+        lats= vs["lat"].__array__()
+        lons= vs["lon"].__array__()
+        print(vn)
+        var=ds.variables[vn]
+        gm=gh.global_mean_var(lats,lons,combined_mask,var)
+        return gm # * 86400 if vn in ["npp", "rh"] else gm
+    
+    #map variables to data
+    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
