@@ -11,6 +11,7 @@ from CompartmentalSystems.TimeStepIterator import (
 )
 from copy import copy
 from typing import Callable
+from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
@@ -21,14 +22,14 @@ Observables = namedtuple(
     'Observables',
     ["cVeg","cLitter","cSoil","rh","ra"]
 )
-OrgDrivers=namedtuple(
-    "OrgDrivers",
-    ["gpp", "mrso", "tas"]
-)    
 Drivers=namedtuple(
-    "Drivers",
-    ("npp",) + OrgDrivers._fields[1:]
+    "OrgDrivers",
+    ["npp", "mrso", "tas"]
 )    
+#Drivers=namedtuple(
+#    "Drivers",
+#    ("npp",) + OrgDrivers._fields[1:]
+#)    
 # As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
 # They preserve order as numpy arrays which is great (and fast) for the numeric computations
 # and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
@@ -39,7 +40,7 @@ Constants = namedtuple(
         "cLitter_0",
         "cSoil_0",
         "cVeg_0",
-        "npp_0",
+        "gpp_0",
         "rh_0",
         "ra_0",
         "r_C_NWT_rh",
@@ -116,9 +117,7 @@ def download_my_TRENDY_output(conf_dict):
 def get_example_site_vars(dataPath):
     # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
-    lat=180
-    lon=200
-    t = s, lat, lon  # [t] = [:,lat,lon]
+    t = s, 50, 33  # [t] = [:,49,325]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
@@ -205,76 +204,43 @@ def make_func_dict(mvs,dvs):
         "xi": make_xi_func(dvs)
     }
 
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    par_dict = {
-        Symbol(k): v for k,v in {
-            'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
-            'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
-            'beta_TR':1-epa.fgv-epa.fwt,
-            'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
-            'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
-            'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
-            'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
-            'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
-            'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
-            'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
-            'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
-            'beta_GVF':epa.fgv*0.5,
-            'r_C_AGML_rh':cpa.r_C_AGML_rh,
-            'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
-            'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
-            'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
-            'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
-            'beta_NWT':epa.fwt*0.5,
-            'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
-            'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
-            'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
-            'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
-            'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
-            'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
-            'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
-            'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
-            'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
-            'beta_AGWT':epa.fwt*0.5,
-            'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
-            'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
-            'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
-        }.items()
-    }
-    X_0_dict={
-        "C_NWT": epa.C_NWT_0,
-        "C_AGWT": epa.C_AGWT_0,
-        "C_GVF": epa.C_GVF_0,
-        "C_GVR": epa.C_GVR_0,
-        "C_TR": cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
-        "C_AGML": epa.C_AGML_0,
-        "C_AGSL": epa.C_AGSL_0,
-        "C_BGDL": epa.C_BGDL_0,
-        "C_BGRL": cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
-        "C_AGMS": epa.C_AGMS_0,
-        "C_YHMS": epa.C_YHMS_0,
-        "C_SHMS": epa.C_SHMS_0,
-        "C_BGMS": cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs)
-    V_init=gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
-
+# We now build the essential object to run the model forward. We have a 
+# - startvector $V_0$ and 
+# - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
+#   the dependence on the iteration $it$ allows us to represent drivers that
+#   are functions of time 
+#
+# So we can compute all values:
+#
+# $V_1=f(0,V_0)$
+#
+# $V_2=f(1,V_1)$
+#
+# ...
+#
+# $V_n+1=f(n,V_n)$
+#
+# Technically this can be implemented as an `iterator` object with a `__next__()` method to move our system one step forward in time. 
+#
+# What we want to build is an object `it_sym` that can use as follows.
+# ```python
+# for i in range(10):
+#     print(it_sym.__next__())
+# ```
+# to print out the first 10 values.
+#
+# If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, 
+# without all the nonessential technical details of e.g. how many steps we want to make or which of the results we want to store.
+# This is essential if we want to test and use the iterator later in different scenarios but avoid reimplemtation of the basic timestep. 
+#
+# Remark:
+#
+# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically without the need to build an iterator ourselves. 
+# In our case we are also interested in tracking the autotrophic and heterotrophic respiration and therefore have to recreate and extend the code `bgc_md2` would use in the background.
+# We will let `bgc_md2` do part of the work and derive numeric functions for the Compartmental matrix $B$ and the input $u$ and the Outfluxes - from which to compute $ra$ $rh$ - from our symbolic description but we will build our own iterator by combining these functions.    
+# We will proceed as follows:
+# - create $V_0$ 
+# - build the function $f$
 
 def make_iterator_sym(
         mvs,
@@ -319,6 +285,7 @@ def make_iterator_sym(
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
+        
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
