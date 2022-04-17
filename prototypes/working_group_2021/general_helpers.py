@@ -6,6 +6,7 @@ from copy import copy
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
+import os
 
 from pathlib import Path
 import json 
@@ -932,18 +933,6 @@ def get_nan_pixel_mask(
     ## since it is too big e.g. for the dlm files 
 
     N_t,N_lat,N_lon = var.shape
-    #nan_mask=np.zeros(shape=(N_lat,N_lon),dtype=np.bool_)
-    #cs=30
-    #for I_lat in tqdm(range(0,N_lat,cs)):
-    #    for I_lon in range(0,N_lon,cs):
-    #        n_lat = min(cs,N_lat-I_lat)
-    #        n_lon = min(cs,N_lon-I_lon)
-    #        chunk = var[:,I_lat:I_lat+n_lat,I_lon:I_lon+n_lon]
-    #        for i_lat in range(n_lat): 
-    #            for i_lon in range(n_lon):
-    #                if np.isnan( chunk[:,i_lat,i_lon]).any(): 
-    #                    nan_mask[I_lat + i_lat, I_lon + i_lon]=True 
-    #
     
     var_mask= var[0,:,:].mask #either False or a boolean array
     start_mask = np.zeros((N_lat,N_lon),dtype=np.bool_) if isinstance(var_mask,bool) else  var_mask
@@ -982,7 +971,7 @@ def global_mean(
         lats: np.ma.core.MaskedArray,
         lons: np.ma.core.MaskedArray,
         arr: np.ma.core.MaskedArray
-    ):
+    )-> np.array:
     """As the signature shows this function expects masked arrays.
     These occure naturaly if netCDF4.Variables are sliced.
     e.g. 
@@ -1004,14 +993,14 @@ def global_mean(
     wms=weight_mat.sum()
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
-    return  (weight_mat*arr).sum(axis=(1,2))/wms
+    return  ((weight_mat*arr).sum(axis=(1,2))/wms).data
 
 def global_mean_var(
         lats: np.ma.core.MaskedArray,
         lons: np.ma.core.MaskedArray,
         mask: np.array,
         var: nc._netCDF4.Variable
-    ):
+    )-> np.array:
     """As the signature shows this function expects a netCDF4.Variable
     This is basically metadata which allows us to compute the maean even 
     if the whole array would not fit into memory.
@@ -1339,6 +1328,30 @@ def make_daily_iterator_sym_trace(
         initial_values=V_arr,
         f=f,
     )
+
+def write_global_mean_cache(
+        gm_path,
+        gm: np.array,
+        var_name: str 
+    ):
+    #var=ds.variables[var_name]
+    if gm_path.exists():
+        print("removing old cache file{}")
+        os.remove(gm_path)
+        
+    n_t=gm.shape[0]
+    time_dim_name="time"
+    ds_gm = nc.Dataset(str(gm_path), 'w',persist=True)
+    time = ds_gm.createDimension(time_dim_name,size=n_t)
+    var_gm=ds_gm.createVariable(var_name,np.float64,[time_dim_name])
+    gm_ma=np.ma.array(gm,mask=np.zeros(gm.shape,dtype=np.bool_))
+    var_gm[:]=gm_ma
+    ds_gm.close()
+
+
+def get_cached_global_mean(gm_path, vn):
+    return nc.Dataset(str(gm_path)).variables[vn].__array__()
+
 
 # def make_fluxrates_from_kf(mvs_kv,xi_d):    
 #    #compute rate based formulation

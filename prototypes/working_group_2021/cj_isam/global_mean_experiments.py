@@ -50,10 +50,19 @@ def get_var(vn):
 
 # -
 
+vn='npp'
+fn="ISAM_S2_{}.nc".format(vn)
+path = dataPath.joinpath(fn)
+ds = nc.Dataset(str(path))
+
 var_dict={vn: get_var(vn) for vn in names}
 #gh.get_nan_pixels(var_dict["cLitter"])
+var=var_dict["cVeg"]
+var.dimensions
+dataPath
 
 # +
+combined_mask=var.mask
 def f(vn):
     path = dataPath.joinpath(msh.nc_file_name(vn))
     ds = nc.Dataset(str(path))
@@ -69,6 +78,9 @@ def f(vn):
 svs=msh.Observables(*map(f, o_names))
 dvs=msh.Drivers(*map(f,d_names))
 # -
+
+[1,2]==[1,2]
+np.ma.array([1.2]).data
 
 #% rm "ISAM_S2_cVeg.nc" 
 # %ls -lah "ISAM_S2_cVeg.nc" 

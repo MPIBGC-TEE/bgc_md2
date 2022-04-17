@@ -1,6 +1,8 @@
 import numpy as np
 import netCDF4 as nc
 from unittest import TestCase, skip
+from numpy.core.fromnumeric import shape
+from pathlib import Path
 from testinfrastructure.InDirTest import InDirTest
 import general_helpers as gh
 
@@ -296,4 +298,200 @@ class Test_general_helpers(InDirTest):
         self.assertTrue(
             (ref_mask == res).all()
         )
-    #def make_ncvar():
+
+    def test_globalmean_var(self):
+        # we create data similar to cmip6 and trendy. These are masked arrays:
+        # the lat lon combinations that have no landpoints are marked with 
+        # False in the mask which is a boolean array of the same shape as 
+        # the actual value array) the
+        # 
+        # The following commented lines show how to get the 
+        # lats and longs are as in jon_yibs 
+        # lat_name = 'latitude'
+        # lon_name = 'longitude'
+        # lats=nds.variables[lat_name].__array__()
+        # longs=nds.variables[lon_name].__array__()
+        # target_var_names=set(nds.variables.keys()).difference([lat_name,lon_name,'time'])
+        # arr = target_var_names[0] 
+        lat_len_1=3
+        lat_len_2=3
+        lat_len_3=3
+        lat_len=sum(
+            [
+                lat_len_1,
+                lat_len_2,
+                lat_len_3
+            ]
+        )
+        lon_len_1=120
+        lon_len_2=120
+        lon_len_3=120
+        lon_len=sum(
+            [
+                lon_len_1,
+                lon_len_2,
+                lon_len_3
+            ]
+        )
+        time_len=3
+        lats=np.ma.masked_array(np.linspace(-90,90,lat_len))
+        lons=np.ma.masked_array(np.linspace(-179.5,179.5,lon_len))
+        arr=np.ma.ones(shape=(time_len,lat_len,lon_len))
+        vn='test_var'
+        trunk='{}_1'.format(vn)
+        ds = nc.Dataset(Path('{}.nc'.format(trunk)), 'w',diskless=True,persist=False)
+        time = ds.createDimension('time',size=time_len)
+        lat = ds.createDimension('lat',size=lat_len)
+        lon = ds.createDimension('lon',size=lon_len)
+        test_var=ds.createVariable(vn, np.float64, ['time','lat','lon'])
+        test_var[:,:,:]=arr
+
+        res_arr=gh.global_mean(
+            lats,
+            lons,
+            arr
+        )
+        res_var=gh.global_mean_var(
+            lats,
+            lons,
+            np.zeros( (lat_len,lon_len), dtype=np.bool_),
+            arr
+        )
+        self.assertTrue(
+            (res_arr == res_var).all()
+        )
+        cache_path = Path('{}_gm.nc'.format(trunk))
+
+        gh.write_global_mean_cache(
+            cache_path,
+            res_var,
+            vn
+        )
+        #def get_cached_global_mean(gm_path, vn):
+        #    return nc.Dataset(str(gm_path)).variables[vn].__array__()
+
+        res_cache = gh.get_cached_global_mean(
+            cache_path,
+            vn
+        )
+        #from IPython import embed;embed() 
+        self.assertTrue(
+            (res_cache==res_var).all()
+        )
+        
+        ds.close()
+
+       # now we test the same properties with a masked array
+       # as e.g the CMIP6 files that Kostia uses
+       # dataPath = Path(conf_dict['dataPath'])
+       # ds=nc.Dataset('cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc')
+       # pwd
+       # dataPath
+       # ds=nc.Dataset(dataPath.joinpath('cLeaf_Lmon_MIROC-ES2L_1pctCO2-bgc_r1i1p1f2_gn_185001-199912.nc'))
+       # cLeaf = ds.variables['cLeaf'].__array__()
+       # in this array many fields are masked
+        
+       # note that in python boolean values are equivalent to integers
+       # 1 = True , 0 = False
+        mask=np.stack(
+            [
+                np.ones(shape=(time_len,lat_len_1,lon_len)),
+                np.zeros(shape=(time_len,lat_len_2,lon_len)),
+                np.ones(shape=(time_len,lat_len_3,lon_len))
+            ],
+            axis=1
+        )
+        arr=np.ma.array(
+            np.ones(shape=(time_len,lat_len,lon_len)),
+            mask=mask
+        )
+        vn='test_var'
+        trunk='{}_2'.format(vn)
+        ds = nc.Dataset(Path('{}.nc'.format(trunk)), 'w',diskless=True,persist=False)
+        time = ds.createDimension('time',size=time_len)
+        lat = ds.createDimension('lat',size=lat_len)
+        lon = ds.createDimension('lon',size=lon_len)
+        test_var=ds.createVariable(vn, np.float64, ['time','lat','lon'])
+        test_var[:,:,:]=arr
+        res_arr=gh.global_mean(
+            lats,
+            lons,
+            arr
+        )
+        res_var=gh.global_mean_var(
+            lats,
+            lons,
+            mask.sum(axis=0),
+            arr
+        )
+        self.assertTrue(
+            (res_arr == res_var).all()
+        )
+        cache_path = Path('{}_gm.nc'.format(trunk))
+
+        gh.write_global_mean_cache(
+            cache_path,
+            res_var,
+            vn
+        )
+        res_cache = gh.get_cached_global_mean(
+            cache_path,
+            vn
+        )
+        self.assertTrue(
+            (res_cache==res_var).all()
+        )
+        
+        ds.close()
+
+        # now we block out some longitudes
+        mask=np.stack(
+            [
+                np.ones(shape=(time_len,lat_len,lon_len_1)),
+                np.zeros(shape=(time_len,lat_len,lon_len_2)),
+                np.ones(shape=(time_len,lat_len,lon_len_3))
+            ],
+            axis=2
+        )
+        arr=np.ma.array(
+            np.ones(shape=(time_len,lat_len,lon_len)),
+            mask=mask
+        )
+        vn='test_var'
+        trunk='{}_3'.format(vn)
+        ds = nc.Dataset(Path('{}.nc'.format(trunk)), 'w',diskless=True,persist=False)
+        time = ds.createDimension('time',size=time_len)
+        lat = ds.createDimension('lat',size=lat_len)
+        lon = ds.createDimension('lon',size=lon_len)
+        test_var=ds.createVariable(vn, np.float64, ['time','lat','lon'])
+        test_var[:,:,:]=arr
+        res_arr=gh.global_mean(
+            lats,
+            lons,
+            arr
+        )
+        res_var=gh.global_mean_var(
+            lats,
+            lons,
+            mask.sum(axis=0),
+            arr
+        )
+        self.assertTrue(
+            (res_arr == res_var).all()
+        )
+        cache_path = Path('{}_gm.nc'.format(trunk))
+
+        gh.write_global_mean_cache(
+            cache_path,
+            res_var,
+            vn
+        )
+        res_cache = gh.get_cached_global_mean(
+            cache_path,
+            vn
+        )
+        self.assertTrue(
+            (res_cache==res_var).all()
+        )
+        
+        ds.close()

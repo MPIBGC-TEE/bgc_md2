@@ -400,11 +400,13 @@ import json
 import numpy.ma as ma 
 
 # Read NetCDF data  ******************************************************************************************************************************
+# this function does not take the different sizes of the pixels into account
 def global_mean(arr):
     arr=np.ma.masked_equal(arr,-9999)
     arr1=arr.filled(np.nan)
     return np.nanmean(arr,axis=(1,2))
 
+# changed in model_specific_helpers_2 since the global_mean function would not work
 def get_global_vars(dataPath):
     # pick up 1 site
     #s = slice(None, None, None)  # this is the same as :

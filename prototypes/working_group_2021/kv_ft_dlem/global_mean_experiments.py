@@ -28,7 +28,7 @@ with Path('config.json').open(mode='r') as f:
 dataPath=Path(conf_dict["dataPath"])
 import model_specific_helpers_2 as msh
 def get_var(vn):
-    fn="DLEM_S2_{}.nc".format(vn)
+    fn="ISAM_S2_{}.nc".format(vn)
     path = dataPath.joinpath(fn)
     ds = nc.Dataset(str(path))
     #scale fluxes vs pools
@@ -41,7 +41,9 @@ names=msh.Observables._fields + msh.Drivers._fields
     #prin
 # -
 
-msh.get_globalmean_vars(dataPath=dataPath)
+
+
+svs,dvs=msh.get_globalmean_vars(dataPath=dataPath)
 
 # +
 #invalid_pixels=[
@@ -244,7 +246,7 @@ t=np.array(((1,2,3),(4,5,6)))
 gh.get_nan_pixels(get_var(name))  
 for name in names
 
-#import general_helpers as gh
+# import general_helpers as gh
 
 
 get_var('rh').__array__().mask

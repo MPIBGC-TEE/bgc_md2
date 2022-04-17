@@ -11,7 +11,6 @@ from CompartmentalSystems.TimeStepIterator import (
 )
 from copy import copy
 from typing import Callable
-from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
@@ -22,14 +21,18 @@ Observables = namedtuple(
     'Observables',
     ["cVeg","cLitter","cSoil","rh","ra"]
 )
-Drivers=namedtuple(
-    "OrgDrivers",
-    ["npp", "mrso", "tas"]
-)    
+#OrgDrivers=namedtuple(
+#    "OrgDrivers",
+#    ["gpp", "mrso", "tas"]
+#)    
 #Drivers=namedtuple(
 #    "Drivers",
 #    ("npp",) + OrgDrivers._fields[1:]
 #)    
+Drivers=namedtuple(
+    "Drivers",
+    ["npp", "mrso", "tas"] #[3840,36,720]
+)    
 # As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
 # They preserve order as numpy arrays which is great (and fast) for the numeric computations
 # and they allow to access values by keys (like dictionaries) which makes it difficult to accidentally mix up values.
@@ -40,7 +43,7 @@ Constants = namedtuple(
         "cLitter_0",
         "cSoil_0",
         "cVeg_0",
-        "gpp_0",
+        "npp_0",
         "rh_0",
         "ra_0",
         "r_C_NWT_rh",
@@ -105,19 +108,29 @@ EstimatedParameters = namedtuple(
 # on the correct ordering of the statevariables we build V dependent on this order 
 
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
+#def download_my_TRENDY_output(conf_dict):
+#    gh.download_TRENDY_output(
+#        username=conf_dict["username"],
+#        password=conf_dict["password"],
+#        dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
+#        models=['ISAM'],
+#        variables = Observables._fields + OrgDrivers._fields
+#    )
 def download_my_TRENDY_output(conf_dict):
     gh.download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['ISAM'],
-        variables = Observables._fields + OrgDrivers._fields
+        variables = Observables._fields + Drivers._fields
     )
 
 def get_example_site_vars(dataPath):
     # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
-    t = s, 50, 33  # [t] = [:,49,325]
+    lat=180
+    lon=200
+    t = s, lat, lon  # [t] = [:,lat,lon]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
@@ -126,66 +139,100 @@ def get_example_site_vars(dataPath):
         return ds.variables[vn][t]
 
     o_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+    #d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Drivers._fields]
 
     # we want to drive with npp and can create it from gpp and ra 
     # observables
-    odvs=OrgDrivers(*map(f,d_names))
+    #odvs=OrgDrivers(*map(f,d_names))
+    dvs=Drivers(*map(f,d_names))
     obss=Observables(*map(f, o_names))
 
-    dvs=Drivers(
-        npp=odvs.gpp-obss.ra,
-        mrso=odvs.mrso,
-        tas=odvs.tas
-    )
+    #dvs=Drivers(
+    #    npp=odvs.gpp-obss.ra,
+    #    mrso=odvs.mrso,
+    #    tas=odvs.tas
+    #)
     return (obss, dvs)
 
-
+experiment_name="ISAM_S2_"
 def nc_file_name(nc_var_name):
-    return "ISAM_S2_{}.nc".format(nc_var_name)
+    return experiment_name+"{}.nc".format(nc_var_name)
 
+def nc_global_mean_file_name(nc_var_name):
+    return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 def get_globalmean_vars(dataPath):
     o_names=Observables._fields
     d_names=Drivers._fields
     names = o_names + d_names 
-
-
-    def get_var(vn):
-        path = dataPath.joinpath(nc_file_name(vn))
-        ds = nc.Dataset(str(path))
-        #scale fluxes vs pools
-        return ds.variables[vn]
-
-    # we first check if any of the arrays has a time lime containing nan values 
-    # APART FROM values that are already masked by the fillvalue
-    print("computing masks, this may take some minutes...")
-    def f(name):
-        print(name)
-        return gh.get_nan_pixel_mask(get_var(name))
-
-    masks=[ f(name)    for name in names ]
-    # We compute the common mask so that it yields valid pixels for ALL variables 
-    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
-    print("computing means, this may also take some minutes...")
-
-    def f(vn):
-        path = dataPath.joinpath(nc_file_name(vn))
-        ds = nc.Dataset(str(path))
-        vs=ds.variables
-        lats= vs["lat"].__array__()
-        lons= vs["lon"].__array__()
-        print(vn)
-        var=ds.variables[vn]
-        gm=gh.global_mean_var(lats,lons,combined_mask,var)
-        return gm # * 86400 if vn in ["npp", "rh"] else gm
     
-    #map variables to data
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    
+    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+        print(""" Found cached global mean files. If you want to recompute the global means
+            remove the following files: """
+        )
+        for vn in names:
+            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
+
+        def get_cached_global_mean(vn):
+            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+    
+        return (
+            Observables(*map(get_cached_global_mean, o_names)),
+            Drivers(*map(get_cached_global_mean,d_names))
+        )
+
+    else:
+        # we now check if any of the arrays has a time lime containing nan values 
+        # APART FROM values that are already masked by the fillvalue
+        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+        def f(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            #scale fluxes vs pools
+            var =ds.variables[vn]
+            return gh.get_nan_pixel_mask(var)
+
+        masks=[ f(name)    for name in names ]
+        # We compute the common mask so that it yields valid pixels for ALL variables 
+        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        print("computing means, this may also take some minutes...")
+
+        def compute_and_cache_global_mean(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            vs=ds.variables
+            lats= vs["lat"].__array__()
+            lons= vs["lon"].__array__()
+            print(vn)
+            var=ds.variables[vn]
+            # check if we have a cached version (which is much faster)
+            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+
+            gm=gh.global_mean_var(
+                    lats,
+                    lons,
+                    combined_mask,
+                    var
+            )
+            gh.write_global_mean_cache(
+                    gm_path,
+                    gm,
+                    vn
+            )
+            return gm # * 86400 if vn in ["npp", "rh"] else gm
+    
+        #map variables to data
+        return (
+            Observables(*map(compute_and_cache_global_mean, o_names)),
+            Drivers(*map(compute_and_cache_global_mean, d_names))
+        )
     
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
+        #print(day,month)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month]) * 86400
 
@@ -204,43 +251,76 @@ def make_func_dict(mvs,dvs):
         "xi": make_xi_func(dvs)
     }
 
-# We now build the essential object to run the model forward. We have a 
-# - startvector $V_0$ and 
-# - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
-#   the dependence on the iteration $it$ allows us to represent drivers that
-#   are functions of time 
-#
-# So we can compute all values:
-#
-# $V_1=f(0,V_0)$
-#
-# $V_2=f(1,V_1)$
-#
-# ...
-#
-# $V_n+1=f(n,V_n)$
-#
-# Technically this can be implemented as an `iterator` object with a `__next__()` method to move our system one step forward in time. 
-#
-# What we want to build is an object `it_sym` that can use as follows.
-# ```python
-# for i in range(10):
-#     print(it_sym.__next__())
-# ```
-# to print out the first 10 values.
-#
-# If iterators had not been invented yet we would invent them now, because they capture exactly the mathematical concept of an initial value system, 
-# without all the nonessential technical details of e.g. how many steps we want to make or which of the results we want to store.
-# This is essential if we want to test and use the iterator later in different scenarios but avoid reimplemtation of the basic timestep. 
-#
-# Remark:
-#
-# If we were only interested in the timeseries of the pool contents `bgc_md2` could compute the solution automatically without the need to build an iterator ourselves. 
-# In our case we are also interested in tracking the autotrophic and heterotrophic respiration and therefore have to recreate and extend the code `bgc_md2` would use in the background.
-# We will let `bgc_md2` do part of the work and derive numeric functions for the Compartmental matrix $B$ and the input $u$ and the Outfluxes - from which to compute $ra$ $rh$ - from our symbolic description but we will build our own iterator by combining these functions.    
-# We will proceed as follows:
-# - create $V_0$ 
-# - build the function $f$
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    par_dict = {
+        Symbol(k): v for k,v in {
+            'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
+            'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
+            'beta_TR':1-epa.fgv-epa.fwt,
+            'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
+            'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
+            'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
+            'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
+            'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
+            'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
+            'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
+            'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
+            'beta_GVF':epa.fgv*0.5,
+            'r_C_AGML_rh':cpa.r_C_AGML_rh,
+            'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
+            'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
+            'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
+            'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
+            'beta_NWT':epa.fwt*0.5,
+            'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
+            'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
+            'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
+            'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
+            'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
+            'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
+            'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
+            'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
+            'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
+            'beta_AGWT':epa.fwt*0.5,
+            'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
+            'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
+            'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
+        }.items()
+    }
+    X_0_dict={
+        "C_NWT": epa.C_NWT_0,
+        "C_AGWT": epa.C_AGWT_0,
+        "C_GVF": epa.C_GVF_0,
+        "C_GVR": epa.C_GVR_0,
+        "C_TR": cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
+        "C_AGML": epa.C_AGML_0,
+        "C_AGSL": epa.C_AGSL_0,
+        "C_BGDL": epa.C_BGDL_0,
+        "C_BGRL": cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
+        "C_AGMS": epa.C_AGMS_0,
+        "C_YHMS": epa.C_YHMS_0,
+        "C_SHMS": epa.C_SHMS_0,
+        "C_BGMS": cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    fd=make_func_dict(mvs,dvs)
+    V_init=gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
+
 
 def make_iterator_sym(
         mvs,
@@ -285,7 +365,6 @@ def make_iterator_sym(
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
-        
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
