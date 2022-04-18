@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.13.7
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -252,12 +252,12 @@ h.compartmental_graph(mvs)
 # +
 # adjust the output to full width
 from IPython.display import HTML
-display(HTML("<style>.container { width:100% !important; }</style>"))
+#display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # make changes to imported files immidiately available 
 # avoiding the need to reload (in most cases)
-# %load_ext autoreload
-# %autoreload 2
+# #%load_ext autoreload
+# #%autoreload 2
 # -
 
 # ### Connect to the form ispecific to the tracability analysis.
@@ -360,16 +360,13 @@ with Path('config.json').open(mode='r') as f:
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cVeg","cLitter","cSoil","rh","ra"]
+    ["cVeg","cLitter","cSoil","rh","ra"] #[320,360,720],
 )
-OrgDrivers=namedtuple(
-    "OrgDrivers",
-    ["gpp", "mrso", "tas"]
-)    
 Drivers=namedtuple(
     "Drivers",
-    ("npp",) + OrgDrivers._fields[1:]
+    ["npp", "mrso", "tas"] #[3840,36,720]
 )    
+    
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
 def download_my_TRENDY_output(conf_dict):
     download_TRENDY_output(
@@ -381,10 +378,10 @@ def download_my_TRENDY_output(conf_dict):
     )
 
 
-# -
-
+# +
 #call it to test that the download works the data
-download_my_TRENDY_output(conf_dict)
+#download_my_TRENDY_output(conf_dict)
+# -
 
 # Copy the content of the above cell into a file `model_specific_helpers_2.py` 
 # and then import it and call the function to check that it works.
@@ -399,14 +396,56 @@ import model_specific_helpers_2 as msh
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
-import json 
+import json  
+import numpy.ma as ma 
 
 # Read NetCDF data  ******************************************************************************************************************************
+# this function does not take the different sizes of the pixels into account
+def global_mean(arr):
+    arr=np.ma.masked_equal(arr,-9999)
+    arr1=arr.filled(np.nan)
+    return np.nanmean(arr,axis=(1,2))
 
+# changed in model_specific_helpers_2 since the global_mean function would not work
+def get_global_vars(dataPath):
+    # pick up 1 site
+    #s = slice(None, None, None)  # this is the same as :
+    #t = s, 180, 220  # [t] = [:,49,325] 180,200
+    def f(tup):
+        vn, fn = tup
+        path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them
+        ds = nc.Dataset(str(path))
+        return global_mean(ds.variables[vn])
+
+    o_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Observables._fields]
+    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Drivers._fields]
+
+    # we want to drive with npp and can create it from gpp and ra 
+    # observables
+    odvs=Drivers(*map(f,d_names))
+    obss=Observables(*map(f,o_names))
+
+    dvs=Drivers(
+        npp=odvs.npp,
+        mrso=odvs.mrso,
+        tas=odvs.tas
+    )
+    return (obss, dvs)
+
+
+# +
+import netCDF4 as nc
+import numpy as np
+from pathlib import Path
+import json  
+import numpy.ma as ma 
+
+# Read NetCDF data  ******************************************************************************************************************************
 def get_example_site_vars(dataPath):
     # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
-    t = s, 180, 200  # [t] = [:,49,325]
+    t = s, 180, 220  # [t] = [:,49,325] 180,200
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
@@ -415,25 +454,41 @@ def get_example_site_vars(dataPath):
         return ds.variables[vn][t]
 
     o_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Drivers._fields]
 
     # we want to drive with npp and can create it from gpp and ra 
     # observables
-    odvs=OrgDrivers(*map(f,d_names))
+    odvs=Drivers(*map(f,d_names))
     obss=Observables(*map(f,o_names))
 
     dvs=Drivers(
-        npp=odvs.gpp-obss.ra,
-        #gpp=odvs.gpp,
+        npp=odvs.npp,
         mrso=odvs.mrso,
         tas=odvs.tas
     )
     return (obss, dvs)
 
 
+# +
+import pandas as pd
+import os
+os.chdir("/Users/liaochijuan/Downloads/isam_data/")
+os.getcwd()
+svs_1=pd.DataFrame(svs)
+dvs_1=pd.DataFrame(dvs)
+#svs_1.to_csv("svs_mean.csv",index=None)
+#dvs_1.to_csv("dvs_mean.csv",index=None)
+
+import pandas as pd
+import os
+os.chdir("/Users/liaochijuan/Downloads/isam_data/")
+#svs=np.array(pd.read_csv('svs_mean.csv'))
+#dvs=np.array(pd.read_csv('dvs_mean.csv'))
+#svs
+#dvs
 # -
 
-svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=get_global_vars(dataPath=Path(conf_dict["dataPath"]))
 svs,dvs
 
 
@@ -788,7 +843,6 @@ def make_StartVector(mvs):
     ) 
 
 
-
 V_init= StartVector(
     C_NWT=svs_0.cVeg/5,
     C_AGWT=svs_0.cVeg/5,
@@ -881,7 +935,7 @@ def make_iterator_sym(
 
 np.array(V_init).shape
 
-
+import model_specific_helpers_2 as msh  
 
 # test the daily iterator
 import model_specific_helpers_2 as msh    
@@ -1123,7 +1177,7 @@ cpa=UnEstimatedParameters(
  r_C_YHMS_2_C_AGMS=0.9*0.55*2.0/365,
  r_C_YHMS_2_C_SHMS=0.1*0.55*2.0/365,
  #number_of_months=len(svs.rh)
- number_of_months=120 # for testing and tuning mcmc
+ number_of_months=3600 # for testing and tuning mcmc
 )
 
 len(svs.rh)
@@ -1177,17 +1231,17 @@ steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVar
 # +
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
-epa_0=msh.EstimatedParameters(
- fwt=0.62,
+epa_0=EstimatedParameters(
+ fwt=0.68,
  fgv=0.3,
- fco=0.95,
+ fco=0.90,
  fml=0.80,
  fd=0.75,
  k_C_NWT=1/(365*2),
- k_C_AGWT=1/(365*30),
- k_C_TR=1/(365*20),
- k_C_GVF=1/(365*30),
- k_C_GVR=1/(365*20),
+ k_C_AGWT=1/(365*15),
+ k_C_TR=1/(365*30),
+ k_C_GVF=1/(365*15),
+ k_C_GVR=1/(365*30),
  f_C_AGSL_2_C_AGMS=0.5*0.3,
  f_C_BGRL_2_C_SHMS=0.5,
  C_NWT_0=steady_state_dict["C_NWT"],
@@ -1488,7 +1542,7 @@ def make_param2res_sym(
                 cLitter=float(V.C_AGML+V.C_AGSL+V.C_BGDL+V.C_BGRL),
                 cSoil=float(V.C_AGMS+V.C_YHMS+V.C_BGMS+V.C_SHMS),
                 cVeg=float(V.C_NWT+V.C_AGWT+V.C_GVF+V.C_TR+V.C_GVR),
-                ra=V.ra/seconds_per_day,
+                #ra=V.ra/seconds_per_day,
                 rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
             )
             sols.append(o)
@@ -1514,6 +1568,9 @@ xs= param2res_sym(epa_0)
 #obs=np.column_stack([ np.array(v) for v in svs])
 obs=np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
 #xs.shape
+# -
+
+
 
 # +
 obs=obs[0:cpa.number_of_months,:] #cut 
@@ -1609,13 +1666,13 @@ epa_min=EstimatedParameters(
 epa_max=EstimatedParameters(
     fwt=0.8,
     fgv=0.3,
-    fco=0.99,
+    fco=0.95,
     fml=0.9,
     fd=0.9,
     k_C_NWT=1/(365*1),
-    k_C_AGWT=1/(365*10),
+    k_C_AGWT=1/(365*5),
     k_C_TR=1/(365*10),
-    k_C_GVF=1/(365*10),
+    k_C_GVF=1/(365*5),
     k_C_GVR=1/(365*10),
     f_C_AGSL_2_C_AGMS=0.9*0.3,
     f_C_BGRL_2_C_SHMS=0.9,
@@ -1635,7 +1692,35 @@ epa_max=EstimatedParameters(
 # ### mcmc to optimize parameters 
 #
 
-np.array(epa_max)
+
+
+def make_isam_cost_func(
+        obs: np.ndarray,
+) -> Callable[[np.ndarray], np.float64]:
+    # Note:
+    # in our code the dimension 0 is the time
+    # and dimension 1 the pool index
+    means = obs.mean(axis=0)
+    mean_centered_obs = obs - means
+
+    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+    #   The desired effect of automatically adjusting weight could be achieved
+    #   by the mean itself.
+    # dominators = means
+    def costfunction(mod: np.ndarray) -> np.float64:
+        obs_1=obs[:][0:4]
+        mod_1=mod[:][0:4]
+        cost = np.mean(
+            np.sum((obs_1 - mod_1) ** 2, axis=0) / denominators * 1000
+        )
+        return cost
+
+    return costfunction
+
+
+
+np.shape(obs)
 
 # +
 from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
@@ -1649,15 +1734,15 @@ C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=make_feng_cost_func(obs),
-    nsimu=200, # for testing and tuning mcmc
+    costfunction=make_isam_cost_func(obs),
+    nsimu=2000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=5 # default value | increase value to reduce acceptance of higher cost functions
+    K=8 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -1669,15 +1754,15 @@ mod_opt = param2res(epa_opt)
 
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
+#plot_solutions(
+#        fig,
         #times=range(cpa.number_of_months),
-        times=range(int(cpa.number_of_months)), # for yearly output
-        var_names=Observables._fields,
-        tup=(mod_opt,obs)
-)
+#        times=range(int(cpa.number_of_months)), # for yearly output
+#        var_names=Observables._fields,
+#        tup=(mod_opt,obs)
+#)
 
-fig.savefig('solutions_opt.pdf')
+#fig.savefig('solutions_opt.pdf')
 
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
@@ -1687,6 +1772,48 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('ISAM_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('ISAM_da_j_aa.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('ISAM_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('ISAM_optimized_solutions.csv'), sep=',')
+
+# +
+import matplotlib.pyplot as plt
+
+print("Forward run with initial parameters")
+plt.figure(figsize=(12,10), dpi=80)
+plt.figure(1)
+
+ax0 = plt.subplot(221)
+ax0.plot(obs[:,0],label='TRENDY',color="red")
+ax0.plot(mod_opt[:,0],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Vegetation C (kg m-2)",size=13)
+#ax0.legend(loc='best')
+ax0.tick_params(labelsize=12)
+
+ax1 = plt.subplot(222)
+ax1.plot(obs[:,1],label='TRENDY',color="red")
+ax1.plot(mod_opt[:,1],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Litter C (kg m-2)",size=13)
+ax1.legend(loc='best')
+ax1.tick_params(labelsize=12)
+
+ax2 = plt.subplot(223)
+ax2.plot(obs[:,2],label='TRENDY',color="red")
+ax2.plot(mod_opt[:,2],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Soil C (kg m-2)",size=13)
+ax2.legend(loc='best')
+ax2.tick_params(labelsize=12)
+
+ax3 = plt.subplot(224)
+ax3.plot(obs[:,3],label='TRENDY',color="red")
+ax3.plot(mod_opt[:,3],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
+ax3.tick_params(labelsize=12)
+
+plt.savefig('ISAM_test_opt.pdf')
+
+
 # -
 
 print("Optimized parameters: ", epa_opt)

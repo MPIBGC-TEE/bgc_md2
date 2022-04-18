@@ -66,8 +66,8 @@ def make_test_args(conf_dict,msh,mvs):
         r_C_wood_litter_rh=0.00012453300124533,
         r_C_root_litter_rh=0.000122042341220423,
         r_C_soil_fast_rh=0.00015220700152207,
-        r_C_soil_slow_rh=2.73972602739726e-05,
-        r_C_soil_passive_rh=7.82778864970646e-06,
+        r_C_soil_slow_rh=3.73972602739726e-05,
+        r_C_soil_passive_rh=8.82778864970646e-06,
         r_C_leaf_2_C_leaf_litter=0.00833333333333333,
         r_C_wood_2_C_wood_litter=9.1324200913242e-05,
         r_C_root_2_C_root_litter=0.00012453300124533,
@@ -90,7 +90,7 @@ def make_test_args(conf_dict,msh,mvs):
     epa_min=msh.EstimatedParameters(
         beta_leaf=0,
         beta_wood=0,
-        T_0=-20,
+        T_0=-10,
         E=.1,
         KM=1,
         r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
@@ -123,8 +123,8 @@ def make_test_args(conf_dict,msh,mvs):
     epa_max=msh.EstimatedParameters(
         beta_leaf=0.99,
         beta_wood=0.99,
-        T_0=10,
-        E=100,
+        T_0=5,
+        E=10,
         KM=100,
         r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
         r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
@@ -155,28 +155,28 @@ def make_test_args(conf_dict,msh,mvs):
         cVeg_0=svs_0.cVeg,
         cLitter_0=svs_0.cLitter,
         cSoil_0=svs_0.cSoil,
-        npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
-        rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
-        ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
-        r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
-        r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
+        npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
+        rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
+        ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
+        #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
+        #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
         #number_of_months=len(svs.rh)
         number_of_months=24 # for testing and tuning mcmc
     )
 
     StartVector = msh.make_StartVector(mvs) 
     V_init= StartVector(
-        C_leaf=svs_0.cVeg/3,
-        C_wood=svs_0.cVeg/3,
-        C_root=svs_0.cVeg/3,
-        C_leaf_litter=svs_0.cLitter/3,
-        C_wood_litter=svs_0.cLitter/3,
-        C_root_litter=svs_0.cLitter/3,
-        C_soil_fast=svs_0.cSoil/3,
-        C_soil_slow=svs_0.cSoil/3,
-        C_soil_passive=svs_0.cSoil/3,
-        ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
-        rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;
+        C_leaf=0.051828761170322826,
+        C_wood=1.970572690329994,
+        C_root=svs_0.cVeg-1.970572690329994-0.051828761170322826,
+        C_leaf_litter=0.1202311902470766,
+        C_wood_litter=0.2225433197876749,
+        C_root_litter=svs_0.cLitter-0.2225433197876749-0.1202311902470766,
+        C_soil_fast=1.7309510511856925,
+        C_soil_slow=2.4435101360092473,
+        C_soil_passive=svs_0.cSoil-2.4435101360092473-1.7309510511856925,
+        ra=svs_0.ra,   # kg/m2/s kg/m2/day;,
+        rh=svs_0.rh   # kg/m2/s kg/m2/day;
     )
     return TestArgs(
         V_init=V_init,

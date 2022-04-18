@@ -20,14 +20,14 @@ sym_dict = {
         ,'C_ml': 'metabolic soil litter pool'
         ,'C_asom': 'active soil organic matter pool'
         ,'C_ssom': 'slow soil organic matter pool'
-        ,'C_7': 'passive soil organic matter pool'
+        ,'C_psom': 'passive soil organic matter pool'
         ,'K_ssl': 'maximum decomposition rate of structural soil surface litter'
         ,'K_msl': 'maximum decomposition rate of metabolic soil surface litter'
         ,'K_sl': 'maximum decomposition rate of structural soil litter'
         ,'K_ml': 'maximum decomposition rate of metabolic soil litter'
         ,'K_asom': 'maximum decomposition rate of active soil organic matter'
         ,'K_ssom': 'maximum decomposition rate of slow soil organic matter'
-        ,'K_7': 'maximum decomposition rate of passive organic matter'
+        ,'K_psom': 'maximum decomposition rate of passive organic matter'
         ,'k_ssl': 'decomposition rate of structural soil surface litter'
         ,'k_sl': 'decomposition rate of structural soil litter'
         ,'k_asom': 'decomposition rate of active soil organic matter'
@@ -38,13 +38,13 @@ sym_dict = {
         ,'E_s': '"fraction of carbon lost as CO$_2$ when active soil organic matter is decomposed and stabilized into slow organic matter"'
         ,'F_m': 'fraction of incoming metabolic litter'
         ,'F_s': 'fraction of incoming structural litter'
-        ,'J_1': 'organic matter input to surface'
-        ,'J_2': 'organic matter input to soil'
+        ,'J_surf': 'organic matter input to surface'
+        ,'J_soil': 'organic matter input to soil'
         ,'alpha_asom_from_ssl': 'flux coefficient from strucutral soil surface litter pool to active soil organic matter pool'
         ,'alpha_asom_from_sl': 'flux coefficient from strucutral soil litter pool to active soil organic matter pool'
-        ,'alpha_ssom1': 'flux coefficient from strucutral soil surface litter pool to slow soil organic matter pool'
-        ,'alpha_ssom3': 'flux coefficient from strucutral soil litter pool to slow soil organic matter pool'
-        ,'alpha_ssom5': 'flux coefficient from strucutral soil surface litter pool to slow soil organic matter pool'
+        ,'alpha_ssom_from_ssl': 'flux coefficient from strucutral soil surface litter pool to slow soil organic matter pool'
+        ,'alpha_ssom_from_sl': 'flux coefficient from strucutral soil litter pool to slow soil organic matter pool'
+        ,'alpha_ssom_from_asom': 'flux coefficient from active soil organic matter pool to slow soil organic matter pool'
         ,'f_T': 'function of temperature'
         ,'f_W': 'function of soil moisture'
 }
@@ -59,29 +59,29 @@ F_m = 0.85 - 0.018 * LN
 F_s = 1 - F_m
 alpha_asom_from_ssl = 0.55 * (1 - A_l)
 alpha_asom_from_sl = 0.45 * (1 - A_l)
-alpha_ssom1 = 0.7 * A_l
-alpha_ssom3 = alpha_ssom1
-alpha_ssom5 = 1 - E_s - 0.004
+alpha_ssom_from_ssl = 0.7 * A_l
+alpha_ssom_from_sl = alpha_ssom_from_ssl
+alpha_ssom_from_asom = 1 - E_s - 0.004
 t = TimeSymbol("t") # unit: "year" #??? monthly
-x = StateVariableTuple((C_ssl, C_msl, C_sl, C_ml, C_asom, C_ssom, C_7))
-u = InputTuple((J_1*F_s, J_1*F_m, J_2*F_s, J_2*F_m, 0, 0, 0))
+x = StateVariableTuple((C_ssl, C_msl, C_sl, C_ml, C_asom, C_ssom, C_psom))
+u = InputTuple((J_surf*F_s, J_surf*F_m, J_soil*F_s, J_soil*F_m, 0, 0, 0))
 xi = f_T * f_W #environmental effects multiplier (DEFAG)
 A = ([        -k_ssl,        0,            0,        0,            0,        0,        0],
      [           0,     -K_msl,            0,        0,            0,        0,        0],
      [           0,        0,         -k_sl,        0,            0,        0,        0],
      [           0,        0,            0,     -K_ml,            0,        0,        0],
-     [alpha_asom_from_ssl*k_ssl, 0.45*K_msl, alpha_asom_from_sl*k_sl, 0.45*K_ml,         -k_asom, 0.42*K_ssom, 0.45*K_7],
-     [alpha_ssom1*k_ssl,        0, alpha_ssom3*k_sl,        0, alpha_ssom5*k_asom,     -K_ssom,        0],
-     [           0,        0,            0,        0,    0.004*k_asom, 0.03*K_ssom,     -K_7])
+     [alpha_asom_from_ssl*k_ssl, 0.45*K_msl, alpha_asom_from_sl*k_sl, 0.45*K_ml,         -k_asom, 0.42*K_ssom, 0.45*K_psom],
+     [alpha_ssom_from_ssl*k_ssl,        0, alpha_ssom_from_sl*k_sl,        0, alpha_ssom_from_asom*k_asom,     -K_ssom,        0],
+     [           0,        0,            0,        0,    0.004*k_asom, 0.03*K_ssom,     -K_psom])
 B = CompartmentalMatrix(xi * ImmutableMatrix(A))
 #Original values without effects of temperature and soil moisture:
 np1 = NumericParameterization(
     par_dict={
-K_ssl: 0.076, K_msl: 0.28, K_sl: 0.094, K_ml: 0.35, K_asom: 0.14, K_ssom: 0.0038, K_7: 0.00013, xi: 1},
+K_ssl: 0.076, K_msl: 0.28, K_sl: 0.094, K_ml: 0.35, K_asom: 0.14, K_ssom: 0.0038, K_psom: 0.00013, xi: 1},
     func_dict=frozendict({})
 )
 nsv1 = NumericStartValueDict({
-C_ssl: 100, C_msl: 200, C_sl: 00, C_ml: 0, C_asom: 0, C_ssom: 0, C_7: 0}) #faked values by Markus to make it run
+C_ssl: 100, C_msl: 200, C_sl: 00, C_ml: 0, C_asom: 0, C_ssom: 0, C_psom: 0}) #faked values by Markus to make it run
 #ntimes = NumericSimulationTimes(np.arange())
 
 mvs = CMTVS(

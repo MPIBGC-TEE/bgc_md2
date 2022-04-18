@@ -62,7 +62,7 @@ sys.path.insert(0, '..')  # necessary to import general_helpers
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
-    month_2_day_index,
+    # month_2_day_index,
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions
@@ -437,6 +437,17 @@ msh.download_my_TRENDY_output(conf_dict)
 svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 # look at data
 # svs, dvs
+# -
+
+Path(conf_dict["dataPath"])
+
+# +
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
+
+
+fig, ax = plt.subplots() #[(12*10-1):12*30]
+plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "observation")
 
 # +
 # Plot simulation output for observables
@@ -558,33 +569,72 @@ plot_solutions(
 #    ]
 # )
 #
-# epa0 = ParameterValues( ## need to modify!!
-#    beta_leaf = 1/3,
-#    beta_wood = 1/3,
-#    f_leaf2DPM=0.1,
-#    f_wood2DPM=0.01,
-#    f_root2DPM=0.001,
-#    f_DPM2BIO =0.1,
-#    f_DPM2HUM =0.01,
-#    f_RPM2BIO =0.001,
-#    f_RPM2HUM =0.1,
-#    f_BIO2HUM =0.01,
-#    f_HUM2BIO =0.001,
-#    k_leaf = 1 / (365 * 2), # day -1
-#    k_wood=1 / (365 * 60),
-#    k_root=1 / (365 * 30),
-#    k_DPM= 0.0278,  # 1 / (365 * 60), # 3.22 * 10**(-7) s-1 ## this value is from Clark et al 2011
-#    k_RPM= 8.3376 * 10 ** (-4), #1 / (365 * 30), # 9.65 * 10**(-9) s-1
-#    k_BIO= 0.0018, #1 / (365 * 30), # 2.12 * 10**(-8) s-1
-#    k_HUM= 5.5555 * 10 ** (-5), #1 / (365 * 200), # 6.43 *10(-10) s-1
-#
-#    c_leaf0=0,
-#    c_wood0=0,
-#    c_RPM0=0,
-#    c_DPM0=0,
-#    c_BIO0=0,
-#    Mw=0.01
-# )
+## save a good hand-tuned parameter in case it's needed in the future
+## only for save, if run here, got error
+epa0 = ParameterValues( ## need to modify!!
+    beta_leaf = 0.35,
+    beta_wood = 0.3,
+    f_leaf2DPM = 0.22,
+    f_wood2DPM = 0.22,
+    f_root2DPM = 0.22,
+    f_DPM2BIO = 0.46*betaR,
+    f_DPM2HUM = 0.54*betaR,
+    f_RPM2BIO = 0.46*betaR,
+    f_RPM2HUM = 0.54*betaR,
+    f_BIO2HUM = 0.54*betaR,
+    f_HUM2BIO = 0.46*betaR,
+    k_leaf = (1 / 4) / (360),
+    k_wood = (1 / 30.5)/ (360),
+    k_root = (1 / 4) /360,
+    k_DPM  = (1 / 0.065) / 360,
+    k_RPM = (1 / 2.5) / 360,
+    k_BIO = (1 / 0.85) / 360,
+    k_HUM = (1 / 30) / 360,
+
+
+    c_leaf0 = svs.cVeg[0] *0.12, #/ 3,  # set inital pool values to svs values
+    c_wood0 = svs.cVeg[0] *0.76, # / 3,
+    c_DPM0 = svs.cSoil[0] *0.005,
+    c_RPM0 = svs.cSoil[0] *0.22,
+    c_BIO0 = svs.cSoil[0] *0.02,
+
+    Mw=0.01
+)
+
+betaR = 0.22   # was derived from clay content(RothC model): 1/(x + 1) , where x = 1.67*(1.85 + 1.60exp(-0.0786%clay))
+epa0 = ParameterValues( ## need to modify!!
+    beta_leaf = 0.35,
+    beta_wood = 0.3,
+    
+    f_leaf2DPM = 0.22,
+    f_wood2DPM = 0.22,
+    f_root2DPM = 0.22,
+    f_DPM2BIO = 0.46*betaR,
+    f_DPM2HUM = 0.54*betaR,
+    f_RPM2BIO = 0.46*betaR,
+    f_RPM2HUM = 0.54*betaR,
+    f_BIO2HUM = 0.54*betaR,
+    f_HUM2BIO = 0.46*betaR,
+    k_leaf = (1 / 4) / (360),
+    k_wood = (1 / 30.5)/ (360),
+    k_root = (1 / 4) /360,
+    k_DPM  = (1 / 0.099) / 360,
+    k_RPM = (1 / 2.5) / 360,
+    k_BIO = (1 / 1.4) / 360,
+    k_HUM = (1 / 42) / 360,
+
+
+    c_leaf0 = svs.cVeg[0] *0.12, #/ 3,  # set inital pool values to svs values
+    c_wood0 = svs.cVeg[0] *0.76, # / 3,
+    c_DPM0 = svs.cSoil[0] *0.002,
+    c_RPM0 = svs.cSoil[0] *0.22,
+    c_BIO0 = svs.cSoil[0] *0.02,
+
+    Mw=0.1,
+    Ms=np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
+    Topt=18.32,
+    Tcons=47.91
+)
 #
 ## need to check here!!
 # old_par_dict = {
@@ -742,34 +792,36 @@ epa_0 = msh.EstimatedParameters(
     **{
         'c_leaf_0': svs_0.cVeg * 0.12,  # set inital pool values to svs values
         'c_wood_0': svs_0.cVeg * 0.76,  # you can set numerical values here directly as well
-        'c_DPM_0': svs_0.cSoil * 0.01,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
-        'c_RPM_0': svs_0.cSoil * 0.22,
-        'c_BIO_0': svs_0.cSoil * 0.02
+        'c_DPM_0': svs_0.cSoil * 0.0025,  # set according to QY's single site results: 0.0025 DPM, 0.22 RPM, 0.02 BIO, 0.7575 HUM
+        'c_RPM_0': svs_0.cSoil * 0.248,
+        'c_BIO_0': svs_0.cSoil * 0.022
     },
     **{
         'beta_leaf': 0.35,
         'beta_wood': 0.3,
         'Mw': 0.1,
         'Ms': np.max(dvs.mrsos) + 500, #, may need add a condition here ## ASK MARKUS
+        'Topt': 18.32,
+        'Tcons': 47.91,
         # 'r_c_leaf_rh': 0,
         # 'r_c_wood_rh': 0,
         # 'r_c_root_rh': 0,
- 'r_c_DPM_rh': 0.0301282051282051,
- 'r_c_RPM_rh': 0.000783333333333333,
- 'r_c_BIO_rh': 0.00274738562091503,
- 'r_c_HUM_rh': 8.00277777777778e-5,
- 'r_c_leaf_2_c_DPM': 0.000152777777777778,
- 'r_c_leaf_2_c_RPM': 0.000541666666666667,
- 'r_c_wood_2_c_DPM': 2.00364298724954e-5,
- 'r_c_wood_2_c_RPM': 7.10382513661202e-5,
- 'r_c_root_2_c_DPM': 0.000152777777777778,
- 'r_c_root_2_c_RPM': 0.000541666666666667,
- 'r_c_DPM_2_c_BIO': 0.00579914529914530,
- 'r_c_DPM_2_c_HUM': 0.00680769230769231,
- 'r_c_RPM_2_c_BIO': 0.000150777777777778,
- 'r_c_RPM_2_c_HUM': 0.000177000000000000,
- 'r_c_BIO_2_c_HUM': 0.000520588235294118,
- 'r_c_HUM_2_c_BIO': 1.25648148148148e-5
+        'r_c_DPM_rh':0.0218855218855219,
+        'r_c_RPM_rh':0.000866666666666667,
+        'r_c_BIO_rh':0.00174841269841270,
+        'r_c_HUM_rh':5.87450980392157e-5,
+        'r_c_leaf_2_c_DPM':0.000152777777777778,
+        'r_c_leaf_2_c_RPM':0.000541666666666667,
+        'r_c_wood_2_c_DPM':2.00364298724954e-5,
+        'r_c_wood_2_c_RPM':7.10382513661202e-5,
+        'r_c_root_2_c_DPM':0.000152777777777778,
+        'r_c_root_2_c_RPM':0.000541666666666667,
+        'r_c_DPM_2_c_BIO':0.00283950617283951,
+        'r_c_DPM_2_c_HUM':0.00333333333333333,
+        'r_c_RPM_2_c_BIO':0.000112444444444444,
+        'r_c_RPM_2_c_HUM':0.000132000000000000,
+        'r_c_BIO_2_c_HUM':0.000235714285714286,
+        'r_c_HUM_2_c_BIO':6.61437908496732e-6
     }
     # **{str(key): value for key,value in  par_dict.items() if}
 )
@@ -788,7 +840,7 @@ fig = plt.figure()
 from general_helpers import plot_observations_vs_simulations
 plot_observations_vs_simulations(fig,svs,obs_simu)
 
-obs_simu.cSoil
+svs_0.cSoil * 0.0011
 
 # +
 import matplotlib.lines as mlines
@@ -796,7 +848,7 @@ import matplotlib.transforms as mtransforms
 
 
 fig, ax = plt.subplots() #[(12*10-1):12*30]
-ax.scatter(np.array(svs.rh[(12*10-1):12*30])*1000, np.array(obs_simu.rh[(12*10-1):12*30])*1000, c='black')
+ax.scatter(np.array(svs.rh)*1000, np.array(obs_simu.rh)*1000, c='black') #[(12*10-1):12*30]
 lims = [
     np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
     np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
@@ -812,25 +864,32 @@ plt.show()
 # +
 plt.plot(list(range(0, 12*20)), np.array(svs.rh[(12*300):12*320])*1000, label = "observation")
 plt.plot(list(range(0, 12*20)), np.array(obs_simu.rh[(12*300):12*320])*1000, label = "simulation")
-plt.plot(list(range(0, 12*20)), np.array(dvs.npp[(12*300):12*320])*1000, label = "NPP")
+#plt.plot(list(range(0, 12*20)), np.array(dvs.npp[(12*300):12*320])*1000, label = "NPP")
 
 #plt.plot(list(range(0, 12*320)), np.array(dvs.npp) - np.array(svs.fVegSoil), label = "net change in veg C")
 #plt.plot(list(range(0, 12*320)), np.array(svs.cVeg), label = "net veg C")
 plt.legend()
 plt.plot()
 plt.show()
+sum((np.array(svs.rh) - np.array(obs_simu.rh))**2)
 # -
 
-np.array(svs.cVeg)[0] - np.array(svs.cVeg)[320*12-1]
+plt.plot(list(range(0, 12*320)), np.array(svs.rh)*1000, label = "observation")
+#plt.plot(list(range(0, 12*320)), np.array(obs_simu.rh)*1000, label = "simulation")
+#plt.plot(list(range(0, 12*20)), np.array(dvs.npp[(12*300):12*320])*1000, label = "NPP")
 
-np.sum(np.array(dvs.npp) - np.array(0))
+
+FT = 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85)))
+plt.plot(np.array(dvs.tsl), 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85))), label = "254.85")
+plt.plot(np.array(dvs.tsl), 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 264.85))), label = "264.85")
+
 
 # +
 fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
-#ax1.plot(list(range(0, 12*320)), np.array(obs_simu.rh), 'r-')
+ax1.plot(list(range(0, 12*20)), np.array(obs_simu.rh)[(12*300):12*320], 'r-')
 #FT = 2.0 ** ((np.array(dvs.tsl) - 298.15) / 10)
-FT = 47.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85)))
+FT = 45.9 / (1 + np.exp(106/(np.array(dvs.tsl) - 254.85)))
 FV = 0.6 + 0.4 * (1 - np.array(dvs.landCoverFrac) / 100)
 
 Mw = 0.01
@@ -853,6 +912,30 @@ ax2.plot(list(range(0, 12*20)), (FT * FV * FS )[(12*300):12*320], 'b-',)
 ax1.set_ylabel('Rh simulation', color='r')
 ax2.set_ylabel('Environmental scaler i', color='b')
 plt.show()
+Ms
+
+# +
+Mw = 0.01
+Ms = np.max(dvs.mrsos) + 50
+S0 = 0.5 * (1 + Mw)  # optimum soil moisture
+Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
+mois =  np.arange(1, 75)
+FS = np.zeros(shape= np.array(mois.shape))
+for mi in range(len(mois)):
+    if S0 < mois[mi]/Ms:
+        FS[mi] = 1 - 0.8 * (mois[mi]/Ms - S0)  # effect of soil moisture
+    if (Smin < mois[mi]/Ms) and (mois[mi]/Ms <= S0):
+        FS[mi] = 0.2 + 0.8 * (mois[mi]/Ms - Smin) / (S0 - Smin)
+    if mois[mi]/Ms <= Smin:
+        FS[mi] = 0.2
+        
+        
+plt.plot(list(range(1, 75)), F, label = "observation")
+
+# -
+
+lst = np.arange(1,4)  
+print(lst)
 
 # +
 ## fixme: 
