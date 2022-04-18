@@ -110,6 +110,8 @@ cpa = msh.Constants(
  #number_of_months=120 # for testing and tuning mcmc
 )
 
+svs
+
 # provide an inital guess for the paramters to be estimated by the data assimilation
 # this is the result of the elaborate procedures 
 epa_0=msh.EstimatedParameters(
@@ -118,13 +120,15 @@ epa_0=msh.EstimatedParameters(
     T_0=2,
     E=4,
     KM=10,
-    env_modifier=1,
+    #env_modifier=1,
     r_C_leaf_litter_rh=0.0004151100041511,
     r_C_wood_litter_rh=0.00012453300124533,
     r_C_root_litter_rh=0.000122042341220423,
     r_C_soil_fast_rh=0.00015220700152207,
-    r_C_soil_slow_rh=2.73972602739726e-05,
-    r_C_soil_passive_rh=7.82778864970646e-06,
+    #r_C_soil_slow_rh=2.73972602739726e-05,
+    r_C_soil_slow_rh=3.73972602739726e-05,
+    #r_C_soil_passive_rh=7.82778864970646e-06,
+    r_C_soil_passive_rh=8.82778864970646e-06,
     r_C_leaf_2_C_leaf_litter=0.00833333333333333,
     r_C_wood_2_C_wood_litter=9.1324200913242e-05,
     r_C_root_2_C_root_litter=0.00012453300124533,
@@ -139,12 +143,14 @@ epa_0=msh.EstimatedParameters(
     r_C_root_litter_2_C_soil_passive=1.74346201743462e-05,
     C_leaf_0=0.051828761170322826,
     C_wood_0=1.970572690329994,
-    C_leaf_litter_0=0.5202311902470766,
-    C_wood_litter_0=0.7225433197876749,
+    C_leaf_litter_0=0.1202311902470766,
+    C_wood_litter_0=0.2225433197876749,
     C_soil_fast_0=1.7309510511856925,
     C_soil_slow_0=2.4435101360092473
 )
 
+
+svs_0.cLitter
 
 # +
 ## now test it 
@@ -156,14 +162,33 @@ obs_simu= param2res_sym(epa_0)
 #obs=np.column_stack([ np.array(v) for v in svs])
 #obs=obs[0:cpa.number_of_months,:] #cut 
 #obs[:,3:4]=obs[:,3:4]
-#n=cpa.number_of_months
+#### clipping ###
+n=600
+obs_arr=np.stack([ arr for arr in svs],axis=1); obs=obs_arr[0:n,:5]
+obs_T=msh.Observables(
+    cVeg=obs[:,0],
+    cLitter=obs[:,1],
+    cSoil=obs[:,2],
+    rh=obs[:,3],
+    ra=obs[:,4]
 
+)
+simu_arr=np.stack([ arr for arr in obs_simu],axis=1); simu=simu_arr[0:n,:5]
+simu_T=msh.Observables(
+    cVeg=simu[:,0],
+    cLitter=simu[:,1],
+    cSoil=simu[:,2],
+    rh=simu[:,3],
+    ra=simu[:,4]
+)
+
+####
 
 fig = plt.figure(figsize=(12, 4), dpi=80)
 
 #fig = plt.figure()
 from general_helpers import plot_observations_vs_simulations
-plot_observations_vs_simulations(fig,svs,obs_simu)
+plot_observations_vs_simulations(fig,obs_T,simu_T)
 # gh.plot_solutions(
 #         fig,
 #         times=range(n),
@@ -171,7 +196,7 @@ plot_observations_vs_simulations(fig,svs,obs_simu)
 #         tup=(obs_simu,obs)
 #         #tup=(obs,)
 # )
-fig.savefig('solutions_10.pdf')
+fig.savefig('solutions_initial.pdf')
 # -
 
 
@@ -217,10 +242,10 @@ obs.shape
 epa_min=msh.EstimatedParameters(
     beta_leaf=0,
     beta_wood=0,
-    T_0=-20,
+    T_0=-10,
     E=.1,
     KM=1,
-    env_modifier=0,
+    #env_modifier=0,
     r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
     r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
     r_C_root_litter_rh=epa_0.r_C_root_litter_rh/100,
@@ -251,10 +276,10 @@ epa_min=msh.EstimatedParameters(
 epa_max=msh.EstimatedParameters(
     beta_leaf=0.99,
     beta_wood=0.99,
-    T_0=10,
-    E=100,
+    T_0=5,
+    E=10,
     KM=100,
-    env_modifier=10,
+    #env_modifier=10,
     r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
     r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
     r_C_root_litter_rh=epa_0.r_C_root_litter_rh*100,
@@ -280,7 +305,19 @@ epa_max=msh.EstimatedParameters(
     C_soil_fast_0=svs_0.cSoil,
     C_soil_slow_0=svs_0.cSoil,
 )
+
+# +
+# for i in range (len (epa_max)):
+#         print(epa_0[i]-epa_max[i])
 # -
+
+TS=.748*(max(dvs.tas)-273.15) + 6.181
+
+np.exp(epa_0.E*(1/(10-epa_0.T_0)))
+
+dvs.mrso[1]/(epa_0.KM+dvs.mrso[1])
+
+np.exp(epa_max.E*(1/(10-epa_0.T_0)-1/(TS-epa_0.T_0))) * max(dvs.mrso)/(epa_0.KM+max(dvs.mrso))
 
 # ### mcmc to optimize parameters 
 #
@@ -296,19 +333,19 @@ param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = gh.autostep_mcmc_2(
+C_autostep, J_autostep = gh.autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func_2(svs),
-    nsimu=200, # for testing and tuning mcmc
+    nsimu=500, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=15,   # default value | target acceptance rate in %
+    acceptance_rate=10,   # target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=2 # default value | increase value to reduce acceptance of higher cost functions
+    K=1.5 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -319,23 +356,15 @@ epa_opt=msh.EstimatedParameters(*par_opt)
 param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 mod_opt = param2res(epa_opt)  
 
-print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
+# full duration plot
+
 fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_observations_vs_simulations(
         fig,
         svs,
         mod_opt
     )
-
-# gh.plot_solutions(
-#         fig,
-#         #times=range(cpa.number_of_months),
-#         times=range(int(cpa.number_of_months)), # for yearly output
-#         var_names=msh.Observables._fields,
-#         tup=(mod_opt,obs)
-# )
-
-fig.savefig('solutions_opt.pdf')
+fig.savefig('solutions_full.pdf')
 
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
@@ -345,7 +374,65 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+
+# +
+# clipped
+#n=120
+obs_arr=np.stack([ arr for arr in svs],axis=1); obs=obs_arr[750:1000,:5]
+obs_T=msh.Observables(
+    cVeg=obs[:,0],
+    cLitter=obs[:,1],
+    cSoil=obs[:,2],
+    rh=obs[:,3],
+    ra=obs[:,4]
+
+)
+simu_arr=np.stack([ arr for arr in mod_opt],axis=1); simu=simu_arr[750:1000,:5]
+simu_T=msh.Observables(
+    cVeg=simu[:,0],
+    cLitter=simu[:,1],
+    cSoil=simu[:,2],
+    rh=simu[:,3],
+    ra=simu[:,4]
+)
+
+####
+
+fig = plt.figure(figsize=(12, 4), dpi=80)
+
+#fig = plt.figure()
+#from general_helpers import plot_observations_vs_simulations
+plot_observations_vs_simulations(fig,obs_T,simu_T)
+# gh.plot_solutions(
+#         fig,
+#         times=range(n),
+#         var_names=msh.Observables._fields,
+#         tup=(obs_simu,obs)
+#         #tup=(obs,)
+# )
+fig.savefig('solutions_closeup.pdf')
+
+
+# fig = plt.figure(figsize=(12, 4), dpi=80)
+# plot_observations_vs_simulations(
+#         fig,
+#         svs,
+#         mod_opt
+#     )
+
+# gh.plot_solutions(
+#         fig,
+#         #times=range(cpa.number_of_months),
+#         times=range(int(cpa.number_of_months)), # for yearly output
+#         var_names=msh.Observables._fields,
+#         tup=(mod_opt,obs)
+# )
+
+# fig.savefig('solutions_opt.pdf')
+
 # -
+
+print(epa_opt)
 
 # ### Traceability analysis  
 #

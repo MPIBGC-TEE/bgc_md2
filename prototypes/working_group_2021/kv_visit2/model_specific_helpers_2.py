@@ -62,7 +62,7 @@ EstimatedParameters = namedtuple(
         "T_0",
         "E",
         "KM",
-        "env_modifier",
+        #"env_modifier",
         #"r_C_leaf_rh",
         #"r_C_wood_rh",
         #"r_C_root_rh",
@@ -182,18 +182,25 @@ def make_npp_func(dvs):
     return func
 
 
-def make_xi_func(dvs):
-    def func(day):
+def make_xi_func(dvs, epa):
+    def xi_func(day):
         month=gh.day_2_month_index(day)
+        TS = (dvs.tas[month]-273.15) * 0.5 # convert from Kelvin to Celcius 
+        TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+        if TS > epa.T_0: 
+            xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+        else: 
+            xi_out=0
+        return(xi_out)
         #return (dvs.xi[month])
-        return 1.0 # preliminary fake for lack of better data...
-    return func
+        #return 1.0 # preliminary fake for lack of better data...
+    return xi_func
 
 
-def make_func_dict(mvs,dvs):
+def make_func_dict(mvs,dvs,epa):
     return {
         "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs)
+        "xi": make_xi_func(dvs, epa)
     }
 
 
@@ -205,7 +212,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
         "T_0": epa.T_0,
         "E": epa.E,
         "KM": epa.KM,
-        "env_modifier": epa.env_modifier,
+        #"env_modifier": epa.env_modifier,
         #"r_C_leaf_rh": 0,
         #"r_C_wood_rh": 0,
         #"r_C_root_rh": 0,
@@ -245,7 +252,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(9,1)
-    fd=make_func_dict(mvs,dvs)
+    fd=make_func_dict(mvs,dvs,epa)
     V_init=gh.make_InitialStartVectorTrace(
             X_0,mvs,
             par_dict=par_dict,
@@ -429,7 +436,13 @@ def make_param2res_sym(
         # could be build from estimated parameters and would have to live here...
         def xi_func(day):
             month=gh.day_2_month_index(day)
-            return 1#dvs.xi[month]
+            TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius 
+            TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+            if TS > epa.T_0: 
+                xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+            else: 
+                xi_out=0
+            return(xi_out)
             # return 1.0 # preliminary fake for lack of better data... 
         
         func_dict={
