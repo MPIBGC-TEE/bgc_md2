@@ -320,7 +320,7 @@ def make_param2res_sym(
         # could be build from estimated parameters and would have to live here...
         func_dict=make_func_dict(mvs,dvs)
     
-        it_sym = make_iterator_sym(
+        it_sym = make_daily_iterator_sym(
             mvs,
             V_init=V_init,
             par_dict=model_par_dict,
@@ -459,66 +459,67 @@ def make_daily_iterator_sym(
     )
 
 
-def make_iterator_sym(
-        mvs,
-        V_init, 
-        par_dict,
-        func_dict,
-        delta_t_val=10 # defaults to 1day timestep
-    ):
-    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+# +
+# def make_iterator_sym(
+#         mvs,
+#         V_init, 
+#         par_dict,
+#         func_dict,
+#         delta_t_val=10 # defaults to 1day timestep
+#     ):
+#     B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
 
-    sv=mvs.get_StateVariableTuple()
-    n=len(sv)
-    # build an array in the correct order of the StateVariables which in our case is already correct 
-    # since V_init was built automatically but in case somebody handcrafted it and changed
-    # the order later in the symbolic formulation....
-    V_arr=np.array(
-        [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.rh]
-    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+#     sv=mvs.get_StateVariableTuple()
+#     n=len(sv)
+#     # build an array in the correct order of the StateVariables which in our case is already correct 
+#     # since V_init was built automatically but in case somebody handcrafted it and changed
+#     # the order later in the symbolic formulation....
+#     V_arr=np.array(
+#         [V_init.__getattribute__(str(v)) for v in sv]+
+#         [V_init.rh]
+#     ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
 
-    numOutFluxesBySymbol={
-        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
-        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
-    } 
-    def f(it,V):
-        X = V[0:n]
-        b = u_func(it,X)
-        B = B_func(it,X)
-        X_new = X + b + B @ X
-        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+#     numOutFluxesBySymbol={
+#         k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
+#         for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+#     } 
+#     def f(it,V):
+#         X = V[0:n]
+#         b = u_func(it,X)
+#         B = B_func(it,X)
+#         X_new = X + b + B @ X
+#         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         
-        rh_flux=[
-            numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
-            for k in [
-                "C_abvstrlit",
-                "C_abvmetlit",
-                "C_belowstrlit",
-                "C_belowmetlit",
-                "C_surface_microbe",
-                "C_soil_microbe",
-                "C_slowsom",
-                "C_passsom"] 
-            if Symbol(k) in numOutFluxesBySymbol.keys()
-        ]
+#         rh_flux=[
+#             numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+#             for k in [
+#                 "C_abvstrlit",
+#                 "C_abvmetlit",
+#                 "C_belowstrlit",
+#                 "C_belowmetlit",
+#                 "C_surface_microbe",
+#                 "C_soil_microbe",
+#                 "C_slowsom",
+#                 "C_passsom"] 
+#             if Symbol(k) in numOutFluxesBySymbol.keys()
+#         ]
         
-        rh = np.array(rh_flux).sum()
+#         rh = np.array(rh_flux).sum()
         
-        V_new = np.concatenate(
-            (
-                X_new.reshape(n,1),
-                np.array([rh]).reshape(1,1)
-            )
-            , axis=0
-        )
-        return V_new
+#         V_new = np.concatenate(
+#             (
+#                 X_new.reshape(n,1),
+#                 np.array([rh]).reshape(1,1)
+#             )
+#             , axis=0
+#         )
+#         return V_new
 
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
-
+#     return TimeStepIterator2(
+#         initial_values=V_arr,
+#         f=f,
+#     )
+# -
 
 def make_weighted_cost_func(
         obs: Observables
@@ -542,11 +543,11 @@ def make_weighted_cost_func(
 
         J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
 
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4) + J_obj5/12
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)/200 + J_obj5/4
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*100
+        return J_new*400
     return costfunction
 
 
