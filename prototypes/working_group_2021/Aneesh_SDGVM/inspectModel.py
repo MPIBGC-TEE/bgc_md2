@@ -279,25 +279,25 @@ epa_max=np.array(
 )
 
 # +
-from general_helpers import autostep_mcmc_2, make_param_filter_func
+from general_helpers import autostep_mcmc, make_param_filter_func
 
 isQualified = msh.make_param_filter_func(epa_max, epa_min)
 param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc_2(
+C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=5000, # for testing and tuning mcmc
+    nsimu=2000, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,   # default value | increase value to reduce initial step size
+    D_init=10,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
