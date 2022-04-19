@@ -99,7 +99,7 @@ for k in sym_dict.keys():
 # some we will also use some symbols for functions (which appear with an argument)
 func_dict={
     'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
-    'NPP': '',
+    'NPP': 'NPP',
 }
 
 for k in func_dict.keys():
