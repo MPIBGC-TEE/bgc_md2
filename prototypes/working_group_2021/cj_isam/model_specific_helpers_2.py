@@ -162,7 +162,7 @@ def nc_file_name(nc_var_name):
 def nc_global_mean_file_name(nc_var_name):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
-def get_globalmean_vars(dataPath):
+def get_global_mean_vars(dataPath):
     o_names=Observables._fields
     d_names=Drivers._fields
     names = o_names + d_names 

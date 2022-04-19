@@ -153,7 +153,7 @@ def get_example_site_vars(dataPath):
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
 
-def get_globalmean_vars(dataPath):
+def get_global_mean_vars(dataPath):
     
     #define function to average variables
     def f(tup):
