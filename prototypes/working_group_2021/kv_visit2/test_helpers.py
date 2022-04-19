@@ -46,14 +46,7 @@ def make_test_args(conf_dict,msh,mvs):
             'r_C_root_litter_2_C_soil_passive': 1.74346201743462e-5
         }.items()
     }
-    svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
-    func_dict={
-        Function(k):v
-        for k,v in {
-            'NPP':msh.make_npp_func(dvs),
-            'xi':msh.make_xi_func(dvs)
-        }.items()
-    }
+    svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
     svs_0=msh.Observables(*map(lambda v: v[0],svs))
     # create a start parameter tuple for the mcmc.
     epa_0=msh.EstimatedParameters(
@@ -82,11 +75,18 @@ def make_test_args(conf_dict,msh,mvs):
         r_C_root_litter_2_C_soil_passive=1.74346201743462e-05,
         C_leaf_0=0.051828761170322826,
         C_wood_0=1.970572690329994,
-        C_leaf_litter_0=0.5202311902470766,
-        C_wood_litter_0=0.7225433197876749,
+        C_leaf_litter_0=0.1202311902470766,
+        C_wood_litter_0=0.2225433197876749,
         C_soil_fast_0=1.7309510511856925,
         C_soil_slow_0=2.4435101360092473        
     )
+    func_dict={
+        Function(k):v
+        for k,v in {
+            'NPP':msh.make_npp_func(dvs),
+            'xi':msh.make_xi_func(dvs,epa_0)
+        }.items()
+    }
     epa_min=msh.EstimatedParameters(
         beta_leaf=0,
         beta_wood=0,
@@ -160,8 +160,8 @@ def make_test_args(conf_dict,msh,mvs):
         ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
         #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
         #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
-        #number_of_months=len(svs.rh)
-        number_of_months=24 # for testing and tuning mcmc
+        number_of_months=len(svs.rh)
+        #number_of_months=24 # for testing and tuning mcmc
     )
 
     StartVector = msh.make_StartVector(mvs) 

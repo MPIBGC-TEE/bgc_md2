@@ -196,34 +196,32 @@ plot_observations_vs_simulations(fig,obs_T,simu_T)
 #         #tup=(obs,)
 # )
 fig.savefig('solutions_initial.pdf')
+# +
+# def make_feng_cost_func_2(
+#     svs #: Observables
+#     ):
+#     # now we compute a scaling factor per observable stream
+#     # fixme mm 10-28-2021
+#     # The denominators in this case are actually the TEMPORAL variances of the data streams
+#     obs_arr=np.stack([ arr for arr in svs],axis=1)
+#     means = obs_arr.mean(axis=0)
+#     mean_centered_obs= obs_arr - means
+#     denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+
+#     def feng_cost_func_2(simu: msh.Observables):
+#         def f(i):
+#             arr=simu[i]
+#             obs=obs_arr[:,i]
+#             diff=((arr-obs)**2).sum()/denominators[i]*100 
+#             return diff
+#         return np.array([f(i) for i  in range(len(simu))]).mean()
+    
+#     return feng_cost_func_2
 # -
 
-
-
-def make_feng_cost_func_2(
-    svs #: Observables
-    ):
-    # now we compute a scaling factor per observable stream
-    # fixme mm 10-28-2021
-    # The denominators in this case are actually the TEMPORAL variances of the data streams
-    obs_arr=np.stack([ arr for arr in svs],axis=1)
-    means = obs_arr.mean(axis=0)
-    mean_centered_obs= obs_arr - means
-    denominators = np.sum(mean_centered_obs ** 2, axis=0)
-
-
-    def feng_cost_func_2(simu: msh.Observables):
-        def f(i):
-            arr=simu[i]
-            obs=obs_arr[:,i]
-            diff=((arr-obs)**2).sum()/denominators[i]*100 
-            return diff
-        return np.array([f(i) for i  in range(len(simu))]).mean()
-    
-    return feng_cost_func_2
-
-feng_cost_function_2=make_feng_cost_func_2(svs)
-feng_cost_function_2(obs_simu)    
+feng_cost_function_2=msh.make_feng_cost_func_2(svs)
+feng_cost_function_2(obs_simu)
 
 obs_arr=np.stack([ arr for arr in svs],axis=1)
 sim_arr=np.stack([ arr for arr in obs_simu],axis=1)
@@ -304,19 +302,7 @@ epa_max=msh.EstimatedParameters(
     C_soil_fast_0=svs_0.cSoil,
     C_soil_slow_0=svs_0.cSoil,
 )
-
-# +
-# for i in range (len (epa_max)):
-#         print(epa_0[i]-epa_max[i])
 # -
-
-TS=.748*(max(dvs.tas)-273.15) + 6.181
-
-np.exp(epa_0.E*(1/(10-epa_0.T_0)))
-
-dvs.mrso[1]/(epa_0.KM+dvs.mrso[1])
-
-np.exp(epa_max.E*(1/(10-epa_0.T_0)-1/(TS-epa_0.T_0))) * max(dvs.mrso)/(epa_0.KM+max(dvs.mrso))
 
 # ### mcmc to optimize parameters 
 #
@@ -336,13 +322,13 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=make_feng_cost_func_2(svs),
-    nsimu=500, # for testing and tuning mcmc
+    costfunction=msh.make_feng_cost_func_2(svs),
+    nsimu=20, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=10,   # target acceptance rate in %
-    chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
     K=1.5 # default value | increase value to reduce acceptance of higher cost functions
 )

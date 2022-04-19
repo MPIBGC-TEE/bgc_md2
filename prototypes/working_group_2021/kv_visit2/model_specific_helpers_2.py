@@ -612,31 +612,32 @@ def make_param2res_sym(
             ra=ra_arr)
     return param2res
 
-def make_feng_cost_func2(
-            obs: Observables,
-    ) -> Callable[[Observables], np.float64]:
-        # Note:
-        # in our code the dimension 0 is the time
-        # and dimension 1 the pool index
-        means = obs.mean(axis=0)
-        mean_centered_obs = obs - means
-        # now we compute a scaling factor per observable stream
-        # fixme mm 10-28-2021
-        #   The denominators in this case are actually the TEMPORAL variances of the data streams
-        denominators = np.sum(mean_centered_obs ** 2, axis=0)
+# +
+# def make_feng_cost_func2(
+#             obs: Observables,
+#     ) -> Callable[[Observables], np.float64]:
+#         # Note:
+#         # in our code the dimension 0 is the time
+#         # and dimension 1 the pool index
+#         means = obs.mean(axis=0)
+#         mean_centered_obs = obs - means
+#         # now we compute a scaling factor per observable stream
+#         # fixme mm 10-28-2021
+#         #   The denominators in this case are actually the TEMPORAL variances of the data streams
+#         denominators = np.sum(mean_centered_obs ** 2, axis=0)
 
-        #   The desired effect of automatically adjusting weight could be achieved
-        #   by the mean itself.
-        # dominators = means
-        def costfunction(mod: Observables) -> np.float64:
-            mod=mod.T
-            cost = np.mean(
-                np.sum((obs - mod) ** 2, axis=0) / denominators * 100
-            )
-            #J_obj1 = np.sum((mod.cVeg - obs.cVeg) ** 2, axis=0) / np.sum(mean_centered_obs ** 2, axis=0)
-            return cost
+#         #   The desired effect of automatically adjusting weight could be achieved
+#         #   by the mean itself.
+#         # dominators = means
+#         def costfunction(mod: Observables) -> np.float64:
+#             mod=mod.T
+#             cost = np.mean(
+#                 np.sum((obs - mod) ** 2, axis=0) / denominators * 100
+#             )
+#             #J_obj1 = np.sum((mod.cVeg - obs.cVeg) ** 2, axis=0) / np.sum(mean_centered_obs ** 2, axis=0)
+#             return cost
 
-        return costfunction
+#         return costfunction
 
     #     for m in range(cpa.number_of_months):
     #         #dpm = days_per_month[ m % 12]
@@ -674,6 +675,32 @@ def make_feng_cost_func2(
     #     #return sol
     #
     # return param2res
+
+
+# -
+
+def make_feng_cost_func_2(
+    svs #: Observables
+    ):
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    # The denominators in this case are actually the TEMPORAL variances of the data streams
+    obs_arr=np.stack([ arr for arr in svs],axis=1)
+    means = obs_arr.mean(axis=0)
+    mean_centered_obs= obs_arr - means
+    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+
+    def feng_cost_func_2(simu: Observables):
+        def f(i):
+            arr=simu[i]
+            obs=obs_arr[:,i]
+            diff=((arr-obs)**2).sum()/denominators[i]*100 
+            return diff
+        return np.array([f(i) for i  in range(len(simu))]).mean()
+    
+    return feng_cost_func_2
+
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
