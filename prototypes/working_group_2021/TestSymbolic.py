@@ -15,14 +15,17 @@ from general_helpers import (
     make_param_filter_func,
     make_feng_cost_func
 )
-model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules','kv_ft_dlem']
-model_folders=['cj_isam']
-#model_folders=['kv_ft_dlem']
 
 class TestSymbolic(TestCase):
+    #define a class_variable that will be overloaded by subclasses
+    model_folders=['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules','kv_ft_dlem']
+
+    @property
+    def model_folders(self):
+        return self.__class__.model_folders
 
     def test_symobolic_description(self):
-        for mf in model_folders:
+        for mf in self.model_folders: 
             with self.subTest(mf=mf):
                 mvs= import_module('{}.source'.format(mf)).mvs
                 print(mvs.get_SmoothReservoirModel())
@@ -30,7 +33,7 @@ class TestSymbolic(TestCase):
     
     #@skip
     def test_download_data(self):
-        for mf in model_folders:
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
@@ -39,7 +42,7 @@ class TestSymbolic(TestCase):
                 msh.download_my_TRENDY_output(conf_dict)
     
     def test_get_example_site_vars(self):
-        for mf in model_folders:
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
@@ -48,19 +51,19 @@ class TestSymbolic(TestCase):
                 #print(svs)
     
 
-    def test_get_globalmean_vars(self):
-        for mf in model_folders:
+    def test_get_global_mean_vars(self):
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 with Path(mf).joinpath('config.json').open(mode='r') as f:
                     conf_dict=json.load(f) 
                 msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                svs, dvs = msh.get_globalmean_vars(Path(conf_dict['dataPath']))
+                svs, dvs = msh.get_global_mean_vars(Path(conf_dict['dataPath']))
                 #print(svs)
     
 
     def test_make_func_dict(self):
         #model_folders=['kv_visit2', 'Aneesh_SDGVM', 'cable-pop']
-        for mf in model_folders:
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 
                 #sys.path.insert(0,mf)
@@ -72,8 +75,7 @@ class TestSymbolic(TestCase):
                 msh.make_func_dict(mvs,dvs)
     #@skip
     def test_make_iterator_sym(self):
-        #model_folders=['kv_visit2','cable-pop']#, 'Aneesh_SDGVM']
-        for mf in model_folders:
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 
                 #sys.path.insert(0,mf)
@@ -100,8 +102,7 @@ class TestSymbolic(TestCase):
                     res_2[i,:]=it_sym_2.__next__().reshape(len(V_init),)
 
     def test_param2res_sym(self):
-        #model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
-        for mf in model_folders:
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
                 mvs = import_module('{}.source'.format(mf)).mvs
@@ -118,18 +119,10 @@ class TestSymbolic(TestCase):
                 param2res_sym = msh.make_param2res_sym( mvs, cpa, dvs)
                 xs= param2res_sym(epa_0)
 
-    def test_get_global_mean_vars(self):
-        #model_folders=['yz_jules']#, 'Aneesh_SDGVM']
-        for mf in model_folders:
-            with self.subTest(mf=mf):
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                    svs, dvs = msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
+    #@skip
     def test_autostep_mcmc(self):
-        #model_folders=['kv_visit2']#, 'Aneesh_SDGVM']
-        for mf in model_folders:
+        for mf in self.model_folders:
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
                 mvs = import_module('{}.source'.format(mf)).mvs
@@ -161,7 +154,7 @@ class TestSymbolic(TestCase):
                     c_min=np.array(epa_min),
                     acceptance_rate=15,   # default value | target acceptance rate in %
                     chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
-                    D_init=1,   # default value | increase value to reduce initial step size
+                    D_init=ta.D_init,   # default value | increase value to reduce initial step size
                     K=2 # default value | increase value to reduce acceptance of higher cost functions
                 )
 
