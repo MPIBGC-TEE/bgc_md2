@@ -79,11 +79,10 @@ h.compartmental_graph(mvs)
 # +
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-
-# msh.download_my_TRENDY_output(conf_dict)
+msh.download_my_TRENDY_output(conf_dict)
 
 #     # Read NetCDF data  ******************************************************************************************************************************
-svs,dvs=msh.get_global_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
 # -
 
