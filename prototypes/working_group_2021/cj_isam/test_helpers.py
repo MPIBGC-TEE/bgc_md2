@@ -1,8 +1,9 @@
 # this file provides some variables for testing.
+import json 
+import numpy as np
 from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
-import json 
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
@@ -16,7 +17,8 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_0",
             "epa_min",
             "epa_max",
-            "cpa"
+            "cpa",
+            "obs_arr"
         ]
     )
     par_dict={
@@ -62,6 +64,7 @@ def make_test_args(conf_dict,msh,mvs):
         }.items()
     }
     svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+    obs_arr= np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
     func_dict={
         Function(k):v
         for k,v in {
@@ -201,7 +204,8 @@ def make_test_args(conf_dict,msh,mvs):
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
-        cpa=cpa
+        cpa=cpa,
+        obs_arr=obs_arr
     )
 
 
