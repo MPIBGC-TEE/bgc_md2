@@ -612,6 +612,184 @@ def make_param2res_sym(
             ra=ra_arr)
     return param2res
 
+Full_output = namedtuple(
+    "Full_output",
+    ["C_leaf", "C_wood", "C_root", "C_leaf_litter", "C_wood_litter", "C_root_litter", "C_soil_fast", "C_soil_slow",
+        "C_soil_passive", "rh","ra"]
+)
+def make_param2res_full_output(
+        mvs,
+        cpa: Constants,
+        dvs: Drivers
+    ) -> Callable[[np.ndarray], np.ndarray]: 
+    # To compute numeric solutions we will need to build and iterator 
+    # as we did before. As it will need numeric values for all the parameters 
+    # we will have to create a complete dictionary for all the symbols
+    # exept those for the statevariables and time.
+    # This set of symbols does not change during the mcmc procedure, since it only
+    # depends on the symbolic model.
+    # Therefore we create it outside the mcmc loop and bake the result into the 
+    # param2res function.
+    # The iterator does not care if they are estimated or constant, it only 
+    # wants a dictionary containing key: value pairs for all
+    # parameters that are not state variables or the symbol for time
+    StartVector=make_StartVector(mvs)
+    srm=mvs.get_SmoothReservoirModel()
+    model_par_dict_keys=srm.free_symbols.difference(
+        [Symbol(str(mvs.get_TimeSymbol()))]+
+        list(mvs.get_StateVariableTuple())
+    )
+    
+    # the time dependent driver function for gpp does not change with the estimated parameters
+    # so its enough to define it once as in our test
+    seconds_per_day = 86400
+    def npp_func(day):
+        month=gh.day_2_month_index(day)
+        return dvs.npp[month] #* seconds_per_day   # kg/m2/s kg/m2/day;
+    
+    def param2res_full_output(pa):
+        epa=EstimatedParameters(*pa)
+        # create a startvector for the iterator from both estimated and fixed parameters 
+        # The order is important and corresponds to the order of the statevariables
+        # Our namedtuple StartVector takes care of this
+        V_init = StartVector(
+            C_leaf=epa.C_leaf_0,
+            C_wood=epa.C_wood_0,
+            C_root=cpa.cVeg_0-(epa.C_leaf_0 + epa.C_wood_0),
+            C_leaf_litter=epa.C_leaf_litter_0,
+            C_wood_litter=epa.C_wood_litter_0,
+            C_root_litter=cpa.cLitter_0-(epa.C_leaf_litter_0 + epa.C_wood_litter_0),
+            C_soil_fast=epa.C_soil_fast_0,
+            C_soil_slow=epa.C_soil_slow_0,
+            C_soil_passive=cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0),
+            ra=cpa.ra_0,
+            rh=cpa.rh_0
+        )
+        # next we create the parameter dict for the iterator
+        # The iterator does not care if they are estimated or not so we look for them
+        # in the combination
+        apa = {**cpa._asdict(),**epa._asdict()}
+        model_par_dict = {
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
+        }
+
+        #print(model_par_dict)
+        #from IPython import embed;embed()
+        
+        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
+        # our fake xi_func could of course be defined outside of param2res but in general it
+        # could be build from estimated parameters and would have to live here...
+        def xi_func(day):
+            month=gh.day_2_month_index(day)
+            TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius 
+            TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+            if TS > epa.T_0: 
+                xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+            else: 
+                xi_out=0
+            return(xi_out)
+            # return 1.0 # preliminary fake for lack of better data... 
+        
+        func_dict={
+            'NPP':npp_func,
+             'xi':xi_func
+        }
+        
+        # size of the timestep in days
+        # We could set it to 30 o
+        # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
+        delta_t_val=15 
+        it_sym = make_iterator_sym(
+            mvs,
+            V_init=V_init,
+            par_dict=model_par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+        
+        # Now that we have the iterator we can start to compute.
+        # the first thing to notice is that we don't need to store all values (daili yi delta_t_val=1)
+        # since the observations are recorded monthly while our iterator possibly has a smaller timestep.
+        # - for the pool contents we only need to record the last day of the month
+        # - for the respiration(s) ra and rh we want an accumulated value (unit mass) 
+        #   have to sum up the products of the values*delta_t over a month
+        # 
+        # Note: check if TRENDY months are like this...
+        # days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        #sols=[]
+
+        # empty arrays for saving data
+        C_leaf_arr = np.zeros(cpa.number_of_months)
+        C_wood_arr = np.zeros(cpa.number_of_months)
+        C_root_arr = np.zeros(cpa.number_of_months)
+        C_leaf_litter_arr = np.zeros(cpa.number_of_months)
+        C_wood_litter_arr = np.zeros(cpa.number_of_months)
+        C_root_litter_arr = np.zeros(cpa.number_of_months)
+        C_soil_fast_arr = np.zeros(cpa.number_of_months)
+        C_soil_slow_arr = np.zeros(cpa.number_of_months)
+        C_soil_passive_arr = np.zeros(cpa.number_of_months)     
+        rh_arr = np.zeros(cpa.number_of_months)
+        ra_arr = np.zeros(cpa.number_of_months)
+        im = 0
+        dpm = 30
+        steps_per_month = int(dpm / delta_t_val)
+        #n=len(V_init)
+        # forward simulation by year
+        for y in range(int(cpa.number_of_months/12)):
+            for m in range(12):
+                C_leaf_avg = 0
+                C_wood_avg = 0
+                C_root_avg = 0
+                C_leaf_litter_avg = 0
+                C_wood_litter_avg = 0
+                C_root_litter_avg = 0
+                C_soil_fast_avg = 0
+                C_soil_slow_avg = 0
+                C_soil_passive_avg = 0
+                rh_avg = 0
+                ra_avg = 0
+                for d in range(steps_per_month):
+                    V = StartVector(*it_sym.__next__())
+                    rh_avg += V.rh
+                    ra_avg += V.ra
+                    C_leaf_avg += float(V.C_leaf)
+                    C_wood_avg += float(V.C_wood)
+                    C_root_avg += float(V.C_root)
+                    C_leaf_litter_avg += float(V.C_leaf_litter)
+                    C_wood_litter_avg += float(V.C_wood_litter)
+                    C_root_litter_avg += float(V.C_root_litter)
+                    C_soil_fast_avg += float(V.C_soil_fast)
+                    C_soil_slow_avg += float(V.C_soil_slow)
+                    C_soil_passive_avg += float(V.C_soil_passive)                    
+                rh_arr[im] = rh_avg / steps_per_month
+                ra_arr[im] = ra_avg / steps_per_month
+                C_leaf_arr[im] = C_leaf_avg / steps_per_month
+                C_wood_arr[im] = C_wood_avg / steps_per_month
+                C_root_arr[im] = C_root_avg / steps_per_month
+                C_leaf_litter_arr[im] = C_leaf_litter_avg / steps_per_month
+                C_wood_litter_arr[im] = C_wood_litter_avg / steps_per_month
+                C_root_litter_arr[im] = C_root_litter_avg / steps_per_month
+                C_soil_fast_arr[im] = C_soil_fast_avg / steps_per_month
+                C_soil_slow_arr[im] = C_soil_slow_avg / steps_per_month
+                C_soil_passive_arr[im] = C_soil_passive_avg / steps_per_month                 
+                im += 1
+            # if y == 100:
+            #    print(V)
+        return Full_output(
+            C_leaf = C_leaf_arr,
+            C_wood = C_wood_arr,
+            C_root = C_root_arr,
+            C_leaf_litter = C_leaf_litter_arr,
+            C_wood_litter = C_wood_litter_arr,
+            C_root_litter = C_root_litter_arr,
+            C_soil_fast = C_soil_fast_arr,
+            C_soil_slow = C_soil_slow_arr,
+            C_soil_passive = C_soil_passive_arr,              
+            rh=rh_arr,
+            ra=ra_arr)
+    return param2res_full_output
+
 # +
 # def make_feng_cost_func2(
 #             obs: Observables,

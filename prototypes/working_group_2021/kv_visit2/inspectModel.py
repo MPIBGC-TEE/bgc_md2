@@ -196,30 +196,7 @@ plot_observations_vs_simulations(fig,obs_T,simu_T)
 #         #tup=(obs,)
 # )
 fig.savefig('solutions_initial.pdf')
-# +
-# def make_feng_cost_func_2(
-#     svs #: Observables
-#     ):
-#     # now we compute a scaling factor per observable stream
-#     # fixme mm 10-28-2021
-#     # The denominators in this case are actually the TEMPORAL variances of the data streams
-#     obs_arr=np.stack([ arr for arr in svs],axis=1)
-#     means = obs_arr.mean(axis=0)
-#     mean_centered_obs= obs_arr - means
-#     denominators = np.sum(mean_centered_obs ** 2, axis=0)
-
-
-#     def feng_cost_func_2(simu: msh.Observables):
-#         def f(i):
-#             arr=simu[i]
-#             obs=obs_arr[:,i]
-#             diff=((arr-obs)**2).sum()/denominators[i]*100 
-#             return diff
-#         return np.array([f(i) for i  in range(len(simu))]).mean()
-    
-#     return feng_cost_func_2
 # -
-
 feng_cost_function_2=msh.make_feng_cost_func_2(svs)
 feng_cost_function_2(obs_simu)
 
@@ -304,7 +281,7 @@ epa_max=msh.EstimatedParameters(
 )
 # -
 
-# ### mcmc to optimize parameters 
+# ### Initial mcmc run to roughly optimize parameters
 #
 
 # +
@@ -323,12 +300,12 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=msh.make_feng_cost_func_2(svs),
-    nsimu=20, # for testing and tuning mcmc
+    nsimu=1000,# for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=10,   # target acceptance rate in %
-    chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    chunk_size=100, # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
     K=1.5 # default value | increase value to reduce acceptance of higher cost functions
 )
@@ -337,10 +314,130 @@ print("Data assimilation finished!")
 # +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
+epa_opt_1=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
+mod_opt = param2res(epa_opt_1)
+
+# print optimized parameters
+print (epa_opt_1)
+
+# +
+# full duration plot
+
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_observations_vs_simulations(
+        fig,
+        svs,
+        mod_opt
+    )
+fig.savefig('solutions_full.pdf')
+
+# save the parameters and cost function values for postprocessing
+outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
+
+#import pandas as pd
+#pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('visit_da_aa.csv'), sep=',')
+#pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('visit_da_j_aa.csv'), sep=',')
+#pd.DataFrame(epa_opt_1).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), sep=',')
+#pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
+# -
+
+# ### Deriving initial pool sizes from the results of 1st mcmc run 
+
+# +
+# Get initial pool sizes from the optimized model
+from model_specific_helpers_2 import make_param2res_full_output
+param2res_full_output = make_param2res_full_output(mvs,cpa,dvs)
+mod_opt_full = param2res_full_output(epa_opt_1)
+# print optimized model output 
+leaf_size=np.mean(mod_opt_full.C_leaf[1200:1750])
+wood_size=np.mean(mod_opt_full.C_wood[1200:1750])
+root_size=np.mean(mod_opt_full.C_root[1200:1750])
+leaf_frac=leaf_size / (leaf_size+wood_size+root_size)
+wood_frac=wood_size / (leaf_size+wood_size+root_size)
+
+leaf_litter_size=np.mean(mod_opt_full.C_leaf_litter[1200:1750])
+wood_litter_size=np.mean(mod_opt_full.C_wood_litter[1200:1750])
+root_litter_size=np.mean(mod_opt_full.C_root_litter[1200:1750])
+leaf_litter_frac=leaf_litter_size / (leaf_litter_size+wood_litter_size+root_litter_size)
+wood_litter_frac=wood_litter_size / (leaf_litter_size+wood_litter_size+root_litter_size)
+
+soil_fast_size=np.mean(mod_opt_full.C_soil_fast[1200:1750])
+soil_slow_size=np.mean(mod_opt_full.C_soil_slow[1200:1750])
+soil_passive_size=np.mean(mod_opt_full.C_soil_passive[1200:1750])
+soil_fast_frac=soil_fast_size / (soil_fast_size+soil_slow_size+soil_passive_size)
+soil_slow_frac=soil_slow_size / (soil_fast_size+soil_slow_size+soil_passive_size)
+
+epa_1=msh.EstimatedParameters(
+    beta_leaf=epa_opt_1.beta_leaf,
+    beta_wood=epa_opt_1.beta_wood,
+    T_0=epa_opt_1.T_0,
+    E=epa_opt_1.E,
+    KM=epa_opt_1.KM,
+    r_C_leaf_litter_rh=epa_opt_1.r_C_leaf_litter_rh,
+    r_C_wood_litter_rh=epa_opt_1.r_C_wood_litter_rh,
+    r_C_root_litter_rh=epa_opt_1.r_C_root_litter_rh,
+    r_C_soil_fast_rh=epa_opt_1.r_C_soil_fast_rh,
+    r_C_soil_slow_rh=epa_opt_1.r_C_soil_slow_rh,
+    r_C_soil_passive_rh=epa_opt_1.r_C_soil_passive_rh,
+    r_C_leaf_2_C_leaf_litter=epa_opt_1.r_C_leaf_2_C_leaf_litter,
+    r_C_wood_2_C_wood_litter=epa_opt_1.r_C_wood_2_C_wood_litter,
+    r_C_root_2_C_root_litter=epa_opt_1.r_C_root_2_C_root_litter,
+    r_C_leaf_litter_2_C_soil_fast=epa_opt_1.r_C_leaf_litter_2_C_soil_fast,
+    r_C_leaf_litter_2_C_soil_slow=epa_opt_1.r_C_leaf_litter_2_C_soil_slow,
+    r_C_leaf_litter_2_C_soil_passive=epa_opt_1.r_C_leaf_litter_2_C_soil_passive,
+    r_C_wood_litter_2_C_soil_fast=epa_opt_1.r_C_wood_litter_2_C_soil_fast,
+    r_C_wood_litter_2_C_soil_slow=epa_opt_1.r_C_wood_litter_2_C_soil_slow,
+    r_C_wood_litter_2_C_soil_passive=epa_opt_1.r_C_wood_litter_2_C_soil_passive,
+    r_C_root_litter_2_C_soil_fast=epa_opt_1.r_C_root_litter_2_C_soil_fast,
+    r_C_root_litter_2_C_soil_slow=epa_opt_1.r_C_root_litter_2_C_soil_slow,
+    r_C_root_litter_2_C_soil_passive=epa_opt_1.r_C_root_litter_2_C_soil_passive,
+    C_leaf_0=leaf_frac * svs_0.cVeg,
+    C_wood_0=wood_frac * svs_0.cVeg,
+    C_leaf_litter_0=leaf_litter_frac * svs_0.cLitter,
+    C_wood_litter_0=wood_litter_frac * svs_0.cLitter,
+    C_soil_fast_0=soil_fast_frac * svs_0.cSoil,
+    C_soil_slow_0=soil_slow_frac * svs_0.cSoil
+)
+
+print(epa_1)
+# -
+
+# ### Final mcmc run to optimize parameters 
+
+# +
+isQualified = msh.make_param_filter_func(epa_max, epa_min)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
+
+print("Starting data assimilation...")
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+C_autostep, J_autostep = gh.autostep_mcmc(
+    initial_parameters=epa_1,
+    filter_func=isQualified,
+    param2res=param2res,
+    costfunction=msh.make_feng_cost_func_2(svs),
+    nsimu=2000,# for testing and tuning mcmc
+    #nsimu=20000,
+    c_max=np.array(epa_max),
+    c_min=np.array(epa_min),
+    acceptance_rate=10,   # target acceptance rate in %
+    chunk_size=100, # default value | number of iterations to calculate current acceptance ratio and update step size
+    D_init=1,   # default value | increase value to reduce initial step size
+    K=1 # default value | increase value to reduce acceptance of higher cost functions
+)
+print("Data assimilation finished!")
+
+# +
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
 epa_opt=msh.EstimatedParameters(*par_opt)
 param2res = msh.make_param2res_sym(mvs,cpa,dvs)
-mod_opt = param2res(epa_opt)  
+mod_opt = param2res(epa_opt)
 
+# print optimized parameters
+print (epa_opt)
+
+# +
 # full duration plot
 
 fig = plt.figure(figsize=(12, 4), dpi=80)
@@ -361,9 +458,9 @@ pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('visit_optimized_pars.csv'), se
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('visit_optimized_solutions.csv'), sep=',')
 
 # +
-# clipped
-#n=120
-obs_arr=np.stack([ arr for arr in svs],axis=1); obs=obs_arr[750:1000,:5]
+# close-up plots (1st 20 years)
+n=240
+obs_arr=np.stack([ arr for arr in svs],axis=1); obs=obs_arr[0:n,:5]
 obs_T=msh.Observables(
     cVeg=obs[:,0],
     cLitter=obs[:,1],
@@ -372,7 +469,7 @@ obs_T=msh.Observables(
     ra=obs[:,4]
 
 )
-simu_arr=np.stack([ arr for arr in mod_opt],axis=1); simu=simu_arr[750:1000,:5]
+simu_arr=np.stack([ arr for arr in mod_opt],axis=1); simu=simu_arr[0:n,:5]
 simu_T=msh.Observables(
     cVeg=simu[:,0],
     cLitter=simu[:,1],
@@ -416,8 +513,6 @@ fig.savefig('solutions_closeup.pdf')
 # fig.savefig('solutions_opt.pdf')
 
 # -
-
-print(epa_opt)
 
 # ### Traceability analysis  
 #
