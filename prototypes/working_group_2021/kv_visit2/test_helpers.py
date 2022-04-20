@@ -150,7 +150,39 @@ def make_test_args(conf_dict,msh,mvs):
         C_wood_litter_0=svs_0.cLitter,
         C_soil_fast_0=svs_0.cSoil,
         C_soil_slow_0=svs_0.cSoil,
-    )    
+    ) 
+    epa_opt=msh.EstimatedParameters(
+        beta_leaf=0.601741020817218, 
+        beta_wood=0.22390711313257386, 
+        T_0=1.8922060451065708, 
+        E=3.8300591425773485, 
+        KM=9.631800647113021, 
+        r_C_leaf_litter_rh=0.0008737274705280157, 
+        r_C_wood_litter_rh=0.0011494417586567836, 
+        r_C_root_litter_rh=0.0005149605386431006, 
+        r_C_soil_fast_rh=6.109571339848052e-05, 
+        r_C_soil_slow_rh=6.479717209850668e-05, 
+        r_C_soil_passive_rh=1.5952503318861723e-05, 
+        r_C_leaf_2_C_leaf_litter=0.010988559061714673, 
+        r_C_wood_2_C_wood_litter=6.0411693978061345e-05, 
+        r_C_root_2_C_root_litter=0.001034939845300317, 
+        r_C_leaf_litter_2_C_soil_fast=0.0017754410102195227, 
+        r_C_leaf_litter_2_C_soil_slow=0.00019809023662103185, 
+        r_C_leaf_litter_2_C_soil_passive=6.358104667847317e-05, 
+        r_C_wood_litter_2_C_soil_fast=0.00019365151377693428, 
+        r_C_wood_litter_2_C_soil_slow=0.00014259637801264968, 
+        r_C_wood_litter_2_C_soil_passive=5.3193238832479425e-05, 
+        r_C_root_litter_2_C_soil_fast=0.00025168820622750515, 
+        r_C_root_litter_2_C_soil_slow=0.00011293389373268058, 
+        r_C_root_litter_2_C_soil_passive=3.2770845636076584e-05, 
+        C_leaf_0=0.0688052068116578, 
+        C_wood_0=3.3443153038339246, 
+        C_leaf_litter_0=0.1655829319914898, 
+        C_wood_litter_0=0.1174464706522318, 
+        C_soil_fast_0=5.638237601383171, 
+        C_soil_slow_0=1.0582336551454536
+    )
+
     cpa = msh.Constants(
         cVeg_0=svs_0.cVeg,
         cLitter_0=svs_0.cLitter,
