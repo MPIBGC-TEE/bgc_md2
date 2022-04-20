@@ -139,6 +139,29 @@ Before you start working on your own model you should make sure that you can run
   (including unintended ones)  do not affect your colleagues.
 
  
-  
+## Run the tests 
+To do the actual scientific work of comparing different models we have to be able to call some of your model specific functions with some specific arguments. E.g. we will use your optimised parameters in a tracability plot.
+To make sure that we can do so for your model cd into your folder and run 
+```
+python ../run_my_tests.py
+```
+This will execute the test suite ```TestSymbolic.py``` for your model. We run it for all models regularly
+but it's best if you notice problems with your own model first.
+If all the tests pass, we can use your model for model inter comparisons. 
+As we extend the analysis more tests will be added which means that you might have to add or change a function to `model_specific_helpers_2.py` or a parameter to `test_helpers.py` 
+There will however usually be already an example model available that passes the tests.
+The commit messages (you can display the last 4 with `git log -4`) give you a hint about the purpose of the change and `git log -p -4` shows you the code changes of the last 4 commits.
+You can find more tricks here:https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History
+
+Think of the test suite as an insurance against unwelcome suprises and a way to make it easier for others to look at your results or help you with a specific problem. 
+Run it often, at least once before you check in!
+If you want to run a single test (e.g. because the test `test_symobolic_description` fails) you can run:
+```
+python ../run_my_tests.py test_symobolic_description
+```
+Make sure that you pull changes often (and allways before you start editing) because we now really work on several models at the same time, so many small things will change often.
+
+
+
 
 
