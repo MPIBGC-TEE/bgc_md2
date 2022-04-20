@@ -295,7 +295,7 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     acceptance_rate=10,   # target acceptance rate in %
     chunk_size=100, # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=1.5 # default value | increase value to reduce acceptance of higher cost functions
+    K=1.5 # increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -416,8 +416,8 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     c_min=np.array(epa_min),
     acceptance_rate=10,   # target acceptance rate in %
     chunk_size=100, # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,   # default value | increase value to reduce initial step size
-    K=1.5 # default value | increase value to reduce acceptance of higher cost functions
+    D_init=2,   # increase value to reduce initial step size
+    K=1 # increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
