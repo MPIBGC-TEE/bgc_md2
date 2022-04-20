@@ -17,7 +17,7 @@ from CompartmentalSystems.TimeStepIterator import TimeStepIterator2
 import CompartmentalSystems.helpers_reservoir as hr
 
 import bgc_md2.resolve.computers as bgc_c
-import bgc_md2.display_helpers as dh
+#import bgc_md2.display_helpers as dh
 import bgc_md2.helper as h
 from bgc_md2.models.BibInfo import BibInfo
 from bgc_md2.helper import module_computers
@@ -33,14 +33,14 @@ import bgc_md2.resolve.computers as bgc_c
 # Other packages
 
 sys.path.insert(0, '..')  # necessary to import general_helpers
-from general_helpers import (
-    download_TRENDY_output,
-    day_2_month_index,
-    # month_2_day_index,
-    make_B_u_funcs_2,
-    monthly_to_yearly,
-    plot_solutions
-)
+#from general_helpers import (
+#    download_TRENDY_output,
+#    day_2_month_index,
+#    # month_2_day_index,
+#    make_B_u_funcs_2,
+#    monthly_to_yearly,
+#    plot_solutions
+#)
 
 
 # Make a small dictionary for the variables we will use
