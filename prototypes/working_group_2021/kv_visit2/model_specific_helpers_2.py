@@ -20,15 +20,15 @@ import general_helpers as gh
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cVeg","cLitter","cSoil","rh","ra"]
+    ["cVeg","cLitter","cSoil","rh"]#,"ra"]
 )
 OrgDrivers=namedtuple(
     "OrgDrivers",
-    ["gpp", "mrso", "tas"]#, "xi_t", "xi_w"]
+    ["gpp", "ra", "mrso", "tas"]#, "xi_t", "xi_w"]
 )    
 Drivers=namedtuple(
     "Drivers",
-    ("npp",) + OrgDrivers._fields[1:]
+    ("npp",) + OrgDrivers._fields[2:]
 )    
 # As a safety measure we specify those parameters again as 'namedtuples', which are like a mixture of dictionaries and tuples
 # They preserve order as numpy arrays which is great (and fast) for the numeric computations
@@ -43,7 +43,7 @@ Constants = namedtuple(
         "npp_0",
         #"xi_0",
         "rh_0",
-        "ra_0",
+        #"ra_0",
         #"r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates
         #"r_C_root_litter_2_C_soil_slow",# it would be much better to know more
         "number_of_months" # necessary to prepare the output in the correct lenght 
@@ -132,7 +132,7 @@ def get_example_site_vars(dataPath):
     obss=Observables(*map(f, o_names))
 
     dvs=Drivers(
-        npp=odvs.gpp-obss.ra,
+        npp=odvs.gpp-odvs.ra,
         mrso=odvs.mrso,
         tas=odvs.tas#,
         #xi=odvs.xi_t*odvs.xi_w
@@ -165,7 +165,7 @@ def get_global_vars(dataPath):
     obss=Observables(*map(f, o_names))
 
     dvs=Drivers(
-        npp=odvs.gpp-obss.ra,
+        npp=odvs.gpp-odvs.ra,
         mrso=odvs.mrso,
         tas=odvs.tas#,
         #xi=odvs.xi_t*odvs.xi_w
@@ -202,7 +202,7 @@ def get_global_mean_vars(dataPath):
         odvs=OrgDrivers(*map(get_cached_global_mean, d_names))
         obss=Observables(*map(get_cached_global_mean, o_names))
         dvs=Drivers(
-            npp=odvs.gpp-obss.ra,
+            npp=odvs.gpp-odvs.ra,
             mrso=odvs.mrso,
             tas=odvs.tas
         )
@@ -258,7 +258,7 @@ def get_global_mean_vars(dataPath):
         odvs=OrgDrivers(*map(compute_and_cache_global_mean, d_names))
         obss=Observables(*map(compute_and_cache_global_mean, o_names))
         dvs=Drivers(
-            npp=odvs.gpp-obss.ra,
+            npp=odvs.gpp-odvs.ra,
             mrso=odvs.mrso,
             tas=odvs.tas
         )
@@ -402,6 +402,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
 # - create $V_0$ 
 # - build the function $f$
 
+# +
 def make_iterator_sym(
         mvs,
         V_init, #: StartVector,
@@ -419,9 +420,9 @@ def make_iterator_sym(
     # since V_init was built automatically but in case somebody handcrafted it and changed
     # the order later in the symbolic formulation....
     V_arr=np.array(
-        [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.ra,V_init.rh]
-    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+        [V_init.__getattribute__(str(v)) for v in sv]+[V_init.rh]
+        #[V_init.ra,V_init.rh]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
     
 
     
@@ -438,13 +439,13 @@ def make_iterator_sym(
         X_new = X + b + B @ X
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         
-        ra = np.sum(
-            [
-              numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in ["C_leaf","C_wood","C_root"] 
-                if Symbol(k) in numOutFluxesBySymbol.keys()
-            ]
-        )
+#         ra = np.sum(
+#             [
+#               numOutFluxesBySymbol[Symbol(k)](it,*X)
+#                 for k in ["C_leaf","C_wood","C_root"] 
+#                 if Symbol(k) in numOutFluxesBySymbol.keys()
+#             ]
+#         )
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
@@ -452,7 +453,8 @@ def make_iterator_sym(
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        #V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        V_new = np.concatenate((X_new.reshape(n,1),np.array(rh).reshape(1,1)), axis=0)
         
         return V_new
     
@@ -461,11 +463,14 @@ def make_iterator_sym(
         f=f,
     )
 
+
+# -
+
 def make_StartVector(mvs):
     return namedtuple(
         "StartVector",
-        [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["ra","rh"]
+        [str(v) for v in mvs.get_StateVariableTuple()]+["rh"]
+        #["ra","rh"]
     ) 
 
 
@@ -514,7 +519,7 @@ def make_param2res_sym(
             C_soil_fast=epa.C_soil_fast_0,
             C_soil_slow=epa.C_soil_slow_0,
             C_soil_passive=cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0),
-            ra=cpa.ra_0,
+            #ra=cpa.ra_0,
             rh=cpa.rh_0
         )
         # next we create the parameter dict for the iterator
@@ -576,7 +581,7 @@ def make_param2res_sym(
         cLitter_arr = np.zeros(cpa.number_of_months)
         cSoil_arr = np.zeros(cpa.number_of_months)
         rh_arr = np.zeros(cpa.number_of_months)
-        ra_arr = np.zeros(cpa.number_of_months)
+        #ra_arr = np.zeros(cpa.number_of_months)
         im = 0
         dpm = 30
         steps_per_month = int(dpm / delta_t_val)
@@ -588,16 +593,16 @@ def make_param2res_sym(
                 cLitter_avg = 0
                 cSoil_avg = 0
                 rh_avg = 0
-                ra_avg = 0
+                #ra_avg = 0
                 for d in range(steps_per_month):
                     V = StartVector(*it_sym.__next__())
                     rh_avg += V.rh
-                    ra_avg += V.ra
+                    #ra_avg += V.ra
                     cVeg_avg += float(V.C_leaf+V.C_wood+V.C_root)
                     cLitter_avg += float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter)
                     cSoil_avg += float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive)
                 rh_arr[im] = rh_avg / steps_per_month
-                ra_arr[im] = ra_avg / steps_per_month
+                #ra_arr[im] = ra_avg / steps_per_month
                 cVeg_arr[im] = cVeg_avg / steps_per_month
                 cLitter_arr[im] = cLitter_avg / steps_per_month
                 cSoil_arr[im] = cSoil_avg / steps_per_month
@@ -608,14 +613,14 @@ def make_param2res_sym(
             cVeg=cVeg_arr,
             cLitter=cLitter_arr,
             cSoil=cSoil_arr,
-            rh=rh_arr,
-            ra=ra_arr)
+            rh=rh_arr)#,
+            #ra=ra_arr)
     return param2res
 
 Full_output = namedtuple(
     "Full_output",
     ["C_leaf", "C_wood", "C_root", "C_leaf_litter", "C_wood_litter", "C_root_litter", "C_soil_fast", "C_soil_slow",
-        "C_soil_passive", "rh","ra"]
+        "C_soil_passive", "rh"]#,"ra"]
 )
 def make_param2res_full_output(
         mvs,
@@ -662,7 +667,7 @@ def make_param2res_full_output(
             C_soil_fast=epa.C_soil_fast_0,
             C_soil_slow=epa.C_soil_slow_0,
             C_soil_passive=cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0),
-            ra=cpa.ra_0,
+            #ra=cpa.ra_0,
             rh=cpa.rh_0
         )
         # next we create the parameter dict for the iterator
@@ -730,7 +735,7 @@ def make_param2res_full_output(
         C_soil_slow_arr = np.zeros(cpa.number_of_months)
         C_soil_passive_arr = np.zeros(cpa.number_of_months)     
         rh_arr = np.zeros(cpa.number_of_months)
-        ra_arr = np.zeros(cpa.number_of_months)
+        #ra_arr = np.zeros(cpa.number_of_months)
         im = 0
         dpm = 30
         steps_per_month = int(dpm / delta_t_val)
@@ -748,11 +753,11 @@ def make_param2res_full_output(
                 C_soil_slow_avg = 0
                 C_soil_passive_avg = 0
                 rh_avg = 0
-                ra_avg = 0
+                #ra_avg = 0
                 for d in range(steps_per_month):
                     V = StartVector(*it_sym.__next__())
                     rh_avg += V.rh
-                    ra_avg += V.ra
+                    #ra_avg += V.ra
                     C_leaf_avg += float(V.C_leaf)
                     C_wood_avg += float(V.C_wood)
                     C_root_avg += float(V.C_root)
@@ -763,7 +768,7 @@ def make_param2res_full_output(
                     C_soil_slow_avg += float(V.C_soil_slow)
                     C_soil_passive_avg += float(V.C_soil_passive)                    
                 rh_arr[im] = rh_avg / steps_per_month
-                ra_arr[im] = ra_avg / steps_per_month
+                #ra_arr[im] = ra_avg / steps_per_month
                 C_leaf_arr[im] = C_leaf_avg / steps_per_month
                 C_wood_arr[im] = C_wood_avg / steps_per_month
                 C_root_arr[im] = C_root_avg / steps_per_month
@@ -786,76 +791,10 @@ def make_param2res_full_output(
             C_soil_fast = C_soil_fast_arr,
             C_soil_slow = C_soil_slow_arr,
             C_soil_passive = C_soil_passive_arr,              
-            rh=rh_arr,
-            ra=ra_arr)
+            rh=rh_arr)#,
+            #ra=ra_arr)
     return param2res_full_output
 
-# +
-# def make_feng_cost_func2(
-#             obs: Observables,
-#     ) -> Callable[[Observables], np.float64]:
-#         # Note:
-#         # in our code the dimension 0 is the time
-#         # and dimension 1 the pool index
-#         means = obs.mean(axis=0)
-#         mean_centered_obs = obs - means
-#         # now we compute a scaling factor per observable stream
-#         # fixme mm 10-28-2021
-#         #   The denominators in this case are actually the TEMPORAL variances of the data streams
-#         denominators = np.sum(mean_centered_obs ** 2, axis=0)
-
-#         #   The desired effect of automatically adjusting weight could be achieved
-#         #   by the mean itself.
-#         # dominators = means
-#         def costfunction(mod: Observables) -> np.float64:
-#             mod=mod.T
-#             cost = np.mean(
-#                 np.sum((obs - mod) ** 2, axis=0) / denominators * 100
-#             )
-#             #J_obj1 = np.sum((mod.cVeg - obs.cVeg) ** 2, axis=0) / np.sum(mean_centered_obs ** 2, axis=0)
-#             return cost
-
-#         return costfunction
-
-    #     for m in range(cpa.number_of_months):
-    #         #dpm = days_per_month[ m % 12]
-    #         mra=0
-    #         mrh=0
-    #         for d in range(int(dpm/delta_t_val)):
-    #             v = it_sym.__next__().reshape(n,)
-    #             # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
-    #             # at the moment the iterator also computes a flux but in kg^-2 ^day
-    #         V=StartVector(*v)
-    #         #from IPython import embed;embed()
-    #         o=Observables(
-    #             cVeg=float(V.C_leaf+V.C_wood+V.C_root),
-    #             cLitter=float(V.C_leaf_litter+V.C_wood_litter+V.C_root_litter),
-    #             cSoil=float(V.C_soil_fast+V.C_soil_slow+V.C_soil_passive),
-    #             ra=V.ra,#/seconds_per_day,
-    #             rh=V.rh#/seconds_per_day # the data is per second while the time units for the iterator refer to days
-    #         )
-    #         sols.append(o)
-    #
-    #     sol=np.stack(sols)
-    #     #convert to yearly output if necessary (the monthly pool data looks very "yearly")
-    #     #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])
-    #     #for i in range(sol.shape[1]):
-    #     #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-    #     #sol=sol_yr
-    #     cVeg_arr=float(V.C_leaf + V.C_wood + V.C_root)
-    #
-    #
-    #     return Observables(
-    #         cVeg=cVeg_arr,
-    #         cSoil=cSoil_arr,
-    #         rh=rh_arr,
-    #         ra=ra_arr)
-    #     #return sol
-    #
-    # return param2res
-
-
-# -
 
 def make_feng_cost_func_2(
     svs #: Observables

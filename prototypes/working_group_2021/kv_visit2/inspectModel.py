@@ -102,7 +102,7 @@ cpa = msh.Constants(
  npp_0=dvs.npp[0],# * 86400,   # kg/m2/s kg/m2/day
  #xi_0=dvs.xi[0],
  rh_0=svs_0.rh,# * 86400,   # kg/m2/s kg/m2/day
- ra_0=svs_0.ra,# * 86400,   # kg/m2/s kg/m2/day
+ #ra_0=svs_0.ra,# * 86400,   # kg/m2/s kg/m2/day
  #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
  #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
  number_of_months=len(svs.rh)
@@ -117,7 +117,7 @@ epa_0=msh.EstimatedParameters(
     beta_leaf=0.6,
     beta_wood=0.25,
     T_0=2,
-    E=4,
+    E=6.5,
     KM=10,
     #env_modifier=1,
     r_C_leaf_litter_rh=0.0004151100041511,
@@ -162,14 +162,14 @@ obs_simu= param2res_sym(epa_0)
 #obs=obs[0:cpa.number_of_months,:] #cut 
 #obs[:,3:4]=obs[:,3:4]
 #### clipping ###
-n=600
+n=len(svs.rh)
 obs_arr=np.stack([ arr for arr in svs],axis=1); obs=obs_arr[0:n,:5]
 obs_T=msh.Observables(
     cVeg=obs[:,0],
     cLitter=obs[:,1],
     cSoil=obs[:,2],
     rh=obs[:,3],
-    ra=obs[:,4]
+    #ra=obs[:,4]
 
 )
 simu_arr=np.stack([ arr for arr in obs_simu],axis=1); simu=simu_arr[0:n,:5]
@@ -178,7 +178,7 @@ simu_T=msh.Observables(
     cLitter=simu[:,1],
     cSoil=simu[:,2],
     rh=simu[:,3],
-    ra=simu[:,4]
+    #ra=simu[:,4]
 )
 
 ####
@@ -197,27 +197,16 @@ plot_observations_vs_simulations(fig,obs_T,simu_T)
 # )
 fig.savefig('solutions_initial.pdf')
 # -
+# test cost function
 feng_cost_function_2=msh.make_feng_cost_func_2(svs)
 feng_cost_function_2(obs_simu)
-
-obs_arr=np.stack([ arr for arr in svs],axis=1)
-sim_arr=np.stack([ arr for arr in obs_simu],axis=1)
-sim_arr.shape
-fcf=gh.make_feng_cost_func(obs_arr)
-fcf(sim_arr)
-
-obs_arr.shape,sim_arr.shape
-
-obs=np.column_stack([ np.array(v) for v in svs])
-#obs=obs[0:cpa.number_of_months,:] #cut 
-obs.shape
 
 # +
 epa_min=msh.EstimatedParameters(
     beta_leaf=0,
     beta_wood=0,
     T_0=-10,
-    E=.1,
+    E=1,
     KM=1,
     #env_modifier=0,
     r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
@@ -251,7 +240,7 @@ epa_max=msh.EstimatedParameters(
     beta_leaf=0.99,
     beta_wood=0.99,
     T_0=5,
-    E=10,
+    E=15,
     KM=100,
     #env_modifier=10,
     r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
@@ -281,8 +270,7 @@ epa_max=msh.EstimatedParameters(
 )
 # -
 
-# ### Initial mcmc run to roughly optimize parameters
-#
+# ### Initial MCMC run to roughly optimize parameters
 
 # +
 from general_helpers import autostep_mcmc, make_feng_cost_func 
@@ -300,7 +288,7 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=msh.make_feng_cost_func_2(svs),
-    nsimu=1000,# for testing and tuning mcmc
+    nsimu=2000,# for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
@@ -310,6 +298,12 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     K=1.5 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
+
+# optimized parameter set (lowest cost function)
+par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
+epa_opt_1=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
+mod_opt = param2res(epa_opt_1)
 
 # +
 # optimized parameter set (lowest cost function)
@@ -330,7 +324,7 @@ plot_observations_vs_simulations(
         svs,
         mod_opt
     )
-fig.savefig('solutions_full.pdf')
+fig.savefig('solutions_mcmc1.pdf')
 
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
@@ -403,7 +397,7 @@ epa_1=msh.EstimatedParameters(
 print(epa_1)
 # -
 
-# ### Final mcmc run to optimize parameters 
+# ### Final MCMC run to optimize parameters 
 
 # +
 isQualified = msh.make_param_filter_func(epa_max, epa_min)
@@ -423,7 +417,7 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     acceptance_rate=10,   # target acceptance rate in %
     chunk_size=100, # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=1 # default value | increase value to reduce acceptance of higher cost functions
+    K=1.5 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -466,7 +460,7 @@ obs_T=msh.Observables(
     cLitter=obs[:,1],
     cSoil=obs[:,2],
     rh=obs[:,3],
-    ra=obs[:,4]
+    #ra=obs[:,4]
 
 )
 simu_arr=np.stack([ arr for arr in mod_opt],axis=1); simu=simu_arr[0:n,:5]
@@ -475,7 +469,7 @@ simu_T=msh.Observables(
     cLitter=simu[:,1],
     cSoil=simu[:,2],
     rh=simu[:,3],
-    ra=simu[:,4]
+    #ra=simu[:,4]
 )
 
 ####
