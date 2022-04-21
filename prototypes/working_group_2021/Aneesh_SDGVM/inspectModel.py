@@ -56,7 +56,7 @@ msh.download_my_TRENDY_output(conf_dict)
 # Before we build a function to load the data lets look at it to get an idea.
 #
 
-svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # +
 

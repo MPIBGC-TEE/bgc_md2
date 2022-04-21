@@ -150,6 +150,17 @@ mvs = CMTVS(
                 (C_psom, C_smb1): r_C_psom_2_C_smb1 * C_psom*xi(t),
             }
         ),
+        BibInfo(# Bibliographical Information
+            name="Visit",
+            longName="",
+            version="1",
+            entryAuthor="Kostiantyn Viatkin",
+            entryAuthorOrcid="",
+            entryCreationDate="",
+            doi="",
+            sym_dict=sym_dict,
+            func_dict=func_dict
+        ),
     },
 
 

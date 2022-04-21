@@ -160,7 +160,7 @@ def get_example_site_vars(dataPath):
         Drivers(*(arr_dict[k] for k in Drivers._fields))
     )
 
-def get_globalmean_vars(dataPath):
+def get_global_mean_vars(dataPath):
     # According to the netcdf metadata the datasets are not uniform
     # - npp and rh start at 360h (15 days) after 01-01-1900 and are recorded every 30 days
     #   these are interpreted as mid-monthly

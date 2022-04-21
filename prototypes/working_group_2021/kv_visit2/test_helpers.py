@@ -24,7 +24,7 @@ def make_test_args(conf_dict,msh,mvs):
             'beta_leaf': 0.6,
             'beta_wood': 0.25,
             'T_0': 2,
-            'E': 4,
+            'E': 6.5,
             'KM': 10,
             'r_C_leaf_litter_rh': 0.000415110004151100,
             'r_C_wood_litter_rh': 0.000124533001245330,
@@ -46,21 +46,14 @@ def make_test_args(conf_dict,msh,mvs):
             'r_C_root_litter_2_C_soil_passive': 1.74346201743462e-5
         }.items()
     }
-    svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
-    func_dict={
-        Function(k):v
-        for k,v in {
-            'NPP':msh.make_npp_func(dvs),
-            'xi':msh.make_xi_func(dvs)
-        }.items()
-    }
+    svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
     svs_0=msh.Observables(*map(lambda v: v[0],svs))
     # create a start parameter tuple for the mcmc.
     epa_0=msh.EstimatedParameters(
         beta_leaf=0.6,
         beta_wood=0.25,
         T_0=2,
-        E=4,
+        E=6.5,
         KM=10,
         r_C_leaf_litter_rh=0.0004151100041511,
         r_C_wood_litter_rh=0.00012453300124533,
@@ -82,16 +75,23 @@ def make_test_args(conf_dict,msh,mvs):
         r_C_root_litter_2_C_soil_passive=1.74346201743462e-05,
         C_leaf_0=0.051828761170322826,
         C_wood_0=1.970572690329994,
-        C_leaf_litter_0=0.5202311902470766,
-        C_wood_litter_0=0.7225433197876749,
+        C_leaf_litter_0=0.1202311902470766,
+        C_wood_litter_0=0.2225433197876749,
         C_soil_fast_0=1.7309510511856925,
         C_soil_slow_0=2.4435101360092473        
     )
+    func_dict={
+        Function(k):v
+        for k,v in {
+            'NPP':msh.make_npp_func(dvs),
+            'xi':msh.make_xi_func(dvs,epa_0)
+        }.items()
+    }
     epa_min=msh.EstimatedParameters(
         beta_leaf=0,
         beta_wood=0,
         T_0=-10,
-        E=.1,
+        E=1,
         KM=1,
         r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh/100,
         r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh/100,
@@ -124,7 +124,7 @@ def make_test_args(conf_dict,msh,mvs):
         beta_leaf=0.99,
         beta_wood=0.99,
         T_0=5,
-        E=10,
+        E=15,
         KM=100,
         r_C_leaf_litter_rh=epa_0.r_C_leaf_litter_rh*100,
         r_C_wood_litter_rh=epa_0.r_C_wood_litter_rh*100,
@@ -150,18 +150,50 @@ def make_test_args(conf_dict,msh,mvs):
         C_wood_litter_0=svs_0.cLitter,
         C_soil_fast_0=svs_0.cSoil,
         C_soil_slow_0=svs_0.cSoil,
-    )    
+    ) 
+    epa_opt=msh.EstimatedParameters(
+        beta_leaf=0.6102169482865195, 
+        beta_wood=0.26331553815787545, 
+        T_0=1.9560345980471245, 
+        E=6.951145421284498, 
+        KM=12.73895376887386, 
+        r_C_leaf_litter_rh=0.0012830039575098323, 
+        r_C_wood_litter_rh=0.0010536416454437036, 
+        r_C_root_litter_rh=0.00022271755326847413, 
+        r_C_soil_fast_rh=0.00013707839288781872, 
+        r_C_soil_slow_rh=3.228645064482276e-05, 
+        r_C_soil_passive_rh=3.8079656062059605e-06, 
+        r_C_leaf_2_C_leaf_litter=0.011755309034589333, 
+        r_C_wood_2_C_wood_litter=0.00012990716959685548, 
+        r_C_root_2_C_root_litter=8.243205281709114e-05, 
+        r_C_leaf_litter_2_C_soil_fast=0.0014521759026031634, 
+        r_C_leaf_litter_2_C_soil_slow=0.000200225210999593, 
+        r_C_leaf_litter_2_C_soil_passive=8.380707345301035e-05, 
+        r_C_wood_litter_2_C_soil_fast=3.19128931685429e-05, 
+        r_C_wood_litter_2_C_soil_slow=7.278721749448471e-05, 
+        r_C_wood_litter_2_C_soil_passive=3.275165103336979e-06, 
+        r_C_root_litter_2_C_soil_fast=0.00044055481426693227, 
+        r_C_root_litter_2_C_soil_slow=3.1019188662910444e-05, 
+        r_C_root_litter_2_C_soil_passive=0.00012243099600679218, 
+        C_leaf_0=0.042596582017273114, 
+        C_wood_0=2.4493874052342517, 
+        C_leaf_litter_0=0.16251047110808622, 
+        C_wood_litter_0=0.17601405444541945, 
+        C_soil_fast_0=1.8746682268250323, 
+        C_soil_slow_0=1.9807766341505468
+    )
+
     cpa = msh.Constants(
         cVeg_0=svs_0.cVeg,
         cLitter_0=svs_0.cLitter,
         cSoil_0=svs_0.cSoil,
         npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
         rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
-        ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
+        #ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
         #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
         #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
-        #number_of_months=len(svs.rh)
-        number_of_months=24 # for testing and tuning mcmc
+        number_of_months=len(svs.rh)
+        #number_of_months=24 # for testing and tuning mcmc
     )
 
     StartVector = msh.make_StartVector(mvs) 
@@ -175,7 +207,7 @@ def make_test_args(conf_dict,msh,mvs):
         C_soil_fast=1.7309510511856925,
         C_soil_slow=2.4435101360092473,
         C_soil_passive=svs_0.cSoil-2.4435101360092473-1.7309510511856925,
-        ra=svs_0.ra,   # kg/m2/s kg/m2/day;,
+        #ra=svs_0.ra,   # kg/m2/s kg/m2/day;,
         rh=svs_0.rh   # kg/m2/s kg/m2/day;
     )
     return TestArgs(
