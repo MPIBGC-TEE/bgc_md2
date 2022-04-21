@@ -43,15 +43,14 @@ Constants = namedtuple(
         'c_soil_0',
         'clay',        #Constants like clay
         'silt',
-        'nyears',       #Run time (years for my model)
-        'beta_leaf',
-        'beta_root'
-        
+        'nyears',       #Run time (years for my model)        
     ]
 )
 EstimatedParameters = namedtuple(
     'EstimatedParameters', 
     [
+        'beta_leaf',
+        'beta_root',
         'r_c_leaf_rh',
         'r_c_root_rh',
         'r_c_wood_rh',

@@ -121,8 +121,6 @@ cpa = msh.Constants(             #use Constants namedtuple to define constant va
     clay = 0.2028,
     silt = 0.2808,
     nyears = 320,
-    beta_leaf=0.37152535661667285,
-    beta_root=0.2118738332472721
 )
 cpa._asdict()    #print - everything should have a numeric value
 # -
@@ -133,6 +131,8 @@ cpa._asdict()    #print - everything should have a numeric value
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
+    beta_leaf=0.37152535661667285,
+    beta_root=0.2118738332472721,
     r_c_leaf_rh=0.0022972292016441116,
     r_c_root_rh=0.0015470633697005037,
     r_c_wood_rh=0.0003981642399033648,

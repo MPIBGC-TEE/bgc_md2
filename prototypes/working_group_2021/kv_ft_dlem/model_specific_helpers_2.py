@@ -123,7 +123,7 @@ def get_example_site_vars(dataPath):
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
-        if vn in ["npp", "rh"]:
+        if vn in ["npp","gpp","rh","ra"]:
             return ds.variables[vn][t]*86400
         else:
             return ds.variables[vn][t]
@@ -132,52 +132,79 @@ def get_example_site_vars(dataPath):
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
+experiment_name="DLEM_S2_"
+def nc_file_name(nc_var_name):
+    return experiment_name+"{}.nc".format(nc_var_name)
 
-def get_globalmean_vars(dataPath):
+def nc_global_mean_file_name(nc_var_name):
+    return experiment_name+"{}_gm.nc".format(nc_var_name)
+
+def get_global_mean_vars(dataPath):
     o_names=Observables._fields
     d_names=Drivers._fields
     names = o_names + d_names 
 
+    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+        print(""" Found cached global mean files. If you want to recompute the global means
+            remove the following files: """
+        )
+        for vn in names:
+            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
-    def get_var(vn):
-        path = dataPath.joinpath("DLEM_S2_{}.nc".format(vn))
-        ds = nc.Dataset(str(path))
-        #scale fluxes vs pools
-        return ds.variables[vn]
+        def get_cached_global_mean(vn):
+            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
     
-    # we first check if any of the arrays has a time lime containing nan values 
-    # APART FROM values that are already masked by the fillvalue
-    print("computing masks, this may take some minutes...")
-    def f(name):
-        print(name)
-        return gh.get_nan_pixel_mask(get_var(name))
+        return (
+            Observables(*map(get_cached_global_mean, o_names)),
+            Drivers(*map(get_cached_global_mean,d_names))
+        )
 
-    masks=[ f(name)    for name in names ]
-    # We compute the common mask so that it yields valid pixels for ALL variables 
-    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
-    print("computing means, this may also take some minutes...")
+    else:
+        # we now check if any of the arrays has a time lime containing nan values 
+        # APART FROM values that are already masked by the fillvalue
+        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+        def f(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            #scale fluxes vs pools
+            var =ds.variables[vn]
+            return gh.get_nan_pixel_mask(var)
 
-    def f(vn):
-        path = dataPath.joinpath("DLEM_S2_{}.nc".format(vn))
-        ds = nc.Dataset(str(path))
-        vs=ds.variables
-        lats= vs["lat"].__array__()
-        lons= vs["lon"].__array__()
-        print(vn)
-        var=ds.variables[vn]
-        gm=gh.global_mean_var(lats,lons,combined_mask,var)
-        return gm * 86400 if vn in ["npp", "rh"] else gm
-    #map variables to data
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+        masks=[ f(name)    for name in names ]
+        # We compute the common mask so that it yields valid pixels for ALL variables 
+        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        print("computing means, this may also take some minutes...")
 
-def make_StartVector(mvs):
-    return namedtuple(
-        "StartVector",
-        [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["rh"]
-    ) 
+        def compute_and_cache_global_mean(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            vs=ds.variables
+            lats= vs["lat"].__array__()
+            lons= vs["lon"].__array__()
+            print(vn)
+            var=ds.variables[vn]
+            # check if we have a cached version (which is much faster)
+            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
 
-
+            gm=gh.global_mean_var(
+                    lats,
+                    lons,
+                    combined_mask,
+                    var
+            )
+            gh.write_global_mean_cache(
+                    gm_path,
+                    gm,
+                    vn
+            )
+            return gm * 86400 if vn in ["npp","gpp","rh","ra"] else gm
+    
+        #map variables to data
+        return (
+            Observables(*map(compute_and_cache_global_mean, o_names)),
+            Drivers(*map(compute_and_cache_global_mean, d_names))
+        )
+        
 def make_iterator_sym(
         mvs,
         V_init,
@@ -227,7 +254,46 @@ def make_iterator_sym(
         f=f,
     )
 
+def make_StartVector(mvs):
+    return namedtuple(
+        "StartVector",
+        [str(v) for v in mvs.get_StateVariableTuple()]+
+        ["rh"]
+    ) 
 
+def make_npp_func(dvs):
+    def npp_func(day):
+        month=gh.day_2_month_index(day)
+        # kg/m2/s kg/m2/day;
+        return (dvs.npp[month])
+    return npp_func
+
+
+def make_gpp_func(dvs):
+    def gpp_func(day):
+        month=gh.day_2_month_index(day)
+        # kg/m2/s kg/m2/day;
+        return (dvs.gpp[month])
+    return gpp_func
+
+def make_temp_func(dvs):
+    def temp_func(day):
+        month=gh.day_2_month_index(day)
+        # kg/m2/s kg/m2/day;
+        return (dvs.tas[month])
+    return temp_func
+    
+def make_xi_func(dvs):
+    def xi_func(day):
+        return 1
+    return xi_func
+    
+def make_func_dict(mvs,dvs):
+    return {
+        "NPP": make_npp_func(dvs),
+        "xi": make_xi_func(dvs)
+    }
+    
 def make_param2res_sym(
         mvs,
         cpa: Constants,

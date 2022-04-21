@@ -94,7 +94,7 @@ with Path('config.json').open(mode='r') as f:
 
 # Subset data to site for simulation:
 
-svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 # Look at data
 svs
 
