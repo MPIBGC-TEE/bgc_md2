@@ -56,7 +56,7 @@ msh.download_my_TRENDY_output(conf_dict)
 # Before we build a function to load the data lets look at it to get an idea.
 #
 
-svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # +
 
@@ -117,6 +117,7 @@ cpa
 # -
 
 epa_0=msh.EstimatedParameters(
+    
      beta_leaf=0.5, 
      beta_wood=0.4, 
      r_C_leaf2abvstrlit= 0.0003*0.85,
@@ -126,10 +127,10 @@ epa_0=msh.EstimatedParameters(
      r_C_root2belowmetlit=0.000034*2.105,
      r_C_root2belowstrlit=0.000032*2.105,
     
-     r_C_abvstrlit2slowsom=0.00003*2,
-     r_C_abvstrlit2surface_microbe=0.00005*1.5,
+     r_C_abvstrlit2slowsom=0.00003*1.8,
+     r_C_abvstrlit2surface_microbe=0.00005*2,
      r_C_abvmetlit2surface_microbe=0.00005,
-     r_C_belowmetlit2soil_microbe=0.00002*60,
+     r_C_belowmetlit2soil_microbe=0.00002*50,
      r_C_belowstrlit2slowsom=0.00006*60,
      r_C_belowstrlit2soil_microbe=0.0003*60,
     
@@ -139,7 +140,7 @@ epa_0=msh.EstimatedParameters(
      r_C_slowsom2passsom=0.0005*100,
      r_C_slowsom2soil_microbe=0.0005*100,
      r_C_soil_microbe2passsom=0.006*100,
-     r_C_soil_microbe2slowsom=0.006*100,
+     r_C_soil_microbe2slowsom=0.006*105,
      r_C_surface_microbe2slowsom=0.006*100,
     
      r_C_abvstrlit_rh=0.00975/11,
@@ -147,18 +148,18 @@ epa_0=msh.EstimatedParameters(
      r_C_belowstrlit_rh=0.011333/10,
      r_C_belowmetlit_rh=0.028264/10,
 
-     r_C_soil_microbe_rh=0.0003*2,
+     r_C_soil_microbe_rh=0.0003*2.2,
      r_C_slowsom_rh=0.00004*2,
      r_C_passsom_rh=0.000006875*2,
-     r_C_surface_microbe_rh=0.000003*2,
+     r_C_surface_microbe_rh=0.000003*2.2,
     
      C_leaf_0=svs_0.cVeg/3,
-     C_abvstrlit_0=svs_0.cLitter/4,
-     C_abvmetlit_0=svs_0.cLitter/4,
-     C_blwstrlit_0=svs_0.cLitter/4,
-     C_surfacemic_0=svs_0.cSoil/4,
-     C_soilmic_0=svs_0.cSoil/4,
-     C_slow_0=svs_0.cSoil/4
+     C_abvstrlit_0= 0.59,    #svs_0.cLitter/4,
+     C_abvmetlit_0= 0.24,    #svs_0.cLitter/4,
+     C_blwstrlit_0= 0.00287261,    #svs_0.cLitter/4,
+     C_surfacemic_0= 9.4e-5,    #svs_0.cSoil/4,
+     C_soilmic_0= 0.049,      #svs_0.cSoil/4,
+     C_slow_0= 0.29828058     #svs_0.cSoil/4
 )
 
 # +
@@ -278,14 +279,14 @@ epa_max=np.array(
 )
 
 # +
-from general_helpers import autostep_mcmc_2, make_param_filter_func
+from general_helpers import autostep_mcmc, make_param_filter_func
 
 isQualified = msh.make_param_filter_func(epa_max, epa_min)
 param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc_2(
+C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
@@ -294,10 +295,10 @@ C_autostep, J_autostep = autostep_mcmc_2(
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=0.23,   # default value | target acceptance rate in %
+    acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=0.01,   # default value | increase value to reduce initial step size
-    K=2 # default value | increase value to reduce acceptance of higher cost functions
+    D_init=50,   # default value | increase value to reduce initial step size
+    K=1 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -331,6 +332,70 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('SDGVM_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('SDGVM_da_j_aa.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('SDGVM_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('SDGVM_optimized_solutions.csv'), sep=',')
-# -
+# +
+it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
+ns=1500
+StartVectorTrace=gh.make_StartVectorTrace(mvs)
+nv=len(StartVectorTrace._fields)
+res_trace= np.zeros((ns,nv))
+for i in range(ns):
+    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
+#res_trace
 
+import matplotlib.pyplot as plt
+n=len(mvs.get_StateVariableTuple())
+fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
+axs=fig.subplots(n+1,2)
+days=list(range(ns))
+
+
+for i in range(n):
+    
+    ax = axs[i,0]
+    #  the solution
+    pos=i
+    ax.plot(
+        days,
+        res_trace[:,i],
+        label=StartVectorTrace._fields[pos],
+        color='blue'
+    )
+    # X_p
+    pos=i+n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='red'
+    )
+    # X_c
+    pos=i+2*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='yellow'
+    )
+    ax.legend()
+    
+    ax = axs[i,1]
+    # RT
+    pos=i+3*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='black'
+    )
+    ax.legend()
+    
+axs[n,0].plot(
+    days,
+    [msh.make_npp_func(dvs)(d) for d in days],
+    label='NPP',
+    color='green'
+)
+axs[n,0].legend()
+
+fig.savefig('solution_Traceability.pdf')
 

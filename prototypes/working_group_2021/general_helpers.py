@@ -6,6 +6,7 @@ from copy import copy
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
+import os
 
 from pathlib import Path
 import json 
@@ -897,13 +898,80 @@ def plot_observations_vs_simulations(
         axs[i].set_title(name)
 
 
+def get_nan_pixels(
+        var: nc._netCDF4.Variable
+    ):
+    """We use a netCDF4.Variable to avoid having to load the whole array into memory 
+    """
+    N_t,N_lat,N_lon = var.shape
+    cs=30
+    def f(I_lat,I_lon):
+        n_lat = min(cs,N_lat-I_lat)
+        n_lon = min(cs,N_lon-I_lon)
+        chunk = var[:,I_lat:I_lat+n_lat,I_lon:I_lon+n_lon]
+        #from IPython import embed;embed()
+        return tuple((
+            (I_lat + i_lat, I_lon + i_lon) 
+            for i_lat in range(n_lat) 
+            for i_lon in range(n_lon)
+            if np.isnan(
+                chunk[:,i_lat,i_lon]
+            ).any() 
+        ))
+                    
+    l=(
+        f(I_lat,I_lon) 
+        for I_lat in range(0,N_lat,cs)
+        for I_lon in range(0,N_lon,cs)
+    )
+    return reduce(lambda x,y:x+y,l)
+    
+def get_nan_pixel_mask(
+        var: nc._netCDF4.Variable
+    ):
+    ## We use a netCDF4.Variable to avoid having to load the whole array into memory 
+    ## since it is too big e.g. for the dlm files 
 
+    N_t,N_lat,N_lon = var.shape
+    
+    var_mask= var[0,:,:].mask #either False or a boolean array
+    start_mask = np.zeros((N_lat,N_lon),dtype=np.bool_) if isinstance(var_mask,bool) else  var_mask
+
+    return np.array(
+        reduce(
+            lambda acc,i: np.logical_or(acc,~np.isfinite(var[i,:,:])),
+            tqdm(range(var.shape[0])),
+            start_mask
+        )
+    )
+
+
+
+
+def get_weight_mat(
+        lats: np.ma.core.MaskedArray,
+        lons: np.ma.core.MaskedArray
+    ):
+    # assuming an equidistant grid.
+    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
+    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
+    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+
+    return np.array(
+        [
+                [   
+                    pixel_area(lats[lat_ind]) 
+                    for lon_ind in range(len(lons))    
+                ]
+            for lat_ind in range(len(lats))    
+        ]
+    )
 
 def global_mean(
         lats: np.ma.core.MaskedArray,
         lons: np.ma.core.MaskedArray,
         arr: np.ma.core.MaskedArray
-    ):
+    )-> np.array:
     """As the signature shows this function expects masked arrays.
     These occure naturaly if netCDF4.Variables are sliced.
     e.g. 
@@ -914,64 +982,51 @@ def global_mean(
     arr=var.__array__()
     The important thing is not to call this functions with the variables but the arrays.
     """
-    # assuming an equidistant grid.
-    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
-    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
-
-    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
     
     #copy the mask from the array (first time step) 
     weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
 
     weight_mat= np.ma.array(
-        np.array(
-            [
-                    [   
-                        pixel_area(lats[lat_ind]) 
-                        for lon_ind in range(len(lons))    
-                    ]
-                for lat_ind in range(len(lats))    
-            ]
-        ),
+        get_weight_mat(lats,lons),
         mask = weight_mask 
+    )
+    wms=weight_mat.sum()
+    # to compute the sum of weights we add only those weights that
+    # do not correspond to an unmasked grid cell
+    return  ((weight_mat*arr).sum(axis=(1,2))/wms).data
+
+def global_mean_var(
+        lats: np.ma.core.MaskedArray,
+        lons: np.ma.core.MaskedArray,
+        mask: np.array,
+        var: nc._netCDF4.Variable
+    )-> np.array:
+    """As the signature shows this function expects a netCDF4.Variable
+    This is basically metadata which allows us to compute the maean even 
+    if the whole array would not fit into memory.
+
+    ds = nc.Dataset("example.nc")
+    var=ds.variables['npp'] #->type(var)=netCDF4._netCDF4.Variable
+
+    the mask array is used to block out extra pixels that are not 
+    masked in var 
+    """
+    
+    weight_mat= np.ma.array(
+        get_weight_mat(lats,lons),
+        mask = mask 
     )
     
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
-    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+    wms=weight_mat.sum()
 
-
-# def global_mean_JULES(lats,lons,arr):
-#    """please do not use this function since it ignores the mask of a possible masked array
-#    and 
-#    """
-#    # assuming an equidistant grid.
-#    delta_lat=(np.array(lats).max() - np.array(lats).min())/(len(np.array(lats))-1)
-#    delta_lon=(np.array(lons).max() - np.array(lons).min())/(len(np.array(lons))-1)
-#
-#    #from IPython import embed;embed()
-#
-#    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
-#    
-#    #copy the mask from the array (first time step) 
-#    weight_mask=arr[0,:,:].mask #if  arr.mask.any() else False
-#
-#    weight_mat= np.ma.array(
-#        np.array(
-#            [
-#                    [   
-#                        pixel_area(lats[lat_ind]) 
-#                        for lon_ind in range(len(lons))    
-#                    ]
-#                for lat_ind in range(len(lats))    
-#            ]
-#        ),
-#        mask = weight_mask 
-#    )
-#    
-#    # to compute the sum of weights we add only those weights that
-#    # do not correspond to an unmasked grid cell
-#    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+    n_t = var.shape[0]
+    res=np.zeros(n_t)
+    for it in tqdm(range(n_t)): 
+        el=(weight_mat*var[it,:,:]).sum()/wms
+        res[it]=el
+    return  res
 
 
 def grad2rad(alpha_in_grad):
@@ -1273,6 +1328,30 @@ def make_daily_iterator_sym_trace(
         initial_values=V_arr,
         f=f,
     )
+
+def write_global_mean_cache(
+        gm_path,
+        gm: np.array,
+        var_name: str 
+    ):
+    #var=ds.variables[var_name]
+    if gm_path.exists():
+        print("removing old cache file{}")
+        os.remove(gm_path)
+        
+    n_t=gm.shape[0]
+    time_dim_name="time"
+    ds_gm = nc.Dataset(str(gm_path), 'w',persist=True)
+    time = ds_gm.createDimension(time_dim_name,size=n_t)
+    var_gm=ds_gm.createVariable(var_name,np.float64,[time_dim_name])
+    gm_ma=np.ma.array(gm,mask=np.zeros(gm.shape,dtype=np.bool_))
+    var_gm[:]=gm_ma
+    ds_gm.close()
+
+
+def get_cached_global_mean(gm_path, vn):
+    return nc.Dataset(str(gm_path)).variables[vn].__array__()
+
 
 # def make_fluxrates_from_kf(mvs_kv,xi_d):    
 #    #compute rate based formulation

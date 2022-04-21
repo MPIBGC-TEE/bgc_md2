@@ -95,9 +95,17 @@ EstimatedParameters = namedtuple(
     ]
 )
 
+#def download_my_TRENDY_output():
+#    download_TRENDY_output(
+#        username=conf_dict["username"],
+#        password=conf_dict["password"],
+#        dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
+#        models=['DLEM'],
+#        variables = Observables._fields + Drivers._fields
+#    )
 
-def download_my_TRENDY_output():
-    download_TRENDY_output(
+def download_my_TRENDY_output(conf_dict):
+    gh.download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
@@ -126,28 +134,41 @@ def get_example_site_vars(dataPath):
 
 
 def get_globalmean_vars(dataPath):
-    # pick up 1 site   
-    #s = slice(None, None, None)  # this is the same as :
-    #t = s, 50, 33  # [t] = [:,49,325]
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them 
-        ds = nc.Dataset(str(path))
-        #print(ds.variables)
-        # access lat/long of netCDF file
-        lats= ds.variables["lat"].__array__()
-        lons= ds.variables["lon"].__array__()
-        #scale fluxes vs pools
-        if vn in ["npp", "rh"]:
-            return gh.global_mean(lats,lons,ds.variables[vn].__array__())*86400
-        else:
-            return gh.global_mean(lats,lons,ds.variables[vn].__array__())
-    #map variables to data
-    o_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
 
+
+    def get_var(vn):
+        path = dataPath.joinpath("DLEM_S2_{}.nc".format(vn))
+        ds = nc.Dataset(str(path))
+        #scale fluxes vs pools
+        return ds.variables[vn]
+    
+    # we first check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    print("computing masks, this may take some minutes...")
+    def f(name):
+        print(name)
+        return gh.get_nan_pixel_mask(get_var(name))
+
+    masks=[ f(name)    for name in names ]
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+    print("computing means, this may also take some minutes...")
+
+    def f(vn):
+        path = dataPath.joinpath("DLEM_S2_{}.nc".format(vn))
+        ds = nc.Dataset(str(path))
+        vs=ds.variables
+        lats= vs["lat"].__array__()
+        lons= vs["lon"].__array__()
+        print(vn)
+        var=ds.variables[vn]
+        gm=gh.global_mean_var(lats,lons,combined_mask,var)
+        return gm * 86400 if vn in ["npp", "rh"] else gm
+    #map variables to data
+    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
 def make_StartVector(mvs):
     return namedtuple(

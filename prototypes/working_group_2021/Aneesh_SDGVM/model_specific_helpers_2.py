@@ -31,7 +31,6 @@ Constants = namedtuple(
     [
         "cLitter_0",
         "cSoil_0",
-        #"c_root_0",
         "cRoot_0",
         "cVeg_0",
         "npp_0",
@@ -161,7 +160,7 @@ def get_example_site_vars(dataPath):
         Drivers(*(arr_dict[k] for k in Drivers._fields))
     )
 
-def get_globalmean_vars(dataPath):
+def get_global_mean_vars(dataPath):
     # According to the netcdf metadata the datasets are not uniform
     # - npp and rh start at 360h (15 days) after 01-01-1900 and are recorded every 30 days
     #   these are interpreted as mid-monthly
@@ -321,11 +320,12 @@ def make_param2res_sym(
         # could be build from estimated parameters and would have to live here...
         func_dict=make_func_dict(mvs,dvs)
     
-        it_sym = make_daily_iterator_sym(
+        it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
             par_dict=model_par_dict,
-            func_dict=func_dict
+            func_dict=func_dict,
+            delta_t_val = 1
         )
         
         # Now that we have the iterator we can start to compute.
@@ -459,6 +459,67 @@ def make_daily_iterator_sym(
     )
 
 
+def make_iterator_sym(
+        mvs,
+        V_init, 
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+
+    sv=mvs.get_StateVariableTuple()
+    n=len(sv)
+    # build an array in the correct order of the StateVariables which in our case is already correct 
+    # since V_init was built automatically but in case somebody handcrafted it and changed
+    # the order later in the symbolic formulation....
+    V_arr=np.array(
+        [V_init.__getattribute__(str(v)) for v in sv]+
+        [V_init.rh]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+
+    numOutFluxesBySymbol={
+        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
+        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    } 
+    def f(it,V):
+        X = V[0:n]
+        b = u_func(it,X)
+        B = B_func(it,X)
+        X_new = X + b + B @ X
+        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+        
+        rh_flux=[
+            numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+            for k in [
+                "C_abvstrlit",
+                "C_abvmetlit",
+                "C_belowstrlit",
+                "C_belowmetlit",
+                "C_surface_microbe",
+                "C_soil_microbe",
+                "C_slowsom",
+                "C_passsom"] 
+            if Symbol(k) in numOutFluxesBySymbol.keys()
+        ]
+        
+        rh = np.array(rh_flux).sum()
+        
+        V_new = np.concatenate(
+            (
+                X_new.reshape(n,1),
+                np.array([rh]).reshape(1,1)
+            )
+            , axis=0
+        )
+        return V_new
+
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+
+
 def make_weighted_cost_func(
         obs: Observables
     ) -> Callable[[Observables],np.float64]:
@@ -481,11 +542,11 @@ def make_weighted_cost_func(
 
         J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
 
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4) + J_obj5/12
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)/200 + J_obj5/4
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*100
+        return J_new*400
     return costfunction
 
 
@@ -505,3 +566,71 @@ def make_param_filter_func(
         return (cond1 and cond2 and cond3)
         
     return isQualified
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    par_dict={
+    Symbol(k): v for k,v in {
+         "beta_leaf":epa.beta_leaf,
+         "beta_wood":epa.beta_wood,
+         "r_C_leaf2abvstrlit":epa.r_C_leaf2abvstrlit,
+         "r_C_abvmetlit2surface_microbe":epa.r_C_abvmetlit2surface_microbe,
+         "r_C_abvstrlit2slowsom":epa.r_C_abvstrlit2slowsom,
+         "r_C_abvstrlit2surface_microbe":epa.r_C_abvstrlit2surface_microbe,
+         "r_C_belowmetlit2soil_microbe":epa.r_C_belowmetlit2soil_microbe,
+         "r_C_belowstrlit2slowsom":epa.r_C_belowstrlit2slowsom,
+         "r_C_belowstrlit2soil_microbe":epa.r_C_belowstrlit2soil_microbe,
+         "r_C_leaf2abvmetlit":epa.r_C_leaf2abvmetlit,
+         "r_C_passsom2soil_microbe":epa.r_C_passsom2soil_microbe,
+         "r_C_root2belowmetlit":epa.r_C_root2belowmetlit,
+         "r_C_root2belowstrlit":epa.r_C_root2belowstrlit,
+         "r_C_slowsom2passsom":epa.r_C_slowsom2passsom,
+         "r_C_slowsom2soil_microbe":epa.r_C_slowsom2soil_microbe,
+         "r_C_soil_microbe2passsom":epa.r_C_soil_microbe2passsom,
+         "r_C_soil_microbe2slowsom":epa.r_C_soil_microbe2slowsom,
+         "r_C_surface_microbe2slowsom":epa.r_C_surface_microbe2slowsom,
+         "r_C_wood2abvmetlit":epa.r_C_wood2abvmetlit,
+         "r_C_wood2abvstrlit":epa.r_C_wood2abvstrlit,
+         "r_C_abvstrlit_rh":epa.r_C_abvstrlit_rh,
+         "r_C_abvmetlit_rh":epa.r_C_abvmetlit_rh,
+         "r_C_belowstrlit_rh":epa.r_C_belowstrlit_rh,
+         "r_C_belowmetlit_rh":epa.r_C_belowmetlit_rh,
+         "r_C_surface_microbe_rh":epa.r_C_surface_microbe_rh,
+         "r_C_slowsom_rh":epa.r_C_slowsom_rh,
+         "r_C_passsom_rh":epa.r_C_passsom_rh,
+         "r_C_soil_microbe_rh":epa.r_C_soil_microbe_rh,
+    }.items()
+}
+    X_0_dict={
+        "C_leaf":  epa.C_leaf_0,
+        "C_root" :cpa.cRoot_0,
+        "C_wood"  :cpa.cVeg_0 - epa.C_leaf_0 - cpa.cRoot_0,
+        "C_abvstrlit" : epa.C_abvstrlit_0,
+        "C_abvmetlit" : epa.C_abvmetlit_0,
+        "C_belowstrlit" : epa.C_blwstrlit_0,
+        "C_belowmetlit" : cpa.cLitter_0 - epa.C_abvstrlit_0 - epa.C_abvmetlit_0 - epa.C_blwstrlit_0,
+        "C_surface_microbe" :epa.C_surfacemic_0,
+        "C_soil_microbe" : epa.C_soilmic_0,
+        "C_slowsom" : epa.C_slow_0,
+        "C_passsom" :cpa.cSoil_0 - epa.C_surfacemic_0 - epa.C_soilmic_0 - epa.C_slow_0,
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(11,1)
+    fd=make_func_dict(mvs,dvs)
+    V_init=gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
+
+
