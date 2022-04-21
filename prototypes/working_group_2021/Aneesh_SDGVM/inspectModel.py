@@ -297,8 +297,8 @@ C_autostep, J_autostep = autostep_mcmc(
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,   # default value | increase value to reduce initial step size
-    K=2 # default value | increase value to reduce acceptance of higher cost functions
+    D_init=50,   # default value | increase value to reduce initial step size
+    K=1 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 

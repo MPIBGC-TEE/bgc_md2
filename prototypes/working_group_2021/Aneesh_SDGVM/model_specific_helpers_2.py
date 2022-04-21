@@ -625,7 +625,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             par_dict=par_dict,
             func_dict=fd
     )
-    it_sym_trace = gh.make_iterator_sym_trace(
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
         mvs,
         V_init=V_init,
         par_dict=par_dict,
