@@ -2,19 +2,15 @@
 # without installing the package you have to commit a certain institutianalized
 # crime by adding the parent directory to the front of the python path.
 import sys
-from unittest.case import TestCase, skip
-from pathlib import Path
-import json 
-
 import matplotlib.pyplot as plt
 import numpy as np
+from unittest.case import TestCase, skip
+from pathlib import Path
 from importlib import import_module
-from general_helpers import (
-    plot_solutions,
-    autostep_mcmc,
-    make_param_filter_func,
-    make_feng_cost_func
-)
+import json 
+
+import general_helpers as gh
+
 
 class TestSymbolic(TestCase):
     
@@ -25,26 +21,24 @@ class TestSymbolic(TestCase):
     def test_symobolic_description(self):
         for mf in self.model_folders: 
             with self.subTest(mf=mf):
-                mvs= import_module('{}.source'.format(mf)).mvs
-                print(mvs.get_SmoothReservoirModel())
-                print(mvs.get_BibInfo())
+                mvs = gh.mvs(mf)
+                # we assert that some variables are present
+                mvs.get_SmoothReservoirModel()
+                mvs.get_BibInfo()
     
     #@skip
     def test_download_data(self):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
-                #sys.path.insert(0,mf)
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                conf_dict=gh.confDict(mf)
+                msh = gh.msh(mf)
                 msh.download_my_TRENDY_output(conf_dict)
     
     def test_get_example_site_vars(self):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                conf_dict=gh.confDict(mf)
+                msh = gh.msh(mf)
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
                 #print(svs)
     
@@ -52,9 +46,8 @@ class TestSymbolic(TestCase):
     def test_get_global_mean_vars(self):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                conf_dict=gh.confDict(mf)
+                msh = gh.msh(mf)
                 svs, dvs = msh.get_global_mean_vars(Path(conf_dict['dataPath']))
                 #print(svs)
     
@@ -64,12 +57,11 @@ class TestSymbolic(TestCase):
             with self.subTest(mf=mf):
                 
                 #sys.path.insert(0,mf)
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
-                mvs = import_module('{}.source'.format(mf)).mvs
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
+                msh = gh.msh(mf)
+                mvs = gh.mvs(mf)
+                conf_dict=gh.confDict(mf)
                 th= import_module('{}.test_helpers'.format(mf))
-                test_args=th.make_test_args(conf_dict,msh,mvs)
+                test_args = gh.test_args(mf)
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
                 msh.make_func_dict(mvs,dvs,test_args.epa_0)
 
@@ -77,12 +69,11 @@ class TestSymbolic(TestCase):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
                 
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                msh = gh.msh(mf)
                 th= import_module('{}.test_helpers'.format(mf))
-                mvs = import_module('{}.source'.format(mf)).mvs
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
+                mvs = gh.mvs(mf)
+                conf_dict=gh.confDict(mf)
+                test_args = gh.test_args(mf)
                 delta_t_val=30 #n_day iterator
                 V_init=test_args.V_init
                 it_sym_2 = msh.make_iterator_sym(
@@ -102,12 +93,11 @@ class TestSymbolic(TestCase):
     def test_param2res_sym(self):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
-                mvs = import_module('{}.source'.format(mf)).mvs
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
                 th= import_module('{}.test_helpers'.format(mf))
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
+                conf_dict=gh.confDict(mf)
+                test_args = gh.test_args(mf)
 
                 cpa = test_args.cpa
                 dvs = test_args.dvs
@@ -128,12 +118,11 @@ class TestSymbolic(TestCase):
             #print("############################  {}  ############################".format(mf))
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
-                mvs = import_module('{}.source'.format(mf)).mvs
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
                 th= import_module('{}.test_helpers'.format(mf))
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
+                conf_dict=gh.confDict(mf)
+                test_args = gh.test_args(mf)
                 cpa = test_args.cpa
                 dvs = test_args.dvs
                 svs = test_args.svs
@@ -141,18 +130,18 @@ class TestSymbolic(TestCase):
                 epa_max = test_args.epa_max
                 epa_0 = test_args.epa_0
 
-                isQualified = make_param_filter_func(epa_max, epa_min)
+                isQualified = gh.make_param_filter_func(epa_max, epa_min)
                 param2res = msh.make_param2res_sym( mvs, cpa, dvs)
 
                 obs=test_args.obs_arr
                 #obs=np.column_stack([ np.array(v) for v in svs])
                 obs=obs[0:cpa.number_of_months,:] #cut
                 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-                C_autostep, J_autostep = autostep_mcmc(
+                C_autostep, J_autostep = gh.autostep_mcmc(
                     initial_parameters=epa_0,
                     filter_func=isQualified,
                     param2res=param2res,
-                    costfunction=make_feng_cost_func(obs),
+                    costfunction=gh.make_feng_cost_func(obs),
                     nsimu=20, # for testing and tuning mcmc
                     #nsimu=20000,
                     c_max=np.array(epa_max),
@@ -168,12 +157,11 @@ class TestSymbolic(TestCase):
         for mf in set(self.model_folders).intersection(['kv_visit2']):
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
-                mvs = import_module('{}.source'.format(mf)).mvs
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
                 th= import_module('{}.test_helpers'.format(mf))
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
+                conf_dict=gh.confDict(mf)
+                test_args = gh.test_args(mf)
                 cpa = test_args.cpa
                 dvs = test_args.dvs
                 svs = test_args.svs
@@ -181,12 +169,12 @@ class TestSymbolic(TestCase):
                 epa_max = test_args.epa_max
                 epa_0 = test_args.epa_0
 
-                isQualified = make_param_filter_func(epa_max, epa_min)
+                isQualified = gh.make_param_filter_func(epa_max, epa_min)
                 param2res = msh.make_param2res_sym( mvs, cpa, dvs)
                 #obs=np.column_stack([ np.array(v) for v in svs])
                 #obs=obs[0:cpa.number_of_months,:] #cut
                 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-                C_autostep, J_autostep = autostep_mcmc(
+                C_autostep, J_autostep = gh.autostep_mcmc(
                     initial_parameters=epa_0,
                     filter_func=isQualified,
                     param2res=param2res,
@@ -206,12 +194,11 @@ class TestSymbolic(TestCase):
         for mf in set(self.model_folders).intersection(['Aneesh_SDGVM']):
             with self.subTest(mf=mf):
                 #sys.path.insert(0,mf)
-                mvs = import_module('{}.source'.format(mf)).mvs
-                msh= import_module('{}.model_specific_helpers_2'.format(mf))
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
                 th= import_module('{}.test_helpers'.format(mf))
-                with Path(mf).joinpath('config.json').open(mode='r') as f:
-                    conf_dict=json.load(f) 
-                test_args=th.make_test_args(conf_dict,msh,mvs)
+                conf_dict=gh.confDict(mf)
+                test_args = gh.test_args(mf)
                 cpa = test_args.cpa
                 dvs = test_args.dvs
                 svs = test_args.svs
@@ -219,10 +206,10 @@ class TestSymbolic(TestCase):
                 epa_max = test_args.epa_max
                 epa_0 = test_args.epa_0
 
-                isQualified = make_param_filter_func(epa_max, epa_min)
+                isQualified = gh.make_param_filter_func(epa_max, epa_min)
                 param2res = msh.make_param2res_sym( mvs, cpa, dvs)
                 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-                C_autostep, J_autostep = autostep_mcmc(
+                C_autostep, J_autostep = gh.autostep_mcmc(
                     initial_parameters=epa_0,
                     filter_func=isQualified,
                     param2res=param2res,
@@ -236,3 +223,5 @@ class TestSymbolic(TestCase):
                     D_init=1,   # default value | increase value to reduce initial step size
                     K=2 # default value | increase value to reduce acceptance of higher cost functions
                 )
+
+    #def test_trace

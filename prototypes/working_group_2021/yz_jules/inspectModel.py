@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.1
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,6 +24,7 @@
 # +
 # load HTML to adjust jupyter settings
 from IPython.display import HTML
+from frozendict.core import frozendict
 
 # adjust jupyter display to full screen width
 display(HTML("<style>.container { width:100% !important; }</style>"))
@@ -38,6 +39,7 @@ from sympy import Symbol, Function
 from ComputabilityGraphs.CMTVS import CMTVS
 from sympy import Symbol, Function, diag, ImmutableMatrix
 from pathlib import Path
+from frozendict import frozendict
 from copy import copy, deepcopy
 from functools import reduce
 from typing import Callable
@@ -102,7 +104,7 @@ import json
 
 # Read username, password, dataPath from config.json file
 with Path('config.json').open(mode='r') as f:
-    conf_dict = json.load(f)
+    conf_dict = frozendict(json.load(f))
     
 # -
 

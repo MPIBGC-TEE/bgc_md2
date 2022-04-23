@@ -4,6 +4,9 @@ from sympy import Symbol, Function
 from pathlib import Path
 import json
 import numpy as np
+from functools import lru_cache
+
+@lru_cache
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
