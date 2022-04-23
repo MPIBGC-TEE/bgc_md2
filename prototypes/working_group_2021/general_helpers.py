@@ -6,6 +6,8 @@ from copy import copy
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
+from frozendict import frozendict
+from importlib import import_module
 import os
 
 from pathlib import Path
@@ -21,6 +23,26 @@ from bgc_md2.resolve.mvars import (
 from bgc_md2.helper import bgc_md2_computers
 
 days_per_year = 365 
+TraceTuple = namedtuple(
+    "TraceTuple",
+     ["X", "X_p" ,"X_c" ,"RT"]
+)
+
+# some tiny helper functions for module loading
+def mvs(mf):
+    return import_module("{}.source".format(mf)).mvs
+def msh(mf):
+    return import_module('{}.model_specific_helpers_2'.format(mf))
+def th(mf):
+    return import_module('{}.test_helpers'.format(mf))
+
+def confDict(mf):
+    with Path(mf).joinpath('config.json').open(mode='r') as f:
+        confDict=frozendict(json.load(f)) 
+    return confDict
+
+def test_args(mf):
+    return th(mf).make_test_args(conf_dict=confDict(mf),msh=msh(mf),mvs=mvs(mf))
 
 # should be part  of CompartmentalSystems
 def make_B_u_funcs(
@@ -1258,6 +1280,7 @@ def make_param_filter_func_2(
     return isQualified
 
 def make_StartVectorTrace(mvs):
+    #deprecated
     svt=mvs.get_StateVariableTuple()
     return namedtuple(
         "StartVectorTrace",
@@ -1266,6 +1289,7 @@ def make_StartVectorTrace(mvs):
          [str(v)+"_c" for v in svt]+
          [str(v)+"_RT" for v in svt]
     )
+
 
 def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
     # test the new iterator
@@ -1290,6 +1314,9 @@ def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
     V_init=StartVectorTrace(*V_arr)
     return V_init
 
+
+# fixme: mm 04-22-2022 
+# this function is deprecated rather use traceability_iterator
 def make_daily_iterator_sym_trace(
         mvs,
         V_init, #: StartVectorTrace,
@@ -1328,6 +1355,64 @@ def make_daily_iterator_sym_trace(
         initial_values=V_arr,
         f=f,
     )
+
+def traceability_iterator(
+        X_0,
+        func_dict,
+        mvs, #: CMTVS,
+        dvs, #: Drivers,
+        cpa, #: Constants,
+        epa,  #: EstimatedParameters
+        delta_t_val: int =1# defaults to 1day timestep
+    ):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=make_param_dict(mvs,cpa,epa)
+
+    
+    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+
+    def trace_tuple_instance(X,B,I):
+        u=I.sum()
+        b=I/u
+        B_inv = np.linalg.inv(B)
+        X_c = B_inv@I
+        X_p = X_c-X
+        RT = X_c/u #=B_inv@b but cheeper to computed
+        
+        return TraceTuple(
+            X=X,
+            X_p=X_p,
+            X_c=X_c,
+            RT=RT
+        )
+    
+    # define the start tuple for the iterator    
+    V_init = trace_tuple_instance(
+        X_0,
+        # in Yiqi's nomenclature: dx/dt=I-Bx 
+        # instead of           : dx/dt=I+Bx 
+        # as assumed by B_u_func 
+        - B_func(0,X_0), 
+        I_func(0,X_0)
+    )
+   
+    # define the function with V_{i+1}=f(i,V_i)
+    def f(
+            it: int,
+            V :TraceTuple
+        ) -> TraceTuple:
+            X = V.X
+            I = I_func(it,X) 
+            B = B_func(it,X)
+            X_new= X + I + B @ X
+            return trace_tuple_instance(X_new,-B,I)
+    
+    return TimeStepIterator2(
+        initial_values=V_init,
+        f=f
+    )
+
+
 
 def write_global_mean_cache(
         gm_path,

@@ -139,38 +139,40 @@ def get_example_site_vars(dataPath):
     )
     return (obss, dvs)
 
-def get_global_vars(dataPath):
-    # pick up 1 site
-    # s = slice(None, None, None)  # this is the same as :
-    # t = s, 50, 33  # [t] = [:,49,325]
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them
-        ds = nc.Dataset(str(path))
-        lats = ds.variables["lat"].__array__()
-        lons = ds.variables["lon"].__array__()
-        if vn in ["npp","gpp","rh","ra"]:
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
-        else:
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
-        #return ds.variables[vn][t]
-
-    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
-
-    # we want to drive with npp and can create it from gpp and ra
-    # observables
-    odvs=OrgDrivers(*map(f,d_names))
-    obss=Observables(*map(f, o_names))
-
-    dvs=Drivers(
-        npp=odvs.gpp-odvs.ra,
-        mrso=odvs.mrso,
-        tas=odvs.tas#,
-        #xi=odvs.xi_t*odvs.xi_w
-    )
-    return (obss, dvs)
+# fixme mm: 04-22-2022
+# is the following commented code obsolete?
+#def get_global_vars(dataPath):
+#    # pick up 1 site
+#    # s = slice(None, None, None)  # this is the same as :
+#    # t = s, 50, 33  # [t] = [:,49,325]
+#    def f(tup):
+#        vn, fn = tup
+#        path = dataPath.joinpath(fn)
+#        # Read NetCDF data but only at the point where we want them
+#        ds = nc.Dataset(str(path))
+#        lats = ds.variables["lat"].__array__()
+#        lons = ds.variables["lon"].__array__()
+#        if vn in ["npp","gpp","rh","ra"]:
+#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
+#        else:
+#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+#        #return ds.variables[vn][t]
+#
+#    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
+#    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+#
+#    # we want to drive with npp and can create it from gpp and ra
+#    # observables
+#    odvs=OrgDrivers(*map(f,d_names))
+#    obss=Observables(*map(f, o_names))
+#
+#    dvs=Drivers(
+#        npp=odvs.gpp-odvs.ra,
+#        mrso=odvs.mrso,
+#        tas=odvs.tas#,
+#        #xi=odvs.xi_t*odvs.xi_w
+#    )
+#    return (obss, dvs)
 
 
 experiment_name="VISIT_S2_"
@@ -295,7 +297,7 @@ def make_xi_func(dvs, epa):
     return xi_func
 
 
-def make_func_dict(mvs,dvs,epa):
+def make_func_dict(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs, epa)
@@ -837,3 +839,54 @@ def make_param_filter_func(
         
     
     return isQualified
+
+
+def make_sim_day_2_day_since_a_D(conf_dict):
+    # this function is extremely important to syncronise our results
+    # because our data streams start at different times the first day of 
+    # a simulation day_ind=0 refers to different dates for different models
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced monthly with different numbers of days
+    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
+    times = ds.variables["time"]
+    # we have to check some assumptions on which this calculation is based
+
+    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units) 
+    td = tm *30  #in days since_1860-01 (assuming a 30 day month since a varying month length would
+    #disqualify month as a unit..
+    
+    import datetime as dt
+    ad = dt.date(1, 1, 1) # first of January of year 1 
+    sd = dt.date(1860, 1, 1)
+    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+
+    def f(day_ind: int)->int:
+        return day_ind+td_aD
+
+    return f
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],     
+        "C_wood": apa['C_wood_0'],     
+        "C_root": apa['cVeg_0'] - (apa['C_leaf_0'] +  apa['C_wood_0']),  
+        "C_leaf_litter": apa['C_leaf_litter_0'],
+        "C_wood_litter": apa['C_wood_litter_0'],
+        "C_root_litter": apa["cLitter_0"]-(apa["C_leaf_litter_0"] + apa["C_wood_litter_0"]),
+        "C_soil_fast":apa["C_soil_fast_0"],
+        "C_soil_slow":apa["C_soil_slow_0"],
+        "C_soil_passive": apa["cSoil_0"]-(apa["C_soil_fast_0"] + apa["C_soil_slow_0"]),
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
+
