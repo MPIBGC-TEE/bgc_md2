@@ -27,9 +27,6 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #set auto reload for notebook
 # %load_ext autoreload
 # %autoreload 2
-# -
-
-# Python Packages:
 
 # +
 # Packages for symbolic code: 
@@ -60,7 +57,7 @@ from general_helpers import (
     make_B_u_funcs_2,
     monthly_to_yearly,
     plot_solutions,
-    autostep_mcmc,  
+    autostep_mcmc_2,  
     make_jon_cost_func,
     make_param_filter_func
 )
@@ -80,10 +77,7 @@ import model_specific_helpers_2 as msh
 # ## Model Figure and Matrix Equations
 # #### Model Figure:
 
-# +
-
 h.compartmental_graph(mvs)
-# -
 
 # #### Matrix equations:
 
@@ -98,7 +92,6 @@ dh.mass_balance_equation(mvs)
 # + codehighlighter=[[11, 12], [16, 17], [8, 28], [41, 43], [8, 24], [42, 44]]
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-
 #msh.download_my_TRENDY_output(conf_dict)
 # -
 
@@ -106,219 +99,15 @@ with Path('config.json').open(mode='r') as f:
 # Define function to subset netCDF files and link to data symbols:
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
-svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 #look at data
 dvs.npp
 # -
 
-# ## Create Symbols for $\xi$, $K$, and $A$ (No Edits)
-# Setup Yiqi matrix format:
-
-# +
-sv=mvs.get_StateVariableTuple()                            # Get state variables from symbolic matrix code
-n=len(sv)                                                  # Count number of pools
-srm = mvs.get_SmoothReservoirModel()                       # Create smooth resevoir model
-_,A,N,_,_=srm.xi_T_N_u_representation(factor_out_xi=False) # Create A and N symbols
-BI=mvs.get_BibInfo()
-for k in BI.sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
-
-t=TimeSymbol("t")
-beta_wood = 1.0-(beta_leaf+beta_root)
-beta_wood = 1.0-(beta_leaf+beta_root)
-
-#create symbols for scaler and input functions
-func_dict={
-    'xi': 'Environmental scaler as a function of time',
-    'NPP': 'Inputs as a function of time',
-}
-for k in BI.func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-# -
-
-# $\xi$ Matrix:
-
-# Create environmental scaler matrix
-xi_d=diag([1,1,1]+[xi(t) for i in range(n-3)],unpack=True)
-xi_d
-
-# $K$ Matrix:
-
-# +
-# Create empty K matrix
-K=xi_d.inv()*N
-# Create new symbols for the k_{i}
-for i in range(n):
-    if K[i,i]!=0:
-        name="k_{0}".format(sv[i])
-        code="{0}=Symbol('{0}')".format(name)
-        #print(code)
-        exec(code)
-
-# Create $K$ matrix      
-K_sym=ImmutableMatrix(
-    n,n,
-    lambda i,j: Symbol("k_" + str(sv[i])) if i==j else 0
-)
-K_sym
-# -
-
-# $f$ symbols in $A$ Matrix:
-
-# +
-# Create new symbols for the f_{i,j}
-for i in range(n):
-    for j in range(n):
-        if A[i,j]!=0 and i!=j:
-            name="f_" + str(sv[j]) + "_2_" + str(sv[i])
-            code="{0}=Symbol('{0}')".format(name)
-            #print(code)
-            exec(code)
-
-# Place $f$ values in $A$ matrix            
-A_sym=ImmutableMatrix(
-    n,n,
-    lambda i,j:  -1 if i==j else (
-        0 if A[i,j]==0 else Symbol("f_" + str(sv[j]) + "_2_" + str(sv[i]))
-    )
-)
-A_sym
-# -
-
-# $A$ matrix:
-
-# Create A matrix
-M_sym=A_sym*K_sym
-M_sym
-
-# ## Create Dictionary of All Fluxes (No Edits)
-
-# +
-# Create a dictionary for the external and internal fluxes (flux divided by dono pool content)
-outflux_rates = {"r_"+str(key)+"_rh":value/key for key,value in hr.out_fluxes_by_symbol(sv,M_sym).items() }
-internal_flux_rates = {"r_"+str(key[0])+"_2_"+str(key[1]):value/key[0] for key,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
-
-# Create dictionary of all flux rates
-all_rates=deepcopy(outflux_rates)
-all_rates.update(internal_flux_rates)
-all_rates
-# -
-
-# ## Calculate Rates from $f$ and $k$ values (Must Edit)
-# I have $k$ and $f$ values describing my model. we can define them here and use them to assign values to $r$s
-
-# + codehighlighter=[[3, 22], [26, 45], [48, 79], [83, 85], [3, 22], [26, 45], [48, 79], [83, 85]]
-# fixme mm
-# The followiwng namedtuple is only used once.
-# It would be much simpler to just add the values directly to old_par_dict
-# Is this a reference to the old implementation?
-ParameterValues = namedtuple(
-    "ParameterValues",
-    [
-        "beta_leaf",
-        "beta_root",
-        "clay",
-        "silt",
-        "k_leaf",
-        "k_root",
-        "k_wood",
-        "k_cwd",
-        "k_samet",
-        "k_sastr",
-        "k_samic",
-        "k_slmet",
-        "k_slstr",
-        "k_slmic",
-        "k_slow",
-        "k_arm",
-        "f_samet_leaf",
-        "f_slmet_root",
-        "f_samic_cwd",
-    ]
-)
-
-epa0 = ParameterValues(
-    beta_leaf=0.3,
-    beta_root=0.3,
-    clay=0.2028,
-    silt=0.2808,
-    k_leaf=0.020,
-    k_root=0.010,
-    k_wood=0.007,
-    k_cwd=0.01,
-    k_samet=0.05,
-    k_sastr=0.05,
-    k_samic=0.05,
-    k_slmet=0.040,
-    k_slstr=0.039,
-    k_slmic=0.05,
-    k_slow=0.0001,
-    k_arm=3.27E-04,
-    f_samet_leaf=0.50,
-    f_slmet_root=0.50,
-    f_samic_cwd=0.50,
-)
-
-old_par_dict = {
-    'k_c_leaf': epa0.k_leaf, # define all k values
-    'k_c_root': epa0.k_root,
-    'k_c_wood': epa0.k_wood,
-    'k_c_lit_cwd': epa0.k_cwd,
-    'k_c_lit_met': epa0.k_samet,
-    'k_c_lit_str': epa0.k_sastr,
-    'k_c_lit_mic': epa0.k_samic,
-    'k_c_soil_met': epa0.k_slmet,
-    'k_c_soil_str': epa0.k_slstr,
-    'k_c_soil_mic': epa0.k_slmic,
-    'k_c_soil_slow': epa0.k_slow,
-    'k_c_soil_passive': epa0.k_arm,
-    'f_c_leaf_2_c_lit_met': epa0.f_samet_leaf,    #define all f values
-    'f_c_root_2_c_soil_met': epa0.f_slmet_root,
-    'f_c_lit_cwd_2_c_lit_mic': epa0.f_samic_cwd*0.7,
-    'f_c_leaf_2_c_lit_str': (1-epa0.f_samet_leaf),
-    'f_c_root_2_c_soil_str': (1-epa0.f_slmet_root),
-    'f_c_wood_2_c_lit_cwd': 1,
-    'f_c_lit_cwd_2_c_soil_slow': (1-epa0.f_samic_cwd),
-    'f_c_lit_met_2_c_lit_mic': 0.2,
-    'f_c_lit_str_2_c_lit_mic': 0.2,
-    'f_c_lit_str_2_c_soil_slow': 0.2,
-    'f_c_lit_mic_2_c_soil_slow': 0.2,
-    'f_c_soil_met_2_c_soil_mic': 0.2,
-    'f_c_soil_str_2_c_soil_mic': 0.2,
-    'f_c_soil_str_2_c_soil_slow': 0.2,
-    'f_c_soil_mic_2_c_soil_slow': 0.2,
-    'f_c_soil_mic_2_c_soil_passive': 0.2,
-    'f_c_soil_slow_2_c_soil_mic': 0.2,
-    'f_c_soil_slow_2_c_soil_passive': 0.2*(0.003+0.009*epa0.clay),
-    'f_c_soil_passive_2_c_soil_mic': 0.2, 
-}
-
-# Define allocation parameters to be optimized
-par_dict = {
-    'beta_leaf': epa0.beta_leaf,
-    'beta_root': epa0.beta_root,
-}
-
-# translate rates from previous parameters to create dictionary of rates to optimize
-par_dict.update(
-    {str(k):v.subs(old_par_dict) for k,v in all_rates.items()}
-)
-
-# Create namedtuple of parameters to optimize and their translated values
-#makeTuple = namedtuple('makeTuple', par_dict)
-#parameters = makeTuple(**par_dict)
-
-#If symbols remain in output below then set them to numerical values in old_par_dict.
-#parameters._asdict() # print - everything below should have a numeric value
-# -
-
 svs_0=msh.Observables(*map(lambda v: v[0],svs))
-dvs.npp
+svs_0
 
 # ## Define Forward Model
 # #### Create constants for forward sim:
@@ -326,53 +115,154 @@ dvs.npp
 # + codehighlighter=[[1, 9], [1, 8]]
 cpa = msh.Constants(             #use Constants namedtuple to define constant values
     npp_0 = dvs.npp[0],
-    rh_0 = svs.rh[0],   
+    rh_0 = svs.rh[0],
+    ra_0 = svs.ra[0],
     c_veg_0 = svs.cVeg[0],
     c_soil_0 = svs.cSoil[0],
     clay = 0.2028,
     silt = 0.2808,
-    nyears = 320
+    nyears = 320,
+    beta_leaf=0.37152535661667285,
+    beta_root=0.2118738332472721
 )
 cpa._asdict()    #print - everything should have a numeric value
 # -
 
 # #### Create start values for parameters to be optimized during data assimilation:
 
-epa0 = msh.EstimatedParameters(
-    **{
-        "c_leaf_0": svs_0.cVeg/3,          #set inital pool values to svs values 
-        "c_root_0": svs_0.cVeg/3,          #you can set numerical values here directly as well
-        "c_lit_cwd_0": svs_0.cSoil/35,
-        "c_lit_met_0": svs_0.cSoil/35,
-        "c_lit_str_0": svs_0.cSoil/35,
-        "c_lit_mic_0": svs_0.cSoil/35,
-        "c_soil_met_0": svs_0.cSoil/20,
-        "c_soil_str_0": svs_0.cSoil/15,
-        "c_soil_mic_0": svs_0.cSoil/10,
-        "c_soil_slow_0": svs_0.cSoil/3
-    },
-    **par_dict
-)    
+# +
+# how we transform given startvalues for the f and k to these is shown in createModel
+# but once we have them, we can print them out and use them from now on directly
+epa0 =msh.EstimatedParameters(
+    r_c_leaf_rh=0.0022972292016441116,
+    r_c_root_rh=0.0015470633697005037,
+    r_c_wood_rh=0.0003981642399033648,
+    r_c_leaf_2_c_lit_met=0.0008419144443122888, 
+    r_c_leaf_2_c_lit_str=7.253712507163508e-05,
+    r_c_root_2_c_soil_met=0.0007599224861792184,
+    r_c_root_2_c_soil_str=0.0007161706404910827,
+    r_c_wood_2_c_lit_cwd=0.0009217945194693122,
+    c_leaf_0=0.11328379866881665,
+    c_root_0=0.14464613373390392,
+    r_c_lit_cwd_rh=0.02026318476587012, 
+    r_c_lit_met_rh=0.00340079410753037, 
+    r_c_lit_str_rh=0.008989119944533677,
+    r_c_lit_mic_rh=0.011276949417831122,
+    r_c_soil_met_rh=0.0006741622348146495,
+    r_c_soil_str_rh=0.00017592886085999286,
+    r_c_soil_mic_rh=0.000519741477608671,
+    r_c_soil_slow_rh=1.0255263440555624e-06,
+    r_c_soil_passive_rh=3.881935738016802e-07,
+    r_c_lit_cwd_2_c_lit_mic=1.3188464625334016e-05,
+    r_c_lit_cwd_2_c_soil_slow=1.6316549662914743e-05,
+    r_c_lit_met_2_c_lit_mic=2.9433144645429653e-06,
+    r_c_lit_str_2_c_lit_mic=0.00010298015064924245,
+    r_c_lit_str_2_c_soil_slow=0.0016579805745133146,
+    r_c_lit_mic_2_c_soil_slow=0.0011840494205249575,
+    r_c_soil_met_2_c_soil_mic=7.861811338124696e-05,
+    r_c_soil_str_2_c_soil_mic=2.578967926776423e-05,
+    r_c_soil_str_2_c_soil_slow=1.7394627034766953e-06,
+    r_c_soil_mic_2_c_soil_slow=0.00021605360652605818,
+    r_c_soil_mic_2_c_soil_passive=4.569266267503945e-05,
+    r_c_soil_slow_2_c_soil_mic=4.1146075824754925e-07,
+    r_c_soil_slow_2_c_soil_passive=2.9993396188473066e-08,
+    r_c_soil_passive_2_c_soil_mic=2.751360714464457e-06,
+    c_lit_cwd_0=0.011122590276073926, 
+    c_lit_met_0=0.04563448012195457,
+    c_lit_str_0=0.022083588329899793,
+    c_lit_mic_0=0.011910319433275054,
+    c_soil_met_0=0.048208986458370635,
+    c_soil_str_0=0.6643525311241724,
+    c_soil_mic_0=0.05837121211447685,
+    c_soil_slow_0=0.3228602860446373
+)
 
+#initial globalmean hand-tuning
+#beta_leaf=0.3,
+#beta_root=0.3,
+#r_c_leaf_rh=0.0008,
+#r_c_root_rh=0.0008,
+#r_c_wood_rh=0.0009,
+#r_c_lit_cwd_rh=0.009730016902211099,
+#r_c_lit_met_rh=0.007002926006944982,
+#r_c_lit_str_rh=0.003459128990999148,
+#r_c_lit_mic_rh=0.006496258804231679, 
+#r_c_soil_met_rh=0.0005283019624678767,
+#r_c_soil_str_rh=0.00015550260079549095,
+#r_c_soil_mic_rh=0.0014976016198231856,
+#r_c_soil_slow_rh=8e-6,
+#r_c_soil_passive_rh=7e-07,
+#r_c_leaf_2_c_lit_met=0.001,
+#r_c_leaf_2_c_lit_str=0.0002,
+#r_c_root_2_c_soil_met=0.001,
+#r_c_root_2_c_soil_str=0.0005,
+#r_c_wood_2_c_lit_cwd=0.0002, 
+#r_c_lit_cwd_2_c_lit_mic=0.00002666130148133097,
+#r_c_lit_cwd_2_c_soil_slow=0.00003132779629682739,
+#r_c_lit_met_2_c_lit_mic=0.000010359522559848344, 
+#r_c_lit_str_2_c_lit_mic=0.00008930543749313994,
+#r_c_lit_str_2_c_soil_slow=0.0006956056931813782,
+#r_c_lit_mic_2_c_soil_slow=0.000982832457403613,
+#r_c_soil_met_2_c_soil_mic=0.000494305460211622,
+#r_c_soil_str_2_c_soil_mic=0.000017939031246948314,
+#r_c_soil_str_2_c_soil_slow=0.000012026215328729533,
+#r_c_soil_mic_2_c_soil_slow=0.0009376182185796474,
+#r_c_soil_mic_2_c_soil_passive=0.00021203823995936096,
+#r_c_soil_slow_2_c_soil_mic=1.2760504386493467e-06,
+#r_c_soil_slow_2_c_soil_passive=4.146635398790735e-08,
+#r_c_soil_passive_2_c_soil_mic=7.889917586471123e-06,
+#c_leaf_0=0.2,
+#c_root_0=0.2,
+#c_lit_cwd_0=0.2,
+#c_lit_met_0=0.2,
+#c_lit_str_0=0.2,
+#c_lit_mic_0=0.2,
+#c_soil_met_0=0.2,
+#c_soil_str_0=0.2, 
+#c_soil_mic_0=0.2,
+#c_soil_slow_0=0.5,
 
 # +
-def npp_func(day):
-        month=day_2_month_index(day)
-        return dvs.npp[month]
+gpp_func = msh.make_gpp_func(dvs)
+npp_func = msh.make_npp_func(dvs)
+temp_func = msh.make_temp_func(dvs)
 
-n=cpa.nyears*12
+n = cpa.nyears*12*30
+
+gpp_obs = np.array([gpp_func(d) for d in range(n)])
 npp_obs = np.array([npp_func(d) for d in range(n)])
+temp_obs = np.array([temp_func(d) for d in range(n)])
 
 # Plot simulation output for observables
-fig = plt.figure()
+fig = plt.figure(figsize=(12, 4), dpi=80)
 plot_solutions(
         fig,
         times=range(n),
-        var_names=msh.Observables._fields,
+        var_names=msh.Drivers._fields,
         tup=(npp_obs,)
 )
-fig.savefig('solutions.pdf')
+fig.savefig('npp.pdf')
 # -
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Drivers._fields[1],
+        tup=(temp_obs,)
+)
+fig.savefig('temp.pdf')
+
+# Plot simulation output for observables
+fig = plt.figure(figsize=(12, 4), dpi=80)
+plot_solutions(
+        fig,
+        times=range(n),
+        var_names=msh.Drivers._fields[2],
+        tup=(gpp_obs,)
+)
+fig.savefig('gpp.pdf')
 
 # #### Create forward model function:
 
@@ -398,10 +288,10 @@ epa_min=msh.EstimatedParameters._make(tuple(np.array(epa0)*0.01))
 epa_max=msh.EstimatedParameters._make(tuple(np.array(epa0)*100))
 
 # fix values that are problematic from calculation
-epa_max = epa_max._replace(beta_leaf = 0.99)
-epa_max = epa_max._replace(beta_root = 0.99)
-epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
-epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
+#epa_max = epa_max._replace(beta_leaf = 0.9)
+#epa_max = epa_max._replace(beta_root = 0.9)
+#epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
+#epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_met_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_str_0 = svs_0.cSoil)
@@ -412,50 +302,47 @@ epa_max = epa_max._replace(c_soil_mic_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
 
 #print - all names should have numerical values
-epa_max._asdict()
+#epa_max._asdict()
 # -
 
 # #### Conduct data assimilation:
 
+param2res=msh.make_param2res_sym(mvs,cpa,dvs)
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc(
+C_autostep, J_autostep = autostep_mcmc_2(
     initial_parameters=epa0,
-    filter_func=make_param_filter_func(epa_max, epa_min),
-    param2res=msh.make_param2res_sym(mvs,cpa,dvs),
+    filter_func=msh.make_param_filter_func(epa_max, epa_min),
+    param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=2000,
+    nsimu=4000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=15,   # default value | target acceptance rate in %
+    acceptance_rate=0.23,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=1,   # default value | increase value to reduce initial step size
+    D_init=0.05,   # default value | increase value to reduce initial step size
     K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
 # #### Graph data assimilation results:
 
-# +
 # optimized parameter set (lowest cost function)
 par_opt=np.min(C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(len(msh.EstimatedParameters._fields),1),axis=1)
 epa_opt=msh.EstimatedParameters(*par_opt)
+param2res = msh.make_param2res_sym(mvs,cpa,dvs)
 mod_opt = param2res(epa_opt)  
-
+#obs = msh.Observables(cVeg=svs.cVeg,cSoil=svs.cSoil,rh=svs.rh)
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
+plot_observations_vs_simulations(
         fig,
-        #times=range(cpa.number_of_months),
-        times=range(n), # for yearly output
-        var_names=msh.observables._fields,
-        tup=(mod_opt,obs)
-        #tup=(obs,)
-)
-
+        svs,
+        mod_opt
+    )
 fig.savefig('solutions_opt.pdf')
-
+# +
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
@@ -464,7 +351,77 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('YIBs_da_pars.csv'), sep=','
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('YIBS_da_cost.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
+
+epa_opt
+# +
+import model_specific_helpers_2 as msh
+import general_helpers as gh
+it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
+ns=1500
+StartVectorTrace=gh.make_StartVectorTrace(mvs)
+nv=len(StartVectorTrace._fields)
+res_trace= np.zeros((ns,nv))
+for i in range(ns):
+    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
+#res_trace
+
+import matplotlib.pyplot as plt
+n=len(mvs.get_StateVariableTuple())
+fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
+axs=fig.subplots(n+1,2)
+days=list(range(ns))
+
+
+for i in range(n):
+    
+    ax = axs[i,0]
+    #  the solution
+    pos=i
+    ax.plot(
+        days,
+        res_trace[:,i],
+        label=StartVectorTrace._fields[pos],
+        color='blue'
+    )
+    # X_p
+    pos=i+n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='red'
+    )
+    # X_c
+    pos=i+2*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='yellow'
+    )
+    ax.legend()
+    
+    ax = axs[i,1]
+    # RT
+    pos=i+3*n
+    ax.plot(
+        days,
+        res_trace[:,pos],
+        label=StartVectorTrace._fields[pos],
+        color='black'
+    )
+    ax.legend()
+    
+axs[n,0].plot(
+    days,
+    [msh.make_npp_func(dvs)(d) for d in days],
+    label='NPP',
+    color='green'
+)
+axs[n,0].legend()
+
 # -
+
 
 
 

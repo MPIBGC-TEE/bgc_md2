@@ -93,6 +93,16 @@ Before you start working on your own model you should make sure that you can run
 1. Although the example is very long since it covers ALL the steps that were necessary for the visit model, YOUR version
    should be very short in the end. (Like instpectModel.py) 
 
+### Common Issues
+This is a small collections of tricky circumstances encountered in several models
+1. Be aware of the units. 
+   Fluxes (like npp or rh) in the trendy data streams have the unit $ kg m^-2 s^-1 $
+   The original timestep of many models was 1 day and so convinienlty (although not necessarily) 
+   unit of time was assumed to be days. So dC/dt is considered to have the unit $ kg m^-2 day^-1 $
+   Consequently the (elements of the ) matrix M = A \xi K is considered to have unit day ^-1.
+   The easiest way to harmonize is to scale the flux data to $  kg m^-2 day^-1 $ by mulitiplying them
+   by $24*60*60$ in the function `get_example_site_vars`
+
 ### General Remarks and Additional information
 
 ## Keep your repository updated! ## (Ohterwise you will base your changes on outdated code run into conflicts and make it very hard for us to incorporate your changes (and for you to incorporate ours...) 

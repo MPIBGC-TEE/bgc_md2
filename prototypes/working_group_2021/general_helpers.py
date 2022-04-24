@@ -6,13 +6,43 @@ from copy import copy
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
+from frozendict import frozendict
+from importlib import import_module
+import os
 
-import CompartmentalSystems.helpers_reservoir as hr
 from pathlib import Path
 import json 
 import netCDF4 as nc
 
+from ComputabilityGraphs.CMTVS import CMTVS
+import CompartmentalSystems.helpers_reservoir as hr
+from bgc_md2.resolve.mvars import (
+        OutFluxesBySymbol,
+        InternalFluxesBySymbol
+)
+from bgc_md2.helper import bgc_md2_computers
+
 days_per_year = 365 
+TraceTuple = namedtuple(
+    "TraceTuple",
+     ["X", "X_p" ,"X_c" ,"RT"]
+)
+
+# some tiny helper functions for module loading
+def mvs(mf):
+    return import_module("{}.source".format(mf)).mvs
+def msh(mf):
+    return import_module('{}.model_specific_helpers_2'.format(mf))
+def th(mf):
+    return import_module('{}.test_helpers'.format(mf))
+
+def confDict(mf):
+    with Path(mf).joinpath('config.json').open(mode='r') as f:
+        confDict=frozendict(json.load(f)) 
+    return confDict
+
+def test_args(mf):
+    return th(mf).make_test_args(conf_dict=confDict(mf),msh=msh(mf),mvs=mvs(mf))
 
 # should be part  of CompartmentalSystems
 def make_B_u_funcs(
@@ -86,6 +116,22 @@ def numfunc(expr_cont, mvs ,delta_t_val, par_dict, func_dict):
         func_set=func_dict
     )
 
+
+def make_param_dict(mvs,cpa,epa):
+    srm=mvs.get_SmoothReservoirModel()
+    model_par_dict_keys=srm.free_symbols.difference(
+        [Symbol(str(mvs.get_TimeSymbol()))]+
+        list(mvs.get_StateVariableTuple())
+    )
+    # Parameter dictionary for the iterator
+    apa = {**cpa._asdict(),**epa._asdict()}
+    model_par_dict = {
+        Symbol(k):v for k,v in apa.items()
+        if Symbol(k) in model_par_dict_keys
+    }
+    return model_par_dict
+
+
 def make_uniform_proposer(
         c_max: Iterable,
         c_min: Iterable,
@@ -111,7 +157,40 @@ def make_uniform_proposer(
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max - c_min) / D)
+            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max-c_min)/D)
+            if filter_func(c_new):
+                keep_searching = False
+        return c_new
+
+    return GenerateParamValues
+
+
+def make_uniform_proposer_2(
+        c_max: Iterable,
+        c_min: Iterable,
+        D: float,
+        filter_func: Callable[[np.ndarray], bool],
+) -> Callable[[Iterable], Iterable]:
+    """Returns a function that will be used by the mcmc algorithm to propose
+    a new parameter value tuple based on a given one. 
+    The two arrays c_max and c_min define the boundaries
+    of the n-dimensional rectangular domain for the parameters and must be of
+    the same shape.  After a possible parameter value has been sampled the
+    filter_func will be applied to it to either accept or discard it.  So
+    filter func must accept parameter array and return either True or False
+    :param c_max: array of maximum parameter values
+    :param c_min: array of minimum parameter values
+    :param D: a parameter to regulate the proposer step. Higher D means smaller step size
+    :param filter_func: model-specific function to filter out impossible parameter combinations
+    """
+
+    g = np.random.default_rng()
+
+    def GenerateParamValues(c_op, D):
+        paramNum = len(c_op)
+        keep_searching = True
+        while keep_searching:
+            c_new = c_op + (np.random.uniform(-0.5,0.5,paramNum) * c_op * D)
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -280,6 +359,134 @@ def autostep_mcmc(
     # remove the part of the arrays that is still filled with zeros
     useful_slice = slice(0, upgraded)
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
+
+# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+def autostep_mcmc_2(
+        initial_parameters: Iterable,
+        filter_func: Callable,
+        param2res: Callable[[np.ndarray], np.ndarray],
+        costfunction: Callable[[np.ndarray], np.float64],
+        nsimu: int,
+        c_max: np.ndarray,
+        c_min: np.ndarray,
+        acceptance_rate=0.23,
+        chunk_size=100,
+        D_init=0.10, 
+        K=1 
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
+    with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
+
+    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
+    :param filter_func: model-specific function to filter out impossible parameter combinations
+    :param param2res: A function that given a parameter(tuple) returns
+    the model output, which has to be an array of the same shape as the observations used to
+    build the cost function.
+    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a
+    specific set of observations, which is why they do not appear as an argument.
+    :param nsimu: The length of the chain
+    :param c_max: Array of maximum values for each parameter
+    :param c_min: Array of minimum values for each parameter
+    :param acceptance_rate: Target acceptance rate in %, default is 20%
+    :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
+    Set to 0 for constant step size. Default is 100.
+    :param D_init: initial D value (increase to get a smaller step size), default = 1
+    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions), default = 1
+    """
+    np.random.seed(seed=10)
+
+    paramNum = len(initial_parameters)
+
+    upgraded = 0
+    C_op = initial_parameters
+    tb = time()
+    first_out = param2res(C_op)
+    J_last = costfunction(first_out)
+    J_min = J_last
+    J_min_simu = 0
+    print('First_iteration done after ' + str( round(time() - tb, 2)) + 's')
+    print('Status update every 10 iterations:')
+    # J_last = 400 # original code
+
+    # initialize the result arrays to the maximum length
+    # Depending on many of the parameters will be accepted only
+    # a part of them will be filled with real values
+    C_upgraded = np.zeros((paramNum, nsimu))
+    J_upgraded = np.zeros((2, nsimu))
+    D = D_init
+    proposer = make_uniform_proposer_2(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+    # for simu in tqdm(range(nsimu)):
+    st = time()
+    accepted_current = 0
+    if chunk_size == 0:
+        chunk_size = nsimu  # if chunk_size is set to 0 - proceed without updating step size.
+    for simu in range(nsimu):
+        if (simu > 0) and (simu % chunk_size == 0):  # every chunk size (e.g. 100 iterations) update the proposer step
+            if accepted_current == 0:
+                accepted_current = 1  # to avoid division by 0
+            if accepted_current/chunk_size > acceptance_rate:
+                D = D * (1 + 0.2)
+            else:
+                D = D * (1 - 0.2)
+            #D = D * np.sqrt(
+            #    acceptance_rate / (accepted_current / chunk_size * 100))  # compare acceptance and update step
+            #if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
+            #    D = (1 / paramNum)
+            accepted_current = 0
+            #proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+        if simu % (chunk_size * 20) == 0:  # every 20 chunks - return to the initial step size (to avoid local minimum)
+            D = D_init
+
+        c_new = proposer(C_op, D)
+        out_simu = param2res(c_new)
+        J_new = costfunction(out_simu)
+
+        if accept_costfunction (J_last=J_last, J_new=J_new, K=K):
+            C_op = c_new
+            J_last = J_new
+            if J_last < J_min:
+                J_min = J_last
+                J_min_simu = simu
+            C_upgraded[:, upgraded] = C_op
+            J_upgraded[1, upgraded] = J_last
+            J_upgraded[0, upgraded] = simu
+            upgraded = upgraded + 1
+            accepted_current = accepted_current + 1
+
+        # print some metadata
+        # (This could be added to the output file later)
+        if simu % 10 == 0 or simu == (nsimu - 1):
+            print(
+                """ 
+               #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
+               progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+               time elapsed: {minutes:02d}:{sec:02d}
+               overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
+               """.format(
+                    n=upgraded,
+                    r=int(upgraded / (simu + 1) * 100),
+                    simu=simu,
+                    nsimu=nsimu,
+                    pbs='|' + int(50 * simu / (nsimu - 1)) * '#' + int((1 - simu / (nsimu - 1)) * 50) * ' ' + '|',
+                    p=int(simu / (nsimu - 1) * 100),
+                    minutes=int((time() - st) / 60),
+                    sec=int((time() - st) % 60),
+                    cost=round(J_min, 2),
+                    cost2=round(J_last, 2),
+                    ac=accepted_current/chunk_size*100,
+                    # rr=int(accepted_current / chunk_size * 100),
+                    ch=chunk_size,
+                    d=round(D, 3),
+                    s=J_min_simu
+                ),
+                end='\033[5A'  # print always on the same spot of the screen...
+            )
+
+    # remove the part of the arrays that is still filled with zeros
+    useful_slice = slice(0, upgraded)
+    return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
+
 
 # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 def adaptive_mcmc(
@@ -521,7 +728,17 @@ def make_jon_cost_func(
     return costfunction
 
 def day_2_month_index(d):
-    return months_by_day_arr()[(d % days_per_year)]
+    #this is the trendy version with always 30 days per month
+    return int(d/30)
+
+# def month_2_day_index(ns):
+#    """ computes the index of the day at the end of the month n in ns
+#    this works on vectors """
+#    return 30*ns
+
+def day_2_month_index_vm(d):
+    # vm for variable months
+    return months_by_day_arr()[(d % days_per_year)] + int(d/days_per_year)*12
 
 
 @lru_cache
@@ -552,7 +769,8 @@ def day_2_year_index(ns):
     return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
 
 
-def month_2_day_index(ns):
+
+def month_2_day_index_vm(ns):
     """ computes the index of the day at the end of the month n in ns
     this works on vectors and is faster than a recursive version working
     on a single index (since the smaller indices are handled anyway)
@@ -696,42 +914,141 @@ def plot_observations_vs_simulations(
     for i,name in enumerate(svs_cut.__class__._fields):
         var=svs_cut[i]
         var_simu=obs_simu[i]
-        axs[i].plot(range(len(var_simu)),var_simu,label="simulation")
-        axs[i].plot(range(len(var)),var,label='observation')
+        axs[i].plot(range(len(var_simu)),var_simu,label="simulation", zorder=2)
+        axs[i].plot(range(len(var)),var,label='observation', zorder=1)
         axs[i].legend()
         axs[i].set_title(name)
 
 
+def get_nan_pixels(
+        var: nc._netCDF4.Variable
+    ):
+    """We use a netCDF4.Variable to avoid having to load the whole array into memory 
+    """
+    N_t,N_lat,N_lon = var.shape
+    cs=30
+    def f(I_lat,I_lon):
+        n_lat = min(cs,N_lat-I_lat)
+        n_lon = min(cs,N_lon-I_lon)
+        chunk = var[:,I_lat:I_lat+n_lat,I_lon:I_lon+n_lon]
+        #from IPython import embed;embed()
+        return tuple((
+            (I_lat + i_lat, I_lon + i_lon) 
+            for i_lat in range(n_lat) 
+            for i_lon in range(n_lon)
+            if np.isnan(
+                chunk[:,i_lat,i_lon]
+            ).any() 
+        ))
+                    
+    l=(
+        f(I_lat,I_lon) 
+        for I_lat in range(0,N_lat,cs)
+        for I_lon in range(0,N_lon,cs)
+    )
+    return reduce(lambda x,y:x+y,l)
+    
+def get_nan_pixel_mask(
+        var: nc._netCDF4.Variable
+    ):
+    ## We use a netCDF4.Variable to avoid having to load the whole array into memory 
+    ## since it is too big e.g. for the dlm files 
+
+    N_t,N_lat,N_lon = var.shape
+    
+    var_mask= var[0,:,:].mask #either False or a boolean array
+    start_mask = np.zeros((N_lat,N_lon),dtype=np.bool_) if isinstance(var_mask,bool) else  var_mask
+
+    return np.array(
+        reduce(
+            lambda acc,i: np.logical_or(acc,~np.isfinite(var[i,:,:])),
+            tqdm(range(var.shape[0])),
+            start_mask
+        )
+    )
 
 
-def global_mean(lats,lons,arr):
+
+
+def get_weight_mat(
+        lats: np.ma.core.MaskedArray,
+        lons: np.ma.core.MaskedArray
+    ):
     # assuming an equidistant grid.
     delta_lat=(lats.max()- lats.min())/(len(lats)-1)
     delta_lon=(lons.max() -lons.min())/(len(lons)-1)
-
     pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+
+    return np.array(
+        [
+                [   
+                    pixel_area(lats[lat_ind]) 
+                    for lon_ind in range(len(lons))    
+                ]
+            for lat_ind in range(len(lats))    
+        ]
+    )
+
+def global_mean(
+        lats: np.ma.core.MaskedArray,
+        lons: np.ma.core.MaskedArray,
+        arr: np.ma.core.MaskedArray
+    )-> np.array:
+    """As the signature shows this function expects masked arrays.
+    These occure naturaly if netCDF4.Variables are sliced.
+    e.g. 
+    ds = nc.Dataset("example.nc")
+    var=ds.variables['npp'] #->type(var)=netCDF4._netCDF4.Variable
+    arr=var[:,:,;] # type(arr)=np.ma.core.MaskedArray
+    # or if we don't know the shape
+    arr=var.__array__()
+    The important thing is not to call this functions with the variables but the arrays.
+    """
     
     #copy the mask from the array (first time step) 
     weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
 
     weight_mat= np.ma.array(
-        np.array(
-            [
-                    [   
-                        pixel_area(lats[lat_ind]) 
-                        for lon_ind in range(len(lons))    
-                    ]
-                for lat_ind in range(len(lats))    
-            ]
-        ),
+        get_weight_mat(lats,lons),
         mask = weight_mask 
+    )
+    wms=weight_mat.sum()
+    # to compute the sum of weights we add only those weights that
+    # do not correspond to an unmasked grid cell
+    return  ((weight_mat*arr).sum(axis=(1,2))/wms).data
+
+def global_mean_var(
+        lats: np.ma.core.MaskedArray,
+        lons: np.ma.core.MaskedArray,
+        mask: np.array,
+        var: nc._netCDF4.Variable
+    )-> np.array:
+    """As the signature shows this function expects a netCDF4.Variable
+    This is basically metadata which allows us to compute the maean even 
+    if the whole array would not fit into memory.
+
+    ds = nc.Dataset("example.nc")
+    var=ds.variables['npp'] #->type(var)=netCDF4._netCDF4.Variable
+
+    the mask array is used to block out extra pixels that are not 
+    masked in var 
+    """
+    
+    weight_mat= np.ma.array(
+        get_weight_mat(lats,lons),
+        mask = mask 
     )
     
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
-    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+    wms=weight_mat.sum()
 
-
+    n_t = var.shape[0]
+    res=np.zeros(n_t)
+    for it in tqdm(range(n_t)): 
+        el=(weight_mat*var[it,:,:]).sum()/wms
+        res[it]=el
+    return  res
 
 
 def grad2rad(alpha_in_grad):
@@ -945,7 +1262,25 @@ def make_param_filter_func(
     
     return isQualified
 
+def make_param_filter_func_2(
+        c_max,
+        c_min, 
+        betas: List[str]
+    ) -> Callable[[np.ndarray], bool]:
+
+    positions=[c_max.__class__._fields.index(beta) for beta in betas]
+    
+    def isQualified(c):
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+
+        cond3 =  np.sum([ c[p] for p in positions])  <=1  
+        return (cond1 and cond2 and cond3)
+        
+    return isQualified
+
 def make_StartVectorTrace(mvs):
+    #deprecated
     svt=mvs.get_StateVariableTuple()
     return namedtuple(
         "StartVectorTrace",
@@ -954,6 +1289,7 @@ def make_StartVectorTrace(mvs):
          [str(v)+"_c" for v in svt]+
          [str(v)+"_RT" for v in svt]
     )
+
 
 def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
     # test the new iterator
@@ -978,6 +1314,9 @@ def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
     V_init=StartVectorTrace(*V_arr)
     return V_init
 
+
+# fixme: mm 04-22-2022 
+# this function is deprecated rather use traceability_iterator
 def make_daily_iterator_sym_trace(
         mvs,
         V_init, #: StartVectorTrace,
@@ -1016,4 +1355,124 @@ def make_daily_iterator_sym_trace(
         initial_values=V_arr,
         f=f,
     )
+
+def traceability_iterator(
+        X_0,
+        func_dict,
+        mvs, #: CMTVS,
+        dvs, #: Drivers,
+        cpa, #: Constants,
+        epa,  #: EstimatedParameters
+        delta_t_val: int =1# defaults to 1day timestep
+    ):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=make_param_dict(mvs,cpa,epa)
+
     
+    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+
+    def trace_tuple_instance(X,B,I):
+        u=I.sum()
+        b=I/u
+        B_inv = np.linalg.inv(B)
+        X_c = B_inv@I
+        X_p = X_c-X
+        RT = X_c/u #=B_inv@b but cheeper to computed
+        
+        return TraceTuple(
+            X=X,
+            X_p=X_p,
+            X_c=X_c,
+            RT=RT
+        )
+    
+    # define the start tuple for the iterator    
+    V_init = trace_tuple_instance(
+        X_0,
+        # in Yiqi's nomenclature: dx/dt=I-Bx 
+        # instead of           : dx/dt=I+Bx 
+        # as assumed by B_u_func 
+        - B_func(0,X_0), 
+        I_func(0,X_0)
+    )
+   
+    # define the function with V_{i+1}=f(i,V_i)
+    def f(
+            it: int,
+            V :TraceTuple
+        ) -> TraceTuple:
+            X = V.X
+            I = I_func(it,X) 
+            B = B_func(it,X)
+            X_new= X + I + B @ X
+            return trace_tuple_instance(X_new,-B,I)
+    
+    return TimeStepIterator2(
+        initial_values=V_init,
+        f=f
+    )
+
+
+
+def write_global_mean_cache(
+        gm_path,
+        gm: np.array,
+        var_name: str 
+    ):
+    #var=ds.variables[var_name]
+    if gm_path.exists():
+        print("removing old cache file{}")
+        os.remove(gm_path)
+        
+    n_t=gm.shape[0]
+    time_dim_name="time"
+    ds_gm = nc.Dataset(str(gm_path), 'w',persist=True)
+    time = ds_gm.createDimension(time_dim_name,size=n_t)
+    var_gm=ds_gm.createVariable(var_name,np.float64,[time_dim_name])
+    gm_ma=np.ma.array(gm,mask=np.zeros(gm.shape,dtype=np.bool_))
+    var_gm[:]=gm_ma
+    ds_gm.close()
+
+
+def get_cached_global_mean(gm_path, vn):
+    return nc.Dataset(str(gm_path)).variables[vn].__array__()
+
+
+# def make_fluxrates_from_kf(mvs_kv,xi_d):    
+#    #compute rate based formulation
+#    # we create a dictionary for the outfluxrates (flux divided by dono pool content)
+#    def ouflux_rate_str(dp):
+#        return "r_"+str(dp)+"_2_out"
+#
+#    def internal_flux_rate_str(dp, rp):
+#        return "r_"+str(dp)+"_2_"+str(rp)
+#
+#    sv = mvs_kf.get_StateVariableTuple()
+#    M_sym=mvs_kf.get_CompartmentalMatrix()*xi_d.inv()
+#    outflux_rates = {ouflux_rate_str(dp):value/dp for dp,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
+#    internal_flux_rates = {:value/dp[0] for dp,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
+#    all_rates = {**internal_flux_rates, ** outflux_rates}
+#    
+#    mvs_new = CMTVS(
+#        {
+#            mvs.get_InFluxesBySymbol(),
+#            mvs.get_TimeSymbol(),
+#            mvs.get_StateVariableTuple(),
+#            OutFluxesBySymbol(
+#                {
+#                    dp :
+#                    Symbol(ouflux_rate_str(dp))*dp
+#                    for dp in mvs.get_OutFluxesBySymbol().keys()
+#                }
+#            ),
+#            InternalFluxesBySymbol(
+#                {
+#                    (dp,rp) : Symbol(internal_flux_rate_str(dp,rp)*dp
+#                    for dp,rp in mvs.get_InternalFluxesBySymbol().keys()
+#                }
+#            )
+#        },
+#        bgc_md2_computers()
+#    )
+#    def fk_pardict_2_r_pardict
+#    return mvs_new
