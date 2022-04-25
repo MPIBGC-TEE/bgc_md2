@@ -43,8 +43,9 @@ mvs = CMTVS(
             C_wood: k_wood2out * C_wood
         }),
         InternalFluxesBySymbol({
-            (C_leaf, C_wood): k_leaf2wood* C_leaf, 
-            (C_wood, C_leaf): k_wood2leaf * C_wood}),
+            #(C_leaf, C_wood): k_leaf2wood* C_leaf, 
+            #(C_wood, C_leaf): k_wood2leaf * C_wood
+        }),
     },
     bgc_md2_computers()
 
@@ -52,7 +53,8 @@ mvs = CMTVS(
 # -
 
 #start to query the model description..
-mvs.get_CompartmentalMatrix()
+M=mvs.get_CompartmentalMatrix()
+M.inverse_LU()
 
 mvs.get_InputTuple()
 

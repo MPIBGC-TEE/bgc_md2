@@ -128,8 +128,7 @@ values(itr,start,stop)
 
 # now with 
 itr=tracebility_iterator(mf,delta_t_val)
-values(itr,3,4)
-
+#values(itr,3,4)
 
 # +
 def values_2_TraceTuple(tups):
@@ -156,7 +155,7 @@ tups=values(itr,start,stop)
 vals=values_2_TraceTuple(tups)
 times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
 vals.X_c.shape,times.shape 
-vals
+#vals
 
 # +
 import matplotlib.pyplot as plt
@@ -201,7 +200,7 @@ def tt_sum(tt):
             for name in tt._fields 
         )
     )
-tt_sum(vals)
+#tt_sum(vals)
 
 
 # +
@@ -219,7 +218,7 @@ def partitions(start,stop,nr_acc=1):
         for i in range(number_of_steps)
     ]+[last_tup]
 
-partitions(start,stop,12)
+#partitions(start,stop,12)
 
 
 # -
@@ -255,7 +254,7 @@ def averaged_values(itr,partitions):
         for (start_p,stop_p) in partitions
     ]
     return values_2_TraceTuple(tts)
-        
+
 
 
 itr=tracebility_iterator(mf,delta_t_val)
