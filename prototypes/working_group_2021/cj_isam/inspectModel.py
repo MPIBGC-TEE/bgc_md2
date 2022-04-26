@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -233,38 +233,58 @@ np.linalg.inv(Bs[0])
 X_ss = np.linalg.solve(B_mean, (-b_mean))
 
 steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVariableTuple())}
+# -
 
-# +
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
 epa_0=msh.EstimatedParameters(
- fwt=0.62,
- fgv=0.3,
- fco=0.95,
- fml=0.80,
- fd=0.75,
- k_C_NWT=1/(365*2),
- k_C_AGWT=1/(365*30),
- k_C_TR=1/(365*20),
- k_C_GVF=1/(365*30),
- k_C_GVR=1/(365*20),
- f_C_AGSL_2_C_AGMS=0.5*0.3,
- f_C_BGRL_2_C_SHMS=0.5,
- C_NWT_0=steady_state_dict["C_NWT"],
- C_AGWT_0=steady_state_dict["C_AGWT"],
- C_GVF_0=steady_state_dict["C_GVF"],
- C_GVR_0=steady_state_dict["C_GVR"],
- C_AGML_0=steady_state_dict["C_AGML"],
- C_AGSL_0=steady_state_dict["C_AGSL"],
- C_BGDL_0=steady_state_dict["C_BGDL"],
- C_AGMS_0=steady_state_dict["C_AGMS"],
- C_YHMS_0=steady_state_dict["C_YHMS"],
- C_SHMS_0=steady_state_dict["C_SHMS"],
-
+    fwt=0.22720510630531535, 
+    fgv=0.13339749844173146, 
+    fco=0.48468873886205804, 
+    fml=0.6625400558788637, 
+    fd=0.609731866092099, 
+    k_C_NWT=0.0015651547605874845, 
+    k_C_AGWT=0.00020579549570896914, 
+    k_C_TR=0.00021655197553090258,
+    k_C_GVF=0.00028880916566528537, 
+    k_C_GVR=0.0001574617151611989, 
+    f_C_AGSL_2_C_AGMS=0.16522686655577523, 
+    f_C_BGRL_2_C_SHMS=0.5461047001295201,
+    C_NWT_0=0.1674883218647344,
+    C_AGWT_0=0.29255052631195533,
+    C_GVF_0=0.3359968317564281,
+    C_GVR_0=2.3328171507922555,
+    C_AGML_0=0.02963751068264173,
+    C_AGSL_0=0.0004373128929123478,
+    C_BGDL_0=0.0005250285545731843,
+    C_AGMS_0=0.07115408727464849,
+    C_YHMS_0=0.17191831703645521,
+    C_SHMS_0=8.037110582162018
+    #fwt=0.3,
+    #fgv=0.12,
+    #fco=0.455,
+    #fml=0.64,
+    #fd=0.6,
+    #k_C_NWT=1/(365*2.3),#2
+    #k_C_AGWT=1/(365*10.3),#30
+    #k_C_TR=1/(365*14.15),#20
+    #k_C_GVF=1/(365*10),#30
+    #k_C_GVR=1/(365*12.38),#20
+    #f_C_AGSL_2_C_AGMS=0.59*0.3,#0.3
+    #f_C_BGRL_2_C_SHMS=0.5,
+    #C_NWT_0=steady_state_dict["C_NWT"],
+    #C_AGWT_0=steady_state_dict["C_AGWT"],
+    #C_GVF_0=steady_state_dict["C_GVF"],
+    #C_GVR_0=steady_state_dict["C_GVR"],
+    #C_AGML_0=steady_state_dict["C_AGML"],
+    #C_AGSL_0=steady_state_dict["C_AGSL"],
+    #C_BGDL_0=steady_state_dict["C_BGDL"],
+    #C_AGMS_0=steady_state_dict["C_AGMS"],
+    #C_YHMS_0=steady_state_dict["C_YHMS"],
+    #C_SHMS_0=steady_state_dict["C_SHMS"],
 )
-# -
 
-epa_0
+
 
 
 # +
@@ -345,15 +365,15 @@ plt.savefig('ISAM_test.pdf')
 
 # +
 epa_min=msh.EstimatedParameters(
-    fwt=0.5,
-    fgv=0.1,
-    fco=0.6,
-    fml=0.6,
-    fd=0.6,
+    fwt=0.1,
+    fgv=0.08,
+    fco=0.25,
+    fml=0.4,
+    fd=0.4,
     k_C_NWT=1/(365*10),
-    k_C_AGWT=1/(365*40),
-    k_C_TR=1/(365*40),
-    k_C_GVF=1/(365*40),
+    k_C_AGWT=1/(365*30),
+    k_C_TR=1/(365*30),
+    k_C_GVF=1/(365*30),
     k_C_GVR=1/(365*40),
     f_C_AGSL_2_C_AGMS=0.1*0.3,
     f_C_BGRL_2_C_SHMS=0.1,
@@ -370,18 +390,18 @@ epa_min=msh.EstimatedParameters(
 )
  
 epa_max=msh.EstimatedParameters(
-    fwt=0.8,
+    fwt=0.6,
     fgv=0.3,
-    fco=0.99,
+    fco=0.7,
     fml=0.9,
     fd=0.9,
-    k_C_NWT=1/(365*1),
-    k_C_AGWT=1/(365*10),
-    k_C_TR=1/(365*10),
-    k_C_GVF=1/(365*10),
-    k_C_GVR=1/(365*10),
-    f_C_AGSL_2_C_AGMS=0.9*0.3,
-    f_C_BGRL_2_C_SHMS=0.9,
+    k_C_NWT=1/(365*0.8),
+    k_C_AGWT=1/(365*8),
+    k_C_TR=1/(365*8),
+    k_C_GVF=1/(365*5),
+    k_C_GVR=1/(365*8),
+    f_C_AGSL_2_C_AGMS=0.8*0.3,
+    f_C_BGRL_2_C_SHMS=0.8,
     C_NWT_0=svs_0.cVeg,
     C_AGWT_0=svs_0.cVeg,
     C_GVF_0=svs_0.cVeg,
@@ -402,6 +422,8 @@ epa_max=msh.EstimatedParameters(
 # ### mcmc to optimize parameters 
 #
 
+
+
 # +
 from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
 
@@ -415,14 +437,14 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=2000, # for testing and tuning mcmc
+    nsimu=500, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=5 # default value | increase value to reduce acceptance of higher cost functions
+    K=10 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -452,6 +474,48 @@ pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('ISAM_da_aa.csv'), sep=',')
 pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('ISAM_da_j_aa.csv'), sep=',')
 pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('ISAM_optimized_pars.csv'), sep=',')
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('ISAM_optimized_solutions.csv'), sep=',')
+
+# +
+import matplotlib.pyplot as plt
+
+print("Forward run with initial parameters")
+plt.figure(figsize=(12,10), dpi=80)
+plt.figure(1)
+
+ax0 = plt.subplot(221)
+ax0.plot(obs[:,0],label='TRENDY',color="red")
+ax0.plot(mod_opt[:,0],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Vegetation C (kg m-2)",size=13)
+#ax0.legend(loc='best')
+ax0.tick_params(labelsize=12)
+
+ax1 = plt.subplot(222)
+ax1.plot(obs[:,1],label='TRENDY',color="red")
+ax1.plot(mod_opt[:,1],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Litter C (kg m-2)",size=13)
+ax1.legend(loc='best')
+ax1.tick_params(labelsize=12)
+
+ax2 = plt.subplot(223)
+ax2.plot(obs[:,2],label='TRENDY',color="red")
+ax2.plot(mod_opt[:,2],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Soil C (kg m-2)",size=13)
+ax2.legend(loc='best')
+ax2.tick_params(labelsize=12)
+
+ax3 = plt.subplot(224)
+ax3.plot(obs[:,3],label='TRENDY',color="red")
+ax3.plot(mod_opt[:,3],label='Simulation',color="blue")
+plt.xlabel("Months since 1700",size=13)
+plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
+ax3.tick_params(labelsize=12)
+
+plt.savefig('ISAM_opt.pdf')
+
+
 # -
 
 print("Optimized parameters: ", epa_opt)
