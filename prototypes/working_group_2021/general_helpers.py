@@ -2,7 +2,8 @@ import numpy as np
 from tqdm import tqdm
 from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
-from copy import copy
+from copy import copy, deepcopy
+from itertools import islice
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
@@ -1356,6 +1357,109 @@ def make_daily_iterator_sym_trace(
         f=f,
     )
 
+
+class InfiniteIterator():
+    def __init__(self,x0,func):#,n):
+        self.x0=x0
+        self.func=func
+        
+        self.cur=x0
+        self.pos=0
+        
+    def __iter__(self):
+        #return a fresh instance that starts from the first step)
+        c=self.__class__(self.x0,self.func)
+        return c
+        #return self
+    
+    def __next__(self):
+        #print(self.pos, self.cur)
+        val=self.func(self.pos,self.cur)
+        self.cur = val
+        self.pos += 1
+        return val
+        #raise StopIteration()
+        
+    # @lru_cache
+    def value_at(self,it_max):
+        I=self.__iter__()
+        def f_i(acc,i):
+            return I.__next__()
+        return reduce(f_i,range(it_max),I.x0)
+    
+    def __getitem__(self,arg):
+        # this functions implements the python index notation itr[start:stop:step]
+        # fixme mm 4-26-2022 
+        # we could use the cache for value_at if we dont use  
+        if isinstance(arg,slice):
+            start=arg.start
+            stop=arg.stop
+            step=arg.step
+            return tuple(islice(self,start,stop,step)) 
+        
+        
+        elif isinstance(arg,int):
+            return self.value_at(it_max=arg)
+        else:
+            raise IndexError(
+                """arguments to __getitem__ have to be either
+                indeces or slices."""
+            )
+        
+
+def values_2_TraceTuple(tups):
+    # instead of the collection of TraceTuples that the InfiniteIterator returns
+    # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
+    return TraceTuple(*(
+        np.stack(
+            tuple((tup.__getattribute__(name)  for tup in tups))
+        )
+        for name in TraceTuple._fields
+    ))
+    
+class TraceTupleIterator(InfiniteIterator):
+    #overload one method specific to the TraceTupleIterator
+    def __getitem__(self,arg):
+        # we call the [] method of the superclass
+        # which returns a tuple of TraceTuples
+        tups=super().__getitem__(arg)
+        
+        # But what we want is a TraceTuple of arrays
+        return values_2_TraceTuple(tups)  
+
+    def averaged_values(self,partitions):
+        start=partitions[0][0]
+        def tt_avg(tups):
+            l=len(tups)
+            return TraceTuple(*(
+                    np.stack(
+                        [
+                            tup.__getattribute__(name)
+                            for tup in tups
+                        ],
+                        axis=0
+                    ).sum(axis=0)/l
+                    for name in TraceTuple._fields
+                )
+            )
+
+        # move to the start
+        for i in range(start):
+            self.__next__()
+
+        tts=[
+            tt_avg(
+                [
+                    self.__next__()
+                    for i in range(stop_p-start_p)
+                ]
+            )
+            for (start_p,stop_p) in partitions
+        ]
+        return values_2_TraceTuple(tts)
+
+
+            
 def traceability_iterator(
         X_0,
         func_dict,
@@ -1377,7 +1481,7 @@ def traceability_iterator(
         B_inv = np.linalg.inv(B)
         X_c = B_inv@I
         X_p = X_c-X
-        RT = X_c/u #=B_inv@b but cheeper to computed
+        RT = X_c/u #=B_inv@b but cheeper to compute
         
         return TraceTuple(
             X=X,
@@ -1391,7 +1495,7 @@ def traceability_iterator(
         X_0,
         # in Yiqi's nomenclature: dx/dt=I-Bx 
         # instead of           : dx/dt=I+Bx 
-        # as assumed by B_u_func 
+        # as assumed by B_u_func  
         - B_func(0,X_0), 
         I_func(0,X_0)
     )
@@ -1407,9 +1511,17 @@ def traceability_iterator(
             X_new= X + I + B @ X
             return trace_tuple_instance(X_new,-B,I)
     
-    return TimeStepIterator2(
-        initial_values=V_init,
-        f=f
+    #return TimeStepIterator2(
+    #    initial_values=V_init,
+    #    f=f
+    #)
+    #return InfiniteIterator(
+    #    x0=V_init,
+    #    func=f
+    #)
+    return TraceTupleIterator(
+        x0=V_init,
+        func=f
     )
 
 

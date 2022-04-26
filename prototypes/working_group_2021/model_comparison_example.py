@@ -1,6 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
+#     formats: ipynb,py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -12,9 +13,14 @@
 #     name: python3
 # ---
 
+# ## Model comparison using traceability analysis
+# We use the infrastructure built so far to compare two ore more models.
+# The workhorse will be an iterator (returned by a general function). That allows us to compute and easily access the desired timelines with python index notation it[2:5] will return the values from position 2 to 5 of the solution (and desired variables).
+# The notebook also contains some functions to compute where the times of two models overlap and some plot functions. 
+
 # +
-# #%load_ext autoreload
-# #%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 import json
 from typing import Tuple
 from importlib import import_module
@@ -30,7 +36,10 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple
 )
 import general_helpers as gh
-# define some functions that yield the result depending on the model folder  mf
+
+
+# define some shortcut functions that yield the result depending on the 
+# model folder  mf
 def sim_day_2_day_aD_func(mf): #->function
     return gh.msh(mf).make_sim_day_2_day_since_a_D(gh.confDict(mf))
 
@@ -98,62 +107,24 @@ s=slice(*min_max_index("yz_jules",delta_t_val,*t_min_tmax(model_folders,delta_t_
 s.step is None 
 
 #ind_d={mf: min_max_index(mf) for mf in model_folders}
-
-
-# +
-def values(itr,start,stop,increment=1):
-    from copy import copy
-    itr=copy(itr)
-    # run the iterator for start iterations
-    for i in range(start):
-        itr.__next__()
-    
-    # now collect the desired
-    return tuple(
-        (
-            itr.__next__() 
-            for i in range(stop-start)
-            if i%increment==0
-        )
-    )
-
-#check with a list
-l=[1,2,3,4]
-start,stop=1,3
-print(l[start:stop])
-itr=l.__iter__()
-values(itr,start,stop)
-
 # -
 
-# now with 
-itr=tracebility_iterator(mf,delta_t_val)
-#values(itr,3,4)
 
-# +
-def values_2_TraceTuple(tups):
-    # instead of the collection of TraceTuples that the iterator returns
-    # we want a Tracetuple of arrays whith the added time dimension
-    return gh.TraceTuple(*(
-        np.stack(
-            tuple((tup.__getattribute__(name)  for tup in tups))
-        )
-        for name in gh.TraceTuple._fields
-    ))
-    
-#number_of_iterations=100
+# You can use python index notation on the iterator
+# it works the same way as  with a list
+l=[1,2,3,4,5,6,7,8,9]
+l[3:8:2]
+
+itr=tracebility_iterator(mf,delta_t_val)
+itr[3:8:2] 
+
 mf='kv_visit2'
 mf="yz_jules"
 start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
 start,stop
 
-# +
-tups=values(itr,start,stop)
-#tt=tups[0]
-#tt.__getattribute__("X")
-
-vals=values_2_TraceTuple(tups)
 times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
+vals=itr[start:stop]
 vals.X_c.shape,times.shape 
 #vals
 
@@ -173,8 +144,9 @@ def plot_sums(model_folders,delta_t_val):
     for i,mf in enumerate(model_folders):
         itr=tracebility_iterator(mf,delta_t_val)
         start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
-        tups=values(itr,start,stop)
-        vals=values_2_TraceTuple(tups)
+        #tups=values(itr,start,stop)
+        #vals=values_2_TraceTuple(tups)
+        vals=itr[start:stop]
         times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
         ax=axs[i]
         for name in names:
@@ -193,15 +165,10 @@ plot_sums(model_folders,delta_t_val)
 
 # -
 
-# check how to sum a TraceTuple of arrays 
-def tt_sum(tt):
-    return gh.TraceTuple( *(
-            tt.__getattribute__(name).sum(axis=0)
-            for name in tt._fields 
-        )
-    )
-#tt_sum(vals)
-
+# ## temporal averages
+# In some cases you might want to see a yearly or monthly average.
+# You could compute all the values and then compute the averages of parts of the arrays.
+# The iterator can also do it for you (without storing the unnecessary potentially huge intermediate fine grained arrays).
 
 # +
 def partitions(start,stop,nr_acc=1):
@@ -218,49 +185,12 @@ def partitions(start,stop,nr_acc=1):
         for i in range(number_of_steps)
     ]+[last_tup]
 
-#partitions(start,stop,12)
-
-
+len(partitions(start,stop,12))
 # -
-
-#temporaly averaged values
-def averaged_values(itr,partitions):
-    start=partitions[0][0]
-    def tt_avg(tups):
-        l=len(tups)
-        return gh.TraceTuple(*(
-                np.stack(
-                    [
-                        tup.__getattribute__(name) 
-                        for tup in tups
-                    ],
-                    axis=0
-                ).sum(axis=0)/l
-                for name in gh.TraceTuple._fields
-            )
-        )
-                             
-    # move to the start
-    for i in range(start):
-        itr.__next__()
-        
-    tts=[
-        tt_avg(
-            [ 
-                itr.__next__()
-                for i in range(stop_p-start_p)
-            ]
-        )
-        for (start_p,stop_p) in partitions
-    ]
-    return values_2_TraceTuple(tts)
-
-
 
 itr=tracebility_iterator(mf,delta_t_val)
 start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
-tavg_vals=averaged_values(
-    itr,
+tavg_vals=itr.averaged_values(
     partitions(start,stop,12)
 )
 
@@ -282,7 +212,7 @@ averaged_times(
 
 
 # +
-def plot_avg_sums(model_folders,delta_t_val):
+def plot_yearly_avg_sums(model_folders,delta_t_val):
     n = len(model_folders)
     fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
     axs=fig.subplots(1,n)
@@ -301,8 +231,11 @@ def plot_avg_sums(model_folders,delta_t_val):
             times_in_days_aD(mf,delta_t_val)/365,
             parts
         )
-        vals=averaged_values(
-            itr,
+        #vals=averaged_values(
+        #    itr,
+        #    parts
+        #)
+        vals=itr.averaged_values(
             parts
         )
         ax=axs[i]
@@ -316,7 +249,7 @@ def plot_avg_sums(model_folders,delta_t_val):
         ax.legend()
         ax.set_title(mf)
         
-plot_avg_sums(model_folders,delta_t_val)
+plot_yearly_avg_sums(model_folders,delta_t_val)
 # -
 
 
