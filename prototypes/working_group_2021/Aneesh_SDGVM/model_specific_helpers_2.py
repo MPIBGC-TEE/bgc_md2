@@ -160,7 +160,7 @@ def get_example_site_vars(dataPath):
         Drivers(*(arr_dict[k] for k in Drivers._fields))
     )
 
-def get_globalmean_vars(dataPath):
+def get_global_mean_vars(dataPath):
     # According to the netcdf metadata the datasets are not uniform
     # - npp and rh start at 360h (15 days) after 01-01-1900 and are recorded every 30 days
     #   these are interpreted as mid-monthly
@@ -464,7 +464,7 @@ def make_iterator_sym(
         V_init, 
         par_dict,
         func_dict,
-        delta_t_val=10 # defaults to 1day timestep
+        delta_t_val=1 # defaults to 1day timestep
     ):
     B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
 
@@ -542,11 +542,11 @@ def make_weighted_cost_func(
 
         J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
 
-        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4) + J_obj5/12
+        J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)/200 + J_obj5/4
         # to make this special costfunction comparable (in its effect on the
         # acceptance rate) to the general costfunction proposed by Feng we
         # rescale it by a factor
-        return J_new*100
+        return J_new*400
     return costfunction
 
 

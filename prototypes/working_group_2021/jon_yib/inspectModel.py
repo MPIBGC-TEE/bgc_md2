@@ -99,7 +99,7 @@ with Path('config.json').open(mode='r') as f:
 # Define function to subset netCDF files and link to data symbols:
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
-svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 #look at data

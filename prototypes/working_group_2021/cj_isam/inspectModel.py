@@ -60,7 +60,7 @@ msh.download_my_TRENDY_output(conf_dict)
 
 import model_specific_helpers_2 as msh
 #svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"])) #also works
-svs,dvs=msh.get_globalmean_vars(dataPath=Path(conf_dict["dataPath"]))
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 svs_0 = msh.Observables(*map(lambda v: v[0],svs))
 dvs_0 = msh.Drivers(*map(lambda v: v[0],dvs))
 

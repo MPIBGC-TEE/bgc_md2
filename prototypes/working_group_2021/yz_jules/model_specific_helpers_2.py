@@ -509,12 +509,9 @@ def make_param2res_sym(
     )
     StartVector = make_StartVector(mvs)
 
-    # Time dependent driver function does not change with the estimated parameters
-    # Defined once outside param2res function
-    # seconds_per_day = 86400
-
     ########### Ask Markus here
-    # Build environmental scaler function  ############### day or monthly, monthly inputs here, Mw and Ms are the to-be-estimated parameters
+    # Build environmental scaler function  ############### day or monthly, 
+    # monthly inputs here, Mw and Ms are the to-be-estimated parameters
 
     # Define actual forward simulation function
     def param2res(pa):
@@ -689,3 +686,77 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
         func_dict=fd
     )
     return it_sym_trace
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "c_leaf": apa['c_leaf_0'],     
+        "c_wood": apa['c_wood_0'],     
+        "c_root": apa['c_veg_0'] - (apa['c_leaf_0'] +  apa['c_wood_0']),  
+        "c_DPM": apa['c_DPM_0'],
+        "c_RPM": apa['c_RPM_0'],
+        "c_BIO": apa['c_BIO_0'],
+        "c_HUM": apa['c_soil_0'] - (apa['c_DPM_0'] + apa['c_RPM_0'] + apa['c_BIO_0'])
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
+
+def make_tuple_traceability_iterator(mvs,dvs,cpa,epa):
+
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0 = numeric_X0(mvs, dvs, cpa, epa)
+    fd = make_func_dict(mvs, dvs, cpa, epa)
+    V_init = gh.make_InitialTraceTuple(
+            X_0,
+            mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it= gh.make_trace_tuple_iterator(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it
+
+def make_sim_day_2_day_since_a_D(conf_dict):
+    # this function is extremely important to syncronise our results
+    # because our data streams start at different times the first day of 
+    # a simulation day_ind=0 refers to different dates for different models
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced monthly with different numbers of days
+    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
+    times = ds.variables["time"]
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced with different numbers of days between monthly
+    # data point
+    # we can see this by looking at the first 24 months
+    # for i in range(24):
+    #     print((times[i + 1] - times[i])/(3600 * 24))
+
+
+    ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
+    td = ts / (3600 * 24) #in days since_2010_01_01_00_00_00
+    
+    import datetime as dt
+    ad = dt.date(1, 1, 1) # first of January of year 1 
+    sd = dt.date(2010, 1, 1)
+    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+
+    def f(day_ind: int)->int:
+        return day_ind+td_aD
+
+    return f
+
+

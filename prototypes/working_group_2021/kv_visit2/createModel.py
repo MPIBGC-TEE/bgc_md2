@@ -1483,8 +1483,9 @@ it_sym = make_steady_state_iterator_sym(
 Bs=[]
 bs=[]
 for i in range(cpa.number_of_months*30):
-    bs.append(it_sym.__next__()[1])
-    Bs.append(it_sym.__next__()[2])
+    res=it_sym.__next__()
+    bs.append(res[1])
+    Bs.append(res[2])
 B_mean=np.stack(Bs).mean(axis=0)
 b_mean=np.stack(bs).mean(axis=0)
 B_mean,b_mean
