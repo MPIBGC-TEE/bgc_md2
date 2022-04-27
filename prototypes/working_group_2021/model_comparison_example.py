@@ -25,6 +25,7 @@ display(Markdown("TracebilityText.md"))
 # %load_ext autoreload
 # %autoreload 2
 import json
+import matplotlib.pyplot as plt
 from typing import Tuple
 from importlib import import_module
 from pathlib import Path
@@ -123,7 +124,7 @@ res=itr[3:8:2]
 # take a peek
 type(res), res._fields, res.X_c.shape, res.X_dot
 
-mf='kv_visit2'
+#mf='kv_visit2'
 mf="yz_jules"
 start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
 start,stop
@@ -165,7 +166,7 @@ def plot_sums(model_folders,delta_t_val):
         ax.set_title(mf)
     #plt.close(fig)
     
-plot_sums(model_folders,delta_t_val)
+#plot_sums(model_folders,delta_t_val)
 
 
 # -
@@ -222,7 +223,7 @@ averaged_times(
 # +
 def plot_yearly_avg_sums(model_folders,delta_t_val):
     n = len(model_folders)
-    fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
+    fig=plt.figure(figsize=((n+1)*10,20))#, dpi = 400)
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
     names=['X','X_c','X_p']
@@ -253,7 +254,9 @@ def plot_yearly_avg_sums(model_folders,delta_t_val):
         ax.legend()
         ax.set_title(mf)
         
-plot_yearly_avg_sums(model_folders,delta_t_val)
+#plot_yearly_avg_sums(model_folders,delta_t_val)
+
+
 # -
 # ## Application: Numerical experiment concerning the  attraction of the solution to wards X_c
 #
@@ -261,10 +264,9 @@ plot_yearly_avg_sums(model_folders,delta_t_val)
 # To this end we plot $X_p$ and the derivative $\frac{d}{d t}X$ 
 
 # +
-import matplotlib.pyplot as plt
 def plot_sums(model_folders,delta_t_val):
     n = len(model_folders)
-    fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
+    fig=plt.figure(figsize=((n+1)*10,20))#, dpi = 400)
     axs=fig.subplots(2,n)
     plt.rcParams['font.size'] = 20
     mass_names=['X','X_c','X_p']
@@ -310,10 +312,70 @@ def plot_sums(model_folders,delta_t_val):
         ax.set_title(mf)
     #plt.close(fig)
     
-plot_sums(model_folders,delta_t_val)
+#plot_sums(model_folders,delta_t_val)
+
+
 # -
 
 
 # ### We see that the sum of the derivative is clearly positive all the time even if X_c_sum crosses the X_sum lines
+
+# +
+def plot_components(mf,delta_t_val):
+    names_1=['X','X_c']#,'X_p']
+    names_2=['X_dot']
+    cd={
+            'X':"green",
+            'X_c':"orange",
+            'X_p':"blue",
+            'X_dot':"black"
+    }
+    itr=tracebility_iterator(mf,delta_t_val)
+    start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start,stop = start_min, int(start_min+(stop_max-start_min)/30)
+    vals=itr[start:stop]
+    n = vals.X.shape[1]
+    fig=plt.figure(figsize=(20,(n+1)*10))#, dpi = 400)
+    axs=fig.subplots(2*n,1)
+    plt.rcParams['font.size'] = 20
+    times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
+    i=0
+    for j in range(n):
+        ax=axs[2*j]#,i]
+        for name in names_1:
+            time_line= vals.__getattribute__(name)
+            ax.plot(
+                times,
+                time_line[:,j,0],
+                label=name+str(j),
+                color=cd[name]
+            )
+            ax.legend()
+            ax.set_title(mf)
+        
+        ax=axs[2*j+1]#,i]
+        for name in names_2:
+            time_line= vals.__getattribute__(name)
+            ax.plot(
+                times,
+                time_line[:,j,0],
+                label=name+str(j),
+                color=cd[name]
+            )
+            ax.plot(
+                times,
+                np.zeros_like(times),
+                color=cd[name]
+            )
+            ax.legend()
+            ax.set_title(mf)
+    
+#plot_components(model_folders[0],delta_t_val)
+plot_components(model_folders[1],delta_t_val)
+# -
+
+[ i for i in range(0,10,2)]
+
 
 
