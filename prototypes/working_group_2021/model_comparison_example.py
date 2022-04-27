@@ -18,6 +18,9 @@
 # The workhorse will be an iterator (returned by a general function). That allows us to compute and easily access the desired timelines with python index notation it[2:5] will return the values from position 2 to 5 of the solution (and desired variables).
 # The notebook also contains some functions to compute where the times of two models overlap and some plot functions. 
 
+from IPython.display import Markdown, display
+display(Markdown("TracebilityText.md"))
+
 # +
 # %load_ext autoreload
 # %autoreload 2
@@ -116,7 +119,9 @@ l=[1,2,3,4,5,6,7,8,9]
 l[3:8:2]
 
 itr=tracebility_iterator(mf,delta_t_val)
-itr[3:8:2] 
+res=itr[3:8:2]
+# take a peek
+type(res), res._fields, res.X_c.shape, res.X_dot
 
 mf='kv_visit2'
 mf="yz_jules"
@@ -168,9 +173,10 @@ plot_sums(model_folders,delta_t_val)
 # ## temporal averages
 # In some cases you might want to see a yearly or monthly average.
 # You could compute all the values and then compute the averages of parts of the arrays.
-# The iterator can also do it for you (without storing the unnecessary potentially huge intermediate fine grained arrays).
+# The iterator can also do it for you (without storing the unnecessary potentially huge intermediate fine grained arrays). The argument for the averaging will be a list of (start,stop) tuples describing the ranges over which to average. 
 
 # +
+# we can build this partition by a little function 
 def partitions(start,stop,nr_acc=1):
     diff=stop-start
     step=nr_acc
@@ -185,7 +191,9 @@ def partitions(start,stop,nr_acc=1):
         for i in range(number_of_steps)
     ]+[last_tup]
 
-len(partitions(start,stop,12))
+# an example we want to partition 
+partitions(0,10,nr_acc=3)
+#len(partitions(start,stop,12))
 # -
 
 itr=tracebility_iterator(mf,delta_t_val)
@@ -231,10 +239,6 @@ def plot_yearly_avg_sums(model_folders,delta_t_val):
             times_in_days_aD(mf,delta_t_val)/365,
             parts
         )
-        #vals=averaged_values(
-        #    itr,
-        #    parts
-        #)
         vals=itr.averaged_values(
             parts
         )
@@ -251,7 +255,65 @@ def plot_yearly_avg_sums(model_folders,delta_t_val):
         
 plot_yearly_avg_sums(model_folders,delta_t_val)
 # -
+# ## Application: Numerical experiment concerning the  attraction of the solution to wards X_c
+#
+# We check the claim that the total Carbon $X$ as vector as well as the sum over all pools.
+# To this end we plot $X_p$ and the derivative $\frac{d}{d t}X$ 
+
+# +
+import matplotlib.pyplot as plt
+def plot_sums(model_folders,delta_t_val):
+    n = len(model_folders)
+    fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
+    axs=fig.subplots(2,n)
+    plt.rcParams['font.size'] = 20
+    mass_names=['X','X_c','X_p']
+    names_2=['X_dot']
+    cd={
+            'X':"green",
+            'X_c':"orange",
+            'X_p':"blue",
+            'X_dot':"black"
+    }
+    for i,mf in enumerate(model_folders):
+        itr=tracebility_iterator(mf,delta_t_val)
+        start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
+        # we do not want the whole interval but look at a smaller part to observe the dynamics
+        start,stop = start_min, int(start_min+(stop_max-start_min)/30)
+        vals=itr[start:stop]
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
+        ax=axs[0,i]
+        for name in mass_names:
+            ax.plot(
+                times,
+                vals.__getattribute__(name).sum(axis=1),
+                label=name+"_sum",
+                color=cd[name]
+            )
+        ax.legend()
+        ax.set_title(mf)
+        ax=axs[1,i]
+        for name in names_2:
+            ax.plot(
+                times,
+                vals.__getattribute__(name).sum(axis=1),
+                label=name+"_sum",
+                color=cd[name]
+            )
+            ax.plot(
+                times,
+                np.zeros_like(times),
+                #label=name+"_sum",
+                color=cd[name]
+            )
+        ax.legend()
+        ax.set_title(mf)
+    #plt.close(fig)
+    
+plot_sums(model_folders,delta_t_val)
+# -
 
 
+# ### We see that the sum of the derivative is clearly positive all the time even if X_c_sum crosses the X_sum lines
 
 

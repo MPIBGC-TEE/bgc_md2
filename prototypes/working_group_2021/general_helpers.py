@@ -26,7 +26,7 @@ from bgc_md2.helper import bgc_md2_computers
 days_per_year = 365 
 TraceTuple = namedtuple(
     "TraceTuple",
-     ["X", "X_p" ,"X_c" ,"RT"]
+     ["X", "X_p" ,"X_c" , "X_dot", "RT"]
 )
 
 # some tiny helper functions for module loading
@@ -1481,12 +1481,14 @@ def traceability_iterator(
         B_inv = np.linalg.inv(B)
         X_c = B_inv@I
         X_p = X_c-X
+        X_dot = I - B @ X 
         RT = X_c/u #=B_inv@b but cheeper to compute
         
         return TraceTuple(
             X=X,
             X_p=X_p,
             X_c=X_c,
+            X_dot=X_dot,
             RT=RT
         )
     
