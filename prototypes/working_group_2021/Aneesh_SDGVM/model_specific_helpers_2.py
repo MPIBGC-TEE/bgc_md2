@@ -661,3 +661,80 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     return X_0
 
 
+experiment_name="SDGVM_S2_"
+def nc_file_name(nc_var_name):
+    return experiment_name+"{}.nc".format(nc_var_name)
+
+
+def nc_global_mean_file_name(nc_var_name):
+    return experiment_name+"{}_gm.nc".format(nc_var_name)
+
+
+def get_global_mean_vars(dataPath):
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+    
+    
+    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+        print(""" Found cached global mean files. If you want to recompute the global means
+            remove the following files: """
+        )
+        for vn in names:
+            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
+
+        def get_cached_global_mean(vn):
+            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+    
+        return (
+            Observables(*map(get_cached_global_mean, o_names)),
+            Drivers(*map(get_cached_global_mean,d_names))
+        )
+
+    else:
+        # we now check if any of the arrays has a time lime containing nan values 
+        # APART FROM values that are already masked by the fillvalue
+        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+        def f(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            #scale fluxes vs pools
+            var =ds.variables[vn]
+            return gh.get_nan_pixel_mask(var)
+
+        masks=[ f(name)    for name in names ]
+        # We compute the common mask so that it yields valid pixels for ALL variables 
+        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        print("computing means, this may also take some minutes...")
+
+        def compute_and_cache_global_mean(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            vs=ds.variables
+            lats= vs["latitude"].__array__()
+            lons= vs["longitude"].__array__()
+            print(vn)
+            var=ds.variables[vn]
+            # check if we have a cached version (which is much faster)
+            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+
+            gm=gh.global_mean_var(
+                    lats,
+                    lons,
+                    combined_mask,
+                    var
+            )
+            gh.write_global_mean_cache(
+                    gm_path,
+                    gm,
+                    vn
+            )
+            return gm # * 86400 if vn in ["npp", "rh"] else gm
+    
+        #map variables to data
+        return (
+            Observables(*map(compute_and_cache_global_mean, o_names)),
+            Drivers(*map(compute_and_cache_global_mean, d_names))
+        )
+
+
