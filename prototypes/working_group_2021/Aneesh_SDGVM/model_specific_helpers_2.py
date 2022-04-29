@@ -634,3 +634,30 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
     return it_sym_trace
 
 
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],     
+        "C_root": apa['C_root_0'],     
+        "C_wood": apa['cVeg_0'] - (apa['C_leaf_0'] +  apa['C_root_0']),  
+        "C_abvstrlit": apa['C_abvstrlit_0'],
+        "C_abvmetlit": apa['C_abvmetlit_0'],
+        "C_belowstrlit": apa["C_blwstrlit_0"],
+        "C_belowmetlit":apa["cLitter_0"]- apa["C_abvstrlit_0"] - apa["C_abvmetlit_0"] - apa["C_blwstrlit_0"],
+        "C_surface_microbe":apa["C_surfacemic_0"],
+        "C_soil_microbe": apa["C_soilmic_0"],
+        "C_slowsom":apa["C_slow_0"],
+        "C_passsom":apa["cSoil_0"] - apa["C_surfacemic_0"] - apa["C_soilmic_0"] - apa["C_slow_0"]
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
+
+
