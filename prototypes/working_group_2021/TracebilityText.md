@@ -29,13 +29,13 @@ Thus the very first part is valid for all models but how many of the later parts
 #### Derivation of the matrix decomposition 
 Compartmental models (well mixed mass balanced) can be written in as an ordinary differential equation in matrix form that relates the momentary value of the (time) derivative $\frac{d X}{d t}$ of an yet unknown function $X$ to the momentary value of $X$ itself.   
 $$
-\frac{d X}{d t}= I(X,t) + \tilde{M}(X,t) X +  \quad (1)   
+\frac{d X}{d t}= I(X,t) + \tilde{M}(X,t) X \quad (1)   
 $$ 
 where $X$ is the statevector representing the pool contents, $\tilde{M}$ the "Compartmental matrix" and $I$ the input vector.
 In Yiqi's group equation (1) is usually written with the negative Compartmental Matrix $M=-\tilde{M}$ 
 
 $$
-\frac{d X}{d t}= I(X,t) - M(X,t) X +  \quad (2)   
+\frac{d X}{d t}= I(X,t) - M(X,t) X \quad (2)   
 $$ 
 
 Together with a startvalue $X_0$ it constitutes an "initial value problem" (ivp) which can be solved numerically by moving step by step forward in time.

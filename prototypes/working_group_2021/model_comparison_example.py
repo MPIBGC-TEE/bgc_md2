@@ -66,8 +66,20 @@ def tracebility_iterator(mf,delta_t_val):
         delta_t_val=delta_t_val
     )
     
-model_folders=['yz_jules','kv_visit2']#, 'Aneesh_SDGVM', 'kv_ft_dlem', 'jon_yib']#,'Aneesh_SDGVM','cable-pop','yz_jules']#,]
+model_folders=['yz_jules','kv_visit2']#, 'Aneesh_SDGVM']#, 'kv_ft_dlem', 'jon_yib']#,'Aneesh_SDGVM','cable-pop','yz_jules']#,]
 mf=model_folders[0]
+cd={
+        'X':"red",
+        'X_c':"orange",
+        'X_p':"blue",
+        'X_dot':"red",
+        'x':"red",
+        'x_c':"orange",
+        'x_p':"blue",
+        'x_dot':"red",
+        'I':"green",
+        'u':"green",
+}
 
 
 # +
@@ -78,7 +90,7 @@ def times_in_days_aD(mf,delta_t_val):
     days_after_sim_start=delta_t_val*np.arange(n_iter)
     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start)))
 
-delta_t_val=30 # assuming the same step size for every model (could be made model specific by an additional testarg)
+delta_t_val=3 # assuming the same step size for every model (could be made model specific by an additional testarg)
 
 
 # +
@@ -136,17 +148,12 @@ vals.X_c.shape,times.shape
 
 # +
 import matplotlib.pyplot as plt
-def plot_sums(model_folders,delta_t_val):
+def plot_sums(model_folders,delta_t_val,cd):
     n = len(model_folders)
     fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
     names=['X','X_c','X_p']
-    cd={
-            'X':"green",
-            'X_c':"orange",
-            'X_p':"blue"
-    }
     for i,mf in enumerate(model_folders):
         itr=tracebility_iterator(mf,delta_t_val)
         start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
@@ -166,7 +173,7 @@ def plot_sums(model_folders,delta_t_val):
         ax.set_title(mf)
     #plt.close(fig)
     
-#plot_sums(model_folders,delta_t_val)
+plot_sums(model_folders,delta_t_val, cd)
 
 
 # -
@@ -221,17 +228,12 @@ averaged_times(
 
 
 # +
-def plot_yearly_avg_sums(model_folders,delta_t_val):
+def plot_yearly_avg_sums(model_folders,delta_t_val,cd):
     n = len(model_folders)
     fig=plt.figure(figsize=((n+1)*10,20))#, dpi = 400)
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
     names=['X','X_c','X_p']
-    cd={
-            'X':"green",
-            'X_c':"orange",
-            'X_p':"blue"
-    }
     for i,mf in enumerate(model_folders):
         itr=tracebility_iterator(mf,delta_t_val)
         start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
@@ -254,29 +256,83 @@ def plot_yearly_avg_sums(model_folders,delta_t_val):
         ax.legend()
         ax.set_title(mf)
         
-#plot_yearly_avg_sums(model_folders,delta_t_val)
+plot_yearly_avg_sums(model_folders, delta_t_val, cd)
 
 
 # -
-# ## Application: Numerical experiment concerning the  attraction of the solution to wards X_c
+# ## Application: Numerical experiment concerning the  attraction of the solution to wards $X_c$.
+# In  Yiqis 2017 Biogeosciences paper: "Transient dynamics of terrestrial carbon storage: mathematical foundation and its applications" the carbon storage potential $\mathbf{X_c}(t)$ is called an "attractor" for the solution $\mathbf{X}(t)$ "at ecosystem scale".
+# We will try to visualize this for our models.
+# Before we can plot anything we have to specify what we mean concretely.
+# We will plot: 
+# 1. The components of $(\mathbf{X_c})_p \; p \in pools $ with the components of the stocks     
+# $(\mathbf{X})_p \; p \in pools$ and the components of the derivative  $(\dot{\mathbf{X}})_p \; p \in pools$
+# 2. The  sums of the components e.g. $\sum_{p \in pools}(\mathbf{X_c})_p$
+# 3. The scalar variables $x_c,x,\dot{x}$ derived for a one pool surrogate system for the combined mass of all the pools and the combined inputs.
+# $$
+# \dot{x}=u(t)-m(t)x
+# $$ 
+# with m(t) specified as follows:
 #
-# We check the claim that the total Carbon $X$ as vector as well as the sum over all pools.
-# To this end we plot $X_p$ and the derivative $\frac{d}{d t}X$ 
+# We start with the special case of a linear but nonautonoumous System:
+# $$
+# \frac{d \mathbf{X}}{d t}= \mathbf{I}(t) - M(t) \mathbf{X} 
+# $$
+# Taking the sum over all pools yields.
+# $$
+# \sum_{p \in pools} \left( \frac{d \mathbf{X}}{d t} \right)_p
+# =
+# \left( \mathbf{I}(t) - M(t) \mathbf{X} \right)_p
+# $$
+#
+# With: 
+# $$
+# u=\sum_{p \in pools} (\mathbf{I})_p, 
+# $$
+# $$
+# x = \sum_{p \in pools} (\mathbf{X})_p
+# \text{ and }
+# $$ 
+# $$
+# \sum_{p \in pools} \left( \frac{d \mathbf{X}}{d t} \right)_p
+# =\frac{d}{d t}\sum_{p \in pools} (\mathbf X )_p
+# =\frac{d}{d t} x
+# $$
+# We can now try to costruct our new system for the combined mass $x$, in particular we want to find a function for the time dependent rate $m(t)$ such that. 
+# $$
+# \dot{x}
+# =u(t)-m(t) x 
+# =\sum_{p \in pools} \left( \mathbf{I}(t) - M(t) \mathbf{X} \right)_p
+# =u(t)-\sum_{p \in pools} ( M(t) \mathbf{X} )_p
+# $$
+# This yields: 
+# $$
+# m(t) = \frac{
+#     \sum_{p \in pools} ( M(t) \mathbf{X} )_p
+#     }{
+#     \sum_{p \in pools} (\mathbf{X})_p
+#     }
+# $$
+# We can even extend this treatment to nonlinear systems:
+# $$
+# \frac{d \mathbf{X}}{d t}= \mathbf{I}(\mathbf{X},t) - M(\mathbf{X},t) \mathbf{X} 
+# $$
+# Assume that we first solve the system numerically and therefore have $\mathbf{X}(t)$ available.
+# Substituting the solution we get:
+# $$
+#
+# $$
+#
 
 # +
-def plot_sums(model_folders,delta_t_val):
+def plot_sums(model_folders,delta_t_val,cd):
     n = len(model_folders)
     fig=plt.figure(figsize=((n+1)*10,20))#, dpi = 400)
-    axs=fig.subplots(2,n)
+    axs=fig.subplots(3,n)
     plt.rcParams['font.size'] = 20
-    mass_names=['X','X_c','X_p']
+    names_0=['X','X_c','X_p']
+    names_1=['x','x_c','x_p']
     names_2=['X_dot']
-    cd={
-            'X':"green",
-            'X_c':"orange",
-            'X_p':"blue",
-            'X_dot':"black"
-    }
     for i,mf in enumerate(model_folders):
         itr=tracebility_iterator(mf,delta_t_val)
         start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
@@ -285,7 +341,7 @@ def plot_sums(model_folders,delta_t_val):
         vals=itr[start:stop]
         times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
         ax=axs[0,i]
-        for name in mass_names:
+        for name in names_0:
             ax.plot(
                 times,
                 vals.__getattribute__(name).sum(axis=1),
@@ -294,7 +350,25 @@ def plot_sums(model_folders,delta_t_val):
             )
         ax.legend()
         ax.set_title(mf)
+        
         ax=axs[1,i]
+        for name in names_1:
+            ax.plot(
+                times,
+                vals.__getattribute__(name),
+                label=name+"1_pool_surrogate",
+                color=cd[name]
+            )
+        ax.legend()
+        ax.plot(
+            times,
+            np.zeros_like(times),
+            #label=name+"_sum",
+            color=cd[name]
+        )
+        ax.set_title(mf)
+        
+        ax=axs[2,i]
         for name in names_2:
             ax.plot(
                 times,
@@ -302,34 +376,35 @@ def plot_sums(model_folders,delta_t_val):
                 label=name+"_sum",
                 color=cd[name]
             )
-            ax.plot(
-                times,
-                np.zeros_like(times),
-                #label=name+"_sum",
-                color=cd[name]
-            )
+        ax.plot(
+            times,
+            np.zeros_like(times),
+            #label=name+"_sum",
+            color=cd[name]
+        )
         ax.legend()
         ax.set_title(mf)
     #plt.close(fig)
     
-#plot_sums(model_folders,delta_t_val)
+plot_sums(model_folders,delta_t_val, cd)
 
 
 # -
 
 
-# ### We see that the sum of the derivative is clearly positive all the time even if X_c_sum crosses the X_sum lines
+# We see that the sum of the derivative is clearly positive all 
+# the time even if $\sum_{p \in pools}(\mathbf{X_c})_p$ 
+# crosses the $\sum_{p \in pools}( \mathbf{X})_p$ lines 
+# which shows that  $\sum_{p \in pools}(\mathbf{X_c})_p$ is NOT ALWAYS 
+# attractive in the sense that the summed derivative  $\sum_{p \in pools}
+# (\mathbf{\dot{X}})_p$ points in the same direction as the difference
+# $\sum_{p \in pools}(\mathbf{X_p})_p$ 
+#
 
 # +
-def plot_components(mf,delta_t_val):
+def plot_components(mf,delta_t_val,cd):
     names_1=['X','X_c']#,'X_p']
     names_2=['X_dot']
-    cd={
-            'X':"green",
-            'X_c':"orange",
-            'X_p':"blue",
-            'X_dot':"black"
-    }
     itr=tracebility_iterator(mf,delta_t_val)
     start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
     # we do not want the whole interval but look at a smaller part to observe the dynamics
@@ -372,10 +447,77 @@ def plot_components(mf,delta_t_val):
             ax.set_title(mf)
     
 #plot_components(model_folders[0],delta_t_val)
-plot_components(model_folders[1],delta_t_val)
+plot_components(model_folders[1],delta_t_val,cd)
 # -
 
 [ i for i in range(0,10,2)]
 
+
+# ### Numerical expiriment
+
+# +
+from scipy.integrate import solve_ivp
+
+def u(t):
+    return (np.cos(t)+1)
+def M(t):
+    #return (np.sin(t)+2)*0.1
+    return 0.1
+
+def X_dot(t, X): 
+    return u(t) - M(t)*X
+
+X_0=0.1
+t_start=0
+t_end=4*np.pi
+
+
+sol = solve_ivp(X_dot, t_span=[t_start,t_end],t_eval=np.linspace(t_start,t_end,100),y0=np.array([X_0]))
+
+times=sol.t
+n=len(times)
+Xs=sol.y.transpose().reshape(n,)
+
+def inv_M(t):
+    return 1/M(t)
+
+def X_c(t):
+    return inv_M(t)*u(t)
+X_cs = np.array(list(map(X_c,times)))
+us= np.array(list(map(u,times)))
+X_ps = X_cs-Xs
+X_dot_ts=np.array(list(map(lambda i:X_dot(times[i],Xs[i]),range(n))))    
+Xs.shape,X_cs.shape,X_dot_ts.shape
+d={
+    "X": Xs, 
+    "X_c": X_cs,
+    "X_p": X_ps,
+    "X_dot": X_dot_ts,
+    "u": us 
+}
+names_1=['X','X_c','X_p']
+names_2=['X_dot','u']
+f=plt.figure(figsize=(20,20))
+axs=f.subplots(2,1)
+for name in names_1:
+    axs[0].plot(times,d[name],color=cd[name],label=name)
+axs[0].legend()
+
+for name in names_2:
+    axs[1].plot(times,d[name],color=cd[name],label=name)
+    axs[1].plot(times,np.zeros_like(times),color='black')
+axs[1].legend()
+
+# +
+# np.array([1,2]).reshape?
+# -
+
+np.array([1,2]).reshape
+
+# +
+# np.reshape?
+# -
+
+np.array
 
 

@@ -26,7 +26,19 @@ from bgc_md2.helper import bgc_md2_computers
 days_per_year = 365 
 TraceTuple = namedtuple(
     "TraceTuple",
-     ["X", "X_p" ,"X_c" , "X_dot", "RT"]
+     [  
+         "X",
+	 "X_p",
+	 "X_c",
+	 "X_dot",
+	 "RT",
+         #
+         "x",
+         "x_p",
+	 "x_c",
+	 "x_dot",
+	 "rt"
+     ]
 )
 
 # some tiny helper functions for module loading
@@ -1483,13 +1495,28 @@ def traceability_iterator(
         X_p = X_c-X
         X_dot = I - B @ X 
         RT = X_c/u #=B_inv@b but cheeper to compute
+        # we now compute the system X_c and X_p
+        # This is in general not equal to the sum of the component, but rather a property
+        # of a surrogate system.
+        x=X.sum()
+        x_dot=X_dot.sum()
+        m_s=(B@X).sum()/x
+        x_c=1/m_s*u
+        x_p=x_c-x
+        rt=x_c/u
+
         
         return TraceTuple(
             X=X,
             X_p=X_p,
             X_c=X_c,
             X_dot=X_dot,
-            RT=RT
+            RT=RT,
+            x=x,
+            x_p=x_p,
+            x_c=x_c,
+            x_dot=x_dot,
+            rt=rt,
         )
     
     # define the start tuple for the iterator    
