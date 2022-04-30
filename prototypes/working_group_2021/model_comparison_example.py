@@ -52,7 +52,7 @@ def tracebility_iterator(mf,delta_t_val):
     mvs_t=gh.mvs(mf)
     dvs_t=ta.dvs
     cpa_t=ta.cpa
-    epa_t=ta.epa_0
+    epa_t=ta.epa_opt
     X_0=gh.msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
     func_dict=gh.msh(mf).make_func_dict(mvs_t,dvs_t,cpa_t,epa_t)
     
@@ -90,7 +90,7 @@ def times_in_days_aD(mf,delta_t_val):
     days_after_sim_start=delta_t_val*np.arange(n_iter)
     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start)))
 
-delta_t_val=3 # assuming the same step size for every model (could be made model specific by an additional testarg)
+delta_t_val=30 # assuming the same step size for every model (could be made model specific by an additional testarg)
 
 
 # +
@@ -147,10 +147,87 @@ vals.X_c.shape,times.shape
 #vals
 
 # +
+model_cols={
+    "yz_jules": "blue",
+    "kv_visit2": "orange",
+}
+from scipy.interpolate import interp1d, splprep
+
+def plot_diff(mf_1, mf_2, delta_t_val, model_cols):
+    
+    part=30
+    start_min_1,stop_max_1=min_max_index(mf_1,delta_t_val,*t_min_tmax([mf_1,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)/part)
+    itr_1=tracebility_iterator(mf_1,delta_t_val)
+    vals_1=itr_1[start_1:stop_1]
+    times_1=times_in_days_aD(mf_1,delta_t_val)[start_1:stop_1]/365
+    
+    start_min_2,stop_max_2=min_max_index(mf_2,delta_t_val,*t_min_tmax([mf_2,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)/part)
+    itr_2=tracebility_iterator(mf_2,delta_t_val)
+    vals_2=itr_2[start_2:stop_2]
+    times_2=times_in_days_aD(mf_2,delta_t_val)[start_2:stop_2]/365
+    fig=plt.figure(figsize=((n)*10,20))
+    axs=fig.subplots(3,3)
+    ###################################################
+    # plot x_c, u and rt for both models 
+    ###################################################
+    def subp(ax,name):
+        def subsubp(mf,vals,times):
+            ax.plot(
+                times,
+                vals.__getattribute__(name),
+                color=model_cols[mf],
+                label=mf
+            )
+            
+        subsubp( mf_1, vals_1,  times_1 )
+        subsubp( mf_2, vals_2,  times_2 )
+        ax.legend()
+        ax.set_title(name)
+
+        
+    subp(axs[0,0],"x_c")
+    subp(axs[0,1],"u")
+    subp(axs[0,2],"rt")
+   #
+    ####################################################
+    ## plot delta_x_c delta_u and delta_rt  
+    ####################################################
+    # Since the two models do not necessarily share the same point in time and not
+    # even the same stepsize or number of steps we compute interpolating functions
+    # to make them comparable
+    def diffp(ax,name):
+        f1=interp1d(times_1,vals_1.__getattribute__(name))
+        f2=interp1d(times_2,vals_2.__getattribute__(name))
+        # chose the interval covered by both to avoid extrapolation
+        start=max(times_1.min(),times_2.min())
+        stop=min(times_1.max(),times_2.max())
+        nstep=min(len(times_1),len(times_2))
+        times=np.linspace(start,stop,nstep)
+        
+        diff=f1(times)-f2(times)
+        ax.plot(times,diff,color="black")
+        ax.set_title("{0}_{1}-{2}".format(name,mf_1,mf_2))
+        
+    diffp(axs[1,0],"x_c")
+    diffp(axs[1,1],"u")
+    diffp(axs[1,2],"rt")
+    
+mf_1="yz_jules"
+mf_2="kv_visit2"
+plot_diff(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
+# -
+
+sorted([[1,2],[5]],key=len)
+
+# +
 import matplotlib.pyplot as plt
 def plot_sums(model_folders,delta_t_val,cd):
     n = len(model_folders)
-    fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
+    fig=plt.figure(figsize=((n+1)*10,20))
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
     names=['X','X_c','X_p']
@@ -200,8 +277,8 @@ def partitions(start,stop,nr_acc=1):
     ]+[last_tup]
 
 # an example we want to partition 
-partitions(0,10,nr_acc=3)
-#len(partitions(start,stop,12))
+#partitions(0,10,nr_acc=3)
+partitions(start,stop,12)
 # -
 
 itr=tracebility_iterator(mf,delta_t_val)
@@ -233,7 +310,8 @@ def plot_yearly_avg_sums(model_folders,delta_t_val,cd):
     fig=plt.figure(figsize=((n+1)*10,20))#, dpi = 400)
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
-    names=['X','X_c','X_p']
+    #names=['X','X_c']#,'X_p']
+    names=['x','x_c']#,'x_p']
     for i,mf in enumerate(model_folders):
         itr=tracebility_iterator(mf,delta_t_val)
         start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
@@ -249,7 +327,7 @@ def plot_yearly_avg_sums(model_folders,delta_t_val,cd):
         for name in names:
             ax.plot(
                 times,
-                vals.__getattribute__(name).sum(axis=1),
+                vals.__getattribute__(name),
                 label=name+"_avg_sum",
                 color=cd[name]
             )
@@ -511,6 +589,8 @@ axs[1].legend()
 # +
 # np.array([1,2]).reshape?
 # -
+
+np.array([1,2]).reshape
 
 np.array([1,2]).reshape
 

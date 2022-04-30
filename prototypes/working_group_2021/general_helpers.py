@@ -37,7 +37,8 @@ TraceTuple = namedtuple(
          "x_p",
 	 "x_c",
 	 "x_dot",
-	 "rt"
+	 "rt",
+         "u",
      ]
 )
 
@@ -1259,26 +1260,35 @@ def pseudo_daily_to_yearly(daily):
     sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
     return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
 
-def make_param_filter_func(
-        c_max: np.ndarray,
-        c_min: np.ndarray
-        ) -> Callable[[np.ndarray], bool]:
 
-    def isQualified(c):
-        # fixme
-        #   this function is model specific: It discards parameter proposals
-        #   where beta1 and beta2 are >0.99
-        cond1 =  (c >= c_min).all() 
-        cond2 =  (c <= c_max).all() 
-        return (cond1 and cond2 )
-        
+def make_feng_cost_func_2(
+    svs #: Observables
+    ):
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    # The denominators in this case are actually the TEMPORAL variances of the data streams
+    obs_arr=np.stack([ arr for arr in svs],axis=1)
+    means = obs_arr.mean(axis=0)
+    mean_centered_obs= obs_arr - means
+    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+
+    def feng_cost_func_2(
+            simu#: Observables
+        ):
+        def f(i):
+            arr=simu[i]
+            obs=obs_arr[:,i]
+            diff=((arr-obs)**2).sum()/denominators[i]*100 
+            return diff
+        return np.array([f(i) for i  in range(len(simu))]).mean()
     
-    return isQualified
+    return feng_cost_func_2
 
-def make_param_filter_func_2(
+def make_param_filter_func(
         c_max,
         c_min, 
-        betas: List[str]
+        betas: List[str]=[]
     ) -> Callable[[np.ndarray], bool]:
 
     positions=[c_max.__class__._fields.index(beta) for beta in betas]
@@ -1330,45 +1340,45 @@ def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
 
 # fixme: mm 04-22-2022 
 # this function is deprecated rather use traceability_iterator
-def make_daily_iterator_sym_trace(
-        mvs,
-        V_init, #: StartVectorTrace,
-        par_dict,
-        func_dict
-    ):
-    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
-    
-    n=len(mvs.get_StateVariableTuple())
-    def f(it,V):
-        #the pools are the first n values
-        X = V[0:n] 
-        I = I_func(it,X) 
-        # we decompose I
-        u=I.sum()
-        b=I/u
-        B = B_func(it,X)
-        B_inf = np.linalg.inv(B)
-        X_new = X + I + B @ X
-        X_p = B_inf @ I
-        X_c = X_new+X_p
-        RT = B_inf @ b
-        V_new = np.concatenate(
-            (
-                X_new.reshape(n,1),
-                X_p.reshape(n,1),
-                X_c.reshape(n,1),
-                RT.reshape(n,1),
-            ),
-            axis=0
-        )
-        return V_new
-    
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
-
+#def make_daily_iterator_sym_trace(
+#        mvs,
+#        V_init, #: StartVectorTrace,
+#        par_dict,
+#        func_dict
+#    ):
+#    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+#    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+#    
+#    n=len(mvs.get_StateVariableTuple())
+#    def f(it,V):
+#        #the pools are the first n values
+#        X = V[0:n] 
+#        I = I_func(it,X) 
+#        # we decompose I
+#        u=I.sum()
+#        b=I/u
+#        B = B_func(it,X)
+#        B_inf = np.linalg.inv(B)
+#        X_new = X + I + B @ X
+#        X_p = B_inf @ I
+#        X_c = X_new+X_p
+#        RT = B_inf @ b
+#        V_new = np.concatenate(
+#            (
+#                X_new.reshape(n,1),
+#                X_p.reshape(n,1),
+#                X_c.reshape(n,1),
+#                RT.reshape(n,1),
+#            ),
+#            axis=0
+#        )
+#        return V_new
+#    
+#    return TimeStepIterator2(
+#        initial_values=V_arr,
+#        f=f,
+#    )
+#
 
 class InfiniteIterator():
     def __init__(self,x0,func):#,n):
@@ -1517,6 +1527,7 @@ def traceability_iterator(
             x_c=x_c,
             x_dot=x_dot,
             rt=rt,
+            u=u,
         )
     
     # define the start tuple for the iterator    

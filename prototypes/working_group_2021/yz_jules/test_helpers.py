@@ -20,6 +20,7 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_0",
             "epa_min",
             "epa_max",
+            "epa_opt",
             "cpa"
         ]
     )
@@ -94,7 +95,8 @@ def make_test_args(conf_dict,msh,mvs):
             'r_c_HUM_2_c_BIO':6.61437908496732e-6
          }
     )
-    
+    # Yu please change this to the optimized parameters if you changed them  
+    epa_opt=epa_0
     # set min/max parameters to +- 100 times initial values
     epa_min = msh.EstimatedParameters(* tuple(np.array(epa_0) * 0.001)) # for fluxes 
     epa_max = msh.EstimatedParameters(* tuple(np.array(epa_0) * 200))
@@ -148,5 +150,6 @@ def make_test_args(conf_dict,msh,mvs):
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
+        epa_opt=epa_opt,
         cpa=cpa
     )
