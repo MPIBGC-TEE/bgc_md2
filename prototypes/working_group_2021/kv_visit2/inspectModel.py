@@ -198,7 +198,7 @@ plot_observations_vs_simulations(fig,obs_T,simu_T)
 fig.savefig('solutions_initial.pdf')
 # -
 # test cost function
-feng_cost_function_2=msh.make_feng_cost_func_2(svs)
+feng_cost_function_2=gh.make_feng_cost_func_2(svs)
 feng_cost_function_2(obs_simu)
 
 # +
@@ -287,7 +287,7 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=msh.make_feng_cost_func_2(svs),
+    costfunction=gh.make_feng_cost_func_2(svs),
     nsimu=2000,# for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
@@ -409,7 +409,7 @@ C_autostep, J_autostep = gh.autostep_mcmc(
     initial_parameters=epa_1,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=msh.make_feng_cost_func_2(svs),
+    costfunction=gh.make_feng_cost_func_2(svs),
     nsimu=2000,# for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),

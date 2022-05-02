@@ -1,4 +1,4 @@
-from sympy import  Symbol, Function
+from sympy import  Symbol, Function, exp, diff, Piecewise
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
 from bgc_md2.models.BibInfo import BibInfo
@@ -43,7 +43,6 @@ sym_dict={
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
     #'env_modifier': '',
-    'tas': 'air temperature',
     'mrso': 'soil moisture',
     'T_0': 'critical temperature',
     'E': 'activation energy',
@@ -59,12 +58,20 @@ for k in sym_dict.keys():
 func_dict={
     'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
     'NPP': '',
+    'mrso': '',
+    'TAS': 'air temperature',
 }
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
     exec(code)
 
 t=TimeSymbol("t")
+TAS_C=TAS(t)-273.15
+TS = 0.748*TAS_C + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+xi=Piecewise(
+    (exp(E*(1/(10-T_0)-1/(TS-T_0))) * mrso(t)/(KM+mrso(t)),TS > T_0),
+    (0,True)
+)
 beta_root = 1.0- (beta_leaf+beta_wood)
 mvs = CMTVS(
     {
@@ -89,12 +96,12 @@ mvs = CMTVS(
         ),
         OutFluxesBySymbol(
             {
-                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi(t),#*env_modifier,
-                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi(t),#*env_modifier,
-                C_root_litter: r_C_root_litter_rh*C_root_litter*xi(t),#*env_modifier,
-                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi(t),#*env_modifier,
-                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi(t),#*env_modifier,
-                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi(t),#*env_modifier,
+                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi,#*env_modifier,
+                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi,#*env_modifier,
+                C_root_litter: r_C_root_litter_rh*C_root_litter*xi,#*env_modifier,
+                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi,#*env_modifier,
+                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi,#*env_modifier,
+                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,#*env_modifier,
             }
         ),
         InternalFluxesBySymbol(
@@ -102,15 +109,15 @@ mvs = CMTVS(
                 (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
                 (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
                 (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
-                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi(t),#*env_modifier,
-                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi(t),#*env_modifier,
-                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi(t),#*env_modifier,
-                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi(t),#*env_modifier,
-                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi(t),#*env_modifier,
-                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi(t),#*env_modifier,
-                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi(t),#*env_modifier,
-                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi(t),#*env_modifier,
-                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi(t),#*env_modifier,
+                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi,#*env_modifier,
+                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi,#*env_modifier,
+                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi,#*env_modifier,
+                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi,#*env_modifier,
+                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi,#*env_modifier,
+                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi,#*env_modifier,
+                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi,#*env_modifier,
+                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi,#*env_modifier,
+                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi,#*env_modifier,
             }
         ),
         BibInfo(# Bibliographical Information
@@ -129,3 +136,24 @@ mvs = CMTVS(
 
     computers=module_computers(bgc_c)
 )
+
+mvs.get_CompartmentalMatrix()
+
+# +
+#diff(xi,t)
+
+# +
+#def make_func_dict(mvs, dvs, cpa, epa):
+#    def tas_num(day):
+#        month=gh.day_2_month_index(day)
+#        return dvs.tas[month]
+#        
+#    def mrso_num(day):
+#        month=gh.day_2_month_index(day)
+#        return dvs.mrso[month]
+#        
+#    f_d={
+#        "TAS": tas_num,
+#        "mrso": mrso_num
+#    }
+#    return f_d

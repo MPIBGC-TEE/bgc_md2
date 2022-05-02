@@ -2,7 +2,8 @@ import numpy as np
 from tqdm import tqdm
 from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
-from copy import copy
+from copy import copy, deepcopy
+from itertools import islice
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
@@ -25,7 +26,20 @@ from bgc_md2.helper import bgc_md2_computers
 days_per_year = 365 
 TraceTuple = namedtuple(
     "TraceTuple",
-     ["X", "X_p" ,"X_c" ,"RT"]
+     [  
+         "X",
+	 "X_p",
+	 "X_c",
+	 "X_dot",
+	 "RT",
+         #
+         "x",
+         "x_p",
+	 "x_c",
+	 "x_dot",
+	 "rt",
+         "u",
+     ]
 )
 
 # some tiny helper functions for module loading
@@ -1246,26 +1260,35 @@ def pseudo_daily_to_yearly(daily):
     sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
     return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
 
-def make_param_filter_func(
-        c_max: np.ndarray,
-        c_min: np.ndarray
-        ) -> Callable[[np.ndarray], bool]:
 
-    def isQualified(c):
-        # fixme
-        #   this function is model specific: It discards parameter proposals
-        #   where beta1 and beta2 are >0.99
-        cond1 =  (c >= c_min).all() 
-        cond2 =  (c <= c_max).all() 
-        return (cond1 and cond2 )
-        
+def make_feng_cost_func_2(
+    svs #: Observables
+    ):
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    # The denominators in this case are actually the TEMPORAL variances of the data streams
+    obs_arr=np.stack([ arr for arr in svs],axis=1)
+    means = obs_arr.mean(axis=0)
+    mean_centered_obs= obs_arr - means
+    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+
+    def feng_cost_func_2(
+            simu#: Observables
+        ):
+        def f(i):
+            arr=simu[i]
+            obs=obs_arr[:,i]
+            diff=((arr-obs)**2).sum()/denominators[i]*100 
+            return diff
+        return np.array([f(i) for i  in range(len(simu))]).mean()
     
-    return isQualified
+    return feng_cost_func_2
 
-def make_param_filter_func_2(
+def make_param_filter_func(
         c_max,
         c_min, 
-        betas: List[str]
+        betas: List[str]=[]
     ) -> Callable[[np.ndarray], bool]:
 
     positions=[c_max.__class__._fields.index(beta) for beta in betas]
@@ -1317,45 +1340,148 @@ def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
 
 # fixme: mm 04-22-2022 
 # this function is deprecated rather use traceability_iterator
-def make_daily_iterator_sym_trace(
-        mvs,
-        V_init, #: StartVectorTrace,
-        par_dict,
-        func_dict
-    ):
-    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
-    
-    n=len(mvs.get_StateVariableTuple())
-    def f(it,V):
-        #the pools are the first n values
-        X = V[0:n] 
-        I = I_func(it,X) 
-        # we decompose I
-        u=I.sum()
-        b=I/u
-        B = B_func(it,X)
-        B_inf = np.linalg.inv(B)
-        X_new = X + I + B @ X
-        X_p = B_inf @ I
-        X_c = X_new+X_p
-        RT = B_inf @ b
-        V_new = np.concatenate(
-            (
-                X_new.reshape(n,1),
-                X_p.reshape(n,1),
-                X_c.reshape(n,1),
-                RT.reshape(n,1),
-            ),
-            axis=0
-        )
-        return V_new
-    
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
+#def make_daily_iterator_sym_trace(
+#        mvs,
+#        V_init, #: StartVectorTrace,
+#        par_dict,
+#        func_dict
+#    ):
+#    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+#    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+#    
+#    n=len(mvs.get_StateVariableTuple())
+#    def f(it,V):
+#        #the pools are the first n values
+#        X = V[0:n] 
+#        I = I_func(it,X) 
+#        # we decompose I
+#        u=I.sum()
+#        b=I/u
+#        B = B_func(it,X)
+#        B_inf = np.linalg.inv(B)
+#        X_new = X + I + B @ X
+#        X_p = B_inf @ I
+#        X_c = X_new+X_p
+#        RT = B_inf @ b
+#        V_new = np.concatenate(
+#            (
+#                X_new.reshape(n,1),
+#                X_p.reshape(n,1),
+#                X_c.reshape(n,1),
+#                RT.reshape(n,1),
+#            ),
+#            axis=0
+#        )
+#        return V_new
+#    
+#    return TimeStepIterator2(
+#        initial_values=V_arr,
+#        f=f,
+#    )
+#
 
+class InfiniteIterator():
+    def __init__(self,x0,func):#,n):
+        self.x0=x0
+        self.func=func
+        
+        self.cur=x0
+        self.pos=0
+        
+    def __iter__(self):
+        #return a fresh instance that starts from the first step)
+        c=self.__class__(self.x0,self.func)
+        return c
+        #return self
+    
+    def __next__(self):
+        #print(self.pos, self.cur)
+        val=self.func(self.pos,self.cur)
+        self.cur = val
+        self.pos += 1
+        return val
+        #raise StopIteration()
+        
+    # @lru_cache
+    def value_at(self,it_max):
+        I=self.__iter__()
+        def f_i(acc,i):
+            return I.__next__()
+        return reduce(f_i,range(it_max),I.x0)
+    
+    def __getitem__(self,arg):
+        # this functions implements the python index notation itr[start:stop:step]
+        # fixme mm 4-26-2022 
+        # we could use the cache for value_at if we dont use  
+        if isinstance(arg,slice):
+            start=arg.start
+            stop=arg.stop
+            step=arg.step
+            return tuple(islice(self,start,stop,step)) 
+        
+        
+        elif isinstance(arg,int):
+            return self.value_at(it_max=arg)
+        else:
+            raise IndexError(
+                """arguments to __getitem__ have to be either
+                indeces or slices."""
+            )
+        
+
+def values_2_TraceTuple(tups):
+    # instead of the collection of TraceTuples that the InfiniteIterator returns
+    # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
+    return TraceTuple(*(
+        np.stack(
+            tuple((tup.__getattribute__(name)  for tup in tups))
+        )
+        for name in TraceTuple._fields
+    ))
+    
+class TraceTupleIterator(InfiniteIterator):
+    #overload one method specific to the TraceTupleIterator
+    def __getitem__(self,arg):
+        # we call the [] method of the superclass
+        # which returns a tuple of TraceTuples
+        tups=super().__getitem__(arg)
+        
+        # But what we want is a TraceTuple of arrays
+        return values_2_TraceTuple(tups)  
+
+    def averaged_values(self,partitions):
+        start=partitions[0][0]
+        def tt_avg(tups):
+            l=len(tups)
+            return TraceTuple(*(
+                    np.stack(
+                        [
+                            tup.__getattribute__(name)
+                            for tup in tups
+                        ],
+                        axis=0
+                    ).sum(axis=0)/l
+                    for name in TraceTuple._fields
+                )
+            )
+
+        # move to the start
+        for i in range(start):
+            self.__next__()
+
+        tts=[
+            tt_avg(
+                [
+                    self.__next__()
+                    for i in range(stop_p-start_p)
+                ]
+            )
+            for (start_p,stop_p) in partitions
+        ]
+        return values_2_TraceTuple(tts)
+
+
+            
 def traceability_iterator(
         X_0,
         func_dict,
@@ -1377,13 +1503,31 @@ def traceability_iterator(
         B_inv = np.linalg.inv(B)
         X_c = B_inv@I
         X_p = X_c-X
-        RT = X_c/u #=B_inv@b but cheeper to computed
+        X_dot = I - B @ X 
+        RT = X_c/u #=B_inv@b but cheeper to compute
+        # we now compute the system X_c and X_p
+        # This is in general not equal to the sum of the component, but rather a property
+        # of a surrogate system.
+        x=X.sum()
+        x_dot=X_dot.sum()
+        m_s=(B@X).sum()/x
+        x_c=1/m_s*u
+        x_p=x_c-x
+        rt=x_c/u
+
         
         return TraceTuple(
             X=X,
             X_p=X_p,
             X_c=X_c,
-            RT=RT
+            X_dot=X_dot,
+            RT=RT,
+            x=x,
+            x_p=x_p,
+            x_c=x_c,
+            x_dot=x_dot,
+            rt=rt,
+            u=u,
         )
     
     # define the start tuple for the iterator    
@@ -1391,7 +1535,7 @@ def traceability_iterator(
         X_0,
         # in Yiqi's nomenclature: dx/dt=I-Bx 
         # instead of           : dx/dt=I+Bx 
-        # as assumed by B_u_func 
+        # as assumed by B_u_func  
         - B_func(0,X_0), 
         I_func(0,X_0)
     )
@@ -1407,9 +1551,17 @@ def traceability_iterator(
             X_new= X + I + B @ X
             return trace_tuple_instance(X_new,-B,I)
     
-    return TimeStepIterator2(
-        initial_values=V_init,
-        f=f
+    #return TimeStepIterator2(
+    #    initial_values=V_init,
+    #    f=f
+    #)
+    #return InfiniteIterator(
+    #    x0=V_init,
+    #    func=f
+    #)
+    return TraceTupleIterator(
+        x0=V_init,
+        func=f
     )
 
 

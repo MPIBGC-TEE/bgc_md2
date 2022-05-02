@@ -273,36 +273,57 @@ def get_global_mean_vars(dataPath):
         )
 
 
-def make_npp_func(dvs):
-    def func(day):
+#def make_npp_func(dvs):
+#    def func(day):
+#        month=gh.day_2_month_index(day)
+#        # kg/m2/s kg/m2/day;
+#        return (dvs.npp[month]) #* 86400
+#
+#    return func
+#
+#
+#def make_xi_func(dvs, epa):
+#    def xi_func(day):
+#        month=gh.day_2_month_index(day)
+#        TS = (dvs.tas[month]-273.15)# * 0.5 # convert from Kelvin to Celcius 
+#        TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+#        if TS > epa.T_0: 
+#            xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+#        else: 
+#            xi_out=0
+#        return(xi_out)
+#        #return (dvs.xi[month])
+#        #return 1.0 # preliminary fake for lack of better data...
+#    return xi_func
+#
+#
+#def make_func_dict(mvs,dvs,cpa,epa):
+#    return {
+#        "NPP": make_npp_func(dvs),
+#        "xi": make_xi_func(dvs, epa)
+#    }
+def make_func_dict(mvs, dvs, cpa, epa):
+
+    def npp_func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month]) #* 86400
 
-    return func
-
-
-def make_xi_func(dvs, epa):
-    def xi_func(day):
+    def tas_num(day):
         month=gh.day_2_month_index(day)
-        TS = (dvs.tas[month]-273.15) * 0.5 # convert from Kelvin to Celcius 
-        TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-        if TS > epa.T_0: 
-            xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
-        else: 
-            xi_out=0
-        return(xi_out)
-        #return (dvs.xi[month])
-        #return 1.0 # preliminary fake for lack of better data...
-    return xi_func
-
-
-def make_func_dict(mvs,dvs,cpa,epa):
-    return {
-        "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs, epa)
+        return dvs.tas[month]
+        
+    def mrso_num(day):
+        month=gh.day_2_month_index(day)
+        return dvs.mrso[month]
+        
+    f_d={
+        "TAS": tas_num,
+        "mrso": mrso_num,
+        "NPP": npp_func,
+        #"xi": make_xi_func(dvs, epa)
     }
-
+    return f_d
 
 def make_traceability_iterator(mvs,dvs,cpa,epa):
     par_dict={
@@ -502,9 +523,9 @@ def make_param2res_sym(
     # the time dependent driver function for gpp does not change with the estimated parameters
     # so its enough to define it once as in our test
     seconds_per_day = 86400
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        return dvs.npp[month] #* seconds_per_day   # kg/m2/s kg/m2/day;
+    #def npp_func(day):
+    #    month=gh.day_2_month_index(day)
+    #    return dvs.npp[month] #* seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -539,21 +560,22 @@ def make_param2res_sym(
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
-        def xi_func(day):
-            month=gh.day_2_month_index(day)
-            TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius 
-            TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-            if TS > epa.T_0: 
-                xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
-            else: 
-                xi_out=0
-            return(xi_out)
-            # return 1.0 # preliminary fake for lack of better data... 
-        
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
+        #def xi_func(day):
+        #    month=gh.day_2_month_index(day)
+        #    TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius 
+        #    TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+        #    if TS > epa.T_0: 
+        #        xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+        #    else: 
+        #        xi_out=0
+        #    return(xi_out)
+        #    # return 1.0 # preliminary fake for lack of better data... 
+        #
+        #func_dict={
+        #    'NPP':npp_func,
+        #     'xi':xi_func
+        #}
+        func_dict=make_func_dict(mvs,dvs,cpa,epa)
         
         # size of the timestep in days
         # We could set it to 30 o
@@ -797,28 +819,28 @@ def make_param2res_full_output(
             #ra=ra_arr)
     return param2res_full_output
 
-
-def make_feng_cost_func_2(
-    svs #: Observables
-    ):
-    # now we compute a scaling factor per observable stream
-    # fixme mm 10-28-2021
-    # The denominators in this case are actually the TEMPORAL variances of the data streams
-    obs_arr=np.stack([ arr for arr in svs],axis=1)
-    means = obs_arr.mean(axis=0)
-    mean_centered_obs= obs_arr - means
-    denominators = np.sum(mean_centered_obs ** 2, axis=0)
-
-
-    def feng_cost_func_2(simu: Observables):
-        def f(i):
-            arr=simu[i]
-            obs=obs_arr[:,i]
-            diff=((arr-obs)**2).sum()/denominators[i]*100 
-            return diff
-        return np.array([f(i) for i  in range(len(simu))]).mean()
-    
-    return feng_cost_func_2
+# moved to general_helpers
+#def make_feng_cost_func_2(
+#    svs #: Observables
+#    ):
+#    # now we compute a scaling factor per observable stream
+#    # fixme mm 10-28-2021
+#    # The denominators in this case are actually the TEMPORAL variances of the data streams
+#    obs_arr=np.stack([ arr for arr in svs],axis=1)
+#    means = obs_arr.mean(axis=0)
+#    mean_centered_obs= obs_arr - means
+#    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+#
+#
+#    def feng_cost_func_2(simu: Observables):
+#        def f(i):
+#            arr=simu[i]
+#            obs=obs_arr[:,i]
+#            diff=((arr-obs)**2).sum()/denominators[i]*100 
+#            return diff
+#        return np.array([f(i) for i  in range(len(simu))]).mean()
+#    
+#    return feng_cost_func_2
 
 
 def make_param_filter_func(
