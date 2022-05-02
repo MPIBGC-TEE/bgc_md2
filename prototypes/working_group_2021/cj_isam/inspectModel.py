@@ -205,7 +205,7 @@ B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict)
 
 
 # +
-  
+import math
 it_sym = make_steady_state_iterator_sym(
     mvs,
     V_init=(X_0,u_func(0,X_0),B_func(0,X_0)),
@@ -238,50 +238,51 @@ steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVar
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
 epa_0=msh.EstimatedParameters(
-    fwt=0.22720510630531535, 
-    fgv=0.13339749844173146, 
-    fco=0.48468873886205804, 
-    fml=0.6625400558788637, 
-    fd=0.609731866092099, 
-    k_C_NWT=0.0015651547605874845, 
-    k_C_AGWT=0.00020579549570896914, 
-    k_C_TR=0.00021655197553090258,
-    k_C_GVF=0.00028880916566528537, 
-    k_C_GVR=0.0001574617151611989, 
-    f_C_AGSL_2_C_AGMS=0.16522686655577523, 
-    f_C_BGRL_2_C_SHMS=0.5461047001295201,
-    C_NWT_0=0.1674883218647344,
-    C_AGWT_0=0.29255052631195533,
-    C_GVF_0=0.3359968317564281,
-    C_GVR_0=2.3328171507922555,
-    C_AGML_0=0.02963751068264173,
-    C_AGSL_0=0.0004373128929123478,
-    C_BGDL_0=0.0005250285545731843,
-    C_AGMS_0=0.07115408727464849,
-    C_YHMS_0=0.17191831703645521,
-    C_SHMS_0=8.037110582162018
-    #fwt=0.3,
-    #fgv=0.12,
-    #fco=0.455,
-    #fml=0.64,
-    #fd=0.6,
-    #k_C_NWT=1/(365*2.3),#2
-    #k_C_AGWT=1/(365*10.3),#30
-    #k_C_TR=1/(365*14.15),#20
-    #k_C_GVF=1/(365*10),#30
-    #k_C_GVR=1/(365*12.38),#20
-    #f_C_AGSL_2_C_AGMS=0.59*0.3,#0.3
-    #f_C_BGRL_2_C_SHMS=0.5,
-    #C_NWT_0=steady_state_dict["C_NWT"],
-    #C_AGWT_0=steady_state_dict["C_AGWT"],
-    #C_GVF_0=steady_state_dict["C_GVF"],
-    #C_GVR_0=steady_state_dict["C_GVR"],
-    #C_AGML_0=steady_state_dict["C_AGML"],
-    #C_AGSL_0=steady_state_dict["C_AGSL"],
-    #C_BGDL_0=steady_state_dict["C_BGDL"],
-    #C_AGMS_0=steady_state_dict["C_AGMS"],
-    #C_YHMS_0=steady_state_dict["C_YHMS"],
-    #C_SHMS_0=steady_state_dict["C_SHMS"],
+    fwt=0.5907770914828289, 
+    fgv=0.10708374044873868, 
+    fco=0.9502719613629499, 
+    fml=0.6985590765466911, 
+    fd=0.8108017779961694, 
+    k_C_NWT=0.0018600810916478165, 
+    k_C_AGWT=0.00017354142452106252, 
+    k_C_TR=0.00016065843641210772, 
+    k_C_GVF=0.00022102017216433633, 
+    k_C_GVR=0.00017926856125131916, 
+    f_C_AGSL_2_C_AGMS=0.20853426509202325, 
+    f_C_BGRL_2_C_SHMS=0.24638112975102788, 
+    C_NWT_0=0.39641121927763323, 
+    C_AGWT_0=1.0098899271611432, 
+    C_GVF_0=0.1784893310039542, 
+    C_GVR_0=2.1680315400436174, 
+    C_AGML_0=0.1251689278629053, 
+    C_AGSL_0=0.005800531050824444, 
+    C_BGDL_0=0.0484130929152639, 
+    C_AGMS_0=0.10074331291791151, 
+    C_YHMS_0=0.5036084965444287, 
+    C_SHMS_0=8.080067914918454,
+    
+    #fwt=0.22720510630531535, 
+    #fgv=0.13339749844173146, 
+    #fco=0.48468873886205804, 
+    #fml=0.6625400558788637, 
+    #fd=0.609731866092099, 
+    #k_C_NWT=0.0015651547605874845, 
+    #k_C_AGWT=0.00020579549570896914, 
+    #k_C_TR=0.00021655197553090258,
+    #k_C_GVF=0.00028880916566528537, 
+    #k_C_GVR=0.0001574617151611989, 
+    #f_C_AGSL_2_C_AGMS=0.16522686655577523, 
+    #f_C_BGRL_2_C_SHMS=0.5461047001295201,
+    #C_NWT_0= svs_0.cVeg * 0.06,#0.1674883218647344,
+    #C_AGWT_0= svs_0.cVeg * 0.095,#0.29255052631195533,
+    #C_GVF_0= svs_0.cVeg * 0.1,#0.3359968317564281,
+    #C_GVR_0= svs_0.cVeg * 0.65,#2.3328171507922555,
+    #C_AGML_0= svs_0.cLitter * 0.6,#0.02963751068264173,
+    #C_AGSL_0= svs_0.cLitter * 0.1,#0.0004373128929123478,
+    #C_BGDL_0= svs_0.cLitter * 0.1,#0.0005250285545731843,
+    #C_AGMS_0= svs_0.cSoil * 0.05,#0.07115408727464849,
+    #C_YHMS_0= svs_0.cSoil * 0.1,#0.17191831703645521,
+    #C_SHMS_0= svs_0.cSoil * 0.7,#8.037110582162018
 )
 
 
@@ -304,7 +305,7 @@ obs[:,3:4]=obs[:,3:4]
 n=cpa.number_of_months
 
 # convert to yearly output if necessary
-#obs_yr=np.zeros(int(cpa.number_of_months/12)*obs.shape[1]).reshape([int(cpa.number_of_months/12),obs.shape[1]])  
+#obs_yr=np.zeros(int(cpa.number_of_months/12)*obs.shape[1]).refwt=0.538141061754704, fgv=0.09965430660231399, fco=0.899657000739055, fml=0.7055535672710194, fd=0.8300632677297293, k_C_NWT=0.0017297080940248545, k_C_AGWT=0.00017468511195159253, k_C_TR=0.00016223935511977146, k_C_GVF=0.0002115629437369954, k_C_GVR=0.00016807958377661582, f_C_AGSL_2_C_AGMS=0.23986217759314643, f_C_BGRL_2_C_SHMS=0.17612859148192067, C_NWT_0=0.24871325996896232, C_AGWT_0=1.7557640443395466, C_GVF_0=0.20250040970682928, C_GVR_0=2.4078877379683274, C_AGML_0=0.13706684206636224, C_AGSL_0=0.03301021821996376, C_BGDL_0=0.07767639566417399, C_AGMS_0=0.5340042592206394, C_YHMS_0=0.1376951143246505, C_SHMS_0=7.329872222951247fwt=0.538141061754704, fgv=0.09965430660231399, fco=0.899657000739055, fml=0.7055535672710194, fd=0.8300632677297293, k_C_NWT=0.0017297080940248545, k_C_AGWT=0.00017468511195159253, k_C_TR=0.00016223935511977146, k_C_GVF=0.0002115629437369954, k_C_GVR=0.00016807958377661582, f_C_AGSL_2_C_AGMS=0.23986217759314643, f_C_BGRL_2_C_SHMS=0.17612859148192067, C_NWT_0=0.24871325996896232, C_AGWT_0=1.7557640443395466, C_GVF_0=0.20250040970682928, C_GVR_0=2.4078877379683274, C_AGML_0=0.13706684206636224, C_AGSL_0=0.03301021821996376, C_BGDL_0=0.07767639566417399, C_AGMS_0=0.5340042592206394, C_YHMS_0=0.1376951143246505, C_SHMS_0=7.329872222951247shape([int(cpa.number_of_months/12),obs.shape[1]])  
 #for i in range(obs.shape[1]):
 #    obs_yr[:,i]=monthly_to_yearly(obs[:,i])
 #obs=obs_yr
@@ -329,32 +330,32 @@ plt.figure(figsize=(12,10), dpi=80)
 plt.figure(1)
 
 ax0 = plt.subplot(221)
-ax0.plot(obs[:,0],label='TRENDY',color="red")
 ax0.plot(xs[:,0],label='Simulation',color="blue")
+ax0.plot(obs[:,0],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Vegetation C (kg m-2)",size=13)
 #ax0.legend(loc='best')
 ax0.tick_params(labelsize=12)
 
 ax1 = plt.subplot(222)
-ax1.plot(obs[:,1],label='TRENDY',color="red")
 ax1.plot(xs[:,1],label='Simulation',color="blue")
+ax1.plot(obs[:,1],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Litter C (kg m-2)",size=13)
 ax1.legend(loc='best')
 ax1.tick_params(labelsize=12)
 
 ax2 = plt.subplot(223)
-ax2.plot(obs[:,2],label='TRENDY',color="red")
 ax2.plot(xs[:,2],label='Simulation',color="blue")
+ax2.plot(obs[:,2],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Soil C (kg m-2)",size=13)
 ax2.legend(loc='best')
 ax2.tick_params(labelsize=12)
 
 ax3 = plt.subplot(224)
-ax3.plot(obs[:,3],label='TRENDY',color="red")
 ax3.plot(xs[:,3],label='Simulation',color="blue")
+ax3.plot(obs[:,3],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
 ax3.tick_params(labelsize=12)
@@ -365,17 +366,17 @@ plt.savefig('ISAM_test.pdf')
 
 # +
 epa_min=msh.EstimatedParameters(
-    fwt=0.1,
-    fgv=0.08,
-    fco=0.25,
-    fml=0.4,
-    fd=0.4,
+    fwt=0.3,
+    fgv=0.05,
+    fco=0.7,
+    fml=0.5,
+    fd=0.6,
     k_C_NWT=1/(365*10),
     k_C_AGWT=1/(365*30),
     k_C_TR=1/(365*30),
     k_C_GVF=1/(365*30),
     k_C_GVR=1/(365*40),
-    f_C_AGSL_2_C_AGMS=0.1*0.3,
+    f_C_AGSL_2_C_AGMS=0.2*0.3,
     f_C_BGRL_2_C_SHMS=0.1,
     C_NWT_0=0,
     C_AGWT_0=0,
@@ -388,20 +389,20 @@ epa_min=msh.EstimatedParameters(
     C_YHMS_0=0,
     C_SHMS_0=0,
 )
- 
+   
 epa_max=msh.EstimatedParameters(
-    fwt=0.6,
-    fgv=0.3,
-    fco=0.7,
-    fml=0.9,
-    fd=0.9,
+    fwt=0.8,
+    fgv=0.5,
+    fco=0.98,
+    fml=0.95,
+    fd=0.95,
     k_C_NWT=1/(365*0.8),
     k_C_AGWT=1/(365*8),
     k_C_TR=1/(365*8),
-    k_C_GVF=1/(365*5),
+    k_C_GVF=1/(365*8),
     k_C_GVR=1/(365*8),
-    f_C_AGSL_2_C_AGMS=0.8*0.3,
-    f_C_BGRL_2_C_SHMS=0.8,
+    f_C_AGSL_2_C_AGMS=0.9*0.3,
+    f_C_BGRL_2_C_SHMS=0.7,
     C_NWT_0=svs_0.cVeg,
     C_AGWT_0=svs_0.cVeg,
     C_GVF_0=svs_0.cVeg,
@@ -421,8 +422,6 @@ epa_max=msh.EstimatedParameters(
 
 # ### mcmc to optimize parameters 
 #
-
-
 
 # +
 from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
@@ -444,7 +443,7 @@ C_autostep, J_autostep = autostep_mcmc(
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=10 # default value | increase value to reduce acceptance of higher cost functions
+    K=2 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -491,8 +490,8 @@ plt.ylabel("Vegetation C (kg m-2)",size=13)
 ax0.tick_params(labelsize=12)
 
 ax1 = plt.subplot(222)
-ax1.plot(obs[:,1],label='TRENDY',color="red")
 ax1.plot(mod_opt[:,1],label='Simulation',color="blue")
+ax1.plot(obs[:,1],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Litter C (kg m-2)",size=13)
 ax1.legend(loc='best')
@@ -507,8 +506,8 @@ ax2.legend(loc='best')
 ax2.tick_params(labelsize=12)
 
 ax3 = plt.subplot(224)
-ax3.plot(obs[:,3],label='TRENDY',color="red")
-ax3.plot(mod_opt[:,3],label='Simulation',color="blue")
+ax3.plot(mod_opt[100:300,3],label='Simulation',color="blue")
+ax3.plot(obs[100:300,3],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
 ax3.tick_params(labelsize=12)
@@ -517,6 +516,8 @@ plt.savefig('ISAM_opt.pdf')
 
 
 # -
+
+
 
 print("Optimized parameters: ", epa_opt)
 #par_dict_opt={

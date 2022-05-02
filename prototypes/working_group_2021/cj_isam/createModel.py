@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.7
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -174,10 +174,10 @@ mvs = CMTVS(
                 C_AGSL: r_C_AGSL_rh*C_AGSL*xi(t),
                 C_AGMS: r_C_AGMS_rh*C_AGMS*xi(t),
                 C_YHMS: r_C_YHMS_rh*C_YHMS*xi(t),
-                C_BGDL: r_C_BGDL_rh*C_BGDL*xi(t),
-                C_BGRL: r_C_BGRL_rh*C_BGRL*xi(t),
-                C_BGMS: r_C_BGMS_rh*C_BGMS*xi(t),
-                C_SHMS: r_C_SHMS_rh*C_SHMS*xi(t),
+                C_BGDL: r_C_BGDL_rh*C_BGDL,#*xi(t),
+                C_BGRL: r_C_BGRL_rh*C_BGRL,#*xi(t),
+                C_BGMS: r_C_BGMS_rh*C_BGMS,#*xi(t),
+                C_SHMS: r_C_SHMS_rh*C_SHMS,#*xi(t),
             }
         ),
         InternalFluxesBySymbol(
@@ -197,11 +197,11 @@ mvs = CMTVS(
                 (C_AGMS,C_YHMS): r_C_AGMS_2_C_YHMS*C_AGMS*xi(t),
                 (C_YHMS,C_AGMS): r_C_YHMS_2_C_AGMS*C_YHMS*xi(t),
                 (C_YHMS,C_SHMS): r_C_YHMS_2_C_AGMS*C_YHMS*xi(t),
-                (C_BGDL,C_SHMS): r_C_BGDL_2_C_SHMS*C_BGDL*xi(t),
-                (C_BGRL,C_SHMS): r_C_BGRL_2_C_SHMS*C_BGRL*xi(t),
-                (C_BGRL,C_BGMS): r_C_BGRL_2_C_BGMS*C_BGRL*xi(t),
-                (C_SHMS,C_BGMS): r_C_SHMS_2_C_BGMS*C_SHMS*xi(t),
-                (C_BGMS,C_SHMS): r_C_BGMS_2_C_SHMS*C_BGMS*xi(t),
+                (C_BGDL,C_SHMS): r_C_BGDL_2_C_SHMS*C_BGDL,#*xi(t),
+                (C_BGRL,C_SHMS): r_C_BGRL_2_C_SHMS*C_BGRL,#*xi(t),
+                (C_BGRL,C_BGMS): r_C_BGRL_2_C_BGMS*C_BGRL,#*xi(t),
+                (C_SHMS,C_BGMS): r_C_SHMS_2_C_BGMS*C_SHMS,#*xi(t),
+                (C_BGMS,C_SHMS): r_C_BGMS_2_C_SHMS*C_BGMS,#*xi(t),
             }
         ),
         BibInfo(# Bibliographical Information
@@ -299,7 +299,7 @@ mvs.computable_mvar_types()
 # We also see that we have a symbol $\xi$ alreasince the model has actually been specified with $\xi in mind
 
 from sympy import diag
-xi_d=diag([1,1,1,1,1]+[xi(t) for i in range(8)],unpack=True)
+xi_d=diag([1,1,1,1,1]+[xi(t) for i in range(4)]+[1,1,1,1],unpack=True)
 xi_d
 
 # We can go on and decompose N =\xi K -> K=\xi^{-1}N
