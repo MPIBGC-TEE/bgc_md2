@@ -14,8 +14,9 @@
 # ---
 
 # # Matrix Model Intercomparison Project: Traceability Analysis
-# <p> We use the <a href="https://github.com/MPIBGC-TEE/bgc_md2">bgc_md2</a> package infrastructure to compare two or more models using traceability analysis approach (<a href="https://doi.org/10.1111/gcb.12172">Xia et al. 2013</a>, <a href="https://doi.org/10.5194/bg-14-145-2017">Luo et al. 2017</a>, <a href="https://doi.org/10.1002/2017MS001004">Jiang et al. 2017</a>) modified for transient simulations of TRENDY model intercomparison project. </p>
-# <p>The biogeochemical models from TRENDY project have been reconstructed from literature using matrix approach (<a href="https://doi.org/10.1029/2002GB001923">Luo et al. 2003</a>, <a href=" https://doi.org/10.1111/gcb.12766">2015</a>, <a href="https://doi.org/10.5194/gmd-5-1045-2012">Sierra et al. 2012</a>) and <a href="https://www.sympy.org/en/index.html">sympy</a> python package (reference) in the <a href="https://github.com/MPIBGC-TEE/bgc_md2">bgc_md2</a> database. Currently the models are simplified to be driven by NPP and thus omitting explicit simulation of leaf processes and autotrophic respiration. Data assimilation (<a href=" https://doi.org/10.1890/09-1275.1">Luo et al. 2011</a>, <a href="https://doi.org/10.1002/2015GB005239">2015</a>) was used to optimize parameters of reconstructed models to fit TRENDY output. </p>
+# <p>We use the <a href="https://github.com/MPIBGC-TEE/bgc_md2">bgc_md2</a> package infrastructure to compare two or more models using traceability analysis approach (<a href="https://doi.org/10.1111/gcb.12172">Xia et al. 2013</a>, <a href="https://doi.org/10.5194/bg-14-145-2017">Luo et al. 2017</a>, <a href="https://doi.org/10.1002/2017MS001004">Jiang et al. 2017</a>) modified for transient simulations of the TRENDY model intercomparison project. </p>
+# <p>The biogeochemical models from the TRENDY project have been reconstructed from literature using matrix approach (<a href="https://doi.org/10.1029/2002GB001923">Luo et al. 2003</a>, <a href=" https://doi.org/10.1111/gcb.12766">2015</a>, <a href="https://doi.org/10.5194/gmd-5-1045-2012">Sierra et al. 2012</a>) and <a href="https://www.sympy.org/en/index.html">sympy</a> python package in the <a href="https://github.com/MPIBGC-TEE/bgc_md2">bgc_md2</a> database. Currently the models are simplified to be driven by NPP and thus omitting explicit simulation of leaf processes and autotrophic respiration. Data assimilation (<a href=" https://doi.org/10.1890/09-1275.1">Luo et al. 2011</a>, <a href="https://doi.org/10.1002/2015GB005239">2015</a>) was used to optimize parameters of reconstructed models to fit TRENDY output.</p>
+# <p>Currently our analysis includes the following steps:
 # <ol>
 # <li>We start by comparing model outputs - <em><strong>C storage (X)</strong></em> over time. Then we compute and compare traceable components to investigate sources of discrepancy between model predictions of C storage, and thus sources of uncertainty in our understanding of global C dynamics. </li>
 # <li>We compute <em><strong>C storage capacity (X<sub>C</sub>)</strong></em> for each model. <em><strong>X<sub>C</sub></strong></em> for each point in time shows what the system <em><strong>X</strong></em> would be if the the system was in the steady state. <em><strong>C storage potential (X<sub>P</sub>)</strong></em> is the difference between <em><strong>X<sub>C</sub></strong></em> and <em><strong>X</strong></em> at each point in time - it shows how far the current C storage of the system is from the steady state.</li> 
@@ -27,8 +28,9 @@
 # <li>Explore temperature and moisture sensitivities of major fluxes (e.g. litter decomposition, soil respiration);</li> 
 # <li>Separetely compare vegetation and soil components for each model;</li> 
 # <li>Investigate differences between model predictions over different biomes;</li>
-# <li>Expand models by explicitely including autotrophic processes;</li>
-# <li>Include sensitivity to more environmental factors and anthropogenic disturbances</li> 
+# <li>Include additional diagnostic variables (e.g. transit time, carbon use efficiency, etc.);</li>
+# <li>Expand models by explicitly including autotrophic processes;</li>
+# <li>Include sensitivity to more environmental factors and anthropogenic disturbances</li>
 # </ul>
 # <p>The short description of methodology for deriving traceable components is given below. </p>
 
@@ -39,33 +41,20 @@ display(Markdown("TracebilityText.md"))
 
 # %load_ext autoreload
 # %autoreload 2
-import json
 import matplotlib.pyplot as plt
-from typing import Tuple
-from importlib import import_module
-from pathlib import Path
-from frozendict import frozendict
 import numpy as np
 from functools import lru_cache
-import bgc_md2.display_helpers as dh
-import bgc_md2.helper as h
-from bgc_md2.resolve.mvars import (
-    CompartmentalMatrix,
-    InputTuple,
-    StateVariableTuple
-)
 import general_helpers as gh
 
 # ### Selecting models to compare
 
 # +
-# define models to compare as folder name : model name
+# define models to compare as a dictionary (folder name : model name)
 model_names={ 
     "yz_jules": "JULES",
     "kv_visit2": "VISIT",
     "yz_jules2": "JULES_2", # placeholder for a 3rd model - copy folder yz_jules and call it "yz_jules2" to run this
 }
-model_folders=[(k) for k in model_names]
 
 # selecting colors for plotting models
 model_cols={
@@ -105,13 +94,12 @@ gh.plot_yearly_components(model_names=model_names, var_names=var_names, delta_t_
 ## plot delta_x_c delta_u and delta_rt for all possible pairs of models 
 ####################################################
 
-# define models to compare as folder name : model name
+# define models to compare as a dictionary (folder name : model name)
 model_names={ 
     "yz_jules": "JULES",
     "kv_visit2": "VISIT",
     "yz_jules2": "JULES_2", # placeholder for a 3rd model - copy folder yz_jules and call it "yz_jules2" to run this
 }
-model_folders=[(k) for k in model_names]
 
 var_names={
         'x_c':'Carbon Storage Capacity (X_c)',
@@ -130,10 +118,8 @@ gh.plot_yearly_diff(model_names=model_names, var_names=var_names, delta_t_val=de
 # assuming same step size for each model
 delta_t_val=30
 
-from scipy.interpolate import interp1d, splprep
-
 def plot_yearly_diff(mf_1, mf_2, delta_t_val, model_cols):
-    n=len(model_folders)
+    n=2
 
     itr_1=gh.traceability_iterator_instance(mf_1,delta_t_val)
     start_1,stop_1=gh.min_max_index(mf_1,delta_t_val,*gh.t_min_tmax([mf_1,mf_1],delta_t_val))
