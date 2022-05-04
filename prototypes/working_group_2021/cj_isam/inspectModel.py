@@ -65,7 +65,9 @@ svs_0 = msh.Observables(*map(lambda v: v[0],svs))
 dvs_0 = msh.Drivers(*map(lambda v: v[0],dvs))
 
 
-dvs.npp.shape
+
+
+
 
 from sympy import Symbol
 par_dict={
@@ -250,39 +252,16 @@ epa_0=msh.EstimatedParameters(
     k_C_GVR=0.00017926856125131916, 
     f_C_AGSL_2_C_AGMS=0.20853426509202325, 
     f_C_BGRL_2_C_SHMS=0.24638112975102788, 
-    C_NWT_0=0.39641121927763323, 
-    C_AGWT_0=1.0098899271611432, 
-    C_GVF_0=0.1784893310039542, 
-    C_GVR_0=2.1680315400436174, 
-    C_AGML_0=0.1251689278629053, 
-    C_AGSL_0=0.005800531050824444, 
-    C_BGDL_0=0.0484130929152639, 
-    C_AGMS_0=0.10074331291791151, 
-    C_YHMS_0=0.5036084965444287, 
-    C_SHMS_0=8.080067914918454,
-    
-    #fwt=0.22720510630531535, 
-    #fgv=0.13339749844173146, 
-    #fco=0.48468873886205804, 
-    #fml=0.6625400558788637, 
-    #fd=0.609731866092099, 
-    #k_C_NWT=0.0015651547605874845, 
-    #k_C_AGWT=0.00020579549570896914, 
-    #k_C_TR=0.00021655197553090258,
-    #k_C_GVF=0.00028880916566528537, 
-    #k_C_GVR=0.0001574617151611989, 
-    #f_C_AGSL_2_C_AGMS=0.16522686655577523, 
-    #f_C_BGRL_2_C_SHMS=0.5461047001295201,
-    #C_NWT_0= svs_0.cVeg * 0.06,#0.1674883218647344,
-    #C_AGWT_0= svs_0.cVeg * 0.095,#0.29255052631195533,
-    #C_GVF_0= svs_0.cVeg * 0.1,#0.3359968317564281,
-    #C_GVR_0= svs_0.cVeg * 0.65,#2.3328171507922555,
-    #C_AGML_0= svs_0.cLitter * 0.6,#0.02963751068264173,
-    #C_AGSL_0= svs_0.cLitter * 0.1,#0.0004373128929123478,
-    #C_BGDL_0= svs_0.cLitter * 0.1,#0.0005250285545731843,
-    #C_AGMS_0= svs_0.cSoil * 0.05,#0.07115408727464849,
-    #C_YHMS_0= svs_0.cSoil * 0.1,#0.17191831703645521,
-    #C_SHMS_0= svs_0.cSoil * 0.7,#8.037110582162018
+    C_NWT_0=svs_0.cVeg * 0.04,#0.39641121927763323, 
+    C_AGWT_0=svs_0.cVeg * 0.4,#1.0098899271611432, 
+    C_GVF_0=svs_0.cVeg * 0.06,#0.1784893310039542, 
+    C_GVR_0=svs_0.cVeg * 0.07,#2.1680315400436174, 
+    C_AGML_0=svs_0.cLitter * 0.17,#0.1251689278629053, 
+    C_AGSL_0=svs_0.cLitter * 0.06,#0.005800531050824444, 
+    C_BGDL_0=svs_0.cLitter * 0.11,#0.0484130929152639, 
+    C_AGMS_0=svs_0.cSoil * 0.006,#0.10074331291791151, 
+    C_YHMS_0=svs_0.cSoil * 0.018,#0.5036084965444287, 
+    C_SHMS_0=svs_0.cSoil * 0.975,#8.080067914918454,
 )
 
 
@@ -389,10 +368,10 @@ epa_min=msh.EstimatedParameters(
     C_YHMS_0=0,
     C_SHMS_0=0,
 )
-   
+
 epa_max=msh.EstimatedParameters(
     fwt=0.8,
-    fgv=0.5,
+    fgv=0.3,
     fco=0.98,
     fml=0.95,
     fd=0.95,
@@ -436,14 +415,14 @@ C_autostep, J_autostep = autostep_mcmc(
     filter_func=isQualified,
     param2res=param2res,
     costfunction=make_feng_cost_func(obs),
-    nsimu=500, # for testing and tuning mcmc
+    nsimu=100, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=2 # default value | increase value to reduce acceptance of higher cost functions
+    K=1 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -506,8 +485,8 @@ ax2.legend(loc='best')
 ax2.tick_params(labelsize=12)
 
 ax3 = plt.subplot(224)
-ax3.plot(mod_opt[100:300,3],label='Simulation',color="blue")
-ax3.plot(obs[100:300,3],label='TRENDY',color="red")
+ax3.plot(mod_opt[:,3],label='Simulation',color="blue")
+ax3.plot(obs[:,3],label='TRENDY',color="red")
 plt.xlabel("Months since 1700",size=13)
 plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
 ax3.tick_params(labelsize=12)
