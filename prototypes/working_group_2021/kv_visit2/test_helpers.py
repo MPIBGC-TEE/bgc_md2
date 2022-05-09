@@ -3,6 +3,9 @@ from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
 import json 
+from functools import lru_cache
+
+@lru_cache
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
@@ -16,6 +19,7 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_0",
             "epa_min",
             "epa_max",
+            "epa_opt",
             "cpa"
         ]
     )
@@ -80,13 +84,13 @@ def make_test_args(conf_dict,msh,mvs):
         C_soil_fast_0=1.7309510511856925,
         C_soil_slow_0=2.4435101360092473        
     )
-    func_dict={
-        Function(k):v
-        for k,v in {
-            'NPP':msh.make_npp_func(dvs),
-            'xi':msh.make_xi_func(dvs,epa_0)
-        }.items()
-    }
+    #func_dict={
+    #    Function(k):v
+    #    for k,v in {
+    #        'NPP':msh.make_npp_func(dvs),
+    #        'xi':msh.make_xi_func(dvs,epa_0)
+    #    }.items()
+    #}
     epa_min=msh.EstimatedParameters(
         beta_leaf=0,
         beta_wood=0,
@@ -213,13 +217,14 @@ def make_test_args(conf_dict,msh,mvs):
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
-        func_dict=func_dict,
+        func_dict=msh.make_func_dict(mvs,dvs,cpa,epa_opt),
         dvs=dvs,
         svs=svs,
         mvs=mvs,
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
+        epa_opt=epa_opt,
         cpa=cpa
     )
 

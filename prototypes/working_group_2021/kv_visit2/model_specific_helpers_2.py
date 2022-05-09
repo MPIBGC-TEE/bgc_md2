@@ -139,38 +139,40 @@ def get_example_site_vars(dataPath):
     )
     return (obss, dvs)
 
-def get_global_vars(dataPath):
-    # pick up 1 site
-    # s = slice(None, None, None)  # this is the same as :
-    # t = s, 50, 33  # [t] = [:,49,325]
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them
-        ds = nc.Dataset(str(path))
-        lats = ds.variables["lat"].__array__()
-        lons = ds.variables["lon"].__array__()
-        if vn in ["npp","gpp","rh","ra"]:
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
-        else:
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
-        #return ds.variables[vn][t]
-
-    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
-
-    # we want to drive with npp and can create it from gpp and ra
-    # observables
-    odvs=OrgDrivers(*map(f,d_names))
-    obss=Observables(*map(f, o_names))
-
-    dvs=Drivers(
-        npp=odvs.gpp-odvs.ra,
-        mrso=odvs.mrso,
-        tas=odvs.tas#,
-        #xi=odvs.xi_t*odvs.xi_w
-    )
-    return (obss, dvs)
+# fixme mm: 04-22-2022
+# is the following commented code obsolete?
+#def get_global_vars(dataPath):
+#    # pick up 1 site
+#    # s = slice(None, None, None)  # this is the same as :
+#    # t = s, 50, 33  # [t] = [:,49,325]
+#    def f(tup):
+#        vn, fn = tup
+#        path = dataPath.joinpath(fn)
+#        # Read NetCDF data but only at the point where we want them
+#        ds = nc.Dataset(str(path))
+#        lats = ds.variables["lat"].__array__()
+#        lons = ds.variables["lon"].__array__()
+#        if vn in ["npp","gpp","rh","ra"]:
+#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
+#        else:
+#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+#        #return ds.variables[vn][t]
+#
+#    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
+#    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
+#
+#    # we want to drive with npp and can create it from gpp and ra
+#    # observables
+#    odvs=OrgDrivers(*map(f,d_names))
+#    obss=Observables(*map(f, o_names))
+#
+#    dvs=Drivers(
+#        npp=odvs.gpp-odvs.ra,
+#        mrso=odvs.mrso,
+#        tas=odvs.tas#,
+#        #xi=odvs.xi_t*odvs.xi_w
+#    )
+#    return (obss, dvs)
 
 
 experiment_name="VISIT_S2_"
@@ -271,36 +273,57 @@ def get_global_mean_vars(dataPath):
         )
 
 
-def make_npp_func(dvs):
-    def func(day):
+#def make_npp_func(dvs):
+#    def func(day):
+#        month=gh.day_2_month_index(day)
+#        # kg/m2/s kg/m2/day;
+#        return (dvs.npp[month]) #* 86400
+#
+#    return func
+#
+#
+#def make_xi_func(dvs, epa):
+#    def xi_func(day):
+#        month=gh.day_2_month_index(day)
+#        TS = (dvs.tas[month]-273.15)# * 0.5 # convert from Kelvin to Celcius 
+#        TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+#        if TS > epa.T_0: 
+#            xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+#        else: 
+#            xi_out=0
+#        return(xi_out)
+#        #return (dvs.xi[month])
+#        #return 1.0 # preliminary fake for lack of better data...
+#    return xi_func
+#
+#
+#def make_func_dict(mvs,dvs,cpa,epa):
+#    return {
+#        "NPP": make_npp_func(dvs),
+#        "xi": make_xi_func(dvs, epa)
+#    }
+def make_func_dict(mvs, dvs, cpa, epa):
+
+    def npp_func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month]) #* 86400
 
-    return func
-
-
-def make_xi_func(dvs, epa):
-    def xi_func(day):
+    def tas_num(day):
         month=gh.day_2_month_index(day)
-        TS = (dvs.tas[month]-273.15) * 0.5 # convert from Kelvin to Celcius 
-        TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-        if TS > epa.T_0: 
-            xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
-        else: 
-            xi_out=0
-        return(xi_out)
-        #return (dvs.xi[month])
-        #return 1.0 # preliminary fake for lack of better data...
-    return xi_func
-
-
-def make_func_dict(mvs,dvs,epa):
-    return {
-        "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs, epa)
+        return dvs.tas[month]
+        
+    def mrso_num(day):
+        month=gh.day_2_month_index(day)
+        return dvs.mrso[month]
+        
+    f_d={
+        "TAS": tas_num,
+        "mrso": mrso_num,
+        "NPP": npp_func,
+        #"xi": make_xi_func(dvs, epa)
     }
-
+    return f_d
 
 def make_traceability_iterator(mvs,dvs,cpa,epa):
     par_dict={
@@ -500,9 +523,9 @@ def make_param2res_sym(
     # the time dependent driver function for gpp does not change with the estimated parameters
     # so its enough to define it once as in our test
     seconds_per_day = 86400
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        return dvs.npp[month] #* seconds_per_day   # kg/m2/s kg/m2/day;
+    #def npp_func(day):
+    #    month=gh.day_2_month_index(day)
+    #    return dvs.npp[month] #* seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -537,21 +560,22 @@ def make_param2res_sym(
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
-        def xi_func(day):
-            month=gh.day_2_month_index(day)
-            TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius 
-            TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-            if TS > epa.T_0: 
-                xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
-            else: 
-                xi_out=0
-            return(xi_out)
-            # return 1.0 # preliminary fake for lack of better data... 
-        
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
+        #def xi_func(day):
+        #    month=gh.day_2_month_index(day)
+        #    TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius 
+        #    TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+        #    if TS > epa.T_0: 
+        #        xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
+        #    else: 
+        #        xi_out=0
+        #    return(xi_out)
+        #    # return 1.0 # preliminary fake for lack of better data... 
+        #
+        #func_dict={
+        #    'NPP':npp_func,
+        #     'xi':xi_func
+        #}
+        func_dict=make_func_dict(mvs,dvs,cpa,epa)
         
         # size of the timestep in days
         # We could set it to 30 o
@@ -795,28 +819,28 @@ def make_param2res_full_output(
             #ra=ra_arr)
     return param2res_full_output
 
-
-def make_feng_cost_func_2(
-    svs #: Observables
-    ):
-    # now we compute a scaling factor per observable stream
-    # fixme mm 10-28-2021
-    # The denominators in this case are actually the TEMPORAL variances of the data streams
-    obs_arr=np.stack([ arr for arr in svs],axis=1)
-    means = obs_arr.mean(axis=0)
-    mean_centered_obs= obs_arr - means
-    denominators = np.sum(mean_centered_obs ** 2, axis=0)
-
-
-    def feng_cost_func_2(simu: Observables):
-        def f(i):
-            arr=simu[i]
-            obs=obs_arr[:,i]
-            diff=((arr-obs)**2).sum()/denominators[i]*100 
-            return diff
-        return np.array([f(i) for i  in range(len(simu))]).mean()
-    
-    return feng_cost_func_2
+# moved to general_helpers
+#def make_feng_cost_func_2(
+#    svs #: Observables
+#    ):
+#    # now we compute a scaling factor per observable stream
+#    # fixme mm 10-28-2021
+#    # The denominators in this case are actually the TEMPORAL variances of the data streams
+#    obs_arr=np.stack([ arr for arr in svs],axis=1)
+#    means = obs_arr.mean(axis=0)
+#    mean_centered_obs= obs_arr - means
+#    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+#
+#
+#    def feng_cost_func_2(simu: Observables):
+#        def f(i):
+#            arr=simu[i]
+#            obs=obs_arr[:,i]
+#            diff=((arr-obs)**2).sum()/denominators[i]*100 
+#            return diff
+#        return np.array([f(i) for i  in range(len(simu))]).mean()
+#    
+#    return feng_cost_func_2
 
 
 def make_param_filter_func(
@@ -837,3 +861,54 @@ def make_param_filter_func(
         
     
     return isQualified
+
+
+def make_sim_day_2_day_since_a_D(conf_dict):
+    # this function is extremely important to syncronise our results
+    # because our data streams start at different times the first day of 
+    # a simulation day_ind=0 refers to different dates for different models
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced monthly with different numbers of days
+    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
+    times = ds.variables["time"]
+    # we have to check some assumptions on which this calculation is based
+
+    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units) 
+    td = tm *30  #in days since_1860-01 (assuming a 30 day month since a varying month length would
+    #disqualify month as a unit..
+    
+    import datetime as dt
+    ad = dt.date(1, 1, 1) # first of January of year 1 
+    sd = dt.date(1860, 1, 1)
+    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+
+    def f(day_ind: int)->int:
+        return day_ind+td_aD
+
+    return f
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],     
+        "C_wood": apa['C_wood_0'],     
+        "C_root": apa['cVeg_0'] - (apa['C_leaf_0'] +  apa['C_wood_0']),  
+        "C_leaf_litter": apa['C_leaf_litter_0'],
+        "C_wood_litter": apa['C_wood_litter_0'],
+        "C_root_litter": apa["cLitter_0"]-(apa["C_leaf_litter_0"] + apa["C_wood_litter_0"]),
+        "C_soil_fast":apa["C_soil_fast_0"],
+        "C_soil_slow":apa["C_soil_slow_0"],
+        "C_soil_passive": apa["cSoil_0"]-(apa["C_soil_fast_0"] + apa["C_soil_slow_0"]),
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
+

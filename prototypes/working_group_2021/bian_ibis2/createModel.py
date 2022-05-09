@@ -45,7 +45,7 @@
 # In this tutorial we will copy contents into new cells as we progress but you **can change it in place**. 
 
 # +
-from sympy import Symbol, Function 
+from sympy import  Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
 from bgc_md2.models.BibInfo import BibInfo
@@ -60,167 +60,199 @@ from bgc_md2.resolve.mvars import (
 import bgc_md2.resolve.computers as bgc_c
 
 # Make a small dictionary for the variables we will use
-sym_dict={
-    'C_NWT': 'Non-Woody Tree Parts',
-    'C_AGWT': 'Aboveground-Woody Tree Parts',
-    'C_TR': 'Tree Roots',
-    'C_GVF': 'Ground Vegetation Foliage',
-    'C_GVR': 'Ground Vegetation Roots',
-    'C_AGML': 'AG: Metabolic Litter',
-    'C_AGSL': 'AG: Structural Litter',
-    'C_AGMS': 'AG: Microbial Soil',
-    'C_YHMS': 'AG: Young Humus Soil',
-    'C_BGDL': 'BG: Decomposable Litter',
-    'C_BGRL': 'BG: Resistant Litter',
-    'C_BGMS': 'BG: Microbial Soil',
-    'C_SHMS': 'BG: Stabilized Humus Soil',
-
-    'r_C_AGML_rh': '',
-    'r_C_AGSL_rh': '',
-    'r_C_AGMS_rh': '',
-    'r_C_YHMS_rh': '',
-    'r_C_BGDL_rh': '',
-    'r_C_BGRL_rh': '',
-    'r_C_BGMS_rh': '',
-    'r_C_SHMS_rh': '',
+sym_dict={    
+    # Carbon Pools
+    "C_leaf": "vegetation leaf pool",
+    "C_wood": "",
+    "C_root": "",
+    "C_mll": "Metabolic Leaf Litter pool",
+    "C_mwl": "Metabolic Wood Litter pool",
+    "C_mrl": "Metabolic Root Litter pool",
+    "C_sll": "Structural Leaf Litter Pool",
+    "C_swl": "Structural Wood Litter Pool",
+    "C_srl": "Structural Root Litter Pool",
+    "C_lll": "Lignin Leaf Litter Pool",
+    "C_lwl": "Lignin Wood Litter Pool",
+    "C_lrl": "Lignin Root Litter Pool",
+    "C_mic": "microbial",
+    "C_prot": "protected som",
+    "C_nonprot": "non-protected som",
+    "C_pass": "passive som", 
     
-    'r_C_NWT_2_C_AGML': '',
-    'r_C_NWT_2_C_AGSL': '',
-    'r_C_AGWT_2_C_AGSL': '',
-    'r_C_TR_2_C_BGDL': '',
-    'r_C_TR_2_C_BGRL': '',
-    'r_C_GVF_2_C_AGML': '',
-    'r_C_GVF_2_C_AGSL': '',
-    'r_C_GVR_2_C_BGDL': '',
-    'r_C_GVR_2_C_BGRL': '',
+    "r_C_mll_rh": "",
+    "r_C_mwl_rh": "",
+    "r_C_mrl_rh": "",
+    "r_C_sll_rh": "",
+    "r_C_swl_rh": "",
+    "r_C_srl_rh": "",
+    "r_C_lll_rh": "",
+    "r_C_lwl_rh": "",
+    "r_C_lrl_rh": "",
+    "r_C_mic_rh": "",
+    "r_C_prot_rh": "",
+    "r_C_nonprot_rh": "",
+    "r_C_pass_rh": "",
     
-    'r_C_AGML_2_C_AGMS': '',
-    'r_C_AGSL_2_C_AGMS': '',
-    'r_C_AGSL_2_C_YHMS': '',
-    'r_C_AGMS_2_C_YHMS': '',
-    'r_C_YHMS_2_C_AGMS': '',
-    'r_C_YHMS_2_C_SHMS': '',
+    "r_C_leaf_2_C_mll": "f4_1",
+    "r_C_wood_2_C_mwl": "f5_2",
+    "r_C_root_2_C_mrl": "f6_3",
+    "r_C_leaf_2_C_sll": "f7_1",
+    "r_C_wood_2_C_swl": "f8_2",
+    "r_C_root_2_C_srl": "f9_3",
+    "r_C_leaf_2_C_lll": "f10_1",
+    "r_C_wood_2_C_lwl": "f11_2",
+    "r_C_root_2_C_lrl": "f12_3",
     
-    'r_C_BGDL_2_C_SHMS': '',
-    'r_C_BGRL_2_C_SHMS': '',
-    'r_C_BGRL_2_C_BGMS': '',
-    'r_C_SHMS_2_C_BGMS': '',
-    'r_C_BGMS_2_C_SHMS': '',
+    "r_C_mll_2_C_mic": "f13_4",
+    "r_C_mwl_2_C_mic": "f13_5",
+    "r_C_mrl_2_C_mic": "f13_6",
+    "r_C_sll_2_C_mic": "f13_7",
+    "r_C_swl_2_C_mic": "f13_8",
+    "r_C_srl_2_C_mic": "f13_9",
+    "r_C_prot_2_C_mic": "f13_14",
+    "r_C_nonprot_2_C_mic": "f13_15",
+    "r_C_pass_2_C_mic": "f13_16",
     
-    'tas': '',
-    'mrso': '',
-    't': '',
-#    'T_0': '',
-#    'E': '',
-#    'KM': '',
-    'fco': '',
-    'fml': '',
-    'fd': '',
-    'fwt': '',
-    'fgv': '',
-    'beta_NWT': '',
-    'beta_AGWT': '',
-    'beta_TR': '',
-    'beta_GVF': '',
-    'beta_GVR': '',
+    "r_C_lll_2_C_prot": "f14_10",
+    "r_C_lwl_2_C_prot": "f14_11",
+    "r_C_lrl_2_C_prot": "f14_12",
+    "r_C_mic_2_C_prot": "f14_13",
+    
+    "r_C_lll_2_C_nonprot": "f15_10",
+    "r_C_lwl_2_C_nonprot": "f15_11",
+    "r_C_lrl_2_C_nonprot": "f15_12",
+    "r_C_mic_2_C_nonprot": "f15_13",
+ 
+    "r_C_prot_2_C_pass": "f16_14",
+    "r_C_nonprot_2_C_pass": "f16_15",
+    
+    "tas": "",
+    "mrso": "",
+    "t": "",
+    "beta_leaf": "",
+    "beta_wood": "",
+    "beta_root": "",
 }
+# Make symbols from  the strings that we can later use in expressions  
+# vl, vw,...
 for k in sym_dict.keys():
     code=k+" = Symbol('{0}')".format(k)
     exec(code)
 
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
-    #"I_vl": "Influx into vegetation leaf pool",
-    #"k_vl_o": "out flux rate of leaf pool",
-    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
-    'NPP': '',
+    # "I_vl": "Influx into vegetation leaf pool",
+    # "r_vl_o": "out flux rate of leaf pool",
+    "xi": "Environmental scalar as a function of time",
+    "NPP": "",
 }
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
     exec(code)
 
 t=TimeSymbol("t")
-beta_GVR = 1.0- (beta_NWT+beta_AGWT+beta_TR+beta_GVF)
+beta_root = 1.0 - (beta_leaf+beta_wood)
+
 mvs = CMTVS(
     {
         t,
         StateVariableTuple((
-            C_NWT,
-	        C_AGWT,
-	        C_TR,
-	        C_GVF,
-	        C_GVR,
-	        C_AGML,
-	        C_AGSL,
-	        C_AGMS,
-	        C_YHMS,
-	        C_BGDL,
-	        C_BGRL,
-	        C_BGMS,
-	        C_SHMS,            
+            C_leaf,
+            C_wood,
+            C_root,
+            C_mll,
+            C_mwl,
+            C_mrl,
+            C_sll,
+            C_swl,
+            C_srl,
+            C_lll,
+            C_lwl,
+            C_lrl,
+            C_mic,
+            C_prot,
+            C_nonprot,
+            C_pass,  
         )),
         InFluxesBySymbol(
             {
-                C_NWT: NPP(t) * beta_NWT, 
-                C_AGWT: NPP(t) * beta_AGWT, 
-                C_TR: NPP(t) * beta_TR,
-                C_GVF: NPP(t) * beta_GVF,
-                C_GVR: NPP(t) * beta_GVR,
+            # Recieving Pool: Input * Allocation
+            C_leaf: NPP(t) * beta_leaf,
+            C_wood: NPP(t) * beta_wood,
+            C_root: NPP(t) * beta_root
             }
         ),
-        OutFluxesBySymbol(
-            {
-                C_AGML: r_C_AGML_rh*C_AGML*xi(t),
-                C_AGSL: r_C_AGSL_rh*C_AGSL*xi(t),
-                C_AGMS: r_C_AGMS_rh*C_AGMS*xi(t),
-                C_YHMS: r_C_YHMS_rh*C_YHMS*xi(t),
-                C_BGDL: r_C_BGDL_rh*C_BGDL,#*xi(t),
-                C_BGRL: r_C_BGRL_rh*C_BGRL,#*xi(t),
-                C_BGMS: r_C_BGMS_rh*C_BGMS,#*xi(t),
-                C_SHMS: r_C_SHMS_rh*C_SHMS,#*xi(t),
-            }
-        ),
-        InternalFluxesBySymbol(
-            {
-                (C_NWT,C_AGML): r_C_NWT_2_C_AGML*C_NWT,
-                (C_NWT,C_AGSL): r_C_NWT_2_C_AGSL*C_NWT,
-                (C_AGWT,C_AGSL): r_C_AGWT_2_C_AGSL*C_AGWT,
-                (C_TR,C_BGDL): r_C_TR_2_C_BGDL*C_TR,
-                (C_TR,C_BGRL): r_C_TR_2_C_BGRL*C_TR,
-                (C_GVF,C_AGML): r_C_GVF_2_C_AGML*C_GVF,
-                (C_GVF,C_AGSL): r_C_GVF_2_C_AGSL*C_GVF,
-                (C_GVR,C_BGDL): r_C_GVR_2_C_BGDL*C_GVR,
-                (C_GVR,C_BGRL): r_C_GVR_2_C_BGRL*C_GVR,
-                (C_AGML,C_AGMS): r_C_AGML_2_C_AGMS*C_AGML*xi(t),
-                (C_AGSL,C_AGMS): r_C_AGSL_2_C_AGMS*C_AGSL*xi(t),
-                (C_AGSL,C_YHMS): r_C_AGSL_2_C_YHMS*C_AGSL*xi(t),
-                (C_AGMS,C_YHMS): r_C_AGMS_2_C_YHMS*C_AGMS*xi(t),
-                (C_YHMS,C_AGMS): r_C_YHMS_2_C_AGMS*C_YHMS*xi(t),
-                (C_YHMS,C_SHMS): r_C_YHMS_2_C_AGMS*C_YHMS*xi(t),
-                (C_BGDL,C_SHMS): r_C_BGDL_2_C_SHMS*C_BGDL,#*xi(t),
-                (C_BGRL,C_SHMS): r_C_BGRL_2_C_SHMS*C_BGRL,#*xi(t),
-                (C_BGRL,C_BGMS): r_C_BGRL_2_C_BGMS*C_BGRL,#*xi(t),
-                (C_SHMS,C_BGMS): r_C_SHMS_2_C_BGMS*C_SHMS,#*xi(t),
-                (C_BGMS,C_SHMS): r_C_BGMS_2_C_SHMS*C_BGMS,#*xi(t),
-            }
-        ),
-        BibInfo(# Bibliographical Information
-            name="ISAM",
+        OutFluxesBySymbol({
+            # define fluxes leaving the system
+            # fluxes leaving the system: FluxRate * DonorPool * Environment scalers
+            
+            C_mll: r_C_mll_rh * C_mll * xi(t),
+            C_mwl: r_C_mwl_rh * C_mwl * xi(t),
+            C_mrl: r_C_mrl_rh * C_mrl * xi(t),
+            C_sll: r_C_sll_rh * C_sll * xi(t),
+            C_swl: r_C_swl_rh * C_swl * xi(t),
+            C_srl: r_C_srl_rh * C_srl * xi(t),
+            C_lll: r_C_lll_rh * C_lll * xi(t),
+            C_lwl: r_C_lwl_rh * C_lwl * xi(t),
+            C_lrl: r_C_lrl_rh * C_lrl * xi(t),
+            C_mic: r_C_mic_rh * C_mic * xi(t),
+            C_prot: r_C_prot_rh * C_prot * xi(t),
+            C_nonprot: r_C_nonprot_rh * C_nonprot * xi(t),
+            C_pass: r_C_pass_rh * C_pass * xi(t) 
+        }),
+        InternalFluxesBySymbol({
+            # define tranfer matrix
+            #(Donor Pool, recieving pool): FluxRate * DonorPool
+            (C_leaf, C_mll): r_C_leaf_2_C_mll * C_leaf,
+            (C_leaf, C_sll): r_C_leaf_2_C_sll * C_leaf,
+            (C_leaf, C_lll): r_C_leaf_2_C_lll * C_leaf,
+            
+            (C_wood, C_mwl): r_C_wood_2_C_mwl * C_wood,
+            (C_wood, C_swl): r_C_wood_2_C_swl * C_wood,
+            (C_wood, C_lwl): r_C_wood_2_C_lwl * C_wood,
+            
+            (C_root, C_mrl): r_C_root_2_C_mrl * C_root,
+            (C_root, C_srl): r_C_root_2_C_srl * C_root,
+            (C_root, C_lrl): r_C_root_2_C_lrl * C_root,
+
+            (C_mll, C_mic): r_C_mll_2_C_mic * C_mll * xi(t),
+            (C_mwl, C_mic): r_C_mwl_2_C_mic * C_mwl * xi(t),
+            (C_mrl, C_mic): r_C_mrl_2_C_mic * C_mrl * xi(t),
+            (C_sll, C_mic): r_C_sll_2_C_mic * C_sll * xi(t),
+            (C_swl, C_mic): r_C_swl_2_C_mic * C_swl * xi(t),
+            (C_srl, C_mic): r_C_srl_2_C_mic * C_srl * xi(t),
+            (C_prot, C_mic): r_C_prot_2_C_mic * C_prot * xi(t),
+            (C_nonprot, C_mic): r_C_nonprot_2_C_mic * C_nonprot * xi(t),
+            (C_pass, C_mic): r_C_pass_2_C_mic * C_pass * xi(t),
+
+            (C_lll, C_prot): r_C_lll_2_C_prot * C_lll * xi(t),
+            (C_lwl, C_prot): r_C_lwl_2_C_prot * C_lwl * xi(t),
+            (C_lrl, C_prot): r_C_lrl_2_C_prot * C_lrl * xi(t),
+            (C_mic, C_prot): r_C_mic_2_C_prot * C_mic * xi(t),
+            
+            (C_lll, C_nonprot): r_C_lll_2_C_nonprot * C_lll * xi(t),
+            (C_lwl, C_nonprot): r_C_lwl_2_C_nonprot * C_lwl * xi(t),
+            (C_lrl, C_nonprot): r_C_lrl_2_C_nonprot * C_lrl * xi(t),
+            (C_mic, C_nonprot): r_C_mic_2_C_nonprot * C_mic * xi(t),
+
+            (C_prot, C_pass): r_C_prot_2_C_pass * C_prot * xi(t),
+            (C_nonprot, C_pass): r_C_nonprot_2_C_pass * C_nonprot * xi(t),
+        }),
+        BibInfo(# Bibliographical Inoformation
+            name="IBIS",
             longName="",
-            version="1",
-            entryAuthor="Cuijuan Liao",
+            version="1.0",
+            entryAuthor="Chenyu Bian",
             entryAuthorOrcid="",
             entryCreationDate="",
             doi="",
             sym_dict=sym_dict,
-            func_dict=func_dict
+            func_dict=func_dict   
         ),
     },
 
-
     computers=module_computers(bgc_c)
 )
-
 # -
 
 # The last statement in the code defines a variable `mvs` which is 
@@ -249,16 +281,17 @@ dh.mass_balance_equation(mvs)
 import bgc_md2.helper as h
 h.compartmental_graph(mvs)
 
-# +
+# + endofcell="--"
 # adjust the output to full width
 from IPython.display import HTML
-#display(HTML("<style>.container { width:100% !important; }</style>"))
+display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # make changes to imported files immidiately available 
 # avoiding the need to reload (in most cases)
-# #%load_ext autoreload
-# #%autoreload 2
+# # %load_ext autoreload
+# # %autoreload 2
 # -
+# --
 
 # ### Connect to the form ispecific to the tracability analysis.
 #
@@ -299,7 +332,7 @@ mvs.computable_mvar_types()
 # We also see that we have a symbol $\xi$ alreasince the model has actually been specified with $\xi in mind
 
 from sympy import diag
-xi_d=diag([1,1,1,1,1]+[xi(t) for i in range(4)]+[1,1,1,1],unpack=True)
+xi_d=diag([1,1,1]+[xi(t) for i in range(13)],unpack=True)
 xi_d
 
 # We can go on and decompose N =\xi K -> K=\xi^{-1}N
@@ -354,33 +387,37 @@ import json
 from pathlib import Path
 from collections import namedtuple 
 
-with Path('config.json').open(mode='r') as f:
-    conf_dict=json.load(f) 
-
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
-    ["cVeg","cLitter","cSoil","rh","ra"] #[320,360,720],
+    ["cVeg","cLitter","cSoil","rh","ra"]  #
 )
+OrgDrivers=namedtuple(
+    "OrgDrivers",
+    ["gpp", "mrso", "tas"] # 
+)    
 Drivers=namedtuple(
     "Drivers",
-    ["npp", "mrso", "tas"] #[3840,36,720]
+    ("npp",) + OrgDrivers._fields[1:]
 )    
-    
 #create a small model specific function that will later be stored in the file model_specific_helpers.py
 def download_my_TRENDY_output(conf_dict):
     download_TRENDY_output(
         username=conf_dict["username"],
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
-        models=['ISAM'],
+        models=['IBIS'],
         variables = Observables._fields + Drivers._fields
     )
 
 
 # +
 #call it to test that the download works the data
-#download_my_TRENDY_output(conf_dict)
+
+with Path('config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
+
+#download_my_TRENDY_output()
 # -
 
 # Copy the content of the above cell into a file `model_specific_helpers_2.py` 
@@ -396,56 +433,14 @@ import model_specific_helpers_2 as msh
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
-import json  
-import numpy.ma as ma 
+import json 
 
 # Read NetCDF data  ******************************************************************************************************************************
-# this function does not take the different sizes of the pixels into account
-def global_mean(arr):
-    arr=np.ma.masked_equal(arr,-9999)
-    arr1=arr.filled(np.nan)
-    return np.nanmean(arr,axis=(1,2))
 
-# changed in model_specific_helpers_2 since the global_mean function would not work
-def get_global_vars(dataPath):
-    # pick up 1 site
-    #s = slice(None, None, None)  # this is the same as :
-    #t = s, 180, 220  # [t] = [:,49,325] 180,200
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them
-        ds = nc.Dataset(str(path))
-        return global_mean(ds.variables[vn])
-
-    o_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Drivers._fields]
-
-    # we want to drive with npp and can create it from gpp and ra 
-    # observables
-    odvs=Drivers(*map(f,d_names))
-    obss=Observables(*map(f,o_names))
-
-    dvs=Drivers(
-        npp=odvs.npp,
-        mrso=odvs.mrso,
-        tas=odvs.tas
-    )
-    return (obss, dvs)
-
-
-# +
-import netCDF4 as nc
-import numpy as np
-from pathlib import Path
-import json  
-import numpy.ma as ma 
-
-# Read NetCDF data  ******************************************************************************************************************************
 def get_example_site_vars(dataPath):
     # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
-    t = s, 180, 220  # [t] = [:,49,325] 180,200
+    t = s, 72, 117  # [t] = [:,49,325]
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
@@ -453,46 +448,30 @@ def get_example_site_vars(dataPath):
         ds = nc.Dataset(str(path))
         return ds.variables[vn][t]
 
-    o_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"ISAM_S2_{}.nc".format(f)) for f in Drivers._fields]
+    o_names=[(f,"IBIS_S3_{}.nc".format(f)) for f in Observables._fields]
+    d_names=[(f,"IBIS_S3_{}.nc".format(f)) for f in OrgDrivers._fields]
 
     # we want to drive with npp and can create it from gpp and ra 
     # observables
-    odvs=Drivers(*map(f,d_names))
-    obss=Observables(*map(f,o_names))
+    odvs=OrgDrivers(*map(f,d_names))
+    obss=Observables(*map(f, o_names))
 
     dvs=Drivers(
-        npp=odvs.npp,
+        npp=odvs.gpp-obss.ra,
         mrso=odvs.mrso,
         tas=odvs.tas
     )
     return (obss, dvs)
 
 
-# +
-import pandas as pd
-import os
-os.chdir("/Users/liaochijuan/Downloads/isam_data/")
-os.getcwd()
-svs_1=pd.DataFrame(svs)
-dvs_1=pd.DataFrame(dvs)
-#svs_1.to_csv("svs_mean.csv",index=None)
-#dvs_1.to_csv("dvs_mean.csv",index=None)
-
-import pandas as pd
-import os
-os.chdir("/Users/liaochijuan/Downloads/isam_data/")
-#svs=np.array(pd.read_csv('svs_mean.csv'))
-#dvs=np.array(pd.read_csv('dvs_mean.csv'))
-#svs
-#dvs
 # -
 
-svs,dvs=get_global_vars(dataPath=Path(conf_dict["dataPath"]))
-svs,dvs
+svs,dvs=get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 
 # Copy the code into `model_specific_helpers_2.py` and call the function again...
+
+svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
 
 # +
 sys.path.insert(0,'..')
@@ -573,52 +552,59 @@ all_rates
 # -
 
 old_par_dict = {
-    fwt: 0.6,
-    fgv: 0.3,
-    fco: 0.73,
-    fml: 0.85,
-    fd: 0.74,
-    #T_0: 2,
-    #E: 4,
-    #KM: 10,
-    beta_NWT: fwt*0.5,
-    beta_AGWT: fwt*0.5,
-    beta_TR: 1-fwt-fgv,
-    beta_GVF: fgv*0.5,
-    beta_GVR: fgv*0.5,
-    f_C_NWT_2_C_AGML: 0.85,
-    f_C_NWT_2_C_AGSL: 1-fml,
-    f_C_TR_2_C_BGDL: fd,
-    f_C_TR_2_C_BGRL: 1-fd,
-    f_C_GVF_2_C_AGML: fml,
-    f_C_GVF_2_C_AGSL: 1-fml,
-    f_C_GVR_2_C_BGDL: fd,
-    f_C_GVR_2_C_BGRL: 1-fd,  
-    f_C_BGDL_2_C_SHMS: 1-fco,
-    f_C_BGRL_2_C_SHMS: (1-fco)*0.5,
-    f_C_BGRL_2_C_BGMS: (1-fco)*0.5,
-    f_C_SHMS_2_C_BGMS: 1-fco,
-    f_C_BGMS_2_C_SHMS: 1-fco,
-    f_C_AGWT_2_C_AGSL: 1,
-    f_C_AGML_2_C_AGMS: 0.45,
-    f_C_AGSL_2_C_AGMS: 0.5*0.3,
-    f_C_AGSL_2_C_YHMS: 0.5*0.3,
-    f_C_AGMS_2_C_YHMS: 0.6,
-    f_C_YHMS_2_C_AGMS: 0.55*0.9,
-    f_C_YHMS_2_C_SHMS: 0.55*0.1,
-    k_C_NWT: 1 / (365 * 2),
-    k_C_AGWT: 1 / (365 * 30),
-    k_C_TR:  1 / (365 * 22),
-    k_C_GVF: 1 / (365 * 30),
-    k_C_GVR: 1 / (365 * 22),
-    k_C_AGML: 4.5 / 365,
-    k_C_AGSL: 18.5 / 365,
-    k_C_AGMS: 7.3 / 365,
-    k_C_YHMS: 2.0 / 365,
-    k_C_BGDL: 10.0 / 365,
-    k_C_BGRL: 0.3 / 365,
-    k_C_BGMS: 0.66 / 365,
-    k_C_SHMS: 0.02 / 365,
+    # decompl: 0.5,
+    # decomps: 0.5,
+    # tau_leaf: 1.0,       
+    # tau_wood: 25.0,         
+    # tau_root: 10.0,
+    # lig_frac: 0.5,
+
+    beta_leaf: 0.6,
+    beta_wood: 0.25,
+    f_C_leaf_2_C_mll: 0.7,    
+    f_C_wood_2_C_mwl: 0.1,  
+    f_C_root_2_C_mrl: 0.2,    
+    f_C_leaf_2_C_sll: 0.1,    
+    f_C_wood_2_C_swl: 0.6,  
+    f_C_root_2_C_srl: 0.4,
+    f_C_leaf_2_C_lll: 0.1,
+    f_C_wood_2_C_lwl: 0.2,
+    f_C_root_2_C_lrl: 0.2, 
+    f_C_mll_2_C_mic: 0.4,
+    f_C_mwl_2_C_mic: 0.4,
+    f_C_mrl_2_C_mic: 0.4,
+    f_C_sll_2_C_mic: 0.3,
+    f_C_swl_2_C_mic: 0.3,
+    f_C_srl_2_C_mic: 0.3,
+    f_C_prot_2_C_mic: 0.35,
+    f_C_nonprot_2_C_mic: 0.41,
+    f_C_pass_2_C_mic: 0.21, 
+    f_C_lll_2_C_prot: 0.5,
+    f_C_lwl_2_C_prot: 0.5,
+    f_C_lrl_2_C_prot: 0.5,
+    f_C_mic_2_C_prot: 0.3,   
+    f_C_lll_2_C_nonprot: 0.5,
+    f_C_lwl_2_C_nonprot: 0.5,
+    f_C_lrl_2_C_nonprot: 0.5,
+    f_C_mic_2_C_nonprot: 0.3,
+    f_C_prot_2_C_pass: 0.6,
+    f_C_nonprot_2_C_pass: 0.5, 
+    k_C_leaf: 1 / (60 * 2),
+    k_C_wood: 1 / (365 * 30),
+    k_C_root: 1 / (365 * 22),
+    k_C_mll: 0.15,
+    k_C_mwl: 0.001,
+    k_C_mrl: 0.1,
+    k_C_sll: 0.01,
+    k_C_swl: 0.001,
+    k_C_srl: 0.005,
+    k_C_lll: 0.01,
+    k_C_lwl: 0.001,
+    k_C_lrl: 0.005,
+    k_C_mic: 1 / (365 * 18),
+    k_C_prot: 1 / (365 * 11),
+    k_C_nonprot: 1 / (365 * 11),
+    k_C_pass: 1 / (365 * 350),
 }
 
 
@@ -628,21 +614,15 @@ old_par_dict = {
 #
 
 par_dict={
-    fwt: 0.6,
-    fgv: 0.3,
-    beta_NWT: fwt*0.5,
-    beta_AGWT: fwt*0.5,
-    beta_TR: 1-fwt-fgv,
-    beta_GVF: fgv*0.5,
-    beta_GVR: fgv*0.5,
-    fco: 0.73,
-    fml: 0.85,
-    fd: 0.74,
-}
+    beta_leaf: 0.6,
+    beta_wood: 0.25
+    }
 par_dict.update(
     {Symbol(k):v.subs(old_par_dict) for k,v in all_rates.items()}
 )
 par_dict
+
+
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
@@ -666,25 +646,33 @@ func_dict={
 # for the next line to work the 
 # two dictionaries par_dict and func_dict have to be complete.
 # In sympy terms this means that the expressions for 
+
+# added by cybian for fix some errors
+print(par_dict)
+print(func_dict)
+
 B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
 # we create a numeric startvector for the compartmental system
 # 
 svs_0=Observables(*map(lambda v: v[0],svs))
 
 X_0= np.array((
-    svs_0.cVeg/5,
-    svs_0.cVeg/5,
-    svs_0.cVeg/5,
-    svs_0.cVeg/5,
-    svs_0.cVeg/5,
-    svs_0.cLitter/4,
-    svs_0.cLitter/4,
-    svs_0.cLitter/4,
-    svs_0.cLitter/4,
-    svs_0.cSoil/4,
-    svs_0.cSoil/4,
-    svs_0.cSoil/4,
-    svs_0.cSoil/4,
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cVeg/3,
+    svs_0.cLitter/6,
+    svs_0.cLitter/6,
+    svs_0.cSoil/7,
+    svs_0.cLitter/6,
+    svs_0.cLitter/6,
+    svs_0.cSoil/7,
+    svs_0.cLitter/6,
+    svs_0.cLitter/6,
+    svs_0.cSoil/7,
+    svs_0.cSoil/7,
+    svs_0.cSoil/7,
+    svs_0.cSoil/7,
+    svs_0.cSoil/7,
 ))#.reshape(9,)
 # in general B and u are nonlinear and can depend on X, thats why we have to test them with index and X arguments
 u_func(0,X_0),B_func(0,X_0)
@@ -695,7 +683,7 @@ import CompartmentalSystems.helpers_reservoir as hr
 # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
 # We first create numerical functions for all the outfluxes from our symbolic description.
 # lets do it for the outflux of one pool first (and then for the whole lot of them)
-expr_cont=mvs.get_OutFluxesBySymbol()[C_AGML]
+expr_cont=mvs.get_OutFluxesBySymbol()[C_mll]
 
 # this is the momentary outflux as a function of t,C_leaf_litter as it would occure in the differential equation
 expr_cont
@@ -723,14 +711,14 @@ expr_disc.subs({delta_t:1})
 # we make it a function of it and ALL state variables to be able to call it in the same way as u_func and B_func 
 argtup=(it, *mvs.get_StateVariableTuple())
 
-C_AGML_func = hr.numerical_function_from_expression(
+C_mll_func = hr.numerical_function_from_expression(
     expr=expr_disc.subs({delta_t:1}),
     tup=argtup, 
     parameter_dict=par_dict,
     func_set=func_dict
 )
 # call it for testing
-C_AGML_func(0,*X_0)
+C_mll_func(0,*X_0)
 
 # +
 # mass production of output functions
@@ -764,23 +752,23 @@ numOutFluxesBySymbol2={
 ra_0=np.sum(
     [
         numOutFluxesBySymbol[k](0,*X_0) 
-        for k in [C_NWT,C_AGWT,C_TR,C_GVF,C_GVR] 
+        for k in [C_leaf,C_wood,C_root] 
         if k in numOutFluxesBySymbol.keys()
     ]
 )
 rh_0=np.sum(
     [
         numOutFluxesBySymbol[k](0,*X_0) 
-        for k in [C_AGML,C_AGSL,C_BGDL,C_BGRL,C_AGMS,C_YHMS,C_SHMS,C_BGMS] 
+        for k in [C_mll,C_mwl,C_mrl,C_sll,C_swl,C_srl,C_lll,C_lwl,C_lrl,C_mic,C_prot,C_nonprot,C_pass] 
         if k in numOutFluxesBySymbol.keys()
     ]
 )
 ra_0,rh_0
 # -
 
-numOutFluxesBySymbol[C_AGML](0,*X_0)
+numOutFluxesBySymbol[C_mll](0,*X_0)
 
-numOutFluxesBySymbol2[C_AGML](0,*X_0)
+numOutFluxesBySymbol2[C_mll](0,*X_0)
 
 # We now build the essential object to run the model forward. We have a 
 # - startvector $V_0$ and 
@@ -843,25 +831,31 @@ def make_StartVector(mvs):
     ) 
 
 
+
+# you can call it instead
+StartVector=msh.make_StartVector(mvs)
+
 V_init= StartVector(
-    C_NWT=svs_0.cVeg/5,
-    C_AGWT=svs_0.cVeg/5,
-    C_TR=svs_0.cVeg/5,
-    C_GVF=svs_0.cVeg/5,
-    C_GVR=svs_0.cVeg/5,
-    C_AGML=svs_0.cLitter/4,
-    C_AGSL=svs_0.cLitter/4,
-    C_BGDL=svs_0.cLitter/4,
-    C_BGRL=svs_0.cLitter/4,
-    C_AGMS=svs_0.cSoil/4,
-    C_YHMS=svs_0.cSoil/4,
-    C_SHMS=svs_0.cSoil/4,
-    C_BGMS=svs_0.cSoil/4,
+    C_leaf=svs_0.cVeg/3,
+    C_wood=svs_0.cVeg/3,
+    C_root=svs_0.cVeg/3,
+    C_mll=svs_0.cLitter/6,
+    C_mwl=svs_0.cLitter/6,
+    C_mrl=svs_0.cSoil/7,   
+    C_sll=svs_0.cLitter/6,
+    C_swl=svs_0.cLitter/6,
+    C_srl=svs_0.cSoil/7,
+    C_lll=svs_0.cLitter/6,
+    C_lwl=svs_0.cLitter/6,
+    C_lrl=svs_0.cSoil/7,
+    C_mic=svs_0.cSoil/7,
+    C_prot=svs_0.cSoil/7,
+    C_nonprot=svs_0.cSoil/7,
+    C_pass=svs_0.cSoil/7,
     ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
     rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;        
 )
-V_init.__getattribute__("C_NWT")
-
+V_init.__getattribute__("C_leaf")
 
 # +
 from CompartmentalSystems import helpers_reservoir as hr
@@ -908,14 +902,14 @@ def make_iterator_sym(
         ra = np.sum(
             [
               numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in [C_NWT,C_AGWT,C_TR,C_GVF,C_GVR] 
+                for k in ["C_leaf","C_wood","C_root"] 
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in [C_AGML,C_AGSL,C_BGDL,C_BGRL,C_AGMS,C_YHMS,C_SHMS,C_BGMS] 
+                for k in ["C_mll","C_mwl","C_mrl","C_sll","C_swl","C_srl","C_lll","C_lwl","C_lrl","C_mic","C_prot","C_nonprot","C_pass"] 
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
@@ -935,10 +929,9 @@ def make_iterator_sym(
 
 np.array(V_init).shape
 
-import model_specific_helpers_2 as msh  
-
+# +
 # test the daily iterator
-import model_specific_helpers_2 as msh    
+    
 it_sym = msh.make_iterator_sym(
     mvs,
     V_init=V_init,
@@ -953,6 +946,7 @@ res_sym = copy(res)
 for i in range(ns):
     res_sym[i,:]=it_sym.__next__().reshape(len(V_init),)
 res_sym
+# -
 
 # We now create another iterator that does run with a different timestep and check that this does not change the results.
 # If we can increase the timestep the data assimilation will be much faster.
@@ -998,14 +992,14 @@ def make_iterator_sym(
         ra = np.sum(
             [
               numOutFluxesBySymbol[k](it,*X)
-                for k in [C_NWT,C_AGWT,C_TR,C_GVF,C_GVR] 
+                for k in [C_leaf,C_wood,C_root] 
                 if k in numOutFluxesBySymbol.keys()
             ]
         )
         rh = np.sum(
             [
                 numOutFluxesBySymbol[k](it,*X)
-                for k in [C_AGML,C_AGSL,C_BGDL,C_BGRL,C_AGMS,C_YHMS,C_SHMS,C_BGMS] 
+                for k in [C_mll,C_mwl,C_mrl,C_sll,C_swl,C_srl,C_lll,C_lwl,C_lrl,C_mic,C_prot,C_nonprot,C_pass] 
                 if k in numOutFluxesBySymbol.keys()
             ]
         )
@@ -1088,23 +1082,32 @@ UnEstimatedParameters = namedtuple(
         "npp_0",
         "rh_0",
         "ra_0",
-        "r_C_NWT_rh",
-        "r_C_AGWT_rh",
-        "r_C_TR_rh",
-        "r_C_GVF_rh",
-        "r_C_GVR_rh",
-        "r_C_AGML_rh",
-        "r_C_AGSL_rh",
-        "r_C_AGMS_rh",
-        "r_C_YHMS_rh",
-        "k_C_BGDL",
-        "k_C_BGRL",
-        "k_C_BGMS",
-        "k_C_SHMS",
-        "r_C_AGML_2_C_AGMS",
-        "r_C_AGMS_2_C_YHMS",
-        "r_C_YHMS_2_C_AGMS",
-        "r_C_YHMS_2_C_SHMS",
+        
+        "k_C_mll",
+        "k_C_mwl",
+        "k_C_mrl",
+        "k_C_sll",
+        "k_C_swl",
+        "k_C_srl",
+        "k_C_lll",
+        "k_C_lwl",
+        "k_C_lrl",
+        
+        "r_C_mll_2_C_mic", # f13_4
+        "r_C_mwl_2_C_mic", # f13_5
+        "r_C_mrl_2_C_mic", # f13_6
+        "r_C_sll_2_C_mic", # f13_7
+        "r_C_swl_2_C_mic", # f13_8
+        "r_C_srl_2_C_mic", # f13_9
+        "r_C_pass_2_C_mic", # f13_16
+
+        "r_C_lll_2_C_prot", # f14_10
+        "r_C_lwl_2_C_prot", # f14_11
+        "r_C_lrl_2_C_prot", # f14_12
+        "r_C_lll_2_C_nonprot", # f15_10
+        "r_C_lwl_2_C_nonprot", # f15_11
+        "r_C_lrl_2_C_nonprot", # f15_12
+        
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
 )
@@ -1116,28 +1119,39 @@ UnEstimatedParameters = namedtuple(
 
 EstimatedParameters = namedtuple(
     "EstimatedParameters",[ 
-        "fwt",
-        "fgv",
-        "fco",
-        "fml",
-        "fd",
-        "k_C_NWT",
-        "k_C_AGWT",
-        "k_C_TR",
-        "k_C_GVF",
-        "k_C_GVR",
-        "f_C_AGSL_2_C_AGMS",
-        "f_C_BGRL_2_C_SHMS",
-        'C_NWT_0',#for the trendy data also the startvalues have to be estimated but 
-        'C_AGWT_0',
-        'C_GVF_0',
-        'C_GVR_0',
-        'C_AGML_0',
-        'C_AGSL_0',
-        'C_BGDL_0',
-        'C_AGMS_0',
-        'C_YHMS_0',
-        'C_SHMS_0',
+        "beta_leaf",
+        "beta_wood",
+        
+        "r_C_leaf_2_C_mll",     # 2,  f4_1
+        "r_C_wood_2_C_mwl",     # 3,  f5_2
+        "r_C_root_2_C_mrl",     # 4,  f6_3
+        "r_C_leaf_2_C_sll",     # 5,  f7_1
+        "r_C_wood_2_C_swl",     # 6,  f8_2
+        "r_C_root_2_C_srl",     # 7,  f9_3
+        "r_C_prot_2_C_mic",     # 8， f13_14
+        "r_C_nonprot_2_C_mic",  # 9， f13_15
+        "r_C_mic_2_C_prot",     # 10, f14_13
+        "r_C_mic_2_C_nonprot",  # 11, f15_13
+        "r_C_prot_2_C_pass",    # 12, f16_14
+        "r_C_nonprot_2_C_pass", # 13, f16_15
+
+        "k_C_mic",              # 17
+        "k_C_protsom",          # 18
+        "k_C_nonprotsom",       # 19
+        "k_C_passsom",          # 20
+        "C_wood_0",           # 23
+        "C_root_0",           # 24
+        "C_mll_0",            # 25
+        "C_mwl_0",            # 26
+        "C_sll_0",            # 27
+        "C_swl_0",            # 28
+        "C_lll_0",            # 29
+        "C_mrl_0",            # 30
+        "C_srl_0",            # 31
+        "C_lrl_0",            # 32 
+        "C_mic_0",            # 33 
+        "C_prot_0",           # 34
+        "C_nonprot_0",        # 35
     ]
 )
 # note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
@@ -1148,7 +1162,7 @@ EstimatedParameters = namedtuple(
 
 # -
 
-
+EstimatedParameters._fields
 
 dvs.npp[1:100]
 
@@ -1156,31 +1170,41 @@ cpa=UnEstimatedParameters(
  cVeg_0=svs_0.cVeg,
  cLitter_0=svs_0.cLitter,
  cSoil_0=svs_0.cSoil,
- npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
+ npp_0=dvs.npp[0] * 86400,  # kg/m2/s kg/m2/day
  rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
  ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
- r_C_NWT_rh=0,
- r_C_AGWT_rh=0,
- r_C_TR_rh=0,
- r_C_GVF_rh=0,
- r_C_GVR_rh=0,
- r_C_AGML_rh=0.55*4.5/365,
- r_C_AGSL_rh=0.7*18.5/365,
- r_C_AGMS_rh=0.4*7.3/365,
- r_C_YHMS_rh=0.45*2.0/365,
- k_C_BGDL=10/365,
- k_C_BGRL=0.3/365,
- k_C_BGMS=0.66/365,
- k_C_SHMS=0.02/365,
- r_C_AGML_2_C_AGMS=0.45*4.5/365,
- r_C_AGMS_2_C_YHMS=0.6*7.3/365,
- r_C_YHMS_2_C_AGMS=0.9*0.55*2.0/365,
- r_C_YHMS_2_C_SHMS=0.1*0.55*2.0/365,
+        
+ k_C_mll=0.15, 
+ k_C_mwl=0.001,
+ k_C_mrl=0.1,
+ k_C_sll=0.01,
+ k_C_swl=0.001,
+ k_C_srl=0.005,
+ k_C_lll=0.01,
+ k_C_lwl=0.001,
+ k_C_lrl=0.005,
+        
+ r_C_mll_2_C_mic=0.4, # f13_4
+ r_C_mwl_2_C_mic=0.4, # f13_5
+ r_C_mrl_2_C_mic=0.4, # f13_6
+ r_C_sll_2_C_mic=0.3, # f13_7
+ r_C_swl_2_C_mic=0.3, # f13_8
+ r_C_srl_2_C_mic=0.3, # f13_9
+ r_C_pass_2_C_mic=0.2, # f13_16
+
+ r_C_lll_2_C_prot=0.5, # f14_10
+ r_C_lwl_2_C_prot=0.5, # f14_11
+ r_C_lrl_2_C_prot=0.5, # f14_12
+ r_C_lll_2_C_nonprot=0.5, # f15_10
+ r_C_lwl_2_C_nonprot=0.5, # f15_11
+ r_C_lrl_2_C_nonprot=0.5, # f15_12       
+
  #number_of_months=len(svs.rh)
- number_of_months=3600 # for testing and tuning mcmc
+ number_of_months=120 # for testing and tuning mcmc
 )
 
-len(svs.rh)
+print('len(rh)=',len(svs.rh))
+print('len(cVeg)=',len(svs.cVeg))
 
 
 # ### Finding better start values for the data assimilation
@@ -1227,36 +1251,45 @@ np.linalg.inv(Bs[0])
 X_ss = np.linalg.solve(B_mean, (-b_mean))
 
 steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVariableTuple())}
+# -
 
-# +
 # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
 # If you don't you get a "TypeError". 
 epa_0=EstimatedParameters(
- fwt=0.68,
- fgv=0.3,
- fco=0.90,
- fml=0.80,
- fd=0.75,
- k_C_NWT=1/(365*2),
- k_C_AGWT=1/(365*15),
- k_C_TR=1/(365*30),
- k_C_GVF=1/(365*15),
- k_C_GVR=1/(365*30),
- f_C_AGSL_2_C_AGMS=0.5*0.3,
- f_C_BGRL_2_C_SHMS=0.5,
- C_NWT_0=steady_state_dict["C_NWT"],
- C_AGWT_0=steady_state_dict["C_AGWT"],
- C_GVF_0=steady_state_dict["C_GVF"],
- C_GVR_0=steady_state_dict["C_GVR"],
- C_AGML_0=steady_state_dict["C_AGML"],
- C_AGSL_0=steady_state_dict["C_AGSL"],
- C_BGDL_0=steady_state_dict["C_BGDL"],
- C_AGMS_0=steady_state_dict["C_AGMS"],
- C_YHMS_0=steady_state_dict["C_YHMS"],
- C_SHMS_0=steady_state_dict["C_SHMS"],
+ beta_leaf=0.6,
+ beta_wood=0.25,
+ 
+ r_C_leaf_2_C_mll=0.4,    
+ r_C_wood_2_C_mwl=0.3,     
+ r_C_root_2_C_mrl=0.3,     
+ r_C_leaf_2_C_sll=0.35,    
+ r_C_wood_2_C_swl=0.35,    
+ r_C_root_2_C_srl=0.3,    
+ r_C_prot_2_C_mic=0.5,     
+ r_C_nonprot_2_C_mic=0.5,  
+ r_C_mic_2_C_prot=0.5,    
+ r_C_mic_2_C_nonprot=0.5,  
+ r_C_prot_2_C_pass=0.5,  
+ r_C_nonprot_2_C_pass=0.5,
 
+ k_C_mic=0.001,            
+ k_C_protsom=0.0001,       
+ k_C_nonprotsom=0.0001,      
+ k_C_passsom=0.0001,          
+ C_wood_0=steady_state_dict["C_wood"],           
+ C_root_0=steady_state_dict["C_root"],           
+ C_mll_0=steady_state_dict["C_mll"],            
+ C_mwl_0=steady_state_dict["C_mwl"],            
+ C_sll_0=steady_state_dict["C_sll"],            
+ C_swl_0=steady_state_dict["C_swl"],            
+ C_lll_0=steady_state_dict["C_lll"],            
+ C_mrl_0=steady_state_dict["C_mrl"],           
+ C_srl_0=steady_state_dict["C_srl"],          
+ C_lrl_0=steady_state_dict["C_lrl"],           
+ C_mic_0=steady_state_dict["C_mic"],           
+ C_prot_0=steady_state_dict["C_prot"],          
+ C_nonprot_0=steady_state_dict["C_nonprot"],     
 )
-# -
 
 # The function `param2res` (which will be used by a general model independent mcmc) only takes the estimated parameters as arguments and produce data in the same shape as the observations.
 # We will taylor make it by another function `make_param2res` which depends on the parameters that we decide to fix.
@@ -1272,30 +1305,39 @@ from typing import Callable
 
 Constants = namedtuple(
     "Constants",
-    [   
+    [
         "cLitter_0",
         "cSoil_0",
         "cVeg_0",
-        "gpp_0",
+        "npp_0",
         "rh_0",
         "ra_0",
-        "r_C_NWT_rh",
-        "r_C_AGWT_rh",
-        "r_C_TR_rh",
-        "r_C_GVF_rh",
-        "r_C_GVR_rh",
-        "r_C_AGML_rh",
-        "r_C_AGSL_rh",
-        "r_C_AGMS_rh",
-        "r_C_YHMS_rh",
-        "k_C_BGDL",
-        "k_C_BGRL",
-        "k_C_BGMS",
-        "k_C_SHMS",
-        "r_C_AGML_2_C_AGMS",
-        "r_C_AGMS_2_C_YHMS",
-        "r_C_YHMS_2_C_AGMS",
-        "r_C_YHMS_2_C_SHMS",
+        
+        "k_C_mll",
+        "k_C_mwl",
+        "k_C_mrl",
+        "k_C_sll",
+        "k_C_swl",
+        "k_C_srl",
+        "k_C_lll",
+        "k_C_lwl",
+        "k_C_lrl",
+        
+        "r_C_mll_2_C_mic", # f13_4
+        "r_C_mwl_2_C_mic", # f13_5
+        "r_C_mrl_2_C_mic", # f13_6
+        "r_C_sll_2_C_mic", # f13_7
+        "r_C_swl_2_C_mic", # f13_8
+        "r_C_srl_2_C_mic", # f13_9
+        "r_C_pass_2_C_mic", # f13_16
+
+        "r_C_lll_2_C_prot", # f14_10
+        "r_C_lwl_2_C_prot", # f14_11
+        "r_C_lrl_2_C_prot", # f14_12
+        "r_C_lll_2_C_nonprot", # f15_10
+        "r_C_lwl_2_C_nonprot", # f15_11
+        "r_C_lrl_2_C_nonprot", # f15_12
+        
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
 )
@@ -1307,28 +1349,41 @@ Constants = namedtuple(
 
 EstimatedParameters = namedtuple(
     "EstimatedParameters",[ 
-        "fwt",
-        "fgv",
-        "fco",
-        "fml",
-        "fd",
-        "k_C_NWT",
-        "k_C_AGWT",
-        "k_C_TR",
-        "k_C_GVF",
-        "k_C_GVR",
-        "f_C_AGSL_2_C_AGMS",
-        "f_C_BGRL_2_C_SHMS",
-        'C_NWT_0',#for the trendy data also the startvalues have to be estimated but 
-        'C_AGWT_0',
-        'C_GVF_0',
-        'C_GVR_0',
-        'C_AGML_0',
-        'C_AGSL_0',
-        'C_BGDL_0',
-        'C_AGMS_0',
-        'C_YHMS_0',
-        'C_SHMS_0',
+        "beta_leaf",
+        "beta_wood",
+        
+        "r_C_leaf_2_C_mll",     # 2,  f4_1
+        "r_C_wood_2_C_mwl",     # 3,  f5_2
+        "r_C_root_2_C_mrl",     # 4,  f6_3
+        "r_C_leaf_2_C_sll",     # 5,  f7_1
+        "r_C_wood_2_C_swl",     # 6,  f8_2
+        "r_C_root_2_C_srl",     # 7,  f9_3
+        "r_C_prot_2_C_mic",     # 8， f13_14
+        "r_C_nonprot_2_C_mic",  # 9， f13_15
+        "r_C_mic_2_C_prot",     # 10, f14_13
+        "r_C_mic_2_C_nonprot",  # 11, f15_13
+        "r_C_prot_2_C_pass",    # 12, f16_14
+        "r_C_nonprot_2_C_pass", # 13, f16_15
+
+        "k_C_mic",              # 17
+        "k_C_protsom",          # 18
+        "k_C_nonprotsom",       # 19
+        "k_C_passsom",          # 20
+        "C_wood_0",           # 23
+        "C_root_0",           # 24
+        
+        "C_mll_0",            # 25
+        "C_mwl_0",            # 26
+        "C_sll_0",            # 27
+        "C_swl_0",            # 28
+        "C_lll_0",            # 29
+        
+        "C_mrl_0",            # 30
+        "C_srl_0",            # 31
+        "C_lrl_0",            # 32 
+        "C_mic_0",            # 33 
+        "C_prot_0",           # 34
+        "C_nonprot_0",        # 35
     ]
 )
 
@@ -1338,29 +1393,36 @@ Constants = namedtuple(
         "cLitter_0",
         "cSoil_0",
         "cVeg_0",
-        "gpp_0",
+        "npp_0",
         "rh_0",
         "ra_0",
-        "r_C_NWT_rh",
-        "r_C_AGWT_rh",
-        "r_C_TR_rh",
-        "r_C_GVF_rh",
-        "r_C_GVR_rh",
-        "r_C_AGML_rh",
-        "r_C_AGSL_rh",
-        "r_C_AGMS_rh",
-        "r_C_YHMS_rh",
-        "k_C_BGDL",
-        "k_C_BGRL",
-        "k_C_BGMS",
-        "k_C_SHMS",
-        "r_C_AGML_2_C_AGMS",
-        "r_C_AGMS_2_C_YHMS",
-        "r_C_YHMS_2_C_AGMS",
-        "r_C_YHMS_2_C_SHMS",
+        
+        "k_C_mll",
+        "k_C_mwl",
+        "k_C_mrl",
+        "k_C_sll",
+        "k_C_swl",
+        "k_C_srl",
+        "k_C_lll",
+        "k_C_lwl",
+        "k_C_lrl",
+        
+        "r_C_mll_2_C_mic", # f13_4
+        "r_C_mwl_2_C_mic", # f13_5
+        "r_C_mrl_2_C_mic", # f13_6
+        "r_C_sll_2_C_mic", # f13_7
+        "r_C_swl_2_C_mic", # f13_8
+        "r_C_srl_2_C_mic", # f13_9
+        "r_C_pass_2_C_mic", # f13_16
+
+        "r_C_lll_2_C_prot", # f14_10
+        "r_C_lwl_2_C_prot", # f14_11
+        "r_C_lrl_2_C_prot", # f14_12
+        "r_C_lll_2_C_nonprot", # f15_10
+        "r_C_lwl_2_C_nonprot", # f15_11
+        "r_C_lrl_2_C_nonprot", # f15_12
+        
         "number_of_months" # necessary to prepare the output in the correct lenght 
-
-
     ]
 )
 # Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated) 
@@ -1371,28 +1433,42 @@ Constants = namedtuple(
 
 EstimatedParameters = namedtuple(
     "EstimatedParameters",[ 
-        "fwt",
-        "fgv",
-        "fco",
-        "fml",
-        "fd",
-        "k_C_NWT",
-        "k_C_AGWT",
-        "k_C_TR",
-        "k_C_GVF",
-        "k_C_GVR",
-        "f_C_AGSL_2_C_AGMS",
-        "f_C_BGRL_2_C_SHMS",
-        'C_NWT_0',#for the trendy data also the startvalues have to be estimated but 
-        'C_AGWT_0',
-        'C_GVF_0',
-        'C_GVR_0',
-        'C_AGML_0',
-        'C_AGSL_0',
-        'C_BGDL_0',
-        'C_AGMS_0',
-        'C_YHMS_0',
-        'C_SHMS_0',
+        "beta_leaf",
+        "beta_wood",
+        
+        "r_C_leaf_2_C_mll",     # 2,  f4_1
+        "r_C_wood_2_C_mwl",     # 3,  f5_2
+        "r_C_root_2_C_mrl",     # 4,  f6_3
+        "r_C_leaf_2_C_sll",     # 5,  f7_1
+        "r_C_wood_2_C_swl",     # 6,  f8_2
+        "r_C_root_2_C_srl",     # 7,  f9_3
+        "r_C_prot_2_C_mic",     # 8， f13_14
+        "r_C_nonprot_2_C_mic",  # 9， f13_15
+        "r_C_mic_2_C_prot",     # 10, f14_13
+        "r_C_mic_2_C_nonprot",  # 11, f15_13
+        "r_C_prot_2_C_pass",    # 12, f16_14
+        "r_C_nonprot_2_C_pass", # 13, f16_15
+
+        "k_C_mic",              # 17
+        "k_C_protsom",          # 18
+        "k_C_nonprotsom",       # 19
+        "k_C_passsom",          # 20
+        
+        "C_wood_0",           # 23
+        "C_root_0",           # 24
+        
+        "C_mll_0",            # 25
+        "C_mwl_0",            # 26        
+        "C_sll_0",            # 27
+        "C_swl_0",            # 28
+        "C_lll_0",            # 29
+        
+        "C_mrl_0",            # 30
+        "C_srl_0",            # 31
+        "C_lrl_0",            # 32 
+        "C_mic_0",            # 33 
+        "C_prot_0",           # 34
+        "C_nonprot_0",        # 35
     ]
 )
 def make_param2res_sym(
@@ -1431,66 +1507,90 @@ def make_param2res_sym(
         # The order is important and corresponds to the order of the statevariables
         # Our namedtuple StartVector takes care of this
         V_init = StartVector(
-            C_NWT=epa.C_NWT_0,
-            C_AGWT=epa.C_AGWT_0,
-            C_GVF=epa.C_GVF_0,
-            C_GVR=epa.C_GVR_0,
-            C_TR=cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
-            C_AGML=epa.C_AGML_0,
-            C_AGSL=epa.C_AGSL_0,
-            C_BGDL=epa.C_BGDL_0,
-            C_BGRL=cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
-            C_AGMS=epa.C_AGMS_0,
-            C_YHMS=epa.C_YHMS_0,
-            C_SHMS=epa.C_SHMS_0,
-            C_BGMS=cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
+            C_leaf=cpa.cVeg_0-(epa.C_wood_0 + epa.C_root_0),
+            C_wood=epa.C_wood_0,            
+            C_root=epa.C_root_0,
+            
+            C_mll=epa.C_mll_0,
+            C_mwl=epa.C_mwl_0,
+            C_mrl=epa.C_mrl_0,
+            C_sll=epa.C_sll_0,
+            C_swl=epa.C_swl_0,
+            C_srl=epa.C_srl_0,
+            C_lll=epa.C_lll_0,
+            C_lwl=cpa.cLitter_0-(epa.C_mll_0 + epa.C_mwl_0 + epa.C_sll_0 + epa.C_swl_0 + epa.C_lll_0),
+            C_lrl=epa.C_lrl_0,
+            
+            C_mic=epa.C_mic_0,
+            C_prot=epa.C_prot_0,
+            C_nonprot=epa.C_nonprot_0,
+            C_pass=cpa.cSoil_0-(epa.C_mrl_0 + epa.C_srl_0 + epa.C_lrl_0 + epa.C_mic_0 + epa.C_prot_0 + epa.C_nonprot_0),
+
             ra=cpa.ra_0,
             rh=cpa.rh_0
         )
         # next we create the parameter dict for the iterator
         # The iterator does not care if they are estimated or not so we look for them
         # in the combination
-        #apa = {**cpa._asdict(),**epa._asdict()}
-        #model_par_dict = {
-        #    Symbol(k):v for k,v in apa.items()
-        #    if Symbol(k) in model_par_dict_keys
-        #}
+        
+        # comment by cybian for fix errors 
+#         apa = {**cpa._asdict(),**epa._asdict()}
+#         model_par_dict = {
+#            Symbol(k):v for k,v in apa.items()
+#             if Symbol(k) in model_par_dict_keys
+#         }
+        
+        # added by cybian for fix some errors
         model_par_dict = {
-            r_C_AGMS_rh:cpa.r_C_AGMS_rh,
-            r_C_AGML_2_C_AGMS:cpa.r_C_AGML_2_C_AGMS,
-            beta_TR:1-epa.fgv-epa.fwt,
-            r_C_GVF_2_C_AGML:epa.k_C_GVF*(1-epa.fml),
-            r_C_AGMS_2_C_YHMS:cpa.r_C_AGMS_2_C_YHMS,
-            r_C_GVR_2_C_BGDL:epa.k_C_GVR*epa.fd,
-            r_C_GVR_2_C_BGRL:epa.k_C_GVR*(1-epa.fd),
-            r_C_YHMS_2_C_AGMS:cpa.r_C_YHMS_2_C_AGMS,
-            r_C_BGMS_2_C_SHMS:cpa.r_C_YHMS_2_C_SHMS,
-            r_C_AGSL_2_C_AGMS:cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
-            r_C_YHMS_rh:cpa.r_C_YHMS_rh,
-            beta_GVF:epa.fgv*0.5,
-            r_C_AGML_rh:cpa.r_C_AGML_rh,
-            r_C_BGRL_rh:cpa.k_C_BGRL*epa.fco,
-            r_C_AGSL_2_C_YHMS:cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
-            r_C_AGWT_2_C_AGSL:epa.k_C_AGWT*1,
-            r_C_TR_2_C_BGRL:epa.k_C_TR*(1-epa.fd),
-            beta_NWT:epa.fwt*0.5,
-            r_C_BGMS_rh:cpa.k_C_BGMS*epa.fco,
-            r_C_GVF_2_C_AGSL:epa.k_C_GVF*epa.fml,
-            r_C_BGRL_2_C_SHMS:cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
-            r_C_BGDL_rh:cpa.k_C_BGDL*epa.fco,
-            r_C_BGRL_2_C_BGMS:cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
-            r_C_SHMS_rh:cpa.k_C_SHMS*epa.fco,
-            r_C_NWT_2_C_AGSL:epa.k_C_NWT*(1-epa.fml),
-            r_C_TR_2_C_BGDL:epa.k_C_TR*epa.fd,
-            r_C_AGSL_rh:cpa.r_C_AGSL_rh,
-            beta_AGWT:epa.fwt*0.5,
-            r_C_SHMS_2_C_BGMS:cpa.k_C_SHMS*(1-epa.fco),
-            r_C_NWT_2_C_AGML:epa.k_C_NWT*epa.fml,
-            r_C_BGDL_2_C_SHMS:cpa.k_C_BGDL*(1-epa.fco)
+            "r_C_mll_rh": cpa.k_C_mll*(1 - cpa.r_C_mll_2_C_mic),
+            "r_C_mwl_rh": cpa.k_C_mwl*(1 - cpa.r_C_mwl_2_C_mic),
+            "r_C_mrl_rh": cpa.k_C_mrl*(1 - cpa.r_C_mrl_2_C_mic),
+            "r_C_sll_rh": cpa.k_C_sll*(1 - cpa.r_C_sll_2_C_mic),
+            "r_C_swl_rh": cpa.k_C_swl*(1 - cpa.r_C_swl_2_C_mic),
+            "r_C_srl_rh": cpa.k_C_srl*(1 - cpa.r_C_srl_2_C_mic),          
+            "r_C_lll_rh": cpa.k_C_lll*(-cpa.r_C_lll_2_C_nonprot - cpa.r_C_lll_2_C_prot + 1),
+            "r_C_lwl_rh": cpa.k_C_lwl*(-cpa.r_C_lwl_2_C_nonprot - cpa.r_C_lwl_2_C_prot + 1),
+            "r_C_lrl_rh": cpa.k_C_lrl*(-cpa.r_C_lrl_2_C_nonprot - cpa.r_C_lrl_2_C_prot + 1),            
+            "r_C_mic_rh": epa.k_C_mic*(-epa.r_C_mic_2_C_nonprot - epa.r_C_mic_2_C_prot + 1),           
+            "r_C_prot_rh": epa.k_C_protsom*(-epa.r_C_prot_2_C_mic - epa.r_C_prot_2_C_pass + 1),
+            "r_C_nonprot_rh": epa.k_C_nonprotsom*(-epa.r_C_nonprot_2_C_mic - epa.r_C_nonprot_2_C_pass + 1),            
+            "r_C_pass_rh": epa.k_C_passsom*(1 - cpa.r_C_pass_2_C_mic),            
+            "r_C_leaf_2_C_lll": 1.0-(epa.r_C_leaf_2_C_mll + epa.r_C_leaf_2_C_sll),
+            "r_C_wood_2_C_lwl": 1.0-(epa.r_C_wood_2_C_mwl + epa.r_C_wood_2_C_swl),
+            "r_C_root_2_C_lrl": 1.0-(epa.r_C_root_2_C_mrl + epa.r_C_root_2_C_srl),
+
+            "r_C_mll_2_C_mic": cpa.r_C_mll_2_C_mic,
+            "r_C_mwl_2_C_mic": cpa.r_C_mwl_2_C_mic,
+            "r_C_mrl_2_C_mic": cpa.r_C_mrl_2_C_mic,
+            "r_C_sll_2_C_mic": cpa.r_C_sll_2_C_mic,
+            "r_C_swl_2_C_mic": cpa.r_C_swl_2_C_mic,
+            "r_C_srl_2_C_mic": cpa.r_C_srl_2_C_mic,
+            "r_C_pass_2_C_mic": cpa.r_C_pass_2_C_mic,
+            "r_C_lll_2_C_prot": cpa.r_C_lll_2_C_prot,
+            "r_C_lwl_2_C_prot": cpa.r_C_lwl_2_C_prot,
+            "r_C_lrl_2_C_prot": cpa.r_C_lrl_2_C_prot,
+            "r_C_lll_2_C_nonprot": cpa.r_C_lll_2_C_nonprot,
+            "r_C_lwl_2_C_nonprot": cpa.r_C_lwl_2_C_nonprot,
+            "r_C_lrl_2_C_nonprot": cpa.r_C_lrl_2_C_nonprot,
+            
+            "beta_leaf": epa.beta_leaf,
+            "beta_wood": epa.beta_wood,
+
+            "r_C_leaf_2_C_mll": epa.r_C_leaf_2_C_mll,
+            "r_C_wood_2_C_mwl": epa.r_C_wood_2_C_mwl,
+            "r_C_root_2_C_mrl": epa.r_C_root_2_C_mrl,
+            "r_C_leaf_2_C_sll": epa.r_C_leaf_2_C_sll,
+            "r_C_wood_2_C_swl": epa.r_C_wood_2_C_swl,
+            "r_C_root_2_C_srl": epa.r_C_root_2_C_srl,
+            "r_C_prot_2_C_mic": epa.r_C_prot_2_C_mic,
+            "r_C_nonprot_2_C_mic": epa.r_C_nonprot_2_C_mic,
+            "r_C_mic_2_C_prot": epa.r_C_mic_2_C_prot,
+            "r_C_mic_2_C_nonprot": epa.r_C_mic_2_C_nonprot,
+            "r_C_prot_2_C_pass": epa.r_C_prot_2_C_pass,
+            "r_C_nonprot_2_C_pass": epa.r_C_nonprot_2_C_pass
         }
 
-        
-        #print(model_par_dict)
+        print(model_par_dict)
         #from IPython import embed;embed()
         
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
@@ -1539,10 +1639,10 @@ def make_param2res_sym(
             V=StartVector(*v)
             #from IPython import embed;embed()
             o=Observables(
-                cLitter=float(V.C_AGML+V.C_AGSL+V.C_BGDL+V.C_BGRL),
-                cSoil=float(V.C_AGMS+V.C_YHMS+V.C_BGMS+V.C_SHMS),
-                cVeg=float(V.C_NWT+V.C_AGWT+V.C_GVF+V.C_TR+V.C_GVR),
-                #ra=V.ra/seconds_per_day,
+                cVeg=float(V.C_leaf + V.C_wood + V.C_root),
+                cLitter=float(V.C_mll + V.C_mwl + V.C_sll + V.C_swl + V.C_lll + V.C_lwl),
+                cSoil=float(V.C_mrl + V.C_srl + V.C_lrl + V.C_mic + V.C_prot + V.C_nonprot + V.C_pass),
+                ra=V.ra/seconds_per_day,
                 rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
             )
             sols.append(o)
@@ -1558,19 +1658,29 @@ def make_param2res_sym(
     return param2res
 
 
+
+
 # +
 # now test it 
 import matplotlib.pyplot as plt
-from general_helpers import plot_solutions
+from general_helpers import plot_solutions 
+1
+# test pesudo_yearly_to_monthly in model_specific_helpers_2
+cVeg_monthly = msh.pesudo_yearly_to_monthly(svs.cVeg)
+cLitter_monthly = msh.pesudo_yearly_to_monthly(svs.cLitter)
+cSoil_monthly = msh.pesudo_yearly_to_monthly(svs.cSoil)
+
+print(len(cVeg_monthly))
 
 param2res_sym = msh.make_param2res_sym(mvs,cpa,dvs)
+
 xs= param2res_sym(epa_0)
+print(np.max(xs), np.min(xs)) #zj 
+print("epa_0",epa_0)
 #obs=np.column_stack([ np.array(v) for v in svs])
-obs=np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
+# added by cybian for unify all the time steps for obss variables
+obs=np.column_stack((cVeg_monthly,cLitter_monthly,cSoil_monthly,np.array(svs.rh),np.array(svs.ra)))
 #xs.shape
-# -
-
-
 
 # +
 obs=obs[0:cpa.number_of_months,:] #cut 
@@ -1586,6 +1696,8 @@ n=cpa.number_of_months
 
 print("Forward run with initial parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
+xs = np.where(xs<0, 0, xs)
+xs = np.where(xs>1e9,0,xs)
 plot_solutions(
         fig,
         times=range(n),
@@ -1596,131 +1708,84 @@ plot_solutions(
 fig.savefig('solutions.pdf')
 
 # +
-import matplotlib.pyplot as plt
-
-print("Forward run with initial parameters")
-plt.figure(figsize=(12,10), dpi=80)
-plt.figure(1)
-
-ax0 = plt.subplot(221)
-ax0.plot(obs[:,0],label='TRENDY',color="red")
-ax0.plot(xs[:,0],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Vegetation C (kg m-2)",size=13)
-#ax0.legend(loc='best')
-ax0.tick_params(labelsize=12)
-
-ax1 = plt.subplot(222)
-ax1.plot(obs[:,1],label='TRENDY',color="red")
-ax1.plot(xs[:,1],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Litter C (kg m-2)",size=13)
-ax1.legend(loc='best')
-ax1.tick_params(labelsize=12)
-
-ax2 = plt.subplot(223)
-ax2.plot(obs[:,2],label='TRENDY',color="red")
-ax2.plot(xs[:,2],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Soil C (kg m-2)",size=13)
-ax2.legend(loc='best')
-ax2.tick_params(labelsize=12)
-
-ax3 = plt.subplot(224)
-ax3.plot(obs[:,3],label='TRENDY',color="red")
-ax3.plot(xs[:,3],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
-ax3.tick_params(labelsize=12)
-
-plt.savefig('ISAM_test.pdf')
-
-
-
-# +
 epa_min=EstimatedParameters(
-    fwt=0.5,
-    fgv=0.1,
-    fco=0.6,
-    fml=0.6,
-    fd=0.6,
-    k_C_NWT=1/(365*10),
-    k_C_AGWT=1/(365*40),
-    k_C_TR=1/(365*40),
-    k_C_GVF=1/(365*40),
-    k_C_GVR=1/(365*40),
-    f_C_AGSL_2_C_AGMS=0.1*0.3,
-    f_C_BGRL_2_C_SHMS=0.1,
-    C_NWT_0=0,
-    C_AGWT_0=0,
-    C_GVF_0=0,
-    C_GVR_0=0,
-    C_AGML_0=0,
-    C_AGSL_0=0,
-    C_BGDL_0=0,
-    C_AGMS_0=0,
-    C_YHMS_0=0,
-    C_SHMS_0=0,
+ beta_leaf=0,
+ beta_wood=0,
+
+ r_C_leaf_2_C_mll=epa_0.r_C_leaf_2_C_mll/100,    
+ r_C_wood_2_C_mwl=epa_0.r_C_wood_2_C_mwl/100,     
+ r_C_root_2_C_mrl=epa_0.r_C_root_2_C_mrl/100,     
+ r_C_leaf_2_C_sll=epa_0.r_C_leaf_2_C_sll/100,    
+ r_C_wood_2_C_swl=epa_0.r_C_wood_2_C_swl/100,    
+ r_C_root_2_C_srl=epa_0.r_C_root_2_C_srl/100,    
+ r_C_prot_2_C_mic=epa_0.r_C_prot_2_C_mic/100,     
+ r_C_nonprot_2_C_mic=epa_0.r_C_nonprot_2_C_mic/100,  
+ r_C_mic_2_C_prot=epa_0.r_C_mic_2_C_prot/100,    
+ r_C_mic_2_C_nonprot=epa_0.r_C_mic_2_C_nonprot/100,  
+ r_C_prot_2_C_pass=epa_0.r_C_prot_2_C_pass/100,  
+ r_C_nonprot_2_C_pass=epa_0.r_C_nonprot_2_C_pass/100,
+
+ k_C_mic=epa_0.k_C_mic/100,            
+ k_C_protsom=epa_0.k_C_protsom/100,       
+ k_C_nonprotsom=epa_0.k_C_nonprotsom/100,      
+ k_C_passsom=epa_0.k_C_passsom/100,   
+    
+ C_wood_0=0,           
+ C_root_0=0,           
+ C_mll_0=0,            
+ C_mwl_0=0,            
+ C_sll_0=0,            
+ C_swl_0=0,            
+ C_lll_0=0,            
+ C_mrl_0=0,           
+ C_srl_0=0,          
+ C_lrl_0=0,           
+ C_mic_0=0,           
+ C_prot_0=0,          
+ C_nonprot_0=0, 
 )
- 
+
 epa_max=EstimatedParameters(
-    fwt=0.8,
-    fgv=0.3,
-    fco=0.95,
-    fml=0.9,
-    fd=0.9,
-    k_C_NWT=1/(365*1),
-    k_C_AGWT=1/(365*5),
-    k_C_TR=1/(365*10),
-    k_C_GVF=1/(365*5),
-    k_C_GVR=1/(365*10),
-    f_C_AGSL_2_C_AGMS=0.9*0.3,
-    f_C_BGRL_2_C_SHMS=0.9,
-    C_NWT_0=svs_0.cVeg,
-    C_AGWT_0=svs_0.cVeg,
-    C_GVF_0=svs_0.cVeg,
-    C_GVR_0=svs_0.cVeg,
-    C_AGML_0=svs_0.cLitter,
-    C_AGSL_0=svs_0.cLitter,
-    C_BGDL_0=svs_0.cLitter,
-    C_AGMS_0=svs_0.cSoil,
-    C_YHMS_0=svs_0.cSoil,
-    C_SHMS_0=svs_0.cSoil,
+ beta_leaf=0.99,
+ beta_wood=0.99,
+ r_C_leaf_2_C_mll=epa_0.r_C_leaf_2_C_mll*100,    
+ r_C_wood_2_C_mwl=epa_0.r_C_wood_2_C_mwl*100,     
+ r_C_root_2_C_mrl=epa_0.r_C_root_2_C_mrl*100,     
+ r_C_leaf_2_C_sll=epa_0.r_C_leaf_2_C_sll*100,    
+ r_C_wood_2_C_swl=epa_0.r_C_wood_2_C_swl*100,    
+ r_C_root_2_C_srl=epa_0.r_C_root_2_C_srl*100,    
+ r_C_prot_2_C_mic=epa_0.r_C_prot_2_C_mic*100,     
+ r_C_nonprot_2_C_mic=epa_0.r_C_nonprot_2_C_mic*100,  
+ r_C_mic_2_C_prot=epa_0.r_C_mic_2_C_prot*100,    
+ r_C_mic_2_C_nonprot=epa_0.r_C_mic_2_C_nonprot*100,  
+ r_C_prot_2_C_pass=epa_0.r_C_prot_2_C_pass*100,  
+ r_C_nonprot_2_C_pass=epa_0.r_C_nonprot_2_C_pass*100,
+
+ k_C_mic=epa_0.k_C_mic*100,            
+ k_C_protsom=epa_0.k_C_protsom*100,       
+ k_C_nonprotsom=epa_0.k_C_nonprotsom*100,      
+ k_C_passsom=epa_0.k_C_passsom*100,   
+    
+ C_wood_0=svs_0.cVeg,           
+ C_root_0=svs_0.cVeg,           
+ C_mll_0=svs_0.cLitter,            
+ C_mwl_0=svs_0.cLitter,            
+ C_sll_0=svs_0.cLitter,            
+ C_swl_0=svs_0.cLitter,            
+ C_lll_0=svs_0.cLitter,            
+ C_mrl_0=svs_0.cSoil,           
+ C_srl_0=svs_0.cSoil,          
+ C_lrl_0=svs_0.cSoil,           
+ C_mic_0=svs_0.cSoil,           
+ C_prot_0=svs_0.cSoil,          
+ C_nonprot_0=svs_0.cSoil, 
 )
 # -
 
 # ### mcmc to optimize parameters 
 #
 
-
-
-def make_isam_cost_func(
-        obs: np.ndarray,
-) -> Callable[[np.ndarray], np.float64]:
-    # Note:
-    # in our code the dimension 0 is the time
-    # and dimension 1 the pool index
-    means = obs.mean(axis=0)
-    mean_centered_obs = obs - means
-
-    denominators = np.sum(mean_centered_obs ** 2, axis=0)
-
-    #   The desired effect of automatically adjusting weight could be achieved
-    #   by the mean itself.
-    # dominators = means
-    def costfunction(mod: np.ndarray) -> np.float64:
-        obs_1=obs[:][0:4]
-        mod_1=mod[:][0:4]
-        cost = np.mean(
-            np.sum((obs_1 - mod_1) ** 2, axis=0) / denominators * 1000
-        )
-        return cost
-
-    return costfunction
-
-
-
-np.shape(obs)
+np.array(epa_max)
 
 # +
 from general_helpers import autostep_mcmc, make_param_filter_func, make_feng_cost_func
@@ -1734,15 +1799,15 @@ C_autostep, J_autostep = autostep_mcmc(
     initial_parameters=epa_0,
     filter_func=isQualified,
     param2res=param2res,
-    costfunction=make_isam_cost_func(obs),
-    nsimu=2000, # for testing and tuning mcmc
+    costfunction=make_feng_cost_func(obs),
+    nsimu=200, # for testing and tuning mcmc
     #nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=15,   # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
     D_init=1,   # default value | increase value to reduce initial step size
-    K=8 # default value | increase value to reduce acceptance of higher cost functions
+    K=5 # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -1754,98 +1819,49 @@ mod_opt = param2res(epa_opt)
 
 print("Forward run with optimized parameters (blue) vs TRENDY output (orange)")
 fig = plt.figure(figsize=(12, 4), dpi=80)
-#plot_solutions(
-#        fig,
+plot_solutions(
+        fig,
         #times=range(cpa.number_of_months),
-#        times=range(int(cpa.number_of_months)), # for yearly output
-#        var_names=Observables._fields,
-#        tup=(mod_opt,obs)
-#)
+        times=range(int(cpa.number_of_months)), # for yearly output
+        var_names=Observables._fields,
+        tup=(mod_opt,obs)
+)
 
-#fig.savefig('solutions_opt.pdf')
+fig.savefig('solutions_opt.pdf')
 
 # save the parameters and cost function values for postprocessing
 outputPath=Path(conf_dict["dataPath"]) # save output to data directory (or change it)
 
 import pandas as pd
-pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('ISAM_da_aa.csv'), sep=',')
-pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('ISAM_da_j_aa.csv'), sep=',')
-pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('ISAM_optimized_pars.csv'), sep=',')
-pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('ISAM_optimized_solutions.csv'), sep=',')
-
-# +
-import matplotlib.pyplot as plt
-
-print("Forward run with initial parameters")
-plt.figure(figsize=(12,10), dpi=80)
-plt.figure(1)
-
-ax0 = plt.subplot(221)
-ax0.plot(obs[:,0],label='TRENDY',color="red")
-ax0.plot(mod_opt[:,0],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Vegetation C (kg m-2)",size=13)
-#ax0.legend(loc='best')
-ax0.tick_params(labelsize=12)
-
-ax1 = plt.subplot(222)
-ax1.plot(obs[:,1],label='TRENDY',color="red")
-ax1.plot(mod_opt[:,1],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Litter C (kg m-2)",size=13)
-ax1.legend(loc='best')
-ax1.tick_params(labelsize=12)
-
-ax2 = plt.subplot(223)
-ax2.plot(obs[:,2],label='TRENDY',color="red")
-ax2.plot(mod_opt[:,2],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Soil C (kg m-2)",size=13)
-ax2.legend(loc='best')
-ax2.tick_params(labelsize=12)
-
-ax3 = plt.subplot(224)
-ax3.plot(obs[:,3],label='TRENDY',color="red")
-ax3.plot(mod_opt[:,3],label='Simulation',color="blue")
-plt.xlabel("Months since 1700",size=13)
-plt.ylabel("Heterotrophic Respiration (kg m-2 s-1)",size=13)
-ax3.tick_params(labelsize=12)
-
-plt.savefig('ISAM_test_opt.pdf')
-
-
+pd.DataFrame(C_autostep).to_csv(outputPath.joinpath('IBIS_da_aa.csv'), sep=',')
+pd.DataFrame(J_autostep).to_csv(outputPath.joinpath('IBIS_da_j_aa.csv'), sep=',')
+pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('IBIS_optimized_pars.csv'), sep=',')
+pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('IBIS_optimized_solutions.csv'), sep=',')
 # -
 
 print("Optimized parameters: ", epa_opt)
-#par_dict_opt={
-#    beta_leaf: epa_opt.beta_leaf,
-#    beta_wood: epa_opt.beta_wood,
-#    T_0: epa_opt.T_0,
-#    E: epa_opt.E,
-#    KM: epa_opt.KM,
-    #r_C_leaf_rh: 0,
-    #r_C_wood_rh: 0,
-    #r_C_root_rh: 0,
-#    r_C_leaf_litter_rh: epa_opt.r_C_leaf_litter_rh,
-#    r_C_wood_litter_rh: epa_opt.r_C_wood_litter_rh,
-#    r_C_root_litter_rh: epa_opt.r_C_root_litter_rh,
-#    r_C_soil_fast_rh: epa_opt.r_C_soil_fast_rh,
-#    r_C_soil_slow_rh: epa_opt.r_C_soil_slow_rh,
-#    r_C_soil_passive_rh: epa_opt.r_C_soil_passive_rh,
-#    r_C_leaf_2_C_leaf_litter: epa_opt.r_C_leaf_2_C_leaf_litter,
-#    r_C_wood_2_C_wood_litter: epa_opt.r_C_wood_2_C_wood_litter,
-#    r_C_root_2_C_root_litter: epa_opt.r_C_root_2_C_root_litter,
-#    r_C_leaf_litter_2_C_soil_fast: epa_opt.r_C_leaf_litter_2_C_soil_fast,
-#    r_C_leaf_litter_2_C_soil_slow: epa_opt.r_C_leaf_litter_2_C_soil_slow,
-#    r_C_leaf_litter_2_C_soil_passive: epa_opt.r_C_leaf_litter_2_C_soil_passive,
-#    r_C_wood_litter_2_C_soil_fast: epa_opt.r_C_wood_litter_2_C_soil_fast,
-#    r_C_wood_litter_2_C_soil_slow: epa_opt.r_C_wood_litter_2_C_soil_slow,
-#    r_C_wood_litter_2_C_soil_passive: epa_opt.r_C_wood_litter_2_C_soil_passive,
-#    r_C_root_litter_2_C_soil_fast: epa_opt.r_C_root_litter_2_C_soil_fast,
-#    r_C_root_litter_2_C_soil_slow: epa_opt.r_C_root_litter_2_C_soil_slow,
-#    r_C_root_litter_2_C_soil_passive: epa_opt.r_C_root_litter_2_C_soil_passive 
-#}
-#print("Optimized parameters dictionary: ", par_dict_opt)
+par_dict_opt={
+     beta_leaf:epa_opt.beta_leaf,
+     beta_wood:epa_opt.beta_wood,
+     r_C_leaf_2_C_mll:epa_opt.r_C_leaf_2_C_mll,    
+     r_C_wood_2_C_mwl:epa_opt.r_C_wood_2_C_mwl,     
+     r_C_root_2_C_mrl:epa_opt.r_C_root_2_C_mrl,     
+     r_C_leaf_2_C_sll:epa_opt.r_C_leaf_2_C_sll,    
+     r_C_wood_2_C_swl:epa_opt.r_C_wood_2_C_swl,    
+     r_C_root_2_C_srl:epa_opt.r_C_root_2_C_srl,    
+     r_C_prot_2_C_mic:epa_opt.r_C_prot_2_C_mic,     
+     r_C_nonprot_2_C_mic:epa_opt.r_C_nonprot_2_C_mic,  
+     r_C_mic_2_C_prot:epa_opt.r_C_mic_2_C_prot,    
+     r_C_mic_2_C_nonprot:epa_opt.r_C_mic_2_C_nonprot,  
+     r_C_prot_2_C_pass:epa_opt.r_C_prot_2_C_pass,  
+     r_C_nonprot_2_C_pass:epa_opt.r_C_nonprot_2_C_pass,
+
+     k_C_mic:epa_opt.k_C_mic,            
+     k_C_protsom:epa_opt.k_C_protsom,       
+     k_C_nonprotsom:epa_opt.k_C_nonprotsom,      
+     k_C_passsom:epa_opt.k_C_passsom,   
+}
+print("Optimized parameters dictionary: ", par_dict_opt)
 
 # ### Traceability analysis  
 #

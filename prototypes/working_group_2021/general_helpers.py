@@ -2,10 +2,14 @@ import numpy as np
 from tqdm import tqdm
 from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
-from copy import copy
+from copy import copy, deepcopy
+from itertools import islice
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from collections import namedtuple
+from frozendict import frozendict
+from importlib import import_module
+import matplotlib.pyplot as plt
 import os
 
 from pathlib import Path
@@ -21,6 +25,39 @@ from bgc_md2.resolve.mvars import (
 from bgc_md2.helper import bgc_md2_computers
 
 days_per_year = 365 
+TraceTuple = namedtuple(
+    "TraceTuple",
+     [  
+         "X",
+	 "X_p",
+	 "X_c",
+	 "X_dot",
+	 "RT",
+         #
+         "x",
+         "x_p",
+	 "x_c",
+	 "x_dot",
+	 "rt",
+         "u",
+     ]
+)
+
+# some tiny helper functions for module loading
+def mvs(mf):
+    return import_module("{}.source".format(mf)).mvs
+def msh(mf):
+    return import_module('{}.model_specific_helpers_2'.format(mf))
+def th(mf):
+    return import_module('{}.test_helpers'.format(mf))
+
+def confDict(mf):
+    with Path(mf).joinpath('config.json').open(mode='r') as f:
+        confDict=frozendict(json.load(f)) 
+    return confDict
+
+def test_args(mf):
+    return th(mf).make_test_args(conf_dict=confDict(mf),msh=msh(mf),mvs=mvs(mf))
 
 # should be part  of CompartmentalSystems
 def make_B_u_funcs(
@@ -925,7 +962,7 @@ def get_nan_pixels(
         for I_lon in range(0,N_lon,cs)
     )
     return reduce(lambda x,y:x+y,l)
-    
+
 def get_nan_pixel_mask(
         var: nc._netCDF4.Variable
     ):
@@ -1224,26 +1261,35 @@ def pseudo_daily_to_yearly(daily):
     sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
     return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
 
-def make_param_filter_func(
-        c_max: np.ndarray,
-        c_min: np.ndarray
-        ) -> Callable[[np.ndarray], bool]:
 
-    def isQualified(c):
-        # fixme
-        #   this function is model specific: It discards parameter proposals
-        #   where beta1 and beta2 are >0.99
-        cond1 =  (c >= c_min).all() 
-        cond2 =  (c <= c_max).all() 
-        return (cond1 and cond2 )
-        
+def make_feng_cost_func_2(
+    svs #: Observables
+    ):
+    # now we compute a scaling factor per observable stream
+    # fixme mm 10-28-2021
+    # The denominators in this case are actually the TEMPORAL variances of the data streams
+    obs_arr=np.stack([ arr for arr in svs],axis=1)
+    means = obs_arr.mean(axis=0)
+    mean_centered_obs= obs_arr - means
+    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+
+
+    def feng_cost_func_2(
+            simu#: Observables
+        ):
+        def f(i):
+            arr=simu[i]
+            obs=obs_arr[:,i]
+            diff=((arr-obs)**2).sum()/denominators[i]*100 
+            return diff
+        return np.array([f(i) for i  in range(len(simu))]).mean()
     
-    return isQualified
+    return feng_cost_func_2
 
-def make_param_filter_func_2(
+def make_param_filter_func(
         c_max,
         c_min, 
-        betas: List[str]
+        betas: List[str]=[]
     ) -> Callable[[np.ndarray], bool]:
 
     positions=[c_max.__class__._fields.index(beta) for beta in betas]
@@ -1258,6 +1304,7 @@ def make_param_filter_func_2(
     return isQualified
 
 def make_StartVectorTrace(mvs):
+    #deprecated
     svt=mvs.get_StateVariableTuple()
     return namedtuple(
         "StartVectorTrace",
@@ -1266,6 +1313,7 @@ def make_StartVectorTrace(mvs):
          [str(v)+"_c" for v in svt]+
          [str(v)+"_RT" for v in svt]
     )
+
 
 def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
     # test the new iterator
@@ -1290,44 +1338,234 @@ def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
     V_init=StartVectorTrace(*V_arr)
     return V_init
 
-def make_daily_iterator_sym_trace(
-        mvs,
-        V_init, #: StartVectorTrace,
-        par_dict,
-        func_dict
-    ):
-    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
-    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+
+# fixme: mm 04-22-2022 
+# this function is deprecated rather use traceability_iterator
+# def make_daily_iterator_sym_trace(
+#        mvs,
+#        V_init, #: StartVectorTrace,
+#        par_dict,
+#        func_dict
+#    ):
+#    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+#    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+#    
+#    n=len(mvs.get_StateVariableTuple())
+#    def f(it,V):
+#        #the pools are the first n values
+#        X = V[0:n] 
+#        I = I_func(it,X) 
+#        # we decompose I
+#        u=I.sum()
+#        b=I/u
+#        B = B_func(it,X)
+#        B_inf = np.linalg.inv(B)
+#        X_new = X + I + B @ X
+#        X_p = B_inf @ I
+#        X_c = X_new+X_p
+#        RT = B_inf @ b
+#        V_new = np.concatenate(
+#            (
+#                X_new.reshape(n,1),
+#                X_p.reshape(n,1),
+#                X_c.reshape(n,1),
+#                RT.reshape(n,1),
+#            ),
+#            axis=0
+#        )
+#        return V_new
+#    
+#    return TimeStepIterator2(
+#        initial_values=V_arr,
+#        f=f,
+#    )
+#
+
+class InfiniteIterator():
+    def __init__(self,x0,func):#,n):
+        self.x0=x0
+        self.func=func
+        
+        self.cur=x0
+        self.pos=0
+        
+    def __iter__(self):
+        #return a fresh instance that starts from the first step)
+        c=self.__class__(self.x0,self.func)
+        return c
+        #return self
     
-    n=len(mvs.get_StateVariableTuple())
-    def f(it,V):
-        #the pools are the first n values
-        X = V[0:n] 
-        I = I_func(it,X) 
-        # we decompose I
+    def __next__(self):
+        #print(self.pos, self.cur)
+        val=self.func(self.pos,self.cur)
+        self.cur = val
+        self.pos += 1
+        return val
+        #raise StopIteration()
+        
+    # @lru_cache
+    def value_at(self,it_max):
+        I=self.__iter__()
+        def f_i(acc,i):
+            return I.__next__()
+        return reduce(f_i,range(it_max),I.x0)
+    
+    def __getitem__(self,arg):
+        # this functions implements the python index notation itr[start:stop:step]
+        # fixme mm 4-26-2022 
+        # we could use the cache for value_at if we dont use  
+        if isinstance(arg,slice):
+            start=arg.start
+            stop=arg.stop
+            step=arg.step
+            return tuple(islice(self,start,stop,step)) 
+        
+        
+        elif isinstance(arg,int):
+            return self.value_at(it_max=arg)
+        else:
+            raise IndexError(
+                """arguments to __getitem__ have to be either
+                indeces or slices."""
+            )
+
+
+def values_2_TraceTuple(tups):
+    # instead of the collection of TraceTuples that the InfiniteIterator returns
+    # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
+    return TraceTuple(*(
+        np.stack(
+            tuple((tup.__getattribute__(name)  for tup in tups))
+        )
+        for name in TraceTuple._fields
+    ))
+
+class TraceTupleIterator(InfiniteIterator):
+    #overload one method specific to the TraceTupleIterator
+    def __getitem__(self,arg):
+        # we call the [] method of the superclass
+        # which returns a tuple of TraceTuples
+        tups=super().__getitem__(arg)
+        
+        # But what we want is a TraceTuple of arrays
+        return values_2_TraceTuple(tups)  
+
+    def averaged_values(self,partitions):
+        start=partitions[0][0]
+        def tt_avg(tups):
+            l=len(tups)
+            return TraceTuple(*(
+                    np.stack(
+                        [
+                            tup.__getattribute__(name)
+                            for tup in tups
+                        ],
+                        axis=0
+                    ).sum(axis=0)/l
+                    for name in TraceTuple._fields
+                )
+            )
+
+        # move to the start
+        for i in range(start):
+            self.__next__()
+
+        tts=[
+            tt_avg(
+                [
+                    self.__next__()
+                    for i in range(stop_p-start_p)
+                ]
+            )
+            for (start_p,stop_p) in partitions
+        ]
+        return values_2_TraceTuple(tts)
+
+
+
+def traceability_iterator(
+        X_0,
+        func_dict,
+        mvs, #: CMTVS,
+        dvs, #: Drivers,
+        cpa, #: Constants,
+        epa,  #: EstimatedParameters
+        delta_t_val: int =1# defaults to 1day timestep
+    ):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=make_param_dict(mvs,cpa,epa)
+
+    
+    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+
+    def trace_tuple_instance(X,B,I):
         u=I.sum()
         b=I/u
-        B = B_func(it,X)
-        B_inf = np.linalg.inv(B)
-        X_new = X + I + B @ X
-        X_p = B_inf @ I
-        X_c = X_new+X_p
-        RT = B_inf @ b
-        V_new = np.concatenate(
-            (
-                X_new.reshape(n,1),
-                X_p.reshape(n,1),
-                X_c.reshape(n,1),
-                RT.reshape(n,1),
-            ),
-            axis=0
+        B_inv = np.linalg.inv(B)
+        X_c = B_inv@I
+        X_p = X_c-X
+        X_dot = I - B @ X 
+        RT = X_c/u #=B_inv@b but cheeper to compute
+        # we now compute the system X_c and X_p
+        # This is in general not equal to the sum of the component, but rather a property
+        # of a surrogate system.
+        x=X.sum()
+        x_dot=X_dot.sum()
+        m_s=(B@X).sum()/x
+        x_c=1/m_s*u
+        x_p=x_c-x
+        rt=x_c/u
+
+        
+        return TraceTuple(
+            X=X,
+            X_p=X_p,
+            X_c=X_c,
+            X_dot=X_dot,
+            RT=RT,
+            x=x,
+            x_p=x_p,
+            x_c=x_c,
+            x_dot=x_dot,
+            rt=rt,
+            u=u,
         )
-        return V_new
     
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
+    # define the start tuple for the iterator    
+    V_init = trace_tuple_instance(
+        X_0,
+        # in Yiqi's nomenclature: dx/dt=I-Bx 
+        # instead of           : dx/dt=I+Bx 
+        # as assumed by B_u_func  
+        - B_func(0,X_0), 
+        I_func(0,X_0)
     )
+   
+    # define the function with V_{i+1}=f(i,V_i)
+    def f(
+            it: int,
+            V :TraceTuple
+        ) -> TraceTuple:
+            X = V.X
+            I = I_func(it,X) 
+            B = B_func(it,X)
+            X_new= X + I + B @ X
+            return trace_tuple_instance(X_new,-B,I)
+    
+    #return TimeStepIterator2(
+    #    initial_values=V_init,
+    #    f=f
+    #)
+    #return InfiniteIterator(
+    #    x0=V_init,
+    #    func=f
+    #)
+    return TraceTupleIterator(
+        x0=V_init,
+        func=f
+    )
+
+
 
 def write_global_mean_cache(
         gm_path,
@@ -1391,3 +1629,251 @@ def get_cached_global_mean(gm_path, vn):
 #    )
 #    def fk_pardict_2_r_pardict
 #    return mvs_new
+
+# # Functions for model comparizon notebook
+
+# +
+import bgc_md2.display_helpers as dh
+from bgc_md2.resolve.mvars import CompartmentalMatrix, InputTuple
+
+# outputs a table with flow diagrams, compartmental matrices and allocation vectors
+def model_table(
+        model_names, # dictionary (folder name : model name)
+    ):
+    model_folders=[(k) for k in model_names]
+    mf=model_folders[0]
+    import_module("{}.source".format(mf))
+    def mvs(mf):
+        return import_module("{}.source".format(mf)).mvs
+
+    tups=[(model_names[mf],mvs(mf))
+          for mf in model_folders
+    ]
+
+    return dh.table(
+        tups=tups,
+        types_compact = [],
+        types_expanded= [InputTuple,CompartmentalMatrix]
+
+    )
+
+# functions to synchronize model outputs to the scale of days since AD
+def sim_day_2_day_aD_func(mf): #->function
+    return msh(mf).make_sim_day_2_day_since_a_D(confDict(mf))
+
+def times_in_days_aD(mf,delta_t_val):
+    n_months=len(test_args(mf).dvs[0])
+    n_days=n_months*30
+    n_iter=int(n_days/delta_t_val)
+    days_after_sim_start=delta_t_val*np.arange(n_iter)
+    return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+
+# function to determine overlapping time frames for models simulations 
+def t_min_tmax(model_folders,delta_t_val):
+    td={
+        mf: times_in_days_aD(mf,delta_t_val)
+        for mf in model_folders
+    }
+    t_min = max([t.min() for t in td.values()])
+    t_max = min([t.max() for t in td.values()])
+    return (t_min,t_max)
+
+# function find the timesteps corresponding to shared times
+from functools import reduce
+def min_max_index(mf,delta_t_val,t_min,t_max):
+    ts=times_in_days_aD(mf,delta_t_val)
+    def count(acc,i):
+        min_i,max_i = acc
+        t=ts[i]
+        min_i = min_i+1 if t < t_min else min_i 
+        max_i = max_i+1 if t < t_max else max_i 
+        return (min_i,max_i)
+    
+    return reduce(count,range(len(ts)),(0,0)) 
+
+# we can build this partition by a little function 
+def partitions(start,stop,nr_acc=1):
+    diff=stop-start
+    step=nr_acc
+    number_of_steps=int(diff/step)
+    last_start=start+number_of_steps*step
+    last_tup=(last_start,stop)
+    return [
+        (
+            start + step * i,
+            start + step *(i+1)
+        )
+        for i in range(number_of_steps)
+    ]+[last_tup]
+
+def averaged_times(times,partitions):
+    return np.array(
+        [
+            times[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
+        ]
+    )
+
+# The iterator allows us to compute and easily access the desired timelines with python index notation [2:5] 
+# it will return the values from position 2 to 5 of the solution (and desired variables).
+def traceability_iterator_instance(mf, # model folder name
+                                   delta_t_val, # model time step
+                                  ):
+    ta=test_args(mf)
+    mvs_t=mvs(mf)
+    dvs_t=ta.dvs
+    cpa_t=ta.cpa
+    epa_t=ta.epa_opt
+    X_0=msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
+    func_dict=msh(mf).make_func_dict(mvs_t,dvs_t,cpa_t,epa_t)
+    
+    return traceability_iterator(
+        X_0,
+        func_dict,
+        mvs=mvs_t,
+        dvs=dvs_t,
+        cpa=cpa_t,
+        epa=epa_t,
+        delta_t_val=delta_t_val
+    )
+
+def plot_yearly_components(model_names, # dictionary (folder name : model name)
+                           var_names, # dictionary (trace_tuple name : descriptive name)
+                           delta_t_val, # model time step
+                           model_cols, # dictionary (folder name :color)
+                          ):
+
+    model_folders=[(k) for k in model_names]
+    variables=[(k) for k in var_names]
+    n=len(variables)
+    yr=int(365/delta_t_val)
+    
+    fig=plt.figure(figsize=(20,n*10))
+    axs=fig.subplots(n,1)
+    
+    # calculate output array length for the average base on the 1st model
+    start,stop=min_max_index(model_folders[0],delta_t_val,*t_min_tmax(model_folders,delta_t_val))
+    output_length=int((stop-start)/12)+1
+    
+    for i,name in enumerate(variables):
+        sum=np.zeros(output_length)
+        for mf in model_folders:
+            itr=traceability_iterator_instance(mf,delta_t_val)
+            start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
+            parts=partitions(start,stop,yr)
+            times=averaged_times(
+                times_in_days_aD(mf,delta_t_val)/365,
+                parts
+            )
+            vals=itr.averaged_values(
+                parts
+            )
+            sum+=vals.__getattribute__(name) # for calculating avarage
+            ax=axs[i]
+            ax.plot(
+                times,
+                vals.__getattribute__(name),
+                label=model_names[mf]+' - '+name,
+                color=model_cols[mf],
+            )
+            if name=='x':  # we plot x together with x_c
+                ax.plot(
+                    times,
+                    vals.__getattribute__('x_c'),
+                    label=model_names[mf]+' - x_c',
+                    color=model_cols[mf],
+                    linestyle = 'dashed'
+                )
+            if name=='x_p':  # 0 line for X_p
+                ax.plot(
+                    times,
+                    np.zeros_like(times),
+                    color="black",
+                    linestyle = 'dotted',
+                    alpha=0.5
+        )
+        if name!='x_p':     # plot avarage for all models (doesn't make sense for X_p)   
+            ax.plot(
+                times,
+                sum/len(model_names),
+                label='Average '+name+' (all models)',
+                color="black",
+                linestyle = 'dotted',                
+                alpha=0.5
+            )                
+        ax.legend()
+        ax.set_title(var_names[name])
+        
+from scipy.interpolate import interp1d, splprep
+
+# function to compute a difference between traceable companents of 2 models
+# Since the two models do not necessarily share the same point in time and not
+# even the same stepsize or number of steps we compute interpolating functions
+# to make them comparable
+
+def model_diff(name, # name of the traceable component (as in trace_tuple)
+               mf_1, # model folder (1st model)
+               times_1, # array of time steps (1st model)
+               vals_1, # array of values for each time step (1st model)
+               mf_2, # model folder (2nd model)
+               times_2, # array of time steps (2nd model)
+               vals_2 # array of values for each time step (2nd model)
+              ):
+    f1=interp1d(times_1,vals_1.__getattribute__(name))
+    f2=interp1d(times_2,vals_2.__getattribute__(name))
+    # chose the interval covered by both to avoid extrapolation
+    start=max(times_1.min(),times_2.min())
+    stop=min(times_1.max(),times_2.max())
+    nstep=min(len(times_1),len(times_2))
+    times=np.linspace(start,stop,nstep)
+        
+    diff=f1(times)-f2(times)
+    #diff=vals_1.__getattribute__(name)-vals_2.__getattribute__(name) # if time step is same, this should work instead of interpolation
+    return(diff, times)  
+
+# plotting differences between traceable companents of 2 models
+def plot_yearly_diff(model_names, # dictionary (folder name : model name)
+                     var_names, # dictionary (trace_tuple name : descriptive name)
+                     delta_t_val, # model time step
+                    ):
+
+    model_folders=[(k) for k in model_names]
+    variables=[(k) for k in var_names]
+    
+    n=int(len(variables)*( len(model_folders) * (len(model_folders)-1) / 2))
+    yr=int(365/delta_t_val)
+    
+    fig=plt.figure(figsize=(20,n*10))
+    axs=fig.subplots(n,1)
+    part=10 # for the whole interval
+    plot_number=0
+    for i,name in enumerate(variables):
+        for j, mf_1 in enumerate(model_folders[0:len(model_folders)-1]):            
+            for mf_2 in model_folders[j+1:len(model_folders)]:
+                start_1,stop_1=min_max_index(mf_1,delta_t_val,*t_min_tmax([mf_1,mf_2],delta_t_val))                              
+                itr_1=traceability_iterator_instance(mf_1,delta_t_val)
+                
+                parts_1=partitions(start_1,stop_1,yr)
+                times_1=averaged_times(
+                    times_in_days_aD(mf_1,delta_t_val)/365,
+                    parts_1
+                )
+                vals_1=itr_1.averaged_values(
+                    parts_1
+                )        
+                
+                start_2,stop_2=min_max_index(mf_2,delta_t_val,*t_min_tmax([mf_2,mf_2],delta_t_val))
+                itr_2=traceability_iterator_instance(mf_2,delta_t_val)                
+                parts_2=partitions(start_2,stop_2,yr)
+                times_2=averaged_times(
+                    times_in_days_aD(mf_2,delta_t_val)/365,
+                    parts_2
+                )
+                vals_2=itr_2.averaged_values(
+                    parts_2
+                )   
+                print ("Plotting "+str(plot_number+1)+" out of "+str(n))
+                diff,times=model_diff(name,mf_1,times_1,vals_1,mf_2,times_2,vals_2)
+                ax=axs[plot_number]
+                ax.plot(times,diff,color="black")
+                ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
+                plot_number+=1 

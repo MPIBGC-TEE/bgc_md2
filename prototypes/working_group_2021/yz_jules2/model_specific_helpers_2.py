@@ -747,6 +747,7 @@ def make_sim_day_2_day_since_a_D(conf_dict):
 
     ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
     td = ts / (3600 * 24) #in days since_2010_01_01_00_00_00
+    #td = (ts - 12 * 3600) / (3600 * 24)
     
     import datetime as dt
     ad = dt.date(1, 1, 1) # first of January of year 1 
