@@ -228,7 +228,7 @@ def get_global_mean_vars(dataPath):
             Observables(*map(compute_and_cache_global_mean, o_names)),
             Drivers(*map(compute_and_cache_global_mean, d_names))
         )
-    
+
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
@@ -239,16 +239,32 @@ def make_npp_func(dvs):
     return func
 
 
-def make_xi_func(dvs):
-    def func(day):
-        return 1.0 # preliminary fake for lack of better data... 
-    return func
+# +
+#def make_xi_func(dvs):
+#    def func(day):
+#        return 1.0 # preliminary fake for lack of better data... 
+#    return func
+# -
+
+import math
+def make_xi_func(tas, mrso):
+    def xi_func(day):
+        mi = gh.day_2_month_index(day)
+        # alternative FT
+        FT = 0.08 * math.exp(0.095 * (tas[mi]-273.15)) # temperature rate modifier
+        FW = 1 #/ (1 + 30 * math.exp(-8.5 * mrso[mi])) # water rate modifier
+        #print("FT,FW", FT, FW)
+        rh_factor = FT * FW
+        return rh_factor # 1.0     # Set to 1 if no scaler implemented
+        # return 1.0
+
+    return xi_func
 
 
 def make_func_dict(mvs,dvs):
     return {
         "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs)
+        "xi": make_xi_func(dvs.tas, dvs.mrso)
     }
 
 def make_traceability_iterator(mvs,dvs,cpa,epa):
@@ -446,10 +462,7 @@ def make_param2res_sym(
         # The iterator does not care if they are estimated or not so we look for them
         # in the combination
         apa = {**cpa._asdict(),**epa._asdict()}
-        #model_par_dict = {
-        #    Symbol(k):v for k,v in apa.items()
-        #    if Symbol(k) in model_par_dict_keys
-        #}
+
         model_par_dict = {
             'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
             'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
@@ -484,20 +497,8 @@ def make_param2res_sym(
             'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
         }
         
-        #print(model_par_dict)
-        #from IPython import embed;embed()
-        
-        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
-        # our fake xi_func could of course be defined outside of param2res but in general it
-        # could be build from estimated parameters and would have to live here...
-        def xi_func(day):
-            return 1.0 # preliminary fake for lack of better data... 
-    
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
-        
+        func_dict=make_func_dict(mvs,dvs)
+
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 

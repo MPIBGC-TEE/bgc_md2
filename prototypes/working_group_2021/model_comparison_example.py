@@ -14,7 +14,7 @@
 # ---
 
 # ## Model comparison using traceability analysis
-# We use the infrastructure built so far to compare two ore more models.
+# We use the infrastructure built so far to compare two or more models.
 # The workhorse will be an iterator (returned by a general function). That allows us to compute and easily access the desired timelines with python index notation it[2:5] will return the values from position 2 to 5 of the solution (and desired variables).
 # The notebook also contains some functions to compute where the times of two models overlap and some plot functions. 
 
@@ -154,7 +154,7 @@ model_cols={
 from scipy.interpolate import interp1d, splprep
 
 def plot_diff(mf_1, mf_2, delta_t_val, model_cols):
-    
+    n=2 #for 2 models
     part=30
     start_min_1,stop_max_1=min_max_index(mf_1,delta_t_val,*t_min_tmax([mf_1,mf_2],delta_t_val))
     # we do not want the whole interval but look at a smaller part to observe the dynamics
