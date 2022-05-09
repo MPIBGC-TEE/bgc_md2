@@ -9,7 +9,7 @@ from ComputabilityGraphs import CMTVS
 from bgc_md2.resolve.mvars import CompartmentalMatrix, InputTuple, StateVariableTuple
 import bgc_md2.helper as h
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-display(HTML("<style>.container { width:100% !important; }</style>"))
+#display(HTML("<style>.container { width:100% !important; }</style>"))
 
 
 
@@ -20,7 +20,9 @@ def mass_balance_equation(mvs):
         sv = mvs.get_StateVariableTuple()
     
         eq = Math(
-            r'\frac{dx}{dt}='+
+            r'\frac{d}{dt}'+
+            rf'{latex(sv)}'+
+            "="+
             rf'{latex(ip)}'+
             r'+'+
             rf'{latex(cm)}'+
