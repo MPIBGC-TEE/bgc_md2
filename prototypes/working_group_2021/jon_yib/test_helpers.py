@@ -18,6 +18,7 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_0",
             "epa_min",
             "epa_max",
+            "epa_opt",
             "cpa"
         ]
     )
@@ -84,6 +85,7 @@ def make_test_args(conf_dict,msh,mvs):
     }
     
     epa_0 = msh.EstimatedParameters(**par_dict)
+    epa_opt = epa_0
     
     # set min/max parameters to +- 100 times initial values
     epa_min=msh.EstimatedParameters._make(tuple(np.array(epa_0)*0.01))
@@ -154,12 +156,13 @@ def make_test_args(conf_dict,msh,mvs):
     return TestArgs(
         V_init=V_init,
         par_dict=model_par_dict,
-        func_dict=msh.make_func_dict(mvs,dvs),
+        func_dict=msh.make_func_dict(mvs,dvs,cpa,epa_opt),
         dvs=dvs,
         svs=svs,
         mvs=mvs,
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
+        epa_opt=epa_opt,
         cpa=cpa
     )

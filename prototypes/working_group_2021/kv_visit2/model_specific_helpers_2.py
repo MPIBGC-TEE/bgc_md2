@@ -141,7 +141,7 @@ def get_example_site_vars(dataPath):
 
 # fixme mm: 04-22-2022
 # is the following commented code obsolete?
-#def get_global_vars(dataPath):
+# def get_global_vars(dataPath):
 #    # pick up 1 site
 #    # s = slice(None, None, None)  # this is the same as :
 #    # t = s, 50, 33  # [t] = [:,49,325]
@@ -820,7 +820,7 @@ def make_param2res_full_output(
     return param2res_full_output
 
 # moved to general_helpers
-#def make_feng_cost_func_2(
+# def make_feng_cost_func_2(
 #    svs #: Observables
 #    ):
 #    # now we compute a scaling factor per observable stream

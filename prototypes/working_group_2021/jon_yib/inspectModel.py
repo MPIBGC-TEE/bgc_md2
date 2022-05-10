@@ -222,46 +222,46 @@ epa0 =msh.EstimatedParameters(
 #c_soil_slow_0=0.5,
 
 # +
-gpp_func = msh.make_gpp_func(dvs)
-npp_func = msh.make_npp_func(dvs)
-temp_func = msh.make_temp_func(dvs)
+#func_dict = msh.make_func_dict(dvs)
 
-n = cpa.nyears*12*30
+#n = cpa.nyears*12*30
 
-gpp_obs = np.array([gpp_func(d) for d in range(n)])
-npp_obs = np.array([npp_func(d) for d in range(n)])
-temp_obs = np.array([temp_func(d) for d in range(n)])
+#gpp_obs = np.array([GPP(d) for d in range(n)])
+#npp_obs = np.array([NPP(d) for d in range(n)])
+#temp_obs = np.array([temp(d) for d in range(n)])
 
 # Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Drivers._fields,
-        tup=(npp_obs,)
-)
-fig.savefig('npp.pdf')
+#fig = plt.figure(figsize=(12, 4), dpi=80)
+#plot_solutions(
+#        fig,
+#        times=range(n),
+#        var_names=msh.Drivers._fields,
+#        tup=(npp_obs,)
+#)
+#fig.savefig('npp.pdf')
+
+# +
+# Plot simulation output for observables
+#fig = plt.figure(figsize=(12, 4), dpi=80)
+#plot_solutions(
+#        fig,
+#        times=range(n),
+#        var_names=msh.Drivers._fields[1],
+#        tup=(temp_obs,)
+#)
+#fig.savefig('temp.pdf')
+
+# +
+# Plot simulation output for observables
+#fig = plt.figure(figsize=(12, 4), dpi=80)
+#plot_solutions(
+#        fig,
+#        times=range(n),
+#        var_names=msh.Drivers._fields[2],
+#        tup=(gpp_obs,)
+#)
+#fig.savefig('gpp.pdf')
 # -
-
-# Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Drivers._fields[1],
-        tup=(temp_obs,)
-)
-fig.savefig('temp.pdf')
-
-# Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Drivers._fields[2],
-        tup=(gpp_obs,)
-)
-fig.savefig('gpp.pdf')
 
 # #### Create forward model function:
 

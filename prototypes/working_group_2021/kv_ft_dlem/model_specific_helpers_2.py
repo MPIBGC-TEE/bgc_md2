@@ -95,7 +95,7 @@ EstimatedParameters = namedtuple(
     ]
 )
 
-#def download_my_TRENDY_output():
+# def download_my_TRENDY_output():
 #    download_TRENDY_output(
 #        username=conf_dict["username"],
 #        password=conf_dict["password"],
@@ -204,7 +204,7 @@ def get_global_mean_vars(dataPath):
             Observables(*map(compute_and_cache_global_mean, o_names)),
             Drivers(*map(compute_and_cache_global_mean, d_names))
         )
-        
+
 def make_iterator_sym(
         mvs,
         V_init,
@@ -261,39 +261,39 @@ def make_StartVector(mvs):
         ["rh"]
     ) 
 
-def make_npp_func(dvs):
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.npp[month])
-    return npp_func
-
-
-def make_gpp_func(dvs):
-    def gpp_func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.gpp[month])
-    return gpp_func
-
-def make_temp_func(dvs):
-    def temp_func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.tas[month])
-    return temp_func
+def make_func_dict(mvs,dvs,cpa,epa):
     
-def make_xi_func(dvs):
-    def xi_func(day):
-        return 1
-    return xi_func
+    def make_npp_func(dvs):
+        def npp_func(day):
+            month=gh.day_2_month_index(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.npp[month])
+        return npp_func
     
-def make_func_dict(mvs,dvs):
+    def make_gpp_func(dvs):
+        def gpp_func(day):
+            month=gh.day_2_month_index(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.gpp[month])
+        return gpp_func
+    
+    def make_temp_func(dvs):
+        def temp_func(day):
+            month=gh.day_2_month_index(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.tas[month])
+        return temp_func
+    
+    def make_xi_func(dvs):
+        def xi_func(day):
+            return 1
+        return xi_func
+    
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
     }
-    
+
 def make_param2res_sym(
         mvs,
         cpa: Constants,
@@ -319,14 +319,12 @@ def make_param2res_sym(
     # Create namedtuple for initial values
     StartVector=make_StartVector(mvs)
     
-    # the time dependent driver function for gpp does not change with the estimated parameters
-    # so its enough to define it once as in our test
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        return dvs.npp[month]   # kg/m2/s kg/m2/day
-    
     def param2res(pa):
         epa=EstimatedParameters(*pa)
+        
+        # Build input and environmental scaler functions
+        func_dict = make_func_dict(mvs,dvs,cpa,epa)
+        
         # create a startvector for the iterator from both estimated and fixed parameters 
         # The order is important and corresponds to the order of the statevariables
         # Our namedtuple StartVector takes care of this
@@ -361,18 +359,7 @@ def make_param2res_sym(
             ),
             rh = apa['rh_0']
         )
-
-        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
-        # our fake xi_func could of course be defined outside of param2res but in general it
-        # could be build from estimated parameters and would have to live here...
-        def xi_func(day):
-            return 1.0 # preliminary fake for lack of better data... 
-    
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
-        
+       
         delta_t_val=15
         it_sym = make_iterator_sym(
             mvs,
@@ -475,3 +462,81 @@ def make_weighted_cost_func(
         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)
         return J_new
     return costfunction
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],
+        "C_wood": apa['C_wood_0'],
+        "C_root": apa['cVeg_0'] - (
+            apa['C_leaf_0'] + 
+            apa['C_wood_0']
+            ),
+        "C_aom1": apa['C_aom1_0'],
+        "C_aom2": apa['cLitter_0'] - apa['C_aom1_0'],
+        "C_smb1": apa['C_smb1_0'],
+        "C_smb2": apa['C_smb2_0'],
+        "C_smr": apa['C_smr_0'],
+        "C_nom": apa['C_nom_0'],
+        "C_dom": apa['C_dom_0'],
+        "C_psom": apa['cSoil_0'] - (
+            apa['C_smb1_0'] +
+            apa['C_smb2_0'] +
+            apa['C_smr_0'] +
+            apa['C_nom_0'] +
+            apa['C_dom_0'] 
+        )
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    fd=make_func_dict(mvs,dvs)
+    V_init = gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
+
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],
+        "C_wood": apa['C_wood_0'],
+        "C_root": apa['cVeg_0'] - (
+            apa['C_leaf_0'] + 
+            apa['C_wood_0']
+            ),
+        "C_aom1": apa['C_aom1_0'],
+        "C_aom2": apa['cLitter_0'] - apa['C_aom1_0'],
+        "C_smb1": apa['C_smb1_0'],
+        "C_smb2": apa['C_smb2_0'],
+        "C_smr": apa['C_smr_0'],
+        "C_nom": apa['C_nom_0'],
+        "C_dom": apa['C_dom_0'],
+        "C_psom": apa['cSoil_0'] - (
+            apa['C_smb1_0'] +
+            apa['C_smb2_0'] +
+            apa['C_smr_0'] +
+            apa['C_nom_0'] +
+            apa['C_dom_0'] 
+        )
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
