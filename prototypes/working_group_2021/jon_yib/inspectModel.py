@@ -27,8 +27,8 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #set auto reload for notebook
 # %load_ext autoreload
 # %autoreload 2
+# -
 
-# +
 # Packages for symbolic code: 
 from sympy import Symbol, Function, diag, ImmutableMatrix 
 from ComputabilityGraphs.CMTVS import CMTVS
@@ -46,21 +46,21 @@ import bgc_md2.resolve.computers as bgc_c
 import bgc_md2.display_helpers as dh
 import bgc_md2.helper as h
 from collections import namedtuple
-
+import general_helpers as gh
 # Other packages
 import sys
 sys.path.insert(0,'..') # necessary to import general_helpers
-from general_helpers import (
-    download_TRENDY_output,
-    day_2_month_index,
-    month_2_day_index,
-    make_B_u_funcs_2,
-    monthly_to_yearly,
-    plot_solutions,
-    autostep_mcmc_2,  
-    make_jon_cost_func,
-    make_param_filter_func
-)
+# from general_helpers import (
+#     download_TRENDY_output,
+#     day_2_month_index,
+#     month_2_day_index,
+#     make_B_u_funcs_2,
+#     monthly_to_yearly,
+#     plot_solutions,
+#     autostep_mcmc_2,  
+#     make_jon_cost_func,
+#     make_param_filter_func
+# )
 from pathlib import Path
 from copy import copy, deepcopy
 from functools import reduce
@@ -72,7 +72,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from source import mvs
 import model_specific_helpers_2 as msh
-# -
 
 # ## Model Figure and Matrix Equations
 # #### Model Figure:
@@ -92,7 +91,7 @@ dh.mass_balance_equation(mvs)
 # + codehighlighter=[[11, 12], [16, 17], [8, 28], [41, 43], [8, 24], [42, 44]]
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-#msh.download_my_TRENDY_output(conf_dict)
+msh.download_my_TRENDY_output(conf_dict)
 # -
 
 # ## Connect Data and Symbols (Must Edit)
@@ -235,7 +234,7 @@ temp_obs = np.array([temp_func(d) for d in range(n)])
 
 # Plot simulation output for observables
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
+gh.plot_solutions(
         fig,
         times=range(n),
         var_names=msh.Drivers._fields,
@@ -246,7 +245,7 @@ fig.savefig('npp.pdf')
 
 # Plot simulation output for observables
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
+gh.plot_solutions(
         fig,
         times=range(n),
         var_names=msh.Drivers._fields[1],
@@ -256,7 +255,7 @@ fig.savefig('temp.pdf')
 
 # Plot simulation output for observables
 fig = plt.figure(figsize=(12, 4), dpi=80)
-plot_solutions(
+gh.plot_solutions(
         fig,
         times=range(n),
         var_names=msh.Drivers._fields[2],
@@ -276,7 +275,7 @@ obs_simu = param2res_sym(epa0)                # Run forward model from initial c
 
 fig = plt.figure()
 from general_helpers import plot_observations_vs_simulations
-plot_observations_vs_simulations(fig,svs,obs_simu)
+gh.plot_observations_vs_simulations(fig,svs,obs_simu)
 
 
 # ## Data Assimilation
@@ -310,7 +309,7 @@ epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
 param2res=msh.make_param2res_sym(mvs,cpa,dvs)
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc_2(
+C_autostep, J_autostep = gh.autostep_mcmc_2(
     initial_parameters=epa0,
     filter_func=msh.make_param_filter_func(epa_max, epa_min),
     param2res=param2res,

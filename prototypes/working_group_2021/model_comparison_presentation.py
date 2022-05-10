@@ -46,6 +46,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from functools import lru_cache
 import general_helpers as gh
+from bgc_md2.resolve.mvars import (
+    CompartmentalMatrix,
+    InputTuple,
+    StateVariableTuple
+)
 
 # ### Selecting models to compare
 
@@ -54,12 +59,14 @@ import general_helpers as gh
 model_names={ 
     "yz_jules": "JULES",
     "kv_visit2": "VISIT",
+    "jon_yib": "YIBs"
 }
 
 # selecting colors for plotting models
 model_cols={
     "yz_jules": "blue",
     "kv_visit2": "orange",
+    "jon_yib": "green"
 }
 # -
 

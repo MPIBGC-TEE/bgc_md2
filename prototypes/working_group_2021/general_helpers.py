@@ -1635,7 +1635,11 @@ def get_cached_global_mean(gm_path, vn):
 
 # +
 import bgc_md2.display_helpers as dh
-from bgc_md2.resolve.mvars import CompartmentalMatrix, InputTuple
+from bgc_md2.resolve.mvars import (
+    CompartmentalMatrix,
+    InputTuple,
+    StateVariableTuple
+)
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
