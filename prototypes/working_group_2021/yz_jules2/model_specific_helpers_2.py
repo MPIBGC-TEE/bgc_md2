@@ -760,4 +760,7 @@ def make_sim_day_2_day_since_a_D(conf_dict):
 
     return f
 
-
+# Define start and end dates of the simulation
+import datetime as dt
+start_date=dt.date(1700, 1, 16) 
+end_date = dt.date(2019, 12, 16)
