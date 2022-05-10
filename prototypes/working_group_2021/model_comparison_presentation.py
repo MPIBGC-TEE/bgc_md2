@@ -19,7 +19,7 @@
 # <p>Currently our analysis includes the following steps:
 # <ol>
 # <li>We start by comparing model outputs - <em><strong>C storage (X)</strong></em> over time. Then we compute and compare traceable components to investigate sources of discrepancy between model predictions of C storage, and thus sources of uncertainty in our understanding of global C dynamics. </li>
-# <li>We compute <em><strong>C storage capacity (X<sub>C</sub>)</strong></em> for each model. <em><strong>X<sub>C</sub> </strong></em> (as a function of time) represents the maximum C storage for the system under current conditions. It is a theoretical steady state at each time point that would be achieved if the conditions (C input and environmental factors) remained constant. <em><strong>X<sub>C</sub></strong></em>  is an autonomous attractor for <em><strong>X</strong></em>. In a non-autonomous system with variable C input and environmental factors (such as temperature and moisture) ecosystem <em><strong>X</strong></em> is constantly chasing <em><strong>X<sub>C</sub></strong></em>, but cannot consistently reach it due to variable conditions: when <em><strong>X<sub>C</sub> &gt X </strong></em>, <em><strong>X</strong></em> is increasing, and when <em><strong>X<sub>C</sub> &lt X </strong></em>,<em><strong>X</strong></em> is decreasing. If at any point in time the system becomes autonomous (C input and environmental factors are constant) then <em><strong>X<sub>C</sub></strong></em> becomes an attractor for <em><strong>X</strong></em>, so that <em><strong>X</strong></em> gets asymptotically closer to <em><strong>X<sub>C</sub></strong></em> until the system reaches the steady state with <em><strong>X</strong></em> = <em><strong>X<sub>C</sub></strong></em>. The difference between <em><strong>X<sub>C</sub></strong></em> and <em><strong>X</strong></em> at each point in time is called  <em><strong>C storage potential (X<sub>P</sub>)</strong></em> - it shows how far the current C storage of the system is from the theoretical steady state (in a positive or negative direction)</li> 
+# <li>We compute <em><strong>C storage capacity (X<sub>C</sub>)</strong></em> for each model. <em><strong>X<sub>C</sub> </strong></em> (as a function of time) represents the maximum C storage for the system under current conditions. It is a theoretical steady state at each time point that would be achieved if the conditions (C input and environmental factors) remained constant. <em><strong>X<sub>C</sub></strong></em>  is an autonomous attractor for <em><strong>X</strong></em>. In a non-autonomous system with variable C input and environmental factors (such as temperature and moisture) ecosystem <em><strong>X</strong></em> is constantly chasing <em><strong>X<sub>C</sub></strong></em>, but cannot consistently reach it due to variable conditions: when <em><strong>X<sub>C</sub> &gt X</strong></em>, <em><strong>X</strong></em> is increasing, and when <em><strong>X<sub>C</sub> &lt X</strong></em>, <em><strong>X</strong></em> is decreasing. If at any point in time the system becomes autonomous (C input and environmental factors are constant) then <em><strong>X<sub>C</sub></strong></em> becomes an attractor for <em><strong>X</strong></em>, so that <em><strong>X</strong></em> gets asymptotically closer to <em><strong>X<sub>C</sub></strong></em> until the system reaches the steady state with <em><strong>X</strong></em> = <em><strong>X<sub>C</sub></strong></em>. The difference between <em><strong>X<sub>C</sub></strong></em> and <em><strong>X</strong></em> at each point in time is called  <em><strong>C storage potential (X<sub>P</sub>)</strong></em>: it shows how far the current C storage of the system is from the theoretical steady state (in a positive or negative direction).</li> 
 # <li><em><strong>X<sub>C</sub></strong></em> of each model depends on <em><strong>C input</strong></em> (in our case - <em><strong>NPP</strong></em>) and <em><strong>Equilibrium Residence Time (RT)</strong></em>. We compare <em><strong>NPP</strong></em> and <em><strong>RT</strong></em> for each model and attribute the contribution of <em><strong>NPP</strong></em> and <em><strong>RT</strong></em> to the discrepancy of <em><strong>X<sub>C</sub></strong></em>.</li>
 # <li><em><strong>RT</strong></em> represents the time which it would take on average for C particle to exit the system after it entered it, if the system was at the equilibrium. In a transient simulation, where the system is not at the steady state, <em><strong>RT</strong></em> becomes a dynamic model characteristic that can be interpreted as a measure of the inverse C turnover rate of the system at each point in time. <em><strong>RT</strong></em> depends on the model structure and on environmental factors. To single out environmental effects we determine <em><strong>temperature</strong></em> and <em><strong>moisture sensitivity</strong></em> of <em><strong>RT</strong></em>, and compare it between models.</li> We also compare <em><strong> RT </strong></em> at fixed temperatures and moisture conditions (gauge conditions) including minimum, maximum and mean conditions across the period of the simulation.
 # <li> Based on the traceable components: <em><strong> NPP, RT, temperature</strong></em> and <em><strong>moisture sensitivity</strong></em> of <em><strong>RT </strong></em>, we can make conclusions regarding the inherent similarity/dissimilarity between the models and single out mechanisms that contribute most to the discrepancy of C predictions. 
@@ -54,14 +54,12 @@ import general_helpers as gh
 model_names={ 
     "yz_jules": "JULES",
     "kv_visit2": "VISIT",
-    "yz_jules2": "JULES_2", # placeholder for a 3rd model - copy folder yz_jules and call it "yz_jules2" to run this
 }
 
 # selecting colors for plotting models
 model_cols={
     "yz_jules": "blue",
     "kv_visit2": "orange",
-    "yz_jules2": "green",
 }
 # -
 
@@ -73,20 +71,72 @@ comparison_table
 
 # ### Plots of traceable components
 
-# +
-# assuming same step size for each model
-delta_t_val=30
+# define same step size for each model (in days)
+delta_t_val=1 # it has to be 1 for consistency of comparison
 
-# variables to plot
-var_names={
-        'x':'Total Carbon (X) and Carbon Storage Capacity (X_c)',
-        'x_p':'Carbon Storage Potential (X_p)',
-        'u':'Carbon Input (NPP)',
-        'rt':'Residense Time (RT)'
-    } 
+gh.plot_x_xc(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
 
-gh.plot_yearly_components(model_names=model_names, var_names=var_names, delta_t_val=delta_t_val, model_cols=model_cols)
-# -
+gh.plot_normalized_x(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
+
+gh.plot_normalized_xc(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
+
+gh.plot_xp(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
+
+gh.plot_u(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
+
+gh.plot_normalized_u(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
+
+gh.plot_rt(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
+
+gh.plot_normalized_rt(model_names=model_names,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=365,
+             overlap=True
+             )
 
 # ## Below are plots in development
 
@@ -96,84 +146,20 @@ gh.plot_yearly_components(model_names=model_names, var_names=var_names, delta_t_
 ####################################################
 
 # define models to compare as a dictionary (folder name : model name)
-model_names={ 
-    "yz_jules": "JULES",
-    "kv_visit2": "VISIT",
-    "yz_jules2": "JULES_2", # placeholder for a 3rd model - copy folder yz_jules and call it "yz_jules2" to run this
-}
+# model_names={ 
+#     "yz_jules": "JULES",
+#     "kv_visit2": "VISIT",
+#     "yz_jules3": "JULES_3", # placeholder for a 3rd model - copy folder yz_jules and call it "yz_jules2" to run this
+# }
 
-var_names={
-        'x_c':'Carbon Storage Capacity (X_c)',
-        'u':'Carbon Input (NPP)',
-        'rt':'Residense Time (RT)'
-    } 
+# var_names={
+#         'x_c':'Carbon Storage Capacity (X_c)',
+#         'u':'Carbon Input (NPP)',
+#         'rt':'Residense Time (RT)'
+#     } 
                 
-gh.plot_yearly_diff(model_names=model_names, var_names=var_names, delta_t_val=delta_t_val)
-
-# +
-# this is to show full duration for YULES and VISIT.
-# JULES starts in 1700 and VISIT - in 1860.
-# X and NPP are very different for both models at the start of the simulation.
-# Therefore, differences also can be traced to the spin-up process to NPP estimion by each model
-
-# assuming same step size for each model
-delta_t_val=30
-
-def plot_yearly_diff(mf_1, mf_2, delta_t_val, model_cols):
-    n=2
-
-    itr_1=gh.traceability_iterator_instance(mf_1,delta_t_val)
-    start_1,stop_1=gh.min_max_index(mf_1,delta_t_val,*gh.t_min_tmax([mf_1,mf_1],delta_t_val))
-    parts_1=gh.partitions(start_1,stop_1,12)
-    times_1=gh.averaged_times(
-        gh.times_in_days_aD(mf_1,delta_t_val)/365,
-        parts_1
-        )
-    vals_1=itr_1.averaged_values(
-        parts_1
-        )        
-    
-
-    itr_2=gh.traceability_iterator_instance(mf_2,delta_t_val)
-    start_2,stop_2=gh.min_max_index(mf_2,delta_t_val,*gh.t_min_tmax([mf_1,mf_2],delta_t_val))    
-    parts_2=gh.partitions(start_2,stop_2,12)
-    times_2=gh.averaged_times(
-        gh.times_in_days_aD(mf_2,delta_t_val)/365,
-        parts_2
-        )
-    vals_2=itr_2.averaged_values(
-        parts_2
-        )
-    
-    fig=plt.figure(figsize=(20,(n)*10))
-    axs=fig.subplots(5,1)
-    
-    ###################################################
-    # plot x_c, u and rt for both models 
-    ###################################################
-    def subp(ax,name):
-        def subsubp(mf,vals,times):
-            ax.plot(
-                times,
-                vals.__getattribute__(name),
-                color=model_cols[mf],
-                label=mf
-            )
-            
-        subsubp( mf_1, vals_1,  times_1 )
-        subsubp( mf_2, vals_2,  times_2 )
-        ax.legend()
-        ax.set_title(name)
-
-    subp(axs[0],"x")        
-    subp(axs[1],"x_c")
-    subp(axs[2],"x_p")
-    subp(axs[3],"u")
-    subp(axs[4],"rt")
-    
-mf_1="yz_jules"
-mf_2="kv_visit2"
-plot_yearly_diff(mf_1, mf_2,delta_t_val=delta_t_val,model_cols=model_cols)
+# gh.plot_diff(model_names=model_names, var_names=var_names, delta_t_val=delta_t_val, part=1, averaging=1)
 # -
+
 
 
