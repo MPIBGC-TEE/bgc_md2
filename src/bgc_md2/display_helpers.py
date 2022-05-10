@@ -20,7 +20,9 @@ def mass_balance_equation(mvs):
         sv = mvs.get_StateVariableTuple()
     
         eq = Math(
-            r'\frac{dx}{dt}='+
+            r'\frac{d}{dt}'+
+            rf'{latex(sv)}'+
+            "="+
             rf'{latex(ip)}'+
             r'+'+
             rf'{latex(cm)}'+
