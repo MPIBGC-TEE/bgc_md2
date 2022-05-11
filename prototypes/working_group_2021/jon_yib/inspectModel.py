@@ -27,8 +27,8 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 #set auto reload for notebook
 # %load_ext autoreload
 # %autoreload 2
+# -
 
-# +
 # Packages for symbolic code: 
 from sympy import Symbol, Function, diag, ImmutableMatrix 
 from ComputabilityGraphs.CMTVS import CMTVS
@@ -46,7 +46,7 @@ import bgc_md2.resolve.computers as bgc_c
 import bgc_md2.display_helpers as dh
 import bgc_md2.helper as h
 from collections import namedtuple
-
+import general_helpers as gh
 # Other packages
 import sys
 sys.path.insert(0,'..') # necessary to import general_helpers
@@ -71,7 +71,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from source import mvs
 import model_specific_helpers_2 as msh
-# -
 
 # ## Model Figure and Matrix Equations
 # #### Model Figure:
@@ -91,7 +90,7 @@ dh.mass_balance_equation(mvs)
 # + codehighlighter=[[11, 12], [16, 17], [8, 28], [41, 43], [8, 24], [42, 44]]
 with Path('config.json').open(mode='r') as f:
     conf_dict=json.load(f) 
-#msh.download_my_TRENDY_output(conf_dict)
+msh.download_my_TRENDY_output(conf_dict)
 # -
 
 # ## Connect Data and Symbols (Must Edit)
@@ -231,6 +230,7 @@ epa0 =msh.EstimatedParameters(
 #temp_obs = np.array([temp(d) for d in range(n)])
 
 # Plot simulation output for observables
+<<<<<<< HEAD
 #fig = plt.figure(figsize=(12, 4), dpi=80)
 #plot_solutions(
 #        fig,
@@ -275,7 +275,7 @@ obs_simu = param2res_sym(epa0)                # Run forward model from initial c
 
 fig = plt.figure()
 from general_helpers import plot_observations_vs_simulations
-plot_observations_vs_simulations(fig,svs,obs_simu)
+gh.plot_observations_vs_simulations(fig,svs,obs_simu)
 
 
 # ## Data Assimilation
@@ -309,7 +309,7 @@ epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
 param2res=msh.make_param2res_sym(mvs,cpa,dvs)
 print("Starting data assimilation...")
 # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-C_autostep, J_autostep = autostep_mcmc_2(
+C_autostep, J_autostep = gh.autostep_mcmc_2(
     initial_parameters=epa0,
     filter_func=msh.make_param_filter_func(epa_max, epa_min),
     param2res=param2res,

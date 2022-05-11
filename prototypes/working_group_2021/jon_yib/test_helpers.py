@@ -4,7 +4,10 @@ from sympy import Symbol, Function
 from pathlib import Path
 import numpy as np
 import json 
+import numpy as np
+from functools import lru_cache
 
+@lru_cache
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
@@ -83,6 +86,7 @@ def make_test_args(conf_dict,msh,mvs):
         'c_soil_mic_0': 0.05837121211447685,
         'c_soil_slow_0': 0.3228602860446373
     }
+
     
     epa_0 = msh.EstimatedParameters(**par_dict)
     epa_opt = epa_0

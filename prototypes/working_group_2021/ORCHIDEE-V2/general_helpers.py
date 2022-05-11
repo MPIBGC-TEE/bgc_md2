@@ -1,10 +1,90 @@
 import numpy as np
 from tqdm import tqdm
-from typing import Callable, Tuple, Iterable
+from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
 from copy import copy
 from time import time
+from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
+from collections import namedtuple
 
+import CompartmentalSystems.helpers_reservoir as hr
+from pathlib import Path
+import json 
+import netCDF4 as nc
+
+days_per_year = 365 
+
+# should be part  of CompartmentalSystems
+def make_B_u_funcs(
+        mvs,
+        mpa,
+        func_dict
+    ):
+        model_params = {Symbol(k): v for k,v in mpa._asdict().items()}
+        return make_B_u_funcs_2(mvs,model_params,func_dict)
+
+def make_B_u_funcs_2(
+        mvs,
+        model_params,
+        func_dict,
+        delta_t_val=1
+    ):
+        #symbol_names = mvs.get_BibInfo().sym_dict.keys()   
+        #for name in symbol_names:
+        #    var(name)
+        t = mvs.get_TimeSymbol()
+        it = Symbol('it')
+        delta_t=Symbol('delta_t')
+        parameter_dict = {**model_params,delta_t: delta_t_val}
+        state_vector = mvs.get_StateVariableTuple()
+
+        sym_B =hr.euler_forward_B_sym(
+                mvs.get_CompartmentalMatrix(),
+                cont_time=t,
+                delta_t=delta_t,
+                iteration=it
+        )
+        #from IPython import embed;embed()
+        sym_u = hr.euler_forward_net_u_sym(
+                mvs.get_InputTuple(),
+                t,
+                delta_t,
+                it
+        )
+        
+        B_func = hr.numerical_array_func(
+                state_vector = state_vector, 
+                time_symbol=it,
+                expr=sym_B,
+                parameter_dict=parameter_dict,
+                func_dict=func_dict
+        )
+        u_func = hr.numerical_array_func(
+                state_vector = state_vector,
+                time_symbol=it,
+                expr=sym_u,
+                parameter_dict=parameter_dict,
+                func_dict=func_dict
+        )
+        return (B_func,u_func)
+
+
+def numfunc(expr_cont, mvs ,delta_t_val, par_dict, func_dict):
+    # This function 
+    # build the discrete expression (which depends on it,delta_t instead of
+    # the continius one that depends on t (TimeSymbol))
+    t=mvs.get_TimeSymbol()
+    it=Symbol("it")           #arbitrary symbol for the step index )
+    delta_t=Symbol('delta_t')
+    expr_disc = expr_cont.subs({t:delta_t*it})
+    expr_num = expr_disc.subs({delta_t:delta_t_val})
+    #print(expr_cont,expr_disc,expr_num)
+    return hr.numerical_function_from_expression(
+        expr=expr_num,
+        tup=(it, *mvs.get_StateVariableTuple()),
+        parameter_dict=par_dict,
+        func_set=func_dict
+    )
 
 def make_uniform_proposer(
         c_max: Iterable,
@@ -13,7 +93,7 @@ def make_uniform_proposer(
         filter_func: Callable[[np.ndarray], bool],
 ) -> Callable[[Iterable], Iterable]:
     """Returns a function that will be used by the mcmc algorithm to propose
-    a new parameter value tuple based on a given one.
+    a new parameter value tuple based on a given one. 
     The two arrays c_max and c_min define the boundaries
     of the n-dimensional rectangular domain for the parameters and must be of
     the same shape.  After a possible parameter value has been sampled the
@@ -31,7 +111,7 @@ def make_uniform_proposer(
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + (g.random(paramNum) - 0.5) * (c_max - c_min) / D
+            c_new = c_op + np.random.uniform(-0.5,0.5,paramNum) * ((c_max - c_min) / D)
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -60,7 +140,7 @@ def make_multivariate_normal_proposer(
     return GenerateParamValues
 
 
-def accept_costfunction(J_last: float, J_new: float, K=1):
+def accept_costfunction(J_last: float, J_new: float, K=2):
     """Regulates how new cost functions are accepted or rejected. If the new cost function is lower than the old one,
     it is always accepted. If the the new cost function is higher than the old one, it has a random
     chance to be accepted based on percentage difference between the old and the new. The chance is defined
@@ -73,7 +153,7 @@ def accept_costfunction(J_last: float, J_new: float, K=1):
     accept = False
     delta_J_percent = (J_last - J_new) / J_last * 100  # normalize delta_J as a percentage of current J
     randNum = np.random.uniform(0, 1)
-    if min(1.0, np.exp(delta_J_percent*K)) > randNum:  # 1% higher cost function has 37% chance to be accepted
+    if min(1.0, np.exp(delta_J_percent*K)) > randNum:  # 1% higher cost function has 14% chance to be accepted
         accept = True
     return accept
 
@@ -87,9 +167,10 @@ def autostep_mcmc(
         nsimu: int,
         c_max: np.ndarray,
         c_min: np.ndarray,
-        acceptance_rate=10,
+        acceptance_rate=15,
         chunk_size=100,
-        D_init=1
+        D_init=1, 
+        K=1 
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
@@ -105,10 +186,11 @@ def autostep_mcmc(
     :param nsimu: The length of the chain
     :param c_max: Array of maximum values for each parameter
     :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %, default is 10%
+    :param acceptance_rate: Target acceptance rate in %, default is 20%
     :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
     Set to 0 for constant step size. Default is 100.
-    :param D_init: initial D value (Increase to get a smaller step size), default = 1
+    :param D_init: initial D value (increase to get a smaller step size), default = 1
+    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions), default = 1
     """
     np.random.seed(seed=10)
 
@@ -121,7 +203,8 @@ def autostep_mcmc(
     J_last = costfunction(first_out)
     J_min = J_last
     J_min_simu = 0
-    print('first_iteration done after ' + str(time() - tb))
+    print('First_iteration done after ' + str( round(time() - tb, 2)) + 's')
+    print('Status update every 10 iterations:')
     # J_last = 400 # original code
 
     # initialize the result arrays to the maximum length
@@ -142,15 +225,18 @@ def autostep_mcmc(
                 accepted_current = 1  # to avoid division by 0
             D = D * np.sqrt(
                 acceptance_rate / (accepted_current / chunk_size * 100))  # compare acceptance and update step
+            if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
+                D = (1 / paramNum)
             accepted_current = 0
             proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func)
         if simu % (chunk_size * 20) == 0:  # every 20 chunks - return to the initial step size (to avoid local minimum)
             D = D_init
+
         c_new = proposer(C_op)
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
 
-        if accept_costfunction (J_last=J_last, J_new=J_new):
+        if accept_costfunction (J_last=J_last, J_new=J_new, K=K):
             C_op = c_new
             J_last = J_new
             if J_last < J_min:
@@ -167,11 +253,10 @@ def autostep_mcmc(
         if simu % 10 == 0 or simu == (nsimu - 1):
             print(
                 """ 
-               #(upgraded): {n}  | D value: {d} 
-               overall acceptance ratio: {r}% | currently {ac} accepted out of {ch}
+               #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
                progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
                time elapsed: {minutes:02d}:{sec:02d}
-               overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
+               overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
                """.format(
                     n=upgraded,
                     r=int(upgraded / (simu + 1) * 100),
@@ -183,7 +268,7 @@ def autostep_mcmc(
                     sec=int((time() - st) % 60),
                     cost=round(J_min, 2),
                     cost2=round(J_last, 2),
-                    ac=accepted_current,
+                    ac=accepted_current/chunk_size*100,
                     # rr=int(accepted_current / chunk_size * 100),
                     ch=chunk_size,
                     d=round(D, 3),
@@ -305,8 +390,10 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
 def mcmc(
         initial_parameters: Iterable,
         proposer: Callable[[Iterable], Iterable],
-        param2res: Callable[[np.ndarray], np.ndarray],
-        costfunction: Callable[[np.ndarray], np.float64],
+        #param2res: Callable[[np.ndarray], np.ndarray],
+        #costfunction: Callable[[np.ndarray], np.float64],
+        param2res: Callable, 
+        costfunction: Callable, 
         nsimu: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -337,7 +424,7 @@ def mcmc(
     # J_last = 400 # original code
 
     # initialize the result arrays to the maximum length
-    # Depending on many of the parameters will be accepted only
+    # Depending on many of the parameters will be accepted only 
     # a part of them will be filled with real values
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
@@ -359,7 +446,7 @@ def mcmc(
             J_upgraded[1, upgraded] = J_last
             J_upgraded[0, upgraded] = simu
             upgraded = upgraded + 1
-        # print some metadata
+        # print some metadata 
         # (This could be added to the output file later)
 
         if simu % 10 == 0 or simu == (nsimu - 1):
@@ -427,16 +514,14 @@ def make_jon_cost_func(
     denominators = means ** 2
 
     def costfunction(mod: np.ndarray) -> np.float64:
-        cost = np.mean(
-            (100/n) * np.sum((obs - mod) ** 2, axis=0) / denominators,
-        axis=1)
+        cost = (100/n) * np.sum(
+            100 * np.sum((obs - mod)**2, axis=0) / denominators 
+            )
         return cost
-
     return costfunction
 
-
 def day_2_month_index(d):
-    return months_by_day_arr()[(d % 365)]
+    return months_by_day_arr()[(d % days_per_year)]
 
 
 @lru_cache
@@ -453,6 +538,18 @@ def months_by_day_arr():
             )
         )
     )
+
+def year_2_day_index(ns):
+    """ computes the index of the day at the end of the year n in ns
+    this works on vectors 
+    """
+    return np.array(list(map(lambda n:days_per_year*n,ns)))
+
+def day_2_year_index(ns):
+    """ computes the index of the year
+    this works on vectors 
+    """
+    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
 
 
 def month_2_day_index(ns):
@@ -555,6 +652,7 @@ def plot_solutions(
     if names is None:
         names = tuple(str(i) for i in range(len(tup)))
 
+    #from IPython import embed; embed()
     assert (all([tup[0].shape == el.shape for el in tup]))
 
     if tup[0].ndim == 1:
@@ -585,3 +683,337 @@ def plot_solutions(
                 )
                 axs[j].set_title(var_names[j])
                 axs[j].legend()
+
+def plot_observations_vs_simulations(
+        fig,
+        svs_cut,
+        obs_simu
+    ):
+    # svn and obs_simu are both 
+    n_plots=len(svs_cut)
+    fig.set_figheight(n_plots* fig.get_figwidth())
+    axs=fig.subplots(n_plots)
+    for i,name in enumerate(svs_cut.__class__._fields):
+        var=svs_cut[i]
+        var_simu=obs_simu[i]
+        axs[i].plot(range(len(var_simu)),var_simu,label="simulation")
+        axs[i].plot(range(len(var)),var,label='observation')
+        axs[i].legend()
+        axs[i].set_title(name)
+
+
+
+
+def global_mean(lats,lons,arr):
+    # assuming an equidistant grid.
+    delta_lat=(lats.max()- lats.min())/(len(lats)-1)
+    delta_lon=(lons.max() -lons.min())/(len(lons)-1)
+
+    pixel_area = make_pixel_area_on_unit_spehre(delta_lat, delta_lon)
+    
+    #copy the mask from the array (first time step) 
+    weight_mask=arr.mask[0,:,:] if  arr.mask.any() else False
+
+    weight_mat= np.ma.array(
+        np.array(
+            [
+                    [   
+                        pixel_area(lats[lat_ind]) 
+                        for lon_ind in range(len(lons))    
+                    ]
+                for lat_ind in range(len(lats))    
+            ]
+        ),
+        mask = weight_mask 
+    )
+    
+    # to compute the sum of weights we add only those weights that
+    # do not correspond to an unmasked grid cell
+    return  (weight_mat*arr).sum(axis=(1,2))/weight_mat.sum()
+
+
+
+
+def grad2rad(alpha_in_grad):
+    return np.pi/180*alpha_in_grad
+
+
+def make_pixel_area_on_unit_spehre(delta_lat,delta_lon,sym=False):  
+    # we compute the are of a delta_phi * delta_theta patch 
+    # on the unit ball centered around phi,theta  
+    # (which depends on theta but not
+    # on phi)
+    # the infinitesimal area element dA = sin(theta)*d_phi * d_theta
+    # we have to integrate it from phi_min to phi_max
+    # and from theta_min to theta_max
+    if sym:
+        # we can do this with sympy (for testing) 
+        for v in ('theta','phi','theta_min', 'theta_max','phi_min','phi_max'):
+            var(v)
+        
+        # We can do this symbolicaly with sympy just for testing...
+        A_sym = integrate(
+                    integrate(
+                        sin(theta),
+                        (theta,theta_min,theta_max)
+                    ),
+                    (phi,phi_min,phi_max)
+        )
+        # translate this to a numeric function
+        A_num=lambdify((theta_min,theta_max,phi_min,phi_max),A_sym,modules=['numpy'])
+    else:
+        # or manually solve the integral since it is very simple
+        def A_num(theta_min,theta_max,phi_min,phi_max):
+            return (
+                (phi_max-phi_min)
+                *
+                (-np.cos(theta_max) + np.cos(theta_min))
+            )
+
+    delta_theta, delta_phi = map(grad2rad, ( delta_lat, delta_lon))
+    dth = delta_theta/2.0
+    dph = delta_phi/2.0
+    
+    def A_patch(theta):
+        # computes the area of a pixel on the unitsphere
+        if np.abs(theta<dth/100): #(==0)  
+            # pixel centered at north pole only extends northwards
+            #print("##################### north pole ##########")
+            theta_min_v=0.0
+            theta_max_v=dth
+        elif np.abs(theta > np.pi-dth/100): #==pi) 
+            # pixel centered at south pole only extends northwards
+            #print("##################### south pole ##########")
+            theta_min_v=np.pi-dth
+            theta_max_v=np.pi 
+        else: 
+            # normal pixel extends south and north-wards
+            theta_min_v=theta-dth
+            theta_max_v=theta+dth
+
+        phi_min_v = -dph
+        phi_max_v = +dph
+        res = A_num(
+            theta_min_v,
+	    theta_max_v,
+	    phi_min_v,
+	    phi_max_v
+        )
+        #print(res)
+        return res
+     
+
+    def pixel_area_on_unit_sphere(lat):
+        # computes the fraction of the area of the sphere covered by this pixel
+        theta_grad=lat+90
+        theta = grad2rad(theta_grad)
+        # the area of the unitsphere is 4 * pi
+        return A_patch(theta)
+
+    return pixel_area_on_unit_sphere
+
+
+def download_TRENDY_output(
+        username: str,
+        password: str,
+        dataPath: Path,
+        models: List[str],
+        variables: List[str]
+):
+    import paramiko
+    import tarfile
+    import gzip
+    import shutil
+
+    def unzip_shutil(source_filepath, dest_filepath, model):
+        if model == "YIBs":
+            f=tarfile.open(source_filepath,'r:gz')
+            f.extractall(path=dataPath)
+            f.close()
+        else:
+            with gzip.open(source_filepath, 'rb') as s_file, open(dest_filepath, 'wb') as d_file:
+                shutil.copyfileobj(s_file, d_file)
+    
+    # open a transport
+    host = "trendy.ex.ac.uk"
+    port = 22
+    transport = paramiko.Transport(host)
+    
+    # authentication
+    transport.connect(None,username=username,password=password)
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    
+    #We are using s2 data
+    experiments = ["S2"]
+    
+    #Loop through models, experiments, and variables to download
+    for model in models:
+        print("downloading data for",model,"model")
+        for experiment in experiments:
+            for variable in variables:
+                 
+                modelname = model
+                modelname_file = model
+                ext = "nc"
+                extra = ""
+                
+                if model == "CLM5":
+                    modelname_file = "CLM5.0"
+                elif model == "ORCHIDEEv3" or model == "ORCHIDEEv3_0.5deg":
+                    modelname_file = "ORCHIDEEv3"
+                elif model == "ISBA_CTRIP":
+                    modelname_file = "ISBA-CTRIP"
+                elif model == "JULES-ES":
+                    modelname = "JULES-ES-1.0"
+                    modelname_file = "JULES-ES-1p0"
+                elif model == "SDGVM" or model == "VISIT":
+                    ext = "nc.gz"
+                elif model == "YIBs":
+                    ext = "nc.tar.gz"
+                    if variable == "cSoil" or variable == "cVeg" or variable == "landCoverFrac":
+                        extra="Annual_"
+                    else:
+                        extra = "Monthly_"
+                elif model == "LPJwsl":
+                    modelname_file = "LPJ"
+                    ext = "nc.gz"
+                    
+                filename  = modelname_file + "_" + experiment + "_" + extra + variable + "." + ext
+                   
+                try:
+                    dataPath.mkdir(exist_ok=True)
+                    complete_path = "output/" + modelname + "/" + experiment + "/" + filename
+                    zipped_path = dataPath.joinpath(filename)
+                    unzipped_filename = modelname_file + "_" + experiment + "_" + extra + variable + ".nc"
+                    unzipped_path = dataPath.joinpath(unzipped_filename)
+                    try:
+                        unzipped_path.resolve(strict=True)
+                    except FileNotFoundError:
+                        try:
+                            zipped_path.resolve(strict=True)
+                        except FileNotFoundError:
+                            print("downloading missing data:",variable)
+                            sftp.get(
+                                remotepath=complete_path,
+                                localpath=zipped_path
+                            )
+                            if zipped_path != unzipped_path:
+                                print("unzipping",zipped_path)
+                                unzip_shutil(zipped_path,unzipped_path,model)
+                        else:
+                            print("unzipping",zipped_path)
+                            unzip_shutil(zipped_path,unzipped_path,model)
+                    else:
+                        print(unzipped_path,"exists, skipping")                    
+                except FileNotFoundError as e:
+                    print(e)
+                    print(complete_path)
+                    print(zipped_path)               
+    print("finished!")
+
+
+def monthly_to_yearly(monthly):
+    #TRENDY specific - months weighted like all months are 30 days
+    if len(monthly.shape) > 1:
+        sub_arrays=[monthly[i*12:(i+1)*12,:,:] for i in range(int(monthly.shape[0]/12))]
+    else:
+        sub_arrays=[monthly[i*12:(i+1)*12,] for i in range(int(monthly.shape[0]/12))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+
+
+
+def pseudo_daily_to_yearly(daily):
+    # compute a yearly average from pseudo daily data
+    # for one data point
+    pseudo_days_per_year = pseudo_days_per_month*12 
+    sub_arrays=[daily[i*pseudo_days_per_year:(i+1)*pseudo_days_per_year,:] for i in range(int(daily.shape[0]/pseudo_days_per_year))]
+    return np.stack(list(map(lambda sa:sa.mean(axis=0), sub_arrays)), axis=0)
+
+def make_param_filter_func(
+        c_max: np.ndarray,
+        c_min: np.ndarray
+        ) -> Callable[[np.ndarray], bool]:
+
+    def isQualified(c):
+        # fixme
+        #   this function is model specific: It discards parameter proposals
+        #   where beta1 and beta2 are >0.99
+        cond1 =  (c >= c_min).all() 
+        cond2 =  (c <= c_max).all() 
+        return (cond1 and cond2 )
+        
+    
+    return isQualified
+
+def make_StartVectorTrace(mvs):
+    svt=mvs.get_StateVariableTuple()
+    return namedtuple(
+        "StartVectorTrace",
+         [str(v) for v in svt]+
+         [str(v)+"_p" for v in svt]+
+         [str(v)+"_c" for v in svt]+
+         [str(v)+"_RT" for v in svt]
+    )
+
+def make_InitialStartVectorTrace(X_0,mvs, par_dict,func_dict):
+    # test the new iterator
+
+    # we make the X_p and X_c  parts compatible with the ones computed by the iterator
+    # for following timesteps (to keep it)
+    # As you can see in the definition of the iterator these values have no impact on further results
+    B_func, u_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    I = u_func(0,X_0)
+    u=I.sum()
+    b=I/u
+    B = B_func(0,X_0)
+    B_inf = np.linalg.inv(B)
+    X_p_0 = B_inf@I
+    X_c_0 = X_0+X_p_0
+    RT_0 = B_inf@b
+    # combine the three
+    #here we rely on order to be consistent
+    #(although we could use also the names of the namedtuple)
+    V_arr=np.concatenate((X_0,X_p_0,X_c_0,RT_0),axis=0 )
+    StartVectorTrace=make_StartVectorTrace(mvs)
+    V_init=StartVectorTrace(*V_arr)
+    return V_init
+
+def make_daily_iterator_sym_trace(
+        mvs,
+        V_init, #: StartVectorTrace,
+        par_dict,
+        func_dict
+    ):
+    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)  
+    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1) 
+    
+    n=len(mvs.get_StateVariableTuple())
+    def f(it,V):
+        #the pools are the first n values
+        X = V[0:n] 
+        I = I_func(it,X) 
+        # we decompose I
+        u=I.sum()
+        b=I/u
+        B = B_func(it,X)
+        B_inf = np.linalg.inv(B)
+        X_new = X + I + B @ X
+        X_p = B_inf @ I
+        X_c = X_new+X_p
+        RT = B_inf @ b
+        V_new = np.concatenate(
+            (
+                X_new.reshape(n,1),
+                X_p.reshape(n,1),
+                X_c.reshape(n,1),
+                RT.reshape(n,1),
+            ),
+            axis=0
+        )
+        return V_new
+    
+    return TimeStepIterator2(
+        initial_values=V_arr,
+        f=f,
+    )
+    

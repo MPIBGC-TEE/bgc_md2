@@ -11,6 +11,7 @@ from frozendict import frozendict
 from importlib import import_module
 import matplotlib.pyplot as plt
 import os
+import datetime as dt
 
 from pathlib import Path
 import json 
@@ -1634,7 +1635,11 @@ def get_cached_global_mean(gm_path, vn):
 
 # +
 import bgc_md2.display_helpers as dh
-from bgc_md2.resolve.mvars import CompartmentalMatrix, InputTuple
+from bgc_md2.resolve.mvars import (
+    CompartmentalMatrix,
+    InputTuple,
+    StateVariableTuple
+)
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -1661,21 +1666,43 @@ def model_table(
 def sim_day_2_day_aD_func(mf): #->function
     return msh(mf).make_sim_day_2_day_since_a_D(confDict(mf))
 
-def times_in_days_aD(mf,delta_t_val):
-    n_months=len(test_args(mf).dvs[0])
-    n_days=n_months*30
+# def times_in_days_aD(mf,delta_t_val):
+#     import datetime as dt
+#     n_months=len(test_args(mf).dvs[0])
+#     end_date = dt.date(2019, 12, 16) # end of simulation 
+#     sd = dt.date(2010, 1, 1)-(0,n_months,0)
+#     n_days=n_months*30
+#     n_iter=int(n_days/delta_t_val)
+#     days_after_sim_start=delta_t_val*np.arange(n_iter)
+#     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+
+def times_in_days_aD(mf, delta_t_val):
+    start_date = msh(mf).start_date # start of the simulation
+    end_date = msh(mf).end_date # end of the simulation
+    duration=end_date-start_date
+    # 365-day calendar does not include leap years so we exclude them    
+    n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
     n_iter=int(n_days/delta_t_val)
     days_after_sim_start=delta_t_val*np.arange(n_iter)
     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
 
 # function to determine overlapping time frames for models simulations 
-def t_min_tmax(model_folders,delta_t_val):
+def t_min_tmax_overlap(model_folders,delta_t_val):
     td={
         mf: times_in_days_aD(mf,delta_t_val)
         for mf in model_folders
     }
     t_min = max([t.min() for t in td.values()])
     t_max = min([t.max() for t in td.values()])
+    return (t_min,t_max)
+
+def t_min_tmax_full(model_folders,delta_t_val):
+    td={
+        mf: times_in_days_aD(mf,delta_t_val)
+        for mf in model_folders
+    }
+    t_min = min([t.min() for t in td.values()])
+    t_max = max([t.max() for t in td.values()])
     return (t_min,t_max)
 
 # function find the timesteps corresponding to shared times
@@ -1736,72 +1763,403 @@ def traceability_iterator_instance(mf, # model folder name
         delta_t_val=delta_t_val
     )
 
-def plot_yearly_components(model_names, # dictionary (folder name : model name)
+def avg_timeline (timeline, # array
+                  averaging # number of steps over which to average
+                ):
+    if averaging<1: 
+         raise Exception('Invalid averaging in avg_timeline: should be >=1')
+    output=timeline
+    if averaging>1:
+        n=len(timeline)//averaging
+        if len(timeline)%averaging>0:
+            n+=1
+        output=np.zeros(n)
+        counter=0
+        i=0
+        while i < (len(timeline)):            
+            x=0
+            sum=0
+            while x < (averaging):
+                if i+x > (len(timeline)-1):
+                    break
+                sum+=timeline[i+x]
+                x+=1                
+            output[counter]=sum/(x)
+            counter+=1
+            i+=x
+    return(output)
+
+def days_AD_to_years(days): # days can be an integer of an array of integers
+    start_date=dt.date(1, 1, 1)
+    if type(days)==int:
+        delta = dt.timedelta(days=days)
+        end_date=start_date+delta
+        years=end_date.year+(end_date.month-1)/12+end_date.day/365
+    else:
+        years=np.zeros(len(days))
+        for i in range(len(days)):
+            delta = dt.timedelta(days=int(days[i]))
+            end_date=start_date+delta
+            years[i]=end_date.year+(end_date.month-1)/12+end_date.day/365
+    return(years)
+        
+end_date = dt.date(2019, 12, 16)
+
+def plot_components_combined(model_names, # dictionary (folder name : model name)
                            var_names, # dictionary (trace_tuple name : descriptive name)
                            delta_t_val, # model time step
                            model_cols, # dictionary (folder name :color)
+                           part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+                           averaging, # number of iterator steps over which to average results. 1 for no averaging  
                           ):
-
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
     model_folders=[(k) for k in model_names]
     variables=[(k) for k in var_names]
     n=len(variables)
-    yr=int(365/delta_t_val)
     
-    fig=plt.figure(figsize=(20,n*10))
+    fig=plt.figure(figsize=(17,n*8))
     axs=fig.subplots(n,1)
-    
-    # calculate output array length for the average base on the 1st model
-    start,stop=min_max_index(model_folders[0],delta_t_val,*t_min_tmax(model_folders,delta_t_val))
-    output_length=int((stop-start)/12)+1
-    
+            
     for i,name in enumerate(variables):
-        sum=np.zeros(output_length)
         for mf in model_folders:
             itr=traceability_iterator_instance(mf,delta_t_val)
-            start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
-            parts=partitions(start,stop,yr)
-            times=averaged_times(
-                times_in_days_aD(mf,delta_t_val)/365,
-                parts
-            )
-            vals=itr.averaged_values(
-                parts
-            )
-            sum+=vals.__getattribute__(name) # for calculating avarage
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))                             
+            # if we do not want the whole interval but look at a smaller part to observe the dynamics
+            #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+            start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+            times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+            print ("Plotting "+str(name)+" for "+str(mf)+" model")
+            vals=itr[start:stop]
             ax=axs[i]
+            times_for_plot=avg_timeline(times, averaging)
+            vals_for_plot=avg_timeline(vals.__getattribute__(name),averaging)
+            if name=='x': 
+                vals_for_plot=vals_for_plot*148940000*1000000*0.000000000001 # convert to global C in Pg          
             ax.plot(
-                times,
-                vals.__getattribute__(name),
+                times_for_plot,                    
+                vals_for_plot,
                 label=model_names[mf]+' - '+name,
                 color=model_cols[mf],
             )
             if name=='x':  # we plot x together with x_c
                 ax.plot(
-                    times,
-                    vals.__getattribute__('x_c'),
+                    times_for_plot,
+                    avg_timeline(vals.__getattribute__('x_c'),averaging)*148940000*1000000*0.000000000001,
                     label=model_names[mf]+' - x_c',
                     color=model_cols[mf],
                     linestyle = 'dashed'
                 )
             if name=='x_p':  # 0 line for X_p
                 ax.plot(
-                    times,
-                    np.zeros_like(times),
+                    times_for_plot,
+                    np.zeros_like(avg_timeline(times, averaging)),
                     color="black",
                     linestyle = 'dotted',
                     alpha=0.5
-        )
-        if name!='x_p':     # plot avarage for all models (doesn't make sense for X_p)   
-            ax.plot(
-                times,
-                sum/len(model_names),
-                label='Average '+name+' (all models)',
-                color="black",
-                linestyle = 'dotted',                
-                alpha=0.5
-            )                
+        )             
         ax.legend()
         ax.set_title(var_names[name])
+        
+def plot_x_xc(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging  
+              overlap=True # compute overlapping timeframe or plot whole duration for all models
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]         
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            label=model_names[mf]+' - X',
+            color=model_cols[mf],
+        )
+        ax.plot(
+            avg_timeline(times, averaging),
+            avg_timeline(vals.__getattribute__('x_c'),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            label=model_names[mf]+' - X_c',
+            color=model_cols[mf],
+            linestyle = 'dashed'
+        )              
+    ax.legend()
+    ax.set_title('Total Carbon (X) and Carbon Storage Capacity (X_c)')
+    ax.set_ylabel('Gt C')
+    ax.grid()
+    
+# change of X since the start of simulation
+def plot_normalized_x(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging
+              overlap=True # compute overlapping timeframe or plot whole duration for all models
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val)) 
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]
+        vals_for_plot=avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_array=vals_for_plot[0]
+        vals_for_plot_norm = vals_array - vals_array[0]        
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            vals_for_plot_norm,
+            label=model_names[mf],
+            color=model_cols[mf],
+        )           
+    ax.legend()
+    ax.set_title('Total Carbon (X) change since the start of the simulation')
+    ax.set_ylabel('Gt C')
+    ax.grid()
+    
+def plot_normalized_xc(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging
+              overlap=True # compute overlapping timeframe or plot whole duration for all models
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val)) 
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]
+        vals_for_plot=avg_timeline(vals.__getattribute__("x_c"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_array=vals_for_plot[0]
+        vals_for_plot_norm = vals_array - vals_array[0]        
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            vals_for_plot_norm,
+            label=model_names[mf],
+            color=model_cols[mf],
+        )           
+    ax.legend()
+    ax.set_title('Carbon Storage Capacity (X) change since the start of the simulation')
+    ax.set_ylabel('Gt C')
+    ax.grid()
+    
+def plot_xp(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging
+              overlap=True # compute overlapping timeframe or plot whole duration for all models            
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))  
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]         
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.__getattribute__("x_p"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            label=model_names[mf],
+            color=model_cols[mf],
+        ) 
+    ax.legend()
+    ax.set_title('Carbon Storage Potential (X_p)')
+    ax.set_ylabel('Gt C')
+    ax.grid()
+    
+def plot_u(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging
+              overlap=True # compute overlapping timeframe or plot whole duration for all models
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]         
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            label=model_names[mf],
+            color=model_cols[mf],
+        ) 
+    ax.legend()
+    ax.set_title('Carbon Input (NPP)')
+    ax.set_ylabel('Gt C / day')
+    ax.grid()
+    
+# u change since the start of simulation    
+def plot_normalized_u(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging 
+              overlap=True # compute overlapping timeframe or plot whole duration for all models
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]
+        vals_for_plot=avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_array=vals_for_plot[0]
+        vals_for_plot_norm = vals_array - vals_array[0]
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            vals_for_plot_norm,
+            label=model_names[mf],
+            color=model_cols[mf],
+        )
+    ax.legend()
+    ax.set_title('Carbon Input (NPP) change since the start of the simulation')
+    ax.set_ylabel('Gt C / day')
+    ax.grid()  
+    
+def plot_rt(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging 
+              overlap=True # compute overlapping timeframe or plot whole duration for all models            
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]         
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.__getattribute__("rt"),averaging)/365, # convert to years
+            label=model_names[mf],
+            color=model_cols[mf],
+        ) 
+    ax.legend()
+    ax.set_title('Equilibrium Residense Time (RT)')
+    ax.set_ylabel('Years')
+    ax.grid()
+    
+def plot_normalized_rt(model_names, # dictionary (folder name : model name)
+              delta_t_val, # model time step
+              model_cols, # dictionary (folder name :color)
+              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+              averaging, # number of iterator steps over which to average results. 1 for no averaging
+              overlap=True # compute overlapping timeframe or plot whole duration for all models
+              ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        vals=itr[start:stop]
+        vals_for_plot=avg_timeline(vals.__getattribute__("rt"),averaging)/365 # convert to years 
+        vals_for_plot_norm = vals_for_plot - vals_for_plot[0]
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            vals_for_plot_norm,            
+            label=model_names[mf],
+            color=model_cols[mf],
+        ) 
+    ax.legend()
+    ax.set_title('Equilibrium Residense Time (RT) change since the start of the simulation')
+    ax.set_ylabel('Years')
+    ax.grid()
         
 from scipy.interpolate import interp1d, splprep
 
@@ -1810,13 +2168,13 @@ from scipy.interpolate import interp1d, splprep
 # even the same stepsize or number of steps we compute interpolating functions
 # to make them comparable
 
-def model_diff(name, # name of the traceable component (as in trace_tuple)
+def timeline_diff(name, # name of variable in the tuple)
                mf_1, # model folder (1st model)
                times_1, # array of time steps (1st model)
-               vals_1, # array of values for each time step (1st model)
+               vals_1, # tuple of values for each time step (1st model)
                mf_2, # model folder (2nd model)
                times_2, # array of time steps (2nd model)
-               vals_2 # array of values for each time step (2nd model)
+               vals_2 # tuple of values for each time step (2nd model)
               ):
     f1=interp1d(times_1,vals_1.__getattribute__(name))
     f2=interp1d(times_2,vals_2.__getattribute__(name))
@@ -1831,48 +2189,44 @@ def model_diff(name, # name of the traceable component (as in trace_tuple)
     return(diff, times)  
 
 # plotting differences between traceable companents of 2 models
-def plot_yearly_diff(model_names, # dictionary (folder name : model name)
+def plot_diff(model_names, # dictionary (folder name : model name)
                      var_names, # dictionary (trace_tuple name : descriptive name)
                      delta_t_val, # model time step
+                     part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+                     averaging, # number of iterator steps over which to average results. 1 for no averaging
                     ):
-
+    if part<0 | part >1: 
+         raise Exception('Invalid partitioning in plot_diff: use part between 0 and 1')
     model_folders=[(k) for k in model_names]
     variables=[(k) for k in var_names]
     
     n=int(len(variables)*( len(model_folders) * (len(model_folders)-1) / 2))
-    yr=int(365/delta_t_val)
+    #yr=int(365/delta_t_val)
     
-    fig=plt.figure(figsize=(20,n*10))
+    fig=plt.figure(figsize=(17,n*8))
     axs=fig.subplots(n,1)
-    part=10 # for the whole interval
     plot_number=0
     for i,name in enumerate(variables):
         for j, mf_1 in enumerate(model_folders[0:len(model_folders)-1]):            
             for mf_2 in model_folders[j+1:len(model_folders)]:
-                start_1,stop_1=min_max_index(mf_1,delta_t_val,*t_min_tmax([mf_1,mf_2],delta_t_val))                              
+                start_min_1,stop_max_1=min_max_index(mf_1,delta_t_val,*t_min_tmax_overlap([mf_1,mf_2],delta_t_val))                              
+                # if we do not want the whole interval but look at a smaller part to observe the dynamics
+                start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)*part)
                 itr_1=traceability_iterator_instance(mf_1,delta_t_val)
+                #parts_1=partitions(start_1,stop_1,yr)
+                times_1=days_AD_to_years(times_in_days_aD(mf_1, delta_t_val)[start_1:stop_1])
+                vals_1=itr_1[start_1:stop_1]
                 
-                parts_1=partitions(start_1,stop_1,yr)
-                times_1=averaged_times(
-                    times_in_days_aD(mf_1,delta_t_val)/365,
-                    parts_1
-                )
-                vals_1=itr_1.averaged_values(
-                    parts_1
-                )        
-                
-                start_2,stop_2=min_max_index(mf_2,delta_t_val,*t_min_tmax([mf_2,mf_2],delta_t_val))
+                start_min_2,stop_max_2=min_max_index(mf_2,delta_t_val,*t_min_tmax_overlap([mf_2,mf_2],delta_t_val))
+                # if we do not want the whole interval but look at a smaller part to observe the dynamics
+                start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)*part)
                 itr_2=traceability_iterator_instance(mf_2,delta_t_val)                
-                parts_2=partitions(start_2,stop_2,yr)
-                times_2=averaged_times(
-                    times_in_days_aD(mf_2,delta_t_val)/365,
-                    parts_2
-                )
-                vals_2=itr_2.averaged_values(
-                    parts_2
-                )   
+                #parts_2=partitions(start_2,stop_2,yr)
+                times_2=days_AD_to_years(times_in_days_aD(mf_2, delta_t_val)[start_2:stop_2])
+                vals_2=itr_1[start_1:stop_1]
+                
                 print ("Plotting "+str(plot_number+1)+" out of "+str(n))
-                diff,times=model_diff(name,mf_1,times_1,vals_1,mf_2,times_2,vals_2)
+                diff,times=timeline_diff(name,mf_1,times_1,vals_1,mf_2,times_2,vals_2)
                 ax=axs[plot_number]
                 ax.plot(times,diff,color="black")
                 ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
