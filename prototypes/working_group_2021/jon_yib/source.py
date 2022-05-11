@@ -36,9 +36,9 @@ sym_dict={
     'c_soil_mic': '',
     'c_soil_slow': '',
     'c_soil_passive': '',
-    'r_c_leaf_rh': '',
-    'r_c_root_rh': '',
-    'r_c_wood_rh': '',
+    #'r_c_leaf_rh': '',
+    #'r_c_root_rh': '',
+    #'r_c_wood_rh': '',
     'r_c_lit_cwd_rh': '',
     'r_c_lit_met_rh': '',
     'r_c_lit_str_rh': '',
@@ -81,6 +81,7 @@ func_dict={
     'xi_leaf': 'Environmental scaler for leaf pool',
     'xi_soil': 'Environmental scaler for soil pool',
     'GPP': 'Aboveground gross input',
+    'NPP': 'Aboveground net input'
 }
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
@@ -108,17 +109,17 @@ mvs = CMTVS(
         InFluxesBySymbol(
             {   #define input/allocation
                 #RecievingPool: Input * Allocation
-                c_leaf: GPP(t) * beta_leaf,
-                c_root: GPP(t) * beta_root,
-                c_wood: GPP(t) * (1-beta_leaf-beta_root)
+                c_leaf: NPP(t) * beta_leaf,
+                c_root: NPP(t) * beta_root,
+                c_wood: NPP(t) * (1-beta_leaf-beta_root)
             }
         ),
         OutFluxesBySymbol(
             {   #define fluxes leaving the system
                 #Fluxes leaving the system: FluRate * DonorPool * EnvironmentalScaler
-                c_leaf: r_c_leaf_rh * c_leaf * xi_leaf(t),
-                c_root: r_c_root_rh * c_root * xi_leaf(t),
-                c_wood: r_c_wood_rh * c_wood * xi_leaf(t),
+                #c_leaf: r_c_leaf_rh * c_leaf * xi_leaf(t),
+                #c_root: r_c_root_rh * c_root * xi_leaf(t),
+                #c_wood: r_c_wood_rh * c_wood * xi_leaf(t),
                 c_lit_cwd: r_c_lit_cwd_rh * c_lit_cwd * xi_soil(t),
                 c_lit_met: r_c_lit_met_rh * c_lit_met * xi_soil(t),
                 c_lit_str: r_c_lit_str_rh * c_lit_str * xi_soil(t),

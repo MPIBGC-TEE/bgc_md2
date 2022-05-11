@@ -22,7 +22,7 @@ Observables_annual = namedtuple(
 )
 Observables_monthly = namedtuple(
     'Observables_monthly',
-    ["rh","ra"]
+    ["rh"] #,"ra"]
 )
 Observables = namedtuple(
     "Observables",
@@ -38,7 +38,7 @@ Constants = namedtuple(
     [
         'npp_0',       #Initial input/pools
         'rh_0',
-        'ra_0',
+        #'ra_0',
         'c_veg_0',
         'c_soil_0',
         'clay',        #Constants like clay
@@ -51,9 +51,9 @@ EstimatedParameters = namedtuple(
     [
         'beta_leaf',
         'beta_root',
-        'r_c_leaf_rh',
-        'r_c_root_rh',
-        'r_c_wood_rh',
+        #'r_c_leaf_rh',
+        #'r_c_root_rh',
+        #'r_c_wood_rh',
         'r_c_leaf_2_c_lit_met',
         'r_c_leaf_2_c_lit_str',
         'r_c_root_2_c_soil_met',
@@ -249,8 +249,8 @@ def make_iterator_sym(
     # the order later in the symbolic formulation....
     V_arr=np.array(
         [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.rh, V_init.ra]
-    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+        [V_init.rh] #, V_init.ra]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
 
     numOutFluxesBySymbol={
         k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
@@ -269,20 +269,20 @@ def make_iterator_sym(
             if Symbol(k) in numOutFluxesBySymbol.keys()
         ]
         
-        ra_flux=[
-            numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
-            for k in ["c_leaf","c_root","c_wood"] 
-            if Symbol(k) in numOutFluxesBySymbol.keys()
-        ]
+        #ra_flux=[
+        #    numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+        #    for k in ["c_leaf","c_root","c_wood"] 
+        #    if Symbol(k) in numOutFluxesBySymbol.keys()
+        #]
         
         rh = np.array(rh_flux).sum()
-        ra = np.array(ra_flux).sum()
+        #ra = np.array(ra_flux).sum()
         
         V_new = np.concatenate(
             (
                 X_new.reshape(n,1),
-                np.array([rh]).reshape(1,1),
-                np.array([ra]).reshape(1,1)
+                np.array([rh]).reshape(1,1) #,
+                #np.array([ra]).reshape(1,1)
             )
             , axis=0
         )
@@ -297,7 +297,7 @@ def make_StartVector(mvs):
     return namedtuple(
         "StartVector",
         [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["rh","ra"]
+        ["rh"] #,"ra"]
     ) 
 
 def make_func_dict(mvs,dvs,cpa,epa):
@@ -413,8 +413,8 @@ def make_param2res_sym(
                 apa['c_soil_mic_0'] +
                 apa['c_soil_slow_0']
             ),
-            rh = apa['rh_0'],
-            ra = apa['ra_0']
+            rh = apa['rh_0'] #,
+            #ra = apa['ra_0']
         )
         
         # define time step and iterator
@@ -448,7 +448,7 @@ def make_param2res_sym(
         cVeg_arr=np.zeros(cpa.nyears)
         cSoil_arr=np.zeros(cpa.nyears)
         rh_arr=np.zeros(cpa.nyears*12)
-        ra_arr=np.zeros(cpa.nyears*12)
+        #ra_arr=np.zeros(cpa.nyears*12)
         
         #set days per month, month counter, and step counts
         dpm = 30                      
@@ -462,15 +462,15 @@ def make_param2res_sym(
             cSoil_avg = 0
             for m in range(12):
                 rh_avg=0
-                ra_avg=0
+                #ra_avg=0
                 for d in range(steps_per_month):    
                     V = StartVector(*it_sym.__next__())                  
                     rh_avg += V.rh
-                    ra_avg += V.ra
+                    #ra_avg += V.ra
                     cVeg_avg += cVegF(V)
                     cSoil_avg += cSoilF(V)
                 rh_arr[im] = rh_avg/steps_per_month
-                ra_arr[im] = ra_avg/steps_per_month
+                #ra_arr[im] = ra_avg/steps_per_month
                 im += 1
             cVeg_arr[y] = cVeg_avg/steps_per_year
             cSoil_arr[y] = cSoil_avg/steps_per_year
@@ -479,8 +479,8 @@ def make_param2res_sym(
         return Observables(
             cVeg = cVeg_arr,
             cSoil = cSoil_arr,
-            rh = rh_arr,
-            ra = ra_arr)
+            rh = rh_arr) #,
+            #ra = ra_arr)
     return param2res
 
 def make_weighted_cost_func(
@@ -494,10 +494,10 @@ def make_weighted_cost_func(
         J_obj1 = (100/obs.cVeg.shape[0]) * np.sum((out_simu.cVeg - obs.cVeg)**2, axis=0) / (obs.cVeg.mean(axis=0)**2)
         J_obj2 = (100/obs.cSoil.shape[0]) * np.sum((out_simu.cSoil -  obs.cSoil)**2, axis=0) / (obs.cSoil.mean(axis=0)**2)
         J_obj3 = (100/obs.rh.shape[0]) * np.sum((out_simu.rh - obs.rh)**2, axis=0) / (obs.rh.mean(axis=0)**2)
-        J_obj4 = (100/obs.ra.shape[0]) * np.sum((out_simu.ra - obs.ra)**2, axis=0) / (obs.ra.mean(axis=0)**2)
+        #J_obj4 = (100/obs.ra.shape[0]) * np.sum((out_simu.ra - obs.ra)**2, axis=0) / (obs.ra.mean(axis=0)**2)
         
         # sum costs
-        J_new = 100 * (J_obj1 + J_obj2 + J_obj3 + J_obj4)
+        J_new = 100 * (J_obj1 + J_obj2 + J_obj3) # + J_obj4)
         return J_new
     return costfunction
 
@@ -507,13 +507,13 @@ def make_param_filter_func(
         ) -> Callable[[np.ndarray], bool]:
 
     # find position of beta_leaf and beta_wood
-    #beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
-    #beta_root_ind=EstimatedParameters._fields.index("beta_root")
+    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
+    beta_root_ind=EstimatedParameters._fields.index("beta_root")
 
     def isQualified(c):
         cond1 =  (c >= c_min).all() 
         cond2 =  (c <= c_max).all() 
-        #cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.99  
+        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.99  
         return (cond1 and cond2) # and cond3)
         
     return isQualified
