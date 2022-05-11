@@ -50,17 +50,16 @@ import general_helpers as gh
 # Other packages
 import sys
 sys.path.insert(0,'..') # necessary to import general_helpers
-# from general_helpers import (
-#     download_TRENDY_output,
-#     day_2_month_index,
-#     month_2_day_index,
-#     make_B_u_funcs_2,
-#     monthly_to_yearly,
-#     plot_solutions,
-#     autostep_mcmc_2,  
-#     make_jon_cost_func,
-#     make_param_filter_func
-# )
+from general_helpers import (
+    download_TRENDY_output,
+    day_2_month_index,
+    make_B_u_funcs_2,
+    monthly_to_yearly,
+    plot_solutions,
+    autostep_mcmc_2,  
+    make_jon_cost_func,
+    make_param_filter_func
+)
 from pathlib import Path
 from copy import copy, deepcopy
 from functools import reduce
@@ -121,8 +120,6 @@ cpa = msh.Constants(             #use Constants namedtuple to define constant va
     clay = 0.2028,
     silt = 0.2808,
     nyears = 320,
-    beta_leaf=0.37152535661667285,
-    beta_root=0.2118738332472721
 )
 cpa._asdict()    #print - everything should have a numeric value
 # -
@@ -133,6 +130,8 @@ cpa._asdict()    #print - everything should have a numeric value
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
 epa0 =msh.EstimatedParameters(
+    beta_leaf=0.37152535661667285,
+    beta_root=0.2118738332472721,
     r_c_leaf_rh=0.0022972292016441116,
     r_c_root_rh=0.0015470633697005037,
     r_c_wood_rh=0.0003981642399033648,
@@ -222,46 +221,47 @@ epa0 =msh.EstimatedParameters(
 #c_soil_slow_0=0.5,
 
 # +
-gpp_func = msh.make_gpp_func(dvs)
-npp_func = msh.make_npp_func(dvs)
-temp_func = msh.make_temp_func(dvs)
+#func_dict = msh.make_func_dict(dvs)
 
-n = cpa.nyears*12*30
+#n = cpa.nyears*12*30
 
-gpp_obs = np.array([gpp_func(d) for d in range(n)])
-npp_obs = np.array([npp_func(d) for d in range(n)])
-temp_obs = np.array([temp_func(d) for d in range(n)])
+#gpp_obs = np.array([GPP(d) for d in range(n)])
+#npp_obs = np.array([NPP(d) for d in range(n)])
+#temp_obs = np.array([temp(d) for d in range(n)])
 
 # Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4), dpi=80)
-gh.plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Drivers._fields,
-        tup=(npp_obs,)
-)
-fig.savefig('npp.pdf')
+<<<<<<< HEAD
+#fig = plt.figure(figsize=(12, 4), dpi=80)
+#plot_solutions(
+#        fig,
+#        times=range(n),
+#        var_names=msh.Drivers._fields,
+#        tup=(npp_obs,)
+#)
+#fig.savefig('npp.pdf')
+
+# +
+# Plot simulation output for observables
+#fig = plt.figure(figsize=(12, 4), dpi=80)
+#plot_solutions(
+#        fig,
+#        times=range(n),
+#        var_names=msh.Drivers._fields[1],
+#        tup=(temp_obs,)
+#)
+#fig.savefig('temp.pdf')
+
+# +
+# Plot simulation output for observables
+#fig = plt.figure(figsize=(12, 4), dpi=80)
+#plot_solutions(
+#        fig,
+#        times=range(n),
+#        var_names=msh.Drivers._fields[2],
+#        tup=(gpp_obs,)
+#)
+#fig.savefig('gpp.pdf')
 # -
-
-# Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4), dpi=80)
-gh.plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Drivers._fields[1],
-        tup=(temp_obs,)
-)
-fig.savefig('temp.pdf')
-
-# Plot simulation output for observables
-fig = plt.figure(figsize=(12, 4), dpi=80)
-gh.plot_solutions(
-        fig,
-        times=range(n),
-        var_names=msh.Drivers._fields[2],
-        tup=(gpp_obs,)
-)
-fig.savefig('gpp.pdf')
 
 # #### Create forward model function:
 
@@ -315,7 +315,7 @@ C_autostep, J_autostep = gh.autostep_mcmc_2(
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=4000,
+    nsimu=100,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=0.23,   # default value | target acceptance rate in %

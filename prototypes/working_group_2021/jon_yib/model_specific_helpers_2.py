@@ -43,17 +43,14 @@ Constants = namedtuple(
         'c_soil_0',
         'clay',        #Constants like clay
         'silt',
-        'nyears',       #Run time (years for my model)
-        #'beta_leaf',
-        #'beta_root'
-        
+        'nyears',       #Run time (years for my model)        
     ]
 )
 EstimatedParameters = namedtuple(
     'EstimatedParameters', 
     [
         'beta_leaf',
-        'beta_root',        
+        'beta_root',
         'r_c_leaf_rh',
         'r_c_root_rh',
         'r_c_wood_rh',
@@ -208,15 +205,12 @@ def get_global_mean_vars(dataPath):
         ds = nc.Dataset(str(path))
         lats = ds.variables["latitude"].__array__()
         lons = ds.variables["longitude"].__array__()
-
-        if vn in ["npp", "gpp", "rh", "ra"]:  # (3840, 144, 192), kg m-2 s-1
-            # f_veg2soil: Total carbon mass from vegetation directly into the soil
-            print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean(lats, lons, ds.variables[vn].__array__()) * 86400  # convert from kg/m2/s to kg/m2/day        
         
+        #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
+        if vn in ["npp","gpp","rh","ra"]:
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
         else:
-            print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean(lats, lons, ds.variables[vn].__array__())
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
 
     # Link symbols and data:
     
@@ -306,61 +300,58 @@ def make_StartVector(mvs):
         ["rh","ra"]
     ) 
 
-
-def make_npp_func(dvs):
-    def npp_func(day):
-        month=gh.day_2_month_index_vm(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.npp[month])
-    return npp_func
-
-
-def make_gpp_func(dvs):
-    def gpp_func(day):
-        month=gh.day_2_month_index_vm(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.gpp[month])
-    return gpp_func
-
-
-def make_temp_func(dvs):
-    def temp_func(day):
-        month=gh.day_2_month_index_vm(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.tas[month])
-    return temp_func
-
-
-def make_xi_func_soil(dvs):
-    t_ref = 273.15 + 28
-    t_half = 273.15 + 0
-    t_exp = 1.9
-    def xi_func_soil(day):
-        month = gh.day_2_month_index_vm(day)
-        s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
-        s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
-        return s_t * s_f 
-    return xi_func_soil
-
-
-def make_xi_func_leaf(dvs):
-    t_ref = 273.15 + 24
-    t_half = 273.15 + 33
-    t_exp = 1.8
-    tf_frac = 0.2
-    def xi_func_leaf(day):
-        month = gh.day_2_month_index_vm(day)
-        s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
-        s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
-        return s_t / s_f 
-    return xi_func_leaf
-
-
 def make_func_dict(mvs,dvs,cpa,epa):
+    
+    def make_temp_func(dvs):
+        def temp_func(day):
+            month=gh.day_2_month_index_vm(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.tas[month])
+        return temp_func
+
+    def make_npp_func(dvs):
+        def npp_func(day):
+            month=gh.day_2_month_index_vm(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.npp[month])
+        return npp_func
+
+    def make_gpp_func(dvs):
+        def gpp_func(day):
+            month=gh.day_2_month_index_vm(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.gpp[month])
+        return gpp_func
+
+    def make_xi_func_leaf(dvs):
+        t_ref = 273.15 + 24
+        t_half = 273.15 + 33
+        t_exp = 1.8
+        tf_frac = 0.2
+        def xi_func_leaf(day):
+            month = gh.day_2_month_index_vm(day)
+            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+            s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
+            return s_t / s_f 
+        return xi_func_leaf
+    
+    def make_xi_func_soil(dvs):
+        t_ref = 273.15 + 28
+        t_half = 273.15 + 0
+        t_exp = 1.9
+        def xi_func_soil(day):
+            month = gh.day_2_month_index_vm(day)
+            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+            s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
+            return s_t * s_f 
+        return xi_func_soil
+    
     return {
         "GPP": make_gpp_func(dvs),
+        "NPP": make_npp_func(dvs),
         "xi_leaf": make_xi_func_leaf(dvs),
-        "xi_soil": make_xi_func_soil(dvs)
+        "xi_soil": make_xi_func_soil(dvs),
+        "temp": make_temp_func(dvs)
     }
 
 
@@ -376,10 +367,7 @@ def make_param2res_sym(
         [Symbol(str(mvs.get_TimeSymbol()))]+
         list(mvs.get_StateVariableTuple())
     )
-    
-    # Build input and environmental scaler functions
-    func_dict = make_func_dict(mvs,dvs)
-    
+     
     # Create namedtuple for initial values
     StartVector=make_StartVector(mvs)
     
@@ -389,7 +377,10 @@ def make_param2res_sym(
         # Parameter vector
         epa=EstimatedParameters(*pa)
         
-         # Parameter dictionary for the iterator
+        # Build input and environmental scaler functions
+        func_dict = make_func_dict(mvs,dvs,cpa,epa)
+        
+        # Parameter dictionary for the iterator
         apa = {**cpa._asdict(),**epa._asdict()}
         model_par_dict = {
             Symbol(k):v for k,v in apa.items()
@@ -427,7 +418,7 @@ def make_param2res_sym(
         )
         
         # define time step and iterator
-        delta_t_val=10 
+        delta_t_val=15 
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -579,7 +570,6 @@ import datetime as dt
 start_date=dt.date(1700, 1, 1)
 end_date = dt.date(2019, 11, 30)
 
-
 def make_sim_day_2_day_since_a_D(conf_dict):
     # this function is extremely important to syncronise our results
     # because our data streams start at different times the first day of 
@@ -590,7 +580,6 @@ def make_sim_day_2_day_since_a_D(conf_dict):
     times = ds.variables["time"]
 
     # we have to check some assumptions on which this calculation is based
-
     tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
     td = int(tm *31)  #in days since_1700-01-01 
     #NOT assuming a 30 day month...
@@ -599,7 +588,6 @@ def make_sim_day_2_day_since_a_D(conf_dict):
     sd = dt.date(1700, 1, 1)
     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
     
-
     def f(day_ind: int)->int:
         return day_ind+td_aD
 
@@ -621,13 +609,19 @@ def numeric_X_0(mvs,dvs,cpa,epa):
         "c_lit_str": apa['c_lit_str_0'],
         "c_lit_mic": apa['c_lit_mic_0'],
         "c_soil_met": apa['c_soil_met_0'],
-        "c_soil_str": apa['c_soil_str_0'],        
+        "c_soil_str": apa['c_soil_str_0'],
         "c_soil_mic": apa['c_soil_mic_0'],
         "c_soil_slow": apa['c_soil_slow_0'],
-        "c_soil_passive": apa["c_soil_0"]-(apa["c_lit_cwd_0"] + apa["c_lit_met_0"] + apa["c_lit_str_0"] +
-                                          apa['c_lit_mic_0'] + apa['c_soil_met_0'] + apa['c_soil_str_0'] +
-                                          apa['c_soil_mic_0'] + apa['c_soil_slow_0']
-                                         ),        
+        "c_soil_passive": apa['c_soil_0'] - (
+                              apa['c_lit_cwd_0'] 
+                            + apa['c_lit_met_0'] 
+                            + apa['c_lit_str_0'] 
+                            + apa['c_lit_mic_0'] 
+                            + apa['c_soil_met_0'] 
+                            + apa['c_soil_str_0'] 
+                            + apa['c_soil_mic_0'] 
+                            + apa['c_soil_slow_0']
+                        )
     }
     X_0= np.array(
         [
