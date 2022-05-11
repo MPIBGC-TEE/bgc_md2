@@ -87,8 +87,6 @@ mvs = CMTVS(
     {
         t,
         StateVariableTuple((
-            #vl, 
-            #vw, 
             C_leaf,
             C_wood,
             C_root,
@@ -103,7 +101,6 @@ mvs = CMTVS(
         )),
         InFluxesBySymbol(
             {
-                #vl: I_vl, vw: I_vw
                 C_leaf: NPP(t) * beta_leaf, 
                 C_root: NPP(t) * (1.0-beta_leaf-beta_wood), 
                 C_wood: NPP(t) * beta_wood
@@ -111,7 +108,6 @@ mvs = CMTVS(
         ),
         OutFluxesBySymbol(
             {
-                #vl: k_vl_o * vl, vw: k_vw_o * vw
                 C_aom1: r_C_aom1_rh*C_aom1*xi(t),
                 C_aom2: r_C_aom2_rh*C_aom2*xi(t),
                 C_smb1: r_C_smb1_rh*C_smb1*xi(t),
@@ -124,7 +120,6 @@ mvs = CMTVS(
         ),
         InternalFluxesBySymbol(
             {
-                #(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw
                 (C_leaf, C_aom1): r_C_leaf_2_C_aom1*C_leaf,
                 (C_leaf, C_aom2): r_C_leaf_2_C_aom2*C_leaf,
                 (C_wood, C_aom1): r_C_wood_2_C_aom1*C_wood,

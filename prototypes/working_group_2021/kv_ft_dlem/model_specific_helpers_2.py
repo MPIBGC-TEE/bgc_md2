@@ -27,7 +27,7 @@ Drivers=namedtuple(
     "Drivers",
     ["npp","mrso"]
 )    
-  
+
 
 Constants = namedtuple(
     "Constants",
@@ -95,7 +95,7 @@ EstimatedParameters = namedtuple(
     ]
 )
 
-#def download_my_TRENDY_output():
+# def download_my_TRENDY_output():
 #    download_TRENDY_output(
 #        username=conf_dict["username"],
 #        password=conf_dict["password"],
@@ -123,7 +123,7 @@ def get_example_site_vars(dataPath):
         path = dataPath.joinpath(fn)
         # Read NetCDF data but only at the point where we want them 
         ds = nc.Dataset(str(path))
-        if vn in ["npp", "rh"]:
+        if vn in ["npp","gpp","rh","ra"]:
             return ds.variables[vn][t]*86400
         else:
             return ds.variables[vn][t]
@@ -132,53 +132,78 @@ def get_example_site_vars(dataPath):
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
+experiment_name="DLEM_S2_"
+def nc_file_name(nc_var_name):
+    return experiment_name+"{}.nc".format(nc_var_name)
 
-def get_globalmean_vars(dataPath):
+def nc_global_mean_file_name(nc_var_name):
+    return experiment_name+"{}_gm.nc".format(nc_var_name)
+
+def get_global_mean_vars(dataPath):
     o_names=Observables._fields
     d_names=Drivers._fields
     names = o_names + d_names 
 
+    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+        print(""" Found cached global mean files. If you want to recompute the global means
+            remove the following files: """
+        )
+        for vn in names:
+            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
-    def get_var(vn):
-        path = dataPath.joinpath("DLEM_S2_{}.nc".format(vn))
-        ds = nc.Dataset(str(path))
-        #scale fluxes vs pools
-        return ds.variables[vn]
+        def get_cached_global_mean(vn):
+            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
     
-    # we first check if any of the arrays has a time lime containing nan values 
-    # APART FROM values that are already masked by the fillvalue
-    print("computing masks, this may take some minutes...")
-    def f(name):
-        print(name)
-        return gh.get_nan_pixel_mask(get_var(name))
+        return (
+            Observables(*map(get_cached_global_mean, o_names)),
+            Drivers(*map(get_cached_global_mean,d_names))
+        )
 
-    masks=[ f(name)    for name in names ]
-    # We compute the common mask so that it yields valid pixels for ALL variables 
-    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
-    print("computing means, this may also take some minutes...")
+    else:
+        # we now check if any of the arrays has a time lime containing nan values 
+        # APART FROM values that are already masked by the fillvalue
+        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+        def f(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            #scale fluxes vs pools
+            var =ds.variables[vn]
+            return gh.get_nan_pixel_mask(var)
 
-    def f(vn):
-        path = dataPath.joinpath("DLEM_S2_{}.nc".format(vn))
-        ds = nc.Dataset(str(path))
-        vs=ds.variables
-        lats= vs["lat"].__array__()
-        lons= vs["lon"].__array__()
-        print(vn)
-        var=ds.variables[vn]
-        gm=gh.global_mean_var(lats,lons,combined_mask,var)
-        return gm * 86400 if vn in ["npp", "rh"] else gm
+        masks=[ f(name)    for name in names ]
+        # We compute the common mask so that it yields valid pixels for ALL variables 
+        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        print("computing means, this may also take some minutes...")
+
+        def compute_and_cache_global_mean(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            vs=ds.variables
+            lats= vs["lat"].__array__()
+            lons= vs["lon"].__array__()
+            print(vn)
+            var=ds.variables[vn]
+            # check if we have a cached version (which is much faster)
+            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+
+            gm=gh.global_mean_var(
+                    lats,
+                    lons,
+                    combined_mask,
+                    var
+            )
+            gh.write_global_mean_cache(
+                    gm_path,
+                    gm,
+                    vn
+            )
+            return gm * 86400 if vn in ["npp","gpp","rh","ra"] else gm
     
-    #map variables to data
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
-
-
-def make_StartVector(mvs):
-    return namedtuple(
-        "StartVector",
-        [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["rh"]
-    ) 
-
+        #map variables to data
+        return (
+            Observables(*map(compute_and_cache_global_mean, o_names)),
+            Drivers(*map(compute_and_cache_global_mean, d_names))
+        )
 
 def make_iterator_sym(
         mvs,
@@ -229,6 +254,45 @@ def make_iterator_sym(
         f=f,
     )
 
+def make_StartVector(mvs):
+    return namedtuple(
+        "StartVector",
+        [str(v) for v in mvs.get_StateVariableTuple()]+
+        ["rh"]
+    ) 
+
+def make_func_dict(mvs,dvs,cpa,epa):
+    
+    def make_npp_func(dvs):
+        def npp_func(day):
+            month=gh.day_2_month_index(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.npp[month])
+        return npp_func
+    
+    def make_gpp_func(dvs):
+        def gpp_func(day):
+            month=gh.day_2_month_index(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.gpp[month])
+        return gpp_func
+    
+    def make_temp_func(dvs):
+        def temp_func(day):
+            month=gh.day_2_month_index(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.tas[month])
+        return temp_func
+    
+    def make_xi_func(dvs):
+        def xi_func(day):
+            return 1
+        return xi_func
+    
+    return {
+        "NPP": make_npp_func(dvs),
+        "xi": make_xi_func(dvs)
+    }
 
 def make_param2res_sym(
         mvs,
@@ -255,14 +319,12 @@ def make_param2res_sym(
     # Create namedtuple for initial values
     StartVector=make_StartVector(mvs)
     
-    # the time dependent driver function for gpp does not change with the estimated parameters
-    # so its enough to define it once as in our test
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        return dvs.npp[month]   # kg/m2/s kg/m2/day
-    
     def param2res(pa):
         epa=EstimatedParameters(*pa)
+        
+        # Build input and environmental scaler functions
+        func_dict = make_func_dict(mvs,dvs,cpa,epa)
+        
         # create a startvector for the iterator from both estimated and fixed parameters 
         # The order is important and corresponds to the order of the statevariables
         # Our namedtuple StartVector takes care of this
@@ -297,18 +359,7 @@ def make_param2res_sym(
             ),
             rh = apa['rh_0']
         )
-
-        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
-        # our fake xi_func could of course be defined outside of param2res but in general it
-        # could be build from estimated parameters and would have to live here...
-        def xi_func(day):
-            return 1.0 # preliminary fake for lack of better data... 
-    
-        func_dict={
-            'NPP':npp_func,
-             'xi':xi_func
-        }
-        
+       
         delta_t_val=15
         it_sym = make_iterator_sym(
             mvs,
@@ -411,3 +462,81 @@ def make_weighted_cost_func(
         J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)
         return J_new
     return costfunction
+
+
+def make_traceability_iterator(mvs,dvs,cpa,epa):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],
+        "C_wood": apa['C_wood_0'],
+        "C_root": apa['cVeg_0'] - (
+            apa['C_leaf_0'] + 
+            apa['C_wood_0']
+            ),
+        "C_aom1": apa['C_aom1_0'],
+        "C_aom2": apa['cLitter_0'] - apa['C_aom1_0'],
+        "C_smb1": apa['C_smb1_0'],
+        "C_smb2": apa['C_smb2_0'],
+        "C_smr": apa['C_smr_0'],
+        "C_nom": apa['C_nom_0'],
+        "C_dom": apa['C_dom_0'],
+        "C_psom": apa['cSoil_0'] - (
+            apa['C_smb1_0'] +
+            apa['C_smb2_0'] +
+            apa['C_smr_0'] +
+            apa['C_nom_0'] +
+            apa['C_dom_0'] 
+        )
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    fd=make_func_dict(mvs,dvs)
+    V_init = gh.make_InitialStartVectorTrace(
+            X_0,mvs,
+            par_dict=par_dict,
+            func_dict=fd
+    )
+    it_sym_trace = gh.make_daily_iterator_sym_trace(
+        mvs,
+        V_init=V_init,
+        par_dict=par_dict,
+        func_dict=fd
+    )
+    return it_sym_trace
+
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf": apa['C_leaf_0'],
+        "C_wood": apa['C_wood_0'],
+        "C_root": apa['cVeg_0'] - (
+            apa['C_leaf_0'] + 
+            apa['C_wood_0']
+            ),
+        "C_aom1": apa['C_aom1_0'],
+        "C_aom2": apa['cLitter_0'] - apa['C_aom1_0'],
+        "C_smb1": apa['C_smb1_0'],
+        "C_smb2": apa['C_smb2_0'],
+        "C_smr": apa['C_smr_0'],
+        "C_nom": apa['C_nom_0'],
+        "C_dom": apa['C_dom_0'],
+        "C_psom": apa['cSoil_0'] - (
+            apa['C_smb1_0'] +
+            apa['C_smb2_0'] +
+            apa['C_smr_0'] +
+            apa['C_nom_0'] +
+            apa['C_dom_0'] 
+        )
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0

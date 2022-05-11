@@ -16,7 +16,31 @@
 # ## Model comparison using traceability analysis
 # We use the infrastructure built so far to compare two ore more models.
 # The workhorse will be an iterator (returned by a general function). That allows us to compute and easily access the desired timelines with python index notation it[2:5] will return the values from position 2 to 5 of the solution (and desired variables).
-# The notebook also contains some functions to compute where the times of two models overlap and some plot functions. 
+# The notebook also contains some functions to compute where the times of two models overlap and some plot functions.
+# ## Outline
+# ### 0.) Infrastructure for comparison plots (for self perusal)
+# - common times
+# - iterator notation
+# - example plots
+# - temporal averages
+#
+# ### 1.) We will investigate the role of $\mathbf{X_c}$
+# - $\mathbf{X_c}$ myth busting by counter examples
+# - provable statements about $\mathbf{X_c}$
+#     - scalar attraction in the surrogate system
+#     - vector attraction for steady state forcasts   
+#
+# ### 2.) Towards attribution of uncertaincies to temperature  and moisture 
+# - elementary sensitivity analysis using partial derivatives
+# - $\xi$ience or pitfalls in interpreting $\xi$  
+# - derive $\frac{\partial}{\partial Temp}$ or $\frac{\partial}{\partial Moist}$ automatically from the symbolic description.
+#
+#
+# ### 3.) Next steps
+# - apply the notebook to compare your model with others.
+# - new tests to help you pin down possible problems with your model
+# - mid-term ownership of the framework teaching and tickets (make Markus disposable ;-))
+#
 
 from IPython.display import Markdown, display
 display(Markdown("TracebilityText.md"))
@@ -52,7 +76,7 @@ def tracebility_iterator(mf,delta_t_val):
     mvs_t=gh.mvs(mf)
     dvs_t=ta.dvs
     cpa_t=ta.cpa
-    epa_t=ta.epa_0
+    epa_t=ta.epa_opt
     X_0=gh.msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
     func_dict=gh.msh(mf).make_func_dict(mvs_t,dvs_t,cpa_t,epa_t)
     
@@ -90,7 +114,7 @@ def times_in_days_aD(mf,delta_t_val):
     days_after_sim_start=delta_t_val*np.arange(n_iter)
     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start)))
 
-delta_t_val=3 # assuming the same step size for every model (could be made model specific by an additional testarg)
+delta_t_val=30 # assuming the same step size for every model (could be made model specific by an additional testarg)
 
 
 # +
@@ -134,7 +158,7 @@ l[3:8:2]
 itr=tracebility_iterator(mf,delta_t_val)
 res=itr[3:8:2]
 # take a peek
-type(res), res._fields, res.X_c.shape, res.X_dot
+#type(res), res._fields, res.X_c.shape, res.X_dot
 
 #mf='kv_visit2'
 mf="yz_jules"
@@ -150,7 +174,7 @@ vals.X_c.shape,times.shape
 import matplotlib.pyplot as plt
 def plot_sums(model_folders,delta_t_val,cd):
     n = len(model_folders)
-    fig=plt.figure(figsize=((n+1)*10,20), dpi = 400)
+    fig=plt.figure(figsize=((n+1)*10,20))
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
     names=['X','X_c','X_p']
@@ -200,8 +224,10 @@ def partitions(start,stop,nr_acc=1):
     ]+[last_tup]
 
 # an example we want to partition 
-partitions(0,10,nr_acc=3)
-#len(partitions(start,stop,12))
+#partitions(0,10,nr_acc=3)
+#partitions(start,stop,12)
+
+
 # -
 
 itr=tracebility_iterator(mf,delta_t_val)
@@ -233,7 +259,8 @@ def plot_yearly_avg_sums(model_folders,delta_t_val,cd):
     fig=plt.figure(figsize=((n+1)*10,20))#, dpi = 400)
     axs=fig.subplots(1,n)
     plt.rcParams['font.size'] = 20
-    names=['X','X_c','X_p']
+    #names=['X','X_c']#,'X_p']
+    names=['x','x_c']#,'x_p']
     for i,mf in enumerate(model_folders):
         itr=tracebility_iterator(mf,delta_t_val)
         start,stop=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
@@ -249,7 +276,7 @@ def plot_yearly_avg_sums(model_folders,delta_t_val,cd):
         for name in names:
             ax.plot(
                 times,
-                vals.__getattribute__(name).sum(axis=1),
+                vals.__getattribute__(name),
                 label=name+"_avg_sum",
                 color=cd[name]
             )
@@ -261,68 +288,78 @@ plot_yearly_avg_sums(model_folders, delta_t_val, cd)
 
 # -
 # ## Application: Numerical experiment concerning the  attraction of the solution to wards $X_c$.
-# In  Yiqis 2017 Biogeosciences paper: "Transient dynamics of terrestrial carbon storage: mathematical foundation and its applications" the carbon storage potential $\mathbf{X_c}(t)$ is called an "attractor" for the solution $\mathbf{X}(t)$ "at ecosystem scale".
+# In  Yiqis 2017 Biogeosciences paper: "Transient dynamics of terrestrial carbon storage: mathematical foundation and its applications" the carbon storage potential $\mathbf{X_c}(t)$  is called an "attractor" for the solution $\mathbf{X}(t)$ "at ecosystem scale".
 # We will try to visualize this for our models.
-# Before we can plot anything we have to specify what we mean concretely.
-# We will plot: 
-# 1. The components of $(\mathbf{X_c})_p \; p \in pools $ with the components of the stocks     
+# Before we can prove or e anything we have to specify what we mean concretely.
+# We will plot several candidates and see what happens: 
+# ### 1. The components of $(\mathbf{X_c})_p \; p \in pools $ with the components of the stocks     
 # $(\mathbf{X})_p \; p \in pools$ and the components of the derivative  $(\dot{\mathbf{X}})_p \; p \in pools$
-# 2. The  sums of the components e.g. $\sum_{p \in pools}(\mathbf{X_c})_p$
-# 3. The scalar variables $x_c,x,\dot{x}$ derived for a one pool surrogate system for the combined mass of all the pools and the combined inputs.
-# $$
-# \dot{x}=u(t)-m(t)x
-# $$ 
-# with m(t) specified as follows:
+# ### 2.) The  sums of the components e.g. $\sum_{p \in pools}(\mathbf{X_c})_p$ is chased by  $\sum_{p \in pools}(\mathbf{X})_p$
+# ### Results:
+# 1.) regarding $\mathbf{X_c}$ as a vector and plotting the components
+
+# +
+def plot_components(mf,delta_t_val,cd):
+    names_1=['X','X_c']#,'X_p']
+    names_2=['X_dot']
+    itr=tracebility_iterator(mf,delta_t_val)
+    start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start,stop = start_min, int(start_min+(stop_max-start_min)/30)
+    vals=itr[start:stop]
+    n = vals.X.shape[1]
+    fig=plt.figure(figsize=(20,(n+1)*10))#, dpi = 400)
+    axs=fig.subplots(2*n,1)
+    plt.rcParams['font.size'] = 20
+    times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
+    i=0
+    for j in range(n):
+        ax=axs[2*j]#,i]
+        for name in names_1:
+            time_line= vals.__getattribute__(name)
+            ax.plot(
+                times,
+                time_line[:,j,0],
+                label=name+str(j),
+                color=cd[name]
+            )
+            ax.legend()
+            ax.set_title(mf)
+        
+        ax=axs[2*j+1]#,i]
+        for name in names_2:
+            time_line= vals.__getattribute__(name)
+            ax.plot(
+                times,
+                time_line[:,j,0],
+                label=name+str(j),
+                color=cd[name]
+            )
+            ax.plot(
+                times,
+                np.zeros_like(times),
+                color=cd[name]
+            )
+            ax.legend()
+            ax.set_title(mf)
+    
+#plot_components(model_folders[0],delta_t_val)
+plot_components(model_folders[1],delta_t_val,cd)
+
+
+# -
+
+# ### Conclusion w.r.t. 1.) :
+# Looking at component $X_6$ we observe that component 6 of the derivative vector $\dot{\mathbf{X}}_6$ does change sign only once in the plotted interval whereas the graphs of $\mathbf{X}_6$ and $\mathbf{X_c}_6$ cross each other several times. 
 #
-# We start with the special case of a linear but nonautonoumous System:
-# $$
-# \frac{d \mathbf{X}}{d t}= \mathbf{I}(t) - M(t) \mathbf{X} 
-# $$
-# Taking the sum over all pools yields.
-# $$
-# \sum_{p \in pools} \left( \frac{d \mathbf{X}}{d t} \right)_p
-# =
-# \left( \mathbf{I}(t) - M(t) \mathbf{X} \right)_p
-# $$
+# That means  $\dot{\mathbf{X}}_6$ clearly does not move in the direction of $\mathbf{X_c}_6$ and therefore in general $\dot{\mathbf{X}}$ as a vector does not move in the direction of 
+# $\mathbf{X_c}$. 
+# In the later part of section 3.2 it becomes clear that this is not claimed for all the pools.
+# So calling the whole $\bf vector$ $\mathbf{X_c}$ an attractor for the vector $\mathbf{X}$ in the local sense that the derivative $\dot{\mathbf{X}}$ is always pointing towards $\mathbf{X_c}$ is misleading.
 #
-# With: 
-# $$
-# u=\sum_{p \in pools} (\mathbf{I})_p, 
-# $$
-# $$
-# x = \sum_{p \in pools} (\mathbf{X})_p
-# \text{ and }
-# $$ 
-# $$
-# \sum_{p \in pools} \left( \frac{d \mathbf{X}}{d t} \right)_p
-# =\frac{d}{d t}\sum_{p \in pools} (\mathbf X )_p
-# =\frac{d}{d t} x
-# $$
-# We can now try to costruct our new system for the combined mass $x$, in particular we want to find a function for the time dependent rate $m(t)$ such that. 
-# $$
-# \dot{x}
-# =u(t)-m(t) x 
-# =\sum_{p \in pools} \left( \mathbf{I}(t) - M(t) \mathbf{X} \right)_p
-# =u(t)-\sum_{p \in pools} ( M(t) \mathbf{X} )_p
-# $$
-# This yields: 
-# $$
-# m(t) = \frac{
-#     \sum_{p \in pools} ( M(t) \mathbf{X} )_p
-#     }{
-#     \sum_{p \in pools} (\mathbf{X})_p
-#     }
-# $$
-# We can even extend this treatment to nonlinear systems:
-# $$
-# \frac{d \mathbf{X}}{d t}= \mathbf{I}(\mathbf{X},t) - M(\mathbf{X},t) \mathbf{X} 
-# $$
-# Assume that we first solve the system numerically and therefore have $\mathbf{X}(t)$ available.
-# Substituting the solution we get:
-# $$
+# Our next idea to show that this holds  "on ecosystem level"
 #
-# $$
-#
+# ### 2.) Is the sum of the components e.g. $\sum_{p \in pools}(\mathbf X)_p $ chasing the sum of the components of  $ \sum_{p \in pools}(\mathbf{X_c})_p$ ?
 
 # +
 def plot_sums(model_folders,delta_t_val,cd):
@@ -392,74 +429,93 @@ plot_sums(model_folders,delta_t_val, cd)
 # -
 
 
+# ## Conclusion: NO
 # We see that the sum of the derivative is clearly positive all 
 # the time even if $\sum_{p \in pools}(\mathbf{X_c})_p$ 
 # crosses the $\sum_{p \in pools}( \mathbf{X})_p$ lines 
-# which shows that  $\sum_{p \in pools}(\mathbf{X_c})_p$ is NOT ALWAYS 
+# which shows that  $\sum_{p \in pools}(\mathbf{X_c})_p$ is **NOT ALWAYS** 
 # attractive in the sense that the summed derivative  $\sum_{p \in pools}
 # (\mathbf{\dot{X}})_p$ points in the same direction as the difference
-# $\sum_{p \in pools}(\mathbf{X_p})_p$ 
+# $\sum_{p \in pools}(\mathbf{X_p})_p$. 
 #
+#
+# ### 3.) Can we derive a one pool surrogate system for the combined mass of all the pools $x$ and the combined inputs $u$ such that the difference $x_p = x_c- x$ and $\dot{x}$ have the same sign, (point in the same (1-dimensional ) direction) ?
+#
+# ### YES!
+# We are aming at something like this:
+# $$
+# \dot{x}=u(t)-m(t)x
+# $$ 
+# where $x$ is the aggregated mass over all pools.
+# The only real question is how to specify 
+# $m(t)$ to insure this.
+#
+# We start with the special case of a linear but nonautonoumous System:
+# $$
+# \frac{d \mathbf{X}}{d t}= \mathbf{I}(t) - M(t) \mathbf{X} 
+# $$
+# Taking the sum over all pools yields.
+# $$
+# \sum_{p \in pools} \left( \frac{d \mathbf{X}}{d t} \right)_p
+# =
+# \left( \mathbf{I}(t) - M(t) \mathbf{X} \right)_p
+# $$
+#
+# With: 
+# $$
+# u=\sum_{p \in pools} (\mathbf{I})_p, 
+# $$
+# $$
+# x = \sum_{p \in pools} (\mathbf{X})_p
+# \text{ and }
+# $$ 
+# $$
+# \sum_{p \in pools} \left( \frac{d \mathbf{X}}{d t} \right)_p
+# =\frac{d}{d t}\sum_{p \in pools} (\mathbf X )_p
+# =\frac{d}{d t} x
+# $$
+# We can now try to costruct our new system for the combined mass $x$, in particular we want to find a function for the time dependent rate $m(t)$ such that. 
+# $$
+# \dot{x}
+# =u(t)-m(t) x 
+# =\sum_{p \in pools} \left( \mathbf{I}(t) - M(t) \mathbf{X} \right)_p
+# =u(t)-\sum_{p \in pools} ( M(t) \mathbf{X} )_p
+# $$
+# This yields: 
+# $$
+# m(t) = \frac{
+#     \sum_{p \in pools} ( M(t) \mathbf{X} )_p
+#     }{
+#     \sum_{p \in pools} (\mathbf{X})_p
+#     }
+# $$
+# We can even extend this treatment to nonlinear systems:
+# $$
+# \frac{d \mathbf{X}}{d t}= \mathbf{I}(\mathbf{X},t) - M(\mathbf{X},t) \mathbf{X} 
+# $$
+# Assume that we first solve the system numerically and therefore have $\mathbf{X}(t)$ available.
+# Substituting the solution we get a linear system:
+# $$
+# \frac{d \mathbf{X}}{d t}= \tilde{\mathbf{I}}(t) - \tilde{M}(t) \mathbf{X} 
+# $$
+# with 
+# $$
+# \tilde{\mathbf{I}}(t)=\mathbf{I}(\mathbf{X}(t),t)
+# $$
+# and
+# $$
+# \tilde{M}(t)=M(\mathbf{X}(t),t)
+# $$
 
-# +
-def plot_components(mf,delta_t_val,cd):
-    names_1=['X','X_c']#,'X_p']
-    names_2=['X_dot']
-    itr=tracebility_iterator(mf,delta_t_val)
-    start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax(model_folders,delta_t_val))
-    # we do not want the whole interval but look at a smaller part to observe the dynamics
-    start,stop = start_min, int(start_min+(stop_max-start_min)/30)
-    vals=itr[start:stop]
-    n = vals.X.shape[1]
-    fig=plt.figure(figsize=(20,(n+1)*10))#, dpi = 400)
-    axs=fig.subplots(2*n,1)
-    plt.rcParams['font.size'] = 20
-    times=times_in_days_aD(mf,delta_t_val)[start:stop]/365
-    i=0
-    for j in range(n):
-        ax=axs[2*j]#,i]
-        for name in names_1:
-            time_line= vals.__getattribute__(name)
-            ax.plot(
-                times,
-                time_line[:,j,0],
-                label=name+str(j),
-                color=cd[name]
-            )
-            ax.legend()
-            ax.set_title(mf)
-        
-        ax=axs[2*j+1]#,i]
-        for name in names_2:
-            time_line= vals.__getattribute__(name)
-            ax.plot(
-                times,
-                time_line[:,j,0],
-                label=name+str(j),
-                color=cd[name]
-            )
-            ax.plot(
-                times,
-                np.zeros_like(times),
-                color=cd[name]
-            )
-            ax.legend()
-            ax.set_title(mf)
-    
-#plot_components(model_folders[0],delta_t_val)
-plot_components(model_folders[1],delta_t_val,cd)
-# -
-
-[ i for i in range(0,10,2)]
-
-
-# ### Numerical expiriment
+# ### Numerical expiriments
+# #### scalar 
 
 # +
 from scipy.integrate import solve_ivp
 
 def u(t):
     return (np.cos(t)+1)
+
 def M(t):
     #return (np.sin(t)+2)*0.1
     return 0.1
@@ -501,23 +557,107 @@ f=plt.figure(figsize=(20,20))
 axs=f.subplots(2,1)
 for name in names_1:
     axs[0].plot(times,d[name],color=cd[name],label=name)
+axs[0].plot(times,np.zeros_like(times),color='black')
 axs[0].legend()
 
 for name in names_2:
     axs[1].plot(times,d[name],color=cd[name],label=name)
-    axs[1].plot(times,np.zeros_like(times),color='black')
+axs[1].plot(times,np.zeros_like(times),color='black')
 axs[1].legend()
 
 # +
-# np.array([1,2]).reshape?
+### For a 2-dimensional example look at 
 # -
 
-np.array([1,2]).reshape
+# ### Towards attribution of uncertainty
+# One of the attractive promises of traceability analysis is the hierachie of attribution to successively finer degree. 
+# $$
+# \mathbf{X_c}=\mathbf{RT} u
+# $$
+# $$
+# \Delta X_c \approx 
+# \frac{\partial X_c}{\partial RT} \Delta RT +
+# \frac{\partial X_c}{\partial u} \Delta u
+# $$
+# $$
+# =u\Delta RT + RT \Delta u
+# $$
 
 # +
-# np.reshape?
+model_cols={
+    "yz_jules": "blue",
+    "kv_visit2": "orange",
+}
+from scipy.interpolate import interp1d, splprep
+
+def plot_diff(mf_1, mf_2, delta_t_val, model_cols):
+    
+    part=30
+    start_min_1,stop_max_1=min_max_index(mf_1,delta_t_val,*t_min_tmax([mf_1,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)/part)
+    itr_1=tracebility_iterator(mf_1,delta_t_val)
+    vals_1=itr_1[start_1:stop_1]
+    times_1=times_in_days_aD(mf_1,delta_t_val)[start_1:stop_1]/365
+    
+    start_min_2,stop_max_2=min_max_index(mf_2,delta_t_val,*t_min_tmax([mf_2,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)/part)
+    itr_2=tracebility_iterator(mf_2,delta_t_val)
+    vals_2=itr_2[start_2:stop_2]
+    times_2=times_in_days_aD(mf_2,delta_t_val)[start_2:stop_2]/365
+    fig=plt.figure(figsize=(2*10,20))
+    axs=fig.subplots(3,3)
+    ###################################################
+    # plot x_c, u and rt for both models 
+    ###################################################
+    def subp(ax,name):
+        def subsubp(mf,vals,times):
+            ax.plot(
+                times,
+                vals.__getattribute__(name),
+                color=model_cols[mf],
+                label=mf
+            )
+            
+        subsubp( mf_1, vals_1,  times_1 )
+        subsubp( mf_2, vals_2,  times_2 )
+        ax.legend()
+        ax.set_title(name)
+
+        
+    subp(axs[0,0],"x_c")
+    subp(axs[0,1],"u")
+    subp(axs[0,2],"rt")
+    #
+    ####################################################
+    ## plot delta_x_c delta_u and delta_rt  
+    ####################################################
+    # Since the two models do not necessarily share the same point in time and not
+    # even the same stepsize or number of steps we compute interpolating functions
+    # to make them comparable
+    def diffp(ax,name):
+        f1=interp1d(times_1,vals_1.__getattribute__(name))
+        f2=interp1d(times_2,vals_2.__getattribute__(name))
+        # chose the interval covered by both to avoid extrapolation
+        start=max(times_1.min(),times_2.min())
+        stop=min(times_1.max(),times_2.max())
+        nstep=min(len(times_1),len(times_2))
+        times=np.linspace(start,stop,nstep)
+        
+        diff=f1(times)-f2(times)
+        ax.plot(times,diff,color="black")
+        ax.set_title("{0}_{1}-{2}".format(name,mf_1,mf_2))
+        
+    diffp(axs[1,0],"x_c")
+    diffp(axs[1,1],"u")
+    diffp(axs[1,2],"rt")
+    
+mf_1="yz_jules"
+mf_2="kv_visit2"
+plot_diff(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
 # -
 
-np.array
+
 
 

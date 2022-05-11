@@ -51,26 +51,30 @@ class TestSymbolic(TestCase):
                 svs, dvs = msh.get_global_mean_vars(Path(conf_dict['dataPath']))
                 #print(svs)
     
-    @skip
     def test_make_func_dict(self):
+        # Purpose:
+        # this test checks that your make_func_dict accepts the maximum set of parameters
+        # mvs,dvs,cpa,epa because some of the models need some of them 
+        # and we want to call the function in the same way from the comparison notebooks
+        # 
+        # How to fix your make_func_dict:
+        # If the test fails and tells you that you called the function with too many parameters
+        # just add it to the parameter list of your make_func_dict and ignore it in the rest 
+        # of the function...
         for mf in self.model_folders:
             with self.subTest(mf=mf):
-                
-                #sys.path.insert(0,mf)
                 msh = gh.msh(mf)
                 mvs = gh.mvs(mf)
                 conf_dict=gh.confDict(mf)
-                th= import_module('{}.test_helpers'.format(mf))
                 test_args = gh.test_args(mf)
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict['dataPath']))
-                msh.make_func_dict(mvs,dvs,test_args.epa_0)
+                msh.make_func_dict(mvs, dvs, test_args.cpa, test_args.epa_0)
 
     def test_make_iterator_sym(self):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
                 
                 msh = gh.msh(mf)
-                th= import_module('{}.test_helpers'.format(mf))
                 mvs = gh.mvs(mf)
                 conf_dict=gh.confDict(mf)
                 test_args = gh.test_args(mf)
@@ -95,7 +99,6 @@ class TestSymbolic(TestCase):
             with self.subTest(mf=mf):
                 mvs = gh.mvs(mf)
                 msh = gh.msh(mf)
-                th= import_module('{}.test_helpers'.format(mf))
                 conf_dict=gh.confDict(mf)
                 test_args = gh.test_args(mf)
 
@@ -108,58 +111,54 @@ class TestSymbolic(TestCase):
 
 
     #@skip
-    def test_autostep_mcmc_array_cost_func(self):
-        # this test is only performed for certain models which have (or have created) monthly data 
-        # for all observed variables an can therefore use the simpler general costfunctions in general
-        # helpers. 
-        # Most other models implement their own costfunctions in model_specific_helpers_2 and are 
-        # are tested with different arguments to the mcmc
-        for mf in set(self.model_folders).intersection(['cj_isam']):
-            #print("############################  {}  ############################".format(mf))
-            with self.subTest(mf=mf):
-                #sys.path.insert(0,mf)
-                mvs = gh.mvs(mf)
-                msh = gh.msh(mf)
-                th= import_module('{}.test_helpers'.format(mf))
-                conf_dict=gh.confDict(mf)
-                test_args = gh.test_args(mf)
-                cpa = test_args.cpa
-                dvs = test_args.dvs
-                svs = test_args.svs
-                epa_min = test_args.epa_min
-                epa_max = test_args.epa_max
-                epa_0 = test_args.epa_0
+    #def test_autostep_mcmc_array_cost_func(self):
+    #    # this test is only performed for certain models which have (or have created) monthly data 
+    #    # for all observed variables an can therefore use the simpler general costfunctions in general
+    #    # helpers. 
+    #    # Most other models implement their own costfunctions in model_specific_helpers_2 and are 
+    #    # are tested with different arguments to the mcmc
+    #    for mf in set(self.model_folders).intersection(['cj_isam']):
+    #        #print("############################  {}  ############################".format(mf))
+    #        with self.subTest(mf=mf):
+    #            mvs = gh.mvs(mf)
+    #            msh = gh.msh(mf)
+    #            conf_dict=gh.confDict(mf)
+    #            test_args = gh.test_args(mf)
+    #            cpa = test_args.cpa
+    #            dvs = test_args.dvs
+    #            svs = test_args.svs
+    #            epa_min = test_args.epa_min
+    #            epa_max = test_args.epa_max
+    #            epa_0 = test_args.epa_0
 
-                isQualified = gh.make_param_filter_func(epa_max, epa_min)
-                param2res = msh.make_param2res_sym( mvs, cpa, dvs)
+    #            isQualified = gh.make_param_filter_func(epa_max, epa_min)
+    #            param2res = msh.make_param2res_sym( mvs, cpa, dvs)
 
-                obs=test_args.obs_arr
-                #obs=np.column_stack([ np.array(v) for v in svs])
-                obs=obs[0:cpa.number_of_months,:] #cut
-                # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-                C_autostep, J_autostep = gh.autostep_mcmc(
-                    initial_parameters=epa_0,
-                    filter_func=isQualified,
-                    param2res=param2res,
-                    costfunction=gh.make_feng_cost_func(obs),
-                    nsimu=20, # for testing and tuning mcmc
-                    #nsimu=20000,
-                    c_max=np.array(epa_max),
-                    c_min=np.array(epa_min),
-                    acceptance_rate=15,   # default value | target acceptance rate in %
-                    chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
-                    D_init=1,   # default value | increase value to reduce initial step size
-                    K=2 # default value | increase value to reduce acceptance of higher cost functions
-                )
+    #            obs=test_args.obs_arr
+    #            #obs=np.column_stack([ np.array(v) for v in svs])
+    #            obs=obs[0:cpa.number_of_months,:] #cut
+    #            # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+    #            C_autostep, J_autostep = gh.autostep_mcmc(
+    #                initial_parameters=epa_0,
+    #                filter_func=isQualified,
+    #                param2res=param2res,
+    #                costfunction=gh.make_feng_cost_func(obs),
+    #                nsimu=20, # for testing and tuning mcmc
+    #                #nsimu=20000,
+    #                c_max=np.array(epa_max),
+    #                c_min=np.array(epa_min),
+    #                acceptance_rate=15,   # default value | target acceptance rate in %
+    #                chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    #                D_init=1,   # default value | increase value to reduce initial step size
+    #                K=2 # default value | increase value to reduce acceptance of higher cost functions
+    #            )
 
 
     def test_autostep_mcmc_tupel_cost_func(self):
         for mf in set(self.model_folders).intersection(['kv_visit2']):
             with self.subTest(mf=mf):
-                #sys.path.insert(0,mf)
                 mvs = gh.mvs(mf)
                 msh = gh.msh(mf)
-                th= import_module('{}.test_helpers'.format(mf))
                 conf_dict=gh.confDict(mf)
                 test_args = gh.test_args(mf)
                 cpa = test_args.cpa
@@ -178,7 +177,8 @@ class TestSymbolic(TestCase):
                     initial_parameters=epa_0,
                     filter_func=isQualified,
                     param2res=param2res,
-                    costfunction=msh.make_feng_cost_func_2(svs),
+                    #costfunction=msh.make_feng_cost_func_2(svs),
+                    costfunction=gh.make_feng_cost_func_2(svs),
                     nsimu=20, # for testing and tuning mcmc
                     #nsimu=20000,
                     c_max=np.array(epa_max),
@@ -189,39 +189,84 @@ class TestSymbolic(TestCase):
                     K=1 # default value | increase value to reduce acceptance of higher cost functions
                 )
     
-    def test_autostep_mcmc_model_specific_costfunction(self):
-        
-        for mf in set(self.model_folders).intersection(['Aneesh_SDGVM']):
+    #def test_autostep_mcmc_model_specific_costfunction(self):
+    #    
+    #    for mf in set(self.model_folders).intersection(['Aneesh_SDGVM']):
+    #        with self.subTest(mf=mf):
+    #            mvs = gh.mvs(mf)
+    #            msh = gh.msh(mf)
+    #            conf_dict=gh.confDict(mf)
+    #            test_args = gh.test_args(mf)
+    #            cpa = test_args.cpa
+    #            dvs = test_args.dvs
+    #            svs = test_args.svs
+    #            epa_min = test_args.epa_min
+    #            epa_max = test_args.epa_max
+    #            epa_0 = test_args.epa_0
+
+    #            isQualified = gh.make_param_filter_func(epa_max, epa_min)
+    #            param2res = msh.make_param2res_sym( mvs, cpa, dvs)
+    #            # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+    #            C_autostep, J_autostep = gh.autostep_mcmc(
+    #                initial_parameters=epa_0,
+    #                filter_func=isQualified,
+    #                param2res=param2res,
+    #                costfunction=msh.make_weighted_cost_func(svs),
+    #                nsimu=20, # for testing and tuning mcmc
+    #                #nsimu=20000,
+    #                c_max=np.array(epa_max),
+    #                c_min=np.array(epa_min),
+    #                acceptance_rate=15,   # default value | target acceptance rate in %
+    #                chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
+    #                D_init=1,   # default value | increase value to reduce initial step size
+    #                K=2 # default value | increase value to reduce acceptance of higher cost functions
+    #            )
+                
+
+    def test_epa_opt_presence(self):
+        # Purpose:
+        # For the model comparison it's nice to have your best and shiniest parameters ;-)
+        # available without having to go through the dataassimilation.
+        # 
+        # How to fix this test:
+        # 1.)   print out your optimal parameters after the data assimilation (e.g from your inspectModel.py)
+        # 2.)   Add the epa_opt field to your TestArgs tupel definition in your test_helpers
+        # 3.)   To avoid  your make_test_args to throw an error at you you have to set the epa_opt value...
+        #       Just paste your painstakenly obtained  parameters there and change them if you have 
+        #       new even shinier ones          
+        #       you can look at Kostia's "kv_visit2/test_helpers.py
+        for mf in set(self.model_folders):
             with self.subTest(mf=mf):
-                #sys.path.insert(0,mf)
                 mvs = gh.mvs(mf)
                 msh = gh.msh(mf)
-                th= import_module('{}.test_helpers'.format(mf))
-                conf_dict=gh.confDict(mf)
                 test_args = gh.test_args(mf)
-                cpa = test_args.cpa
-                dvs = test_args.dvs
-                svs = test_args.svs
-                epa_min = test_args.epa_min
-                epa_max = test_args.epa_max
-                epa_0 = test_args.epa_0
+                test_args.epa_opt
 
-                isQualified = gh.make_param_filter_func(epa_max, epa_min)
-                param2res = msh.make_param2res_sym( mvs, cpa, dvs)
-                # Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-                C_autostep, J_autostep = gh.autostep_mcmc(
-                    initial_parameters=epa_0,
-                    filter_func=isQualified,
-                    param2res=param2res,
-                    costfunction=msh.make_weighted_cost_func(svs),
-                    nsimu=20, # for testing and tuning mcmc
-                    #nsimu=20000,
-                    c_max=np.array(epa_max),
-                    c_min=np.array(epa_min),
-                    acceptance_rate=15,   # default value | target acceptance rate in %
-                    chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
-                    D_init=1,   # default value | increase value to reduce initial step size
-                    K=2 # default value | increase value to reduce acceptance of higher cost functions
-                )
 
-    #def test_trace
+    #def test_make_param_filter_func_presence(self):
+    #    #Purpose:
+    #    # Although we do not have to 
+
+
+    def test_numeric_X0(self):
+        # Purpose:
+        # This function assembles the startvector for several iterators
+        # especially the one that computes the variables for the tracebility analysis.
+        # but could also be used in your param2res (for the pools part)
+        #
+        # How to make it work:
+        # look at kv_visit2/model_specific_helpers_2.py
+        # or yz_jules/model_specific_helpers_2.py
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
+                ta=gh.test_args(mf)
+                mvs_t=gh.mvs(mf)
+                dvs_t=ta.dvs
+                cpa_t=ta.cpa
+                epa_t=ta.epa_0
+                X_0=gh.msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
+
+
+

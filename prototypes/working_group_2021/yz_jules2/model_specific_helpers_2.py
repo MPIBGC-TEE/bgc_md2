@@ -371,7 +371,7 @@ def make_StartVector(mvs):
 
 def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
     def xi_func(day):
-        mi = gh.day_2_month_index_vm(day)
+        mi = gh.day_2_month_index(day)
         # alternative FT
             # Q10 function (this is not what Clark et al 2011 Fig. 2 presented, the equation must be wrong)
         #FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
@@ -398,7 +398,7 @@ def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
 
 def make_npp_func(dvs):
     def func(day):
-        month = gh.day_2_month_index_vm(day)
+        month = gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month])
 
@@ -744,9 +744,11 @@ def make_sim_day_2_day_since_a_D(conf_dict):
     # for i in range(24):
     #     print((times[i + 1] - times[i])/(3600 * 24))
 
+
     ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
-    td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
+    td = ts / (3600 * 24) #in days since_2010_01_01_00_00_00
     #td = (ts - 12 * 3600) / (3600 * 24)
+    
     import datetime as dt
     ad = dt.date(1, 1, 1) # first of January of year 1 
     sd = dt.date(2010, 1, 1)

@@ -43,15 +43,14 @@ Constants = namedtuple(
         'c_soil_0',
         'clay',        #Constants like clay
         'silt',
-        'nyears',       #Run time (years for my model)
-        'beta_leaf',
-        'beta_root'
-        
+        'nyears',       #Run time (years for my model)        
     ]
 )
 EstimatedParameters = namedtuple(
     'EstimatedParameters', 
     [
+        'beta_leaf',
+        'beta_root',
         'r_c_leaf_rh',
         'r_c_root_rh',
         'r_c_wood_rh',
@@ -153,33 +152,68 @@ def get_example_site_vars(dataPath):
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
 
-def get_global_mean_vars(dataPath):
+# +
+# deprecated because it uses an already deprecated global_mean_JULES function
+# def get_global_mean_vars(dataPath):
     
-    #define function to average variables
+#     #define function to average variables
+#     def f(tup):
+#         #define parts of function from nc file
+#         vn, fn = tup
+#         path = dataPath.joinpath(fn)
+#         ds = nc.Dataset(str(path))
+#         lats = ds.variables["latitude"]
+#         lons = ds.variables["longitude"]
+        
+#         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
+#         if vn in ["npp","gpp","rh","ra"]:
+#             #for name, variable in ds.variables.items():            
+#             #    for attrname in variable.ncattrs():
+#             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+#             return (gh.global_mean_JULES(lats, lons, ds.variables[vn])*24*60*60)
+#         else:
+#             #for name, variable in ds.variables.items():            
+#             #    for attrname in variable.ncattrs():
+#             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+#             return (gh.global_mean_JULES(lats, lons, ds.variables[vn]))
+
+#     # Link symbols and data:
+#     # YIBS has annual vs monthly file names so they are linked separately
+#     # If all your data is similarly named you can do this in one step
+
+#     # Create annual file names (single step if files similarly named)
+#     o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
+
+#     # Create monthly file names (can remove if done in one step above)
+#     monthly_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Observables_monthly._fields]
+#     # Extend name list with monthly names
+#     o_names.extend(monthly_names)
+
+#     # create file names for Drivers
+#     d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
+
+#     # Link symbols and data for Observables/Drivers
+#     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+# -
+
+def get_global_mean_vars(dataPath):
+    # Define function to select geospatial cell and scale data
     def f(tup):
-        #define parts of function from nc file
         vn, fn = tup
         path = dataPath.joinpath(fn)
+        # Read NetCDF data but only at the point where we want them
         ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"]
-        lons = ds.variables["longitude"]
+        lats = ds.variables["latitude"].__array__()
+        lons = ds.variables["longitude"].__array__()
         
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
         if vn in ["npp","gpp","rh","ra"]:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean_JULES(lats, lons, ds.variables[vn])*24*60*60)
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
         else:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean_JULES(lats, lons, ds.variables[vn]))
+            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
 
     # Link symbols and data:
-    # YIBS has annual vs monthly file names so they are linked separately
-    # If all your data is similarly named you can do this in one step
-
+    
     # Create annual file names (single step if files similarly named)
     o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
 
@@ -191,8 +225,12 @@ def get_global_mean_vars(dataPath):
     # create file names for Drivers
     d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
 
-    # Link symbols and data for Observables/Drivers
-    return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    # Link symbols and data for observables/drivers
+    # print(o_tuples)
+    return (
+        Observables(*map(f, o_names)),
+        Drivers(*map(f, d_names))
+    )
 
 
 def make_iterator_sym(
@@ -262,61 +300,58 @@ def make_StartVector(mvs):
         ["rh","ra"]
     ) 
 
+def make_func_dict(mvs,dvs,cpa,epa):
+    
+    def make_temp_func(dvs):
+        def temp_func(day):
+            month=gh.day_2_month_index_vm(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.tas[month])
+        return temp_func
 
-def make_npp_func(dvs):
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.npp[month])
-    return npp_func
+    def make_npp_func(dvs):
+        def npp_func(day):
+            month=gh.day_2_month_index_vm(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.npp[month])
+        return npp_func
 
+    def make_gpp_func(dvs):
+        def gpp_func(day):
+            month=gh.day_2_month_index_vm(day)
+            # kg/m2/s kg/m2/day;
+            return (dvs.gpp[month])
+        return gpp_func
 
-def make_gpp_func(dvs):
-    def gpp_func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.gpp[month])
-    return gpp_func
-
-
-def make_temp_func(dvs):
-    def temp_func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.tas[month])
-    return temp_func
-
-
-def make_xi_func_soil(dvs):
-    t_ref = 273.15 + 28
-    t_half = 273.15 + 0
-    t_exp = 1.9
-    def xi_func_soil(day):
-        month = gh.day_2_month_index(day)
-        s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
-        s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
-        return s_t * s_f 
-    return xi_func_soil
-
-
-def make_xi_func_leaf(dvs):
-    t_ref = 273.15 + 24
-    t_half = 273.15 + 33
-    t_exp = 1.8
-    tf_frac = 0.2
-    def xi_func_leaf(day):
-        month = gh.day_2_month_index(day)
-        s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
-        s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
-        return s_t / s_f 
-    return xi_func_leaf
-
-
-def make_func_dict(mvs,dvs):
+    def make_xi_func_leaf(dvs):
+        t_ref = 273.15 + 24
+        t_half = 273.15 + 33
+        t_exp = 1.8
+        tf_frac = 0.2
+        def xi_func_leaf(day):
+            month = gh.day_2_month_index_vm(day)
+            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+            s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
+            return s_t / s_f 
+        return xi_func_leaf
+    
+    def make_xi_func_soil(dvs):
+        t_ref = 273.15 + 28
+        t_half = 273.15 + 0
+        t_exp = 1.9
+        def xi_func_soil(day):
+            month = gh.day_2_month_index_vm(day)
+            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+            s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
+            return s_t * s_f 
+        return xi_func_soil
+    
     return {
         "GPP": make_gpp_func(dvs),
+        "NPP": make_npp_func(dvs),
         "xi_leaf": make_xi_func_leaf(dvs),
-        "xi_soil": make_xi_func_soil(dvs)
+        "xi_soil": make_xi_func_soil(dvs),
+        "temp": make_temp_func(dvs)
     }
 
 
@@ -332,10 +367,7 @@ def make_param2res_sym(
         [Symbol(str(mvs.get_TimeSymbol()))]+
         list(mvs.get_StateVariableTuple())
     )
-    
-    # Build input and environmental scaler functions
-    func_dict = make_func_dict(mvs,dvs)
-    
+     
     # Create namedtuple for initial values
     StartVector=make_StartVector(mvs)
     
@@ -345,7 +377,10 @@ def make_param2res_sym(
         # Parameter vector
         epa=EstimatedParameters(*pa)
         
-         # Parameter dictionary for the iterator
+        # Build input and environmental scaler functions
+        func_dict = make_func_dict(mvs,dvs,cpa,epa)
+        
+        # Parameter dictionary for the iterator
         apa = {**cpa._asdict(),**epa._asdict()}
         model_par_dict = {
             Symbol(k):v for k,v in apa.items()
@@ -383,7 +418,7 @@ def make_param2res_sym(
         )
         
         # define time step and iterator
-        delta_t_val=10 
+        delta_t_val=15 
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -528,3 +563,69 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
         func_dict=fd
     )
     return it_sym_trace
+
+
+# Define start and end dates of the simulation
+import datetime as dt
+start_date=dt.date(1700, 1, 1)
+end_date = dt.date(2019, 11, 30)
+
+def make_sim_day_2_day_since_a_D(conf_dict):
+    # this function is extremely important to syncronise our results
+    # because our data streams start at different times the first day of 
+    # a simulation day_ind=0 refers to different dates for different models
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced monthly with different numbers of days
+    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("YIBs_S2_Monthly_gpp.nc")))
+    times = ds.variables["time"]
+
+    # we have to check some assumptions on which this calculation is based
+    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    td = int(tm *31)  #in days since_1700-01-01 
+    #NOT assuming a 30 day month...
+    import datetime as dt
+    ad = dt.date(1, 1, 1) # first of January of year 1 
+    sd = dt.date(1700, 1, 1)
+    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+    def f(day_ind: int)->int:
+        return day_ind+td_aD
+
+    return f
+
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "c_leaf": apa['c_leaf_0'],     
+        "c_root": apa['c_root_0'],     
+        "c_wood": apa['c_veg_0'] - (apa['c_leaf_0'] +  apa['c_root_0']),  
+        "c_lit_cwd": apa['c_lit_cwd_0'],
+        "c_lit_met": apa['c_lit_met_0'],
+        "c_lit_str": apa['c_lit_str_0'],
+        "c_lit_mic": apa['c_lit_mic_0'],
+        "c_soil_met": apa['c_soil_met_0'],
+        "c_soil_str": apa['c_soil_str_0'],
+        "c_soil_mic": apa['c_soil_mic_0'],
+        "c_soil_slow": apa['c_soil_slow_0'],
+        "c_soil_passive": apa['c_soil_0'] - (
+                              apa['c_lit_cwd_0'] 
+                            + apa['c_lit_met_0'] 
+                            + apa['c_lit_str_0'] 
+                            + apa['c_lit_mic_0'] 
+                            + apa['c_soil_met_0'] 
+                            + apa['c_soil_str_0'] 
+                            + apa['c_soil_mic_0'] 
+                            + apa['c_soil_slow_0']
+                        )
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
