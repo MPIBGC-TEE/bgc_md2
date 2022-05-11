@@ -59,14 +59,16 @@ from bgc_md2.resolve.mvars import (
 model_names={ 
     "yz_jules": "JULES",
     "kv_visit2": "VISIT",
-    "jon_yib": "YIBs"
+    "jon_yib": "YIBs",
+    #"kv_ft_dlem": "DLEM"
 }
 
 # selecting colors for plotting models
 model_cols={
     "yz_jules": "blue",
     "kv_visit2": "orange",
-    "jon_yib": "green"
+    "jon_yib": "green",
+    #"kv_ft_dlem": "red"
 }
 # -
 
