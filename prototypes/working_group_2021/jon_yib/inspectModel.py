@@ -46,10 +46,10 @@ import bgc_md2.resolve.computers as bgc_c
 import bgc_md2.display_helpers as dh
 import bgc_md2.helper as h
 from collections import namedtuple
-import general_helpers as gh
 # Other packages
 import sys
 sys.path.insert(0,'..') # necessary to import general_helpers
+import general_helpers as gh
 from general_helpers import (
     download_TRENDY_output,
     day_2_month_index,
@@ -114,7 +114,7 @@ svs_0
 cpa = msh.Constants(             #use Constants namedtuple to define constant values
     npp_0 = dvs.npp[0],
     rh_0 = svs.rh[0],
-    ra_0 = svs.ra[0],
+    #ra_0 = svs.ra[0],
     c_veg_0 = svs.cVeg[0],
     c_soil_0 = svs.cSoil[0],
     clay = 0.2028,
@@ -132,9 +132,9 @@ cpa._asdict()    #print - everything should have a numeric value
 epa0 =msh.EstimatedParameters(
     beta_leaf=0.37152535661667285,
     beta_root=0.2118738332472721,
-    r_c_leaf_rh=0.0022972292016441116,
-    r_c_root_rh=0.0015470633697005037,
-    r_c_wood_rh=0.0003981642399033648,
+    #r_c_leaf_rh=0.0022972292016441116,
+    #r_c_root_rh=0.0015470633697005037,
+    #r_c_wood_rh=0.0003981642399033648,
     r_c_leaf_2_c_lit_met=0.0008419144443122888, 
     r_c_leaf_2_c_lit_str=7.253712507163508e-05,
     r_c_root_2_c_soil_met=0.0007599224861792184,
@@ -230,7 +230,6 @@ epa0 =msh.EstimatedParameters(
 #temp_obs = np.array([temp(d) for d in range(n)])
 
 # Plot simulation output for observables
-<<<<<<< HEAD
 #fig = plt.figure(figsize=(12, 4), dpi=80)
 #plot_solutions(
 #        fig,
@@ -287,10 +286,10 @@ epa_min=msh.EstimatedParameters._make(tuple(np.array(epa0)*0.01))
 epa_max=msh.EstimatedParameters._make(tuple(np.array(epa0)*100))
 
 # fix values that are problematic from calculation
-#epa_max = epa_max._replace(beta_leaf = 0.9)
-#epa_max = epa_max._replace(beta_root = 0.9)
-#epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
-#epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
+epa_max = epa_max._replace(beta_leaf = 0.9)
+epa_max = epa_max._replace(beta_root = 0.9)
+epa_max = epa_max._replace(c_leaf_0 = svs_0.cVeg)
+epa_max = epa_max._replace(c_root_0 = svs_0.cVeg)
 epa_max = epa_max._replace(c_lit_cwd_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_met_0 = svs_0.cSoil)
 epa_max = epa_max._replace(c_lit_str_0 = svs_0.cSoil)

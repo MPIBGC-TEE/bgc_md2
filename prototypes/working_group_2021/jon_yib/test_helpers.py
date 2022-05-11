@@ -33,7 +33,7 @@ def make_test_args(conf_dict,msh,mvs):
     cpa = msh.Constants(             #use Constants namedtuple to define constant values
         npp_0 = dvs.npp[0],
         rh_0 = svs.rh[0],
-        ra_0 = svs.ra[0],
+        #ra_0 = svs.ra[0],
         c_veg_0 = svs.cVeg[0],
         c_soil_0 = svs.cSoil[0],
         clay = 0.2028,
@@ -44,9 +44,9 @@ def make_test_args(conf_dict,msh,mvs):
     par_dict = {
         'beta_leaf': 0.37152535661667285,
         'beta_root': 0.2118738332472721,
-        'r_c_leaf_rh': 0.0022972292016441116,
-        'r_c_root_rh': 0.0015470633697005037,
-        'r_c_wood_rh':0.0003981642399033648,
+        #'r_c_leaf_rh': 0.0022972292016441116,
+        #'r_c_root_rh': 0.0015470633697005037,
+        #'r_c_wood_rh':0.0003981642399033648,
         'r_c_leaf_2_c_lit_met': 0.0008419144443122888, 
         'r_c_leaf_2_c_lit_str': 7.253712507163508e-05,
         'r_c_root_2_c_soil_met': 0.0007599224861792184,
@@ -153,8 +153,8 @@ def make_test_args(conf_dict,msh,mvs):
             apa['c_soil_mic_0'] +
             apa['c_soil_slow_0']
         ),
-        rh = apa['rh_0'],
-        ra = apa['ra_0']
+        rh = apa['rh_0'] #,
+        #ra = apa['ra_0']
     )
         
     return TestArgs(
