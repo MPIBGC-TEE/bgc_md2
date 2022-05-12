@@ -303,8 +303,9 @@ def get_global_mean_vars(dataPath):
             #This is fine though b/c it allows inspection of clipped netcdf files
             #I do this to keep all further code intact that uses netcdf4
             nc_clip.to_netcdf(dataDIR)
-            #read netcdf file
+            #read netcdf file back in
             var = nc.Dataset(str(dataDIR)).variables[vn]
+	    ###########
             #return after assessing NaN data values
             return gh.get_nan_pixel_mask(var)
 
