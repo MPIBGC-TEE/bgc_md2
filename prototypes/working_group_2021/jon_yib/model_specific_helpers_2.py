@@ -123,14 +123,14 @@ def get_example_site_vars(dataPath):
         ds = nc.Dataset(str(path))
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
         if vn in ["npp","gpp","rh","ra"]:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            for name, variable in ds.variables.items():            
+                for attrname in variable.ncattrs():
+                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return (ds.variables[vn][t]*24*60*60)
         else:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            for name, variable in ds.variables.items():            
+                for attrname in variable.ncattrs():
+                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return ds.variables[vn][t]
 
     # Link symbols and data:
@@ -196,41 +196,153 @@ def get_example_site_vars(dataPath):
 #     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 # -
 
+experiment_name="YIBs_S2_"
+def nc_file_name(nc_var_name):
+    if nc_var_name in ["cVeg", "cSoil"]:
+        return experiment_name+"Annual_{}.nc".format(nc_var_name)
+    else:
+        return experiment_name+"Monthly_{}.nc".format(nc_var_name)
+
+
+# +
+def nc_global_mean_file_name(nc_var_name):
+    return experiment_name+"{}_gm.nc".format(nc_var_name)
+
+def nc_clip_file_name(nc_var_name):
+    return experiment_name+"{}_clipped.nc".format(nc_var_name)
+
+
+# -
+
 def get_global_mean_vars(dataPath):
     # Define function to select geospatial cell and scale data
-    def f(tup):
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        # Read NetCDF data but only at the point where we want them
-        ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"].__array__()
-        lons = ds.variables["longitude"].__array__()
-        
-        #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-        if vn in ["npp","gpp","rh","ra"]:
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
-        else:
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+    #def f(tup):
+    #    vn, fn = tup
+    #    path = dataPath.joinpath(fn)
+    #    # Read NetCDF data but only at the point where we want them
+    #    ds = nc.Dataset(str(path))
+    #    lats = ds.variables["latitude"].__array__()
+    #    lons = ds.variables["longitude"].__array__()
+    #    
+    #    #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
+    #    if vn in ["npp","gpp","rh","ra"]:
+    #        return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
+    #    else:
+    #        return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+    #
+    ## Link symbols and data:
+    #
+    ## Create annual file names (single step if files similarly named)
+    #o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
+    #
+    ## Create monthly file names (can remove if done in one step above)
+    #monthly_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Observables_monthly._fields]
+    ## Extend name list with monthly names
+    #o_names.extend(monthly_names)
+    #
+    ## create file names for Drivers
+    #d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
+    #
+    ## Link symbols and data for observables/drivers
+    ## print(o_tuples)
+    #return (
+    #    Observables(*map(f, o_names)),
+    #    Drivers(*map(f, d_names))
+    #)
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
 
-    # Link symbols and data:
+    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+        print(""" Found cached global mean files. If you want to recompute the global means
+            remove the following files: """
+        )
+        for vn in names:
+            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
+
+        def get_cached_global_mean(vn):
+            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
     
-    # Create annual file names (single step if files similarly named)
-    o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
+        return (
+            Observables(*map(get_cached_global_mean, o_names)),
+            Drivers(*map(get_cached_global_mean,d_names))
+        )
 
-    # Create monthly file names (can remove if done in one step above)
-    monthly_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Observables_monthly._fields]
-    # Extend name list with monthly names
-    o_names.extend(monthly_names)
+    else:
+        # we now check if any of the arrays has a time lime containing nan values 
+        # APART FROM values that are already masked by the fillvalue
+        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+        def f(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            #ds = nc.Dataset(str(path))
+            #scale fluxes vs pools
+            #var =ds.variables[vn]
+            
+            ########### apply shape file mask of the world to each data file
+            #import needed librarys - these have to be added to conda env
+            #use "conda install --channel conda-forge geopandas rioxarray xarray shapely gdal=3.2.1"
+            #for some reason the newest gdal created an unknown conflict and couldn't be imported
+            #also this will break general_helpers "from forzendict import frozendict" so run_my_tests.py fails
+            import geopandas
+            import rioxarray
+            import xarray
+            from shapely.geometry import mapping
+            #use xarray to open dataset
+            nc_x = xarray.open_dataset(path, decode_times=False)
+            #set spatial dimensions by name
+            nc_x.rio.set_spatial_dims(x_dim="longitude", y_dim="latitude", inplace=True)
+            #set projection
+            nc_x.rio.write_crs("epsg:4326", inplace=True)
+            #use geopandas to read in map of world to use as clip
+            wrld_shp = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'), crs="epsg:4326")
+            #clip the imported array by the projected world map
+            nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
+            #set save directory and filename
+            dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
+            #save to file - inefficient but only option, xarray can't create netcdf4 python object, can only save
+            #This is fine though b/c it allows inspection of clipped netcdf files
+            #I do this to keep all further code intact that uses netcdf4
+            nc_clip.to_netcdf(dataDIR)
+            #read netcdf file back in
+            var = nc.Dataset(str(dataDIR)).variables[vn]
+	    ###########
+            #return after assessing NaN data values
+            return gh.get_nan_pixel_mask(var)
 
-    # create file names for Drivers
-    d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
+        masks=[ f(name)    for name in names ]
+        # We compute the common mask so that it yields valid pixels for ALL variables 
+        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        print("computing means, this may also take some minutes...")
 
-    # Link symbols and data for observables/drivers
-    # print(o_tuples)
-    return (
-        Observables(*map(f, o_names)),
-        Drivers(*map(f, d_names))
-    )
+        def compute_and_cache_global_mean(vn):
+            path = dataPath.joinpath(nc_file_name(vn))
+            ds = nc.Dataset(str(path))
+            vs=ds.variables
+            lats= vs["latitude"].__array__()
+            lons= vs["longitude"].__array__()
+            print(vn)
+            var=ds.variables[vn]
+            # check if we have a cached version (which is much faster)
+            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+
+            gm=gh.global_mean_var(
+                    lats,
+                    lons,
+                    combined_mask,
+                    var
+            )
+            gh.write_global_mean_cache(
+                    gm_path,
+                    gm,
+                    vn
+            )
+            return gm * 86400 if vn in ["npp","gpp","rh","ra"] else gm
+    
+        #map variables to data
+        return (
+            Observables(*map(compute_and_cache_global_mean, o_names)),
+            Drivers(*map(compute_and_cache_global_mean, d_names))
+        )
 
 
 def make_iterator_sym(
@@ -550,7 +662,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs)
+    fd=make_func_dict(mvs,dvs,cpa,epa)
     V_init = gh.make_InitialStartVectorTrace(
             X_0,mvs,
             par_dict=par_dict,
