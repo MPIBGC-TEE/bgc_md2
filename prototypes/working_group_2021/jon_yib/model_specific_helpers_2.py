@@ -123,14 +123,14 @@ def get_example_site_vars(dataPath):
         ds = nc.Dataset(str(path))
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
         if vn in ["npp","gpp","rh","ra"]:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            for name, variable in ds.variables.items():            
+                for attrname in variable.ncattrs():
+                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return (ds.variables[vn][t]*24*60*60)
         else:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            for name, variable in ds.variables.items():            
+                for attrname in variable.ncattrs():
+                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return ds.variables[vn][t]
 
     # Link symbols and data:
@@ -204,9 +204,15 @@ def nc_file_name(nc_var_name):
         return experiment_name+"Monthly_{}.nc".format(nc_var_name)
 
 
+# +
 def nc_global_mean_file_name(nc_var_name):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
+def nc_clip_file_name(nc_var_name):
+    return experiment_name+"{}_clipped.nc".format(nc_var_name)
+
+
+# -
 
 def get_global_mean_vars(dataPath):
     # Define function to select geospatial cell and scale data
@@ -268,9 +274,38 @@ def get_global_mean_vars(dataPath):
         print("computing masks to exclude pixels with nan entries, this may take some minutes...")
         def f(vn):
             path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
+            #ds = nc.Dataset(str(path))
             #scale fluxes vs pools
-            var =ds.variables[vn]
+            #var =ds.variables[vn]
+            
+            ########### apply shape file mask of the world to each data file
+            #import needed librarys - these have to be added to conda env
+            #use "conda install --channel conda-forge geopandas rioxarray xarray shapely gdal=3.2.1"
+            #for some reason the newest gdal created an unknown conflict and couldn't be imported
+            #also this will break general_helpers "from forzendict import frozendict" so run_my_tests.py fails
+            import geopandas
+            import rioxarray
+            import xarray
+            from shapely.geometry import mapping
+            #use xarray to open dataset
+            nc_x = xarray.open_dataset(path, decode_times=False)
+            #set spatial dimensions by name
+            nc_x.rio.set_spatial_dims(x_dim="longitude", y_dim="latitude", inplace=True)
+            #set projection
+            nc_x.rio.write_crs("epsg:4326", inplace=True)
+            #use geopandas to read in map of world to use as clip
+            wrld_shp = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'), crs="epsg:4326")
+            #clip the imported array by the projected world map
+            nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
+            #set save directory and filename
+            dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
+            #save to file - inefficient but only option, xarray can't create netcdf4 python object, can only save
+            #This is fine though b/c it allows inspection of clipped netcdf files
+            #I do this to keep all further code intact that uses netcdf4
+            nc_clip.to_netcdf(dataDIR)
+            #read netcdf file
+            var = nc.Dataset(str(dataDIR)).variables[vn]
+            #return after assessing NaN data values
             return gh.get_nan_pixel_mask(var)
 
         masks=[ f(name)    for name in names ]
@@ -626,7 +661,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs)
+    fd=make_func_dict(mvs,dvs,cpa,epa)
     V_init = gh.make_InitialStartVectorTrace(
             X_0,mvs,
             par_dict=par_dict,
