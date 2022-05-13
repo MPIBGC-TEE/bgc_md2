@@ -50,9 +50,9 @@ EstimatedParameters = namedtuple(
         "beta_wood",
         "Theta_sat",
         "Theta_fc",
-        "r_C_leaf_rh",
-        "r_C_wood_rh",
-        "r_C_root_rh",
+        #"r_C_leaf_rh",
+        #"r_C_wood_rh",
+        #"r_C_root_rh",
         "r_C_aom1_rh",
         "r_C_aom2_rh",
         "r_C_smb1_rh",
@@ -152,8 +152,8 @@ def get_global_mean_vars(dataPath):
             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
-            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
-    
+            gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            return gm * 86400 if vn in ["gpp", "npp","rh", "ra"] else gm   
         return (
             Observables(*map(get_cached_global_mean, o_names)),
             Drivers(*map(get_cached_global_mean,d_names))
