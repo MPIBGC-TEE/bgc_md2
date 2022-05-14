@@ -495,3 +495,98 @@ class Test_general_helpers(InDirTest):
         )
         
         ds.close()
+
+    def test_common_mask(self):
+        def i2c_maker(lat_0,lon_0,step_lat,step_lon):
+            def i2c(i_lat,i_lon):
+                return(
+                    lat_0+step_lat*i_lat,
+                    lon_0+step_lon*i_lon
+                )
+            return i2c
+        step_lat1,step_lon1=(1,1)
+        i2c_1=i2c_maker(
+            step_lat1/2,
+            step_lon1/2,
+            step_lat1,
+            step_lon1,
+        )
+        
+        
+        step_lat2,step_lon2=(.7,1)
+        i2c_2=i2c_maker(
+            .5+step_lat2/2,
+            step_lon2/2,
+            step_lat2,
+            step_lon2,
+        )
+
+        m1=np.array([0,1,0,0],dtype=np.bool_).reshape(4,1)
+        m2=np.array([1,1,0,0,0],dtype=np.bool_).reshape(5,1)
+        
+        m_res=gh.combine_masks([m1,m2],[i2c_1,i2c_2])
+        
+        m_ref=[
+                (1.0, 2.0, 0.0, 1.0),
+                (0.5, 1.2, 0.0, 1.0),
+                (1.2, 1.8999999999999997, 0.0, 1.0)
+        ]
+        print(m_ref==m_res)
+        self.assertTrue(m_res==m_ref)
+
+        
+
+        common_mask=m_res
+        m_ref=np.array([1,1,0,0]).reshape(4,1)
+        res= gh.project(
+            m1.shape,
+            i2c_1,
+            common_mask
+        )
+        self.assertTrue(
+                (
+                    res==m_ref
+                ).all()
+        )
+
+        
+    def test_open_interval_intersect(self):        
+        self.assertTrue(gh.open_interval_intersect((0,1),(0.5,1.5)))
+        self.assertTrue(gh.open_interval_intersect((0.5,1.5),(0,1)))
+        self.assertTrue(gh.open_interval_intersect((0,1),(0,1)))
+        self.assertTrue(gh.open_interval_intersect((0,1),(-1,2)))
+        self.assertFalse(gh.open_interval_intersect((0,1),(1,2)))
+        self.assertFalse(gh.open_interval_intersect((1,2),(0,1)))
+
+    def test_pixel_intersect(self):
+        self.assertTrue(
+	    gh.pixel_intersect(
+                gh.boundaries(0,1,0,1),
+                gh.boundaries(0,1,0,1)
+            )
+        )
+        self.assertTrue(
+	    gh.pixel_intersect(
+                gh.boundaries(0,1,0,1),
+                gh.boundaries(.5,1.5,0,1)
+            )
+        )
+        self.assertTrue(
+	    gh.pixel_intersect(
+                gh.boundaries(0,1,0,1),
+                gh.boundaries(.5,.7,.5,.7)
+            )
+        )
+        self.assertFalse(
+            gh.pixel_intersect(
+                gh.boundaries(0,1,0,1),
+                gh.boundaries(1,1.5,0,1)
+            )
+        )
+        self.assertFalse(
+            gh.pixel_intersect(
+                gh.boundaries(0,1,0,1),
+                gh.boundaries(1,1.5,1,1.5)
+            )
+        )
+
