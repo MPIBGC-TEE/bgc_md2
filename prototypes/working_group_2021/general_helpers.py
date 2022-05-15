@@ -20,10 +20,14 @@ import netCDF4 as nc
 from ComputabilityGraphs.CMTVS import CMTVS
 import CompartmentalSystems.helpers_reservoir as hr
 from bgc_md2.resolve.mvars import (
-        OutFluxesBySymbol,
-        InternalFluxesBySymbol
+#    OutFluxesBySymbol,
+#    InternalFluxesBySymbol
+    CompartmentalMatrix,
+    InputTuple,
+    StateVariableTuple
 )
-from bgc_md2.helper import bgc_md2_computers
+#from bgc_md2.helper import bgc_md2_computers
+import bgc_md2.display_helpers as dh
 
 days_per_year = 365 
 TraceTuple = namedtuple(
@@ -1591,55 +1595,103 @@ def write_global_mean_cache(
 def get_cached_global_mean(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-
-# def make_fluxrates_from_kf(mvs_kv,xi_d):    
-#    #compute rate based formulation
-#    # we create a dictionary for the outfluxrates (flux divided by dono pool content)
-#    def ouflux_rate_str(dp):
-#        return "r_"+str(dp)+"_2_out"
-#
-#    def internal_flux_rate_str(dp, rp):
-#        return "r_"+str(dp)+"_2_"+str(rp)
-#
-#    sv = mvs_kf.get_StateVariableTuple()
-#    M_sym=mvs_kf.get_CompartmentalMatrix()*xi_d.inv()
-#    outflux_rates = {ouflux_rate_str(dp):value/dp for dp,value in hr.out_fluxes_by_symbol(sv,M_sym).items()}
-#    internal_flux_rates = {:value/dp[0] for dp,value in hr.internal_fluxes_by_symbol(sv,M_sym).items()}
-#    all_rates = {**internal_flux_rates, ** outflux_rates}
-#    
-#    mvs_new = CMTVS(
-#        {
-#            mvs.get_InFluxesBySymbol(),
-#            mvs.get_TimeSymbol(),
-#            mvs.get_StateVariableTuple(),
-#            OutFluxesBySymbol(
-#                {
-#                    dp :
-#                    Symbol(ouflux_rate_str(dp))*dp
-#                    for dp in mvs.get_OutFluxesBySymbol().keys()
-#                }
-#            ),
-#            InternalFluxesBySymbol(
-#                {
-#                    (dp,rp) : Symbol(internal_flux_rate_str(dp,rp)*dp
-#                    for dp,rp in mvs.get_InternalFluxesBySymbol().keys()
-#                }
-#            )
-#        },
-#        bgc_md2_computers()
-#    )
-#    def fk_pardict_2_r_pardict
-#    return mvs_new
-
-# # Functions for model comparizon notebook
-
-# +
-import bgc_md2.display_helpers as dh
-from bgc_md2.resolve.mvars import (
-    CompartmentalMatrix,
-    InputTuple,
-    StateVariableTuple
+boundaries=namedtuple(
+    "boundaries",
+    [
+        "min_lat",
+        "max_lat",
+        "min_lon",
+        "max_lon"
+    ]
 )
+
+def combine_masks(masks,i2cs):
+    m1,m2 = masks
+    i2c_1,i2c_2 = i2cs
+    
+    def g(m,i2c):
+        s=m.shape
+        print(s[0])
+        bounds=[]
+        lat_0,lon_0=i2c(0,0)
+        lat_1,lon_1=i2c(1,1)
+        step_lat=lat_1-lat_0
+        step_lon=lon_1-lon_0
+        for i in range(s[0]):
+            for j in range(s[1]):
+                print(i,j)
+                print(m[i,j])
+                if  m[i,j]:
+                    lat,lon=i2c(i,j)
+                    res=boundaries(
+                        min_lat=lat-step_lat/2,
+                        max_lat=lat+step_lat/2,
+                        min_lon=lon-step_lon/2,
+                        max_lon=lon+step_lon/2
+                    )
+                    bounds.append(res)
+        return bounds
+
+    #return g(m1,i2c_1)
+    return reduce(
+        lambda acc,el:acc+el,
+        [g(m,i2c) for m,i2c in zip(masks,i2cs)] 
+    )
+
+def open_interval_intersect(i1,i2):
+    min1,max1=i1
+    min2,max2=i2
+    mid2=(min2+max2)/2
+    return ( 
+        min1 < min2 and min2< max1 
+        or
+        min1 < max2 and max2< max1
+        or
+        min1 < mid2 and mid2< max1
+    )
+
+def pixel_intersect(b1,b2):
+    return (
+        open_interval_intersect(
+            (b1.min_lat,b1.max_lat),
+            (b2.min_lat,b2.max_lat)
+        )
+        and
+        open_interval_intersect(
+            (b1.min_lon,b1.max_lon),
+            (b2.min_lon,b2.max_lon)
+        )
+    )
+
+def project(s,i2c,common_mask):
+    mask=np.zeros(s)
+    
+    lat_0,lon_0=i2c(0,0)
+    lat_1,lon_1=i2c(1,1)
+    step_lat=lat_1-lat_0
+    step_lon=lon_1-lon_0
+    
+    def in_cm(i,j):
+        lat,lon=i2c(i,j)
+        p_b=boundaries(
+            min_lat=lat-step_lat/2,
+            max_lat=lat+step_lat/2,
+            min_lon=lon-step_lon/2,
+            max_lon=lon+step_lon/2
+        )
+        return reduce(
+            lambda acc,mpb: acc or pixel_intersect(p_b,mpb),
+            common_mask,
+            False
+        )
+    
+    for i in range(s[0]):
+        for j in range(s[1]):
+            mask[i,j] = True if in_cm(i,j) else False
+
+    return mask
+
+
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -2231,3 +2283,4 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 ax.plot(times,diff,color="black")
                 ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
                 plot_number+=1 
+
