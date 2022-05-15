@@ -96,8 +96,6 @@ msh.download_my_TRENDY_output(conf_dict)
 # ## Connect Data and Symbols (Must Edit)
 # Define function to subset netCDF files and link to data symbols:
 
-msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
-
 # + codehighlighter=[[5, 6], [23, 33], [5, 6], [23, 33]]
 svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
 

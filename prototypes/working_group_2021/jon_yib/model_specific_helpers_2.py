@@ -123,14 +123,14 @@ def get_example_site_vars(dataPath):
         ds = nc.Dataset(str(path))
         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
         if vn in ["npp","gpp","rh","ra"]:
-            for name, variable in ds.variables.items():            
-                for attrname in variable.ncattrs():
-                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            #for name, variable in ds.variables.items():            
+            #    for attrname in variable.ncattrs():
+            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return (ds.variables[vn][t]*24*60*60)
         else:
-            for name, variable in ds.variables.items():            
-                for attrname in variable.ncattrs():
-                    print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            #for name, variable in ds.variables.items():            
+            #    for attrname in variable.ncattrs():
+            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
             return ds.variables[vn][t]
 
     # Link symbols and data:
@@ -297,6 +297,9 @@ def get_global_mean_vars(dataPath):
             wrld_shp = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'), crs="epsg:4326")
             #clip the imported array by the projected world map
             nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
+
+            # we can clip/mask again by Greenland,Antarctica,or other shape if we want to here
+
             #set save directory and filename
             dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
             #save to file - inefficient but only option, xarray can't create netcdf4 python object, can only save
@@ -305,7 +308,7 @@ def get_global_mean_vars(dataPath):
             nc_clip.to_netcdf(dataDIR)
             #read netcdf file back in
             var = nc.Dataset(str(dataDIR)).variables[vn]
-	    ###########
+            ###########
             #return after assessing NaN data values
             return gh.get_nan_pixel_mask(var)
 
