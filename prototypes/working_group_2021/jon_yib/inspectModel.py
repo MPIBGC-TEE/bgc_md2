@@ -129,137 +129,53 @@ cpa._asdict()    #print - everything should have a numeric value
 # +
 # how we transform given startvalues for the f and k to these is shown in createModel
 # but once we have them, we can print them out and use them from now on directly
-epa0 =msh.EstimatedParameters(
-    beta_leaf=0.37152535661667285,
-    beta_root=0.2118738332472721,
-    #r_c_leaf_rh=0.0022972292016441116,
-    #r_c_root_rh=0.0015470633697005037,
-    #r_c_wood_rh=0.0003981642399033648,
-    r_c_leaf_2_c_lit_met=0.0008419144443122888, 
-    r_c_leaf_2_c_lit_str=7.253712507163508e-05,
-    r_c_root_2_c_soil_met=0.0007599224861792184,
-    r_c_root_2_c_soil_str=0.0007161706404910827,
-    r_c_wood_2_c_lit_cwd=0.0009217945194693122,
-    c_leaf_0=0.11328379866881665,
-    c_root_0=0.14464613373390392,
-    r_c_lit_cwd_rh=0.02026318476587012, 
-    r_c_lit_met_rh=0.00340079410753037, 
-    r_c_lit_str_rh=0.008989119944533677,
-    r_c_lit_mic_rh=0.011276949417831122,
-    r_c_soil_met_rh=0.0006741622348146495,
-    r_c_soil_str_rh=0.00017592886085999286,
-    r_c_soil_mic_rh=0.000519741477608671,
-    r_c_soil_slow_rh=1.0255263440555624e-06,
-    r_c_soil_passive_rh=3.881935738016802e-07,
-    r_c_lit_cwd_2_c_lit_mic=1.3188464625334016e-05,
-    r_c_lit_cwd_2_c_soil_slow=1.6316549662914743e-05,
-    r_c_lit_met_2_c_lit_mic=2.9433144645429653e-06,
-    r_c_lit_str_2_c_lit_mic=0.00010298015064924245,
-    r_c_lit_str_2_c_soil_slow=0.0016579805745133146,
-    r_c_lit_mic_2_c_soil_slow=0.0011840494205249575,
-    r_c_soil_met_2_c_soil_mic=7.861811338124696e-05,
-    r_c_soil_str_2_c_soil_mic=2.578967926776423e-05,
-    r_c_soil_str_2_c_soil_slow=1.7394627034766953e-06,
-    r_c_soil_mic_2_c_soil_slow=0.00021605360652605818,
-    r_c_soil_mic_2_c_soil_passive=4.569266267503945e-05,
-    r_c_soil_slow_2_c_soil_mic=4.1146075824754925e-07,
-    r_c_soil_slow_2_c_soil_passive=2.9993396188473066e-08,
-    r_c_soil_passive_2_c_soil_mic=2.751360714464457e-06,
-    c_lit_cwd_0=0.011122590276073926, 
-    c_lit_met_0=0.04563448012195457,
-    c_lit_str_0=0.022083588329899793,
-    c_lit_mic_0=0.011910319433275054,
-    c_soil_met_0=0.048208986458370635,
-    c_soil_str_0=0.6643525311241724,
-    c_soil_mic_0=0.05837121211447685,
-    c_soil_slow_0=0.3228602860446373
-)
-
-#initial globalmean hand-tuning
-#beta_leaf=0.3,
-#beta_root=0.3,
-#r_c_leaf_rh=0.0008,
-#r_c_root_rh=0.0008,
-#r_c_wood_rh=0.0009,
-#r_c_lit_cwd_rh=0.009730016902211099,
-#r_c_lit_met_rh=0.007002926006944982,
-#r_c_lit_str_rh=0.003459128990999148,
-#r_c_lit_mic_rh=0.006496258804231679, 
-#r_c_soil_met_rh=0.0005283019624678767,
-#r_c_soil_str_rh=0.00015550260079549095,
-#r_c_soil_mic_rh=0.0014976016198231856,
-#r_c_soil_slow_rh=8e-6,
-#r_c_soil_passive_rh=7e-07,
-#r_c_leaf_2_c_lit_met=0.001,
-#r_c_leaf_2_c_lit_str=0.0002,
-#r_c_root_2_c_soil_met=0.001,
-#r_c_root_2_c_soil_str=0.0005,
-#r_c_wood_2_c_lit_cwd=0.0002, 
-#r_c_lit_cwd_2_c_lit_mic=0.00002666130148133097,
-#r_c_lit_cwd_2_c_soil_slow=0.00003132779629682739,
-#r_c_lit_met_2_c_lit_mic=0.000010359522559848344, 
-#r_c_lit_str_2_c_lit_mic=0.00008930543749313994,
-#r_c_lit_str_2_c_soil_slow=0.0006956056931813782,
-#r_c_lit_mic_2_c_soil_slow=0.000982832457403613,
-#r_c_soil_met_2_c_soil_mic=0.000494305460211622,
-#r_c_soil_str_2_c_soil_mic=0.000017939031246948314,
-#r_c_soil_str_2_c_soil_slow=0.000012026215328729533,
-#r_c_soil_mic_2_c_soil_slow=0.0009376182185796474,
-#r_c_soil_mic_2_c_soil_passive=0.00021203823995936096,
-#r_c_soil_slow_2_c_soil_mic=1.2760504386493467e-06,
-#r_c_soil_slow_2_c_soil_passive=4.146635398790735e-08,
-#r_c_soil_passive_2_c_soil_mic=7.889917586471123e-06,
-#c_leaf_0=0.2,
-#c_root_0=0.2,
-#c_lit_cwd_0=0.2,
-#c_lit_met_0=0.2,
-#c_lit_str_0=0.2,
-#c_lit_mic_0=0.2,
-#c_soil_met_0=0.2,
-#c_soil_str_0=0.2, 
-#c_soil_mic_0=0.2,
-#c_soil_slow_0=0.5,
-
-# +
-#func_dict = msh.make_func_dict(dvs)
-
-#n = cpa.nyears*12*30
-
-#gpp_obs = np.array([GPP(d) for d in range(n)])
-#npp_obs = np.array([NPP(d) for d in range(n)])
-#temp_obs = np.array([temp(d) for d in range(n)])
-
-# Plot simulation output for observables
-#fig = plt.figure(figsize=(12, 4), dpi=80)
-#plot_solutions(
-#        fig,
-#        times=range(n),
-#        var_names=msh.Drivers._fields,
-#        tup=(npp_obs,)
-#)
-#fig.savefig('npp.pdf')
-
-# +
-# Plot simulation output for observables
-#fig = plt.figure(figsize=(12, 4), dpi=80)
-#plot_solutions(
-#        fig,
-#        times=range(n),
-#        var_names=msh.Drivers._fields[1],
-#        tup=(temp_obs,)
-#)
-#fig.savefig('temp.pdf')
-
-# +
-# Plot simulation output for observables
-#fig = plt.figure(figsize=(12, 4), dpi=80)
-#plot_solutions(
-#        fig,
-#        times=range(n),
-#        var_names=msh.Drivers._fields[2],
-#        tup=(gpp_obs,)
-#)
-#fig.savefig('gpp.pdf')
+par_dict = {
+    'beta_leaf': 0.7682384553229892, 
+    'beta_root': 0.14204586101167424, 
+    #'r_c_leaf_rh': 0.0022972292016441116,
+    #'r_c_root_rh': 0.0015470633697005037,
+    #'r_c_wood_rh':0.0003981642399033648,
+    'r_c_leaf_2_c_lit_met': 0.0007120305898251202, 
+    'r_c_leaf_2_c_lit_str': 0.0007883254343687162, 
+    'r_c_root_2_c_soil_met': 0.0012363546536425828,
+    'r_c_root_2_c_soil_str': 0.0004067071571929328, 
+    'r_c_wood_2_c_lit_cwd': 0.0002446124661809959, 
+    'c_leaf_0': 0.5615104265472759, 
+    'c_root_0': 0.6495807787373601, 
+    'r_c_lit_cwd_rh': 0.012210598784500313, 
+    'r_c_lit_met_rh': 0.032329371473925055, 
+    'r_c_lit_str_rh': 0.0068962597828840545, 
+    'r_c_lit_mic_rh': 0.012288969300236126,
+    'r_c_soil_met_rh': 0.0006758167922701092, 
+    'r_c_soil_str_rh': 0.00015605646641441882, 
+    'r_c_soil_mic_rh': 0.0019289112487673949, 
+    'r_c_soil_slow_rh': 4.189139209275766e-05, 
+    'r_c_soil_passive_rh': 1.35207047030553e-06,
+    'r_c_lit_cwd_2_c_lit_mic': 1.0045960071963091e-05,
+    'r_c_lit_cwd_2_c_soil_slow': 2.3397158076915994e-05,
+    'r_c_lit_met_2_c_lit_mic': 4.002638739947475e-06,
+    'r_c_lit_str_2_c_lit_mic': 0.00015293789003356162,
+    'r_c_lit_str_2_c_soil_slow': 0.0006227680438540832,
+    'r_c_lit_mic_2_c_soil_slow': 0.0009027280237572068,
+    'r_c_soil_met_2_c_soil_mic': 6.415659555529971e-05, 
+    'r_c_soil_str_2_c_soil_mic': 4.210824237095305e-05, 
+    'r_c_soil_str_2_c_soil_slow': 2.286834247048494e-06,
+    'r_c_soil_mic_2_c_soil_slow': 0.0002479841662654259,
+    'r_c_soil_mic_2_c_soil_passive': 4.462823543110515e-05,
+    'r_c_soil_slow_2_c_soil_mic': 2.1991855605003557e-06,
+    'r_c_soil_slow_2_c_soil_passive': 1.2525484949464374e-06,
+    'r_c_soil_passive_2_c_soil_mic': 2.7413297461931206e-06,
+    'c_lit_cwd_0': 0.17874982599134848,
+    'c_lit_met_0': 0.0780909757802213,
+    'c_lit_str_0': 0.11870057582418095,
+    'c_lit_mic_0': 0.07406262306023444,
+    'c_soil_met_0': 0.3098341636788049,
+    'c_soil_str_0': 0.5370201126137074,
+    'c_soil_mic_0': 0.16367672062228367, 
+    'c_soil_slow_0': 1.6344026460653003
+}
+    
+epa0 = msh.EstimatedParameters(**par_dict)
 # -
 
 # #### Create forward model function:
@@ -314,7 +230,7 @@ C_autostep, J_autostep = gh.autostep_mcmc_2(
     param2res=param2res,
     costfunction=msh.make_weighted_cost_func(svs),
     #nsimu=200, # for testing and tuning mcmc
-    nsimu=100,
+    nsimu=2000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
     acceptance_rate=0.23,   # default value | target acceptance rate in %
@@ -351,75 +267,3 @@ pd.DataFrame(epa_opt).to_csv(outputPath.joinpath('YIBs_optimized_pars.csv'), sep
 pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('YIBs_optimized_solutions.csv'), sep=',')
 
 epa_opt
-# +
-import model_specific_helpers_2 as msh
-import general_helpers as gh
-it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
-ns=1500
-StartVectorTrace=gh.make_StartVectorTrace(mvs)
-nv=len(StartVectorTrace._fields)
-res_trace= np.zeros((ns,nv))
-for i in range(ns):
-    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
-#res_trace
-
-import matplotlib.pyplot as plt
-n=len(mvs.get_StateVariableTuple())
-fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
-axs=fig.subplots(n+1,2)
-days=list(range(ns))
-
-
-for i in range(n):
-    
-    ax = axs[i,0]
-    #  the solution
-    pos=i
-    ax.plot(
-        days,
-        res_trace[:,i],
-        label=StartVectorTrace._fields[pos],
-        color='blue'
-    )
-    # X_p
-    pos=i+n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='red'
-    )
-    # X_c
-    pos=i+2*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='yellow'
-    )
-    ax.legend()
-    
-    ax = axs[i,1]
-    # RT
-    pos=i+3*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='black'
-    )
-    ax.legend()
-    
-axs[n,0].plot(
-    days,
-    [msh.make_npp_func(dvs)(d) for d in days],
-    label='NPP',
-    color='green'
-)
-axs[n,0].legend()
-
-# -
-
-
-
-

@@ -298,7 +298,7 @@ def get_global_mean_vars(dataPath):
             #clip the imported array by the projected world map
             nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
 
-            # we can clip/mask again by Greenland,Antarctica,or other shape if we want to here
+            # we can clip/mask again by Greenland,Antarctica, or other shapefile if we want to here
 
             #set save directory and filename
             dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
@@ -334,12 +334,17 @@ def get_global_mean_vars(dataPath):
                     combined_mask,
                     var
             )
+            
+            #scale per second to per day before caching
+            if vn in ["npp","gpp","rh","ra"]:
+                gm = gm * 86400
+                
             gh.write_global_mean_cache(
                     gm_path,
                     gm,
                     vn
             )
-            return gm * 86400 if vn in ["npp","gpp","rh","ra"] else gm
+            return gm
     
         #map variables to data
         return (
