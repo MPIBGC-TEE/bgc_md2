@@ -153,7 +153,7 @@ def get_global_mean_vars(dataPath):
 
         def get_cached_global_mean(vn):
             gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
-            return gm * 86400 if vn in ["gpp", "npp","rh", "ra"] else gm   
+            return gm
         return (
             Observables(*map(get_cached_global_mean, o_names)),
             Drivers(*map(get_cached_global_mean,d_names))
@@ -192,12 +192,16 @@ def get_global_mean_vars(dataPath):
                     combined_mask,
                     var
             )
+            #scale per second to per day before caching
+            if vn in ["npp","gpp","rh","ra"]:
+                gm = gm * 86400
+                
             gh.write_global_mean_cache(
                     gm_path,
                     gm,
                     vn
             )
-            return gm * 86400 if vn in ["npp","gpp","rh","ra"] else gm
+            return gm
     
         #map variables to data
         return (
