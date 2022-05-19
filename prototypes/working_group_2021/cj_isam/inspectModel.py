@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -70,49 +70,49 @@ dvs_0 = msh.Drivers(*map(lambda v: v[0],dvs))
 
 
 from sympy import Symbol
-par_dict={
-    Symbol(k):v for k,v in 
-    {
-        "beta_NWT": 0.3,
-        "beta_AGWT": 0.3,
-        "beta_TR": 0.10000000000000003,
-        "beta_GVF": 0.15,
-        "beta_GVR": 0.15,
-        "r_C_NWT_rh": 0,
-        "r_C_AGWT_rh": 0,
-        "r_C_TR_rh": 0,
-        "r_C_GVF_rh": 0,
-        "r_C_GVR_rh": 0,
-        "r_C_AGML_rh": 0.00678082191780822,
-        "r_C_AGSL_rh": 0.0354794520547945,
-        "r_C_AGMS_rh": 0.00800000000000000,
-        "r_C_YHMS_rh": 0.00246575342465753,
-        "r_C_BGDL_rh": 0.0200000000000000,
-        "r_C_BGRL_rh": 0.000600000000000000,
-        "r_C_BGMS_rh": 0.00132000000000000,
-        "r_C_SHMS_rh": 4.00000000000000e-5,
-        "r_C_NWT_2_C_AGML": 0.00116438356164384,
-        "r_C_NWT_2_C_AGSL": 0.000205479452054795,
-        "r_C_AGWT_2_C_AGSL": 9.13242009132420e-5,
-        "r_C_TR_2_C_BGDL": 9.21544209215442e-5,
-        "r_C_TR_2_C_BGRL": 3.23785803237858e-5,
-        "r_C_GVF_2_C_AGML": 7.76255707762557e-5,
-        "r_C_GVF_2_C_AGSL": 1.36986301369863e-5,
-        "r_C_GVR_2_C_BGDL": 9.21544209215442e-5,
-        "r_C_GVR_2_C_BGRL": 3.23785803237858e-5,
-        "r_C_AGML_2_C_AGMS": 0.00554794520547945,
-        "r_C_AGSL_2_C_AGMS": 0.00760273972602740,
-        "r_C_AGSL_2_C_YHMS": 0.00760273972602740,
-        "r_C_AGMS_2_C_YHMS": 0.0120000000000000,
-        "r_C_YHMS_2_C_AGMS": 0.00271232876712329,
-        "r_C_YHMS_2_C_SHMS": 0.000301369863013699,
-        "r_C_BGDL_2_C_SHMS": 0.00739726027397260,
-        "r_C_BGRL_2_C_BGMS": 0.000110958904109589,
-        "r_C_BGRL_2_C_SHMS": 0.000110958904109589,
-        "r_C_BGMS_2_C_SHMS": 0.000488219178082192,
-        "r_C_SHMS_2_C_BGMS": 1.47945205479452e-5 
-    }.items()    
-}
+# par_dict={
+#     Symbol(k):v for k,v in 
+#     {
+#         "beta_NWT": 0.3,
+#         "beta_AGWT": 0.3,
+#         "beta_TR": 0.10000000000000003,
+#         "beta_GVF": 0.15,
+#         #"beta_GVR": 0.15,
+#         #"r_C_NWT_rh": 0,
+#         #"r_C_AGWT_rh": 0,
+#         #"r_C_TR_rh": 0,
+#         #"r_C_GVF_rh": 0,
+#         #"r_C_GVR_rh": 0,
+#         "r_C_AGML_rh": 0.00678082191780822,
+#         "r_C_AGSL_rh": 0.0354794520547945,
+#         "r_C_AGMS_rh": 0.00800000000000000,
+#         "r_C_YHMS_rh": 0.00246575342465753,
+#         "r_C_BGDL_rh": 0.0200000000000000,
+#         "r_C_BGRL_rh": 0.000600000000000000,
+#         "r_C_BGMS_rh": 0.00132000000000000,
+#         "r_C_SHMS_rh": 4.00000000000000e-5,
+#         "r_C_NWT_2_C_AGML": 0.00116438356164384,
+#         "r_C_NWT_2_C_AGSL": 0.000205479452054795,
+#         "r_C_AGWT_2_C_AGSL": 9.13242009132420e-5,
+#         "r_C_TR_2_C_BGDL": 9.21544209215442e-5,
+#         "r_C_TR_2_C_BGRL": 3.23785803237858e-5,
+#         "r_C_GVF_2_C_AGML": 7.76255707762557e-5,
+#         "r_C_GVF_2_C_AGSL": 1.36986301369863e-5,
+#         "r_C_GVR_2_C_BGDL": 9.21544209215442e-5,
+#         "r_C_GVR_2_C_BGRL": 3.23785803237858e-5,
+#         "r_C_AGML_2_C_AGMS": 0.00554794520547945,
+#         "r_C_AGSL_2_C_AGMS": 0.00760273972602740,
+#         "r_C_AGSL_2_C_YHMS": 0.00760273972602740,
+#         "r_C_AGMS_2_C_YHMS": 0.0120000000000000,
+#         "r_C_YHMS_2_C_AGMS": 0.00271232876712329,
+#         "r_C_YHMS_2_C_SHMS": 0.000301369863013699,
+#         "r_C_BGDL_2_C_SHMS": 0.00739726027397260,
+#         "r_C_BGRL_2_C_BGMS": 0.000110958904109589,
+#         "r_C_BGRL_2_C_SHMS": 0.000110958904109589,
+#         "r_C_BGMS_2_C_SHMS": 0.000488219178082192,
+#         "r_C_SHMS_2_C_BGMS": 1.47945205479452e-5 
+#     }.items()    
+# }
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for $NPP$ and $\xi$ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 
@@ -155,11 +155,11 @@ cpa=msh.Constants(
  npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
  rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
  ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
- r_C_NWT_rh=0,
- r_C_AGWT_rh=0,
- r_C_TR_rh=0,
- r_C_GVF_rh=0,
- r_C_GVR_rh=0,
+ #r_C_NWT_rh=0,
+ #r_C_AGWT_rh=0,
+ #r_C_TR_rh=0,
+ #r_C_GVF_rh=0,
+ #r_C_GVR_rh=0,
  r_C_AGML_rh=0.55*4.5/365,
  r_C_AGSL_rh=0.7*18.5/365,
  r_C_AGMS_rh=0.4*7.3/365,
@@ -178,6 +178,45 @@ cpa=msh.Constants(
 
 # ### Finding better start values for the data assimilation
 # You don't have to do this. It's a heuristic approach to find a better starting position.
+
+# create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
+# If you don't you get a "TypeError". 
+epa_0=msh.EstimatedParameters(
+    fwt=0.5907770914828289, 
+    fgv=0.10708374044873868, 
+    fco=0.9502719613629499, 
+    fml=0.6985590765466911, 
+    fd=0.8108017779961694, 
+    k_C_NWT=0.0018600810916478165, 
+    k_C_AGWT=0.00017354142452106252, 
+    k_C_TR=0.00016065843641210772, 
+    k_C_GVF=0.00022102017216433633, 
+    k_C_GVR=0.00017926856125131916, 
+    f_C_AGSL_2_C_AGMS=0.20853426509202325, 
+    f_C_BGRL_2_C_SHMS=0.24638112975102788, 
+    C_NWT_0=svs_0.cVeg * 0.04,#0.39641121927763323, 
+    C_AGWT_0=svs_0.cVeg * 0.4,#1.0098899271611432, 
+    C_GVF_0=svs_0.cVeg * 0.06,#0.1784893310039542, 
+    C_GVR_0=svs_0.cVeg * 0.07,#2.1680315400436174, 
+    C_AGML_0=svs_0.cLitter * 0.17,#0.1251689278629053, 
+    C_AGSL_0=svs_0.cLitter * 0.06,#0.005800531050824444, 
+    C_BGDL_0=svs_0.cLitter * 0.11,#0.0484130929152639, 
+    C_AGMS_0=svs_0.cSoil * 0.006,#0.10074331291791151, 
+    C_YHMS_0=svs_0.cSoil * 0.018,#0.5036084965444287, 
+    C_SHMS_0=svs_0.cSoil * 0.975,#8.080067914918454,
+)
+
+srm=mvs.get_SmoothReservoirModel()
+par_dict_keys=srm.free_symbols.difference(
+    [Symbol(str(mvs.get_TimeSymbol()))]+
+    list(mvs.get_StateVariableTuple())
+    )
+apa = {**cpa._asdict(),**epa_0._asdict()}
+par_dict = {
+    Symbol(k):v for k,v in apa.items()
+    if Symbol(k) in par_dict_keys
+    }
+par_dict
 
 # +
 import sys
@@ -202,7 +241,7 @@ def make_steady_state_iterator_sym(
         initial_values=V_init,
         f=f)
 # calculate steady state
-func_dict=msh.make_func_dict(svs,dvs)
+func_dict=msh.make_func_dict(svs,dvs,cpa,epa_0)
 B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict)  
 
 
@@ -235,34 +274,35 @@ np.linalg.inv(Bs[0])
 X_ss = np.linalg.solve(B_mean, (-b_mean))
 
 steady_state_dict={str(name): X_ss[i,0] for i,name in enumerate(mvs.get_StateVariableTuple())}
-# -
 
-# create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
-# If you don't you get a "TypeError". 
-epa_0=msh.EstimatedParameters(
-    fwt=0.5907770914828289, 
-    fgv=0.10708374044873868, 
-    fco=0.9502719613629499, 
-    fml=0.6985590765466911, 
-    fd=0.8108017779961694, 
-    k_C_NWT=0.0018600810916478165, 
-    k_C_AGWT=0.00017354142452106252, 
-    k_C_TR=0.00016065843641210772, 
-    k_C_GVF=0.00022102017216433633, 
-    k_C_GVR=0.00017926856125131916, 
-    f_C_AGSL_2_C_AGMS=0.20853426509202325, 
-    f_C_BGRL_2_C_SHMS=0.24638112975102788, 
-    C_NWT_0=svs_0.cVeg * 0.04,#0.39641121927763323, 
-    C_AGWT_0=svs_0.cVeg * 0.4,#1.0098899271611432, 
-    C_GVF_0=svs_0.cVeg * 0.06,#0.1784893310039542, 
-    C_GVR_0=svs_0.cVeg * 0.07,#2.1680315400436174, 
-    C_AGML_0=svs_0.cLitter * 0.17,#0.1251689278629053, 
-    C_AGSL_0=svs_0.cLitter * 0.06,#0.005800531050824444, 
-    C_BGDL_0=svs_0.cLitter * 0.11,#0.0484130929152639, 
-    C_AGMS_0=svs_0.cSoil * 0.006,#0.10074331291791151, 
-    C_YHMS_0=svs_0.cSoil * 0.018,#0.5036084965444287, 
-    C_SHMS_0=svs_0.cSoil * 0.975,#8.080067914918454,
-)
+# +
+# # create a start parameter tuple for the mcmc. The order has to be the same as when you created the namedtupl3 
+# # If you don't you get a "TypeError". 
+# epa_0=msh.EstimatedParameters(
+#     fwt=0.5907770914828289, 
+#     fgv=0.10708374044873868, 
+#     fco=0.9502719613629499, 
+#     fml=0.6985590765466911, 
+#     fd=0.8108017779961694, 
+#     k_C_NWT=0.0018600810916478165, 
+#     k_C_AGWT=0.00017354142452106252, 
+#     k_C_TR=0.00016065843641210772, 
+#     k_C_GVF=0.00022102017216433633, 
+#     k_C_GVR=0.00017926856125131916, 
+#     f_C_AGSL_2_C_AGMS=0.20853426509202325, 
+#     f_C_BGRL_2_C_SHMS=0.24638112975102788, 
+#     C_NWT_0=svs_0.cVeg * 0.04,#0.39641121927763323, 
+#     C_AGWT_0=svs_0.cVeg * 0.4,#1.0098899271611432, 
+#     C_GVF_0=svs_0.cVeg * 0.06,#0.1784893310039542, 
+#     C_GVR_0=svs_0.cVeg * 0.07,#2.1680315400436174, 
+#     C_AGML_0=svs_0.cLitter * 0.17,#0.1251689278629053, 
+#     C_AGSL_0=svs_0.cLitter * 0.06,#0.005800531050824444, 
+#     C_BGDL_0=svs_0.cLitter * 0.11,#0.0484130929152639, 
+#     C_AGMS_0=svs_0.cSoil * 0.006,#0.10074331291791151, 
+#     C_YHMS_0=svs_0.cSoil * 0.018,#0.5036084965444287, 
+#     C_SHMS_0=svs_0.cSoil * 0.975,#8.080067914918454,
+# )
+# -
 
 
 
@@ -628,68 +668,71 @@ print("Optimized parameters: ", epa_opt)
 #
 
 # +
-it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
-ns=10*360 #1500
-StartVectorTrace=gh.make_StartVectorTrace(mvs)
-nv=len(StartVectorTrace._fields)
-res_trace= np.zeros((ns,nv))
-for i in range(ns):
-    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
-#res_trace
+# THIS IS DEPRECATED VERSION OF TRACEABILITY
+# SEE NEW VERSION IN model_comparison_example.py AND model_comparison_presentation.py
 
-import matplotlib.pyplot as plt
-n=len(mvs.get_StateVariableTuple())
-fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
-axs=fig.subplots(n+1,2)
-days=list(range(ns))
+# it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
+# ns=10*360 #1500
+# StartVectorTrace=gh.make_StartVectorTrace(mvs)
+# nv=len(StartVectorTrace._fields)
+# res_trace= np.zeros((ns,nv))
+# for i in range(ns):
+#     res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
+# #res_trace
+
+# import matplotlib.pyplot as plt
+# n=len(mvs.get_StateVariableTuple())
+# fig=plt.figure(figsize=(20,(n+1)*10), dpi=80)
+# axs=fig.subplots(n+1,2)
+# days=list(range(ns))
 
 
-for i in range(n):
+# for i in range(n):
     
-    ax = axs[i,0]
-    #  the solution
-    pos=i
-    ax.plot(
-        days,
-        res_trace[:,i],
-        label=StartVectorTrace._fields[pos],
-        color='blue'
-    )
-    # X_p
-    pos=i+n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='red'
-    )
-    # X_c
-    pos=i+2*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='yellow'
-    )
-    ax.legend()
+#     ax = axs[i,0]
+#     #  the solution
+#     pos=i
+#     ax.plot(
+#         days,
+#         res_trace[:,i],
+#         label=StartVectorTrace._fields[pos],
+#         color='blue'
+#     )
+#     # X_p
+#     pos=i+n
+#     ax.plot(
+#         days,
+#         res_trace[:,pos],
+#         label=StartVectorTrace._fields[pos],
+#         color='red'
+#     )
+#     # X_c
+#     pos=i+2*n
+#     ax.plot(
+#         days,
+#         res_trace[:,pos],
+#         label=StartVectorTrace._fields[pos],
+#         color='yellow'
+#     )
+#     ax.legend()
     
-    ax = axs[i,1]
-    # RT
-    pos=i+3*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='black'
-    )
-    ax.legend()
+#     ax = axs[i,1]
+#     # RT
+#     pos=i+3*n
+#     ax.plot(
+#         days,
+#         res_trace[:,pos],
+#         label=StartVectorTrace._fields[pos],
+#         color='black'
+#     )
+#     ax.legend()
     
-axs[n,0].plot(
-    days,
-    [msh.make_npp_func(dvs)(d) for d in days],
-    label='NPP',
-    color='green'
-)
-axs[n,0].legend()
+# axs[n,0].plot(
+#     days,
+#     [msh.make_npp_func(dvs)(d) for d in days],
+#     label='NPP',
+#     color='green'
+# )
+# axs[n,0].legend()
 # -
 

@@ -46,11 +46,11 @@ Constants = namedtuple(
         "npp_0",
         "rh_0",
         "ra_0",
-        "r_C_NWT_rh",
-        "r_C_AGWT_rh",
-        "r_C_TR_rh",
-        "r_C_GVF_rh",
-        "r_C_GVR_rh",
+        #"r_C_NWT_rh",
+        #"r_C_AGWT_rh",
+        #"r_C_TR_rh",
+        #"r_C_GVF_rh",
+        #"r_C_GVR_rh",
         "r_C_AGML_rh",
         "r_C_AGSL_rh",
         "r_C_AGMS_rh",
@@ -231,7 +231,7 @@ def get_global_mean_vars(dataPath):
 
 def make_npp_func(dvs):
     def func(day):
-        month=gh.day_2_month_index(day)
+        month=gh.day_2_month_index_vm(day)
         #print(day,month)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month]) * 86400
@@ -247,12 +247,12 @@ def make_npp_func(dvs):
 # -
 
 import math
-def make_xi_func(tas, mrso):
+def make_xi_func(dvs):
     def xi_func(day):
-        mi = gh.day_2_month_index(day)
+        mi = gh.day_2_month_index_vm(day)
         # alternative FT
-        FT = 0.08 * math.exp(0.095 * (tas[mi]-273.15)) # temperature rate modifier
-        FW = 1 #/ (1 + 30 * math.exp(-8.5 * mrso[mi])) # water rate modifier
+        FT = 0.08 * math.exp(0.095 * (dvs.tas[mi]-273.15)) # temperature rate modifier
+        FW = 1 #/ (1 + 30 * math.exp(-8.5 * dvs.mrso[mi])) # water rate modifier
         #print("FT,FW", FT, FW)
         rh_factor = FT * FW
         return rh_factor # 1.0     # Set to 1 if no scaler implemented
@@ -261,82 +261,83 @@ def make_xi_func(tas, mrso):
     return xi_func
 
 
-def make_func_dict(mvs,dvs):
+def make_func_dict(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs.tas, dvs.mrso)
+        "xi": make_xi_func(dvs)
     }
 
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    par_dict = {
-        Symbol(k): v for k,v in {
-            'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
-            'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
-            'beta_TR':1-epa.fgv-epa.fwt,
-            'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
-            'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
-            'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
-            'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
-            'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
-            'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
-            'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
-            'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
-            'beta_GVF':epa.fgv*0.5,
-            'r_C_AGML_rh':cpa.r_C_AGML_rh,
-            'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
-            'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
-            'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
-            'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
-            'beta_NWT':epa.fwt*0.5,
-            'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
-            'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
-            'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
-            'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
-            'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
-            'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
-            'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
-            'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
-            'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
-            'beta_AGWT':epa.fwt*0.5,
-            'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
-            'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
-            'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
-        }.items()
-    }
-    X_0_dict={
-        "C_NWT": epa.C_NWT_0,
-        "C_AGWT": epa.C_AGWT_0,
-        "C_GVF": epa.C_GVF_0,
-        "C_GVR": epa.C_GVR_0,
-        "C_TR": cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
-        "C_AGML": epa.C_AGML_0,
-        "C_AGSL": epa.C_AGSL_0,
-        "C_BGDL": epa.C_BGDL_0,
-        "C_BGRL": cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
-        "C_AGMS": epa.C_AGMS_0,
-        "C_YHMS": epa.C_YHMS_0,
-        "C_SHMS": epa.C_SHMS_0,
-        "C_BGMS": cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs)
-    V_init=gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
-
+# +
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
+#     par_dict = {
+#         Symbol(k): v for k,v in {
+#             'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
+#             'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
+#             'beta_TR':1-epa.fgv-epa.fwt,
+#             'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
+#             'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
+#             'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
+#             'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
+#             'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
+#             'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
+#             'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
+#             'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
+#             'beta_GVF':epa.fgv*0.5,
+#             'r_C_AGML_rh':cpa.r_C_AGML_rh,
+#             'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
+#             'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
+#             'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
+#             'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
+#             'beta_NWT':epa.fwt*0.5,
+#             'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
+#             'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
+#             'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
+#             'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
+#             'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
+#             'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
+#             'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
+#             'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
+#             'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
+#             'beta_AGWT':epa.fwt*0.5,
+#             'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
+#             'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
+#             'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
+#         }.items()
+#     }
+#     X_0_dict={
+#         "C_NWT": epa.C_NWT_0,
+#         "C_AGWT": epa.C_AGWT_0,
+#         "C_GVF": epa.C_GVF_0,
+#         "C_GVR": epa.C_GVR_0,
+#         "C_TR": cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
+#         "C_AGML": epa.C_AGML_0,
+#         "C_AGSL": epa.C_AGSL_0,
+#         "C_BGDL": epa.C_BGDL_0,
+#         "C_BGRL": cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
+#         "C_AGMS": epa.C_AGMS_0,
+#         "C_YHMS": epa.C_YHMS_0,
+#         "C_SHMS": epa.C_SHMS_0,
+#         "C_BGMS": cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
+#     }
+#     X_0= np.array(
+#         [
+#             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+#         ]
+#     ).reshape(len(X_0_dict),1)
+#     fd=make_func_dict(mvs,dvs,cpa,epa)
+#     V_init=gh.make_InitialStartVectorTrace(
+#             X_0,mvs,
+#             par_dict=par_dict,
+#             func_dict=fd
+#     )
+#     it_sym_trace = gh.make_daily_iterator_sym_trace(
+#         mvs,
+#         V_init=V_init,
+#         par_dict=par_dict,
+#         func_dict=fd
+#     )
+#     return it_sym_trace
+# -
 
 def make_iterator_sym(
         mvs,
@@ -432,9 +433,9 @@ def make_param2res_sym(
     # the time dependent driver function for gpp does not change with the estimated parameters
     # so its enough to define it once as in our test
     seconds_per_day = 86400
-    def npp_func(day):
-        month=gh.day_2_month_index(day)
-        return dvs.npp[month] * seconds_per_day   # kg/m2/s kg/m2/day;
+#     def npp_func(day):
+#         month=gh.day_2_month_index(day)
+#         return dvs.npp[month] * seconds_per_day   # kg/m2/s kg/m2/day;
     
     def param2res(pa):
         epa=EstimatedParameters(*pa)
@@ -462,42 +463,45 @@ def make_param2res_sym(
         # The iterator does not care if they are estimated or not so we look for them
         # in the combination
         apa = {**cpa._asdict(),**epa._asdict()}
-
         model_par_dict = {
-            'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
-            'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
-            'beta_TR':1-epa.fgv-epa.fwt,
-            'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
-            'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
-            'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
-            'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
-            'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
-            'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
-            'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
-            'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
-            'beta_GVF':epa.fgv*0.5,
-            'r_C_AGML_rh':cpa.r_C_AGML_rh,
-            'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
-            'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
-            'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
-            'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
-            'beta_NWT':epa.fwt*0.5,
-            'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
-            'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
-            'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
-            'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
-            'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
-            'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
-            'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
-            'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
-            'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
-            'beta_AGWT':epa.fwt*0.5,
-            'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
-            'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
-            'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
         }
+#         model_par_dict = {
+#             'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
+#             'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
+#             'beta_TR':1-epa.fgv-epa.fwt,
+#             'r_C_GVF_2_C_AGML':epa.k_C_GVF*(1-epa.fml),
+#             'r_C_AGMS_2_C_YHMS':cpa.r_C_AGMS_2_C_YHMS,
+#             'r_C_GVR_2_C_BGDL':epa.k_C_GVR*epa.fd,
+#             'r_C_GVR_2_C_BGRL':epa.k_C_GVR*(1-epa.fd),
+#             'r_C_YHMS_2_C_AGMS':cpa.r_C_YHMS_2_C_AGMS,
+#             'r_C_BGMS_2_C_SHMS':cpa.r_C_YHMS_2_C_SHMS,
+#             'r_C_AGSL_2_C_AGMS':cpa.r_C_AGSL_rh/0.7*epa.f_C_AGSL_2_C_AGMS,
+#             'r_C_YHMS_rh':cpa.r_C_YHMS_rh,
+#             'beta_GVF':epa.fgv*0.5,
+#             'r_C_AGML_rh':cpa.r_C_AGML_rh,
+#             'r_C_BGRL_rh':cpa.k_C_BGRL*epa.fco,
+#             'r_C_AGSL_2_C_YHMS':cpa.r_C_AGSL_rh/0.7*(1-epa.f_C_AGSL_2_C_AGMS),
+#             'r_C_AGWT_2_C_AGSL':epa.k_C_AGWT*1,
+#             'r_C_TR_2_C_BGRL':epa.k_C_TR*(1-epa.fd),
+#             'beta_NWT':epa.fwt*0.5,
+#             'r_C_BGMS_rh':cpa.k_C_BGMS*epa.fco,
+#             'r_C_GVF_2_C_AGSL':epa.k_C_GVF*epa.fml,
+#             'r_C_BGRL_2_C_SHMS':cpa.k_C_BGRL*(1-epa.fco)*epa.f_C_BGRL_2_C_SHMS,
+#             'r_C_BGDL_rh':cpa.k_C_BGDL*epa.fco,
+#             'r_C_BGRL_2_C_BGMS':cpa.k_C_BGRL*(1-epa.fco)*(1-epa.f_C_BGRL_2_C_SHMS),
+#             'r_C_SHMS_rh':cpa.k_C_SHMS*epa.fco,
+#             'r_C_NWT_2_C_AGSL':epa.k_C_NWT*(1-epa.fml),
+#             'r_C_TR_2_C_BGDL':epa.k_C_TR*epa.fd,
+#             'r_C_AGSL_rh':cpa.r_C_AGSL_rh,
+#             'beta_AGWT':epa.fwt*0.5,
+#             'r_C_SHMS_2_C_BGMS':cpa.k_C_SHMS*(1-epa.fco),
+#             'r_C_NWT_2_C_AGML':epa.k_C_NWT*epa.fml,
+#             'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
+#         }
         
-        func_dict=make_func_dict(mvs,dvs)
+        func_dict=make_func_dict(mvs,dvs,cpa,epa)
 
         # size of the timestep in days
         # We could set it to 30 o
@@ -570,3 +574,65 @@ def make_param_filter_func(
         
     
     return isQualified
+
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_NWT": epa.C_NWT_0,
+        "C_AGWT": epa.C_AGWT_0,
+        "C_GVF": epa.C_GVF_0,
+        "C_GVR": epa.C_GVR_0,
+        "C_TR": cpa.cVeg_0-(epa.C_NWT_0 + epa.C_AGWT_0 + epa.C_GVF_0 + epa.C_GVR_0),
+        "C_AGML": epa.C_AGML_0,
+        "C_AGSL": epa.C_AGSL_0,
+        "C_BGDL": epa.C_BGDL_0,
+        "C_BGRL": cpa.cLitter_0-(epa.C_AGML_0 + epa.C_AGSL_0 + epa.C_BGDL_0),
+        "C_AGMS": epa.C_AGMS_0,
+        "C_YHMS": epa.C_YHMS_0,
+        "C_SHMS": epa.C_SHMS_0,
+        "C_BGMS": cpa.cSoil_0-(epa.C_AGMS_0 + epa.C_YHMS_0 + epa.C_SHMS_0),
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+
+    return X_0
+
+
+# Define start and end dates of the simulation
+import datetime as dt
+start_date=dt.date(1700, 1, 16)
+end_date = dt.date(2019, 12, 16)
+
+
+def make_sim_day_2_day_since_a_D(conf_dict):
+    # this function is extremely important to syncronise our results
+    # because our data streams start at different times the first day of 
+    # a simulation day_ind=0 refers to different dates for different models
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced monthly with different numbers of days
+    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("ISAM_S2_cVeg.nc")))
+    times = ds.variables["time"]
+
+    # we have to check some assumptions on which this calculation is based
+
+    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    td = int(tm *31)  #in days since_1700-01-01 
+    #NOT assuming a 30 day month...
+    import datetime as dt
+    ad = dt.date(1, 1, 1) # first of January of year 1 
+    sd = dt.date(1700, 1, 16)
+    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+
+    def f(day_ind: int)->int:
+        return day_ind+td_aD
+
+    return f
