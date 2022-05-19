@@ -24,7 +24,21 @@ time=nc.Dataset(
     Path(gh.confDict("Aneesh_SDGVM")["dataPath"]).joinpath("SDGVM_S2_npp.nc")
 ).variables["time"]
 print(time)
-start_date=dt.date(1900,1,16)
+reference_date=dt.date(1900,1,1)
+first_value_in_days=time[0]/24
+print("\nFirst value in days: " + str(first_value_in_days))
+start_date=reference_date+dt.timedelta(first_value_in_days)
+print("Start date: "+str(start_date))
+last_value_in_days=time[-1]/24
+print("\nLast value in days: " + str(last_value_in_days))
+end_date_real_months=reference_date+dt.timedelta(last_value_in_days)
+print("End date (with real months): "+str(end_date_real_months))
+last_date_in_days=reference_date.year*360+reference_date.month*30+reference_date.day+last_value_in_days
+end_year_30d=last_date_in_days//360
+end_month_30d=(last_date_in_days%360)//30
+end_day_30d=(last_date_in_days%360)%30
+print("End date (with 30day months): "+str(end_year_30d)+"-"+str(end_month_30d)+"-"+str(end_day_30d))
+print ("2020-00-16 actually means 2019-12-16 - this is exactly what Panoply shows as the date of last measurement")
 
 # interpretation 1, believe:
 # -the unit as hours since 1901,1,16
