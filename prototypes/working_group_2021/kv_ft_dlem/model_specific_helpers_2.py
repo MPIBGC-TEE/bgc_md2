@@ -145,11 +145,11 @@ def get_global_mean_vars(dataPath):
     names = o_names + d_names 
 
     if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
-        print(""" Found cached global mean files. If you want to recompute the global means
-            remove the following files: """
-        )
-        for vn in names:
-            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
+#         print(""" Found cached global mean files. If you want to recompute the global means
+#             remove the following files: """
+#         )
+#         for vn in names:
+#             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
             gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)

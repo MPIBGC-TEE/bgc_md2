@@ -1718,6 +1718,7 @@ def model_table(
 def sim_day_2_day_aD_func(mf): #->function
     return msh(mf).make_sim_day_2_day_since_a_D(confDict(mf))
 
+# +
 # def times_in_days_aD(mf,delta_t_val):
 #     import datetime as dt
 #     n_months=len(test_args(mf).dvs[0])
@@ -1727,13 +1728,23 @@ def sim_day_2_day_aD_func(mf): #->function
 #     n_iter=int(n_days/delta_t_val)
 #     days_after_sim_start=delta_t_val*np.arange(n_iter)
 #     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+# -
 
 def times_in_days_aD(mf, delta_t_val):
     start_date = msh(mf).start_date # start of the simulation
     end_date = msh(mf).end_date # end of the simulation
-    duration=end_date-start_date
-    # 365-day calendar does not include leap years so we exclude them    
-    n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
+    if mf in ["Aneesh_SDGVM"]: # different calculation for models with 30-day months
+        start_year=start_date.year
+        start_month=start_date.month
+        start_day=start_date.day
+        end_year=end_date.year
+        end_month=end_date.month
+        end_day=end_date.day
+        n_days=end_year*360+end_month*30+end_day - (start_year*360+start_month*30+start_day)
+    else:   
+        duration=end_date-start_date
+        # 365-day calendar does not include leap years so we exclude them    
+        n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
     n_iter=int(n_days/delta_t_val)
     days_after_sim_start=delta_t_val*np.arange(n_iter)
     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
@@ -1854,7 +1865,7 @@ def days_AD_to_years(days): # days can be an integer of an array of integers
             end_date=start_date+delta
             years[i]=end_date.year+(end_date.month-1)/12+end_date.day/365
     return(years)
-        
+
 end_date = dt.date(2019, 12, 16)
 
 def plot_components_combined(model_names, # dictionary (folder name : model name)
@@ -1912,7 +1923,7 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
         )             
         ax.legend()
         ax.set_title(var_names[name])
-        
+
 def plot_x_xc(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
@@ -1954,7 +1965,7 @@ def plot_x_xc(model_names, # dictionary (folder name : model name)
     ax.set_title('Total Carbon (X) and Carbon Storage Capacity (X_c)')
     ax.set_ylabel('Gt C')
     ax.grid()
-    
+
 # change of X since the start of simulation
 def plot_normalized_x(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
@@ -1982,7 +1993,9 @@ def plot_normalized_x(model_names, # dictionary (folder name : model name)
         vals=itr[start:stop]
         vals_for_plot=avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
-        vals_for_plot_norm = vals_array - vals_array[0]        
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change        
+        #print(vals_for_plot_norm.shape)
+        #print(vals_for_plot_norm[0,:].shape)
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,
@@ -1991,9 +2004,9 @@ def plot_normalized_x(model_names, # dictionary (folder name : model name)
         )           
     ax.legend()
     ax.set_title('Total Carbon (X) change since the start of the simulation')
-    ax.set_ylabel('Gt C')
+    ax.set_ylabel('% change')
     ax.grid()
-    
+
 def plot_normalized_xc(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
@@ -2020,7 +2033,7 @@ def plot_normalized_xc(model_names, # dictionary (folder name : model name)
         vals=itr[start:stop]
         vals_for_plot=avg_timeline(vals.__getattribute__("x_c"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
-        vals_for_plot_norm = vals_array - vals_array[0]        
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change      
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,
@@ -2029,9 +2042,9 @@ def plot_normalized_xc(model_names, # dictionary (folder name : model name)
         )           
     ax.legend()
     ax.set_title('Carbon Storage Capacity (X) change since the start of the simulation')
-    ax.set_ylabel('Gt C')
+    ax.set_ylabel('% change')
     ax.grid()
-    
+
 def plot_xp(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
@@ -2066,7 +2079,7 @@ def plot_xp(model_names, # dictionary (folder name : model name)
     ax.set_title('Carbon Storage Potential (X_p)')
     ax.set_ylabel('Gt C')
     ax.grid()
-    
+
 def plot_u(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
@@ -2101,7 +2114,7 @@ def plot_u(model_names, # dictionary (folder name : model name)
     ax.set_title('Carbon Input (NPP)')
     ax.set_ylabel('Gt C / day')
     ax.grid()
-    
+
 # u change since the start of simulation    
 def plot_normalized_u(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
@@ -2129,7 +2142,7 @@ def plot_normalized_u(model_names, # dictionary (folder name : model name)
         vals=itr[start:stop]
         vals_for_plot=avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
-        vals_for_plot_norm = vals_array - vals_array[0]
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change 
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,
@@ -2138,9 +2151,9 @@ def plot_normalized_u(model_names, # dictionary (folder name : model name)
         )
     ax.legend()
     ax.set_title('Carbon Input (NPP) change since the start of the simulation')
-    ax.set_ylabel('Gt C / day')
+    ax.set_ylabel('% change')
     ax.grid()  
-    
+
 def plot_rt(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
@@ -2175,7 +2188,7 @@ def plot_rt(model_names, # dictionary (folder name : model name)
     ax.set_title('Equilibrium Residense Time (RT)')
     ax.set_ylabel('Years')
     ax.grid()
-    
+
 def plot_normalized_rt(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
@@ -2200,8 +2213,9 @@ def plot_normalized_rt(model_names, # dictionary (folder name : model name)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
         times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("rt"),averaging)/365 # convert to years 
-        vals_for_plot_norm = vals_for_plot - vals_for_plot[0]
+        vals_for_plot=avg_timeline(vals.__getattribute__("rt"),averaging)/365 # convert to years
+        vals_array=vals_for_plot
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change 
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,            
@@ -2210,9 +2224,9 @@ def plot_normalized_rt(model_names, # dictionary (folder name : model name)
         ) 
     ax.legend()
     ax.set_title('Equilibrium Residense Time (RT) change since the start of the simulation')
-    ax.set_ylabel('Years')
+    ax.set_ylabel('% change')
     ax.grid()
-        
+
 from scipy.interpolate import interp1d, splprep
 
 # function to compute a difference between traceable companents of 2 models

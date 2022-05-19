@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -18,27 +19,14 @@
 # <p>The biogeochemical models from the TRENDY project have been reconstructed from literature using matrix approach (<a href="https://doi.org/10.1029/2002GB001923">Luo et al. 2003</a>, <a href=" https://doi.org/10.1111/gcb.12766">2015</a>, <a href="https://doi.org/10.5194/gmd-5-1045-2012">Sierra et al. 2012</a>) and <a href="https://www.sympy.org/en/index.html">sympy</a> python package in the <a href="https://github.com/MPIBGC-TEE/bgc_md2">bgc_md2</a> database. Currently the models are simplified to be driven by NPP and thus omitting explicit simulation of leaf processes and autotrophic respiration. Data assimilation (<a href=" https://doi.org/10.1890/09-1275.1">Luo et al. 2011</a>, <a href="https://doi.org/10.1002/2015GB005239">2015</a>) was used to optimize parameters of reconstructed models to fit TRENDY output.</p>
 # <p>Currently our analysis includes the following steps:
 # <ol>
-# <li>We start by comparing model outputs - <em><strong>C storage (X)</strong></em> over time. Then we compute and compare traceable components to investigate sources of discrepancy between model predictions of C storage, and thus sources of uncertainty in our understanding of global C dynamics. </li>
-# <li>We compute <em><strong>C storage capacity (X<sub>C</sub>)</strong></em> for each model. <em><strong>X<sub>C</sub> </strong></em> (as a function of time) represents the maximum C storage for the system under current conditions. 
-# It is a theoretically predicted steady state of the autonomous system that we would obtain if we froze our original non-autonomous system at time point $t=t_{freeze}$ keeping the conditions (C input and environmental factors) constant after $t_{freeze}$. Since this prediction depends on the point in time when we fix inputs and matrices  $\mathbf{X_c}$ is a function of time. Note that this time dependence does not mean that this is a correct prediction for the solution $\mathbf{X}$ of the original time dependent system.  
-# While $\mathbf{X}_c$ is an attractor (even a fixed point) of the frozen autonomous system it is not attractin the real solution  $\mathbf{X}$ which becomes clear if we look at the long term development of the two functions.  
-#  In a non-autonomous system with variable C input and environmental factors (such as temperature and moisture) ecosystem <em><strong>X</strong></em> is 
-#     
-#     constantly chasing ("chasing" is  undefined. It does not chase in Yiqis sense and nobody has come up with a different definition yet. I think it is much more appropriate to write "in an intuitive sense it seems to chase" which illustrates that this is a conjecture not a statement and that we don't exactly know what we mean by "chasing").  
-#    
-# <em><strong>X<sub>C</sub></strong></em>, but cannot consistently reach it due to variable conditions: when <em><strong>X<sub>C</sub> &gt X</strong></em>, <em><strong>X</strong></em> is increasing, 
-#     
-#     The vector notation is misleading since it implies componontwise interpretation for which the above sentence is not always true. This part of the argument can only be made for the surrogate system.
-#     
-#     and when <em><strong>X<sub>C</sub> &lt X</strong></em>, <em><strong>X</strong></em> is decreasing. 
-#     
-#     same here
-#     
-#     If at any point in time the system becomes autonomous (C input and environmental factors are constant) then <em><strong>X<sub>C</sub></strong></em> becomes an attractor for <em><strong>X</strong></em>, so that <em><strong>X</strong></em> gets asymptotically closer to <em><strong>X<sub>C</sub></strong></em> until the system reaches the steady state with <em><strong>X</strong></em> = <em><strong>X<sub>C</sub></strong></em>. The difference between <em><strong>X<sub>C</sub></strong></em> and <em><strong>X</strong></em> at each point in time is called  <em><strong>C storage potential (X<sub>P</sub>)</strong></em>: it shows how far the current C storage of the system is from the theoretical steady state (in a positive or negative direction).</li> 
-#
-#     <li><em><strong>X<sub>C</sub></strong></em> of each model depends on <em><strong>C input</strong></em> (in our case - <em><strong>NPP</strong></em>) and <em><strong>Equilibrium Residence Time (RT)</strong></em>. We compare <em><strong>NPP</strong></em> and <em><strong>RT</strong></em> for each model and attribute the contribution of <em><strong>NPP</strong></em> and <em><strong>RT</strong></em> to the discrepancy of <em><strong>X<sub>C</sub></strong></em>.</li>
-# <li><em><strong>RT</strong></em> represents the time which it would take on average for C particle to exit the system after it entered it, if the system was at the equilibrium. In a transient simulation, where the system is not at the steady state, <em><strong>RT</strong></em> becomes a dynamic model characteristic that can be interpreted as a measure of the inverse C turnover rate of the system at each point in time. <em><strong>RT</strong></em> depends on the model structure and on environmental factors. To single out environmental effects we determine <em><strong>temperature</strong></em> and <em><strong>moisture sensitivity</strong></em> of <em><strong>RT</strong></em>, and compare it between models.</li> We also compare <em><strong> RT </strong></em> at fixed temperatures and moisture conditions (gauge conditions) including minimum, maximum and mean conditions across the period of the simulation.
-# <li> Based on the traceable components: <em><strong> NPP, RT, temperature</strong></em> and <em><strong>moisture sensitivity</strong></em> of <em><strong>RT </strong></em>, we can make conclusions regarding the inherent similarity/dissimilarity between the models and single out mechanisms that contribute most to the discrepancy of C predictions. 
+# <li>We start by comparing model outputs - <em><strong>C storage</strong></em> ($X$) over time. Then we compute and compare traceable components to investigate sources of discrepancy between model predictions of C storage, and thus sources of uncertainty in our understanding of global C dynamics. </li>
+# <li>We compute <em><strong>C storage capacity </strong></em> $X_{C}$ for each model. $X_{C}$ (as a function of time) represents the maximum C storage for the system under current conditions. 
+# It is a theoretically predicted steady state of the autonomous system that we would obtain if we froze our original non-autonomous system at time point $t_{freeze}$ keeping the conditions (C input and environmental factors) constant after $t_{freeze}$. While $X_{C}$ is not a correct prediction for the solution $X$ of the original time dependent system, it is rather a momentary characteristic of the system that depends on conditions at each point in time.  
+# $X_{C}$ is an attractor of the frozen autonomous system, although it is not attracting the real solution  $X$. In a non-autonomous system with variable C input and environmental factors (such as temperature and moisture)  <em><strong>ecosystem</strong></em> $X$ (if we consider ecosystem as a whole - as a <em>"surrogate" 1-pool system</em>, not pool-wise) is constantly chasing $X_{C}$, but cannot consistently reach it due to variable conditions: when $X_{C}$ &gt $X$, $X$ is increasing, and when $X_{C}$ &lt $X$, $X$ is decreasing.</li>
+# <li>The difference between $X_{C}$ and $X$ at each point in time is called  <em><strong>C storage potential </strong></em>($X_{P}$): it shows how far the current C storage of the system is from the theoretical steady state (in a positive or negative direction).</li> 
+# <li>$X_{C}$ of each model depends on <em><strong>C input</strong></em> (in our case - $NPP$) and <em><strong>Equilibrium Residence Time </strong></em>($RT$). We compare $NPP$ and $RT$ for each model and attribute the contribution of $NPP$ and $RT$ to the discrepancy of $X_{C}$.</li>
+# <li>$RT$ represents the time which it would take on average for C particle to exit the system after it entered it, if the system was at the equilibrium. In a transient simulation, where the system is not at the steady state, $RT$ becomes a dynamic model characteristic that can be interpreted as a measure of the inverse C turnover rate of the system at each point in time. $RT$ depends on the model structure and on environmental factors. To single out environmental effects we determine <em><strong>temperature</strong></em> and <em><strong>moisture sensitivity</strong></em> of $RT$, and compare it between models. We also compare $RT$ at fixed temperatures and moisture conditions (gauge conditions) including minimum, maximum and mean conditions across the period of the simulation.</li>
+# <li> Based on the traceable components: $NPP$, $RT$, <em><strong>temperature</strong></em> and <em><strong>moisture sensitivity</strong></em> of $RT$, we can make conclusions regarding the inherent similarity/dissimilarity between the models and single out mechanisms that contribute most to the discrepancy of C predictions. 
 # </ol>
 # <p>The analysis is currently performed for total global C storage, including vegetation and soil parts. <br> Next steps to expand the analysis may include the following: </p>
 # <ul>
@@ -77,7 +65,7 @@ model_names={
     "kv_visit2": "VISIT",
     #"jon_yib": "YIBs",
     "kv_ft_dlem": "DLEM",
-    #"cj_isam": "ISAM",
+    "cj_isam": "ISAM",
 }
 
 # selecting colors for plotting models
