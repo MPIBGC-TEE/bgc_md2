@@ -30,6 +30,36 @@ from bgc_md2.resolve.mvars import (
 import bgc_md2.display_helpers as dh
 
 days_per_year = 365 
+
+boundaries=namedtuple(
+    "boundaries",
+    [
+        "min_lat",
+        "max_lat",
+        "min_lon",
+        "max_lon"
+    ]
+)
+Transformers=namedtuple(
+    "Transformers",
+    [
+        "i2lat",
+        "i2lat_min_max",
+        "lat2i",
+        "i2lon",
+        "i2lon_min_max",
+        "lon2i",
+    ]
+)
+
+def pixel_boundaries(lat,lon,step_lat,step_lon):
+    return boundaries(
+        min_lat=lat-step_lat/2,
+        max_lat=lat+step_lat/2,
+        min_lon=lon-step_lon/2,
+        max_lon=lon+step_lon/2
+    )
+
 TraceTuple = namedtuple(
     "TraceTuple",
      [  
@@ -1595,15 +1625,6 @@ def write_global_mean_cache(
 def get_cached_global_mean(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-boundaries=namedtuple(
-    "boundaries",
-    [
-        "min_lat",
-        "max_lat",
-        "min_lon",
-        "max_lon"
-    ]
-)
 
 def combine_masks(masks,i2cs):
     m1,m2 = masks
@@ -1637,6 +1658,9 @@ def combine_masks(masks,i2cs):
         lambda acc,el:acc+el,
         [g(m,i2c) for m,i2c in zip(masks,i2cs)] 
     )
+
+
+
 
 def open_interval_intersect(i1,i2):
     min1,max1=i1
@@ -1692,6 +1716,134 @@ def project(s,i2c,common_mask):
     return mask
 
 
+class CoordMask():
+    def __init__(
+            self,
+            index_mask: np.ndarray,
+            lat_0,
+            lon_0,
+
+        ):
+        s=index_mask.shape
+
+        i2lat, i2lon, lat2i, lon2i = transform_maker(lat_0,lon_0,n_lat=s[0],n_lon=s[1])
+        self.index_mask=index_mask
+        self.i2lat=i2lat
+        self.i2lon=i2lon
+        self.lat2i=lat2i
+        self.lon2i=lon2i
+
+
+    def plot_cell(
+            ax,
+            b: boundaries,
+            color: str
+        ):
+        xs=[
+            b.min_lat,
+            b.min_lat,
+            b.max_lat,
+            b.max_lat,
+            b.min_lat
+        ]
+        ys=[
+            b.min_lon,
+            b.max_lon,
+            b.max_lon,
+            b.min_lon,
+            b.min_lon
+        ]
+        ax.plot(xs,ys,color=color)
+        ax.fill(xs,ys,color=color,alpha=0.4)
+
+
+    def plot(self,ax,color="black"):
+        mask = self.index_mask
+        
+        s = mask.shape
+        i2lat=self.i2lat
+        i2lon=self.i2lon
+
+        step_lat=i2lat(1)-i2lat(0)
+        step_lon=i2lon(1)-i2lon(0)
+        for i in range(s[0]):
+            for j in range(s[1]):
+                lat=i2lat(i)
+                lon=i2lon(j)
+                self.__class__.plot_cell(
+                    ax,
+                    pixel_boundaries(lat,lon,step_lat,step_lon),   
+                    color="red" if mask[i,j] == 1 else color 
+                )
+    #def __getitem__(self,slat,slon):
+        # we overload the [] operator for our mask
+        # in a way that allows cyclic and negativ indices 
+
+
+def project_2(
+    target: CoordMask,
+    source:  CoordMask
+    ):
+     
+    s=target.index_mask.shape
+    
+    step_lat=target.i2lat(1)-target.i2lat(0)
+    step_lon=target.i2lon(1)-target.i2lon(0)
+    
+    def masked(i,j):
+        lat=target.i2lat(i)
+        lon=target.i2lon(j)
+        p_b=boundaries(
+            min_lat=lat-step_lat/2,
+            max_lat=lat+step_lat/2,
+            min_lon=lon-step_lon/2,
+            max_lon=lon+step_lon/2
+        )
+        print(p_b)
+        # compute the index patch in source mask
+        # We have to take account of the fact that higher lat 
+        # may mean lower i_lat (respectively for lon)
+        # depending on the model specific mapping of indices
+        # to a UNIFIED lat,lon system 
+        # (with agreed upon physical point on the earht's surface as lat=0,lon=0
+        # and direction of increase
+        v1=source.lat2i(p_b.min_lat)
+        v2=source.lat2i(p_b.max_lat)
+        i_lat_min=min(v1,v2)
+        i_lat_max=max(v1,v2)
+        w1=source.lon2i(p_b.min_lon)
+        w2=source.lon2i(p_b.max_lon)
+        i_lon_min=min(w1,w2)
+        i_lon_max=max(w1,w2)
+        # we have to prepare for the case that our target pixel is INSIDE the source pixel
+        # in either dimension
+        # instead of [a:a,..] we have to write[a,...]
+        slice_lat= slice(i_lat_min) if i_lat_min==i_lat_max else slice(i_lat_min,i_lat_max)
+        slice_lon= slice(i_lon_min) if i_lon_min==i_lon_max else slice(i_lon_min,i_lon_max)
+        print("i,       ", i)           
+        #print("j,       ", j)
+        print("i_lat_min", i_lat_min) 
+        print("i_lat_max", i_lat_max)   
+        #print("i_lon_min", i_lon_min) 
+        #print("i_lon_max", i_lon_max)
+        
+        #from IPython import embed; embed()
+        # now we look at this slice of the mask and check the number nm of masked pixels 
+        # in this slice (nm > 0 means 
+        patch = source[slice_lat, slice_lon]
+        res=patch.sum()>0
+        print("res=",res)
+        print("####################")
+        return res
+
+    
+    mask=np.zeros(s)
+    for i in range(s[0]):
+        for j in range(s[1]):
+            mask[i,j] = masked(i,j)
+        
+    return mask
+
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -1713,6 +1865,48 @@ def model_table(
         types_expanded= [InputTuple,CompartmentalMatrix]
 
     )
+
+def transform_maker(lat_0,lon_0,n_lat,n_lon):
+    step_lat=180.0/n_lat
+    step_lon=360.0/n_lon
+    # The result of this function is a tuple of 4 funtions
+    # To translate from indices (i,j)  in the array  to (lat,lon) with the following
+    # properties
+    # values of the center of the indexed pixel
+    # and back
+    # These functions does not necessarily work for every model
+    # You will
+    def i2lat(i_lat):
+        if i_lat > (n_lat-1):
+            raise IndexError("i_lat > n_lat; with i_lat={}, n_lat={}".format(i_lat,n_lat))
+        return lat_0+(step_lat*i_lat)
+    
+    def i2lon(i_lon):
+        if i_lon > (n_lon-1):
+            raise IndexError("i_lon > n_lon; with i_lon={0}, n_lon={1}".format(i_lon,n_lon))
+        return lon_0+(step_lon*i_lon)
+    
+    # the inverse finds the indices of the pixel containing
+    # the point with the given coordinates
+    def lat2i(lat):
+        print("lat={}".format(lat))
+        # we cant use round since we want ir=3.5 to be already in pixel 4
+        ir=(lat-lat_0)/step_lat
+        #return round(ir)
+        ii=int(ir)
+        print("ir={}".format(ir))
+        print("ii={}".format(ii))
+        d=ir-ii
+        return ii if d<0.5 else ii+1
+        
+    def lon2i(lon):
+        # we cant use round since we want ir=3.5 to be already in pixel 4
+        ir=(lon-lon_0)/step_lon
+        ii=int(ir)
+        d=ir-ii
+        return ii if d<0.5 else ii+1
+    
+    return i2lat, i2lon, lat2i, lon2i
 
 # functions to synchronize model outputs to the scale of days since AD
 def sim_day_2_day_aD_func(mf): #->function

@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import json 
 import numpy as np
+import netCDF4 as nc
 from functools import lru_cache
 
 @lru_cache
@@ -22,7 +23,9 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_min",
             "epa_max",
             "epa_opt",
-            "cpa"
+            "cpa",
+            "lats",
+            "lons"
         ]
     )
     svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
@@ -155,7 +158,9 @@ def make_test_args(conf_dict,msh,mvs):
         rh = apa['rh_0'] #,
         #ra = apa['ra_0']
     )
-        
+    # actually we want a dataset with mask but we don't have one at 
+    # the moment
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("YIBs_S0_Monthly_npp.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=model_par_dict,
@@ -167,5 +172,7 @@ def make_test_args(conf_dict,msh,mvs):
         epa_min=epa_min,
         epa_max=epa_max,
         epa_opt=epa_opt,
-        cpa=cpa
+        cpa=cpa,
+        lats=ds.variables["latitude"][:],
+        lons=ds.variables["longitude"][:],
     )

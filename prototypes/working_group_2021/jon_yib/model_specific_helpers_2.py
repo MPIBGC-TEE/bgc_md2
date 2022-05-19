@@ -16,6 +16,91 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def make_model_index_transforms():
+    # returns a tuple of functions to describe the grid 
+    # index_to_latitude
+    # latitude_to_index
+    # index_to_longitude
+    # longitude_to_index
+    # 
+    #
+    # These function represent the indexing
+    # scheme used in the  netcdf4 files.
+    # So they are specific to the dataset and model
+    # (in this case trendy and yibs )
+    # In this case the indexing is somewhat different  
+    # from other models (which can use a general_helpers function)
+    # since -180 and +180 are among the latitudes
+    # These half-pixels are different since there lat value
+    # is not in the center but on the boundary
+
+    # The netcdf variables contain lats and lons as
+    # arrays (possibly under a different name)
+    # if we choose an index i we want:
+    # lats[i]==index_to_latitude(i) and
+    # latitude_to_index(lats[i])==i
+    #
+    # lons[i]=index_to_longitude(i) and
+    # longitude_to_index[lons[i])==i
+
+    n_lat = 181
+    n_lon = 360
+    lat_0 = -90
+    lon_0 = -179.5
+    step_lat=1.0 #special case n.e. 180/nlatssince yibs includes -180 and 180
+    step_lon=360.0/n_lon
+    def i2lat(i_lat):
+        if i_lat > (n_lat-1):
+            raise IndexError("i_lat > n_lat; with i_lat={}, n_lat={}".format(i_lat,n_lat))
+        return lat_0+(step_lat*i_lat)
+    
+    def i2lat_min_max(i):
+        #compute the lat boundaries of pixel i
+        center=i2lat(i)
+        lat_min = center if center==-90 else center - step_lat/2 
+        lat_max= center if center==90 else center + step_lat/2 
+        return lat_min,lat_max
+    
+    def lat2i(lat):
+        # the inverse finds the indices of the pixel containing
+        # the point with the given coordinates
+        # we cant use round since we want ir=3.5 to be already in pixel 4
+        ir=(lat-lat_0)/step_lat
+        ii=int(ir)
+        d=ir-ii
+        return ii if d<0.5 else ii+1
+    
+    def i2lon_min_max(i):
+        #compute the lon boundaries of pixel i
+        center=i2lon(i)
+        lon_min = center - step_lon/2 
+        lon_max=  center + step_lon/2 
+        return lon_min,lon_max
+
+
+    def i2lon(i_lon):
+        if i_lon > (n_lon-1):
+            raise IndexError("i_lon > n_lon; with i_lon={0}, n_lon={1}".format(i_lon,n_lon))
+        return lon_0+(step_lon*i_lon)
+    
+        
+    def lon2i(lon):
+        # we cant use round since we want ir=3.5 to be already in pixel 4
+        ir=(lon-lon_0)/step_lon
+        ii=int(ir)
+        d=ir-ii
+        return ii if d<0.5 else ii+1
+    return gh.Transformers(
+            i2lat=i2lat,
+            i2lat_min_max=i2lat_min_max,
+            lat2i=lat2i,
+            i2lon=i2lon,
+            i2lon_min_max=i2lon_min_max,
+            lon2i=lon2i,
+        )
+    
+        
+
 Observables_annual = namedtuple(
     'Observables_annual',
     ["cVeg", "cSoil"]
@@ -283,34 +368,34 @@ def get_global_mean_vars(dataPath):
             #use "conda install --channel conda-forge geopandas rioxarray xarray shapely gdal=3.2.1"
             #for some reason the newest gdal created an unknown conflict and couldn't be imported
             #also this will break general_helpers "from forzendict import frozendict" so run_my_tests.py fails
-            import geopandas
-            import rioxarray
-            import xarray
-            from shapely.geometry import mapping
-            #use xarray to open dataset
-            nc_x = xarray.open_dataset(path, decode_times=False)
-            #set spatial dimensions by name
-            nc_x.rio.set_spatial_dims(x_dim="longitude", y_dim="latitude", inplace=True)
-            #set projection
-            nc_x.rio.write_crs("epsg:4326", inplace=True)
-            #use geopandas to read in map of world to use as clip
-            wrld_shp = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'), crs="epsg:4326")
-            #clip the imported array by the projected world map
-            nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
+            #import geopandas
+            #import rioxarray
+            #import xarray
+            #from shapely.geometry import mapping
+            ##use xarray to open dataset
+            #nc_x = xarray.open_dataset(path, decode_times=False)
+            ##set spatial dimensions by name
+            #nc_x.rio.set_spatial_dims(x_dim="longitude", y_dim="latitude", inplace=True)
+            ##set projection
+            #nc_x.rio.write_crs("epsg:4326", inplace=True)
+            ##use geopandas to read in map of world to use as clip
+            #wrld_shp = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'), crs="epsg:4326")
+            ##clip the imported array by the projected world map
+            ##nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
 
-            # we can clip/mask again by Greenland,Antarctica, or other shapefile if we want to here
+            ## we can clip/mask again by Greenland,Antarctica, or other shapefile if we want to here
 
-            #set save directory and filename
-            dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
-            #save to file - inefficient but only option, xarray can't create netcdf4 python object, can only save
-            #This is fine though b/c it allows inspection of clipped netcdf files
-            #I do this to keep all further code intact that uses netcdf4
-            nc_clip.to_netcdf(dataDIR)
-            #read netcdf file back in
-            var = nc.Dataset(str(dataDIR)).variables[vn]
-            ###########
-            #return after assessing NaN data values
-            return gh.get_nan_pixel_mask(var)
+            ##set save directory and filename
+            #dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
+            ##save to file - inefficient but only option, xarray can't create netcdf4 python object, can only save
+            ##This is fine though b/c it allows inspection of clipped netcdf files
+            ##I do this to keep all further code intact that uses netcdf4
+            #nc_clip.to_netcdf(dataDIR)
+            ##read netcdf file back in
+            ##var = nc.Dataset(str(dataDIR)).variables[vn]
+            ############
+            ##return after assessing NaN data values
+            #return gh.get_nan_pixel_mask(var)
 
         masks=[ f(name)    for name in names ]
         # We compute the common mask so that it yields valid pixels for ALL variables 
@@ -749,3 +834,5 @@ def numeric_X_0(mvs,dvs,cpa,epa):
         ]
     ).reshape(len(X_0_dict),1)
     return X_0
+
+

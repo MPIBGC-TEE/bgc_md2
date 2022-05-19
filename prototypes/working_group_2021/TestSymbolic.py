@@ -270,3 +270,48 @@ class TestSymbolic(TestCase):
 
 
 
+    def test_make_model_index_transforms(self):
+        model_folders=["jon_yib"]
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                test_args = gh.test_args(mf)
+                msh = gh.msh(mf)
+                lats=test_args.lats.data
+                lons=test_args.lons.data
+                # check that we predict the
+                # right latitude values for
+                # a given array index 
+                tr = msh.make_model_index_transforms()
+                n_lats=len(lats)
+                print("n_lats={}".format(n_lats))
+                for i in range(n_lats):
+                    self.assertEqual(lats[i],tr.i2lat(i))
+                
+                n_lons=len(lons)
+                print("n_lons={}".format(n_lons))
+                for i in range(n_lons):
+                    self.assertEqual(lons[i],tr.i2lon(i))
+
+                # inverse operation
+                # check that we can predict the index from a given
+                # latitude
+                for i in range(n_lats):
+                    self.assertEqual(tr.lat2i(lats[i]),i)
+                # or longitude
+                for i in range(n_lons):
+                    self.assertEqual(tr.lon2i(lons[i]),i)
+
+                #check the interpretation of the pixel boundaries
+                for i in range(n_lats-1):
+                    #minimum belongs to pixel
+                    self.assertEqual(tr.lat2i(tr.i2lat_min_max(i)[0]),i)
+                    #maximum belongs to next pixel
+                    self.assertEqual(tr.lat2i(tr.i2lat_min_max(i)[1]),i+1)
+
+                print(tr.i2lat_min_max(180))
+                print(tr.lat2i(90))
+
+
+                    
+                    
+
