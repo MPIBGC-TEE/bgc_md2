@@ -70,4 +70,39 @@ print("\n\nEnd date according to 1440 months and 12 month years since 1900-01-16
 #   (iterator already implements unit days) and then compute the date (with pythons datetime module).
 # -
 
+# now import the NPP data and explore how it actually behaves
+import sys
+sys.path.insert(0,'Aneesh_sdgvm') # necessary to import general_helpers
+import model_specific_helpers_2 as msh
+from pathlib import Path
+import json
+with Path('Aneesh_sdgvm/config.json').open(mode='r') as f:
+    conf_dict=json.load(f) 
+svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
+
+# now we plot distribution of NPP values over 12 months
+import matplotlib.pyplot as plt
+import numpy as np
+# 1st plot is the beginning of the simulation
+plt.plot(
+    dvs.npp[0:12])
+plt.xticks(np.arange(0, 12, 1))
+plt.grid()
+
+# 2nd plot is the middle of the simulation
+plt.plot(
+    dvs.npp[len(dvs.npp)//2-12:len(dvs.npp)//2])
+plt.xticks(np.arange(0, 12, 1))
+plt.grid()
+
+# 3rd plot is the end of the simulation
+plt.plot(
+    dvs.npp[len(dvs.npp)-12:len(dvs.npp)])
+plt.xticks(np.arange(0, 12, 1))
+plt.grid()
+
+# +
+# we see that the npp follows the months throughout the simulation, so interpretation 3 is correct
+# -
+
 
