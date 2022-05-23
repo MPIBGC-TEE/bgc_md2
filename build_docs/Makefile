@@ -1,11 +1,9 @@
-# Minimal makefile for Sphinx documentation
-#
-
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXOPTS    ?=
+SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = source
+APIDOCDIR     = $(SOURCEDIR)/auto
 BUILDDIR      = _build
 AUTOSUMMARYDIR= _autosummary
 PUBDIR        = ../docs
@@ -22,14 +20,15 @@ help:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -rf $(APIDOCDIR)/*
 	rm -rf $(SOURCEDIR)/$(AUTOSUMMARYDIR)/*
 
 .PHONY: api-doc
 api-doc:
-	sphinx-apidoc -o $(SOURCEDIR)/ --ext-autodoc $(MODULESDIR)
+	sphinx-apidoc -o $(APIDOCDIR)/ --ext-autodoc $(MODULESDIR)
 
 .PHONY: html
-html:
+html: api-doc
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(SOURCEDIR) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -40,3 +39,11 @@ publish:
 	@cp -r $(BUILDDIR)/html/* $(PUBDIR)
 	@touch $(PUBDIR)/.nojekyll #tell github to serve plain html
 
+
+.PHONY: help Makefile
+
+
+# Catch-all target: route all unknown targets to Sphinx using the new
+# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+%: Makefile
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

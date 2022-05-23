@@ -1881,24 +1881,33 @@ def transform_maker(lat_0,lon_0,n_lat,n_lon):
             raise IndexError("i_lat > n_lat; with i_lat={}, n_lat={}".format(i_lat,n_lat))
         return lat_0+(step_lat*i_lat)
     
-    def i2lon(i_lon):
-        if i_lon > (n_lon-1):
-            raise IndexError("i_lon > n_lon; with i_lon={0}, n_lon={1}".format(i_lon,n_lon))
-        return lon_0+(step_lon*i_lon)
+    def i2lat_min_max(i):
+        #compute the lat boundaries of pixel i
+        center=i2lat(i)
+        lat_min = center - step_lat/2 
+        lat_max=  center + step_lat/2 
+        return lat_min,lat_max
     
     # the inverse finds the indices of the pixel containing
     # the point with the given coordinates
     def lat2i(lat):
-        print("lat={}".format(lat))
-        # we cant use round since we want ir=3.5 to be already in pixel 4
         ir=(lat-lat_0)/step_lat
-        #return round(ir)
         ii=int(ir)
-        print("ir={}".format(ir))
-        print("ii={}".format(ii))
         d=ir-ii
-        return ii if d<0.5 else ii+1
+        return ii if (d<0.5 or ii== (n_lat - 1))  else ii+1
         
+    def i2lon(i_lon):
+        if i_lon > (n_lon-1):
+            raise IndexError("i_lon > n_lon; with i_lon={0}, n_lon={1}".format(i_lon,n_lon))
+        return lon_0+(step_lon*i_lon)
+
+    def i2lon_min_max(i):
+        #compute the lon boundaries of pixel i
+        center=i2lon(i)
+        lon_min = center - step_lon/2 
+        lon_max=  center + step_lon/2 
+        return lon_min,lon_max
+
     def lon2i(lon):
         # we cant use round since we want ir=3.5 to be already in pixel 4
         ir=(lon-lon_0)/step_lon
@@ -1906,7 +1915,14 @@ def transform_maker(lat_0,lon_0,n_lat,n_lon):
         d=ir-ii
         return ii if d<0.5 else ii+1
     
-    return i2lat, i2lon, lat2i, lon2i
+    return Transformers(
+        i2lat=i2lat,
+        i2lat_min_max=i2lat_min_max,
+        lat2i=lat2i,
+        i2lon=i2lon,
+        i2lon_min_max=i2lon_min_max,
+        lon2i=lon2i,
+    )
 
 # functions to synchronize model outputs to the scale of days since AD
 def sim_day_2_day_aD_func(mf): #->function

@@ -19,16 +19,22 @@ Topics:
    manual/usage
    manual/structure
 
-Available models
+API
+---
+.. toctree::
+   :maxdepth: 3
+
+   auto/modules.rst
+
+Main modules
 ----------------
 
 .. autosummary::
-   :template: autosummary/base.rst
    :toctree: _autosummary
 
-    ~bgc_md2.models.Williams2005GCB
-    ~bgc_md2.models.ELM
-    ~bgc_md2.models.CARDAMOM 
+    ~bgc_md2.models
+    ~bgc_md2.resolve
+
 
 Indices and tables
 ==================

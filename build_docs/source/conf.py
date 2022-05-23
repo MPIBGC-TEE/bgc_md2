@@ -11,8 +11,10 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import pathlib
 import sys
-sys.path.insert(0, os.path.abspath('../../src/bgc_md2'))
+sys.path.insert(0, pathlib.Path(__file__).parents[2].joinpath('src','bgc_md2').resolve().as_posix())
+#sys.path.insert(0, os.path.abspath('../../src/bgc_md2'))
 
 autodoc_mock_imports = ["cf_units"]
 project = 'Biogeochemical model database'
@@ -58,8 +60,27 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = 'alabaster'
+#html_theme = 'furo'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+#EPUB options
+epub_show_urls ='footnote'
+
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = False
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_use_keyword = True
+napoleon_custom_sections = None
+

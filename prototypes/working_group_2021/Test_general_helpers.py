@@ -589,4 +589,125 @@ class Test_general_helpers(InDirTest):
                 gh.boundaries(1,1.5,1,1.5)
             )
         )
+    def test_transform_maker(self):
+        n_lat = 18
+        n_lon = 36
+        lat_0 = 5
+        lon_0 = 5
+        i2lat, i2lon, lat2i,lon2i= gh.transform_maker(
+            lat_0,
+            lon_0,
+            n_lat,
+            n_lon,
+        )
+        # check that i2lat rejects arguments >n_lat-1
+        with self.assertRaises(IndexError):
+            lat = i2lat(n_lat)
+        
+        # check that i2lon rejects arguments >n_lon-1
+        with self.assertRaises(IndexError):
+            lon = i2lon(n_lon)
 
+        # test the inverse property (under too large indices)
+        for i in range(0,n_lat):
+            lat=i2lat(i)
+            ii=lat2i(lat)
+            #print("i={i},lat={lat},ii={ii}".format(i=i,lat=lat,ii=ii))
+            self.assertEqual(ii,i)
+
+        for i in range(0,n_lon):
+            lon=i2lon(i)
+            ii=lon2i(lon)
+            #print("i={i},lon={lon},ii={ii}".format(i=i,lon=lon,ii=ii))
+            self.assertEqual(lon2i(i2lon(i)),i)
+
+
+        ### test that lat2i always leads to indices within the array boundaries
+        # jon_yibs
+        n_lat = 181
+        n_lon = 360
+        lat_0 = -90
+        lon_0 = -179.5
+        i2lat, i2lon, lat2i,lon2i= gh.transform_maker(
+            lat_0,
+            lon_0,
+            n_lat,
+            n_lon,
+        )
+
+        ## test the inverse property for bigger than 360 for lon
+        #for i in range(0,n_lon):
+        #    self.assertEqual(lon2i(i2lon(i)+360),i)
+        ## now we check the results where we land on the boundaries of 
+        ## the pixel 
+        #self.assertEqual(i2lat(1.5),20)
+
+    def test_Coordmask_getitem(self):
+        cm_1=gh.CoordMask(
+            np.array(dtype=np.bool_).reshape(4,1),
+            (180/4)/2,
+            (360/1)/2
+        )
+
+
+    def test_project_2(self):
+        cm_1=gh.CoordMask(
+            np.array([0,1,0,0],dtype=np.bool_).reshape(4,1),
+            (180/4)/2,
+            (360/1)/2
+        )
+        
+        
+        # self projection
+        res= gh.project_2(
+            cm_1,
+            cm_1
+        )
+        self.assertTrue((res==cm_1.index_mask).all())
+
+        # projection into higher res target.
+        # target pixel inside source pixel 
+
+        cm_2=gh.CoordMask(
+            np.array([1,0,0],dtype=np.bool_).reshape(3,1), 
+            (180/3)/2,
+            (360/1)/2
+        )
+
+        res= gh.project_2(
+            target=cm_1,
+            source=cm_2
+        )
+        m_ref=np.array([1,1,0,0]).reshape(4,1)
+        self.assertTrue((res==m_ref).all())
+
+
+
+        # shifted and different size
+        
+        i2lat_2, i2lon_2, lat2i_2,lon2i_2= gh.transform_maker(
+            .5+step_lat2/2,
+            step_lon2/2,
+        )
+
+        cm_2=gh.CoordMask(
+            np.array([1,1,0,0,0],dtype=np.bool_).reshape(5,1), 
+            45+(180/5)/2,
+            (360/1)/2
+        )
+        
+
+        res=gh.project_2(
+            target=cm_1,
+            source=cm_2
+        )
+        print(res)
+        m_ref=np.array([1,1,0,0]).reshape(4,1)
+
+        #self.assertTrue(
+        #        (
+        #            res==m_ref
+        #        ).all()
+        #)
+
+        

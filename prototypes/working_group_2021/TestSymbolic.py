@@ -271,7 +271,6 @@ class TestSymbolic(TestCase):
 
 
     def test_make_model_index_transforms(self):
-        model_folders=["jon_yib"]
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
                 test_args = gh.test_args(mf)
@@ -305,11 +304,16 @@ class TestSymbolic(TestCase):
                 for i in range(n_lats-1):
                     #minimum belongs to pixel
                     self.assertEqual(tr.lat2i(tr.i2lat_min_max(i)[0]),i)
-                    #maximum belongs to next pixel
+                    #maximum belongs to next pixel (if there is one)
                     self.assertEqual(tr.lat2i(tr.i2lat_min_max(i)[1]),i+1)
 
-                print(tr.i2lat_min_max(180))
-                print(tr.lat2i(90))
+               
+                # the last lat pixel contains also the pole
+                last=n_lats-1
+                lat_min, lat_max=tr.i2lat_min_max(last)
+                print(lat_max)
+                self.assertEqual(tr.lat2i(lat_max),last)
+                
 
 
                     

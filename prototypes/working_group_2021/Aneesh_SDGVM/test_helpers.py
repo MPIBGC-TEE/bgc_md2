@@ -2,6 +2,7 @@
 from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
+import netCDF4 as nc
 import json 
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
@@ -17,7 +18,9 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_min",
             "epa_max",
             "epa_opt",
-            "cpa"
+            "cpa",
+            "lats",
+            "lons"
         ]
     )
     par_dict={
@@ -252,6 +255,7 @@ def make_test_args(conf_dict,msh,mvs):
         C_passsom= svs_0.cSoil - 9.4e-5 - 0.049 - 0.29828058,
         rh=svs_0.rh
     )
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("SDGVM_S2_cRoot.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
@@ -262,6 +266,12 @@ def make_test_args(conf_dict,msh,mvs):
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
+<<<<<<< Updated upstream
         epa_opt=epa_opt,
         cpa=cpa
+=======
+        cpa=cpa,
+        lats=ds.variables["latitude"][:],
+        lons=ds.variables["longitude"][:],
+>>>>>>> Stashed changes
     )

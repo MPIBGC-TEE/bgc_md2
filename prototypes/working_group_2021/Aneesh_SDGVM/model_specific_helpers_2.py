@@ -17,6 +17,15 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = -89.5,
+    lon_0 = -179.5,
+    n_lat = 180,
+    n_lon = 360,
+ )
+
 Observables = namedtuple(
     'Observables',
     ["cVeg", "cRoot", "cLitter", "cSoil", "rh"]

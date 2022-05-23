@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.3
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -30,9 +30,16 @@
 # ```bash
 # bgc_md2/src/bgc_md2/models/testVectorFree/source.py
 # ```
-# and copy its contents into a new cell. (we will later save it under a new name) 
+# or via the following code:
+
+import inspect
+import bgc_md2.models.testVectorFree.source 
+print(inspect.getsource(bgc_md2.models.testVectorFree.source))
+
+# # copy its contents into a new cell. (we can later save it under a new name) 
 
 # +
+
 from sympy import var, Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import module_computers
@@ -43,7 +50,7 @@ from bgc_md2.resolve.mvars import (
     TimeSymbol,
     StateVariableTuple,
 )
-import bgc_md2.resolve.computers as bgc_c
+from importlib import import_module
 
 # Make a small dictionary for the variables we will use
 sym_dict={
@@ -60,7 +67,7 @@ for k in sym_dict.keys():
     code=k+" = Symbol('{0}')".format(k)
     exec(code)
 
-# some we will also use some symbols for functions (which appear with an argument) 
+# We will also use some symbolic functions ("symbols" with an argument) 
 func_dict={
     "I_vl": "Influx into vegetation leaf pool",
     "k_vl_o": "out flux rate of leaf pool",
@@ -80,15 +87,16 @@ mvs = CMTVS(
         InternalFluxesBySymbol({(vl, vw): k_vl_2_vw * vl, (vw, vl): k_vw_2_vl * vw}),
     },
 
-    computers=module_computers(bgc_c)
+    computers=module_computers(bgc_md2.resolve.computers)
 )
 # -
 
 # The last statement in the code defines a variable `mvs` which is 
 # an instance of CMTVS which stands for `C`onnected`M`ulti`T`ype`V`ariable`S`et".
 # It contains information in two forms. 
-# 1. Variables of certain type (like InFluxesBySymbol)
-# 2. a set of functions that "connect" these Variables and to other results we did not specify but which can be computed.
+# 1. Variables of certain types (like InFluxesBySymbol)
+# 2. Computers, Functions that "connect" these Variables and to other results we did not specify but which can be computed.
+#    
 #
 #
 # Taks:
@@ -610,7 +618,7 @@ old_par_dict = {
     k_C_soil_slow: 1 / (365 * 100),  # 18
     k_C_soil_passive: 1 / (365 * 350),  # 19
 }
-    
+
 
 # Now we can translate the old paramterisation to the new one.
 
