@@ -20,7 +20,9 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_min",
             "epa_max",
             "epa_opt",
-            "cpa"
+            "cpa",
+            "lats",
+            "lons"
         ]
     )
     par_dict={

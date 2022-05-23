@@ -266,12 +266,8 @@ def make_test_args(conf_dict,msh,mvs):
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
-<<<<<<< Updated upstream
         epa_opt=epa_opt,
-        cpa=cpa
-=======
         cpa=cpa,
         lats=ds.variables["latitude"][:],
         lons=ds.variables["longitude"][:],
->>>>>>> Stashed changes
     )
