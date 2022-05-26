@@ -253,7 +253,7 @@ def make_xi_func(dvs):
     return func
 
 
-def make_func_dict(mvs,dvs):
+def make_func_dict(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
@@ -327,7 +327,7 @@ def make_param2res_sym(
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
-        func_dict=make_func_dict(mvs,dvs)
+        func_dict=make_func_dict(mvs,dvs,cpa,epa)
     
         it_sym = make_iterator_sym(
             mvs,
@@ -852,12 +852,12 @@ def make_sim_day_2_day_since_a_D(conf_dict):
     #     print((times[i + 1] - times[i])/(3600 * 24))
 
 
-    ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
-    td = ts / (3600 * 24) #in days since_2010_01_01_00_00_00
+    ts = times[0] #time of first observation in hours since 1900-01-01 00:00:00
+    td = ts / 24 #in days since 1900-01-01 00:00:00
     
     import datetime as dt
     ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(2010, 1, 1)
+    sd = dt.date(1900, 1, 16)
     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
     
 
@@ -866,4 +866,7 @@ def make_sim_day_2_day_since_a_D(conf_dict):
 
     return f
 
-
+# Define start and end dates of the simulation
+import datetime as dt
+start_date=dt.date(1900, 1, 16) 
+end_date = dt.date(2019, 1, 16)
