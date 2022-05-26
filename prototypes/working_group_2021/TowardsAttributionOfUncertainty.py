@@ -281,5 +281,6 @@ mf_2="kv_visit2"
 plot_diff_1(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
 # -
 
-
+# We can see both contributions to $\Delta x_c$. They are of the same order of magnitude although $\Delta rt$ seems a tiny bit bigger.
+# We also see that the contributions are sometimes higher for $
 
