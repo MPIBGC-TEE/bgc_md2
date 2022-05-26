@@ -3,6 +3,7 @@ from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
 import json 
+import netCDF4 as nc
 from functools import lru_cache
 
 @lru_cache
@@ -216,6 +217,7 @@ def make_test_args(conf_dict,msh,mvs):
         #ra=svs_0.ra,   # kg/m2/s kg/m2/day;,
         rh=svs_0.rh   # kg/m2/s kg/m2/day;
     )
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("VISIT_S2_cLitter.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
@@ -227,7 +229,9 @@ def make_test_args(conf_dict,msh,mvs):
         epa_min=epa_min,
         epa_max=epa_max,
         epa_opt=epa_opt,
-        cpa=cpa
+        cpa=cpa,
+        lats=ds.variables["lat"][:],
+        lons=ds.variables["lon"][:],
     )
 
 

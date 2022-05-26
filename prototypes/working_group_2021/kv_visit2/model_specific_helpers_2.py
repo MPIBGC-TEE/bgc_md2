@@ -17,6 +17,14 @@ sys.path.insert(0,'..') # necessary to import general_helpers
 from general_helpers import monthly_to_yearly #, month_2_day_index
 import general_helpers as gh
 
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = 89.75,
+    lon_0 = -179.75,
+    step_lat = -0.5,
+    step_lon = 0.5,
+ )
+
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
