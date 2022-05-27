@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -430,6 +430,7 @@ def plot_diff_3(mf_1, mf_2, delta_t_val, model_cols):
     
     ax=axs#[2,1]
     ax.plot(times,x_c_1(times),label="$x_c$ {}".format(mf_1),color=model_cols[mf_1])
+    ax.plot(times,x_c_2(times),label="$x_c$ {}".format(mf_2),color=model_cols[mf_2])
     ax.stackplot(
         times,
         [
@@ -448,13 +449,6 @@ def plot_diff_3(mf_1, mf_2, delta_t_val, model_cols):
             "black",
         ]
     )
-    #ax.plot(
-    #    times,
-    #    delta_u*rt_1(times)+delta_rt*u_1(times),
-    #    label="Approximate $\Delta  X_c= \Delta u * rt_1 + \Delta rt * u_1$",
-    #    color="blue"
-    #)
-    #ax.plot(times,delta_x_c,label="Exact $\Delta X_c= X_1 - X_2$",color="green")
     ax.set_title("$Approximation$")
     ax.legend()
     
@@ -462,6 +456,108 @@ def plot_diff_3(mf_1, mf_2, delta_t_val, model_cols):
 mf_1="yz_jules"
 mf_2="kv_visit2"
 plot_diff_3(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
+# +
+model_cols={
+    "yz_jules": "blue",
+    "kv_visit2": "orange",
+    "cj_isam": "green",
+}
+from scipy.interpolate import interp1d, splprep
+
+def plot_diff_average(mf_1, mf_2, delta_t_val, model_cols):
+    #play with those
+    part=3
+    avg_len=300
+    
+    
+    start_min_1,stop_max_1=gh.min_max_index(mf_1,delta_t_val,*gh.t_min_tmax_overlap([mf_1,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)/part)
+    itr_1=tracebility_iterator(mf_1,delta_t_val)
+    vals_1=itr_1[start_1:stop_1]
+    times_1=gh.times_in_days_aD(mf_1,delta_t_val)[start_1:stop_1]/365
+    
+    start_min_2,stop_max_2=gh.min_max_index(mf_2,delta_t_val,*gh.t_min_tmax_overlap([mf_2,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)/part)
+    itr_2=tracebility_iterator(mf_2,delta_t_val)
+    vals_2=itr_2[start_2:stop_2]
+    times_2=gh.times_in_days_aD(mf_2,delta_t_val)[start_2:stop_2]/365
+    
+    # Since the two models do not necessarily share the same point in time and not
+    # even the same stepsize or number of steps we compute interpolating functions
+    # to make them comparable
+    # create interpolation functions for common timeline
+    x_c_1=interp1d(times_1,vals_1.x_c)
+    x_c_2=interp1d(times_2,vals_2.x_c)
+    u_1=interp1d(times_1,vals_1.u)
+    u_2=interp1d(times_2,vals_2.u)
+    rt_1=interp1d(times_1,vals_1.rt)
+    rt_2=interp1d(times_2,vals_2.rt)
+    
+    # common times
+    start=max(times_1.min(),times_2.min())
+    stop=min(times_1.max(),times_2.max())
+    nstep=min(len(times_1),len(times_2))
+    times=np.linspace(start,stop,nstep)
+    
+    # values for plots
+    delta_u=u_1(times)-u_2(times)
+    delta_rt=rt_1(times)-rt_2(times)
+    delta_x_c=x_c_1(times)-x_c_2(times)
+    
+    parts=gh.partitions(0,len(times),avg_len)
+    def f(arr):
+        return gh.averaged_1d_array(arr,parts)
+    
+    avg_times=f(times)
+    avg_x_c_1=f(x_c_1(times))
+    avg_x_c_2=f(x_c_2(times))
+    avg_rt_1=f(rt_1(times))
+    avg_rt_2=f(rt_2(times))
+    avg_u_1=f(u_1(times))
+    avg_u_2=f(u_2(times))
+    avg_delta_u=f(delta_u)
+    avg_delta_rt=f(delta_rt)
+    avg_delta_x_c=f(delta_x_c)
+    
+    fig=plt.figure(figsize=(10,10))
+    axs=fig.subplots(1,1)
+    ####################################################
+    ## plot x_c_1, x_c_2,  RT_1*delta_u and delta_rt  
+    ####################################################
+    ## rt1*delta_u
+    
+    ax=axs#[2,1]
+    ax.plot(avg_times,avg_x_c_1,label="$x_c$ {}".format(mf_1),color=model_cols[mf_1])
+    ax.plot(avg_times,avg_x_c_2,label="$x_c$ {}".format(mf_2),color=model_cols[mf_2])
+    ax.stackplot(
+        avg_times,
+        [
+            avg_x_c_2,
+            avg_delta_rt*avg_u_1,
+            avg_delta_u*avg_rt_1,
+        ],
+        labels=[
+            "$x_c$ {}".format(mf_2),
+            "$\Delta rt * u_1$",
+            "$\Delta u * rt_1$",
+        ],
+        colors=[
+            model_cols[mf_2],
+            "red",
+            "black",
+        ]
+    )
+    #ax.set_title("$Approximation$")
+    #ax.legend()
+    
+    
+mf_1="yz_jules"
+mf_2="kv_visit2"
+#mf_2="cj_isam"
+plot_diff_average(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
 # -
+
 
 

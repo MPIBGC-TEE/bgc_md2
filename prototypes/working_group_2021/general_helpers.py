@@ -1465,7 +1465,7 @@ class InfiniteIterator():
         #return a fresh instance that starts from the first step)
         c=self.__class__(self.x0,self.func)
         return c
-        #return self
+        #return self 
     
     def __next__(self):
         #print(self.pos, self.cur)
@@ -2067,13 +2067,21 @@ def partitions(start,stop,nr_acc=1):
         for i in range(number_of_steps)
     ]+[last_tup]
 
+# fixme mm 5-26-2022: obsolete (turned into wrapper before removal to avoid breking existing code)
 def averaged_times(times,partitions):
+    return averaged_1d_arrays(times,partitions)
+    #return np.array(
+    #    [
+    #        times[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
+    #    ]
+    #)
+
+def averaged_1d_array(arr,partitions):
     return np.array(
         [
-            times[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
+            arr[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
         ]
     )
-
 # The iterator allows us to compute and easily access the desired timelines with python index notation [2:5] 
 # it will return the values from position 2 to 5 of the solution (and desired variables).
 def traceability_iterator_instance(mf, # model folder name

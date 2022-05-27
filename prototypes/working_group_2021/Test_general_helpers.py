@@ -761,4 +761,10 @@ class Test_general_helpers(InDirTest):
         ##        ).all()
         ##)
 
-        
+def test_TraceTupleIterator(self):
+    I=np.array([1,1]).reshape(2,1),
+    itr=gh.TraceTupleIterator(
+            x_0=np.array([1,1]).reshape(2,1),
+            func=lambda i,X :I-k*X 
+    ) 
+    results=itr[0:100]
