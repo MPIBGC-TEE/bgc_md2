@@ -95,7 +95,7 @@ delta_t_val=30 # assuming the same step size for every model (could be made mode
 # \Delta RT 
 # +
 # \left.
-# \frac{\partial X_c}{\partial u} \Delta u
+# \frac{\partial X_c}{\partial u} 
 # \right|_{RT_1,u_1}
 # \Delta u
 # $$
@@ -282,5 +282,100 @@ plot_diff_1(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
 # -
 
 # We can see both contributions to $\Delta x_c$. They are of the same order of magnitude although $\Delta rt$ seems a tiny bit bigger.
-# We also see that the contributions are sometimes higher for $
+# We also see that the contributions are sometimes higher for $\Delta u$.
+# The error between the real and the linearly approximated $\Delta xc$ is also visible.
+# Not too bad...
+#
+
+
+# +
+
+model_cols={
+    "yz_jules": "blue",
+    "kv_visit2": "orange",
+}
+from scipy.interpolate import interp1d, splprep
+
+def plot_diff_2(mf_1, mf_2, delta_t_val, model_cols):
+    
+    part=30
+    start_min_1,stop_max_1=gh.min_max_index(mf_1,delta_t_val,*gh.t_min_tmax_overlap([mf_1,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)/part)
+    itr_1=tracebility_iterator(mf_1,delta_t_val)
+    vals_1=itr_1[start_1:stop_1]
+    times_1=gh.times_in_days_aD(mf_1,delta_t_val)[start_1:stop_1]/365
+    
+    start_min_2,stop_max_2=gh.min_max_index(mf_2,delta_t_val,*gh.t_min_tmax_overlap([mf_2,mf_2],delta_t_val))
+    # we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)/part)
+    itr_2=tracebility_iterator(mf_2,delta_t_val)
+    vals_2=itr_2[start_2:stop_2]
+    times_2=gh.times_in_days_aD(mf_2,delta_t_val)[start_2:stop_2]/365
+    
+    # Since the two models do not necessarily share the same point in time and not
+    # even the same stepsize or number of steps we compute interpolating functions
+    # to make them comparable
+    # create interpolation functions for common timeline
+    x_c_1=interp1d(times_1,vals_1.x_c)
+    x_c_2=interp1d(times_2,vals_2.x_c)
+    u_1=interp1d(times_1,vals_1.u)
+    u_2=interp1d(times_2,vals_2.u)
+    rt_1=interp1d(times_1,vals_1.rt)
+    rt_2=interp1d(times_2,vals_2.rt)
+    
+    # common plot times
+    start=max(times_1.min(),times_2.min())
+    stop=min(times_1.max(),times_2.max())
+    nstep=min(len(times_1),len(times_2))
+    times=np.linspace(start,stop,nstep)
+    
+    # values for plots
+    delta_u=u_1(times)-u_2(times)
+    delta_rt=rt_1(times)-rt_2(times)
+    delta_x_c=x_c_1(times)-x_c_2(times)
+    
+    
+    fig=plt.figure(figsize=(10,10))
+    axs=fig.subplots(1,1)
+    ####################################################
+    ## plot x_c_1, x_c_2,  RT_1*delta_u and delta_rt  
+    ####################################################
+    ## rt1*delta_u
+    
+    ax=axs#[2,1]
+    #ax.plot(times,delta_u*rt_1(times),label="$\Delta u * rt_1$",color="black")
+    #ax.plot(times,delta_rt*u_1(times),label="$\Delta rt * u_1$",color="red")
+    ax.stackplot(
+        times,
+        [
+            delta_rt*u_1(times),
+            delta_u*rt_1(times)
+        ],
+        labels=[
+            "$\Delta rt * u_1$",
+            "$\Delta u * rt_1$"
+        ],
+        colors=[
+            "red","black"
+        ]
+    )
+    ax.plot(
+        times,
+        delta_u*rt_1(times)+delta_rt*u_1(times),
+        label="Approximate $\Delta  X_c= \Delta u * rt_1 + \Delta rt * u_1$",
+        color="blue"
+    )
+    ax.plot(times,delta_x_c,label="Exact $\Delta X_c= X_1 - X_2$",color="green")
+    ax.set_title("$Approximation$")
+    ax.legend()
+    
+    
+mf_1="yz_jules"
+mf_2="kv_visit2"
+plot_diff_2(mf_1, mf_2,delta_t_val=10,model_cols=model_cols)
+# -
+
+
+
 
