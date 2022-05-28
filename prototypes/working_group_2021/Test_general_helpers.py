@@ -761,10 +761,91 @@ class Test_general_helpers(InDirTest):
         ##        ).all()
         ##)
 
-def test_TraceTupleIterator(self):
-    I=np.array([1,1]).reshape(2,1),
-    itr=gh.TraceTupleIterator(
-            x_0=np.array([1,1]).reshape(2,1),
-            func=lambda i,X :I-k*X 
-    ) 
-    results=itr[0:100]
+    def test_InfiniteIterator(self):
+        I=np.array([1,1]).reshape(2,1),
+        k=.5
+        def f(i,X):
+            return X+(I-k*X)
+        itr=gh.InfiniteIterator(
+                x0=np.array([1,1]).reshape(2,1),
+                func=f
+        ) 
+        
+        # make sure that [] has no side effects
+        
+        # first we get a single value
+        # the results will be tuples of length 1
+        # of 2,1 arrays 
+        result_1=itr[0]
+        result_2=itr[0]
+        self.assertTrue(
+            np.all(
+                (
+                    np.all(result_1[0] == result_2[0])
+                )
+            )
+        )
+
+        # tuples of arrays
+        results_1=np.stack(itr[0:10])
+        results_2=np.stack(itr[0:10])
+        self.assertTrue(
+            np.all(results_1 == results_2)
+        )
+
+    def test_TraceTupleIterator(self):
+        def B_func(it,X):
+            return -0.5*np.eye(2)
+
+        def I_func(it,X):
+            return  2*np.ones(shape=(2,1))
+        
+        X_0=np.array([2,1]).reshape(2,1)
+
+        V_init = gh.trace_tuple_instance(
+            X_0,
+            # in Yiqi's nomenclature: dx/dt=I-Bx 
+            # instead of           : dx/dt=I+Bx 
+            # as assumed by B_u_func  
+            - B_func(0,X_0), 
+            I_func(0,X_0)
+        )
+   
+        # define the function with V_{i+1}=f(i,V_i)
+        def f(
+                it: int,
+                V :gh.TraceTuple
+            ) -> gh.TraceTuple:
+                X = V.X
+                I = I_func(it,X) 
+                B = B_func(it,X)
+                X_new= X + I + B @ X
+                return gh.trace_tuple_instance(X_new,-B,I)
+        
+        itr=gh.TraceTupleIterator(
+                x0=V_init,
+                func=f
+        ) 
+        # assert side effect free [ ] application 
+        results_1=itr[0:10]
+        results_2=itr[0:10]
+        self.assertTrue(
+            np.all(
+                tuple( 
+                    np.all(
+                        results_1.__getattribute__(name) 
+                        == results_2.__getattribute__(name)
+                    )
+                    for name in gh.TraceTuple._fields
+                )
+            )
+        )
+        # test correct averaging
+        parts=gh.partitions(0,10,2)
+        res=itr.averaged_values(parts)
+        ref=results_1.averages(parts)
+        self.assertTrue(res == ref)
+        
+
+        
+

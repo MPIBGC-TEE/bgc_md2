@@ -97,8 +97,8 @@ class SymTransformers():
 #        max_lon=lon+step_lon/2
 #    )
 
-TraceTuple = namedtuple(
-    "TraceTuple",
+_TraceTuple = namedtuple(
+    "_TraceTuple",
      [  
          "X",
 	 "X_p",
@@ -114,6 +114,59 @@ TraceTuple = namedtuple(
          "u",
      ]
 )
+class TraceTuple(_TraceTuple):
+    def averages(
+        self, 
+        partitions
+        ):
+        return self.__class__(
+            *tuple(
+                averaged_1d_array(
+                        self.__getattribute__(name),
+                        partitions
+                )
+                for name in TraceTuple._fields
+        
+            )
+        )
+
+    def __add__(
+            self,
+            other
+        ):
+        """overload + which is useful for averaging"""
+        return self.__class__(
+            *tuple(
+                self.__getattribute__(name)
+                +other.__getattribute__(name)
+                for name in TraceTuple._fields
+        
+            )
+        )
+    def __truediv__(
+            self,
+            number 
+        ):
+        """overload / for scalars  which is useful for averaging"""
+        
+        return self.__class__(
+            *tuple(
+                self.__getattribute__(name)/number
+                for name in TraceTuple._fields
+        
+            )
+        )
+
+    def __eq__(
+            self,
+            other
+        ):
+        """overload == which is useful for tests"""
+        return np.all(
+            self.__getattribute__(name)
+            ==other.__getattribute__(name)
+            for name in TraceTuple._fields
+        )
 
 # some tiny helper functions for module loading
 def mvs(mf):
@@ -1462,7 +1515,13 @@ class InfiniteIterator():
         self.pos=0
         
     def __iter__(self):
-        #return a fresh instance that starts from the first step)
+        # return a fresh instance that starts from the first step)
+        # This is important for the __getitem__ to work
+        # as expected and not have side effects
+        # for
+        # res1=itr[0:10]
+        # res2=itr[0:10]
+
         c=self.__class__(self.x0,self.func)
         return c
         #return self 
@@ -1494,7 +1553,7 @@ class InfiniteIterator():
         
         
         elif isinstance(arg,int):
-            return self.value_at(it_max=arg)
+            return (self.value_at(it_max=arg),)
         else:
             raise IndexError(
                 """arguments to __getitem__ have to be either
@@ -1503,7 +1562,7 @@ class InfiniteIterator():
 
 
 def values_2_TraceTuple(tups):
-    # instead of the collection of TraceTuples that the InfiniteIterator returns
+    # instead of the tuple of TraceTuples that the InfiniteIterator returns
     # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
     return TraceTuple(*(
         np.stack(
@@ -1525,27 +1584,25 @@ class TraceTupleIterator(InfiniteIterator):
     def averaged_values(self,partitions):
         start=partitions[0][0]
         def tt_avg(tups):
+            # note that this involves overloaded + and / 
+            # for TraceTuple
             l=len(tups)
-            return TraceTuple(*(
-                    np.stack(
-                        [
-                            tup.__getattribute__(name)
-                            for tup in tups
-                        ],
-                        axis=0
-                    ).sum(axis=0)/l
-                    for name in TraceTuple._fields
-                )
-            )
+            return reduce(
+                lambda acc,el:acc+el,
+                tups
+            )/l
 
+        # make a copy to avoid side effects on self
+        itr=self.__iter__()
         # move to the start
         for i in range(start):
-            self.__next__()
+            itr.__next__()
+        #from IPython import embed;embed()
 
         tts=[
             tt_avg(
                 [
-                    self.__next__()
+                    itr.__next__()
                     for i in range(stop_p-start_p)
                 ]
             )
@@ -1554,6 +1611,38 @@ class TraceTupleIterator(InfiniteIterator):
         return values_2_TraceTuple(tts)
 
 
+def trace_tuple_instance(X,B,I):
+    u=I.sum()
+    b=I/u
+    B_inv = np.linalg.inv(B)
+    X_c = B_inv@I
+    X_p = X_c-X
+    X_dot = I - B @ X 
+    RT = X_c/u #=B_inv@b but cheeper to compute
+    # we now compute the system X_c and X_p
+    # This is in general not equal to the sum of the component, but rather a property
+    # of a surrogate system.
+    x=X.sum()
+    x_dot=X_dot.sum()
+    m_s=(B@X).sum()/x
+    x_c=1/m_s*u
+    x_p=x_c-x
+    rt=x_c/u
+
+    
+    return TraceTuple(
+        X=X,
+        X_p=X_p,
+        X_c=X_c,
+        X_dot=X_dot,
+        RT=RT,
+        x=x,
+        x_p=x_p,
+        x_c=x_c,
+        x_dot=x_dot,
+        rt=rt,
+        u=u,
+    )
 
 def traceability_iterator(
         X_0,
@@ -1570,38 +1659,6 @@ def traceability_iterator(
     
     B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
 
-    def trace_tuple_instance(X,B,I):
-        u=I.sum()
-        b=I/u
-        B_inv = np.linalg.inv(B)
-        X_c = B_inv@I
-        X_p = X_c-X
-        X_dot = I - B @ X 
-        RT = X_c/u #=B_inv@b but cheeper to compute
-        # we now compute the system X_c and X_p
-        # This is in general not equal to the sum of the component, but rather a property
-        # of a surrogate system.
-        x=X.sum()
-        x_dot=X_dot.sum()
-        m_s=(B@X).sum()/x
-        x_c=1/m_s*u
-        x_p=x_c-x
-        rt=x_c/u
-
-        
-        return TraceTuple(
-            X=X,
-            X_p=X_p,
-            X_c=X_c,
-            X_dot=X_dot,
-            RT=RT,
-            x=x,
-            x_p=x_p,
-            x_c=x_c,
-            x_dot=x_dot,
-            rt=rt,
-            u=u,
-        )
     
     # define the start tuple for the iterator    
     V_init = trace_tuple_instance(
@@ -1624,14 +1681,6 @@ def traceability_iterator(
             X_new= X + I + B @ X
             return trace_tuple_instance(X_new,-B,I)
     
-    #return TimeStepIterator2(
-    #    initial_values=V_init,
-    #    f=f
-    #)
-    #return InfiniteIterator(
-    #    x0=V_init,
-    #    func=f
-    #)
     return TraceTupleIterator(
         x0=V_init,
         func=f
@@ -2058,14 +2107,14 @@ def partitions(start,stop,nr_acc=1):
     step=nr_acc
     number_of_steps=int(diff/step)
     last_start=start+number_of_steps*step
-    last_tup=(last_start,stop)
+    last_tup_l=[(last_start,stop)] if last_start<stop else []
     return [
         (
             start + step * i,
             start + step *(i+1)
         )
         for i in range(number_of_steps)
-    ]+[last_tup]
+    ]+last_tup_l
 
 # fixme mm 5-26-2022: obsolete (turned into wrapper before removal to avoid breking existing code)
 def averaged_times(times,partitions):
@@ -2077,16 +2126,27 @@ def averaged_times(times,partitions):
     #)
 
 def averaged_1d_array(arr,partitions):
+    """ this function also works for multidimensional arrays
+    It assumes that the first dimension is time/iteration
+    """
     return np.array(
         [
-            arr[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
+            arr[p[0]:p[1]].sum(axis=0)/(p[1]-p[0]) 
+            for p in partitions
         ]
     )
+
+
 # The iterator allows us to compute and easily access the desired timelines with python index notation [2:5] 
 # it will return the values from position 2 to 5 of the solution (and desired variables).
-def traceability_iterator_instance(mf, # model folder name
-                                   delta_t_val, # model time step
-                                  ):
+
+def traceability_iterator_instance(
+        mf: str, # model folder name
+        delta_t_val: int, # model time step
+    ):
+    """Wrapper that just needs the folder name and the step 
+    size.
+    """
     ta=test_args(mf)
     mvs_t=mvs(mf)
     dvs_t=ta.dvs
