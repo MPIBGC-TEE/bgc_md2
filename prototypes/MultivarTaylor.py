@@ -21,7 +21,8 @@ RTs=np.linspace(0,1,11)
 us=np.linspace(0,2,21)
 X,Y=np.meshgrid(RTs,us)
 ax=plt.axes(projection='3d')
-ax.plot_surface(
+#ax.plot_surface(
+ax.plot_wireframe(
         X,
         Y,
         map_cc(expr,(RT,u),(RTs,us)),
@@ -55,7 +56,8 @@ def delta(arr):
 Delta_RTs, Delta_us= map(delta,(RTs,us))
 
 X,Y=np.meshgrid(Delta_RTs,Delta_us)
-ax.plot_wireframe(
+#ax.plot_wireframe(
+ax.contour3D(
     X,
     Y,
     map_cc(
