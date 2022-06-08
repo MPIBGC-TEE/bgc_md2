@@ -13,8 +13,6 @@ import bgc_md2.resolve.computers as bgc_c
 
 # Make a small dictionary for the variables we will use
 sym_dict={
-    #"r_vl_2_vw": "internal flux rate from leaf to wood", 
-    #"r_vw_2_vl": "internal flux rate from wood to leaf", 
     'C_soil_fast': '',
     'C_soil_slow': '',
     'C_soil_passive': '',
@@ -42,7 +40,6 @@ sym_dict={
     'r_C_root_litter_2_C_soil_fast': '',
     'r_C_root_litter_2_C_soil_slow': '',
     'r_C_root_litter_2_C_soil_passive': '',
-    #'env_modifier': '',
     'mrso': 'soil moisture',
     'T_0': 'critical temperature',
     'E': 'activation energy',
@@ -57,8 +54,8 @@ for k in sym_dict.keys():
 # some we will also use some symbols for functions (which appear with an argument) 
 func_dict={
     'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
-    'NPP': '',
-    'mrso': '',
+    'NPP': 'net primary production',
+    'mrso': 'soil moisture',
     'TAS': 'air temperature',
 }
 for k in func_dict.keys():
@@ -96,12 +93,12 @@ mvs = CMTVS(
         ),
         OutFluxesBySymbol(
             {
-                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi,#*env_modifier,
-                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi,#*env_modifier,
-                C_root_litter: r_C_root_litter_rh*C_root_litter*xi,#*env_modifier,
-                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi,#*env_modifier,
-                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi,#*env_modifier,
-                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,#*env_modifier,
+                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi,
+                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi,
+                C_root_litter: r_C_root_litter_rh*C_root_litter*xi,
+                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi,
+                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi,
+                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,
             }
         ),
         InternalFluxesBySymbol(
@@ -109,15 +106,15 @@ mvs = CMTVS(
                 (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
                 (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
                 (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
-                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi,#*env_modifier,
-                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi,#*env_modifier,
-                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi,#*env_modifier,
-                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi,#*env_modifier,
-                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi,#*env_modifier,
-                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi,#*env_modifier,
-                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi,#*env_modifier,
-                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi,#*env_modifier,
-                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi,#*env_modifier,
+                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi,
+                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi,
+                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi,
+                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi,
+                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi,
+                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi,
+                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi,
+                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi,
+                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi,
             }
         ),
         BibInfo(# Bibliographical Information
