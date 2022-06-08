@@ -61,6 +61,14 @@ CoordTransformers=namedtuple(
         "LON2lon"
     ]
 )
+date=namedtuple(
+    "date",
+    [
+        'year',
+        'month',
+        'day'
+    ]
+)
 def compose_2(
         f: Callable,
         g: Callable
@@ -867,50 +875,73 @@ def make_jon_cost_func(
         return cost
     return costfunction
 
-def day_2_month_index(d):
-    #this is the trendy version with always 30 days per month
-    return int(d/30)
+def days_per_month():
+    #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    dpm= [30 for i in range(12)]
+    return dpm
 
-# def month_2_day_index(ns):
-#    """ computes the index of the day at the end of the month n in ns
-#    this works on vectors """
-#    return 30*ns
+def days_per_year():
+    return sum(days_per_month())
 
-def day_2_month_index_vm(d):
-    # vm for variable months
-    return months_by_day_arr()[(d % days_per_year)] + int(d/days_per_year)*12
-
-
-@lru_cache
-def months_by_day_arr():
-    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    return np.concatenate(
+def day_2_month_index(day):
+    months_by_day_arr= np.concatenate(
         tuple(
             map(
                 lambda m: m * np.ones(
-                    days_per_month[m],
+                    days_per_month()[m],
                     dtype=np.int64
                 ),
                 range(12)
             )
         )
     )
+    #  for variable months
+    dpy=days_per_year()
+    return months_by_day_arr[(day % dpy)] + int(day/dpy)*12
 
-def year_2_day_index(ns):
-    """ computes the index of the day at the end of the year n in ns
-    this works on vectors 
-    """
-    return np.array(list(map(lambda n:days_per_year*n,ns)))
+def days_since_AD(iteration, delta_t_val,start_date):
+    
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
+    #times = ds.variables["time"]
+    # we have to check some assumptions on which this calculation is based
+    # for jules the data points are actually spaced with different numbers of days between monthly
+    # data point
+    # we can see this by looking at the first 24 months
+    # for i in range(24):
+    #     print((times[i + 1] - times[i])/(3600 * 24))
+    #ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
+    #td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
 
-def day_2_year_index(ns):
-    """ computes the index of the year
-    this works on vectors 
-    """
-    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
+    # To get the startdate we used the following days_per_month (which yields a 365 day year)
+    # used #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    # from then on we might use a different counting (see days_per_month()) 
+    start_year, start_month, start_day=start_date
+    td_AD=start_year*days_per_year()+sum(days_per_month()[0: (start_month - 1)])+(start_day-1) 
+    return td_AD+iteration*delta_t_val
+
+#def day_2_month_index_vm(d):
+#    # vm for variable months
+#    return months_by_day_arr()[(d % days_per_year())] + int(d/days_per_year())*12
 
 
+#@lru_cache
+#def months_by_day_arr():
+#    #days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+#    days_per_month = 
+#    return np.concatenate(
+#        tuple(
+#            map(
+#                lambda m: m * np.ones(
+#                    days_per_month[m],
+#                    dtype=np.int64
+#                ),
+#                range(12)
+#            )
+#        )
+#    )
 
-def month_2_day_index_vm(ns):
+def month_2_day_index(ns,start_date):
+    start_month=start_date.month
     """ computes the index of the day at the end of the month n in ns
     this works on vectors and is faster than a recursive version working
     on a single index (since the smaller indices are handled anyway)
@@ -918,8 +949,8 @@ def month_2_day_index_vm(ns):
 
     # We first compute the sequence of day indices up to the highest month in ns
     # and then select from this sequence the day indices for the months in ns
-    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    dpm = (days_per_month[i % len(days_per_month)] for i in range(max(ns)))
+    d = days_per_month() 
+    dpm = (d[i % len(d)] for i in range(max(ns)))
 
     # compute indices for which we want to store the results which is the
     # list of partial sums of the above list  (repeated)
@@ -943,6 +974,54 @@ def month_2_day_index_vm(ns):
         []
     )
     return day_indices
+
+def year_2_day_index(ns):
+    """ computes the index of the day at the end of the year n in ns
+    this works on vectors 
+    """
+    return np.array(list(map(lambda n:days_per_year*n,ns)))
+
+def day_2_year_index(ns):
+    """ computes the index of the year
+    this works on vectors 
+    """
+    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
+
+
+
+#def month_2_day_index_vm(ns):
+#    """ computes the index of the day at the end of the month n in ns
+#    this works on vectors and is faster than a recursive version working
+#    on a single index (since the smaller indices are handled anyway)
+#    """
+#
+#    # We first compute the sequence of day indices up to the highest month in ns
+#    # and then select from this sequence the day indices for the months in ns
+#    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+#    dpm = (days_per_month[i % len(days_per_month)] for i in range(max(ns)))
+#
+#    # compute indices for which we want to store the results which is the
+#    # list of partial sums of the above list  (repeated)
+#
+#    def f(acc, el):
+#        if len(acc) < 1:
+#            res = (el,)
+#        else:
+#            last = acc[-1]
+#            res = acc + (el + last,)
+#        return res
+#
+#    day_indices_for_continuous_moths = reduce(
+#        f,
+#        dpm,
+#        (0,)
+#    )
+#    day_indices = reduce(
+#        lambda acc, n: acc + [day_indices_for_continuous_moths[n]],  # for n=0 we want 0
+#        ns,
+#        []
+#    )
+#    return day_indices
 
 
 class TimeStepIterator2():
@@ -2046,28 +2125,28 @@ def sim_day_2_day_aD_func(mf): #->function
 #     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
 # -
 
-def times_in_days_aD(mf, delta_t_val):
-    start_date = msh(mf).start_date # start of the simulation
-    end_date = msh(mf).end_date # end of the simulation
-    #fixme mm 5-26-2022
-    # In general helpers NO model name should be specified 
-    # NOT a single function here has to know about a specific model
-    # this part clearly belongs to model specific helpers...
-    if mf in ["Aneesh_SDGVM"]: # different calculation for models with 30-day months
-        start_year=start_date.year
-        start_month=start_date.month
-        start_day=start_date.day
-        end_year=end_date.year
-        end_month=end_date.month
-        end_day=end_date.day
-        n_days=end_year*360+end_month*30+end_day - (start_year*360+start_month*30+start_day)
-    else:   
-        duration=end_date-start_date
-        # 365-day calendar does not include leap years so we exclude them    
-        n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
-    n_iter=int(n_days/delta_t_val)
-    days_after_sim_start=delta_t_val*np.arange(n_iter)
-    return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+#def times_in_days_aD(mf, delta_t_val):
+#    start_date = msh(mf).start_date # start of the simulation
+#    end_date = msh(mf).end_date # end of the simulation
+#    #fixme mm 5-26-2022
+#    # In general helpers NO model name should be specified 
+#    # NOT a single function here has to know about a specific model
+#    # this part clearly belongs to model specific helpers...
+#    if mf in ["Aneesh_SDGVM"]: # different calculation for models with 30-day months
+#        start_year=start_date.year
+#        start_month=start_date.month
+#        start_day=start_date.day
+#        end_year=end_date.year
+#        end_month=end_date.month
+#        end_day=end_date.day
+#        n_days=end_year*360+end_month*30+end_day - (start_year*360+start_month*30+start_day)
+#    else:   
+#        duration=end_date-start_date
+#        # 365-day calendar does not include leap years so we exclude them    
+#        n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
+#    n_iter=int(n_days/delta_t_val)
+#    days_after_sim_start=delta_t_val*np.arange(n_iter)
+#    return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
 
 # function to determine overlapping time frames for models simulations 
 def t_min_tmax_overlap(model_folders,delta_t_val):
@@ -2116,14 +2195,6 @@ def partitions(start,stop,nr_acc=1):
         for i in range(number_of_steps)
     ]+last_tup_l
 
-# fixme mm 5-26-2022: obsolete (turned into wrapper before removal to avoid breking existing code)
-def averaged_times(times,partitions):
-    return averaged_1d_arrays(times,partitions)
-    #return np.array(
-    #    [
-    #        times[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
-    #    ]
-    #)
 
 def averaged_1d_array(arr,partitions):
     """ this function also works for multidimensional arrays
@@ -2165,6 +2236,7 @@ def traceability_iterator_instance(
         delta_t_val=delta_t_val
     )
 
+# fixme: possible obsolete = averaged_1d_array
 def avg_timeline (timeline, # array
                   averaging # number of steps over which to average
                 ):
@@ -2191,21 +2263,23 @@ def avg_timeline (timeline, # array
             i+=x
     return(output)
 
-def days_AD_to_years(days): # days can be an integer of an array of integers
-    start_date=dt.date(1, 1, 1)
-    if type(days)==int:
-        delta = dt.timedelta(days=days)
-        end_date=start_date+delta
-        years=end_date.year+(end_date.month-1)/12+end_date.day/365
-    else:
-        years=np.zeros(len(days))
-        for i in range(len(days)):
-            delta = dt.timedelta(days=int(days[i]))
-            end_date=start_date+delta
-            years[i]=end_date.year+(end_date.month-1)/12+end_date.day/365
-    return(years)
+# fixme: this function should be obsolete and furthermore contains duplication in the 365 days per year
+# (days_per_year())
+#def days_AD_to_years(days): # days can be an integer of an array of integers
+#    start_date=dt.date(1, 1, 1)
+#    if type(days)==int:
+#        delta = dt.timedelta(days=days)
+#        end_date=start_date+delta
+#        years=end_date.year+(end_date.month-1)/12+end_date.day/365
+#    else:
+#        years=np.zeros(len(days))
+#        for i in range(len(days)):
+#            delta = dt.timedelta(days=int(days[i]))
+#            end_date=start_date+delta
+#            years[i]=end_date.year+(end_date.month-1)/12+end_date.day/365
+#    return(years)
 
-end_date = dt.date(2019, 12, 16)
+#end_date = dt.date(2019, 12, 16)
 
 def plot_components_combined(model_names, # dictionary (folder name : model name)
                            var_names, # dictionary (trace_tuple name : descriptive name)

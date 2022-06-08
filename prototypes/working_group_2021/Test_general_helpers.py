@@ -40,35 +40,35 @@ class Test_general_helpers(InDirTest):
         self.assertEqual(gh.day_2_month_index(31), 1) 
         self.assertEqual(gh.day_2_month_index(60), 2) 
 
+     
+    #def test_month_2_day_index_vm(self):
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([0]),
+    #            [0]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([1]),
+    #            [31]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([2]),
+    #            [59]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([3]),
+    #            [90]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([1,3]),
+    #            [31,90]
+    #    ) 
     
-    def test_month_2_day_index_vm(self):
-        self.assertEqual(
-                gh.month_2_day_index_vm([0]),
-                [0]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([1]),
-                [31]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([2]),
-                [59]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([3]),
-                [90]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([1,3]),
-                [31,90]
-        ) 
-    
-    def test_day_2_month_index_vm(self):
-        # note that days are counted from zero so day 30 is January 31.
-        self.assertEqual(gh.day_2_month_index_vm( 0), 0) 
-        self.assertEqual(gh.day_2_month_index_vm(30), 0) 
-        self.assertEqual(gh.day_2_month_index_vm(31), 1) 
-        self.assertEqual(gh.day_2_month_index_vm(60), 2) 
+    #def test_day_2_month_index_vm(self):
+    #    # note that days are counted from zero so day 30 is January 31.
+    #    self.assertEqual(gh.day_2_month_index_vm( 0), 0) 
+    #    self.assertEqual(gh.day_2_month_index_vm(30), 0) 
+    #    self.assertEqual(gh.day_2_month_index_vm(31), 1) 
+    #    self.assertEqual(gh.day_2_month_index_vm(60), 2) 
 
 
     def test_pixel_area_on_unit_sphere(self):

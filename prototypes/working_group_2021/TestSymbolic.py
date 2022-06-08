@@ -189,7 +189,7 @@ class TestSymbolic(TestCase):
                     K=1 # default value | increase value to reduce acceptance of higher cost functions
                 )
     
-    #def test_autostep_mcmc_model_specific_costfunction(self):
+    #def test_autostep_mcmc_with_model_specific_costfunction(self):
     #    
     #    for mf in set(self.model_folders).intersection(['Aneesh_SDGVM']):
     #        with self.subTest(mf=mf):
@@ -241,6 +241,21 @@ class TestSymbolic(TestCase):
                 msh = gh.msh(mf)
                 test_args = gh.test_args(mf)
                 test_args.epa_opt
+
+    def test_start_date_presence(self):
+        # Purpose:
+        # For the model comparison plots it's necessary to have a common timeline
+        # 
+        # How to fix this test:
+        # 1.)   implement a function start_date in your model_specific_helpers_2 file
+        #       you can look at Kostia's "kv_visit2/model_specific_helpers_2.py as an 
+        #       example
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
+                msh.start_date()
+
 
 
     #def test_make_param_filter_func_presence(self):
