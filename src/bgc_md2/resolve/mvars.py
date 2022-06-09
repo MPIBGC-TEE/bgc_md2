@@ -355,13 +355,13 @@ class VegetationCarbonInputPartitioningTuple(ColumnVectorLike):
 
 
 class VegetationCarbonCompartmentalMatrix(MatrixLike):  # cycling matrix
-    """Create a CompartmentalMatrix (which is immutable) for the vegetation part only.
+    """Create a CompartmentalMatrix for the vegetation part only.
     Note that for the same physical model this matrix can take different shapes, depending
     on the order of the vegetation state variables (as defined via the VegetationStateVariableTuple)
     
-    It is more likely that you will not create this matrix itself since it can easily be computed
-    from the VegetationCarbonStateVariables and the CompartmentalMatrix for the whole system. (or the carbon cycle)
-
+    It is more likely that you will NOT create this matrix yourself since it can easily be computed
+    from the VegetationCarbonStateVariables and the CompartmentalMatrix for the whole system. 
+    Note that the resulting matrix is immuatable.
     Examples
     ========
 
@@ -375,7 +375,7 @@ class VegetationCarbonCompartmentalMatrix(MatrixLike):  # cycling matrix
     >>> _[0, 0] = 42
     Traceback (most recent call last):
     ...
-    TypeError: Cannot set values of ImmutableDenseMatrix
+    TypeError: Cannot set values of 
     """
     pass
 
