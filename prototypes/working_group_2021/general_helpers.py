@@ -76,10 +76,26 @@ def compose_2(
     """Function composition"""
     return lambda arg: f(g(arg))
 
+def identicalTransformers():
+    """ This function can be used if the grid used by the model has 
+    - lat ==   0 at the equator with 
+    - lat == -90 at the south pole,
+    - lat == +90 at the north pole,
+    - lon ==   0 at Greenich and 
+    - lon is counted positive eastwards
+    """
+    return CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: lon,
+            LON2lon=lambda LON: LON,
+    )
+
 class SymTransformers():
     """as Transformers but with a fixed coord system
-    with -90 <= lat <=90 
-    with -180 <= lon <=  180
+    with 
+    -90 <= lat <= 90 
+    -180 <= lon <= 180
     lat=0,Equator
     lon=0,Greenich
     """
@@ -2045,19 +2061,21 @@ def model_table(
     )
 
 def transform_maker(lat_0,lon_0,step_lat,step_lon):
+    """
+    The result of this function is a tuple of functions
+    To translate from indices (i,j)  in the array  to (lat,lon) with the following
+    properties
+    values of the center of the indexed pixel
+    and back
+    These functions do not necessarily work for every model
+    You have to check them on the latitude longitude variables of your netcdf files.
+    """
     n_lat=180.0/abs(step_lat)
     if int(n_lat)!=n_lat:
         raise Exception("step_lat has to be a divisor of 180")
     n_lon=360.0/abs(step_lon)
     if int(n_lon)!=n_lon:
         raise Exception("step_lon has to be a divisor of 360")
-    # The result of this function is a tuple of functions
-    # To translate from indices (i,j)  in the array  to (lat,lon) with the following
-    # properties
-    # values of the center of the indexed pixel
-    # and back
-    # These functions does not necessarily work for every model
-    # You will
     def i2lat(i_lat):
         if i_lat > (n_lat-1):
             raise IndexError("i_lat > n_lat-1; with i_lat={}, n_lat={}".format(i_lat,n_lat))

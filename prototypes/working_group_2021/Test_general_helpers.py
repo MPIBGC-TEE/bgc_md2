@@ -5,6 +5,7 @@ from numpy.core.fromnumeric import shape
 from pathlib import Path
 from testinfrastructure.InDirTest import InDirTest
 import general_helpers as gh
+import matplotlib.pyplot as plt
 
 class Test_general_helpers(InDirTest):
 
@@ -624,7 +625,6 @@ class Test_general_helpers(InDirTest):
             self.assertEqual(tr.lon2i(tr.i2lon(i)),i)
 
 
-
     def test_project_2_self_a(self):
         step_lat = 180
         step_lon = 90
@@ -637,12 +637,7 @@ class Test_general_helpers(InDirTest):
             step_lon,
         )
         # here we use the identical transformation
-        ctr=gh.CoordTransformers(
-                lat2LAT=lambda lat: lat,
-                LAT2lat=lambda LAT: LAT,
-                lon2LON=lambda lon: lon,
-                LON2lon=lambda LON: LON,
-        )
+        ctr=gh.identicalTransformers()
         sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
         cm_1=gh.CoordMask(
             np.array([0,1,0,0],dtype=np.bool_).reshape(1,4),
@@ -660,7 +655,8 @@ class Test_general_helpers(InDirTest):
     def test_project_2_self_b(self):
         step_lat = 90
         step_lon = 90
-        lat_0 = 0
+        #lat_0 = 0
+        lat_0 = -90+45
         lon_0 = -180+45
         itr = gh.transform_maker(
             lat_0,
@@ -669,18 +665,12 @@ class Test_general_helpers(InDirTest):
             step_lon,
         )
         # here we use the identical transformation
-        ctr=gh.CoordTransformers(
-                lat2LAT=lambda lat: lat,
-                LAT2lat=lambda LAT: LAT,
-                lon2LON=lambda lon: lon,
-                LON2lon=lambda LON: LON,
-        )
+        ctr=gh.identicalTransformers()
         sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
         cm_1=gh.CoordMask(
             np.array([[0,1,0,0],[0,0,0,0]],dtype=np.bool_).reshape(2,4),
             sym_tr
         )
-        
         
         # self projection
         res= gh.project_2(
@@ -688,11 +678,16 @@ class Test_general_helpers(InDirTest):
             cm_1
         )
         self.assertTrue((res.index_mask==cm_1.index_mask).all())
+        f=plt.figure()
+        ax=f.add_subplot(1,1,1)
+        cm_1.plot(ax)
+        f.savefig("cm_1.pdf")
 
     def test_project_2_self_c(self):
         step_lat = 60
         step_lon = 90
-        lat_0 = 0
+        #lat_0 = 0
+        lat_0 = -90+30 
         lon_0 = -180+45
         itr = gh.transform_maker(
             lat_0,
@@ -701,12 +696,7 @@ class Test_general_helpers(InDirTest):
             step_lon,
         )
         # here we use the identical transformation
-        ctr=gh.CoordTransformers(
-                lat2LAT=lambda lat: lat,
-                LAT2lat=lambda LAT: LAT,
-                lon2LON=lambda lon: lon,
-                LON2lon=lambda LON: LON,
-        )
+        ctr=gh.identicalTransformers()
         sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
         n_lat=int(180/step_lat)
         n_lon=int(360/step_lon)
@@ -722,13 +712,80 @@ class Test_general_helpers(InDirTest):
             cm_1
         )
         self.assertTrue((res.index_mask==cm_1.index_mask).all())
+        f=plt.figure()
+        ax=f.add_subplot(1,1,1)
+        cm_1.plot(ax)
+        f.savefig("cm_1.pdf")
     
-    #def test_project_2_higer_res_target(self):
+    def test_project_2_higer_res_target(self):
+        # here we use the identical transformation
+        ctr=gh.identicalTransformers()
+        step_lat = 60
+        step_lon = 90
+        #lat_0 = 0
+        lat_0 = -90+30 
+        lon_0 = -180+45
+        itr_1 = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        sym_tr_1 = gh.SymTransformers(itr=itr_1,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_1=gh.CoordMask(
+            np.array(
+                [
+                    [0,0,0,0],
+                    [0,1,0,0],
+                    [0,0,0,0],
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat,n_lon),
+            sym_tr_1
+        )
 
-        #res= gh.project_2(
-        #    target=cm_1,
-        #    source=cm_2
-        #)
+        step_lat = 45
+        step_lon = 60
+        #lat_0 = 0
+        lat_0 = -90+step_lat/2.0
+        lon_0 = -180+step_lon/2.0
+        itr_2 = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        # here we use the identical transformation
+        sym_tr_2 = gh.SymTransformers(itr=itr_2,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_2=gh.CoordMask(
+            np.array(
+                [
+                    [0,0,0,0,0,0],
+                    [0,1,0,0,0,0],
+                    [0,0,0,0,0,0],
+                    [0,0,0,0,0,0],
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat,n_lon),
+            sym_tr_2
+        )
+        res= gh.project_2(
+            target=cm_2,
+            source=cm_1
+        )
+        f=plt.figure()
+        ax=f.add_subplot(3,1,1)
+        cm_1.plot(ax)
+        ax=f.add_subplot(3,1,2)
+        cm_2.plot(ax)
+        ax=f.add_subplot(3,1,3)
+        res.plot(ax)
+        f.savefig("cms.pdf")
+        raise
         #m_ref=np.array([1,1,0,0]).reshape(4,1)
         #self.assertTrue((res==m_ref).all())
 
