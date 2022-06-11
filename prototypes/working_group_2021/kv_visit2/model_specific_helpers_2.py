@@ -281,35 +281,37 @@ def get_global_mean_vars(dataPath):
 
 
 
-def make_sim_day_2_day_since_a_D(conf_dict):
-    # this function is extremely important to syncronise our results
-    # because our data streams start at different times the first day of 
-    # a simulation day_ind=0 refers to different dates for different models
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced monthly with different numbers of days
-    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
-    times = ds.variables["time"]
+# +
+# def make_sim_day_2_day_since_a_D(conf_dict):
+#     # this function is extremely important to syncronise our results
+#     # because our data streams start at different times the first day of 
+#     # a simulation day_ind=0 refers to different dates for different models
+#     # we have to check some assumptions on which this calculation is based
+#     # for jules the data points are actually spaced monthly with different numbers of days
+#     ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
+#     times = ds.variables["time"]
 
-    # we have to check some assumptions on which this calculation is based
+#     # we have to check some assumptions on which this calculation is based
 
-    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
-    td = int(tm *31)  #in days since_1860-01-01 
-    #NOT assuming a 30 day month...
-    import datetime as dt
-    ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(1860, 1, 1)
-    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+#     tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+#     td = int(tm *31)  #in days since_1860-01-01 
+#     #NOT assuming a 30 day month...
+#     import datetime as dt
+#     ad = dt.date(1, 1, 1) # first of January of year 1 
+#     sd = dt.date(1860, 1, 1)
+#     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
     
 
-    def f(day_ind: int)->int:
-        return day_ind+td_aD
+#     def f(day_ind: int)->int:
+#         return day_ind+td_aD
 
-    return f
+#     return f
+# -
 
-## Define start and end dates of the simulation
-#import datetime as dt
-#start_date=dt.date(1860, 1, 16)
-#end_date = dt.date(2019, 12, 16)
+# # Define start and end dates of the simulation
+# import datetime as dt
+# start_date=dt.date(1860, 1, 16)
+# end_date = dt.date(2019, 12, 16)
 
 
 
@@ -901,7 +903,7 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     ).reshape(len(X_0_dict),1)
     return X_0
 
-#def days_per_month():
+# def days_per_month():
 #    #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 #    dpm= [30 for i in range(12)]
 #    return dpm
@@ -912,23 +914,14 @@ def start_date():
     ## because our data streams start at different times the first day of 
     ## a simulation day_ind=0 refers to different dates for different models
     ## we have to check some assumptions on which this calculation is based
-    ## for jules the data points are actually spaced monthly with different numbers of days
-    ## 
     ## Here is how to get these values
-    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_gpp.nc")))
     #times = ds.variables["time"]
-    ## we have to check some assumptions on which this calculation is based
-    ## for jules the data points are actually spaced with different numbers of days between monthly
-    ## data point
-    ## we can see this by looking at the first 24 months
-    ## for i in range(24):
-    ##     print((times[i + 1] - times[i])/(3600 * 24))
-
-    #ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
-    #td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
+    #tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    #td = int(tm *30)  #in days since_1860-01-01 
     #import datetime as dt
     #ad = dt.date(1, 1, 1) # first of January of year 1 
-    #sd = dt.date(2010, 1, 1)
+    #sd = dt.date(1860, 1, 1)
     #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
     ## from td_aD (days since 1-1-1) we can compute the year month and day
     return gh.date(
@@ -936,78 +929,3 @@ def start_date():
         month=1,
         day=1
     )
-
-#def month_2_day_index(ns):
-#    start_month=start_date().month
-#    """ computes the index of the day at the end of the month n in ns
-#    this works on vectors and is faster than a recursive version working
-#    on a single index (since the smaller indices are handled anyway)
-#    """
-#
-#    # We first compute the sequence of day indices up to the highest month in ns
-#    # and then select from this sequence the day indices for the months in ns
-#    d =gh.days_per_month() 
-#    dpm = (d[i % len(d)] for i in range(max(ns)))
-#
-#    # compute indices for which we want to store the results which is the
-#    # list of partial sums of the above list  (repeated)
-#
-#    def f(acc, el):
-#        if len(acc) < 1:
-#            res = (el,)
-#        else:
-#            last = acc[-1]
-#            res = acc + (el + last,)
-#        return res
-#
-#    day_indices_for_continuous_moths = reduce(
-#        f,
-#        dpm,
-#        (0,)
-#    )
-#    day_indices = reduce(
-#        lambda acc, n: acc + [day_indices_for_continuous_moths[n]],  # for n=0 we want 0
-#        ns,
-#        []
-#    )
-#    return day_indices
-
-#def day_2_month_index(day):
-#    months_by_day_arr= np.concatenate(
-#        tuple(
-#            map(
-#                lambda m: m * np.ones(
-#                    days_per_month()[m],
-#                    dtype=np.int64
-#                ),
-#                range(12)
-#            )
-#        )
-#    )
-#    #  for variable months
-#    dpy=days_per_year()
-#    return months_by_day_arr[(day % dpy)] + int(day/dpy)*12
-
-#def days_per_year():
-#    return sum(days_per_month())
-
-#def days_since_AD(iteration, delta_t_val):
-#    
-#    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
-#    #times = ds.variables["time"]
-#    # we have to check some assumptions on which this calculation is based
-#    # for jules the data points are actually spaced with different numbers of days between monthly
-#    # data point
-#    # we can see this by looking at the first 24 months
-#    # for i in range(24):
-#    #     print((times[i + 1] - times[i])/(3600 * 24))
-#    #ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
-#    #td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
-#
-#    # To get the startdate we used the following days_per_month (which yields a 365 day year)
-#    # used #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-#    # from then on we might use a different counting (see days_per_month()) 
-#    start_year, start_month, start_day=start_date()
-#    td_AD=start_year*gh.days_per_year()+sum(gh.days_per_month()[0: (start_month - 1)])+(start_day-1) 
-#    return td_AD+iteration*delta_t_val
-
