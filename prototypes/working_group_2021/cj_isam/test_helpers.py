@@ -64,7 +64,7 @@ def make_test_args(conf_dict,msh,mvs):
             "r_C_SHMS_2_C_BGMS": 1.47945205479452e-5
         }.items()
     }
-    svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+    svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
     obs_arr= np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
     func_dict={
         Function(k):v

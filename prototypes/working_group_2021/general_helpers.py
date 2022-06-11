@@ -30,8 +30,6 @@ from bgc_md2.resolve.mvars import (
 #from bgc_md2.helper import bgc_md2_computers
 import bgc_md2.display_helpers as dh
 
-days_per_year = 365 
-
 boundaries=namedtuple(
     "boundaries",
     [
@@ -112,9 +110,9 @@ class SymTransformers():
         self.i2lon=compose_2(ctr.lon2LON,itr.i2lon)
         self.i2lon_min_max=lambda i: map(ctr.lon2LON,itr.i2lon_min_max(i))
         self.lon2i=compose_2(itr.lon2i,ctr.LON2lon)
-    
 
-#def pixel_boundaries(lat,lon,step_lat,step_lon):
+
+# def pixel_boundaries(lat,lon,step_lat,step_lon):
 #    return boundaries(
 #        min_lat=lat-step_lat/2,
 #        max_lat=lat+step_lat/2,
@@ -917,45 +915,13 @@ def day_2_month_index(day):
     return months_by_day_arr[(day % dpy)] + int(day/dpy)*12
 
 def days_since_AD(iteration, delta_t_val,start_date):
-    
-    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
-    #times = ds.variables["time"]
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced with different numbers of days between monthly
-    # data point
-    # we can see this by looking at the first 24 months
-    # for i in range(24):
-    #     print((times[i + 1] - times[i])/(3600 * 24))
-    #ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
-    #td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
-
-    # To get the startdate we used the following days_per_month (which yields a 365 day year)
-    # used #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    # To get the startdate we used the model specific function start_date()
+    # where it can be derivde using the original calendar (365 day or 360 day)
     # from then on we might use a different counting (see days_per_month()) 
     start_year, start_month, start_day=start_date
     td_AD=start_year*days_per_year()+sum(days_per_month()[0: (start_month - 1)])+(start_day-1) 
     return td_AD+iteration*delta_t_val
 
-#def day_2_month_index_vm(d):
-#    # vm for variable months
-#    return months_by_day_arr()[(d % days_per_year())] + int(d/days_per_year())*12
-
-
-#@lru_cache
-#def months_by_day_arr():
-#    #days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-#    days_per_month = 
-#    return np.concatenate(
-#        tuple(
-#            map(
-#                lambda m: m * np.ones(
-#                    days_per_month[m],
-#                    dtype=np.int64
-#                ),
-#                range(12)
-#            )
-#        )
-#    )
 
 def month_2_day_index(ns,start_date):
     start_month=start_date.month
@@ -992,54 +958,13 @@ def month_2_day_index(ns,start_date):
     )
     return day_indices
 
-def year_2_day_index(ns):
-    """ computes the index of the day at the end of the year n in ns
-    this works on vectors 
-    """
-    return np.array(list(map(lambda n:days_per_year*n,ns)))
-
-def day_2_year_index(ns):
-    """ computes the index of the year
-    this works on vectors 
-    """
-    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
-
-
-
-#def month_2_day_index_vm(ns):
-#    """ computes the index of the day at the end of the month n in ns
-#    this works on vectors and is faster than a recursive version working
-#    on a single index (since the smaller indices are handled anyway)
-#    """
-#
-#    # We first compute the sequence of day indices up to the highest month in ns
-#    # and then select from this sequence the day indices for the months in ns
-#    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-#    dpm = (days_per_month[i % len(days_per_month)] for i in range(max(ns)))
-#
-#    # compute indices for which we want to store the results which is the
-#    # list of partial sums of the above list  (repeated)
-#
-#    def f(acc, el):
-#        if len(acc) < 1:
-#            res = (el,)
-#        else:
-#            last = acc[-1]
-#            res = acc + (el + last,)
-#        return res
-#
-#    day_indices_for_continuous_moths = reduce(
-#        f,
-#        dpm,
-#        (0,)
-#    )
-#    day_indices = reduce(
-#        lambda acc, n: acc + [day_indices_for_continuous_moths[n]],  # for n=0 we want 0
-#        ns,
-#        []
-#    )
-#    return day_indices
-
+# +
+# def year_2_day_index(ns):
+#     """ computes the index of the day at the end of the year n in ns
+#     this works on vectors 
+#     """
+#     return np.array(list(map(lambda n:days_per_year*n,ns)))
+# -
 
 class TimeStepIterator2():
     """iterator for looping forward over the results of a difference equation
@@ -1842,8 +1767,6 @@ def combine_masks(masks,i2cs):
     )
 
 
-
-
 def open_interval_intersect(i1,i2):
     min1,max1=i1
     min2,max2=i2
@@ -2114,44 +2037,21 @@ def transform_maker(lat_0,lon_0,step_lat,step_lon):
         lon2i=lon2i,
     )
 
-# functions to synchronize model outputs to the scale of days since AD
-def sim_day_2_day_aD_func(mf): #->function
-    return msh(mf).make_sim_day_2_day_since_a_D(confDict(mf))
-
 # +
-# def times_in_days_aD(mf,delta_t_val):
-#     import datetime as dt
-#     n_months=len(test_args(mf).dvs[0])
-#     end_date = dt.date(2019, 12, 16) # end of simulation 
-#     sd = dt.date(2010, 1, 1)-(0,n_months,0)
-#     n_days=n_months*30
-#     n_iter=int(n_days/delta_t_val)
-#     days_after_sim_start=delta_t_val*np.arange(n_iter)
-#     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+# For harmonizing timelines and plotting
 # -
 
-#def times_in_days_aD(mf, delta_t_val):
-#    start_date = msh(mf).start_date # start of the simulation
-#    end_date = msh(mf).end_date # end of the simulation
-#    #fixme mm 5-26-2022
-#    # In general helpers NO model name should be specified 
-#    # NOT a single function here has to know about a specific model
-#    # this part clearly belongs to model specific helpers...
-#    if mf in ["Aneesh_SDGVM"]: # different calculation for models with 30-day months
-#        start_year=start_date.year
-#        start_month=start_date.month
-#        start_day=start_date.day
-#        end_year=end_date.year
-#        end_month=end_date.month
-#        end_day=end_date.day
-#        n_days=end_year*360+end_month*30+end_day - (start_year*360+start_month*30+start_day)
-#    else:   
-#        duration=end_date-start_date
-#        # 365-day calendar does not include leap years so we exclude them    
-#        n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
-#    n_iter=int(n_days/delta_t_val)
-#    days_after_sim_start=delta_t_val*np.arange(n_iter)
-#    return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+def times_in_days_aD(mf,delta_t_val):
+    n_months=len(test_args(mf).dvs[0])
+    n_days=month_2_day_index([n_months],msh(mf).start_date())[0]
+    n_iter=int(n_days/delta_t_val)
+    return np.array(
+        tuple((
+            days_since_AD(i,delta_t_val,msh(mf).start_date()) 
+            for i in np.arange(n_iter)#days_after_sim_start
+        ))
+    )
+
 
 # function to determine overlapping time frames for models simulations 
 def t_min_tmax_overlap(model_folders,delta_t_val):
@@ -2185,6 +2085,8 @@ def min_max_index(mf,delta_t_val,t_min,t_max):
     
     return reduce(count,range(len(ts)),(0,0)) 
 
+# fixme: do we need this partition?
+# partitions is only used in averaged_1d_array and in Trace_Tuple class
 # we can build this partition by a little function 
 def partitions(start,stop,nr_acc=1):
     diff=stop-start
@@ -2201,6 +2103,11 @@ def partitions(start,stop,nr_acc=1):
     ]+last_tup_l
 
 
+# fixme: merge with avg_timeline? 
+# avg_timeline has a better interface - 2nd argument is a number rather than an array of parts
+# so avg_timeline does not need a partitions function
+# which is very useful in graphs when ve average times as well (partitions make it very inconvenient)
+# averaged_1d_array and partiotions are used in Trace_Tuple class. Can they be changed to avg_timeline? 
 def averaged_1d_array(arr,partitions):
     """ this function also works for multidimensional arrays
     It assumes that the first dimension is time/iteration
@@ -2222,7 +2129,7 @@ def traceability_iterator_instance(
     ):
     """Wrapper that just needs the folder name and the step 
     size.
-    """
+    """    
     ta=test_args(mf)
     mvs_t=mvs(mf)
     dvs_t=ta.dvs
@@ -2268,24 +2175,6 @@ def avg_timeline (timeline, # array
             i+=x
     return(output)
 
-# fixme: this function should be obsolete and furthermore contains duplication in the 365 days per year
-# (days_per_year())
-#def days_AD_to_years(days): # days can be an integer of an array of integers
-#    start_date=dt.date(1, 1, 1)
-#    if type(days)==int:
-#        delta = dt.timedelta(days=days)
-#        end_date=start_date+delta
-#        years=end_date.year+(end_date.month-1)/12+end_date.day/365
-#    else:
-#        years=np.zeros(len(days))
-#        for i in range(len(days)):
-#            delta = dt.timedelta(days=int(days[i]))
-#            end_date=start_date+delta
-#            years[i]=end_date.year+(end_date.month-1)/12+end_date.day/365
-#    return(years)
-
-#end_date = dt.date(2019, 12, 16)
-
 def plot_components_combined(model_names, # dictionary (folder name : model name)
                            var_names, # dictionary (trace_tuple name : descriptive name)
                            delta_t_val, # model time step
@@ -2309,12 +2198,12 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
             # if we do not want the whole interval but look at a smaller part to observe the dynamics
             #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
             start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-            times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+            times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
             print ("Plotting "+str(name)+" for "+str(mf)+" model")
             vals=itr[start:stop]
             ax=axs[i]
-            times_for_plot=avg_timeline(times, averaging)
-            vals_for_plot=avg_timeline(vals.__getattribute__(name),averaging)
+            times_for_plot=avg_timeline(times, averaging),
+            vals_for_plot=avg_timeline(vals.__getattribute__(name), averaging)
             if name=='x': 
                 vals_for_plot=vals_for_plot*148940000*1000000*0.000000000001 # convert to global C in Pg          
             ax.plot(
@@ -2326,10 +2215,10 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
             if name=='x':  # we plot x together with x_c
                 ax.plot(
                     times_for_plot,
-                    avg_timeline(vals.__getattribute__('x_c'),averaging)*148940000*1000000*0.000000000001,
+                    avg_timeline(vals.x_c, averaging)*148940000*1000000*0.000000000001,
                     label=model_names[mf]+' - x_c',
                     color=model_cols[mf],
-                    linestyle = 'dashed'
+                    linestyle = 'dashed',
                 )
             if name=='x_p':  # 0 line for X_p
                 ax.plot(
@@ -2337,10 +2226,10 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
                     np.zeros_like(avg_timeline(times, averaging)),
                     color="black",
                     linestyle = 'dotted',
-                    alpha=0.5
-        )             
-        ax.legend()
-        ax.set_title(var_names[name])
+                    alpha=0.5,
+                )             
+    ax.legend()
+    ax.set_title(var_names[name])
 
 def plot_x_xc(model_names, # dictionary (folder name : model name)
               delta_t_val, # model time step
@@ -2351,8 +2240,7 @@ def plot_x_xc(model_names, # dictionary (folder name : model name)
               ):
     if (part<0) | (part >1): 
          raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
-    model_folders=[(k) for k in model_names]
-    
+    model_folders=[(k) for k in model_names]    
     fig=plt.figure(figsize=(17,8))
     ax=fig.subplots(1,1)
     for mf in model_folders:
@@ -2362,22 +2250,23 @@ def plot_x_xc(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
-        ax.plot(
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
+        #print("vals.x")
+        #print(vals.x[0:240])
+        ax.plot(        
             avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            avg_timeline(vals.x,averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
             label=model_names[mf]+' - X',
             color=model_cols[mf],
         )
         ax.plot(
-            avg_timeline(times, averaging),
-            avg_timeline(vals.__getattribute__('x_c'),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.x_c, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt            
             label=model_names[mf]+' - X_c',
             color=model_cols[mf],
-            linestyle = 'dashed'
+            linestyle = 'dashed',
         )              
     ax.legend()
     ax.set_title('Total Carbon (X) and Carbon Storage Capacity (X_c)')
@@ -2405,15 +2294,12 @@ def plot_normalized_x(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_for_plot=avg_timeline(vals.x, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
         vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change        
-        #print(vals_for_plot_norm.shape)
-        #print(vals_for_plot_norm[0,:].shape)
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,
@@ -2445,13 +2331,12 @@ def plot_normalized_xc(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("x_c"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_for_plot=avg_timeline(vals.x_c, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
-        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change      
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change          
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,
@@ -2483,13 +2368,12 @@ def plot_xp(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]         
         ax.plot(
-            avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("x_p"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            avg_timeline(times, averaging),
+            avg_timeline(vals.x_p, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
             label=model_names[mf],
             color=model_cols[mf],
         ) 
@@ -2518,13 +2402,12 @@ def plot_u(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
         ax.plot(
             avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            avg_timeline(vals.u, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
             label=model_names[mf],
             color=model_cols[mf],
         ) 
@@ -2554,11 +2437,10 @@ def plot_normalized_u(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_for_plot=avg_timeline(vals.u, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
         vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change 
         ax.plot(
@@ -2592,13 +2474,12 @@ def plot_rt(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
         ax.plot(
             avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("rt"),averaging)/365, # convert to years
+            avg_timeline(vals.rt, averaging)/days_per_year(), # convert to years
             label=model_names[mf],
             color=model_cols[mf],
         ) 
@@ -2627,11 +2508,10 @@ def plot_normalized_rt(model_names, # dictionary (folder name : model name)
         else:
             start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(mf,delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("rt"),averaging)/365 # convert to years
+        vals_for_plot=avg_timeline(vals.rt, averaging)/days_per_year() # convert to years
         vals_array=vals_for_plot
         vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change 
         ax.plot(
@@ -2698,7 +2578,7 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)*part)
                 itr_1=traceability_iterator_instance(mf_1,delta_t_val)
                 #parts_1=partitions(start_1,stop_1,yr)
-                times_1=days_AD_to_years(times_in_days_aD(mf_1, delta_t_val)[start_1:stop_1])
+                times_1=times_in_days_aD(mf_1, delta_t_val)[start_1:stop_1]/days_per_year()
                 vals_1=itr_1[start_1:stop_1]
                 
                 start_min_2,stop_max_2=min_max_index(mf_2,delta_t_val,*t_min_tmax_overlap([mf_2,mf_2],delta_t_val))
@@ -2706,7 +2586,7 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)*part)
                 itr_2=traceability_iterator_instance(mf_2,delta_t_val)                
                 #parts_2=partitions(start_2,stop_2,yr)
-                times_2=days_AD_to_years(times_in_days_aD(mf_2, delta_t_val)[start_2:stop_2])
+                times_2=times_in_days_aD(mf_2, delta_t_val)[start_2:stop_2]/days_per_year()
                 vals_2=itr_1[start_1:stop_1]
                 
                 print ("Plotting "+str(plot_number+1)+" out of "+str(n))
