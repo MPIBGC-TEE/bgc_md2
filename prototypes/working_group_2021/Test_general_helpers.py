@@ -625,32 +625,36 @@ class Test_general_helpers(InDirTest):
             self.assertEqual(tr.lon2i(tr.i2lon(i)),i)
 
 
-    def test_project_2_self_a(self):
-        step_lat = 180
-        step_lon = 90
-        lat_0 = 90
-        lon_0 = -180+45
-        itr = gh.transform_maker(
-            lat_0,
-            lon_0,
-            step_lat,
-            step_lon,
-        )
-        # here we use the identical transformation
-        ctr=gh.identicalTransformers()
-        sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
-        cm_1=gh.CoordMask(
-            np.array([0,1,0,0],dtype=np.bool_).reshape(1,4),
-            sym_tr
-        )
-        
-        
-        # self projection
-        res= gh.project_2(
-            cm_1,
-            cm_1
-        )
-        self.assertTrue((res.index_mask==cm_1.index_mask).all())
+    #def test_project_2_self_a(self):
+    #    step_lat = 180
+    #    step_lon = 90
+    #    lat_0 = 90
+    #    lon_0 = -180+45
+    #    itr = gh.transform_maker(
+    #        lat_0,
+    #        lon_0,
+    #        step_lat,
+    #        step_lon,
+    #    )
+    #    # here we use the identical transformation
+    #    ctr=gh.identicalTransformers()
+    #    sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
+    #    cm_1=gh.CoordMask(
+    #        np.array([0,1,0,0],dtype=np.bool_).reshape(1,4),
+    #        sym_tr
+    #    )
+    #    
+    #    
+    #    # self projection
+    #    res= gh.project_2(
+    #        cm_1,
+    #        cm_1
+    #    )
+    #    f=plt.figure()
+    #    ax=f.add_subplot(1,1,1)
+    #    cm_1.plot(ax)
+    #    f.savefig("cm_1.pdf")
+    #    self.assertTrue((res.index_mask==cm_1.index_mask).all())
 
     def test_project_2_self_b(self):
         step_lat = 90
