@@ -16,41 +16,65 @@
 # +
 from bokeh.plotting import figure, show
 import numpy as np
-# prepare some data
-x = [ 3, 4, 5]
-y = [ 3, 4, 5]
-
-last_point=np.array([
-    x[-1],
-    y[-1]
-])
-second_last_point=np.array([
-    x[-2],
-    y[-2]
-])
-last_vector=last_point-second_last_point
-left_head_vector=np.array([
-    -last_vector[0],
-     last_vector[1]
-])    
-right_head_vector=np.array([
-     last_vector[0],
-    -last_vector[1]
-])    
-width = 0.5
-left_head_point=second_last_point+width*left_head_vector
-right_head_point=second_last_point+width*right_head_vector
-#we go first from the tip to left head
-left_stroke=[left_head_point,last_point]
-right_stroke=[right_head_point,last_point]
+from functools import reduce
+from typing import List,Tuple
 
 def veclist_to_coordlists(veclist):
     xs=[v[0] for v in veclist]
     ys=[v[1] for v in veclist]
     return xs,ys
+    #return list(zip(*veclist))
+
+def norm(vec):
+    return np.sqrt(np.dot(vec,vec))
+
+def with_arrow_head(
+        xs: List[float],
+        ys: List[float], 
+        width: float = 0.5,
+        length: float =0.5,
+    )->Tuple[List[float],List[float]]:
     
-left_xs,left_ys = veclist_to_coordlists(left_stroke)
-right_xs,right_ys = veclist_to_coordlists(right_stroke)
+    last_point=np.array([
+        xs[-1],
+        ys[-1]
+    ])
+    second_last_point=np.array([
+        xs[-2],
+        ys[-2]
+    ])
+    last_vector=last_point-second_last_point
+    last_vector_n=last_vector/norm(last_vector)
+    print('last_vector',last_vector)
+    left_head_vector=np.array([
+        -last_vector_n[1],
+         last_vector_n[0]
+    ])    
+    print('left_head_vector',left_head_vector)
+    right_head_vector = -left_head_vector
+    left_head_point=last_point -length*last_vector_n +width*left_head_vector
+    
+    right_head_point = last_point - length*last_vector_n  +  width*right_head_vector
+    #we go first from the tip to left head
+    left_stroke=[left_head_point,last_point]
+    right_stroke=[right_head_point,last_point]
+
+    
+    left_xs,left_ys = veclist_to_coordlists(left_stroke)
+    right_xs,right_ys = veclist_to_coordlists(right_stroke)
+    #xss= [
+    #    xs, 
+    #    left_xs, 
+    #    right_xs
+    #]
+    #yss=[
+    #    ys, 
+    #    left_ys, 
+    #    right_ys
+    #]
+    xss=xs+left_xs+right_xs
+    yss=ys+left_ys+right_ys
+    return xss,yss
 
 # create a new plot with a title and axis labels
 p = figure(
@@ -58,22 +82,20 @@ p = figure(
     x_axis_label='x', 
     y_axis_label='y'
 )
+# prepare some data
+xs_1 = [ 3, 4, 5, 6, 7]
+ys_1 = [ 1, 1, 1, 1, 1]
+xs_2 = [ 3, 4, 5, 6, 7]
+ys_2 = [ 2, 2, 2, 2, 2]
+xss_1,yss_1=with_arrow_head(xs_1,ys_1,0.2,0.5)
+xss_2,yss_2=with_arrow_head(xs_2,ys_2)
 p.multi_line(
-    [
-        x, 
-        left_xs, 
-        right_xs
-    ],
-    [
-        y, 
-        left_ys, 
-        right_ys
-    ],
-    color="blue", 
+    [xss_1,xss_2],
+    [yss_1,yss_2],
+    line_color=["blue","red"], 
     line_width=4,
 )
 show(p)
-np.dot(right_head_vector,last_vector)
 
 # +
 import math
@@ -83,7 +105,7 @@ from bokeh.models import Ellipse, GraphRenderer, StaticLayoutProvider
 from bokeh.palettes import Spectral8
 from bokeh.plotting import figure
 
-N = 8
+N = 5#<8
 node_indices = list(range(N))
 
 plot = figure(title="Graph Layout Demonstration", x_range=(-1.1,1.1), y_range=(-1.1,1.1),
@@ -92,7 +114,7 @@ plot = figure(title="Graph Layout Demonstration", x_range=(-1.1,1.1), y_range=(-
 graph = GraphRenderer()
 
 graph.node_renderer.data_source.add(node_indices, 'index')
-graph.node_renderer.data_source.add(Spectral8, 'color')
+graph.node_renderer.data_source.add(Spectral8[:N], 'color')
 graph.node_renderer.glyph = Ellipse(height=0.1, width=0.2, fill_color="color")
 
 graph.edge_renderer.data_source.data = dict(
@@ -100,7 +122,7 @@ graph.edge_renderer.data_source.data = dict(
     end=node_indices)
 
 ### start of layout code
-circ = [i*2*math.pi/8 for i in node_indices]
+circ = [i*2*math.pi/N for i in node_indices]
 x = [math.cos(i) for i in circ]
 y = [math.sin(i) for i in circ]
 graph_layout = dict(zip(node_indices, zip(x, y)))
@@ -110,26 +132,49 @@ graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
 def bezier(start, end, control, steps):
     return [(1-s)**2*start + 2*(1-s)*s*control + s**2*end for s in steps]
 
-xs, ys = [], []
-sx, sy = graph_layout[0]
-steps = [i/100. for i in range(100)]
-for node_index in node_indices:
-    ex, ey = graph_layout[node_index]
-    xs.append(bezier(sx, ex, 0, steps))
-    ys.append(bezier(sy, ey, 0, steps))
-graph.edge_renderer.data_source.data['xs'] = xs
-graph.edge_renderer.data_source.data['ys'] = ys
+def double_bezier(start_point,end_point,control_vector,steps):
+    start_x,start_y = start_point
+    end_x,end_y = end_point
+    control_x,control_y = control_vector
+    xs = bezier(start_x,end_x,control_x,steps)
+    ys = bezier(start_y,end_y,control_y,steps)
+    xss,yss=with_arrow_head(xs,ys,0.1,0.1)
+    return (
+        xss,
+        yss
+    )
+
+n_steps=20
+steps = [i/float(n_steps) for i in range(n_steps)]
+
+
+# +
+def add_line(acc,node_index):
+    xss,yss=acc
+    axs,ays= double_bezier(
+        start_point=graph_layout[0],
+        end_point=graph_layout[node_index],
+        control_vector=(0,0),
+        steps=steps
+    )
+    return( 
+        xss+[axs],
+        yss+[ays]
+    )
+
+xss,yss=reduce(add_line,node_indices,([],[]))
+graph.edge_renderer.data_source.data['xs'] = xss
+graph.edge_renderer.data_source.data['ys'] = yss
 
 plot.renderers.append(graph)
 
 output_file("graph.html")
+
 show(plot)
 # -
 
 
 
-sx,sy,ex,ey
-
-bezier(1.0,2.0,0,[1/10*i for i in range(10)])
+xss[2]
 
 

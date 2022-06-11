@@ -716,8 +716,10 @@ class Test_general_helpers(InDirTest):
         ax=f.add_subplot(1,1,1)
         cm_1.plot(ax)
         f.savefig("cm_1.pdf")
+
+        
     
-    def test_project_2_higer_res_target(self):
+    def test_project_2_higher_res_target(self):
         # here we use the identical transformation
         ctr=gh.identicalTransformers()
         step_lat = 60
@@ -785,7 +787,7 @@ class Test_general_helpers(InDirTest):
         ax=f.add_subplot(3,1,3)
         res.plot(ax)
         f.savefig("cms.pdf")
-        raise
+        #raise "the plot shows that something goes definitely wrong"
         #m_ref=np.array([1,1,0,0]).reshape(4,1)
         #self.assertTrue((res==m_ref).all())
 

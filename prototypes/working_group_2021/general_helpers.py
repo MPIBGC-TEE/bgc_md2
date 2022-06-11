@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import interpolate
 from tqdm import tqdm
 from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
@@ -1965,79 +1966,140 @@ class CoordMask():
 
 
 
+#def project_2_old(
+#    source: CoordMask,
+#    target: CoordMask
+#    ):
+#     
+#    s=target.index_mask.shape
+#    t_tr=target.tr
+#    s_tr=source.tr
+#    
+#    def masked(i,j):
+#        lat=t_tr.i2lat(i)
+#        lon=t_tr.i2lon(j)
+#        p_b=boundaries(
+#            *t_tr.i2lat_min_max(i),
+#            *t_tr.i2lon_min_max(j)
+#        )
+#        print("#####################################")           
+#        print("p_b = ",p_b)
+#        # compute the index patch in source mask
+#        # We have to take account of the fact that higher lat 
+#        # may mean lower i_lat (respectively for lon)
+#        # depending on the model specific mapping of indices
+#        # to a UNIFIED lat,lon system 
+#        # (with agreed upon physical point on the earth's surface as lat=0,lon=0
+#        # and directions of increase
+#        v1=s_tr.lat2i(p_b.min_lat)
+#        v2=s_tr.lat2i(p_b.max_lat)
+#        i_lat_min=min(v1,v2)
+#        i_lat_max=max(v1,v2)
+#        
+#        w1=s_tr.lon2i(p_b.min_lon)
+#        w2=s_tr.lon2i(p_b.max_lon)
+#        i_lon_min=min(w1,w2)
+#        i_lon_max=max(w1,w2)
+#        # we have to prepare for the case that our target pixel is INSIDE the source pixel
+#        # in either dimension
+#        # instead of [a:a,..] we have to write[a,...]
+#        slice_lat = i_lat_min if i_lat_min==i_lat_max else slice(i_lat_min,i_lat_max)
+#        #slice_lat = slice(i_lat_min,i_lat_max)
+#        slice_lon = i_lon_min if i_lon_min==i_lon_max else slice(i_lon_min,i_lon_max)
+#        print("i = ", i)           
+#        print("j = ", j)
+#        print("i_lat_min", i_lat_min) 
+#        print("i_lat_max", i_lat_max)   
+#        print("slice_lat = ", slice_lat)
+#        print("slice_lon = ", slice_lon)
+#        #print("i_lon_min", i_lon_min) 
+#        #print("i_lon_max", i_lon_max)
+#        
+#        #from IPython import embed; embed()
+#        # now we look at this slice of the mask and check the number nm of masked pixels 
+#        # in this slice (nm > 0 means 
+#        patch = source.index_mask[slice_lat, slice_lon]
+#        print('patch',patch)
+#        res=patch.sum()>0
+#        print("res=",res)
+#        #print("####################")
+#        return res
+#
+#    mask=np.zeros(s)
+#    for i in range(s[0]):
+#        for j in range(s[1]):
+#            try:
+#                mask[i,j] = masked(i,j)
+#            except Exception:
+#                print(mask)
+#                raise
+#        
+#    return CoordMask(
+#                index_mask= mask,
+#                tr=t_tr
+#            )
+
 def project_2(
     source: CoordMask,
     target: CoordMask
     ):
-     
-    s=target.index_mask.shape
-    trt=target.tr
-    trs=source.tr
     
-    def masked(i,j):
-        lat=trt.i2lat(i)
-        lon=trt.i2lon(j)
-        p_b=boundaries(
-            *trt.i2lat_min_max(i),
-            *trt.i2lon_min_max(j)
-        )
-        print("#####################################")           
-        print("p_b = ",p_b)
-        # compute the index patch in source mask
-        # We have to take account of the fact that higher lat 
-        # may mean lower i_lat (respectively for lon)
-        # depending on the model specific mapping of indices
-        # to a UNIFIED lat,lon system 
-        # (with agreed upon physical point on the earht's surface as lat=0,lon=0
-        # and direction of increase
-        v1=trs.lat2i(p_b.min_lat)
-        v2=trs.lat2i(p_b.max_lat)
-        i_lat_min=min(v1,v2)
-        i_lat_max=max(v1,v2)
-        w1=trs.lon2i(p_b.min_lon)
-        w2=trs.lon2i(p_b.max_lon)
-        i_lon_min=min(w1,w2)
-        i_lon_max=max(w1,w2)
-        # we have to prepare for the case that our target pixel is INSIDE the source pixel
-        # in either dimension
-        # instead of [a:a,..] we have to write[a,...]
-        slice_lat = i_lat_min if i_lat_min==i_lat_max else slice(i_lat_min,i_lat_max)
-        #slice_lat = slice(i_lat_min,i_lat_max)
-        slice_lon = i_lon_min if i_lon_min==i_lon_max else slice(i_lon_min,i_lon_max)
-        print("i = ", i)           
-        print("j = ", j)
-        print("i_lat_min", i_lat_min) 
-        print("i_lat_max", i_lat_max)   
-        print("slice_lat = ", slice_lat)
-        print("slice_lon = ", slice_lon)
-        #print("i_lon_min", i_lon_min) 
-        #print("i_lon_max", i_lon_max)
-        
-        #from IPython import embed; embed()
-        # now we look at this slice of the mask and check the number nm of masked pixels 
-        # in this slice (nm > 0 means 
-        patch = source.index_mask[slice_lat, slice_lon]
-        print('patch',patch)
-        res=patch.sum()>0
-        print("res=",res)
-        #print("####################")
-        return res
+    s_mask=source.index_mask
+    s_n_lat,s_n_lon = s_mask.shape
+    
+    t_mask=target.index_mask
+    t_n_lat,t_n_lon = t_mask.shape
 
-    
-    mask=np.zeros(s)
-    for i in range(s[0]):
-        for j in range(s[1]):
-            try:
-                mask[i,j] = masked(i,j)
-            except Exception:
-                print(mask)
-                raise
-        
-    return CoordMask(
-                index_mask= mask,
-                tr=trt
+    t_tr=target.tr
+    s_tr=source.tr
+    # we first create the (unified) lat lon coordinates of the source array 
+    # and interpolate the source mask on them
+    lats = np.array(
+        list(
+            map(
+                s_tr.i2lat,
+                range(s_n_lat)
             )
-
+        )
+    )
+    lons = np.array(
+        list(
+            map(
+                s_tr.i2lon,
+                range(s_n_lon)
+            )
+        )
+    )
+    #from IPython import embed; embed()
+    f=interpolate.interp2d(x=lons,y=lats,z=s_mask)
+    # now we apply this interpolating function to the target grid
+    # points
+    target_lats = np.array(
+        list(
+            map(
+                t_tr.i2lat,
+                range(t_n_lat)
+            )
+        )
+    )
+    target_lons = np.array(
+        list(
+            map(
+                t_tr.i2lon,
+                range(t_n_lon)
+            )
+        )
+    )
+    float_grid=f(target_lons,target_lats)
+    projected_mask=float_grid>0.5
+    return CoordMask(
+                index_mask= np.logical_or(
+                    projected_mask,
+                    t_mask
+                ),
+                tr=t_tr
+            )
+    
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -2078,6 +2140,7 @@ def transform_maker(lat_0,lon_0,step_lat,step_lon):
         raise Exception("step_lon has to be a divisor of 360")
     def i2lat(i_lat):
         if i_lat > (n_lat-1):
+            #from IPython import embed; embed()
             raise IndexError("i_lat > n_lat-1; with i_lat={}, n_lat={}".format(i_lat,n_lat))
         return lat_0+(step_lat*i_lat)
     
