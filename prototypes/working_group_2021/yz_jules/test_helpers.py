@@ -21,7 +21,8 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_min",
             "epa_max",
             "epa_opt",
-            "cpa"
+            "cpa",
+            "start_date"
         ]
     )
     par_dict={
@@ -151,5 +152,6 @@ def make_test_args(conf_dict,msh,mvs):
         epa_min=epa_min,
         epa_max=epa_max,
         epa_opt=epa_opt,
-        cpa=cpa
+        cpa=cpa,
+        start_date=msh.start_date()
     )

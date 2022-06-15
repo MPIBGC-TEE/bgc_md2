@@ -24,7 +24,8 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_opt",
             "cpa",
             "lats",
-            "lons"
+            "lons",
+            "start_date"
         ]
     )
     par_dict={
@@ -233,6 +234,7 @@ def make_test_args(conf_dict,msh,mvs):
         cpa=cpa,
         lats=ds.variables["lat"][:],
         lons=ds.variables["lon"][:],
+        start_date=msh.start_date()
     )
 
 

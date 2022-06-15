@@ -61,11 +61,11 @@ from bgc_md2.resolve.mvars import (
 # +
 # define models to compare as a dictionary (folder name : model name)
 model_names={
-    "Aneesh_SDGVM":"SDGVM",
-    #"yz_jules": "JULES",
-    #"kv_visit2": "VISIT",
+    "yz_jules": "JULES",
+    "kv_visit2": "VISIT",
     #"jon_yib": "YIBs",
     "kv_ft_dlem": "DLEM",
+    #"Aneesh_SDGVM":"SDGVM",
     "cj_isam": "ISAM",
 }
 
@@ -86,74 +86,102 @@ model_cols={
 comparison_table=gh.model_table(model_names)
 comparison_table
 
-# ### Plots of traceable components
+# ### Loading TRENDY data and model parameters
 
 # define same step size for each model (in days)
-delta_t_val=1 # it has to be 1 for consistency of comparison
+delta_t_val=30
+# load data and parameters
+model_folders=[(k) for k in model_names]
+test_arg_list=gh.get_test_arg_list(model_folders)
+
+# ### Plots of traceable components
+
+var_names={
+    "x": "X and X_c",
+    "x_p": "X_p",
+    "u": "C input",
+    "rt": "Residence time",
+}
+gh.plot_components_combined(model_names=model_names,
+                        test_arg_list=test_arg_list,   
+                        var_names=var_names,
+                        delta_t_val=delta_t_val,
+                        model_cols=model_cols,
+                        part=1,
+                        averaging=12  
+                       )
 
 gh.plot_x_xc(model_names=model_names,
+             test_arg_list=test_arg_list,
              delta_t_val=delta_t_val, 
              model_cols=model_cols,
              part=1,
-             averaging=365,
+             averaging=12,
              overlap=True
              )
 
 gh.plot_normalized_x(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+                     delta_t_val=delta_t_val,
+                     test_arg_list=test_arg_list,
+                     model_cols=model_cols,
+                     part=1,
+                     averaging=12,
+                     overlap=True
+                     )
 
 gh.plot_normalized_xc(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+                      test_arg_list=test_arg_list,
+                      delta_t_val=delta_t_val, 
+                      model_cols=model_cols,
+                      part=1,
+                      averaging=12,
+                      overlap=True
+                     )
 
 gh.plot_xp(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+           test_arg_list=test_arg_list,
+           delta_t_val=delta_t_val, 
+           model_cols=model_cols,
+           part=1,
+           averaging=12,
+           overlap=True
+          )
 
 gh.plot_u(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+          test_arg_list=test_arg_list,
+          delta_t_val=delta_t_val, 
+          model_cols=model_cols,
+          part=1,
+          averaging=12,
+          overlap=True
+         )
 
 gh.plot_normalized_u(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+                     test_arg_list=test_arg_list,
+                     delta_t_val=delta_t_val, 
+                     model_cols=model_cols,
+                     part=1,
+                     averaging=12,
+                     overlap=True
+                     )
 
 gh.plot_rt(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+           test_arg_list=test_arg_list,
+           delta_t_val=delta_t_val, 
+           model_cols=model_cols,
+           part=1,
+           averaging=12,
+           overlap=True
+          )
 
 gh.plot_normalized_rt(model_names=model_names,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=365,
-             overlap=True
-             )
+                      test_arg_list=test_arg_list,
+                     delta_t_val=delta_t_val, 
+                     model_cols=model_cols,
+                     part=1,
+                     averaging=12,
+                     overlap=True
+                     )
 
 # ## Below are plots in development
 
