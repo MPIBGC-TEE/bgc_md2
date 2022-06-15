@@ -16,6 +16,7 @@
 # +
 from bokeh.plotting import figure, show
 import numpy as np
+import networkx as nx
 from functools import reduce
 from typing import List,Tuple
 
@@ -100,12 +101,13 @@ show(p)
 # +
 import math
 
-from bokeh.io import output_file, show
+from bokeh.io import output_file, show, output_notebook
 from bokeh.models import Ellipse, GraphRenderer, StaticLayoutProvider
 from bokeh.palettes import Spectral8
 from bokeh.plotting import figure
 
 N = 5#<8
+
 node_indices = list(range(N))
 
 plot = figure(title="Graph Layout Demonstration", x_range=(-1.1,1.1), y_range=(-1.1,1.1),
@@ -167,14 +169,52 @@ graph.edge_renderer.data_source.data['xs'] = xss
 graph.edge_renderer.data_source.data['ys'] = yss
 
 plot.renderers.append(graph)
-
-output_file("graph.html")
+output_notebook()
+#output_file("graph.html")
 
 show(plot)
 # -
 
 
 
-xss[2]
+#xss[2]
+#
+## +
+#import networkx as nx
+#
+#from bokeh.io import output_file, show
+#from bokeh.models import (BoxSelectTool, Circle, EdgesAndLinkedNodes, HoverTool,
+#                          MultiLine, NodesAndLinkedEdges, Plot, Range1d, TapTool)
+#from bokeh.palettes import Spectral4
+#from bokeh.plotting import from_networkx
+#
+#G=nx.karate_club_graph()
+#
+#plot = Plot(width=400, height=400,
+#            x_range=Range1d(-1.1,1.1), y_range=Range1d(-1.1,1.1))
+#plot.title.text = "Graph Interaction Demonstration"
+#
+#plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
+#
+#graph_renderer = from_networkx(G, nx.circular_layout, scale=1, center=(0,0))
+#
+#graph_renderer.node_renderer.glyph = Circle(size=15, fill_color=Spectral4[0])
+#graph_renderer.node_renderer.selection_glyph = Circle(size=15, fill_color=Spectral4[2])
+#graph_renderer.node_renderer.hover_glyph = Circle(size=15, fill_color=Spectral4[1])
+#
+#graph_renderer.edge_renderer.glyph = MultiLine(line_color="#CCCCCC", line_alpha=0.8, line_width=5)
+#graph_renderer.edge_renderer.selection_glyph = MultiLine(line_color=Spectral4[2], line_width=5)
+#graph_renderer.edge_renderer.hover_glyph = MultiLine(line_color=Spectral4[1], line_width=5)
+#
+#graph_renderer.selection_policy = NodesAndLinkedEdges()
+#graph_renderer.inspection_policy = EdgesAndLinkedNodes()
+#
+#plot.renderers.append(graph_renderer)
+#
+#output_file("interactive_graphs.html")
+#show(plot)
+
+
+# -
 
 
