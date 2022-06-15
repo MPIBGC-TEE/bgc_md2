@@ -267,7 +267,7 @@ def make_StartVector(mvs):
     ) 
 
 from typing import Callable
-from general_helpers import month_2_day_index_vm
+#from general_helpers import month_2_day_index_vm
 from functools import reduce
 
 
@@ -834,39 +834,62 @@ def nc_global_mean_file_name(nc_var_name):
 #             #Observables(*map(compute_and_cache_global_mean, o_names)),
 #             #Drivers(*map(compute_and_cache_global_mean, d_names))            
 #         )
+
+# +
+# def make_sim_day_2_day_since_a_D(conf_dict):
+#     # this function is extremely important to syncronise our results
+#     # because our data streams start at different times the first day of 
+#     # a simulation day_ind=0 refers to different dates for different models
+#     # we have to check some assumptions on which this calculation is based
+#     # for jules the data points are actually spaced monthly with different numbers of days
+#     ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("SDGVM_S2_cVeg.nc")))
+#     times = ds.variables["time"]
+#     # we have to check some assumptions on which this calculation is based
+#     # for jules the data points are actually spaced with different numbers of days between monthly
+#     # data point
+#     # we can see this by looking at the first 24 months
+#     # for i in range(24):
+#     #     print((times[i + 1] - times[i])/(3600 * 24))
+
+
+#     ts = times[0] #time of first observation in hours since 1900-01-01 00:00:00
+#     td = ts / 24 #in days since 1900-01-01 00:00:00
+    
+#     import datetime as dt
+#     ad = dt.date(1, 1, 1) # first of January of year 1 
+#     sd = dt.date(1900, 1, 16)
+#     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+
+#     def f(day_ind: int)->int:
+#         return day_ind+td_aD
+
+#     return f
 # -
 
-def make_sim_day_2_day_since_a_D(conf_dict):
-    # this function is extremely important to syncronise our results
-    # because our data streams start at different times the first day of 
-    # a simulation day_ind=0 refers to different dates for different models
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced monthly with different numbers of days
-    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("SDGVM_S2_cVeg.nc")))
-    times = ds.variables["time"]
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced with different numbers of days between monthly
-    # data point
-    # we can see this by looking at the first 24 months
-    # for i in range(24):
-    #     print((times[i + 1] - times[i])/(3600 * 24))
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("SDGVM_S2_npp.nc")))
+    #times = ds.variables["time"]
+    #tm = times[0] #time of first observation in Months_since_1900-01 # print(times.units)
+    #td = ts/24  #in days since_1900-01-01 
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(1900, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1900, 
+        month=1,
+        day=16
+    )
 
-
-    ts = times[0] #time of first observation in hours since 1900-01-01 00:00:00
-    td = ts / 24 #in days since 1900-01-01 00:00:00
-    
-    import datetime as dt
-    ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(1900, 1, 16)
-    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
-
-    def f(day_ind: int)->int:
-        return day_ind+td_aD
-
-    return f
-
-# Define start and end dates of the simulation
-import datetime as dt
-start_date=dt.date(1900, 1, 16) 
-end_date = dt.date(2019, 1, 16)
+# +
+# # Define start and end dates of the simulation
+# import datetime as dt
+# start_date=dt.date(1900, 1, 16) 
+# end_date = dt.date(2019, 1, 16)
