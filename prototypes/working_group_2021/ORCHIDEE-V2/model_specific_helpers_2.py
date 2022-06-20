@@ -1,4 +1,4 @@
-from cmath import pi, sin
+                                                                from cmath import pi, sin
 import sys
 import json
 from pathlib import Path
@@ -322,16 +322,24 @@ def make_npp_func(dvs):
     return func
 
 
-def make_xi_func(dvs):
-    def func(day):
-        return 1.0 # preliminary fake for lack of better data...
-    return func
+def make_xi_func(Ts):
+    def xi_func(day):
+        mi = gh.day_2_month_index(day)
+        # alternative FT
+        FT = 0.08 * np.exp(0.095 * (Ts[mi]))  # temperature rate modifier
+        FW = 1  # / (1 + 30 * math.exp(-8.5 * mrso[mi])) # water rate modifier
+        # print("FT,FW", FT, FW)
+        rh_factor = FT * FW
+        return rh_factor  # 1.0     # Set to 1 if no scaler implemented
+        # return 1.0
+        print('rh_factor')      
+    return xi_func
 
 
 def make_func_dict(mvs, dvs):
     return {
         "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs)
+        "xi": make_xi_func(dvs.Ts)
     }
 
 
