@@ -657,10 +657,11 @@ class Test_general_helpers(InDirTest):
     #    self.assertTrue((res.index_mask==cm_1.index_mask).all())
 
     def test_project_2_self_b(self):
-        step_lat = 90
+        #step_lat = 90
+        #lat_0 = -90+45
+        step_lat = -90
+        lat_0 = 90-45
         step_lon = 90
-        #lat_0 = 0
-        lat_0 = -90+45
         lon_0 = -180+45
         itr = gh.transform_maker(
             lat_0,
@@ -681,17 +682,22 @@ class Test_general_helpers(InDirTest):
             cm_1,
             cm_1
         )
-        self.assertTrue((res.index_mask==cm_1.index_mask).all())
         f=plt.figure()
-        ax=f.add_subplot(1,1,1)
-        cm_1.plot(ax)
+        ax=f.add_subplot(3,1,1)
+        cm_1.plot_dots(ax)
+        ax=f.add_subplot(3,1,2)
+        res.plot_dots(ax)
         f.savefig("cm_1.pdf")
+        self.assertTrue((res.index_mask==cm_1.index_mask).all())
 
     def test_project_2_self_c(self):
-        step_lat = 60
+        #step_lat = 60
+        #lat_0 = -90+30 
+        
+        step_lat = -60
+        lat_0 = 90-30 
+        
         step_lon = 90
-        #lat_0 = 0
-        lat_0 = -90+30 
         lon_0 = -180+45
         itr = gh.transform_maker(
             lat_0,
@@ -705,7 +711,7 @@ class Test_general_helpers(InDirTest):
         n_lat=int(180/step_lat)
         n_lon=int(360/step_lon)
         cm_1=gh.CoordMask(
-            np.array([[0,0,0,0],[0,1,0,0],[0,0,0,0]],dtype=np.bool_).reshape(n_lat,n_lon),
+            np.array([[1,0,0,0],[0,1,0,0],[0,0,0,0]],dtype=np.bool_).reshape(n_lat,n_lon),
             sym_tr
         )
         
@@ -715,11 +721,13 @@ class Test_general_helpers(InDirTest):
             cm_1,
             cm_1
         )
-        self.assertTrue((res.index_mask==cm_1.index_mask).all())
         f=plt.figure()
-        ax=f.add_subplot(1,1,1)
-        cm_1.plot(ax)
+        ax=f.add_subplot(2,1,1)
+        cm_1.plot_dots(ax)
+        ax=f.add_subplot(2,1,2)
+        res.plot_dots(ax)
         f.savefig("cm_1.pdf")
+        self.assertTrue((res.index_mask==cm_1.index_mask).all())
 
         
     

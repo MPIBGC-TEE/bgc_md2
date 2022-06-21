@@ -1,5 +1,6 @@
 import numpy as np
-from scipy import interpolate
+from numpy.lib.function_base import meshgrid
+from scipy import interpolate, sparse
 from tqdm import tqdm
 from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
@@ -43,11 +44,11 @@ Transformers=namedtuple(
     "Transformers",
     [
         "i2lat",
-        "i2lat_min_max",
-        "lat2i",
+        #"i2lat_min_max",
+        #"lat2i",
         "i2lon",
-        "i2lon_min_max",
-        "lon2i",
+        #"i2lon_min_max",
+        #"lon2i",
     ]
 )
 
@@ -137,12 +138,12 @@ class SymTransformers():
             ctr: CoordTransformers
         ):
         self.i2lat=compose_2(ctr.lat2LAT,itr.i2lat)
-        self.i2lat_min_max=lambda i: map(ctr.lat2LAT,itr.i2lat_min_max(i))
-        self.lat2i=compose_2(itr.lat2i,ctr.LAT2lat)
+        #self.i2lat_min_max=lambda i: map(ctr.lat2LAT,itr.i2lat_min_max(i))
+        #self.lat2i=compose_2(itr.lat2i,ctr.LAT2lat)
     
         self.i2lon=compose_2(ctr.lon2LON,itr.i2lon)
-        self.i2lon_min_max=lambda i: map(ctr.lon2LON,itr.i2lon_min_max(i))
-        self.lon2i=compose_2(itr.lon2i,ctr.LON2lon)
+        #self.i2lon_min_max=lambda i: map(ctr.lon2LON,itr.i2lon_min_max(i))
+        #self.lon2i=compose_2(itr.lon2i,ctr.LON2lon)
 
 
 # def pixel_boundaries(lat,lon,step_lat,step_lon):
@@ -1864,6 +1865,25 @@ def combine_masks(coord_masks: List['CoordMask']):
 #    return mask
 
 
+def permutation(unordered_vec):
+    n=len(unordered_vec) 
+    tups=[(i,unordered_vec[i]) for i in range(n)] 
+    ordered_tups=sorted(tups,key=lambda t:t[1])
+
+    data=np.ones(n)
+    col=np.array([tup[0] for tup in ordered_tups])
+    row=np.arange(n)
+    #from IPython import embed; embed()   
+    p=sparse.bsr_array((data,(row,col)),dtype=np.int64)
+    ordered_vec=np.array(
+        [
+            tup[1] for tup in ordered_tups
+        ]
+    )
+    t=p@row
+    assert((t==col).all())
+    return ordered_vec,p,p.transpose()
+
 
 class CoordMask():
     """A CoordMask 
@@ -1883,50 +1903,88 @@ class CoordMask():
         self.tr=tr
 
 
-    def plot_cell(
-            ax,
-            b: boundaries,
-            color: str
-        ):
-        xs=[
-            b.min_lon,
-            b.min_lon,
-            b.max_lon,
-            b.max_lon,
-            b.min_lon
-        ]
-        ys=[
-            b.min_lat,
-            b.max_lat,
-            b.max_lat,
-            b.min_lat,
-            b.min_lat
-        ]
-        ax.plot(xs,ys,color=color)
-        ax.fill(xs,ys,color=color,alpha=0.4)
+    #def plot_cell(
+    #        ax,
+    #        b: boundaries,
+    #        color: str
+    #    ):
+    #    xs=[
+    #        b.min_lon,
+    #        b.min_lon,
+    #        b.max_lon,
+    #        b.max_lon,
+    #        b.min_lon
+    #    ]
+    #    ys=[
+    #        b.min_lat,
+    #        b.max_lat,
+    #        b.max_lat,
+    #        b.min_lat,
+    #        b.min_lat
+    #    ]
+    #    ax.plot(xs,ys,color=color)
+    #    ax.fill(xs,ys,color=color,alpha=0.4)
 
 
-    def plot(self,ax,color="black"):
+    #def plot(self,ax,color="black"):
+    #    mask = self.index_mask
+    #    
+    #    s = mask.shape
+    #    tr = self.tr
+
+    #    for i in range(s[0]):
+    #        for j in range(s[1]):
+    #            min_lat, max_lat = tr.i2lat_min_max(i)
+    #            min_lon, max_lon = tr.i2lon_min_max(j)
+    #            self.__class__.plot_cell(
+    #                ax,
+    #                boundaries(
+    #                    min_lat=min_lat,
+    #                    max_lat=max_lat,
+    #                    min_lon=min_lon,
+    #                    max_lon=max_lon,
+    #                ),  
+    #                color="red" if mask[i,j] == 1 else color 
+    #            )
+    @property
+    def n_lats(self):
+        return self.index_mask.shape[0]
+    
+    @property
+    def n_lons(self):
+        return self.index_mask.shape[1]
+
+    @property
+    def lats(self):
+        return np.array([self.tr.i2lat(i) for i in range(self.n_lats)])
+    
+    @property
+    def lons(self):
+        return np.array([self.tr.i2lon(i) for i in range(self.n_lons)])
+
+    def ordered_lats(self):
+        return permutation(self.lats)
+    
+    def ordered_lons(self):
+        return permutation(self.lons)
+
+    def ordered_mask(self):
+        ordered_lats,p_lats,p_lats_inv=self.ordered_lats()
+        ordered_lons,p_lons,p_lons_inv=self.ordered_lons()
         mask = self.index_mask
-        
-        s = mask.shape
-        print(s)
-        tr = self.tr
+        new_mask = p_lats @ mask @ p_lons
+        return ordered_lats,ordered_lons,new_mask
 
-        for i in range(s[0]):
-            for j in range(s[1]):
-                min_lat, max_lat = tr.i2lat_min_max(i)
-                min_lon, max_lon = tr.i2lon_min_max(j)
-                self.__class__.plot_cell(
-                    ax,
-                    boundaries(
-                        min_lat=min_lat,
-                        max_lat=max_lat,
-                        min_lon=min_lon,
-                        max_lon=max_lon,
-                    ),  
-                    color="red" if mask[i,j] == 1 else color 
-                )
+    def plot_dots(self,ax,color="black"):
+        ordered_lats,ordered_lons,new_mask=self.ordered_mask()
+        new_mask
+        X,Y=np.meshgrid(
+                ordered_lons,
+                ordered_lats
+        )
+        ax.pcolormesh(X,Y,new_mask)
+        
+
     
     def write_netCDF4(self,path):
         # for visualization we write out the lat and lon arrays too
@@ -1992,7 +2050,6 @@ def project_2(
             )
         )
     )
-    #from IPython import embed; embed()
     f=interpolate.interp2d(x=lons,y=lats,z=s_mask)
     # now we apply this interpolating function to the target grid
     # points
@@ -2012,9 +2069,13 @@ def project_2(
             )
         )
     )
-    float_grid=f(target_lons,target_lats)
+    # order lats and lons since f returns an array that assumes this anyway
+    otlats,p_lat,p_lat_inv=target.ordered_lats()
+    otlons,p_lon,p_lon_inv=target.ordered_lons()
+    float_grid=p_lat_inv @ f(otlons,otlats) @ p_lon_inv
     print(float_grid.mean())
     projected_mask=float_grid>0.5
+    #from IPython import embed; embed()
     return CoordMask(
                 index_mask= np.logical_or(
                     projected_mask,
@@ -2061,56 +2122,57 @@ def transform_maker(lat_0,lon_0,step_lat,step_lon):
     n_lon=360.0/abs(step_lon)
     if int(n_lon)!=n_lon:
         raise Exception("step_lon has to be a divisor of 360")
+
     def i2lat(i_lat):
         if i_lat > (n_lat-1):
             #from IPython import embed; embed()
             raise IndexError("i_lat > n_lat-1; with i_lat={}, n_lat={}".format(i_lat,n_lat))
         return lat_0+(step_lat*i_lat)
-    
-    def i2lat_min_max(i):
-        #compute the lat boundaries of pixel i
-        center=i2lat(i)
-        lat_min = center - step_lat/2
-        lat_max=  center + step_lat/2
-        return lat_min,lat_max
-    
-    # the inverse finds the indices of the pixel containing
-    # the point with the given coordinates
-    def lat2i(lat):
-        ir=(lat-lat_0)/step_lat
-        ii=int(ir)
-        d=ir-ii
-        if ii == (n_lat -1):
-            print("ii",ii)
-
-        return ii if (d<0.5 or ii == (n_lat - 1))  else ii+1
-        
+#    
+#    def i2lat_min_max(i):
+#        #compute the lat boundaries of pixel i
+#        center=i2lat(i)
+#        lat_min = center - step_lat/2
+#        lat_max=  center + step_lat/2
+#        return lat_min,lat_max
+#    
+#    # the inverse finds the indices of the pixel containing
+#    # the point with the given coordinates
+#    def lat2i(lat):
+#        ir=(lat-lat_0)/step_lat
+#        ii=int(ir)
+#        d=ir-ii
+#        if ii == (n_lat -1):
+#            print("ii",ii)
+#
+#        return ii if (d<0.5 or ii == (n_lat - 1))  else ii+1
+#        
     def i2lon(i_lon):
         if i_lon > (n_lon-1):
             raise IndexError("i_lon > n_lon; with i_lon={0}, n_lon={1}".format(i_lon,n_lon))
         return lon_0+(step_lon*i_lon)
-
-    def i2lon_min_max(i):
-        #compute the lon boundaries of pixel i
-        center=i2lon(i)
-        lon_min = center - step_lon/2 
-        lon_max=  center + step_lon/2 
-        return lon_min,lon_max
-
-    def lon2i(lon):
-        # we cant use round since we want ir=3.5 to be already in pixel 4
-        ir=(lon-lon_0)/step_lon
-        ii=int(ir)
-        d=ir-ii
-        return ii if d<0.5 else ii+1
+#
+#    def i2lon_min_max(i):
+#        #compute the lon boundaries of pixel i
+#        center=i2lon(i)
+#        lon_min = center - step_lon/2 
+#        lon_max=  center + step_lon/2 
+#        return lon_min,lon_max
+#
+#    def lon2i(lon):
+#        # we cant use round since we want ir=3.5 to be already in pixel 4
+#        ir=(lon-lon_0)/step_lon
+#        ii=int(ir)
+#        d=ir-ii
+#        return ii if d<0.5 else ii+1
     
     return Transformers(
         i2lat=i2lat,
-        i2lat_min_max=i2lat_min_max,
-        lat2i=lat2i,
+        #i2lat_min_max=i2lat_min_max,
+        #lat2i=lat2i,
         i2lon=i2lon,
-        i2lon_min_max=i2lon_min_max,
-        lon2i=lon2i,
+        #i2lon_min_max=i2lon_min_max,
+        #lon2i=lon2i,
     )
 
 # +

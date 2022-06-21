@@ -358,11 +358,11 @@ class TestSymbolic(TestCase):
                 msh = gh.msh(mf)
                 
                 c_mask=msh.spatial_mask(Path(gh.confDict(mf)['dataPath']))
-                c_mask.write_netCDF4(mf+".nc")
-                #f=plt.figure()
-                #ax=f.add_subplot(1,1,1)
-                #c_mask.plot(ax)
-                #f.savefig(str(mf)+".pdf")
+                #c_mask.write_netCDF4(mf+".nc")
+                f=plt.figure()
+                ax=f.add_subplot(1,1,1)
+                c_mask.plot_dots(ax)
+                f.savefig(str(mf)+".pdf")
 
 
 

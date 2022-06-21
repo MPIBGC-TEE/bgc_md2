@@ -17,6 +17,16 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def spatial_mask(dataPath)->'CoorMask':
+    mask=nc.Dataset(dataPath.joinpath("SDGVM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        mask,
+        sym_tr
+    )
 
 def make_model_coord_transforms():
     return gh.identicalTransformers()
@@ -330,13 +340,13 @@ def make_param2res_sym(
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
         func_dict=make_func_dict(mvs,dvs,cpa,epa)
-        delta_t_val = 1
+    
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
             par_dict=model_par_dict,
             func_dict=func_dict,
-            delta_t_val = delta_t_val
+            delta_t_val = 1
         )
         
         # Now that we have the iterator we can start to compute.
@@ -359,8 +369,6 @@ def make_param2res_sym(
         m_id=0
         dpm=30
         dpy=30*12
-        steps_per_month = int(dpm / delta_t_val)
-        steps_per_year = int(dpy / delta_t_val)
         for y in range(number_of_years):
             cVeg=0
             cRoot = 0
@@ -379,12 +387,12 @@ def make_param2res_sym(
                     cLitter+=float(V.C_abvstrlit + V.C_abvmetlit + V.C_belowstrlit + V.C_belowmetlit)
                     cSoil+=float(V.C_surface_microbe + V.C_soil_microbe + V.C_slowsom + V.C_passsom)
                     mrh +=V.rh
-                rhs[m_id]=mrh/steps_per_month
+                rhs[m_id]=mrh/dpm
                 m_id+=1
-            cVegs[y]=cVeg/steps_per_year
-            cRoots[y] = cRoot/steps_per_year
-            cLitters[y]= cLitter/steps_per_year 
-            cSoils[y]= cSoil/steps_per_year
+            cVegs[y]=cVeg/dpy
+            cRoots[y] = cRoot/dpy
+            cLitters[y]= cLitter/dpy 
+            cSoils[y]= cSoil/dpy
         
         return Observables(
             cVeg=cVegs,
