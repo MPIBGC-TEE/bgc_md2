@@ -75,13 +75,46 @@ def compose_2(
     """Function composition"""
     return lambda arg: f(g(arg))
 
+def globalMaskTransformers(mask: np.ndarray)->'SymTransformers':
+    n_lats,n_lons=mask.shape
+    # this functions define how the indices of the combined (all models) mask 
+    # relates to our unified coord system LAT, LON
+    # with -90< LAT < 90 , 0 at equator
+    # and -180 < LON < 180, 0 at Greenwich
+    step_lat = 180.0 / n_lats
+    step_lon = 360.0 / n_lons
+    
+    lat_0 = -90+step_lat/2
+    lon_0 = -180+step_lon/2
+    itr = transform_maker(
+        lat_0,
+        lon_0,
+        step_lat,
+        step_lon,
+    )
+    # here we use the identical transformation
+    ctr=identicalTransformers()
+    return SymTransformers(itr=itr,ctr=ctr)
+
+def globalMask()->'CoordMask':
+    # fixme mm 6-20-2022
+    # this should actually be  package data
+    # We create a target 
+    ds=Path('.').joinpath('common_mask.nc')
+    mask=ds.variables['mask'][:,:].data
+    return CoordMask(
+            mask=mask,
+            tr=globalMaskTransformers(mask)
+    )
+            
+
 def identicalTransformers():
     """ This function can be used if the grid used by the model has 
     - lat ==   0 at the equator with 
     - lat == -90 at the south pole,
     - lat == +90 at the north pole,
     - lon ==   0 at Greenich and 
-    - lon is counted positive eastwards
+    - lon is counted positive eastwards from -180 to 180
     """
     return CoordTransformers(
             lat2LAT=lambda lat: lat,
@@ -1733,92 +1766,102 @@ def get_cached_global_mean(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
 
-def combine_masks(masks,i2cs):
-    m1,m2 = masks
-    i2c_1,i2c_2 = i2cs
-    
-    def g(m,i2c):
-        s=m.shape
-        print(s[0])
-        bounds=[]
-        lat_0,lon_0=i2c(0,0)
-        lat_1,lon_1=i2c(1,1)
-        step_lat=lat_1-lat_0
-        step_lon=lon_1-lon_0
-        for i in range(s[0]):
-            for j in range(s[1]):
-                print(i,j)
-                print(m[i,j])
-                if  m[i,j]:
-                    lat,lon=i2c(i,j)
-                    res=boundaries(
-                        min_lat=lat-step_lat/2,
-                        max_lat=lat+step_lat/2,
-                        min_lon=lon-step_lon/2,
-                        max_lon=lon+step_lon/2
-                    )
-                    bounds.append(res)
-        return bounds
+def combine_masks(coord_masks: List['CoordMask']):
+    def k(cm):
+        arr=cm.index_mask
+        return arr.shape[0]+arr.shape[1]
 
-    #return g(m1,i2c_1)
     return reduce(
-        lambda acc,el:acc+el,
-        [g(m,i2c) for m,i2c in zip(masks,i2cs)] 
+        project_2,#(acc,el)
+        sorted(coord_masks,key=k ) # we want the finest grid as the last
     )
-
-
-def open_interval_intersect(i1,i2):
-    min1,max1=i1
-    min2,max2=i2
-    mid2=(min2+max2)/2
-    return ( 
-        min1 < min2 and min2< max1 
-        or
-        min1 < max2 and max2< max1
-        or
-        min1 < mid2 and mid2< max1
-    )
-
-def pixel_intersect(b1,b2):
-    return (
-        open_interval_intersect(
-            (b1.min_lat,b1.max_lat),
-            (b2.min_lat,b2.max_lat)
-        )
-        and
-        open_interval_intersect(
-            (b1.min_lon,b1.max_lon),
-            (b2.min_lon,b2.max_lon)
-        )
-    )
-
-def project(s,i2c,common_mask):
-    mask=np.zeros(s)
     
-    lat_0,lon_0=i2c(0,0)
-    lat_1,lon_1=i2c(1,1)
-    step_lat=lat_1-lat_0
-    step_lon=lon_1-lon_0
-    
-    def in_cm(i,j):
-        lat,lon=i2c(i,j)
-        p_b=boundaries(
-            min_lat=lat-step_lat/2,
-            max_lat=lat+step_lat/2,
-            min_lon=lon-step_lon/2,
-            max_lon=lon+step_lon/2
-        )
-        return reduce(
-            lambda acc,mpb: acc or pixel_intersect(p_b,mpb),
-            common_mask,
-            False
-        )
-    
-    for i in range(s[0]):
-        for j in range(s[1]):
-            mask[i,j] = True if in_cm(i,j) else False
-
-    return mask
+#def combine_masks(masks,i2cs):
+#    m1,m2 = masks
+#    i2c_1,i2c_2 = i2cs
+#    
+#    def g(m,i2c):
+#        s=m.shape
+#        print(s[0])
+#        bounds=[]
+#        lat_0,lon_0=i2c(0,0)
+#        lat_1,lon_1=i2c(1,1)
+#        step_lat=lat_1-lat_0
+#        step_lon=lon_1-lon_0
+#        for i in range(s[0]):
+#            for j in range(s[1]):
+#                print(i,j)
+#                print(m[i,j])
+#                if  m[i,j]:
+#                    lat,lon=i2c(i,j)
+#                    res=boundaries(
+#                        min_lat=lat-step_lat/2,
+#                        max_lat=lat+step_lat/2,
+#                        min_lon=lon-step_lon/2,
+#                        max_lon=lon+step_lon/2
+#                    )
+#                    bounds.append(res)
+#        return bounds
+#
+#    #return g(m1,i2c_1)
+#    return reduce(
+#        lambda acc,el:acc+el,
+#        [g(m,i2c) for m,i2c in zip(masks,i2cs)] 
+#    )
+#
+#
+#def open_interval_intersect(i1,i2):
+#    min1,max1=i1
+#    min2,max2=i2
+#    mid2=(min2+max2)/2
+#    return ( 
+#        min1 < min2 and min2< max1 
+#        or
+#        min1 < max2 and max2< max1
+#        or
+#        min1 < mid2 and mid2< max1
+#    )
+#
+#def pixel_intersect(b1,b2):
+#    return (
+#        open_interval_intersect(
+#            (b1.min_lat,b1.max_lat),
+#            (b2.min_lat,b2.max_lat)
+#        )
+#        and
+#        open_interval_intersect(
+#            (b1.min_lon,b1.max_lon),
+#            (b2.min_lon,b2.max_lon)
+#        )
+#    )
+#
+#def project(s,i2c,common_mask):
+#    mask=np.zeros(s)
+#    
+#    lat_0,lon_0=i2c(0,0)
+#    lat_1,lon_1=i2c(1,1)
+#    step_lat=lat_1-lat_0
+#    step_lon=lon_1-lon_0
+#    
+#    def in_cm(i,j):
+#        lat,lon=i2c(i,j)
+#        p_b=boundaries(
+#            min_lat=lat-step_lat/2,
+#            max_lat=lat+step_lat/2,
+#            min_lon=lon-step_lon/2,
+#            max_lon=lon+step_lon/2
+#        )
+#        return reduce(
+#            lambda acc,mpb: acc or pixel_intersect(p_b,mpb),
+#            common_mask,
+#            False
+#        )
+#    
+#    for i in range(s[0]):
+#        for j in range(s[1]):
+#            mask[i,j] = True if in_cm(i,j) else False
+#
+#    return mask
 
 
 
@@ -1836,7 +1879,7 @@ class CoordMask():
         ):
         s=index_mask.shape
 
-        self.index_mask=index_mask
+        self.index_mask=index_mask.astype(np.float64,casting='safe')
         self.tr=tr
 
 
@@ -1884,6 +1927,37 @@ class CoordMask():
                     ),  
                     color="red" if mask[i,j] == 1 else color 
                 )
+    
+    def write_netCDF4(self,path):
+        # for visualization we write out the lat and lon arrays too
+        # although we don't use them at the moment to reconstruct
+        # the transformers.
+        index_mask=self.index_mask
+        s=index_mask.shape
+        n_lats, n_lons=s
+        ds = nc.Dataset(str(path),'w',persist=True)
+        #mask = ds.createDimension('mask',size=s)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+
+        test=ds.createVariable("test",'i1',['lat','lon'])
+        test[:,:]=index_mask
+
+        lats=ds.createVariable("lat",'float64',['lat'])
+        lats[:]=list(
+                map(
+                    self.tr.i2lat,
+                    range(n_lats)
+                )
+        )
+        lons=ds.createVariable("lon",'float64',['lon'])
+        lons[:]=list(
+                map(
+                    self.tr.i2lon,
+                    range(n_lons)
+                )
+        )
+        
 
 
 def project_2(
@@ -1891,7 +1965,8 @@ def project_2(
     target: CoordMask
     ):
     
-    s_mask=source.index_mask
+    s_mask=source.index_mask#.astype(np.float64,casting='safe')
+    print(s_mask.mean())
     s_n_lat,s_n_lon = s_mask.shape
     
     t_mask=target.index_mask
@@ -1938,6 +2013,7 @@ def project_2(
         )
     )
     float_grid=f(target_lons,target_lats)
+    print(float_grid.mean())
     projected_mask=float_grid>0.5
     return CoordMask(
                 index_mask= np.logical_or(

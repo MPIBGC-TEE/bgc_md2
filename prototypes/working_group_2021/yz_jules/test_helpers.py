@@ -4,6 +4,7 @@ from sympy import Symbol, Function
 from pathlib import Path
 import json
 import numpy as np
+import netCDF4 as nc
 from functools import lru_cache
 
 @lru_cache
@@ -22,6 +23,8 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_max",
             "epa_opt",
             "cpa",
+            "lats",
+            "lons",
             "start_date"
         ]
     )
@@ -141,6 +144,7 @@ def make_test_args(conf_dict,msh,mvs):
         # f_veg2soil=svs_0.f_veg2soil# add the fraction
     )
     
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("JULES-ES-1p0_S2_tsl.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
@@ -153,5 +157,7 @@ def make_test_args(conf_dict,msh,mvs):
         epa_max=epa_max,
         epa_opt=epa_opt,
         cpa=cpa,
+        lats=ds.variables["latitude"][:],
+        lons=ds.variables["longitude"][:],
         start_date=msh.start_date()
     )

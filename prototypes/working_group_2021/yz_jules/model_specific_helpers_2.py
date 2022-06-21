@@ -16,6 +16,29 @@ from functools import reduce
 sys.path.insert(0, '..')  # necessary to import general_helpers
 import general_helpers as gh
 
+def make_model_coord_transforms():
+    """ This function can is used to achieve a target grid LAT,LON with
+    - LAT ==   0 at the equator with 
+    - LAT == -90 at the south pole,
+    - LAT== +90 at the north pole,
+    - LON ==   0 at Greenich and 
+    - LON is counted positive eastwards from -180 to 180
+    """
+    return gh.CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: lon-180,
+            LON2lon=lambda LON: LON+180,
+    )
+    
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = -89.375,
+    lon_0 = 0.9375,
+    step_lat = 1.25,
+    step_lon = 1.875,
+ )
+
 Observables = namedtuple(
     'Observables',
     ["cVeg", "cSoil", "rh", "fVegSoil"]

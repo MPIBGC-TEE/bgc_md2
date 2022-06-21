@@ -16,6 +16,9 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def make_model_coord_transforms():
+    return gh.identicalTransformers()
+
 def make_model_index_transforms():
     # returns a tuple of functions to describe the grid 
     # index_to_latitude

@@ -4,7 +4,6 @@ from sympy import Symbol, Function
 from pathlib import Path
 import netCDF4 as nc
 import json 
-import netCDF4 as nc
 from functools import lru_cache
 
 @lru_cache

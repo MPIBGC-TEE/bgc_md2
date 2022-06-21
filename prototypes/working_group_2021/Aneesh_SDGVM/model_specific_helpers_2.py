@@ -18,6 +18,9 @@ sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
 
+def make_model_coord_transforms():
+    return gh.identicalTransformers()
+
 def make_model_index_transforms():
     return gh.transform_maker(
     lat_0 = -89.5,
@@ -267,7 +270,6 @@ def make_StartVector(mvs):
     ) 
 
 from typing import Callable
-#from general_helpers import month_2_day_index_vm
 from functools import reduce
 
 

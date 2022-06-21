@@ -286,7 +286,9 @@ class TestSymbolic(TestCase):
 
 
     def test_make_model_index_transforms(self):
-        for mf in set(self.model_folders):
+        model_folders=['kv_visit2','kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib']#,'kv_visit2', 'jon_yib''Aneesh_SDGVM','cable-pop','yz_jules',]
+        #for mf in set(self.model_folders):
+        for mf in set(model_folders):
             with self.subTest(mf=mf):
                 test_args = gh.test_args(mf)
                 msh = gh.msh(mf)
@@ -329,6 +331,39 @@ class TestSymbolic(TestCase):
                 print(lat_max)
                 self.assertEqual(tr.lat2i(lat_max),last)
                 
+
+    def test_make_model_coord_transforms(self):
+        model_folders=['kv_visit2','kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib','yz_jules']#,'cable-pop']
+        #for mf in set(self.model_folders):
+        for mf in set(model_folders):
+            with self.subTest(mf=mf):
+                test_args = gh.test_args(mf)
+                msh = gh.msh(mf)
+                lats=test_args.lats.data
+                lons=test_args.lons.data
+                # check that we predict the
+                # right latitude values for
+                # a given array index 
+                ctr = msh.make_model_coord_transforms()
+                #print(lats)
+                print(ctr.lat2LAT(lats))
+                print(ctr.lon2LON(lons))
+
+    def test_mask(self):
+        model_folders=['cj_isam','kv_visit2']#,'kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib','yz_jules']#,'cable-pop']
+        #for mf in set(self.model_folders):
+        for mf in set(model_folders):
+            with self.subTest(mf=mf):
+                #test_args = gh.test_args(mf)
+                msh = gh.msh(mf)
+                
+                c_mask=msh.spatial_mask(Path(gh.confDict(mf)['dataPath']))
+                c_mask.write_netCDF4(mf+".nc")
+                #f=plt.figure()
+                #ax=f.add_subplot(1,1,1)
+                #c_mask.plot(ax)
+                #f.savefig(str(mf)+".pdf")
+
 
 
                     

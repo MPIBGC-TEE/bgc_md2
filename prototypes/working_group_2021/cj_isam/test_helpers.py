@@ -1,6 +1,7 @@
 # this file provides some variables for testing.
 import json 
 import numpy as np
+import netCDF4 as nc
 from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
@@ -19,6 +20,8 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_max",
             "epa_opt",
             "cpa",
+            "lats",
+            "lons",
             "obs_arr",
             "start_date"
         ]
@@ -220,6 +223,7 @@ def make_test_args(conf_dict,msh,mvs):
         ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
         rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;
     )
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("ISAM_S2_cLitter.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
@@ -232,6 +236,8 @@ def make_test_args(conf_dict,msh,mvs):
         epa_max=epa_max,
         epa_opt=epa_opt,
         cpa=cpa,
+        lats=ds.variables["lat"][:],
+        lons=ds.variables["lon"][:],
         obs_arr=obs_arr,
         start_date=msh.start_date()        
     )

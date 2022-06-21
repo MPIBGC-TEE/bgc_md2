@@ -16,6 +16,33 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def spatial_mask(dataPath)->'CoorMask':
+    mask=nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        mask,
+        sym_tr
+    )
+
+def make_model_coord_transforms():
+    """ This function can is used to achieve a target grid LAT,LON with
+    - LAT ==   0 at the equator with 
+    - LAT == -90 at the south pole,
+    - LAT== +90 at the north pole,
+    - LON ==   0 at Greenich and 
+    - LON is counted positive eastwards from -180 to 180
+    """
+    return gh.CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: lon,
+            LON2lon=lambda LON: LON,
+    )
+    
+
 def make_model_index_transforms():
     return gh.transform_maker(
     lat_0 = 89.75,
@@ -237,6 +264,18 @@ def get_global_mean_vars(dataPath):
         masks=[ f(name)    for name in names ]
         # We compute the common mask so that it yields valid pixels for ALL variables 
         combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        gm=gh.globalMask()
+        gcm=gh.project(
+                source=gm,
+                target=CoordMask(
+                    index_mask=combined_mask,
+                    tr=SymTransformers(
+                        ctr=make_model_coord_transforms(),
+                        itr=make_model_index_transforms()
+                    )
+                )
+        )
+
         print("computing means, this may also take some minutes...")
 
         def compute_and_cache_global_mean(vn):
@@ -253,7 +292,8 @@ def get_global_mean_vars(dataPath):
             gm=gh.global_mean_var(
                     lats,
                     lons,
-                    combined_mask,
+                    gcm.mask,
+                    #combined_mask,
                     var
             )
             gh.write_global_mean_cache(

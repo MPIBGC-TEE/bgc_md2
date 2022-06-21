@@ -16,6 +16,54 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def spatial_mask(dataPath)->'CoorMask':
+    mask=nc.Dataset(dataPath.joinpath("ISAM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        mask,
+        sym_tr
+    )
+
+def make_model_coord_transforms():
+    """ This function can is used to achieve a target grid LAT,LON with
+    - LAT ==   0 at the equator with 
+    - LAT == -90 at the south pole,
+    - LAT== +90 at the north pole,
+    - LON ==   0 at Greenich and 
+    - LON is counted positive eastwards from -180 to 180
+    """
+    def lon2LON(lon):
+        return -180+ lon-180 if lon > 180 else lon
+        #if lon > 180:
+        #    return -180+ lon-180
+        #else:
+        #    lon
+
+    def LON2lon(LON):
+        return 360+LON if LON < 0 else LON
+        #if LON < 0:
+        #    return 360+LON
+        #else:
+        #    LON
+
+    return gh.CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lon2LON,
+            LON2lon=LON2lon
+    )
+    
+
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = -89.75,
+    lon_0 = 0.25,
+    step_lat = 0.5,
+    step_lon = 0.5,
+ )
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
     'Observables',
