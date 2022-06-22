@@ -25,7 +25,8 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_opt",
             "cpa",
             "lats",
-            "lons"
+            "lons",
+            "start_date"
         ]
     )
     svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
@@ -160,7 +161,7 @@ def make_test_args(conf_dict,msh,mvs):
     )
     # actually we want a dataset with mask but we don't have one at 
     # the moment
-    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("YIBs_S0_Monthly_npp.nc"))    
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("YIBs_S2_Monthly_npp.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=model_par_dict,
@@ -175,4 +176,5 @@ def make_test_args(conf_dict,msh,mvs):
         cpa=cpa,
         lats=ds.variables["latitude"][:],
         lons=ds.variables["longitude"][:],
+        start_date=msh.start_date()
     )

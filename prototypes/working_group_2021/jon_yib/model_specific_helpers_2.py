@@ -55,7 +55,7 @@ def spatial_mask(dataPath)->'CoorMask':
         combined_mask,
         sym_tr
     )
-    
+
 def make_model_coord_transforms():
     return gh.identicalTransformers()
 
@@ -141,7 +141,7 @@ def make_model_index_transforms():
             #i2lon_min_max=i2lon_min_max,
             #lon2i=lon2i,
         )
-    
+
         
 
 Observables_annual = namedtuple(
@@ -478,21 +478,21 @@ def make_func_dict(mvs,dvs,cpa,epa):
     
     def make_temp_func(dvs):
         def temp_func(day):
-            month=gh.day_2_month_index_vm(day)
+            month=gh.day_2_month_index(day)
             # kg/m2/s kg/m2/day;
             return (dvs.tas[month])
         return temp_func
 
     def make_npp_func(dvs):
         def npp_func(day):
-            month=gh.day_2_month_index_vm(day)
+            month=gh.day_2_month_index(day)
             # kg/m2/s kg/m2/day;
             return (dvs.npp[month])
         return npp_func
 
     def make_gpp_func(dvs):
         def gpp_func(day):
-            month=gh.day_2_month_index_vm(day)
+            month=gh.day_2_month_index(day)
             # kg/m2/s kg/m2/day;
             return (dvs.gpp[month])
         return gpp_func
@@ -503,7 +503,7 @@ def make_func_dict(mvs,dvs,cpa,epa):
         t_exp = 1.8
         tf_frac = 0.2
         def xi_func_leaf(day):
-            month = gh.day_2_month_index_vm(day)
+            month = gh.day_2_month_index(day)
             s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
             s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
             return s_t / s_f 
@@ -514,7 +514,7 @@ def make_func_dict(mvs,dvs,cpa,epa):
         t_half = 273.15 + 0
         t_exp = 1.9
         def xi_func_soil(day):
-            month = gh.day_2_month_index_vm(day)
+            month = gh.day_2_month_index(day)
             s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
             s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
             return s_t * s_f 
@@ -738,11 +738,26 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
     )
     return it_sym_trace
 
-
-# Define start and end dates of the simulation
-import datetime as dt
-start_date=dt.date(1700, 1, 1)
-end_date = dt.date(2019, 11, 30)
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("YIBs_S2_Monthly_npp.nc")))
+    #times = ds.variables["time"]
+    #tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    #td = int(tm *30)  #in days since_1700-01-01 
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(1700, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1700, 
+        month=1,
+        day=1
+    )
 
 def make_sim_day_2_day_since_a_D(conf_dict):
     # this function is extremely important to syncronise our results
