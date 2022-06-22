@@ -1,8 +1,7 @@
 # +
 import sys
-import json 
 from pathlib import Path
-from collections import namedtuple 
+from collections import namedtuple
 import netCDF4 as nc
 import numpy as np
 from sympy import Symbol
@@ -17,6 +16,41 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 # -
+def spatial_mask(dataPath)->'CoorMask':
+    # We read the mask of a file and also create a masks by checking for the NANs
+    # we now check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    
+    # 1.)
+    f_mask=nc.Dataset(dataPath.joinpath("DLEM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    
+    # 2.) 
+    print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+    
+    def f(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)
+
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+
+    masks=[ f(name)    for name in names ]
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
+    print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
+    #from IPython import embed;embed() 
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        combined_mask,
+        sym_tr
+    )
 def make_model_coord_transforms():
     """ This function can is used to achieve a target grid LAT,LON with
     - LAT ==   0 at the equator with 

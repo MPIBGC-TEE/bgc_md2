@@ -251,32 +251,21 @@ def get_global_mean_vars(dataPath):
         )
 
     else:
-        # we now check if any of the arrays has a time lime containing nan values 
-        # APART FROM values that are already masked by the fillvalue
-        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
-        def f(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
-            #scale fluxes vs pools
-            var =ds.variables[vn]
-            return gh.get_nan_pixel_mask(var)
-
-        masks=[ f(name)    for name in names ]
-        # We compute the common mask so that it yields valid pixels for ALL variables 
-        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
         gm=gh.globalMask()
-        gcm=gh.project(
+        # load an example file with mask
+        template = nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        gcm=gh.project_2(
                 source=gm,
-                target=CoordMask(
-                    index_mask=combined_mask,
-                    tr=SymTransformers(
+                target=gh.CoordMask(
+                    index_mask=np.zeros_like(template),
+                    tr=gh.SymTransformers(
                         ctr=make_model_coord_transforms(),
                         itr=make_model_index_transforms()
                     )
                 )
         )
 
-        print("computing means, this may also take some minutes...")
+        print("computing means, this may take some minutes...")
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(nc_file_name(vn))
@@ -292,7 +281,7 @@ def get_global_mean_vars(dataPath):
             gm=gh.global_mean_var(
                     lats,
                     lons,
-                    gcm.mask,
+                    gcm.index_mask,
                     #combined_mask,
                     var
             )

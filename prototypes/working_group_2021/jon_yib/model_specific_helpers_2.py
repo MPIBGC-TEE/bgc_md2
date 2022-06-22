@@ -16,6 +16,46 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def spatial_mask(dataPath)->'CoorMask':
+    # the yibs data set has 
+    # 1.) ONE file with a mask YIBs_S2_Monthly_tas.nc
+    # 2.) missing masks for all other files
+    # 3.) trajectories that brake of after some time and are filled wiht NAN
+    #     without beeing masked
+    # We therefore create a mask by checking for the NANs
+    # we now check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    
+    # 1.)
+    f_mask=nc.Dataset(dataPath.joinpath("YIBs_S2_Monthly_tas.nc")).variables['tas'][0,:,:].mask
+    
+    # 2.) 
+    print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+    
+    def f(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)
+
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+
+    masks=[ f(name)    for name in names ]
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
+    
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        combined_mask,
+        sym_tr
+    )
+    
 def make_model_coord_transforms():
     return gh.identicalTransformers()
 
@@ -57,28 +97,28 @@ def make_model_index_transforms():
             raise IndexError("i_lat > n_lat; with i_lat={}, n_lat={}".format(i_lat,n_lat))
         return lat_0+(step_lat*i_lat)
     
-    def i2lat_min_max(i):
-        #compute the lat boundaries of pixel i
-        center=i2lat(i)
-        lat_min = center if center==-90 else center - step_lat/2 
-        lat_max= center if center==90 else center + step_lat/2 
-        return lat_min,lat_max
-    
-    def lat2i(lat):
-        # the inverse finds the indices of the pixel containing
-        # the point with the given coordinates
-        # we cant use round since we want ir=3.5 to be already in pixel 4
-        ir=(lat-lat_0)/step_lat
-        ii=int(ir)
-        d=ir-ii
-        return ii if d<0.5 else ii+1
-    
-    def i2lon_min_max(i):
-        #compute the lon boundaries of pixel i
-        center=i2lon(i)
-        lon_min = center - step_lon/2 
-        lon_max=  center + step_lon/2 
-        return lon_min,lon_max
+    #def i2lat_min_max(i):
+    #    #compute the lat boundaries of pixel i
+    #    center=i2lat(i)
+    #    lat_min = center if center==-90 else center - step_lat/2 
+    #    lat_max= center if center==90 else center + step_lat/2 
+    #    return lat_min,lat_max
+    #
+    #def lat2i(lat):
+    #    # the inverse finds the indices of the pixel containing
+    #    # the point with the given coordinates
+    #    # we cant use round since we want ir=3.5 to be already in pixel 4
+    #    ir=(lat-lat_0)/step_lat
+    #    ii=int(ir)
+    #    d=ir-ii
+    #    return ii if d<0.5 else ii+1
+    #
+    #def i2lon_min_max(i):
+    #    #compute the lon boundaries of pixel i
+    #    center=i2lon(i)
+    #    lon_min = center - step_lon/2 
+    #    lon_max=  center + step_lon/2 
+    #    return lon_min,lon_max
 
 
     def i2lon(i_lon):
@@ -87,19 +127,19 @@ def make_model_index_transforms():
         return lon_0+(step_lon*i_lon)
     
         
-    def lon2i(lon):
-        # we cant use round since we want ir=3.5 to be already in pixel 4
-        ir=(lon-lon_0)/step_lon
-        ii=int(ir)
-        d=ir-ii
-        return ii if d<0.5 else ii+1
+    #def lon2i(lon):
+    #    # we cant use round since we want ir=3.5 to be already in pixel 4
+    #    ir=(lon-lon_0)/step_lon
+    #    ii=int(ir)
+    #    d=ir-ii
+    #    return ii if d<0.5 else ii+1
     return gh.Transformers(
             i2lat=i2lat,
-            i2lat_min_max=i2lat_min_max,
-            lat2i=lat2i,
+            #i2lat_min_max=i2lat_min_max,
+            #lat2i=lat2i,
             i2lon=i2lon,
-            i2lon_min_max=i2lon_min_max,
-            lon2i=lon2i,
+            #i2lon_min_max=i2lon_min_max,
+            #lon2i=lon2i,
         )
     
         
@@ -242,47 +282,6 @@ def get_example_site_vars(dataPath):
 
 # +
 # deprecated because it uses an already deprecated global_mean_JULES function
-# def get_global_mean_vars(dataPath):
-    
-#     #define function to average variables
-#     def f(tup):
-#         #define parts of function from nc file
-#         vn, fn = tup
-#         path = dataPath.joinpath(fn)
-#         ds = nc.Dataset(str(path))
-#         lats = ds.variables["latitude"]
-#         lons = ds.variables["longitude"]
-        
-#         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-#         if vn in ["npp","gpp","rh","ra"]:
-#             #for name, variable in ds.variables.items():            
-#             #    for attrname in variable.ncattrs():
-#             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-#             return (gh.global_mean_JULES(lats, lons, ds.variables[vn])*24*60*60)
-#         else:
-#             #for name, variable in ds.variables.items():            
-#             #    for attrname in variable.ncattrs():
-#             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-#             return (gh.global_mean_JULES(lats, lons, ds.variables[vn]))
-
-#     # Link symbols and data:
-#     # YIBS has annual vs monthly file names so they are linked separately
-#     # If all your data is similarly named you can do this in one step
-
-#     # Create annual file names (single step if files similarly named)
-#     o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
-
-#     # Create monthly file names (can remove if done in one step above)
-#     monthly_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Observables_monthly._fields]
-#     # Extend name list with monthly names
-#     o_names.extend(monthly_names)
-
-#     # create file names for Drivers
-#     d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
-
-#     # Link symbols and data for Observables/Drivers
-#     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
-# -
 
 experiment_name="YIBs_S2_"
 def nc_file_name(nc_var_name):
@@ -299,8 +298,6 @@ def nc_global_mean_file_name(nc_var_name):
 def nc_clip_file_name(nc_var_name):
     return experiment_name+"{}_clipped.nc".format(nc_var_name)
 
-
-# -
 
 def get_global_mean_vars(dataPath):
     # Define function to select geospatial cell and scale data
@@ -357,54 +354,23 @@ def get_global_mean_vars(dataPath):
         )
 
     else:
-        # we now check if any of the arrays has a time lime containing nan values 
-        # APART FROM values that are already masked by the fillvalue
-        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
-        def f(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            #ds = nc.Dataset(str(path))
-            #scale fluxes vs pools
-            #var =ds.variables[vn]
-            
-            ########### apply shape file mask of the world to each data file
-            #import needed librarys - these have to be added to conda env
-            #use "conda install --channel conda-forge geopandas rioxarray xarray shapely gdal=3.2.1"
-            #for some reason the newest gdal created an unknown conflict and couldn't be imported
-            #also this will break general_helpers "from forzendict import frozendict" so run_my_tests.py fails
-            #import geopandas
-            #import rioxarray
-            #import xarray
-            #from shapely.geometry import mapping
-            ##use xarray to open dataset
-            #nc_x = xarray.open_dataset(path, decode_times=False)
-            ##set spatial dimensions by name
-            #nc_x.rio.set_spatial_dims(x_dim="longitude", y_dim="latitude", inplace=True)
-            ##set projection
-            #nc_x.rio.write_crs("epsg:4326", inplace=True)
-            ##use geopandas to read in map of world to use as clip
-            #wrld_shp = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'), crs="epsg:4326")
-            ##clip the imported array by the projected world map
-            ##nc_clip = nc_x.rio.clip(wrld_shp.geometry.apply(mapping), wrld_shp.crs, drop=False)
-
-            ## we can clip/mask again by Greenland,Antarctica, or other shapefile if we want to here
-
-            ##set save directory and filename
-            #dataDIR = dataPath.joinpath(nc_clip_file_name(vn))
-            ##save to file - inefficient but only option, xarray can't create netcdf4 python object, can only save
-            ##This is fine though b/c it allows inspection of clipped netcdf files
-            ##I do this to keep all further code intact that uses netcdf4
-            #nc_clip.to_netcdf(dataDIR)
-            ##read netcdf file back in
-            ##var = nc.Dataset(str(dataDIR)).variables[vn]
-            ############
-            ##return after assessing NaN data values
-            #return gh.get_nan_pixel_mask(var)
-
-        masks=[ f(name)    for name in names ]
-        # We compute the common mask so that it yields valid pixels for ALL variables 
-        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
         print("computing means, this may also take some minutes...")
 
+        gm=gh.globalMask()
+        # load an example file with mask
+        template = nc.Dataset(
+                        dataPath.joinpath("YIBs_S2_Monthly_tas.nc")
+                    ).variables['tas'][0,:,:].mask
+        gcm=gh.project_2(
+                source=gm,
+                target=gh.CoordMask(
+                    index_mask=np.zeros_like(template),
+                    tr=gh.SymTransformers(
+                        ctr=make_model_coord_transforms(),
+                        itr=make_model_index_transforms()
+                    )
+                )
+        )
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(nc_file_name(vn))
             ds = nc.Dataset(str(path))
@@ -419,7 +385,7 @@ def get_global_mean_vars(dataPath):
             gm=gh.global_mean_var(
                     lats,
                     lons,
-                    combined_mask,
+                    gcm.index_mask,
                     var
             )
             

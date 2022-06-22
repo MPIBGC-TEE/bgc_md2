@@ -16,7 +16,15 @@ class TestSymbolic(TestCase):
     
     @property
     def model_folders(self):
-        return ['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules','kv_ft_dlem']
+        return [
+            #'kv_visit2',
+	        'jon_yib',
+	        #'Aneesh_SDGVM',
+	        #'cable-pop',
+	        #'cj_isam',
+	        #'yz_jules',
+	        #'kv_ft_dlem'
+        ]
 
     def test_symobolic_description(self):
         for mf in self.model_folders: 

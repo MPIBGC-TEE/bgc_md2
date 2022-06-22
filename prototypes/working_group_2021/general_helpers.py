@@ -13,6 +13,7 @@ from frozendict import frozendict
 from importlib import import_module
 import matplotlib.pyplot as plt
 import os
+import inspect
 import datetime as dt
 
 from pathlib import Path
@@ -101,10 +102,15 @@ def globalMask()->'CoordMask':
     # fixme mm 6-20-2022
     # this should actually be  package data
     # We create a target 
-    ds=Path('.').joinpath('common_mask.nc')
+    this_dir=os.path.dirname(
+        os.path.abspath(
+            inspect.getfile(inspect.currentframe())
+        )
+    )
+    ds=nc.Dataset(Path(this_dir).joinpath('common_mask.nc'))
     mask=ds.variables['mask'][:,:].data
     return CoordMask(
-            mask=mask,
+            index_mask=mask,
             tr=globalMaskTransformers(mask)
     )
             
@@ -1998,7 +2004,7 @@ class CoordMask():
         lat = ds.createDimension('lat',size=n_lats)
         lon = ds.createDimension('lon',size=n_lons)
 
-        test=ds.createVariable("test",'i1',['lat','lon'])
+        test=ds.createVariable("mask",'i1',['lat','lon'])
         test[:,:]=index_mask
 
         lats=ds.createVariable("lat",'float64',['lat'])
