@@ -3,6 +3,7 @@ import netCDF4 as nc
 from unittest import TestCase, skip
 from numpy.core.fromnumeric import shape
 from pathlib import Path
+from time import time, sleep
 from testinfrastructure.InDirTest import InDirTest
 import general_helpers as gh
 import matplotlib.pyplot as plt
@@ -284,6 +285,7 @@ class Test_general_helpers(InDirTest):
         self.assertTrue(
             (ref_mask == res).all()
         )
+        ds.close()
 
         ma_arr=np.ma.array(arg,mask=False)
         ds = nc.Dataset('diskless_example1.nc','w',diskless=True,persist=False)
@@ -299,6 +301,27 @@ class Test_general_helpers(InDirTest):
         self.assertTrue(
             (ref_mask == res).all()
         )
+        ds.close()
+        # 4-D-example
+        n_t=2
+        n_d=3
+        n_lats=4
+        n_lons=5
+        arg= np.zeros((n_t,n_d,n_lats,n_lons))
+        arg[0,0,2,3]=np.nan
+        arg[1,2,1,3]=np.nan
+        mask=np.zeros((n_t,n_d,n_lats,n_lons),dtype=np.bool_)
+        mask[:,0,0,0]=True
+        ma_arr=np.ma.array(arg,mask=mask)
+        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=False)
+        time = ds.createDimension('time',size=n_t)
+        depth = ds.createDimension('depth',size=n_d)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+        test_var=ds.createVariable("test_var",np.float64,['time','depth','lat','lon'])
+        test_var[:,:,:,:]=ma_arr
+        ds.close()
+
 
     def test_globalmean_var(self):
         # we create data similar to cmip6 and trendy. These are masked arrays:
@@ -963,4 +986,40 @@ class Test_general_helpers(InDirTest):
         
 
         
+    def test_read_or_create(self):
+        cachePath=Path("cache.nc")
+ 
+        def caw(path):
+            sleep(2)
+            n = 5
+            ds = nc.Dataset(path,'w',persist=True)
+            lat = ds.createDimension('lat',size=n)
+            lon = ds.createDimension('lon',size=n)
+            test=ds.createVariable("test",np.float64,['lat','lon'])
+            var=np.diag(np.arange(0,n))
+            test[:,:]=var
+            return var 
+            
+        
+        def r(path):
+            ds=nc.Dataset(path)
+            return ds.variables['test'][:,:].data
+        
+        path=Path("test.nc")
+        before=time()
+        res_1=gh.read_or_create(
+                path=path,
+                create_and_write=caw,
+                read=r
+        )
+        after_1=time()
+        res_2=gh.read_or_create(
+                path=path,
+                create_and_write=caw,
+                read=r
+        )
+        after_2=time()
+        self.assertTrue((res_1==res_2).all())
+        self.assertTrue(after_1-before> after_2-after_1)
+
 

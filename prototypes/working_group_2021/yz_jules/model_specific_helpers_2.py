@@ -41,6 +41,9 @@ d_name2varname_in_file = {
 }
 
 def spatial_mask(dataPath)->'CoorMask':
+    cache_path=dataPath.joinpath('mask.nc')
+    
+
     # We read the mask of a file and also create a masks by checking for the NANs
     # we now check if any of the arrays has a time lime containing nan values 
     # APART FROM values that are already masked by the fillvalue
@@ -59,16 +62,16 @@ def spatial_mask(dataPath)->'CoorMask':
         var =ds.variables[vn_in_file]
         #return after assessing NaN data values
         return gh.get_nan_pixel_mask(var)
-        #return vn_in_file , file_name
 
     o_names=Observables._fields
     d_names=Drivers._fields
     names = o_names + d_names 
-
+    
     masks=[ f(name)    for name in names ]
+    from IPython import embed;embed() 
+
     # We compute the common mask so that it yields valid pixels for ALL variables 
     combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
-    #from IPython import embed;embed() 
     print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
     sym_tr= gh.SymTransformers(
         itr=make_model_index_transforms(),
@@ -259,35 +262,52 @@ def get_global_mean_vars(dataPath):
         if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
             # f_veg2soil: Total carbon mass from vegetation directly into the soil
             #print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean(lats, lons, gcm, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
+            ma=ds.variables[vn][:,:,:].data * 86400# convert from kg/m2/s to kg/m2/day
         
         elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
-            tmp = ds.variables[vn][:, 0, :, :]
-            #print("converted size is ", tmp.shape)
-            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
-            return gh.global_mean(lats, lons, tmp)  # average soil temperature at different depth
-            
+            ma=ds.variables[vn][:, 0, :, :].data
+            #print("converted size is ", ma.shape)
+            # ma= np.mean(ds.variables[vn][:, :, slat, slon].data, axis=1)
+            # average soil temperature at different depth
     
         elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
             #print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
             # from IPython import embed;embed()
             var = ds.variables[vn]
             sh = var.shape
-            tmp = np.zeros(shape = var[:, 0, :, :].shape)
+            ma= np.zeros(shape = var[:, 0, :, :].shape)
             #print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
             for i in range(13):
-                tmp = tmp + var[:, i, :, :]
-                # print("converted size is ", tmp.shape)
+                ma = ma + var[:, i, :, :].data
+                # print("converted size is ", ma.shape)
             #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
             # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
             # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
             # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
-            return gh.global_mean(lats, lons, tmp)  # sum the vegetation coverages
+            # sum the vegetation coverages
+            
         
         else:
             #print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean(lats, lons, ds.variables[vn].__array__())
+            ma=ds.variables[vn][:,:,:].data
+       
+
+        return gh.global_mean(
+            lats, 
+            lons, 
+            np.ma.masked_array(
+                data=ma,
+                # stack the 2d gcm 
+                mask=np.stack(
+                    [
+                        gcm.index_mask 
+                        for i in range(ma.shape[0])
+                    ],
+                    axis=0
+                )
+            )                
+         )  
 
     # Link symbols and data:
 

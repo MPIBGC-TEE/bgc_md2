@@ -7,12 +7,12 @@ from pathlib import Path
 
 # model_folders = ['yz_jules']
 model_folders = [
-    # 'yz_jules',
-    'cj_isam',
-    'Aneesh_SDGVM',
-    'kv_ft_dlem',
-    'kv_visit2',
-    'jon_yib'
+    'yz_jules',
+    #'cj_isam',
+    #'Aneesh_SDGVM',
+    #'kv_ft_dlem',
+    #'kv_visit2',
+    #'jon_yib'
 ]
 
 

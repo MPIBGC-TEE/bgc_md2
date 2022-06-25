@@ -17,13 +17,13 @@ class TestSymbolic(TestCase):
     @property
     def model_folders(self):
         return [
-            #'kv_visit2',
-	        'jon_yib',
-	        #'Aneesh_SDGVM',
-	        #'cable-pop',
-	        #'cj_isam',
-	        #'yz_jules',
-	        #'kv_ft_dlem'
+            'kv_visit2',
+	     'jon_yib',
+	     'Aneesh_SDGVM',
+	     'cable-pop',
+	     'cj_isam',
+	     'yz_jules',
+	     'kv_ft_dlem'
         ]
 
     def test_symobolic_description(self):
@@ -358,9 +358,9 @@ class TestSymbolic(TestCase):
                 print(ctr.lon2LON(lons))
 
     def test_mask(self):
-        model_folders=['cj_isam','kv_visit2']#,'kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib','yz_jules']#,'cable-pop']
-        #for mf in set(self.model_folders):
-        for mf in set(model_folders):
+        #model_folders=['cj_isam','kv_visit2']#,'kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib','yz_jules']#,'cable-pop']
+        #for mf in set(model_folders):
+        for mf in set(self.model_folders):
             with self.subTest(mf=mf):
                 #test_args = gh.test_args(mf)
                 msh = gh.msh(mf)

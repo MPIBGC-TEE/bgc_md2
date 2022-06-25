@@ -31,6 +31,11 @@ from bgc_md2.resolve.mvars import (
 )
 #from bgc_md2.helper import bgc_md2_computers
 import bgc_md2.display_helpers as dh
+from typing import TypeVar, Callable, Union, NewType
+
+T=TypeVar('T')
+#Array=Union(np.ma.core.MaskedArray,np.ndarray)
+NewType('Array',np.ndarray)
 
 boundaries=namedtuple(
     "boundaries",
@@ -1126,7 +1131,7 @@ def get_nan_pixels(
     ):
     """We use a netCDF4.Variable to avoid having to load the whole array into memory 
     """
-    N_t,N_lat,N_lon = var.shape
+    Nn_t,N_lat,N_lon = var.shape
     cs=30
     def f(I_lat,I_lon):
         n_lat = min(cs,N_lat-I_lat)
@@ -1149,24 +1154,75 @@ def get_nan_pixels(
     )
     return reduce(lambda x,y:x+y,l)
 
+def reduce_dims(
+        var: Union[nc._netCDF4.Variable, np.ma.core.MaskedArray] ,
+        min_dim: int,
+        f_data: Callable,#[[Array,Array],Array],
+        f_mask: Callable,#[[Array,Array],Array]
+    ):
+    # small recursive helper that applies the function f in a reduce call
+    # reduce(f(acc,el),[arr[0,:,:...] ,arr[1,:,:,...]]) 
+    # where the elements of the list are the subarrays arr[0],arr[1]...
+    # where the accumulater acc has one dimensions less  
+    # (for example summing: f(acc,el) = acc+ell 
+    # applying f over the first dimension reduces the dimension of the original array by one
+    #
+    # The function calls itself again until the number of dimensions has reached min_dim 
+    n=var.ndim    
+    if n == min_dim:
+        return var
+    else:
+        s0=var.shape[0]
+        start_var=var[0] # note that in numpy this is equivalent to var[0,:,:...]
+        def g(acc,i):
+            el=var[i]
+            return np.ma.masked_array(
+                data=f_data(acc.data,el.data),
+                mask=f_mask(acc.mask,el.mask)
+            )
+        new_ma = reduce(
+            g,
+            tqdm(range(s0)),
+            start_var
+        )
+
+        return reduce_dims(
+            var=new_ma,
+            min_dim=min_dim,
+            f_data=f_data,
+            f_mask=f_mask
+        )
+
 def get_nan_pixel_mask(
         var: nc._netCDF4.Variable
     ):
     ## We use a netCDF4.Variable to avoid having to load the whole array into memory 
     ## since it is too big e.g. for the dlm files 
 
-    N_t,N_lat,N_lon = var.shape
     
-    var_mask= var[0,:,:].mask #either False or a boolean array
-    start_mask = np.zeros((N_lat,N_lon),dtype=np.bool_) if isinstance(var_mask,bool) else  var_mask
-
-    return np.array(
-        reduce(
-            lambda acc,i: np.logical_or(acc,~np.isfinite(var[i,:,:])),
-            tqdm(range(var.shape[0])),
-            start_mask
+    def f_data(acc,el):
+        return np.logical_or(
+            acc,
+            np.logical_not(
+                np.isfinite(el)
+            )
         )
-    )
+
+    
+    def f_mask(acc,el):
+        return np.logical_or(
+            acc,
+            el
+        )
+
+    m_arr= reduce_dims(
+            var,
+            min_dim=2,
+            f_data=f_data,
+            f_mask=f_mask
+    ) # the result is a masked array 
+
+    return np.logical_or(m_arr.mask,m_arr.data)
 
 
 
@@ -2790,4 +2846,18 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 ax.plot(times,diff,color="black")
                 ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
                 plot_number+=1 
+
+def read_or_create(
+            path: Path,
+            create_and_write: Callable[[Path],T],
+            read: Callable[[Path],T]
+    ) -> T:
+    print('type',type(path))
+    if path.exists():
+        print(
+                "Found cache file {}. If you want to recompute the result remove it.".format(str(path)) 
+        )
+        return read(path)
+    else:
+        return create_and_write(path)
 
