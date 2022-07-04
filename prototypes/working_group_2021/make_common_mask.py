@@ -5,18 +5,19 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 
-# model_folders = ['yz_jules']
 model_folders = [
     'yz_jules',
-    #'cj_isam',
-    #'Aneesh_SDGVM',
-    #'kv_ft_dlem',
-    #'kv_visit2',
-    #'jon_yib'
+    'cj_isam',
+    'Aneesh_SDGVM',
+    'kv_ft_dlem',
+    'kv_visit2',
+    'jon_yib'
 ]
 
 
 def mask(mf):
+    print("###########################################")
+    print("#######   {}   ######".format(mf))
     msh = gh.msh(mf)
     return msh.spatial_mask(Path(gh.confDict(mf)['dataPath']))
 
@@ -39,8 +40,8 @@ masks.append(ut)
 ###############################################################################
 # plotting
 titles = model_folders+["empty_mask"]
-f = plt.figure(figsize=(10, 20))
 n = len(masks)
+f = plt.figure(figsize=(20,n*10))
 for i in range(n):
     m = masks[i]
     ax = f.add_subplot(n+1, 1, i+1)

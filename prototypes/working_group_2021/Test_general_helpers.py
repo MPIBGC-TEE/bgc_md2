@@ -281,6 +281,7 @@ class Test_general_helpers(InDirTest):
         ref_mask[0,0]=True
         ref_mask[2,3]=True
         ref_mask[1,3]=True
+        
         res = gh.get_nan_pixel_mask(test_var)
         self.assertTrue(
             (ref_mask == res).all()
@@ -320,6 +321,12 @@ class Test_general_helpers(InDirTest):
         lon = ds.createDimension('lon',size=n_lons)
         test_var=ds.createVariable("test_var",np.float64,['time','depth','lat','lon'])
         test_var[:,:,:,:]=ma_arr
+        
+        res = gh.get_nan_pixel_mask(test_var)
+        from IPython import embed;embed()
+        self.assertTrue(
+            (ref_mask == res).all()
+        )
         ds.close()
 
 
@@ -988,14 +995,14 @@ class Test_general_helpers(InDirTest):
         
     def test_read_or_create(self):
         cachePath=Path("cache.nc")
- 
+        var_name="test" 
         def caw(path):
             sleep(2)
             n = 5
             ds = nc.Dataset(path,'w',persist=True)
             lat = ds.createDimension('lat',size=n)
             lon = ds.createDimension('lon',size=n)
-            test=ds.createVariable("test",np.float64,['lat','lon'])
+            test=ds.createVariable(var_name,np.float64,['lat','lon'])
             var=np.diag(np.arange(0,n))
             test[:,:]=var
             return var 
@@ -1003,9 +1010,9 @@ class Test_general_helpers(InDirTest):
         
         def r(path):
             ds=nc.Dataset(path)
-            return ds.variables['test'][:,:].data
+            return ds.variables[var_name][:,:].data
         
-        path=Path("test.nc")
+        path=Path("cache","test.nc")
         before=time()
         res_1=gh.read_or_create(
                 path=path,

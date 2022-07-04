@@ -48,12 +48,10 @@ def spatial_mask(dataPath)->'CoorMask':
     # we now check if any of the arrays has a time lime containing nan values 
     # APART FROM values that are already masked by the fillvalue
     
-    # 1.)
-    f_mask=nc.Dataset(dataPath.joinpath("JULES-ES-1p0_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
-    
-    # 2.) 
     print("computing masks to exclude pixels with nan entries, this may take some minutes...")
     
+
+    # We compute the common mask so that it yields valid pixels for ALL variables 
     def f(d_name):
         vn_in_file = d_name2varname_in_file[d_name]
         file_name = file_name_from_var_name[vn_in_file]
@@ -68,11 +66,8 @@ def spatial_mask(dataPath)->'CoorMask':
     names = o_names + d_names 
     
     masks=[ f(name)    for name in names ]
-    from IPython import embed;embed() 
+    combined_mask = reduce(lambda acc,m: np.logical_or(acc,m),masks)
 
-    # We compute the common mask so that it yields valid pixels for ALL variables 
-    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
-    print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
     sym_tr= gh.SymTransformers(
         itr=make_model_index_transforms(),
         ctr=make_model_coord_transforms()
@@ -81,6 +76,7 @@ def spatial_mask(dataPath)->'CoorMask':
         combined_mask,
         sym_tr
     )
+
 def make_model_coord_transforms():
     """ This function can is used to achieve a target grid LAT,LON with
     - LAT ==   0 at the equator with 
@@ -92,8 +88,8 @@ def make_model_coord_transforms():
     return gh.CoordTransformers(
             lat2LAT=lambda lat: lat,
             LAT2lat=lambda LAT: LAT,
-            lon2LON=lambda lon: lon-180,
-            LON2lon=lambda LON: LON+180,
+            lon2LON=lambda lon: -180+ lon-180 if lon > 180 else lon,
+            LON2lon=lambda LON: 360+LON if LON < 0 else LON
     )
     
 def make_model_index_transforms():

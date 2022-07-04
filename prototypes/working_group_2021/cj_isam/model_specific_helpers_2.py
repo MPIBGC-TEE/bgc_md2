@@ -35,25 +35,12 @@ def make_model_coord_transforms():
     - LON ==   0 at Greenich and 
     - LON is counted positive eastwards from -180 to 180
     """
-    def lon2LON(lon):
-        return -180+ lon-180 if lon > 180 else lon
-        #if lon > 180:
-        #    return -180+ lon-180
-        #else:
-        #    lon
-
-    def LON2lon(LON):
-        return 360+LON if LON < 0 else LON
-        #if LON < 0:
-        #    return 360+LON
-        #else:
-        #    LON
 
     return gh.CoordTransformers(
             lat2LAT=lambda lat: lat,
             LAT2lat=lambda LAT: LAT,
-            lon2LON=lon2LON,
-            LON2lon=LON2lon
+            lon2LON=lambda lon: -180+ lon-180 if lon > 180 else lon,
+            LON2lon=lambda LON: 360+LON if LON < 0 else LON
     )
     
 

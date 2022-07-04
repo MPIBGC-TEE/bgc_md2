@@ -1126,6 +1126,100 @@ def plot_observations_vs_simulations(
         axs[i].set_title(name)
 
 
+def reduce_is_infinite_over_first_dim(
+        arr: np.ma.core.MaskedArray
+    ) -> np.ma.core.MaskedArray :
+    # 
+    return  reduce(
+        lambda acc,el: np.logical_or(
+            acc,
+            np.logical_not(
+                np.isfinite(el)
+            )
+        )
+        ,
+        map(lambda i:arr[i], range(arr.shape[0]))
+    )
+
+
+def is_infinite_rec(
+        chunk: np.ma.core.MaskedArray
+    ) -> np.ma.core.MaskedArray:
+    # works for any dimension (some variables are 4, most are 3 dimensional)
+    # The function reduce_is_infinite_over_first_dim reduces the array dimension by 1 
+    # everytime it is called and is called
+    # until the result is a 2d array (lat,lon are always the last dimensions in our datasets)
+    if chunk.ndim==2:
+        return chunk
+    else:
+        return is_infinite_rec(
+            reduce_is_infinite_over_first_dim(chunk)
+        )
+
+
+def get_nan_pixel_mask(
+        var: Union[nc._netCDF4.Variable,np.ma.core.MaskedArray]
+    )->np.ndarray:
+    try: 
+        # only works if var is a netCDF4.Variable
+        print(var.name) 
+    except:
+        AttributeError()
+
+
+    # partition along the the chunks of the netcdf file (measured about a100 times faster)
+    # and much less memory consuming than reading the complete array which requiers more than 16GB RAM
+    
+    try:
+        chunksizes=var.chunking()
+        chunksize = 1 if chunksizes == 'contiguous' else chunksizes[0]
+    except:
+        # chunksizes could still be None
+        TypeError
+        chunksize=1
+    # Note: no list comprehension but a lazy map object to save memory
+    subarrs=map(
+        lambda t: var[t[0]:t[1]],
+        partitions(
+            start=0,
+            stop=var.shape[0],
+            nr_acc=chunksize
+        )
+    )
+    
+    res=reduce(
+        lambda acc, el: np.logical_or(acc,el),
+        tqdm(map(is_infinite_rec,subarrs))
+    )
+    # res is a masked array where both res.data and res.mask  
+    # are boolean arrays. res.mask is the logical_or for any masked
+    # array operation and in our case logical_or is also applied to the 
+    # data (in the reduce call in this function and is_finite_rec)
+    
+    # the ultimate result is a mask that masks every lat,lon pixel 
+    # that is already masked for any time or any layer
+    # or has a nan entry at any time or any layer
+    mask=np.logical_or(res.data,res.mask)
+
+    # we check if the original mask was appropriate
+    org_mask_ind = tuple(0 for i in range(var.ndim-2))+(slice(None),)+(slice(None),)
+    org_mask=var[org_mask_ind].mask
+
+    unmasked_nan_pixels=np.argwhere(
+        np.logical_and(
+            mask,
+            np.logical_not(org_mask)
+        )
+    )
+    if len(unmasked_nan_pixels)>0:
+        print(
+            "found {} previously unmasked NaN pixels {}".format(
+                len(unmasked_nan_pixels),
+                unmasked_nan_pixels
+            )
+        )
+    return mask
+
 def get_nan_pixels(
         var: nc._netCDF4.Variable
     ):
@@ -1154,75 +1248,25 @@ def get_nan_pixels(
     )
     return reduce(lambda x,y:x+y,l)
 
-def reduce_dims(
-        var: Union[nc._netCDF4.Variable, np.ma.core.MaskedArray] ,
-        min_dim: int,
-        f_data: Callable,#[[Array,Array],Array],
-        f_mask: Callable,#[[Array,Array],Array]
-    ):
-    # small recursive helper that applies the function f in a reduce call
-    # reduce(f(acc,el),[arr[0,:,:...] ,arr[1,:,:,...]]) 
-    # where the elements of the list are the subarrays arr[0],arr[1]...
-    # where the accumulater acc has one dimensions less  
-    # (for example summing: f(acc,el) = acc+ell 
-    # applying f over the first dimension reduces the dimension of the original array by one
-    #
-    # The function calls itself again until the number of dimensions has reached min_dim 
-    n=var.ndim    
-    if n == min_dim:
-        return var
-    else:
-        s0=var.shape[0]
-        start_var=var[0] # note that in numpy this is equivalent to var[0,:,:...]
-        def g(acc,i):
-            el=var[i]
-            return np.ma.masked_array(
-                data=f_data(acc.data,el.data),
-                mask=f_mask(acc.mask,el.mask)
-            )
-        new_ma = reduce(
-            g,
-            tqdm(range(s0)),
-            start_var
+def reduce_is_infinite_over_first_dim(arr):
+    def f(acc, el):
+        new_acc=np.logical_or( acc,el)
+        new_ind=np.argwhere(np.logical_not(new_acc==acc)) 
+        #if len(new_ind)>0:
+        #    print(new_ind)
+        return new_acc
+            
+    def make_sub_arr_mask(i):
+        #print(i)
+        return np.logical_not(
+            np.isfinite(arr[i])
         )
 
-        return reduce_dims(
-            var=new_ma,
-            min_dim=min_dim,
-            f_data=f_data,
-            f_mask=f_mask
-        )
+    return  reduce(
+        f,
+        map(make_sub_arr_mask, range(arr.shape[0]))
+    )
 
-def get_nan_pixel_mask(
-        var: nc._netCDF4.Variable
-    ):
-    ## We use a netCDF4.Variable to avoid having to load the whole array into memory 
-    ## since it is too big e.g. for the dlm files 
-
-    
-    def f_data(acc,el):
-        return np.logical_or(
-            acc,
-            np.logical_not(
-                np.isfinite(el)
-            )
-        )
-
-    
-    def f_mask(acc,el):
-        return np.logical_or(
-            acc,
-            el
-        )
-
-    m_arr= reduce_dims(
-            var,
-            min_dim=2,
-            f_data=f_data,
-            f_mask=f_mask
-    ) # the result is a masked array 
-
-    return np.logical_or(m_arr.mask,m_arr.data)
 
 
 
@@ -2237,6 +2281,29 @@ def transform_maker(lat_0,lon_0,step_lat,step_lon):
         #lon2i=lon2i,
     )
 
+def read_or_create(
+            path: Path,
+            create_and_write: Callable[[Path],T],
+            read: Callable[[Path],T]
+    ) -> T:
+    """
+    A the basic cache functionality:
+    path: the path of the cache file
+    create_and_write: The funciton that creates the  object to be cached and writes it to <path>.
+    read: The function that extracts the cached object from <path>.
+    """
+    print('type',type(path))
+    if path.exists():
+        print(
+                "Found cache file {}. If you want to recompute the result remove it.".format(str(path)) 
+        )
+        return read(path)
+    else:
+        pp=path.parent
+        if not(pp.exists()): 
+            pp.mkdir(parents=True)
+        return create_and_write(path)
+
 # +
 # For harmonizing timelines and plotting
 # -
@@ -2290,7 +2357,6 @@ def t_min_tmax_full(test_arg_list, # a list of test_args from all models involve
     return (t_min,t_max)
 
 # function find the timesteps corresponding to shared times
-from functools import reduce
 def min_max_index(test_args, # a tuple defined in model-specific test_helpers.py
                   delta_t_val, # iterator time step
                   t_min, # output of t_min_tmax_overlap or t_min_tmax_full
@@ -2846,18 +2912,4 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 ax.plot(times,diff,color="black")
                 ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
                 plot_number+=1 
-
-def read_or_create(
-            path: Path,
-            create_and_write: Callable[[Path],T],
-            read: Callable[[Path],T]
-    ) -> T:
-    print('type',type(path))
-    if path.exists():
-        print(
-                "Found cache file {}. If you want to recompute the result remove it.".format(str(path)) 
-        )
-        return read(path)
-    else:
-        return create_and_write(path)
 
