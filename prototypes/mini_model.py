@@ -11,7 +11,7 @@ from bgc_md2.resolve.mvars import (
 
 # +
 # obtain dictionary of symbols for equations from txt file
-params_in = open(r"C:\Users\ekutschera\Desktop\Matrix\sym_dict.txt", 'r')
+params_in = open(r"mini_model_sym_dict.txt", 'r')
 sym_dict = {}
 for line in params_in:
     k, v = line.strip().split('=')
