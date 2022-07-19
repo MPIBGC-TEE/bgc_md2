@@ -63,7 +63,7 @@ from bgc_md2.resolve.mvars import (
 model_names={
     "yz_jules": "JULES",
     "kv_visit2": "VISIT",
-    #"jon_yib": "YIBs",
+    "jon_yib": "YIBs",
     "kv_ft_dlem": "DLEM",
     #"Aneesh_SDGVM":"SDGVM",
     "cj_isam": "ISAM",
@@ -96,20 +96,22 @@ test_arg_list=gh.get_test_arg_list(model_folders)
 
 # ### Plots of traceable components
 
-var_names={
-    "x": "X and X_c",
-    "x_p": "X_p",
-    "u": "C input",
-    "rt": "Residence time",
-}
-gh.plot_components_combined(model_names=model_names,
-                        test_arg_list=test_arg_list,   
-                        var_names=var_names,
-                        delta_t_val=delta_t_val,
-                        model_cols=model_cols,
-                        part=1,
-                        averaging=12  
-                       )
+# +
+# var_names={
+#     "x": "X and X_c",
+#     "x_p": "X_p",
+#     "u": "C input",
+#     "rt": "Residence time",
+# }
+# gh.plot_components_combined(model_names=model_names,
+#                         test_arg_list=test_arg_list,   
+#                         var_names=var_names,
+#                         delta_t_val=delta_t_val,
+#                         model_cols=model_cols,
+#                         part=1,
+#                         averaging=12  
+#                        )
+# -
 
 gh.plot_x_xc(model_names=model_names,
              test_arg_list=test_arg_list,
@@ -183,28 +185,37 @@ gh.plot_normalized_rt(model_names=model_names,
                      overlap=True
                      )
 
-# ## Below are plots in development
+# ## Contribution of Residense Time and C Input to the Differences in C Storage Capacity
+
+count_rt=0
+count_u=0
+for i in range(len(model_folders)-1):
+    j=i
+    while j<len(model_folders)-1:
+        j+=1
+        mf_1=model_folders[i]
+        mf_2=model_folders[j]
+        ta_1=gh.test_args(mf_1)
+        ta_2=gh.test_args(mf_2)
+        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+        rt,u=gh.plot_attribute_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+        count_rt=count_rt+rt
+        count_u=count_u+u
 
 # +
-####################################################
-## plot delta_x_c delta_u and delta_rt for all possible pairs of models 
-####################################################
+overall_rt_perc=count_rt/(count_rt+count_u)*100
+overall_u_perc=count_u/(count_rt+count_u)*100
+# Pie chart, where the slices will be ordered and plotted counter-clockwise:
+labels = 'RT', 'u'
+sizes = [overall_rt_perc, overall_u_perc]
 
-# define models to compare as a dictionary (folder name : model name)
-# model_names={ 
-#     "yz_jules": "JULES",
-#     "kv_visit2": "VISIT",
-#     "yz_jules3": "JULES_3", # placeholder for a 3rd model - copy folder yz_jules and call it "yz_jules2" to run this
-# }
-
-# var_names={
-#         'x_c':'Carbon Storage Capacity (X_c)',
-#         'u':'Carbon Input (NPP)',
-#         'rt':'Residense Time (RT)'
-#     } 
-                
-# gh.plot_diff(model_names=model_names, var_names=var_names, delta_t_val=delta_t_val, part=1, averaging=1)
+fig1=plt.figure(figsize=(8,8))
+ax1 = fig1.subplots()
+ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+        shadow=True, startangle=90)
+ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+ax1.set_title('Average Contribution of Residense Time (RT) and C Input (u) Among All Pairs of Models')
+plt.show()
 # -
-
 
 

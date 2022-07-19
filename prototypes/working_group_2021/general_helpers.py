@@ -118,7 +118,7 @@ def globalMask()->'CoordMask':
             index_mask=mask,
             tr=globalMaskTransformers(mask)
     )
-            
+
 
 def identicalTransformers():
     """ This function can be used if the grid used by the model has 
@@ -1882,8 +1882,8 @@ def combine_masks(coord_masks: List['CoordMask']):
         project_2,#(acc,el)
         sorted(coord_masks,key=k ) # we want the finest grid as the last
     )
-    
-#def combine_masks(masks,i2cs):
+
+# def combine_masks(masks,i2cs):
 #    m1,m2 = masks
 #    i2c_1,i2c_2 = i2cs
 #    
@@ -1917,7 +1917,7 @@ def combine_masks(coord_masks: List['CoordMask']):
 #    )
 #
 #
-#def open_interval_intersect(i1,i2):
+# def open_interval_intersect(i1,i2):
 #    min1,max1=i1
 #    min2,max2=i2
 #    mid2=(min2+max2)/2
@@ -1929,7 +1929,7 @@ def combine_masks(coord_masks: List['CoordMask']):
 #        min1 < mid2 and mid2< max1
 #    )
 #
-#def pixel_intersect(b1,b2):
+# def pixel_intersect(b1,b2):
 #    return (
 #        open_interval_intersect(
 #            (b1.min_lat,b1.max_lat),
@@ -1942,7 +1942,7 @@ def combine_masks(coord_masks: List['CoordMask']):
 #        )
 #    )
 #
-#def project(s,i2c,common_mask):
+# def project(s,i2c,common_mask):
 #    mask=np.zeros(s)
 #    
 #    lat_0,lon_0=i2c(0,0)
@@ -2121,7 +2121,7 @@ class CoordMask():
                     range(n_lons)
                 )
         )
-        
+
 
 
 def project_2(
@@ -2912,4 +2912,80 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 ax.plot(times,diff,color="black")
                 ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
                 plot_number+=1 
+
+
+def plot_attribute_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
+    if part<0 | part >1: 
+        raise Exception('Invalid partitioning in plot_diff: use part between 0 and 1')
+    #ta_1=test_args(mf_1)
+    #ta_2=test_args(mf_2)
+    test_arg_list=[ta_1,ta_2]
+
+    itr_1=traceability_iterator_instance(mf_1,ta_1,delta_t_val)
+    itr_2=traceability_iterator_instance(mf_2,ta_2,delta_t_val)
+
+    start_min_1,stop_max_1=min_max_index(ta_1,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+    start_min_2,stop_max_2=min_max_index(ta_2,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+
+    # if we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_1,stop_1 = int(stop_max_1-(stop_max_1-start_min_1)*part), stop_max_1
+    start_2,stop_2 = int(stop_max_2-(stop_max_2-start_min_2)*part), stop_max_2
+    times_1=times_in_days_aD(ta_1,delta_t_val)[start_1:stop_1]/days_per_year()
+    times_2=times_in_days_aD(ta_2,delta_t_val)[start_2:stop_2]/days_per_year()
+    vals_1=itr_1[start_1:stop_1]
+    vals_2=itr_2[start_2:stop_2]
+
+    x_c_1=interp1d(times_1,vals_1.x_c)
+    x_c_2=interp1d(times_2,vals_2.x_c)
+    u_1=interp1d(times_1,vals_1.u)
+    u_2=interp1d(times_2,vals_2.u)
+    rt_1=interp1d(times_1,vals_1.rt)
+    rt_2=interp1d(times_2,vals_2.rt)
+
+    # common plot times
+    start=max(times_1.min(),times_2.min())
+    stop=min(times_1.max(),times_2.max())
+    nstep=min(len(times_1),len(times_2))
+    times=np.linspace(start,stop,nstep)
+    
+    # values for plots
+    delta_u=u_1(times)-u_2(times)
+    delta_rt=rt_1(times)-rt_2(times)
+    delta_x_c=x_c_1(times)-x_c_2(times)
+
+    rt_contrib=delta_rt*u_1(times)
+    u_contrib=delta_u*rt_1(times)
+    percent_rt=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib))*100
+    percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib))*100
+
+    fig=plt.figure(figsize=(17,8))
+    axs=fig.subplots(1,2)
+    ax=axs[0]
+    ax.plot(
+        times[0:60],                    
+        percent_rt[0:60],            
+        label="contribution of RT",
+        #color=model_cols[mf],
+    )
+    ax.plot(
+        times[0:60],                    
+        percent_u[0:60],            
+        label="contribution of u",
+        #color=model_cols[mf],
+    )
+    ax.legend()
+    ax.set_title('Contribution of Residense Time (RT) and C Input (u) Over Time')
+    ax.set_ylabel('% contribution')
+    ax.grid()
+
+    ax1=axs[1]
+    ax1.set_title('Average Contribution of RT and u')
+    labels = 'RT', 'U'
+    sizes = [np.mean(percent_rt), np.mean(percent_u)]
+    ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+        shadow=True, startangle=90)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.show()
+    
+    return (np.mean(percent_rt), np.mean(percent_u))
 
