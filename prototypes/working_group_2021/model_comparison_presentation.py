@@ -195,8 +195,8 @@ for i in range(len(model_folders)-1):
         j+=1
         mf_1=model_folders[i]
         mf_2=model_folders[j]
-        ta_1=gh.test_args(mf_1)
-        ta_2=gh.test_args(mf_2)
+        ta_1=test_arg_list[i]
+        ta_2=test_arg_list[j]
         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
         rt,u=gh.plot_attribute_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
         count_rt=count_rt+rt
