@@ -44,6 +44,12 @@ sym_dict={
     "WOOD3C": "C in dead coarse roots component of forest system",
     "cprodc_A": "fraction of Gpp that goes to the above ground part",
     "cprodc_B": "fraction of Gpp that goes to the below ground part",
+    "dec1_1":"",
+    "defac_0": "",
+    "strlig_1":"",
+    "fallrt": "",
+    "dec1_2": "",
+    "strlig_2": "",
 }
 
 # +
@@ -133,7 +139,7 @@ mass_balance_equation(mvs)
 from bgc_md2.models.Parton1987SoilSciSocAmJ.source_by_name import mvs as mvs_century
 
 
-mvs.computable_mvar_types
+mvs.computable_mvar_types()
 
 mvs_century.get_InputTuple()
 
