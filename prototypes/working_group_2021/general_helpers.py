@@ -2914,11 +2914,9 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 plot_number+=1 
 
 
-def plot_attribute_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
+def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     if part<0 | part >1: 
         raise Exception('Invalid partitioning in plot_diff: use part between 0 and 1')
-    #ta_1=test_args(mf_1)
-    #ta_2=test_args(mf_2)
     test_arg_list=[ta_1,ta_2]
 
     itr_1=traceability_iterator_instance(mf_1,ta_1,delta_t_val)
@@ -2953,39 +2951,57 @@ def plot_attribute_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     delta_rt=rt_1(times)-rt_2(times)
     delta_x_c=x_c_1(times)-x_c_2(times)
 
-    rt_contrib=delta_rt*u_1(times)
-    u_contrib=delta_u*rt_1(times)
-    percent_rt=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib))*100
-    percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib))*100
+    rt_contrib=delta_rt*(u_1(times)-delta_u/2)
+    u_contrib=delta_u*(rt_1(times)-delta_rt/2)
+    combined_contrib=delta_x_c-rt_contrib-u_contrib
 
+    percent_rt=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    percent_combined=abs(combined_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    
     fig=plt.figure(figsize=(17,8))
     axs=fig.subplots(1,2)
     ax=axs[0]
     ax.plot(
-        times[0:60],                    
-        percent_rt[0:60],            
-        label="contribution of RT",
-        #color=model_cols[mf],
+        #times[60*12:60*12+36],                    
+        #rt_contrib[60*12:60*12+36],            
+        avg_timeline(times, 12),
+        avg_timeline(percent_rt, 12),
+        label="contribution of $\Delta$ RT",
+        color="darkorange",
     )
     ax.plot(
-        times[0:60],                    
-        percent_u[0:60],            
-        label="contribution of u",
-        #color=model_cols[mf],
+        #times[60*12:60*12+36],                    
+        #u_contrib[60*12:60*12+36],            
+        avg_timeline(times, 12),
+        avg_timeline(percent_u, 12),
+        label="contribution of $\Delta$ u",
+        color="green",
     )
+    ax.plot(
+        #times[60*12:60*12+36],                    
+        #u_contrib[60*12:60*12+36],            
+        avg_timeline(times, 12),
+        avg_timeline(percent_combined, 12),
+        label="contribution of $\Delta$ u * $\Delta$ RT",
+        color="grey",
+    )
+    
     ax.legend()
-    ax.set_title('Contribution of Residense Time (RT) and C Input (u) Over Time')
-    ax.set_ylabel('% contribution')
+    ax.set_title('Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Over Time')
+    ax.set_ylabel('%')
     ax.grid()
-
+    
     ax1=axs[1]
     ax1.set_title('Average Contribution of RT and u')
-    labels = 'RT', 'U'
-    sizes = [np.mean(percent_rt), np.mean(percent_u)]
+    labels = '$\Delta$ RT', '$\Delta$ U * $\Delta$ RT', '$\Delta$ U'
+    sizes = [np.mean(percent_rt), np.mean(percent_combined), np.mean(percent_u)]
     ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
-        shadow=True, startangle=90)
+        startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     plt.show()
     
-    return (np.mean(percent_rt), np.mean(percent_u))
+    return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined))
+
+
 
