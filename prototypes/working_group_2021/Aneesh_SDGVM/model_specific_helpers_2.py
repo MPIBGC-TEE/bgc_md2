@@ -299,6 +299,7 @@ def make_param2res_sym(
     # The iterator does not care if they are estimated or not it only 
     # wants a dictionary containing key: value pairs for all
     # parameters that are not state variables or the symbol for time
+    StartVector=make_StartVector(mvs)
     srm=mvs.get_SmoothReservoirModel()
     model_par_dict_keys=srm.free_symbols.difference(
         [Symbol(str(mvs.get_TimeSymbol()))]+
@@ -312,8 +313,7 @@ def make_param2res_sym(
         epa=EstimatedParameters(*pa)
         # create a startvector for the iterator from both estimated and fixed parameters 
         # The order is important and corresponds to the order of the statevariables
-        # Our namedtuple StartVector takes care of this
-        StartVector=make_StartVector(mvs)
+        # Our namedtuple StartVector takes care of this       
         V_init = StartVector(
             C_leaf = epa.C_leaf_0,
             C_root= cpa.cRoot_0,
@@ -340,13 +340,14 @@ def make_param2res_sym(
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
         func_dict=make_func_dict(mvs,dvs,cpa,epa)
-    
+        
+        delta_t_val=2
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
             par_dict=model_par_dict,
             func_dict=func_dict,
-            delta_t_val = 1
+            delta_t_val = delta_t_val
         )
         
         # Now that we have the iterator we can start to compute.
@@ -367,8 +368,11 @@ def make_param2res_sym(
         cSoils=np.zeros(number_of_years)
         sols=[]
         m_id=0
+        #y_id=0
         dpm=30
-        dpy=30*12
+        #dpy=30*12
+        steps_per_month = int(dpm / delta_t_val)
+        steps_per_year = steps_per_month*12
         for y in range(number_of_years):
             cVeg=0
             cRoot = 0
@@ -378,22 +382,23 @@ def make_param2res_sym(
                 #dpm = days_per_month[ m % 12]  
                 #mra=0
                 mrh=0
-                for d in range(dpm):
+                for d in range(steps_per_month):
                     v = it_sym.__next__()
                     #mra +=v[9,0]
                     V=StartVector(*v)
+                    print(V)
                     cVeg+=float(V.C_leaf+V.C_wood+V.C_root)
                     cRoot+= float(V.C_root)
                     cLitter+=float(V.C_abvstrlit + V.C_abvmetlit + V.C_belowstrlit + V.C_belowmetlit)
                     cSoil+=float(V.C_surface_microbe + V.C_soil_microbe + V.C_slowsom + V.C_passsom)
                     mrh +=V.rh
-                rhs[m_id]=mrh/dpm
+                rhs[m_id]=mrh/steps_per_month
                 m_id+=1
-            cVegs[y]=cVeg/dpy
-            cRoots[y] = cRoot/dpy
-            cLitters[y]= cLitter/dpy 
-            cSoils[y]= cSoil/dpy
-        
+            cVegs[y]=cVeg/steps_per_year
+            cRoots[y] = cRoot/steps_per_year
+            cLitters[y]= cLitter/steps_per_year 
+            cSoils[y]= cSoil/steps_per_year
+            #y_id+= 1
         return Observables(
             cVeg=cVegs,
             cRoot=cRoots,
@@ -411,73 +416,73 @@ from CompartmentalSystems.TimeStepIterator import (
 )
 from copy import copy
 
-def make_daily_iterator_sym(
-        mvs,
-        V_init,
-        par_dict,
-        func_dict,
-        delta_t_val=1
-    ):
-    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict)
-    def numfunc(expr_cont,delta_t_val):
-        # build the discrete expression (which depends on it,delta_t instead of
-        # the continius one that depends on t (TimeSymbol))
-        it=Symbol("it")           #arbitrary symbol for the step index )
-        t=mvs.get_TimeSymbol()
-        delta_t=Symbol('delta_t')
-        expr_disc = expr_cont.subs({t:delta_t*it})
-        return hr.numerical_function_from_expression(
-            expr=expr_disc.subs({delta_t:delta_t_val}),
-            tup=(it, *mvs.get_StateVariableTuple()),
-            parameter_dict=par_dict,
-            func_set=func_dict
-        )
+# def make_daily_iterator_sym(
+        # mvs,
+        # V_init,
+        # par_dict,
+        # func_dict,
+        # delta_t_val=1
+    # ):
+    # B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)
+    # def numfunc(expr_cont,delta_t_val):
+        # # build the discrete expression (which depends on it,delta_t instead of
+        # # the continius one that depends on t (TimeSymbol))
+        # it=Symbol("it")           #arbitrary symbol for the step index )
+        # t=mvs.get_TimeSymbol()
+        # delta_t=Symbol('delta_t')
+        # expr_disc = expr_cont.subs({t:delta_t*it})
+        # return hr.numerical_function_from_expression(
+            # expr=expr_disc.subs({delta_t:delta_t_val}),
+            # tup=(it, *mvs.get_StateVariableTuple()),
+            # parameter_dict=par_dict,
+            # func_set=func_dict
+        # )
 
-    sv=mvs.get_StateVariableTuple()
-    n=len(sv)
-    # build an array in the correct order of the StateVariables which in our case is already correct
-    # since V_init was built automatically but in case somebody handcrafted it and changed
-    # the order later in the symbolic formulation....
-    V_arr=np.array(
-        [V_init.__getattribute__(str(v)) for v in sv]+
-        #[V_init.ra,V_init.rh]
-        [V_init.rh]
-    ).reshape(n+1,1) #reshaping is neccessary for matmux
-    numOutFluxesBySymbol={
-        k:numfunc(expr_cont,delta_t_val=delta_t_val)
-        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
-    }
+    # sv=mvs.get_StateVariableTuple()
+    # n=len(sv)
+    # # build an array in the correct order of the StateVariables which in our case is already correct
+    # # since V_init was built automatically but in case somebody handcrafted it and changed
+    # # the order later in the symbolic formulation....
+    # V_arr=np.array(
+        # [V_init.__getattribute__(str(v)) for v in sv]+
+        # #[V_init.ra,V_init.rh]
+        # [V_init.rh]
+    # ).reshape(n+1,1) #reshaping is neccessary for matmux
+    # numOutFluxesBySymbol={
+        # k:numfunc(expr_cont,delta_t_val=delta_t_val)
+        # for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+    # }
 
-    def f(it,V):
-        X = V[0:n]
-        b = u_func(it,X)
-        B = B_func(it,X)
-        outfluxes = B @ X
-        X_new = X + b + outfluxes
-        rh = np.sum(
-            [
-                numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in [
-                    "C_abvstrlit",
-                    "C_abvmetlit",
-                    "C_belowstrlit",
-                    "C_belowmetlit",
-                    "C_surface_microbe",
-                    "C_soil_microbe",
-                    "C_slowsom",
-                    "C_passsom"
-                ]
-                if Symbol(k) in numOutFluxesBySymbol.keys()
-            ]
-        )
+    # def f(it,V):
+        # X = V[0:n]
+        # b = u_func(it,X)
+        # B = B_func(it,X)
+        # outfluxes = B @ X
+        # X_new = X + b + outfluxes
+        # rh = np.sum(
+            # [
+                # numOutFluxesBySymbol[Symbol(k)](it,*X)
+                # for k in [
+                    # "C_abvstrlit",
+                    # "C_abvmetlit",
+                    # "C_belowstrlit",
+                    # "C_belowmetlit",
+                    # "C_surface_microbe",
+                    # "C_soil_microbe",
+                    # "C_slowsom",
+                    # "C_passsom"
+                # ]
+                # if Symbol(k) in numOutFluxesBySymbol.keys()
+            # ]
+        # )
 
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
-        return V_new
+        # V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
+        # return V_new
 
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
-    )
+    # return TimeStepIterator2(
+        # initial_values=V_arr,
+        # f=f,
+    # )
 
 
 def make_iterator_sym(
@@ -510,21 +515,36 @@ def make_iterator_sym(
         X_new = X + b + B @ X
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         
-        rh_flux=[
-            numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
-            for k in [
-                "C_abvstrlit",
-                "C_abvmetlit",
-                "C_belowstrlit",
-                "C_belowmetlit",
-                "C_surface_microbe",
-                "C_soil_microbe",
-                "C_slowsom",
-                "C_passsom"] 
-            if Symbol(k) in numOutFluxesBySymbol.keys()
-        ]
+        # rh_flux=[
+            # numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+            # for k in [
+                # "C_abvstrlit",
+                # "C_abvmetlit",
+                # "C_belowstrlit",
+                # "C_belowmetlit",
+                # "C_surface_microbe",
+                # "C_soil_microbe",
+                # "C_slowsom",
+                # "C_passsom"] 
+            # if Symbol(k) in numOutFluxesBySymbol.keys()
+        # ]
         
-        rh = np.array(rh_flux).sum()
+        # rh = np.array(rh_flux).sum()
+        rh = np.sum(
+            [
+                numOutFluxesBySymbol[Symbol(k)](it,*X)
+                for k in [
+                    "C_abvstrlit",
+                    "C_abvmetlit",
+                    "C_belowstrlit",
+                    "C_belowmetlit",
+                    "C_surface_microbe",
+                    "C_soil_microbe",
+                    "C_slowsom",
+                    "C_passsom"]
+                if Symbol(k) in numOutFluxesBySymbol.keys()
+            ]
+        )
         
         V_new = np.concatenate(
             (
@@ -589,70 +609,70 @@ def make_param_filter_func(
     return isQualified
 
 
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    par_dict={
-    Symbol(k): v for k,v in {
-         "beta_leaf":epa.beta_leaf,
-         "beta_wood":epa.beta_wood,
-         "r_C_leaf2abvstrlit":epa.r_C_leaf2abvstrlit,
-         "r_C_abvmetlit2surface_microbe":epa.r_C_abvmetlit2surface_microbe,
-         "r_C_abvstrlit2slowsom":epa.r_C_abvstrlit2slowsom,
-         "r_C_abvstrlit2surface_microbe":epa.r_C_abvstrlit2surface_microbe,
-         "r_C_belowmetlit2soil_microbe":epa.r_C_belowmetlit2soil_microbe,
-         "r_C_belowstrlit2slowsom":epa.r_C_belowstrlit2slowsom,
-         "r_C_belowstrlit2soil_microbe":epa.r_C_belowstrlit2soil_microbe,
-         "r_C_leaf2abvmetlit":epa.r_C_leaf2abvmetlit,
-         "r_C_passsom2soil_microbe":epa.r_C_passsom2soil_microbe,
-         "r_C_root2belowmetlit":epa.r_C_root2belowmetlit,
-         "r_C_root2belowstrlit":epa.r_C_root2belowstrlit,
-         "r_C_slowsom2passsom":epa.r_C_slowsom2passsom,
-         "r_C_slowsom2soil_microbe":epa.r_C_slowsom2soil_microbe,
-         "r_C_soil_microbe2passsom":epa.r_C_soil_microbe2passsom,
-         "r_C_soil_microbe2slowsom":epa.r_C_soil_microbe2slowsom,
-         "r_C_surface_microbe2slowsom":epa.r_C_surface_microbe2slowsom,
-         "r_C_wood2abvmetlit":epa.r_C_wood2abvmetlit,
-         "r_C_wood2abvstrlit":epa.r_C_wood2abvstrlit,
-         "r_C_abvstrlit_rh":epa.r_C_abvstrlit_rh,
-         "r_C_abvmetlit_rh":epa.r_C_abvmetlit_rh,
-         "r_C_belowstrlit_rh":epa.r_C_belowstrlit_rh,
-         "r_C_belowmetlit_rh":epa.r_C_belowmetlit_rh,
-         "r_C_surface_microbe_rh":epa.r_C_surface_microbe_rh,
-         "r_C_slowsom_rh":epa.r_C_slowsom_rh,
-         "r_C_passsom_rh":epa.r_C_passsom_rh,
-         "r_C_soil_microbe_rh":epa.r_C_soil_microbe_rh,
-    }.items()
-}
-    X_0_dict={
-        "C_leaf":  epa.C_leaf_0,
-        "C_root" :cpa.cRoot_0,
-        "C_wood"  :cpa.cVeg_0 - epa.C_leaf_0 - cpa.cRoot_0,
-        "C_abvstrlit" : epa.C_abvstrlit_0,
-        "C_abvmetlit" : epa.C_abvmetlit_0,
-        "C_belowstrlit" : epa.C_blwstrlit_0,
-        "C_belowmetlit" : cpa.cLitter_0 - epa.C_abvstrlit_0 - epa.C_abvmetlit_0 - epa.C_blwstrlit_0,
-        "C_surface_microbe" :epa.C_surfacemic_0,
-        "C_soil_microbe" : epa.C_soilmic_0,
-        "C_slowsom" : epa.C_slow_0,
-        "C_passsom" :cpa.cSoil_0 - epa.C_surfacemic_0 - epa.C_soilmic_0 - epa.C_slow_0,
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(11,1)
-    fd=make_func_dict(mvs,dvs)
-    V_init=gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
+    # par_dict={
+    # Symbol(k): v for k,v in {
+         # "beta_leaf":epa.beta_leaf,
+         # "beta_wood":epa.beta_wood,
+         # "r_C_leaf2abvstrlit":epa.r_C_leaf2abvstrlit,
+         # "r_C_abvmetlit2surface_microbe":epa.r_C_abvmetlit2surface_microbe,
+         # "r_C_abvstrlit2slowsom":epa.r_C_abvstrlit2slowsom,
+         # "r_C_abvstrlit2surface_microbe":epa.r_C_abvstrlit2surface_microbe,
+         # "r_C_belowmetlit2soil_microbe":epa.r_C_belowmetlit2soil_microbe,
+         # "r_C_belowstrlit2slowsom":epa.r_C_belowstrlit2slowsom,
+         # "r_C_belowstrlit2soil_microbe":epa.r_C_belowstrlit2soil_microbe,
+         # "r_C_leaf2abvmetlit":epa.r_C_leaf2abvmetlit,
+         # "r_C_passsom2soil_microbe":epa.r_C_passsom2soil_microbe,
+         # "r_C_root2belowmetlit":epa.r_C_root2belowmetlit,
+         # "r_C_root2belowstrlit":epa.r_C_root2belowstrlit,
+         # "r_C_slowsom2passsom":epa.r_C_slowsom2passsom,
+         # "r_C_slowsom2soil_microbe":epa.r_C_slowsom2soil_microbe,
+         # "r_C_soil_microbe2passsom":epa.r_C_soil_microbe2passsom,
+         # "r_C_soil_microbe2slowsom":epa.r_C_soil_microbe2slowsom,
+         # "r_C_surface_microbe2slowsom":epa.r_C_surface_microbe2slowsom,
+         # "r_C_wood2abvmetlit":epa.r_C_wood2abvmetlit,
+         # "r_C_wood2abvstrlit":epa.r_C_wood2abvstrlit,
+         # "r_C_abvstrlit_rh":epa.r_C_abvstrlit_rh,
+         # "r_C_abvmetlit_rh":epa.r_C_abvmetlit_rh,
+         # "r_C_belowstrlit_rh":epa.r_C_belowstrlit_rh,
+         # "r_C_belowmetlit_rh":epa.r_C_belowmetlit_rh,
+         # "r_C_surface_microbe_rh":epa.r_C_surface_microbe_rh,
+         # "r_C_slowsom_rh":epa.r_C_slowsom_rh,
+         # "r_C_passsom_rh":epa.r_C_passsom_rh,
+         # "r_C_soil_microbe_rh":epa.r_C_soil_microbe_rh,
+    # }.items()
+# }
+    # X_0_dict={
+        # "C_leaf":  epa.C_leaf_0,
+        # "C_root" :cpa.cRoot_0,
+        # "C_wood"  :cpa.cVeg_0 - epa.C_leaf_0 - cpa.cRoot_0,
+        # "C_abvstrlit" : epa.C_abvstrlit_0,
+        # "C_abvmetlit" : epa.C_abvmetlit_0,
+        # "C_belowstrlit" : epa.C_blwstrlit_0,
+        # "C_belowmetlit" : cpa.cLitter_0 - epa.C_abvstrlit_0 - epa.C_abvmetlit_0 - epa.C_blwstrlit_0,
+        # "C_surface_microbe" :epa.C_surfacemic_0,
+        # "C_soil_microbe" : epa.C_soilmic_0,
+        # "C_slowsom" : epa.C_slow_0,
+        # "C_passsom" :cpa.cSoil_0 - epa.C_surfacemic_0 - epa.C_soilmic_0 - epa.C_slow_0,
+    # }
+    # X_0= np.array(
+        # [
+            # X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        # ]
+    # ).reshape(11,1)
+    # fd=make_func_dict(mvs,dvs)
+    # V_init=gh.make_InitialStartVectorTrace(
+            # X_0,mvs,
+            # par_dict=par_dict,
+            # func_dict=fd
+    # )
+    # it_sym_trace = gh.make_daily_iterator_sym_trace(
+        # mvs,
+        # V_init=V_init,
+        # par_dict=par_dict,
+        # func_dict=fd
+    # )
+    # return it_sym_trace
 
 
 def numeric_X_0(mvs,dvs,cpa,epa):
