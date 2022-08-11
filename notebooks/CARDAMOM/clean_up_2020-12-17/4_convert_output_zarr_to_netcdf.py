@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.6.0
+#       jupytext_version: 1.11.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -122,12 +122,12 @@ xs_rel_err_da = xs_abs_err_da/xs_da * 100
 # age moment vectors
 mean_pool_age_vector_da = data_da[:, :, :, :, 1, :]
 pool_age_moment_vector_2_da = data_da[:, :, :, :, 2, :]
-pool_age_sd_vector_da = da.sqrt(pool_age_moment_vector_2_da)
+pool_age_sd_vector_da = da.sqrt(pool_age_moment_vector_2_da - mean_pool_age_vector_da**2)
 
 # system age moments
 mean_system_age_da = (solution_da * mean_pool_age_vector_da).sum(-1) / solution_da.sum(-1)
 system_age_moment_2_da = (solution_da * pool_age_moment_vector_2_da).sum(-1) / solution_da.sum(-1)
-system_age_sd_da = da.sqrt(system_age_moment_2_da)
+system_age_sd_da = da.sqrt(system_age_moment_2_da - mean_system_age_da**2)
 
 ## pool age median and quantiles
 #pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
@@ -150,7 +150,7 @@ elif model_type == "discrete":
     btt_moment_2_da = (acc_net_external_output_vector_da * pool_age_moment_vector_2_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
 else:
     raise(TypeError("unknown model type '%s'" % model_type))
-btt_sd_da = np.sqrt(btt_moment_2_da)
+btt_sd_da = np.sqrt(btt_moment_2_da - mean_btt_da**2)
 
 # backward transit time median and quantiles
 btt_median_da = da.from_zarr(str(project_path.joinpath("btt_median")))
