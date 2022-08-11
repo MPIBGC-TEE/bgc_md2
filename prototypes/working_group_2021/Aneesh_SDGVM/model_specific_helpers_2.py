@@ -341,7 +341,7 @@ def make_param2res_sym(
         # could be build from estimated parameters and would have to live here...
         func_dict=make_func_dict(mvs,dvs,cpa,epa)
         
-        delta_t_val=2
+        delta_t_val=1
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
