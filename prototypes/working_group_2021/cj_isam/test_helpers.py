@@ -1,6 +1,7 @@
 # this file provides some variables for testing.
 import json 
 import numpy as np
+import netCDF4 as nc
 from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
@@ -17,8 +18,12 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_0",
             "epa_min",
             "epa_max",
+            "epa_opt",
             "cpa",
-            "obs_arr"
+            "lats",
+            "lons",
+            "obs_arr",
+            "start_date"
         ]
     )
     par_dict={
@@ -27,12 +32,12 @@ def make_test_args(conf_dict,msh,mvs):
             "beta_AGWT": 0.3,
             "beta_TR": 0.10000000000000003,
             "beta_GVF": 0.15,
-            "beta_GVR": 0.15,
-            "r_C_NWT_rh": 0,
-            "r_C_AGWT_rh": 0,
-            "r_C_TR_rh": 0,
-            "r_C_GVF_rh": 0,
-            "r_C_GVR_rh": 0,
+            #"beta_GVR": 0.15,
+            #"r_C_NWT_rh": 0,
+            #"r_C_AGWT_rh": 0,
+            #"r_C_TR_rh": 0,
+            #"r_C_GVF_rh": 0,
+            #"r_C_GVR_rh": 0,
             "r_C_AGML_rh": 0.00678082191780822,
             "r_C_AGSL_rh": 0.0354794520547945,
             "r_C_AGMS_rh": 0.00800000000000000,
@@ -63,7 +68,7 @@ def make_test_args(conf_dict,msh,mvs):
             "r_C_SHMS_2_C_BGMS": 1.47945205479452e-5
         }.items()
     }
-    svs,dvs=msh.get_example_site_vars(dataPath=Path(conf_dict["dataPath"]))
+    svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
     obs_arr= np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
     func_dict={
         Function(k):v
@@ -148,6 +153,30 @@ def make_test_args(conf_dict,msh,mvs):
         C_YHMS_0=svs_0.cSoil,
         C_SHMS_0=svs_0.cSoil,
     )
+    epa_opt=msh.EstimatedParameters(
+        fwt=0.5907770914828289, 
+        fgv=0.10708374044873868, 
+        fco=0.9502719613629499, 
+        fml=0.6985590765466911, 
+        fd=0.8108017779961694, 
+        k_C_NWT=0.0018600810916478165, 
+        k_C_AGWT=0.00017354142452106252, 
+        k_C_TR=0.00016065843641210772, 
+        k_C_GVF=0.00022102017216433633, 
+        k_C_GVR=0.00017926856125131916, 
+        f_C_AGSL_2_C_AGMS=0.20853426509202325, 
+        f_C_BGRL_2_C_SHMS=0.24638112975102788, 
+        C_NWT_0=svs_0.cVeg * 0.04,#0.39641121927763323, 
+        C_AGWT_0=svs_0.cVeg * 0.4,#1.0098899271611432, 
+        C_GVF_0=svs_0.cVeg * 0.06,#0.1784893310039542, 
+        C_GVR_0=svs_0.cVeg * 0.07,#2.1680315400436174, 
+        C_AGML_0=svs_0.cLitter * 0.17,#0.1251689278629053, 
+        C_AGSL_0=svs_0.cLitter * 0.06,#0.005800531050824444, 
+        C_BGDL_0=svs_0.cLitter * 0.11,#0.0484130929152639, 
+        C_AGMS_0=svs_0.cSoil * 0.006,#0.10074331291791151, 
+        C_YHMS_0=svs_0.cSoil * 0.018,#0.5036084965444287, 
+        C_SHMS_0=svs_0.cSoil * 0.975,#8.080067914918454,
+)
     
     cpa = msh.Constants(
         cVeg_0=svs_0.cVeg,
@@ -156,11 +185,11 @@ def make_test_args(conf_dict,msh,mvs):
         npp_0=dvs.npp[0] * 86400,   # kg/m2/s kg/m2/day
         rh_0=svs_0.rh * 86400,   # kg/m2/s kg/m2/day
         ra_0=svs_0.ra * 86400,   # kg/m2/s kg/m2/day
-        r_C_NWT_rh=0,
-        r_C_AGWT_rh=0,
-        r_C_TR_rh=0,
-        r_C_GVF_rh=0,
-        r_C_GVR_rh=0,
+        #r_C_NWT_rh=0,
+        #r_C_AGWT_rh=0,
+        #r_C_TR_rh=0,
+        #r_C_GVF_rh=0,
+        #r_C_GVR_rh=0,
         r_C_AGML_rh=0.55*4.5/365,
         r_C_AGSL_rh=0.7*18.5/365,
         r_C_AGMS_rh=0.4*7.3/365,
@@ -194,6 +223,7 @@ def make_test_args(conf_dict,msh,mvs):
         ra=svs_0.ra*86400,   # kg/m2/s kg/m2/day;,
         rh=svs_0.rh*86400   # kg/m2/s kg/m2/day;
     )
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("ISAM_S2_cLitter.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
@@ -204,8 +234,12 @@ def make_test_args(conf_dict,msh,mvs):
         epa_0=epa_0,
         epa_min=epa_min,
         epa_max=epa_max,
+        epa_opt=epa_opt,
         cpa=cpa,
-        obs_arr=obs_arr
+        lats=ds.variables["lat"][:],
+        lons=ds.variables["lon"][:],
+        obs_arr=obs_arr,
+        start_date=msh.start_date()        
     )
 
 

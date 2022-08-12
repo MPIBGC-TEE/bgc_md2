@@ -14,8 +14,42 @@ from typing import Callable
 from functools import reduce
 
 sys.path.insert(0,'..') # necessary to import general_helpers
-from general_helpers import monthly_to_yearly #, month_2_day_index
 import general_helpers as gh
+
+def spatial_mask(dataPath)->'CoorMask':
+    mask=nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        mask,
+        sym_tr
+    )
+
+def make_model_coord_transforms():
+    """ This function can is used to achieve a target grid LAT,LON with
+    - LAT ==   0 at the equator with 
+    - LAT == -90 at the south pole,
+    - LAT== +90 at the north pole,
+    - LON ==   0 at Greenich and 
+    - LON is counted positive eastwards from -180 to 180
+    """
+    return gh.CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: lon,
+            LON2lon=lambda LON: LON,
+    )
+    
+
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = 89.75,
+    lon_0 = -179.75,
+    step_lat = -0.5,
+    step_lon = 0.5,
+ )
 
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
@@ -217,20 +251,21 @@ def get_global_mean_vars(dataPath):
         )
 
     else:
-        # we now check if any of the arrays has a time lime containing nan values 
-        # APART FROM values that are already masked by the fillvalue
-        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
-        def f(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
-            #scale fluxes vs pools
-            var =ds.variables[vn]
-            return gh.get_nan_pixel_mask(var)
+        gm=gh.globalMask()
+        # load an example file with mask
+        template = nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        gcm=gh.project_2(
+                source=gm,
+                target=gh.CoordMask(
+                    index_mask=np.zeros_like(template),
+                    tr=gh.SymTransformers(
+                        ctr=make_model_coord_transforms(),
+                        itr=make_model_index_transforms()
+                    )
+                )
+        )
 
-        masks=[ f(name)    for name in names ]
-        # We compute the common mask so that it yields valid pixels for ALL variables 
-        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
-        print("computing means, this may also take some minutes...")
+        print("computing means, this may take some minutes...")
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(nc_file_name(vn))
@@ -246,7 +281,8 @@ def get_global_mean_vars(dataPath):
             gm=gh.global_mean_var(
                     lats,
                     lons,
-                    combined_mask,
+                    gcm.index_mask,
+                    #combined_mask,
                     var
             )
             gh.write_global_mean_cache(
@@ -273,48 +309,53 @@ def get_global_mean_vars(dataPath):
         )
 
 
-#def make_npp_func(dvs):
-#    def func(day):
-#        month=gh.day_2_month_index(day)
-#        # kg/m2/s kg/m2/day;
-#        return (dvs.npp[month]) #* 86400
-#
-#    return func
-#
-#
-#def make_xi_func(dvs, epa):
-#    def xi_func(day):
-#        month=gh.day_2_month_index(day)
-#        TS = (dvs.tas[month]-273.15)# * 0.5 # convert from Kelvin to Celcius 
-#        TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-#        if TS > epa.T_0: 
-#            xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])  
-#        else: 
-#            xi_out=0
-#        return(xi_out)
-#        #return (dvs.xi[month])
-#        #return 1.0 # preliminary fake for lack of better data...
-#    return xi_func
-#
-#
-#def make_func_dict(mvs,dvs,cpa,epa):
-#    return {
-#        "NPP": make_npp_func(dvs),
-#        "xi": make_xi_func(dvs, epa)
-#    }
-def make_func_dict(mvs, dvs, cpa, epa):
 
+# +
+# def make_sim_day_2_day_since_a_D(conf_dict):
+#     # this function is extremely important to syncronise our results
+#     # because our data streams start at different times the first day of 
+#     # a simulation day_ind=0 refers to different dates for different models
+#     # we have to check some assumptions on which this calculation is based
+#     # for jules the data points are actually spaced monthly with different numbers of days
+#     ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
+#     times = ds.variables["time"]
+
+#     # we have to check some assumptions on which this calculation is based
+
+#     tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+#     td = int(tm *31)  #in days since_1860-01-01 
+#     #NOT assuming a 30 day month...
+#     import datetime as dt
+#     ad = dt.date(1, 1, 1) # first of January of year 1 
+#     sd = dt.date(1860, 1, 1)
+#     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    
+
+#     def f(day_ind: int)->int:
+#         return day_ind+td_aD
+
+#     return f
+# -
+
+# # Define start and end dates of the simulation
+# import datetime as dt
+# start_date=dt.date(1860, 1, 16)
+# end_date = dt.date(2019, 12, 16)
+
+
+
+def make_func_dict(mvs, dvs, cpa, epa):
     def npp_func(day):
-        month=gh.day_2_month_index_vm(day)
+        month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month]) #* 86400
 
     def tas_num(day):
-        month=gh.day_2_month_index_vm(day)
+        month=gh.day_2_month_index(day)
         return dvs.tas[month]
         
     def mrso_num(day):
-        month=gh.day_2_month_index_vm(day)
+        month=gh.day_2_month_index(day)
         return dvs.mrso[month]
         
     f_d={
@@ -865,35 +906,6 @@ def make_param_filter_func(
     return isQualified
 
 
-def make_sim_day_2_day_since_a_D(conf_dict):
-    # this function is extremely important to syncronise our results
-    # because our data streams start at different times the first day of 
-    # a simulation day_ind=0 refers to different dates for different models
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced monthly with different numbers of days
-    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
-    times = ds.variables["time"]
-
-    # we have to check some assumptions on which this calculation is based
-
-    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
-    td = int(tm *31)  #in days since_1860-01-01 
-    #NOT assuming a 30 day month...
-    import datetime as dt
-    ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(1860, 1, 1)
-    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
-
-    def f(day_ind: int)->int:
-        return day_ind+td_aD
-
-    return f
-
-# Define start and end dates of the simulation
-import datetime as dt
-start_date=dt.date(1860, 1, 16)
-end_date = dt.date(2019, 12, 16)
 
 
 def numeric_X_0(mvs,dvs,cpa,epa):
@@ -920,3 +932,29 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     ).reshape(len(X_0_dict),1)
     return X_0
 
+# def days_per_month():
+#    #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+#    dpm= [30 for i in range(12)]
+#    return dpm
+
+
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_gpp.nc")))
+    #times = ds.variables["time"]
+    #tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    #td = int(tm *30)  #in days since_1860-01-01 
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(1860, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1860, 
+        month=1,
+        day=1
+    )

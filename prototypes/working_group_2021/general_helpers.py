@@ -1,4 +1,6 @@
 import numpy as np
+from numpy.lib.function_base import meshgrid
+from scipy import interpolate, sparse
 from tqdm import tqdm
 from typing import Callable, Tuple, Iterable, List
 from functools import reduce, lru_cache
@@ -11,6 +13,7 @@ from frozendict import frozendict
 from importlib import import_module
 import matplotlib.pyplot as plt
 import os
+import inspect
 import datetime as dt
 
 from pathlib import Path
@@ -28,10 +31,142 @@ from bgc_md2.resolve.mvars import (
 )
 #from bgc_md2.helper import bgc_md2_computers
 import bgc_md2.display_helpers as dh
+from typing import TypeVar, Callable, Union, NewType
 
-days_per_year = 365 
-TraceTuple = namedtuple(
-    "TraceTuple",
+T=TypeVar('T')
+#Array=Union(np.ma.core.MaskedArray,np.ndarray)
+NewType('Array',np.ndarray)
+
+boundaries=namedtuple(
+    "boundaries",
+    [
+        "min_lat",
+        "max_lat",
+        "min_lon",
+        "max_lon"
+    ]
+)
+Transformers=namedtuple(
+    "Transformers",
+    [
+        "i2lat",
+        #"i2lat_min_max",
+        #"lat2i",
+        "i2lon",
+        #"i2lon_min_max",
+        #"lon2i",
+    ]
+)
+
+CoordTransformers=namedtuple(
+    "CoordTransformers",
+    [
+        "lat2LAT",
+        "LAT2lat",
+        "lon2LON",
+        "LON2lon"
+    ]
+)
+date=namedtuple(
+    "date",
+    [
+        'year',
+        'month',
+        'day'
+    ]
+)
+def compose_2(
+        f: Callable,
+        g: Callable
+    )-> Callable:
+    """Function composition"""
+    return lambda arg: f(g(arg))
+
+def globalMaskTransformers(mask: np.ndarray)->'SymTransformers':
+    n_lats,n_lons=mask.shape
+    # this functions define how the indices of the combined (all models) mask 
+    # relates to our unified coord system LAT, LON
+    # with -90< LAT < 90 , 0 at equator
+    # and -180 < LON < 180, 0 at Greenwich
+    step_lat = 180.0 / n_lats
+    step_lon = 360.0 / n_lons
+    
+    lat_0 = -90+step_lat/2
+    lon_0 = -180+step_lon/2
+    itr = transform_maker(
+        lat_0,
+        lon_0,
+        step_lat,
+        step_lon,
+    )
+    # here we use the identical transformation
+    ctr=identicalTransformers()
+    return SymTransformers(itr=itr,ctr=ctr)
+
+def globalMask()->'CoordMask':
+    # fixme mm 6-20-2022
+    # this should actually be  package data
+    # We create a target 
+    this_dir=os.path.dirname(
+        os.path.abspath(
+            inspect.getfile(inspect.currentframe())
+        )
+    )
+    ds=nc.Dataset(Path(this_dir).joinpath('common_mask.nc'))
+    mask=ds.variables['mask'][:,:].data
+    return CoordMask(
+            index_mask=mask,
+            tr=globalMaskTransformers(mask)
+    )
+
+
+def identicalTransformers():
+    """ This function can be used if the grid used by the model has 
+    - lat ==   0 at the equator with 
+    - lat == -90 at the south pole,
+    - lat == +90 at the north pole,
+    - lon ==   0 at Greenich and 
+    - lon is counted positive eastwards from -180 to 180
+    """
+    return CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: lon,
+            LON2lon=lambda LON: LON,
+    )
+
+class SymTransformers():
+    """as Transformers but with a fixed coord system
+    with 
+    -90 <= lat <= 90 
+    -180 <= lon <= 180
+    lat=0,Equator
+    lon=0,Greenich
+    """
+    def __init__(
+            self,
+            itr: Transformers,
+            ctr: CoordTransformers
+        ):
+        self.i2lat=compose_2(ctr.lat2LAT,itr.i2lat)
+        #self.i2lat_min_max=lambda i: map(ctr.lat2LAT,itr.i2lat_min_max(i))
+        #self.lat2i=compose_2(itr.lat2i,ctr.LAT2lat)
+    
+        self.i2lon=compose_2(ctr.lon2LON,itr.i2lon)
+        #self.i2lon_min_max=lambda i: map(ctr.lon2LON,itr.i2lon_min_max(i))
+        #self.lon2i=compose_2(itr.lon2i,ctr.LON2lon)
+
+
+# def pixel_boundaries(lat,lon,step_lat,step_lon):
+#    return boundaries(
+#        min_lat=lat-step_lat/2,
+#        max_lat=lat+step_lat/2,
+#        min_lon=lon-step_lon/2,
+#        max_lon=lon+step_lon/2
+#    )
+
+_TraceTuple = namedtuple(
+    "_TraceTuple",
      [  
          "X",
 	 "X_p",
@@ -47,6 +182,59 @@ TraceTuple = namedtuple(
          "u",
      ]
 )
+class TraceTuple(_TraceTuple):
+    def averages(
+        self, 
+        partitions
+        ):
+        return self.__class__(
+            *tuple(
+                averaged_1d_array(
+                        self.__getattribute__(name),
+                        partitions
+                )
+                for name in TraceTuple._fields
+        
+            )
+        )
+
+    def __add__(
+            self,
+            other
+        ):
+        """overload + which is useful for averaging"""
+        return self.__class__(
+            *tuple(
+                self.__getattribute__(name)
+                +other.__getattribute__(name)
+                for name in TraceTuple._fields
+        
+            )
+        )
+    def __truediv__(
+            self,
+            number 
+        ):
+        """overload / for scalars  which is useful for averaging"""
+        
+        return self.__class__(
+            *tuple(
+                self.__getattribute__(name)/number
+                for name in TraceTuple._fields
+        
+            )
+        )
+
+    def __eq__(
+            self,
+            other
+        ):
+        """overload == which is useful for tests"""
+        return np.all(
+            self.__getattribute__(name)
+            ==other.__getattribute__(name)
+            for name in TraceTuple._fields
+        )
 
 # some tiny helper functions for module loading
 def mvs(mf):
@@ -747,50 +935,41 @@ def make_jon_cost_func(
         return cost
     return costfunction
 
-def day_2_month_index(d):
-    #this is the trendy version with always 30 days per month
-    return int(d/30)
+def days_per_month():
+    #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    dpm= [30 for i in range(12)]
+    return dpm
 
-# def month_2_day_index(ns):
-#    """ computes the index of the day at the end of the month n in ns
-#    this works on vectors """
-#    return 30*ns
+def days_per_year():
+    return sum(days_per_month())
 
-def day_2_month_index_vm(d):
-    # vm for variable months
-    return months_by_day_arr()[(d % days_per_year)] + int(d/days_per_year)*12
-
-
-@lru_cache
-def months_by_day_arr():
-    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    return np.concatenate(
+def day_2_month_index(day):
+    months_by_day_arr= np.concatenate(
         tuple(
             map(
                 lambda m: m * np.ones(
-                    days_per_month[m],
+                    days_per_month()[m],
                     dtype=np.int64
                 ),
                 range(12)
             )
         )
     )
+    #  for variable months
+    dpy=days_per_year()
+    return months_by_day_arr[(day % dpy)] + int(day/dpy)*12
 
-def year_2_day_index(ns):
-    """ computes the index of the day at the end of the year n in ns
-    this works on vectors 
-    """
-    return np.array(list(map(lambda n:days_per_year*n,ns)))
-
-def day_2_year_index(ns):
-    """ computes the index of the year
-    this works on vectors 
-    """
-    return np.array(list(map(lambda i_d:int(days_per_year/i_d),ns)))
-
+def days_since_AD(iteration, delta_t_val,start_date):
+    # To get the startdate we used the model specific function start_date()
+    # where it can be derivde using the original calendar (365 day or 360 day)
+    # from then on we might use a different counting (see days_per_month()) 
+    start_year, start_month, start_day=start_date
+    td_AD=start_year*days_per_year()+sum(days_per_month()[0: (start_month - 1)])+(start_day-1) 
+    return td_AD+iteration*delta_t_val
 
 
-def month_2_day_index_vm(ns):
+def month_2_day_index(ns,start_date):
+    start_month=start_date.month
     """ computes the index of the day at the end of the month n in ns
     this works on vectors and is faster than a recursive version working
     on a single index (since the smaller indices are handled anyway)
@@ -798,8 +977,8 @@ def month_2_day_index_vm(ns):
 
     # We first compute the sequence of day indices up to the highest month in ns
     # and then select from this sequence the day indices for the months in ns
-    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    dpm = (days_per_month[i % len(days_per_month)] for i in range(max(ns)))
+    d = days_per_month() 
+    dpm = (d[i % len(d)] for i in range(max(ns)))
 
     # compute indices for which we want to store the results which is the
     # list of partial sums of the above list  (repeated)
@@ -824,6 +1003,13 @@ def month_2_day_index_vm(ns):
     )
     return day_indices
 
+# +
+# def year_2_day_index(ns):
+#     """ computes the index of the day at the end of the year n in ns
+#     this works on vectors 
+#     """
+#     return np.array(list(map(lambda n:days_per_year*n,ns)))
+# -
 
 class TimeStepIterator2():
     """iterator for looping forward over the results of a difference equation
@@ -940,12 +1126,106 @@ def plot_observations_vs_simulations(
         axs[i].set_title(name)
 
 
+def reduce_is_infinite_over_first_dim(
+        arr: np.ma.core.MaskedArray
+    ) -> np.ma.core.MaskedArray :
+    # 
+    return  reduce(
+        lambda acc,el: np.logical_or(
+            acc,
+            np.logical_not(
+                np.isfinite(el)
+            )
+        )
+        ,
+        map(lambda i:arr[i], range(arr.shape[0]))
+    )
+
+
+def is_infinite_rec(
+        chunk: np.ma.core.MaskedArray
+    ) -> np.ma.core.MaskedArray:
+    # works for any dimension (some variables are 4, most are 3 dimensional)
+    # The function reduce_is_infinite_over_first_dim reduces the array dimension by 1 
+    # everytime it is called and is called
+    # until the result is a 2d array (lat,lon are always the last dimensions in our datasets)
+    if chunk.ndim==2:
+        return chunk
+    else:
+        return is_infinite_rec(
+            reduce_is_infinite_over_first_dim(chunk)
+        )
+
+
+def get_nan_pixel_mask(
+        var: Union[nc._netCDF4.Variable,np.ma.core.MaskedArray]
+    )->np.ndarray:
+    try: 
+        # only works if var is a netCDF4.Variable
+        print(var.name) 
+    except:
+        AttributeError()
+
+
+    # partition along the the chunks of the netcdf file (measured about a100 times faster)
+    # and much less memory consuming than reading the complete array which requiers more than 16GB RAM
+    
+    try:
+        chunksizes=var.chunking()
+        chunksize = 1 if chunksizes == 'contiguous' else chunksizes[0]
+    except:
+        # chunksizes could still be None
+        TypeError
+        chunksize=1
+    # Note: no list comprehension but a lazy map object to save memory
+    subarrs=map(
+        lambda t: var[t[0]:t[1]],
+        partitions(
+            start=0,
+            stop=var.shape[0],
+            nr_acc=chunksize
+        )
+    )
+    
+    res=reduce(
+        lambda acc, el: np.logical_or(acc,el),
+        tqdm(map(is_infinite_rec,subarrs))
+    )
+    # res is a masked array where both res.data and res.mask  
+    # are boolean arrays. res.mask is the logical_or for any masked
+    # array operation and in our case logical_or is also applied to the 
+    # data (in the reduce call in this function and is_finite_rec)
+    
+    # the ultimate result is a mask that masks every lat,lon pixel 
+    # that is already masked for any time or any layer
+    # or has a nan entry at any time or any layer
+    mask=np.logical_or(res.data,res.mask)
+
+    # we check if the original mask was appropriate
+    org_mask_ind = tuple(0 for i in range(var.ndim-2))+(slice(None),)+(slice(None),)
+    org_mask=var[org_mask_ind].mask
+
+    unmasked_nan_pixels=np.argwhere(
+        np.logical_and(
+            mask,
+            np.logical_not(org_mask)
+        )
+    )
+    if len(unmasked_nan_pixels)>0:
+        print(
+            "found {} previously unmasked NaN pixels {}".format(
+                len(unmasked_nan_pixels),
+                unmasked_nan_pixels
+            )
+        )
+    return mask
+
 def get_nan_pixels(
         var: nc._netCDF4.Variable
     ):
     """We use a netCDF4.Variable to avoid having to load the whole array into memory 
     """
-    N_t,N_lat,N_lon = var.shape
+    Nn_t,N_lat,N_lon = var.shape
     cs=30
     def f(I_lat,I_lon):
         n_lat = min(cs,N_lat-I_lat)
@@ -968,24 +1248,25 @@ def get_nan_pixels(
     )
     return reduce(lambda x,y:x+y,l)
 
-def get_nan_pixel_mask(
-        var: nc._netCDF4.Variable
-    ):
-    ## We use a netCDF4.Variable to avoid having to load the whole array into memory 
-    ## since it is too big e.g. for the dlm files 
-
-    N_t,N_lat,N_lon = var.shape
-    
-    var_mask= var[0,:,:].mask #either False or a boolean array
-    start_mask = np.zeros((N_lat,N_lon),dtype=np.bool_) if isinstance(var_mask,bool) else  var_mask
-
-    return np.array(
-        reduce(
-            lambda acc,i: np.logical_or(acc,~np.isfinite(var[i,:,:])),
-            tqdm(range(var.shape[0])),
-            start_mask
+def reduce_is_infinite_over_first_dim(arr):
+    def f(acc, el):
+        new_acc=np.logical_or( acc,el)
+        new_ind=np.argwhere(np.logical_not(new_acc==acc)) 
+        #if len(new_ind)>0:
+        #    print(new_ind)
+        return new_acc
+            
+    def make_sub_arr_mask(i):
+        #print(i)
+        return np.logical_not(
+            np.isfinite(arr[i])
         )
+
+    return  reduce(
+        f,
+        map(make_sub_arr_mask, range(arr.shape[0]))
     )
+
 
 
 
@@ -1395,10 +1676,16 @@ class InfiniteIterator():
         self.pos=0
         
     def __iter__(self):
-        #return a fresh instance that starts from the first step)
+        # return a fresh instance that starts from the first step)
+        # This is important for the __getitem__ to work
+        # as expected and not have side effects
+        # for
+        # res1=itr[0:10]
+        # res2=itr[0:10]
+
         c=self.__class__(self.x0,self.func)
         return c
-        #return self
+        #return self 
     
     def __next__(self):
         #print(self.pos, self.cur)
@@ -1427,7 +1714,7 @@ class InfiniteIterator():
         
         
         elif isinstance(arg,int):
-            return self.value_at(it_max=arg)
+            return (self.value_at(it_max=arg),)
         else:
             raise IndexError(
                 """arguments to __getitem__ have to be either
@@ -1436,7 +1723,7 @@ class InfiniteIterator():
 
 
 def values_2_TraceTuple(tups):
-    # instead of the collection of TraceTuples that the InfiniteIterator returns
+    # instead of the tuple of TraceTuples that the InfiniteIterator returns
     # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
     return TraceTuple(*(
         np.stack(
@@ -1458,27 +1745,25 @@ class TraceTupleIterator(InfiniteIterator):
     def averaged_values(self,partitions):
         start=partitions[0][0]
         def tt_avg(tups):
+            # note that this involves overloaded + and / 
+            # for TraceTuple
             l=len(tups)
-            return TraceTuple(*(
-                    np.stack(
-                        [
-                            tup.__getattribute__(name)
-                            for tup in tups
-                        ],
-                        axis=0
-                    ).sum(axis=0)/l
-                    for name in TraceTuple._fields
-                )
-            )
+            return reduce(
+                lambda acc,el:acc+el,
+                tups
+            )/l
 
+        # make a copy to avoid side effects on self
+        itr=self.__iter__()
         # move to the start
         for i in range(start):
-            self.__next__()
+            itr.__next__()
+        #from IPython import embed;embed()
 
         tts=[
             tt_avg(
                 [
-                    self.__next__()
+                    itr.__next__()
                     for i in range(stop_p-start_p)
                 ]
             )
@@ -1487,6 +1772,38 @@ class TraceTupleIterator(InfiniteIterator):
         return values_2_TraceTuple(tts)
 
 
+def trace_tuple_instance(X,B,I):
+    u=I.sum()
+    b=I/u
+    B_inv = np.linalg.inv(B)
+    X_c = B_inv@I
+    X_p = X_c-X
+    X_dot = I - B @ X 
+    RT = X_c/u #=B_inv@b but cheeper to compute
+    # we now compute the system X_c and X_p
+    # This is in general not equal to the sum of the component, but rather a property
+    # of a surrogate system.
+    x=X.sum()
+    x_dot=X_dot.sum()
+    m_s=(B@X).sum()/x
+    x_c=1/m_s*u
+    x_p=x_c-x
+    rt=x_c/u
+
+    
+    return TraceTuple(
+        X=X,
+        X_p=X_p,
+        X_c=X_c,
+        X_dot=X_dot,
+        RT=RT,
+        x=x,
+        x_p=x_p,
+        x_c=x_c,
+        x_dot=x_dot,
+        rt=rt,
+        u=u,
+    )
 
 def traceability_iterator(
         X_0,
@@ -1503,38 +1820,6 @@ def traceability_iterator(
     
     B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
 
-    def trace_tuple_instance(X,B,I):
-        u=I.sum()
-        b=I/u
-        B_inv = np.linalg.inv(B)
-        X_c = B_inv@I
-        X_p = X_c-X
-        X_dot = I - B @ X 
-        RT = X_c/u #=B_inv@b but cheeper to compute
-        # we now compute the system X_c and X_p
-        # This is in general not equal to the sum of the component, but rather a property
-        # of a surrogate system.
-        x=X.sum()
-        x_dot=X_dot.sum()
-        m_s=(B@X).sum()/x
-        x_c=1/m_s*u
-        x_p=x_c-x
-        rt=x_c/u
-
-        
-        return TraceTuple(
-            X=X,
-            X_p=X_p,
-            X_c=X_c,
-            X_dot=X_dot,
-            RT=RT,
-            x=x,
-            x_p=x_p,
-            x_c=x_c,
-            x_dot=x_dot,
-            rt=rt,
-            u=u,
-        )
     
     # define the start tuple for the iterator    
     V_init = trace_tuple_instance(
@@ -1557,14 +1842,6 @@ def traceability_iterator(
             X_new= X + I + B @ X
             return trace_tuple_instance(X_new,-B,I)
     
-    #return TimeStepIterator2(
-    #    initial_values=V_init,
-    #    f=f
-    #)
-    #return InfiniteIterator(
-    #    x0=V_init,
-    #    func=f
-    #)
     return TraceTupleIterator(
         x0=V_init,
         func=f
@@ -1595,102 +1872,323 @@ def write_global_mean_cache(
 def get_cached_global_mean(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-boundaries=namedtuple(
-    "boundaries",
-    [
-        "min_lat",
-        "max_lat",
-        "min_lon",
-        "max_lon"
-    ]
-)
 
-def combine_masks(masks,i2cs):
-    m1,m2 = masks
-    i2c_1,i2c_2 = i2cs
-    
-    def g(m,i2c):
-        s=m.shape
-        print(s[0])
-        bounds=[]
-        lat_0,lon_0=i2c(0,0)
-        lat_1,lon_1=i2c(1,1)
-        step_lat=lat_1-lat_0
-        step_lon=lon_1-lon_0
-        for i in range(s[0]):
-            for j in range(s[1]):
-                print(i,j)
-                print(m[i,j])
-                if  m[i,j]:
-                    lat,lon=i2c(i,j)
-                    res=boundaries(
-                        min_lat=lat-step_lat/2,
-                        max_lat=lat+step_lat/2,
-                        min_lon=lon-step_lon/2,
-                        max_lon=lon+step_lon/2
-                    )
-                    bounds.append(res)
-        return bounds
+def combine_masks(coord_masks: List['CoordMask']):
+    def k(cm):
+        arr=cm.index_mask
+        return arr.shape[0]+arr.shape[1]
 
-    #return g(m1,i2c_1)
     return reduce(
-        lambda acc,el:acc+el,
-        [g(m,i2c) for m,i2c in zip(masks,i2cs)] 
+        project_2,#(acc,el)
+        sorted(coord_masks,key=k ) # we want the finest grid as the last
     )
 
-def open_interval_intersect(i1,i2):
-    min1,max1=i1
-    min2,max2=i2
-    mid2=(min2+max2)/2
-    return ( 
-        min1 < min2 and min2< max1 
-        or
-        min1 < max2 and max2< max1
-        or
-        min1 < mid2 and mid2< max1
+# def combine_masks(masks,i2cs):
+#    m1,m2 = masks
+#    i2c_1,i2c_2 = i2cs
+#    
+#    def g(m,i2c):
+#        s=m.shape
+#        print(s[0])
+#        bounds=[]
+#        lat_0,lon_0=i2c(0,0)
+#        lat_1,lon_1=i2c(1,1)
+#        step_lat=lat_1-lat_0
+#        step_lon=lon_1-lon_0
+#        for i in range(s[0]):
+#            for j in range(s[1]):
+#                print(i,j)
+#                print(m[i,j])
+#                if  m[i,j]:
+#                    lat,lon=i2c(i,j)
+#                    res=boundaries(
+#                        min_lat=lat-step_lat/2,
+#                        max_lat=lat+step_lat/2,
+#                        min_lon=lon-step_lon/2,
+#                        max_lon=lon+step_lon/2
+#                    )
+#                    bounds.append(res)
+#        return bounds
+#
+#    #return g(m1,i2c_1)
+#    return reduce(
+#        lambda acc,el:acc+el,
+#        [g(m,i2c) for m,i2c in zip(masks,i2cs)] 
+#    )
+#
+#
+# def open_interval_intersect(i1,i2):
+#    min1,max1=i1
+#    min2,max2=i2
+#    mid2=(min2+max2)/2
+#    return ( 
+#        min1 < min2 and min2< max1 
+#        or
+#        min1 < max2 and max2< max1
+#        or
+#        min1 < mid2 and mid2< max1
+#    )
+#
+# def pixel_intersect(b1,b2):
+#    return (
+#        open_interval_intersect(
+#            (b1.min_lat,b1.max_lat),
+#            (b2.min_lat,b2.max_lat)
+#        )
+#        and
+#        open_interval_intersect(
+#            (b1.min_lon,b1.max_lon),
+#            (b2.min_lon,b2.max_lon)
+#        )
+#    )
+#
+# def project(s,i2c,common_mask):
+#    mask=np.zeros(s)
+#    
+#    lat_0,lon_0=i2c(0,0)
+#    lat_1,lon_1=i2c(1,1)
+#    step_lat=lat_1-lat_0
+#    step_lon=lon_1-lon_0
+#    
+#    def in_cm(i,j):
+#        lat,lon=i2c(i,j)
+#        p_b=boundaries(
+#            min_lat=lat-step_lat/2,
+#            max_lat=lat+step_lat/2,
+#            min_lon=lon-step_lon/2,
+#            max_lon=lon+step_lon/2
+#        )
+#        return reduce(
+#            lambda acc,mpb: acc or pixel_intersect(p_b,mpb),
+#            common_mask,
+#            False
+#        )
+#    
+#    for i in range(s[0]):
+#        for j in range(s[1]):
+#            mask[i,j] = True if in_cm(i,j) else False
+#
+#    return mask
+
+
+def permutation(unordered_vec):
+    n=len(unordered_vec) 
+    tups=[(i,unordered_vec[i]) for i in range(n)] 
+    ordered_tups=sorted(tups,key=lambda t:t[1])
+
+    data=np.ones(n)
+    col=np.array([tup[0] for tup in ordered_tups])
+    row=np.arange(n)
+    #from IPython import embed; embed()   
+    p=sparse.bsr_array((data,(row,col)),dtype=np.int64)
+    ordered_vec=np.array(
+        [
+            tup[1] for tup in ordered_tups
+        ]
     )
+    t=p@row
+    assert((t==col).all())
+    return ordered_vec,p,p.transpose()
 
-def pixel_intersect(b1,b2):
-    return (
-        open_interval_intersect(
-            (b1.min_lat,b1.max_lat),
-            (b2.min_lat,b2.max_lat)
+
+class CoordMask():
+    """A CoordMask 
+    with -90 <= lat <=90 
+    with -180 <= lon <=  180
+    lat=0,Equator
+    lon=0,Greenich
+    """
+    def __init__(
+            self,
+            index_mask: np.ndarray,
+            tr: SymTransformers
+        ):
+        s=index_mask.shape
+
+        self.index_mask=index_mask.astype(np.float64,casting='safe')
+        self.tr=tr
+
+
+    #def plot_cell(
+    #        ax,
+    #        b: boundaries,
+    #        color: str
+    #    ):
+    #    xs=[
+    #        b.min_lon,
+    #        b.min_lon,
+    #        b.max_lon,
+    #        b.max_lon,
+    #        b.min_lon
+    #    ]
+    #    ys=[
+    #        b.min_lat,
+    #        b.max_lat,
+    #        b.max_lat,
+    #        b.min_lat,
+    #        b.min_lat
+    #    ]
+    #    ax.plot(xs,ys,color=color)
+    #    ax.fill(xs,ys,color=color,alpha=0.4)
+
+
+    #def plot(self,ax,color="black"):
+    #    mask = self.index_mask
+    #    
+    #    s = mask.shape
+    #    tr = self.tr
+
+    #    for i in range(s[0]):
+    #        for j in range(s[1]):
+    #            min_lat, max_lat = tr.i2lat_min_max(i)
+    #            min_lon, max_lon = tr.i2lon_min_max(j)
+    #            self.__class__.plot_cell(
+    #                ax,
+    #                boundaries(
+    #                    min_lat=min_lat,
+    #                    max_lat=max_lat,
+    #                    min_lon=min_lon,
+    #                    max_lon=max_lon,
+    #                ),  
+    #                color="red" if mask[i,j] == 1 else color 
+    #            )
+    @property
+    def n_lats(self):
+        return self.index_mask.shape[0]
+    
+    @property
+    def n_lons(self):
+        return self.index_mask.shape[1]
+
+    @property
+    def lats(self):
+        return np.array([self.tr.i2lat(i) for i in range(self.n_lats)])
+    
+    @property
+    def lons(self):
+        return np.array([self.tr.i2lon(i) for i in range(self.n_lons)])
+
+    def ordered_lats(self):
+        return permutation(self.lats)
+    
+    def ordered_lons(self):
+        return permutation(self.lons)
+
+    def ordered_mask(self):
+        ordered_lats,p_lats,p_lats_inv=self.ordered_lats()
+        ordered_lons,p_lons,p_lons_inv=self.ordered_lons()
+        mask = self.index_mask
+        new_mask = p_lats @ mask @ p_lons
+        return ordered_lats,ordered_lons,new_mask
+
+    def plot_dots(self,ax,color="black"):
+        ordered_lats,ordered_lons,new_mask=self.ordered_mask()
+        new_mask
+        X,Y=np.meshgrid(
+                ordered_lons,
+                ordered_lats
         )
-        and
-        open_interval_intersect(
-            (b1.min_lon,b1.max_lon),
-            (b2.min_lon,b2.max_lon)
+        ax.pcolormesh(X,Y,new_mask)
+        
+
+    
+    def write_netCDF4(self,path):
+        # for visualization we write out the lat and lon arrays too
+        # although we don't use them at the moment to reconstruct
+        # the transformers.
+        index_mask=self.index_mask
+        s=index_mask.shape
+        n_lats, n_lons=s
+        ds = nc.Dataset(str(path),'w',persist=True)
+        #mask = ds.createDimension('mask',size=s)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+
+        test=ds.createVariable("mask",'i1',['lat','lon'])
+        test[:,:]=index_mask
+
+        lats=ds.createVariable("lat",'float64',['lat'])
+        lats[:]=list(
+                map(
+                    self.tr.i2lat,
+                    range(n_lats)
+                )
+        )
+        lons=ds.createVariable("lon",'float64',['lon'])
+        lons[:]=list(
+                map(
+                    self.tr.i2lon,
+                    range(n_lons)
+                )
+        )
+
+
+
+def project_2(
+    source: CoordMask,
+    target: CoordMask
+    ):
+    
+    s_mask=source.index_mask#.astype(np.float64,casting='safe')
+    print(s_mask.mean())
+    s_n_lat,s_n_lon = s_mask.shape
+    
+    t_mask=target.index_mask
+    t_n_lat,t_n_lon = t_mask.shape
+
+    t_tr=target.tr
+    s_tr=source.tr
+    # we first create the (unified) lat lon coordinates of the source array 
+    # and interpolate the source mask on them
+    lats = np.array(
+        list(
+            map(
+                s_tr.i2lat,
+                range(s_n_lat)
+            )
         )
     )
-
-def project(s,i2c,common_mask):
-    mask=np.zeros(s)
-    
-    lat_0,lon_0=i2c(0,0)
-    lat_1,lon_1=i2c(1,1)
-    step_lat=lat_1-lat_0
-    step_lon=lon_1-lon_0
-    
-    def in_cm(i,j):
-        lat,lon=i2c(i,j)
-        p_b=boundaries(
-            min_lat=lat-step_lat/2,
-            max_lat=lat+step_lat/2,
-            min_lon=lon-step_lon/2,
-            max_lon=lon+step_lon/2
+    lons = np.array(
+        list(
+            map(
+                s_tr.i2lon,
+                range(s_n_lon)
+            )
         )
-        return reduce(
-            lambda acc,mpb: acc or pixel_intersect(p_b,mpb),
-            common_mask,
-            False
+    )
+    f=interpolate.interp2d(x=lons,y=lats,z=s_mask)
+    # now we apply this interpolating function to the target grid
+    # points
+    target_lats = np.array(
+        list(
+            map(
+                t_tr.i2lat,
+                range(t_n_lat)
+            )
         )
-    
-    for i in range(s[0]):
-        for j in range(s[1]):
-            mask[i,j] = True if in_cm(i,j) else False
-
-    return mask
-
+    )
+    target_lons = np.array(
+        list(
+            map(
+                t_tr.i2lon,
+                range(t_n_lon)
+            )
+        )
+    )
+    # order lats and lons since f returns an array that assumes this anyway
+    otlats,p_lat,p_lat_inv=target.ordered_lats()
+    otlons,p_lon,p_lon_inv=target.ordered_lons()
+    float_grid=p_lat_inv @ f(otlons,otlats) @ p_lon_inv
+    print(float_grid.mean())
+    projected_mask=float_grid>0.5
+    #from IPython import embed; embed()
+    return CoordMask(
+                index_mask= np.logical_or(
+                    projected_mask,
+                    t_mask
+                ),
+                tr=t_tr
+            )
 
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
@@ -1714,53 +2212,157 @@ def model_table(
 
     )
 
-# functions to synchronize model outputs to the scale of days since AD
-def sim_day_2_day_aD_func(mf): #->function
-    return msh(mf).make_sim_day_2_day_since_a_D(confDict(mf))
+def transform_maker(lat_0,lon_0,step_lat,step_lon):
+    """
+    The result of this function is a tuple of functions
+    To translate from indices (i,j)  in the array  to (lat,lon) with the following
+    properties
+    values of the center of the indexed pixel
+    and back
+    These functions do not necessarily work for every model
+    You have to check them on the latitude longitude variables of your netcdf files.
+    """
+    n_lat=180.0/abs(step_lat)
+    if int(n_lat)!=n_lat:
+        raise Exception("step_lat has to be a divisor of 180")
+    n_lon=360.0/abs(step_lon)
+    if int(n_lon)!=n_lon:
+        raise Exception("step_lon has to be a divisor of 360")
 
-# def times_in_days_aD(mf,delta_t_val):
-#     import datetime as dt
-#     n_months=len(test_args(mf).dvs[0])
-#     end_date = dt.date(2019, 12, 16) # end of simulation 
-#     sd = dt.date(2010, 1, 1)-(0,n_months,0)
-#     n_days=n_months*30
-#     n_iter=int(n_days/delta_t_val)
-#     days_after_sim_start=delta_t_val*np.arange(n_iter)
-#     return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+    def i2lat(i_lat):
+        if i_lat > (n_lat-1):
+            #from IPython import embed; embed()
+            raise IndexError("i_lat > n_lat-1; with i_lat={}, n_lat={}".format(i_lat,n_lat))
+        return lat_0+(step_lat*i_lat)
+#    
+#    def i2lat_min_max(i):
+#        #compute the lat boundaries of pixel i
+#        center=i2lat(i)
+#        lat_min = center - step_lat/2
+#        lat_max=  center + step_lat/2
+#        return lat_min,lat_max
+#    
+#    # the inverse finds the indices of the pixel containing
+#    # the point with the given coordinates
+#    def lat2i(lat):
+#        ir=(lat-lat_0)/step_lat
+#        ii=int(ir)
+#        d=ir-ii
+#        if ii == (n_lat -1):
+#            print("ii",ii)
+#
+#        return ii if (d<0.5 or ii == (n_lat - 1))  else ii+1
+#        
+    def i2lon(i_lon):
+        if i_lon > (n_lon-1):
+            raise IndexError("i_lon > n_lon; with i_lon={0}, n_lon={1}".format(i_lon,n_lon))
+        return lon_0+(step_lon*i_lon)
+#
+#    def i2lon_min_max(i):
+#        #compute the lon boundaries of pixel i
+#        center=i2lon(i)
+#        lon_min = center - step_lon/2 
+#        lon_max=  center + step_lon/2 
+#        return lon_min,lon_max
+#
+#    def lon2i(lon):
+#        # we cant use round since we want ir=3.5 to be already in pixel 4
+#        ir=(lon-lon_0)/step_lon
+#        ii=int(ir)
+#        d=ir-ii
+#        return ii if d<0.5 else ii+1
+    
+    return Transformers(
+        i2lat=i2lat,
+        #i2lat_min_max=i2lat_min_max,
+        #lat2i=lat2i,
+        i2lon=i2lon,
+        #i2lon_min_max=i2lon_min_max,
+        #lon2i=lon2i,
+    )
 
-def times_in_days_aD(mf, delta_t_val):
-    start_date = msh(mf).start_date # start of the simulation
-    end_date = msh(mf).end_date # end of the simulation
-    duration=end_date-start_date
-    # 365-day calendar does not include leap years so we exclude them    
-    n_days=duration.days-(end_date.year-start_date.year)//4+(end_date.year-start_date.year)//100-(end_date.year-start_date.year)//400
+def read_or_create(
+            path: Path,
+            create_and_write: Callable[[Path],T],
+            read: Callable[[Path],T]
+    ) -> T:
+    """
+    A the basic cache functionality:
+    path: the path of the cache file
+    create_and_write: The funciton that creates the  object to be cached and writes it to <path>.
+    read: The function that extracts the cached object from <path>.
+    """
+    print('type',type(path))
+    if path.exists():
+        print(
+                "Found cache file {}. If you want to recompute the result remove it.".format(str(path)) 
+        )
+        return read(path)
+    else:
+        pp=path.parent
+        if not(pp.exists()): 
+            pp.mkdir(parents=True)
+        return create_and_write(path)
+
+# +
+# For harmonizing timelines and plotting
+# -
+
+# a function to get a list of test_args from all models involved in the comparison
+def get_test_arg_list (model_folders):
+    test_arg_list=[]
+    for mf in model_folders:
+        print("Loading data and parameters for "+ mf +" model...")
+        current_ta=test_args(mf)
+        test_arg_list.append(current_ta)
+    print("Done!")
+    return test_arg_list
+
+
+def times_in_days_aD(test_args, # a tuple defined in model-specific test_helpers.py
+                     delta_t_val # iterator time step
+                    ):
+    n_months=len(test_args.dvs[0])
+    n_days=month_2_day_index([n_months],test_args.start_date)[0]
     n_iter=int(n_days/delta_t_val)
-    days_after_sim_start=delta_t_val*np.arange(n_iter)
-    return np.array(tuple(map(sim_day_2_day_aD_func(mf),days_after_sim_start))) 
+    return np.array(
+        tuple((
+            days_since_AD(i,delta_t_val,test_args.start_date) 
+            for i in np.arange(n_iter)#days_after_sim_start
+        ))
+    )
+
 
 # function to determine overlapping time frames for models simulations 
-def t_min_tmax_overlap(model_folders,delta_t_val):
+def t_min_tmax_overlap(test_arg_list, # a list of test_args from all models involved
+                       delta_t_val # iterator time step
+                      ):
     td={
-        mf: times_in_days_aD(mf,delta_t_val)
-        for mf in model_folders
+        i: times_in_days_aD(test_arg_list[i],delta_t_val)
+        for i in range(len(test_arg_list))
     }
     t_min = max([t.min() for t in td.values()])
     t_max = min([t.max() for t in td.values()])
     return (t_min,t_max)
 
-def t_min_tmax_full(model_folders,delta_t_val):
+def t_min_tmax_full(test_arg_list, # a list of test_args from all models involved
+                    delta_t_val # iterator time step
+                   ):
     td={
-        mf: times_in_days_aD(mf,delta_t_val)
-        for mf in model_folders
+        i: times_in_days_aD(test_arg_list[i],delta_t_val)
+        for i in range(len(test_arg_list))
     }
     t_min = min([t.min() for t in td.values()])
     t_max = max([t.max() for t in td.values()])
     return (t_min,t_max)
 
 # function find the timesteps corresponding to shared times
-from functools import reduce
-def min_max_index(mf,delta_t_val,t_min,t_max):
-    ts=times_in_days_aD(mf,delta_t_val)
+def min_max_index(test_args, # a tuple defined in model-specific test_helpers.py
+                  delta_t_val, # iterator time step
+                  t_min, # output of t_min_tmax_overlap or t_min_tmax_full
+                  t_max # output of t_min_tmax_overlap or t_min_tmax_full
+                 ):
+    ts=times_in_days_aD(test_args,delta_t_val)
     def count(acc,i):
         min_i,max_i = acc
         t=ts[i]
@@ -1770,38 +2372,56 @@ def min_max_index(mf,delta_t_val,t_min,t_max):
     
     return reduce(count,range(len(ts)),(0,0)) 
 
+# fixme: do we need this partition?
+# partitions is only used in averaged_1d_array and in Trace_Tuple class
 # we can build this partition by a little function 
 def partitions(start,stop,nr_acc=1):
     diff=stop-start
     step=nr_acc
     number_of_steps=int(diff/step)
     last_start=start+number_of_steps*step
-    last_tup=(last_start,stop)
+    last_tup_l=[(last_start,stop)] if last_start<stop else []
     return [
         (
             start + step * i,
             start + step *(i+1)
         )
         for i in range(number_of_steps)
-    ]+[last_tup]
+    ]+last_tup_l
 
-def averaged_times(times,partitions):
+
+# fixme: merge with avg_timeline? 
+# avg_timeline has a better interface - 2nd argument is a number rather than an array of parts
+# so avg_timeline does not need a partitions function
+# which is very useful in graphs when ve average times as well (partitions make it very inconvenient)
+# averaged_1d_array and partiotions are used in Trace_Tuple class. Can they be changed to avg_timeline? 
+def averaged_1d_array(arr,partitions):
+    """ this function also works for multidimensional arrays
+    It assumes that the first dimension is time/iteration
+    """
     return np.array(
         [
-            times[p[0]:p[1]].sum()/(p[1]-p[0]) for p in partitions
+            arr[p[0]:p[1]].sum(axis=0)/(p[1]-p[0]) 
+            for p in partitions
         ]
     )
 
+
 # The iterator allows us to compute and easily access the desired timelines with python index notation [2:5] 
 # it will return the values from position 2 to 5 of the solution (and desired variables).
-def traceability_iterator_instance(mf, # model folder name
-                                   delta_t_val, # model time step
-                                  ):
-    ta=test_args(mf)
+
+def traceability_iterator_instance(
+        mf, # name of the model folder
+        test_args, # a tuple defined in model-specific test_helpers.py
+        delta_t_val, # model time step
+    ):
+    """Wrapper that just needs the folder name and the step 
+    size.
+    """    
     mvs_t=mvs(mf)
-    dvs_t=ta.dvs
-    cpa_t=ta.cpa
-    epa_t=ta.epa_opt
+    dvs_t=test_args.dvs
+    cpa_t=test_args.cpa
+    epa_t=test_args.epa_opt
     X_0=msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
     func_dict=msh(mf).make_func_dict(mvs_t,dvs_t,cpa_t,epa_t)
     
@@ -1815,6 +2435,7 @@ def traceability_iterator_instance(mf, # model folder name
         delta_t_val=delta_t_val
     )
 
+# fixme: possible obsolete = averaged_1d_array
 def avg_timeline (timeline, # array
                   averaging # number of steps over which to average
                 ):
@@ -1841,23 +2462,10 @@ def avg_timeline (timeline, # array
             i+=x
     return(output)
 
-def days_AD_to_years(days): # days can be an integer of an array of integers
-    start_date=dt.date(1, 1, 1)
-    if type(days)==int:
-        delta = dt.timedelta(days=days)
-        end_date=start_date+delta
-        years=end_date.year+(end_date.month-1)/12+end_date.day/365
-    else:
-        years=np.zeros(len(days))
-        for i in range(len(days)):
-            delta = dt.timedelta(days=int(days[i]))
-            end_date=start_date+delta
-            years[i]=end_date.year+(end_date.month-1)/12+end_date.day/365
-    return(years)
-        
-end_date = dt.date(2019, 12, 16)
+
 
 def plot_components_combined(model_names, # dictionary (folder name : model name)
+                           test_arg_list, # a list of test_args from all models involved   
                            var_names, # dictionary (trace_tuple name : descriptive name)
                            delta_t_val, # model time step
                            model_cols, # dictionary (folder name :color)
@@ -1874,18 +2482,19 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
     axs=fig.subplots(n,1)
             
     for i,name in enumerate(variables):
+        k=0
         for mf in model_folders:
-            itr=traceability_iterator_instance(mf,delta_t_val)
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))                             
+            itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))                             
             # if we do not want the whole interval but look at a smaller part to observe the dynamics
             #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
             start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-            times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+            times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
             print ("Plotting "+str(name)+" for "+str(mf)+" model")
             vals=itr[start:stop]
             ax=axs[i]
             times_for_plot=avg_timeline(times, averaging)
-            vals_for_plot=avg_timeline(vals.__getattribute__(name),averaging)
+            vals_for_plot=avg_timeline(vals.__getattribute__(name), averaging)
             if name=='x': 
                 vals_for_plot=vals_for_plot*148940000*1000000*0.000000000001 # convert to global C in Pg          
             ax.plot(
@@ -1897,10 +2506,10 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
             if name=='x':  # we plot x together with x_c
                 ax.plot(
                     times_for_plot,
-                    avg_timeline(vals.__getattribute__('x_c'),averaging)*148940000*1000000*0.000000000001,
+                    avg_timeline(vals.x_c, averaging)*148940000*1000000*0.000000000001,
                     label=model_names[mf]+' - x_c',
                     color=model_cols[mf],
-                    linestyle = 'dashed'
+                    linestyle = 'dashed',
                 )
             if name=='x_p':  # 0 line for X_p
                 ax.plot(
@@ -1908,12 +2517,15 @@ def plot_components_combined(model_names, # dictionary (folder name : model name
                     np.zeros_like(avg_timeline(times, averaging)),
                     color="black",
                     linestyle = 'dotted',
-                    alpha=0.5
-        )             
+                    alpha=0.5,
+                )
+            k+=1            
         ax.legend()
         ax.set_title(var_names[name])
-        
+        ax.grid()
+
 def plot_x_xc(model_names, # dictionary (folder name : model name)
+              test_arg_list, # a list of test_args from all models involved
               delta_t_val, # model time step
               model_cols, # dictionary (folder name :color)
               part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
@@ -1922,297 +2534,314 @@ def plot_x_xc(model_names, # dictionary (folder name : model name)
               ):
     if (part<0) | (part >1): 
          raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
-    model_folders=[(k) for k in model_names]
-    
+    model_folders=[(k) for k in model_names]    
     fig=plt.figure(figsize=(17,8))
     ax=fig.subplots(1,1)
+    k=0
     for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
         if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
         else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
-        ax.plot(
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
+        #print("vals.x")
+        #print(vals.x[0:240])
+        ax.plot(        
             avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            avg_timeline(vals.x,averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
             label=model_names[mf]+' - X',
             color=model_cols[mf],
         )
         ax.plot(
-            avg_timeline(times, averaging),
-            avg_timeline(vals.__getattribute__('x_c'),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.x_c, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt            
             label=model_names[mf]+' - X_c',
             color=model_cols[mf],
-            linestyle = 'dashed'
-        )              
+            linestyle = 'dashed',
+        )
+        k+=1
     ax.legend()
     ax.set_title('Total Carbon (X) and Carbon Storage Capacity (X_c)')
     ax.set_ylabel('Gt C')
     ax.grid()
-    
+
 # change of X since the start of simulation
 def plot_normalized_x(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging
-              overlap=True # compute overlapping timeframe or plot whole duration for all models
-              ):
+                      test_arg_list, # a list of test_args from all models involved
+                      delta_t_val, # model time step
+                      model_cols, # dictionary (folder name :color)
+                      part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+                      averaging, # number of iterator steps over which to average results. 1 for no averaging
+                      overlap=True # compute overlapping timeframe or plot whole duration for all models
+                      ):
     if (part<0) | (part >1): 
          raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
     model_folders=[(k) for k in model_names]
     
     fig=plt.figure(figsize=(17,8))
     ax=fig.subplots(1,1)
+    k=0
     for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
         if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val)) 
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val)) 
         else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))            
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("x"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_for_plot=avg_timeline(vals.x, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
         vals_array=vals_for_plot[0]
-        vals_for_plot_norm = vals_array - vals_array[0]        
-        ax.plot(
-            avg_timeline(times, averaging),                    
-            vals_for_plot_norm,
-            label=model_names[mf],
-            color=model_cols[mf],
-        )           
-    ax.legend()
-    ax.set_title('Total Carbon (X) change since the start of the simulation')
-    ax.set_ylabel('Gt C')
-    ax.grid()
-    
-def plot_normalized_xc(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging
-              overlap=True # compute overlapping timeframe or plot whole duration for all models
-              ):
-    if (part<0) | (part >1): 
-         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
-    model_folders=[(k) for k in model_names]
-    
-    fig=plt.figure(figsize=(17,8))
-    ax=fig.subplots(1,1)
-    for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
-        if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val)) 
-        else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
-        # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
-        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("x_c"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
-        vals_array=vals_for_plot[0]
-        vals_for_plot_norm = vals_array - vals_array[0]        
-        ax.plot(
-            avg_timeline(times, averaging),                    
-            vals_for_plot_norm,
-            label=model_names[mf],
-            color=model_cols[mf],
-        )           
-    ax.legend()
-    ax.set_title('Carbon Storage Capacity (X) change since the start of the simulation')
-    ax.set_ylabel('Gt C')
-    ax.grid()
-    
-def plot_xp(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging
-              overlap=True # compute overlapping timeframe or plot whole duration for all models            
-              ):
-    if (part<0) | (part >1): 
-         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
-    model_folders=[(k) for k in model_names]
-    
-    fig=plt.figure(figsize=(17,8))
-    ax=fig.subplots(1,1)
-    for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
-        if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))  
-        else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
-        # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
-        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
-        ax.plot(
-            avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("x_p"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
-            label=model_names[mf],
-            color=model_cols[mf],
-        ) 
-    ax.legend()
-    ax.set_title('Carbon Storage Potential (X_p)')
-    ax.set_ylabel('Gt C')
-    ax.grid()
-    
-def plot_u(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging
-              overlap=True # compute overlapping timeframe or plot whole duration for all models
-              ):
-    if (part<0) | (part >1): 
-         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
-    model_folders=[(k) for k in model_names]
-    
-    fig=plt.figure(figsize=(17,8))
-    ax=fig.subplots(1,1)
-    for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
-        if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
-        else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
-        # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
-        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
-        ax.plot(
-            avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
-            label=model_names[mf],
-            color=model_cols[mf],
-        ) 
-    ax.legend()
-    ax.set_title('Carbon Input (NPP)')
-    ax.set_ylabel('Gt C / day')
-    ax.grid()
-    
-# u change since the start of simulation    
-def plot_normalized_u(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging 
-              overlap=True # compute overlapping timeframe or plot whole duration for all models
-              ):
-    if (part<0) | (part >1): 
-         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
-    model_folders=[(k) for k in model_names]
-    
-    fig=plt.figure(figsize=(17,8))
-    ax=fig.subplots(1,1)
-    for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
-        if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
-        else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))            
-        # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
-        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("u"),averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
-        vals_array=vals_for_plot[0]
-        vals_for_plot_norm = vals_array - vals_array[0]
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change        
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,
             label=model_names[mf],
             color=model_cols[mf],
         )
+        k+=1
     ax.legend()
-    ax.set_title('Carbon Input (NPP) change since the start of the simulation')
-    ax.set_ylabel('Gt C / day')
-    ax.grid()  
-    
-def plot_rt(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging 
-              overlap=True # compute overlapping timeframe or plot whole duration for all models            
-              ):
+    ax.set_title('Total Carbon (X) change since the start of the simulation')
+    ax.set_ylabel('% change')
+    ax.grid()
+
+def plot_normalized_xc(model_names, # dictionary (folder name : model name)
+                       test_arg_list, # a list of test_args from all models involved
+                       delta_t_val, # model time step
+                       model_cols, # dictionary (folder name :color)
+                       part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+                       averaging, # number of iterator steps over which to average results. 1 for no averaging
+                       overlap=True # compute overlapping timeframe or plot whole duration for all models
+                       ):
     if (part<0) | (part >1): 
          raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
     model_folders=[(k) for k in model_names]
     
     fig=plt.figure(figsize=(17,8))
     ax=fig.subplots(1,1)
+    k=0
     for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
         if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val)) 
         else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))            
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
-        vals=itr[start:stop]         
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
+        vals_for_plot=avg_timeline(vals.x_c, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_array=vals_for_plot[0]
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change          
         ax.plot(
             avg_timeline(times, averaging),                    
-            avg_timeline(vals.__getattribute__("rt"),averaging)/365, # convert to years
+            vals_for_plot_norm,
             label=model_names[mf],
             color=model_cols[mf],
-        ) 
+        )
+        k+=1
+    ax.legend()
+    ax.set_title('Carbon Storage Capacity (X) change since the start of the simulation')
+    ax.set_ylabel('% change')
+    ax.grid()
+
+def plot_xp(model_names, # dictionary (folder name : model name)
+            test_arg_list, # a list of test_args from all models involved
+            delta_t_val, # model time step
+            model_cols, # dictionary (folder name :color)
+            part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+            averaging, # number of iterator steps over which to average results. 1 for no averaging
+            overlap=True # compute overlapping timeframe or plot whole duration for all models            
+            ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    k=0
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))  
+        else:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]         
+        ax.plot(
+            avg_timeline(times, averaging),
+            avg_timeline(vals.x_p, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            label=model_names[mf],
+            color=model_cols[mf],
+        )
+        k+=1
+    ax.legend()
+    ax.set_title('Carbon Storage Potential (X_p)')
+    ax.set_ylabel('Gt C')
+    ax.grid()
+
+def plot_u(model_names, # dictionary (folder name : model name)
+            test_arg_list, # a list of test_args from all models involved
+            delta_t_val, # model time step
+            model_cols, # dictionary (folder name :color)
+            part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+            averaging, # number of iterator steps over which to average results. 1 for no averaging
+            overlap=True # compute overlapping timeframe or plot whole duration for all models
+            ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    k=0
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))            
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.u, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+            label=model_names[mf],
+            color=model_cols[mf],
+        )
+        k+=1
+    ax.legend()
+    ax.set_title('Carbon Input (NPP)')
+    ax.set_ylabel('Gt C / day')
+    ax.grid()
+
+# u change since the start of simulation    
+def plot_normalized_u(model_names, # dictionary (folder name : model name)
+                      test_arg_list, # a list of test_args from all models involved
+                      delta_t_val, # model time step
+                      model_cols, # dictionary (folder name :color)
+                      part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+                      averaging, # number of iterator steps over which to average results. 1 for no averaging 
+                      overlap=True # compute overlapping timeframe or plot whole duration for all models
+                      ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    k=0
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))            
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
+        vals_for_plot=avg_timeline(vals.u, averaging)*148940000*1000000*0.000000000001, # convert to global C in Gt
+        vals_array=vals_for_plot[0]
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change 
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            vals_for_plot_norm,
+            label=model_names[mf],
+            color=model_cols[mf],
+        )
+        k+=1
+    ax.legend()
+    ax.set_title('Carbon Input (NPP) change since the start of the simulation')
+    ax.set_ylabel('% change')
+    ax.grid()  
+
+def plot_rt(model_names, # dictionary (folder name : model name)
+            test_arg_list, # a list of test_args from all models involved
+            delta_t_val, # model time step
+            model_cols, # dictionary (folder name :color)
+            part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+            averaging, # number of iterator steps over which to average results. 1 for no averaging 
+            overlap=True # compute overlapping timeframe or plot whole duration for all models            
+            ):
+    if (part<0) | (part >1): 
+         raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
+    model_folders=[(k) for k in model_names]
+    
+    fig=plt.figure(figsize=(17,8))
+    ax=fig.subplots(1,1)
+    k=0
+    for mf in model_folders:
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
+        if overlap==True:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+        else:
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
+        vals=itr[start:stop]
+        ax.plot(
+            avg_timeline(times, averaging),                    
+            avg_timeline(vals.rt, averaging)/days_per_year(), # convert to years
+            label=model_names[mf],
+            color=model_cols[mf],
+        )
+        k+=1
     ax.legend()
     ax.set_title('Equilibrium Residense Time (RT)')
     ax.set_ylabel('Years')
     ax.grid()
-    
+
 def plot_normalized_rt(model_names, # dictionary (folder name : model name)
-              delta_t_val, # model time step
-              model_cols, # dictionary (folder name :color)
-              part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-              averaging, # number of iterator steps over which to average results. 1 for no averaging
-              overlap=True # compute overlapping timeframe or plot whole duration for all models
-              ):
+                       test_arg_list, # a list of test_args from all models involved
+                       delta_t_val, # model time step
+                       model_cols, # dictionary (folder name :color)
+                       part, #0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+                       averaging, # number of iterator steps over which to average results. 1 for no averaging
+                       overlap=True # compute overlapping timeframe or plot whole duration for all models
+                      ):
     if (part<0) | (part >1): 
          raise Exception('Invalid partitioning in plot_components_combined: use part between 0 and 1')        
     model_folders=[(k) for k in model_names]
     
     fig=plt.figure(figsize=(17,8))
     ax=fig.subplots(1,1)
+    k=0
     for mf in model_folders:
-        itr=traceability_iterator_instance(mf,delta_t_val)
+        itr=traceability_iterator_instance(mf,test_arg_list[k],delta_t_val)
         if overlap==True:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_overlap(model_folders,delta_t_val))
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
         else:
-            start_min,stop_max=min_max_index(mf,delta_t_val,*t_min_tmax_full(model_folders,delta_t_val))
+            start_min,stop_max=min_max_index(test_arg_list[k],delta_t_val,*t_min_tmax_full(test_arg_list,delta_t_val))
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        #start,stop = start_min, int(start_min+(stop_max-start_min)*part)
         start,stop = int(stop_max-(stop_max-start_min)*part), stop_max
-        times=days_AD_to_years(times_in_days_aD(mf,delta_t_val)[start:stop])
+        times=times_in_days_aD(test_arg_list[k],delta_t_val)[start:stop]/days_per_year()
         vals=itr[start:stop]
-        vals_for_plot=avg_timeline(vals.__getattribute__("rt"),averaging)/365 # convert to years 
-        vals_for_plot_norm = vals_for_plot - vals_for_plot[0]
+        vals_for_plot=avg_timeline(vals.rt, averaging)/days_per_year() # convert to years
+        vals_array=vals_for_plot
+        vals_for_plot_norm = (vals_array - vals_array[0]) / vals_array[0] * 100 # convert to % change 
         ax.plot(
             avg_timeline(times, averaging),                    
             vals_for_plot_norm,            
             label=model_names[mf],
             color=model_cols[mf],
-        ) 
+        )
+        k+=1
     ax.legend()
     ax.set_title('Equilibrium Residense Time (RT) change since the start of the simulation')
-    ax.set_ylabel('Years')
+    ax.set_ylabel('% change')
     ax.grid()
-        
+
 from scipy.interpolate import interp1d, splprep
 
 # function to compute a difference between traceable companents of 2 models
@@ -2266,7 +2895,7 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 start_1,stop_1 = start_min_1, int(start_min_1+(stop_max_1-start_min_1)*part)
                 itr_1=traceability_iterator_instance(mf_1,delta_t_val)
                 #parts_1=partitions(start_1,stop_1,yr)
-                times_1=days_AD_to_years(times_in_days_aD(mf_1, delta_t_val)[start_1:stop_1])
+                times_1=times_in_days_aD(mf_1, delta_t_val)[start_1:stop_1]/days_per_year()
                 vals_1=itr_1[start_1:stop_1]
                 
                 start_min_2,stop_max_2=min_max_index(mf_2,delta_t_val,*t_min_tmax_overlap([mf_2,mf_2],delta_t_val))
@@ -2274,7 +2903,7 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 start_2,stop_2 = start_min_2, int(start_min_2+(stop_max_2-start_min_2)*part)
                 itr_2=traceability_iterator_instance(mf_2,delta_t_val)                
                 #parts_2=partitions(start_2,stop_2,yr)
-                times_2=days_AD_to_years(times_in_days_aD(mf_2, delta_t_val)[start_2:stop_2])
+                times_2=times_in_days_aD(mf_2, delta_t_val)[start_2:stop_2]/days_per_year()
                 vals_2=itr_1[start_1:stop_1]
                 
                 print ("Plotting "+str(plot_number+1)+" out of "+str(n))
@@ -2283,4 +2912,96 @@ def plot_diff(model_names, # dictionary (folder name : model name)
                 ax.plot(times,diff,color="black")
                 ax.set_title("Delta {0} for {1}-{2}".format(name,model_names[mf_1],model_names[mf_2]))
                 plot_number+=1 
+
+
+def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
+    if part<0 | part >1: 
+        raise Exception('Invalid partitioning in plot_diff: use part between 0 and 1')
+    test_arg_list=[ta_1,ta_2]
+
+    itr_1=traceability_iterator_instance(mf_1,ta_1,delta_t_val)
+    itr_2=traceability_iterator_instance(mf_2,ta_2,delta_t_val)
+
+    start_min_1,stop_max_1=min_max_index(ta_1,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+    start_min_2,stop_max_2=min_max_index(ta_2,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+
+    # if we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_1,stop_1 = int(stop_max_1-(stop_max_1-start_min_1)*part), stop_max_1
+    start_2,stop_2 = int(stop_max_2-(stop_max_2-start_min_2)*part), stop_max_2
+    times_1=times_in_days_aD(ta_1,delta_t_val)[start_1:stop_1]/days_per_year()
+    times_2=times_in_days_aD(ta_2,delta_t_val)[start_2:stop_2]/days_per_year()
+    vals_1=itr_1[start_1:stop_1]
+    vals_2=itr_2[start_2:stop_2]
+
+    x_c_1=interp1d(times_1,vals_1.x_c)
+    x_c_2=interp1d(times_2,vals_2.x_c)
+    u_1=interp1d(times_1,vals_1.u)
+    u_2=interp1d(times_2,vals_2.u)
+    rt_1=interp1d(times_1,vals_1.rt)
+    rt_2=interp1d(times_2,vals_2.rt)
+
+    # common plot times
+    start=max(times_1.min(),times_2.min())
+    stop=min(times_1.max(),times_2.max())
+    nstep=min(len(times_1),len(times_2))
+    times=np.linspace(start,stop,nstep)
+    
+    # values for plots
+    delta_u=u_1(times)-u_2(times)
+    delta_rt=rt_1(times)-rt_2(times)
+    delta_x_c=x_c_1(times)-x_c_2(times)
+
+    rt_contrib=delta_rt*(u_1(times)-delta_u/2)
+    u_contrib=delta_u*(rt_1(times)-delta_rt/2)
+    combined_contrib=delta_x_c-rt_contrib-u_contrib
+
+    percent_rt=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    percent_combined=abs(combined_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    
+    fig=plt.figure(figsize=(17,8))
+    axs=fig.subplots(1,2)
+    ax=axs[0]
+    ax.plot(
+        #times[60*12:60*12+36],                    
+        #rt_contrib[60*12:60*12+36],            
+        avg_timeline(times, 12),
+        avg_timeline(percent_rt, 12),
+        label="contribution of $\Delta$ RT",
+        color="darkorange",
+    )
+    ax.plot(
+        #times[60*12:60*12+36],                    
+        #u_contrib[60*12:60*12+36],            
+        avg_timeline(times, 12),
+        avg_timeline(percent_u, 12),
+        label="contribution of $\Delta$ u",
+        color="green",
+    )
+    ax.plot(
+        #times[60*12:60*12+36],                    
+        #u_contrib[60*12:60*12+36],            
+        avg_timeline(times, 12),
+        avg_timeline(percent_combined, 12),
+        label="contribution of $\Delta$ u * $\Delta$ RT",
+        color="grey",
+    )
+    
+    ax.legend()
+    ax.set_title('Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Over Time')
+    ax.set_ylabel('%')
+    ax.grid()
+    
+    ax1=axs[1]
+    ax1.set_title('Average Contribution of RT and u')
+    labels = '$\Delta$ RT', '$\Delta$ U * $\Delta$ RT', '$\Delta$ U'
+    sizes = [np.mean(percent_rt), np.mean(percent_combined), np.mean(percent_u)]
+    ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+        startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.show()
+    
+    return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined))
+
+
 

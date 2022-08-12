@@ -3,6 +3,7 @@ from collections import namedtuple
 from sympy import Symbol, Function
 from pathlib import Path
 import numpy as np
+import netCDF4 as nc
 import json 
 
 # +
@@ -20,7 +21,10 @@ def make_test_args(conf_dict,msh,mvs):
             "epa_min",
             "epa_max",
             "epa_opt",
-            "cpa"
+            "cpa",
+            "lats",
+            "lons",
+            "start_date"
         ]
     )
     svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
@@ -200,6 +204,7 @@ def make_test_args(conf_dict,msh,mvs):
         rh = apa['rh_0']
     )
         
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("DLEM_S2_cLitter.nc"))    
     return TestArgs(
         V_init=V_init,
         par_dict=model_par_dict,
@@ -211,5 +216,8 @@ def make_test_args(conf_dict,msh,mvs):
         epa_min=epa_min,
         epa_max=epa_max,
         epa_opt=epa_opt,
-        cpa=cpa
+        cpa=cpa,
+        lats=ds.variables["lat"][:],
+        lons=ds.variables["lon"][:],
+        start_date=msh.start_date()
     )

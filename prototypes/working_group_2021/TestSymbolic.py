@@ -16,7 +16,15 @@ class TestSymbolic(TestCase):
     
     @property
     def model_folders(self):
-        return ['kv_visit2', 'jon_yib','Aneesh_SDGVM','cable-pop','cj_isam','yz_jules','kv_ft_dlem']
+        return [
+            'kv_visit2',
+	     'jon_yib',
+	     'Aneesh_SDGVM',
+	     'cable-pop',
+	     'cj_isam',
+	     'yz_jules',
+	     'kv_ft_dlem'
+        ]
 
     def test_symobolic_description(self):
         for mf in self.model_folders: 
@@ -189,7 +197,7 @@ class TestSymbolic(TestCase):
                     K=1 # default value | increase value to reduce acceptance of higher cost functions
                 )
     
-    #def test_autostep_mcmc_model_specific_costfunction(self):
+    #def test_autostep_mcmc_with_model_specific_costfunction(self):
     #    
     #    for mf in set(self.model_folders).intersection(['Aneesh_SDGVM']):
     #        with self.subTest(mf=mf):
@@ -242,6 +250,21 @@ class TestSymbolic(TestCase):
                 test_args = gh.test_args(mf)
                 test_args.epa_opt
 
+    def test_start_date_presence(self):
+        # Purpose:
+        # For the model comparison plots it's necessary to have a common timeline
+        # 
+        # How to fix this test:
+        # 1.)   implement a function start_date in your model_specific_helpers_2 file
+        #       you can look at Kostia's "kv_visit2/model_specific_helpers_2.py as an 
+        #       example
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                mvs = gh.mvs(mf)
+                msh = gh.msh(mf)
+                msh.start_date()
+
+
 
     #def test_make_param_filter_func_presence(self):
     #    #Purpose:
@@ -269,4 +292,88 @@ class TestSymbolic(TestCase):
                 X_0=gh.msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
 
 
+
+    def test_make_model_index_transforms(self):
+        model_folders=['kv_visit2','kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib']#,'kv_visit2', 'jon_yib''Aneesh_SDGVM','cable-pop','yz_jules',]
+        #for mf in set(self.model_folders):
+        for mf in set(model_folders):
+            with self.subTest(mf=mf):
+                test_args = gh.test_args(mf)
+                msh = gh.msh(mf)
+                lats=test_args.lats.data
+                lons=test_args.lons.data
+                # check that we predict the
+                # right latitude values for
+                # a given array index 
+                tr = msh.make_model_index_transforms()
+                n_lats=len(lats)
+                print("n_lats={}".format(n_lats))
+                for i in range(n_lats):
+                    self.assertEqual(lats[i],tr.i2lat(i))
+                
+                n_lons=len(lons)
+                print("n_lons={}".format(n_lons))
+                for i in range(n_lons):
+                    self.assertEqual(lons[i],tr.i2lon(i))
+
+                # inverse operation
+                # check that we can predict the index from a given
+                # latitude
+                for i in range(n_lats):
+                    self.assertEqual(tr.lat2i(lats[i]),i)
+                # or longitude
+                for i in range(n_lons):
+                    self.assertEqual(tr.lon2i(lons[i]),i)
+
+                #check the interpretation of the pixel boundaries
+                for i in range(n_lats-1):
+                    #minimum belongs to pixel
+                    self.assertEqual(tr.lat2i(tr.i2lat_min_max(i)[0]),i)
+                    #maximum belongs to next pixel (if there is one)
+                    self.assertEqual(tr.lat2i(tr.i2lat_min_max(i)[1]),i+1)
+
+               
+                # the last lat pixel contains also the pole
+                last=n_lats-1
+                lat_min, lat_max=tr.i2lat_min_max(last)
+                print(lat_max)
+                self.assertEqual(tr.lat2i(lat_max),last)
+                
+
+    def test_make_model_coord_transforms(self):
+        model_folders=['kv_visit2','kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib','yz_jules']#,'cable-pop']
+        #for mf in set(self.model_folders):
+        for mf in set(model_folders):
+            with self.subTest(mf=mf):
+                test_args = gh.test_args(mf)
+                msh = gh.msh(mf)
+                lats=test_args.lats.data
+                lons=test_args.lons.data
+                # check that we predict the
+                # right latitude values for
+                # a given array index 
+                ctr = msh.make_model_coord_transforms()
+                #print(lats)
+                print(ctr.lat2LAT(lats))
+                print(ctr.lon2LON(lons))
+
+    def test_mask(self):
+        #model_folders=['cj_isam','kv_visit2']#,'kv_ft_dlem','Aneesh_SDGVM','cj_isam','jon_yib','yz_jules']#,'cable-pop']
+        #for mf in set(model_folders):
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                #test_args = gh.test_args(mf)
+                msh = gh.msh(mf)
+                
+                c_mask=msh.spatial_mask(Path(gh.confDict(mf)['dataPath']))
+                #c_mask.write_netCDF4(mf+".nc")
+                f=plt.figure()
+                ax=f.add_subplot(1,1,1)
+                c_mask.plot_dots(ax)
+                f.savefig(str(mf)+".pdf")
+
+
+
+                    
+                    
 

@@ -316,7 +316,7 @@ def make_xi_func(dvs):
     return func
 
 
-def make_func_dict(mvs,dvs):
+def make_func_dict(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
@@ -564,12 +564,12 @@ def make_param2res_sym(
 #              'xi':xi_func
 #         }
 
-        func_dict=make_func_dict(mvs,dvs)
+        func_dict=make_func_dict(mvs,dvs,cpa,epa)
         
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=1 
+        delta_t_val=15 
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -807,7 +807,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(16,1)
-    fd=make_func_dict(mvs,dvs)
+    fd=make_func_dict(mvs,dvs,cpa,epa)
     V_init=gh.make_InitialStartVectorTrace(
             X_0,mvs,
             par_dict=par_dict,
@@ -821,3 +821,56 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
     )
     return it_sym_trace
     
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    #apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict={
+        "C_leaf":cpa.cVeg_0-(epa.C_wood_0 + epa.C_root_0),
+        "C_wood":epa.C_wood_0,            
+        "C_root":epa.C_root_0,
+
+        "C_mll":epa.C_mll_0,
+        "C_mwl":epa.C_mwl_0,
+        "C_mrl":epa.C_mrl_0,
+        "C_sll":epa.C_sll_0,
+        "C_swl":epa.C_swl_0,
+        "C_srl":epa.C_srl_0,
+        "C_lll":epa.C_lll_0,
+        "C_lwl":cpa.cLitter_0-(epa.C_mll_0 + epa.C_mwl_0 + epa.C_sll_0 + epa.C_swl_0 + epa.C_lll_0),
+        "C_lrl":epa.C_lrl_0,
+
+        "C_mic":epa.C_mic_0,
+        "C_prot":epa.C_prot_0,
+        "C_nonprot":epa.C_nonprot_0,
+        "C_pass":cpa.cSoil_0-(epa.C_mrl_0 + epa.C_srl_0 + epa.C_lrl_0 + epa.C_mic_0 + epa.C_prot_0 + epa.C_nonprot_0),
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
+
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_gpp.nc")))
+    #times = ds.variables["time"]
+    #tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    #td = int(tm *30)  #in days since_1860-01-01 
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(1860, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1700, 
+        month=1,
+        day=1
+    )

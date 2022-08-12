@@ -1,8 +1,7 @@
 # +
 import sys
-import json 
 from pathlib import Path
-from collections import namedtuple 
+from collections import namedtuple
 import netCDF4 as nc
 import numpy as np
 from sympy import Symbol
@@ -17,6 +16,65 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 # -
+def spatial_mask(dataPath)->'CoorMask':
+    # We read the mask of a file and also create a masks by checking for the NANs
+    # we now check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    
+    # 1.)
+    f_mask=nc.Dataset(dataPath.joinpath("DLEM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    
+    # 2.) 
+    print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+    
+    def f(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)
+
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+
+    masks=[ f(name)    for name in names ]
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
+    print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
+    #from IPython import embed;embed() 
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        combined_mask,
+        sym_tr
+    )
+def make_model_coord_transforms():
+    """ This function can is used to achieve a target grid LAT,LON with
+    - LAT ==   0 at the equator with 
+    - LAT == -90 at the south pole,
+    - LAT== +90 at the north pole,
+    - LON ==   0 at Greenich and 
+    - LON is counted positive eastwards from -180 to 180
+    """
+    return gh.CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: lon,
+            LON2lon=lambda LON: LON,
+    )
+    
+
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = 89.75,
+    lon_0 = -179.75,
+    step_lat = -0.5,
+    step_lon = 0.5,
+ )
+
 
 # we will use the trendy output names directly in other parts of the output
 Observables = namedtuple(
@@ -145,11 +203,11 @@ def get_global_mean_vars(dataPath):
     names = o_names + d_names 
 
     if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
-        print(""" Found cached global mean files. If you want to recompute the global means
-            remove the following files: """
-        )
-        for vn in names:
-            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
+#         print(""" Found cached global mean files. If you want to recompute the global means
+#             remove the following files: """
+#         )
+#         for vn in names:
+#             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
             gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
@@ -269,21 +327,21 @@ def make_func_dict(mvs,dvs,cpa,epa):
     
     def make_npp_func(dvs):
         def npp_func(day):
-            month=gh.day_2_month_index_vm(day)
+            month=gh.day_2_month_index(day)
             # kg/m2/s kg/m2/day;
             return (dvs.npp[month])
         return npp_func
     
     def make_gpp_func(dvs):
         def gpp_func(day):
-            month=gh.day_2_month_index_vm(day)
+            month=gh.day_2_month_index(day)
             # kg/m2/s kg/m2/day;
             return (dvs.gpp[month])
         return gpp_func
     
     def make_temp_func(dvs):
         def temp_func(day):
-            month=gh.day_2_month_index_vm(day)
+            month=gh.day_2_month_index(day)
             # kg/m2/s kg/m2/day;
             return (dvs.tas[month])
         return temp_func
@@ -546,32 +604,23 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     return X_0
 
 
-def make_sim_day_2_day_since_a_D(conf_dict):
-    # this function is extremely important to syncronise our results
-    # because our data streams start at different times the first day of 
-    # a simulation day_ind=0 refers to different dates for different models
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced monthly with different numbers of days
-    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("DLEM_S2_cVeg.nc")))
-    times = ds.variables["time"]
-
-    # we have to check some assumptions on which this calculation is based
-
-    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
-    td = int(tm *31)  #in days since_1860-01-01 
-    #NOT assuming a 30 day month...
-    import datetime as dt
-    ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(1700, 1, 1)
-    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
-
-    def f(day_ind: int)->int:
-        return day_ind+td_aD
-
-    return f
-
-# Define start and end dates of the simulation
-import datetime as dt
-start_date=dt.date(1700, 1, 1)
-end_date = dt.date(2019, 11, 30)
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("DLEM_S2_npp.nc")))
+    #times = ds.variables["time"]
+    #tm = times[0] #time of first observation in Months_since_1700-01 # print(times.units)
+    #td = int(tm *30)  #in days since_1700-01-01 
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(1700, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1700, 
+        month=1,
+        day=1
+    )

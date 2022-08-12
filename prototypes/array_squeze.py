@@ -60,24 +60,24 @@ if __name__ == "__main__":
     )
 
     nz = dask.array.nonzero((iveg == ifv))
-    n_val=int(npatch/2*nland)
+    n_val = int(npatch/2*nland)
 
-    B_val = cH.valid_combies_parallel(nz,B)
-    u_val = cH.valid_combies_parallel(nz,u)
-    x0_val = cH.valid_combies_parallel(nz,x0)
-    assert(B_val.shape == (ntime,npool,npool,n_val))
-    assert(u_val.shape == (ntime,npool,n_val))
-    assert(x0_val.shape == (npool,n_val))
-    
-    # write them to disk 
+    B_val = cH.valid_combies_parallel(nz, B)
+    u_val = cH.valid_combies_parallel(nz, u)
+    x0_val = cH.valid_combies_parallel(nz, x0)
+    assert(B_val.shape == (ntime, npool, npool, n_val))
+    assert(u_val.shape == (ntime, npool, n_val))
+    assert(x0_val.shape == (npool, n_val))
+
+    # write them to disk
 #    if dir_p.exists():
 #        shutil.rmtree(dir_p)
-    
-    cH.batchwise_to_zarr(B_val,'B.zarr',rm=True)
-    cH.batchwise_to_zarr(u_val,'u.zarr',rm=True)
-    cH.batchwise_to_zarr(x0_val,'x0.zarr',rm=True)
 
-    ## and read them again
+    cH.batchwise_to_zarr(B_val, 'B.zarr', rm=True)
+    cH.batchwise_to_zarr(u_val, 'u.zarr', rm=True)
+    cH.batchwise_to_zarr(x0_val, 'x0.zarr', rm=True)
+
+    # and read them again
 
     assert(dask.array.all(dask.array.from_zarr('B.zarr') == B_val).compute())
     assert(dask.array.all(dask.array.from_zarr('u.zarr') == u_val).compute())

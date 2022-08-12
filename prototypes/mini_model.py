@@ -10,26 +10,51 @@ from bgc_md2.resolve.mvars import (
 )
 
 # +
+# obtain dictionary of symbols for equations from txt file
+params_in = open(r"mini_model_sym_dict.txt", 'r')
+sym_dict = {}
+for line in params_in:
+    k, v = line.strip().split('=')
+    sym_dict[k.strip()] = v.strip()
+    
+params_in.close()
+
+# -
+
 #define all the symbols you are going to use in the equations
 sym_dict={
-    "AGLIVC": "Above ground live grass C pool ",
+    "AGLIVC": "Above ground live grass C pool ", 
     "BGLIVC": "Below ground live grass root C pool ",
     "STDEDC": "Standing dead C pool ", 
     "STRUCC_1": "Surface structural C pool",
     "STRUCC_2": "Below ground structural C pool",
-    "SOM1C1": "Surface microbe C pool",
-    "SOM1C2": "Active organic C pool",
+    "SOM1C_1": "Surface microbe C pool",
+    "SOM1C_2": "Active organic C pool",
     "SOM2C": "Slow organic C pool",
     "SOM3C": "Passive soil organic matter C pool",
-    "cultra4": "fraction of standing dead C to surface litter", 
-    "cultra1": "fraction of above ground live C transferred to standing dead", 
     "METABC_1": "Surface metabolic C ",
     "METABC_2": "Below ground metabolic C ",
+    "CROOTC": "C in forest system coarse root component",
+    "FBRCHC": "C in forest system fine branch component",
+    "FROOTC": "C in forest system fine root component",
+    "RLEAVC": "C in forest system leaf component",
+    "RLWODC": "C in forest system large wood component",
+    "WOOD1C": "C in dead fine branch component of forest system",
+    "WOOD2C": "C in dead large wood component of forest system",
+    "WOOD3C": "C in dead coarse roots component of forest system",
     "cprodc_A": "fraction of Gpp that goes to the above ground part",
     "cprodc_B": "fraction of Gpp that goes to the below ground part",
-    "r_leaf2out": "",
-    "r_wood2out": "",
+    "dec1_1":"",
+    "defac_0": "",
+    "strlig_1":"",
+    "fallrt": "",
+    "dec1_2": "",
+    "strlig_2": "",
 }
+
+# +
+#define all the symbols you are going to use in the equations
+
 for k in sym_dict.keys():
     code=k+" = Symbol('{0}')".format(k)
     exec(code)
@@ -39,13 +64,14 @@ func_dict = {
 }
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-cprodc_B = 1 - cprodc_A
-    
+    exec(code)    
     
 #I_wood=Function("I_wood") 
 t=TimeSymbol("t") # the symbol used for time since it has a special role
+e = Symbol("e")   # for exponential functions
+
+cprodc_B = 1 - cprodc_A
+k_STRUCC_1 = dec1_1 * defac_0 * (e**(-3*strlig_1))
 
 # formulate the model
 mvs = CMTVS(
@@ -57,12 +83,20 @@ mvs = CMTVS(
                 STDEDC,
                 STRUCC_1,
                 STRUCC_2,
-                SOM1C1,
-                SOM1C2,
+                SOM1C_1,
+                SOM1C_2,
                 SOM2C,
                 SOM3C,
                 METABC_1,
                 METABC_2,
+                CROOTC,
+                FBRCHC,
+                FROOTC,
+                RLEAVC,
+                RLWODC,
+                WOOD1C,
+                WOOD2C,
+                WOOD3C,
             )
         ), 
         t, 
@@ -71,13 +105,13 @@ mvs = CMTVS(
             BGLIVC: Gpp_grass(t)*cprodc_B
         }),
         OutFluxesBySymbol({
-            STDEDC: r_leaf2out * STDEDC,
-            STRUCC_1: r_wood2out * STRUCC_1
+            STDEDC: fallrt * STDEDC,
+            STRUCC_1: (k_STRUCC_1) * (0.3 * strlig_1 + (0.55 - 0.55 * strlig_1)) * STRUCC_1, 
+            STRUCC_2: (dec1_2 * defac_0 * (e**(-3*strlig_2))) * STRUCC_2  # anerb=1 see litdec.F
         }),
         InternalFluxesBySymbol({
-            (AGLIVC, STDEDC): cultra1* AGLIVC, 
-            (STDEDC, STRUCC_1): cultra4* STDEDC, 
-            #(STRUCC_1, C_leaf): k_wood2leaf * STRUCC
+            (STRUCC_1, SOM1C_1): ((k_STRUCC_1 - strlig_1 * k_STRUCC_1) - (k_STRUCC_1 - strlig_1 * k_STRUCC_1) * 0.55) * STRUCC_1,
+            (STRUCC_1, SOM2C): k_STRUCC_1 * (strlig_1 - strlig_1 * 0.3) * STRUCC_1  
         }),
     },
     bgc_md2_computers()
@@ -105,11 +139,13 @@ mass_balance_equation(mvs)
 from bgc_md2.models.Parton1987SoilSciSocAmJ.source_by_name import mvs as mvs_century
 
 
-mvs.computable_mvar_types
+mvs.computable_mvar_types()
 
 mvs_century.get_InputTuple()
 
 compartmental_graph(mvs_century)
+
+mass_balance_equation(mvs_century)
 
 BI=mvs_century.get_BibInfo()
 BI.sym_dict
@@ -124,8 +160,3 @@ s
 # -
 
 type(s)
-
-a
-
-
-

@@ -128,7 +128,7 @@ def vegetation_carbon_internal_fluxes_by_symbol_1(
     
     return VegetationCarbonInternalFluxesBySymbol( internal_fluxes_veg)
 
-@lru_cache
+#@lru_cache
 def vegetation_carbon_compartmental_matrix_1(
     in_fluxes: InFluxesBySymbol,
     out_fluxes: OutFluxesBySymbol,

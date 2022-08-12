@@ -11,10 +11,94 @@ from CompartmentalSystems.TimeStepIterator import (TimeStepIterator2)
 from typing import Callable
 
 # from general_helpers import month_2_day_index, monthly_to_yearly
-# from functools import reduce
+from functools import reduce
 
 sys.path.insert(0, '..')  # necessary to import general_helpers
 import general_helpers as gh
+
+# dictionaries to link file names to var names
+file_name_from_var_name = {
+   "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
+   **{
+        vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
+        for vn in [ "mrsos",
+	 "tsl",
+	 "landCoverFrac",
+	 "cVeg",
+	 "cSoil",
+	 "rh",
+	    "fVegSoil" ]
+   }
+}
+# global dictionary to link var names to var names in files
+d_name2varname_in_file = {
+    "npp": 'npp_nlim',
+    **{
+        vn: vn
+        for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
+    }
+
+}
+
+def spatial_mask(dataPath)->'CoorMask':
+    cache_path=dataPath.joinpath('mask.nc')
+    
+
+    # We read the mask of a file and also create a masks by checking for the NANs
+    # we now check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    
+    print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+    
+
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    def f(d_name):
+        vn_in_file = d_name2varname_in_file[d_name]
+        file_name = file_name_from_var_name[vn_in_file]
+        path = dataPath.joinpath(file_name)
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn_in_file]
+        #return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)
+
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+    
+    masks=[ f(name)    for name in names ]
+    combined_mask = reduce(lambda acc,m: np.logical_or(acc,m),masks)
+
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        combined_mask,
+        sym_tr
+    )
+
+def make_model_coord_transforms():
+    """ This function can is used to achieve a target grid LAT,LON with
+    - LAT ==   0 at the equator with 
+    - LAT == -90 at the south pole,
+    - LAT== +90 at the north pole,
+    - LON ==   0 at Greenich and 
+    - LON is counted positive eastwards from -180 to 180
+    """
+    return gh.CoordTransformers(
+            lat2LAT=lambda lat: lat,
+            LAT2lat=lambda LAT: LAT,
+            lon2LON=lambda lon: -180+ lon-180 if lon > 180 else lon,
+            LON2lon=lambda LON: 360+LON if LON < 0 else LON
+    )
+    
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = -89.375,
+    lon_0 = 0.9375,
+    step_lat = 1.25,
+    step_lon = 1.875,
+ )
 
 Observables = namedtuple(
     'Observables',
@@ -73,7 +157,6 @@ EstimatedParameters = namedtuple(
         'r_c_HUM_2_c_BIO',
     ]
 )
-
 def download_my_TRENDY_output(conf_dict):
     gh.download_TRENDY_output(
         username=conf_dict["username"],
@@ -123,36 +206,7 @@ def get_example_site_vars(dataPath):
             print("reading ", vn, ", size is ", ds.variables[vn].shape)
             return ds.variables[vn][t]
 
-    # Link symbols and data:
-
-    # Create file names (single step if files similarly named)
-
-    file_name_from_var_name = {
-       "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
-       **{
-            vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
-            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
-       }
-    }
-    #d_name2varname_in_file = {
-    #    "npp":'npp_nlim',
-    #    **{
-    #         vn: vn
-    #         for vn in ["fVegSoil", "mrso", "tsl","landCoverFrac", "cVeg", "cSoil", "rh" ]
-    #    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
-    #    **{
-    #        vn: "JULES-ES-1p0_S2_{}.nc".format(vn)
-    #        for vn in ["mrso", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh", "fVegSoil"]
-    #    }
-    #}
-    d_name2varname_in_file = {
-        "npp": 'npp_nlim',
-        **{
-            vn: vn
-            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
-        }
-
-    }
+    ## Link symbols and data:
 
     o_tuples = [
         (
@@ -177,103 +231,22 @@ def get_example_site_vars(dataPath):
         Drivers(*map(f, d_tuples))
     )
 
-# def get_global_mean_vars_old(dataPath):
-#    """This function is deprecated since it uses the also deprecated function global_mean_JULES from general_helpers.py which ignores the mask of the array
-#    """
-#    # Define single geospatial cell from (3840, 144, 192)
-#    #slayer = slice(None, None, None)  # this is the same as :
-#    #slat = 120
-#    #slon = 50
-#    #t = slayer, slat, slon  # a site in South America
-#
-#    
-#    # Define function to select geospatial cell and scale data
-#    def f(tup):
-#        vn, fn = tup
-#        path = dataPath.joinpath(fn)
-#        # Read NetCDF data but only at the point where we want them
-#        ds = nc.Dataset(str(path))
-#        lats = ds.variables["latitude"]
-#        lons = ds.variables["longitude"]
-#
-#        if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
-#            # f_veg2soil: Total carbon mass from vegetation directly into the soil
-#            print("reading ", vn, ", size is ", ds.variables[vn].shape)
-#            return gh.global_mean_JULES(lats, lons, ds.variables[vn]) * 86400  # convert from kg/m2/s to kg/m2/day
-#        
-#        elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
-#            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
-#            tmp = ds.variables[vn][:, 0, :, :]
-#            print("converted size is ", tmp.shape)
-#            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
-#            return gh.global_mean_JULES(lats, lons, tmp)  # average soil temperature at different depth
-#            
-#    
-#        elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
-#            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
-#            # from IPython import embed;embed()
-#            var = ds.variables[vn]
-#            sh = var.shape
-#            tmp = np.zeros(shape = var[:, 0, :, :].shape)
-#            print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
-#            for i in range(13):
-#                tmp = tmp + var[:, i, :, :]
-#                # print("converted size is ", tmp.shape)
-#            #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
-#            # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
-#            # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
-#            # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
-#            return gh.global_mean_JULES(lats, lons, tmp)  # sum the vegetation coverages
-#        
-#        else:
-#            print("reading ", vn, ", size is ", ds.variables[vn].shape)
-#            return gh.global_mean_JULES(lats, lons, ds.variables[vn])
-#
-#    # Link symbols and data:
-#
-#    # Create file names (single step if files similarly named)
-#
-#    file_name_from_var_name = {
-#       "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
-#       **{
-#            vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
-#            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
-#       }
-#    }
-#    d_name2varname_in_file = {
-#        "npp": 'npp_nlim',
-#        **{
-#            vn: vn
-#            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
-#        }
-#
-#    }
-#
-#    o_tuples = [
-#        (
-#            d_name2varname_in_file[f],
-#            file_name_from_var_name[d_name2varname_in_file[f]]
-#        )
-#        for f in Observables._fields
-#    ]
-#
-#    d_tuples = [
-#        (
-#            d_name2varname_in_file[f],
-#            file_name_from_var_name[d_name2varname_in_file[f]]
-#        )
-#        for f in Drivers._fields
-#    ]
-#
-#    # Link symbols and data for observables/drivers
-#    # print(o_tuples)
-#    return (
-#        Observables(*map(f, o_tuples)),
-#        Drivers(*map(f, d_tuples))
-#    )
 
 def get_global_mean_vars(dataPath):
     # Define function to select geospatial cell and scale data
+    gm=gh.globalMask()
+    # load an example file with mask
+    template = nc.Dataset(dataPath.joinpath("JULES-ES-1p0_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    gcm=gh.project_2(
+            source=gm,
+            target=gh.CoordMask(
+                index_mask=np.zeros_like(template),
+                tr=gh.SymTransformers(
+                    ctr=make_model_coord_transforms(),
+                    itr=make_model_index_transforms()
+                )
+            )
+    )
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
@@ -284,56 +257,58 @@ def get_global_mean_vars(dataPath):
 
         if vn in ["npp_nlim", "gpp", "rh", "ra", "fVegSoil"]:  # (3840, 144, 192), kg m-2 s-1
             # f_veg2soil: Total carbon mass from vegetation directly into the soil
-            print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean(lats, lons, ds.variables[vn].__array__()) * 86400  # convert from kg/m2/s to kg/m2/day
+            #print("reading ", vn, ", size is ", ds.variables[vn].shape)
+            ma=ds.variables[vn][:,:,:].data * 86400# convert from kg/m2/s to kg/m2/day
         
         elif vn in ["tsl"]:  # Temperature of Soil - top layer, 192x144x4 (depth) x3840, 'K'
             print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 4, 144, 192)
-            tmp = ds.variables[vn][:, 0, :, :]
-            print("converted size is ", tmp.shape)
-            # tmp = np.mean(ds.variables[vn][:, :, slat, slon], axis=1)
-            return gh.global_mean(lats, lons, tmp)  # average soil temperature at different depth
-            
+            ma=ds.variables[vn][:, 0, :, :].data
+            #print("converted size is ", ma.shape)
+            # ma= np.mean(ds.variables[vn][:, :, slat, slon].data, axis=1)
+            # average soil temperature at different depth
     
         elif vn in ["landCoverFrac"]:  # Plant Functional Type Grid Fraction, 192x144x17 (vegtype) x3840
-            print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
+            #print("reading ", vn, ", size is ", ds.variables[vn].shape)  ## (3840, 17, 144, 192)
             # from IPython import embed;embed()
             var = ds.variables[vn]
             sh = var.shape
-            tmp = np.zeros(shape = var[:, 0, :, :].shape)
-            print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
+            ma= np.zeros(shape = var[:, 0, :, :].shape)
+            #print("creating a zero arry, shape is ", var[:, 0, :, :].shape)
             for i in range(13):
-                tmp = tmp + var[:, i, :, :]
-                # print("converted size is ", tmp.shape)
+                ma = ma + var[:, i, :, :].data
+                # print("converted size is ", ma.shape)
             #'0.BdlDcd; 1.BdlEvgTrop; 2.BdlEvgTemp; 3.NdlDcd; 4.NdlEvg; 5.c3grass; 6.c3crop; 7.c3pasture; 8.c4grass; 9.c4crop; 10.c4pasture; 11.shrubDcd; 12.shrubEvg; 13.urban; 14.lake; 15.soil; 16.ice'
             # print("Forest cover (t=0) is ", np.sum(var[1, 0:5, :, :]))
             # print("Grass + crop + shrub (t=0) cover is ", np.sum(var[1, 5:13, slat, slon]))
             # print("Non-vegetation (t=0) cover is ", np.sum(var[1, 13:17, slat, slon]))
-            return gh.global_mean(lats, lons, tmp)  # sum the vegetation coverages
+            # sum the vegetation coverages
+            
         
         else:
-            print("reading ", vn, ", size is ", ds.variables[vn].shape)
-            return gh.global_mean(lats, lons, ds.variables[vn].__array__())
+            #print("reading ", vn, ", size is ", ds.variables[vn].shape)
+            ma=ds.variables[vn][:,:,:].data
+       
+
+        return gh.global_mean(
+            lats, 
+            lons, 
+            np.ma.masked_array(
+                data=ma,
+                # stack the 2d gcm 
+                mask=np.stack(
+                    [
+                        gcm.index_mask 
+                        for i in range(ma.shape[0])
+                    ],
+                    axis=0
+                )
+            )                
+         )  
 
     # Link symbols and data:
 
     # Create file names (single step if files similarly named)
 
-    file_name_from_var_name = {
-       "npp_nlim":"JULES-ES-1p0_S2_npp.nc",
-       **{
-            vn: "JULES-ES-1p0_S2_{}.nc".format(vn) 
-            for vn in [ "mrsos", "tsl","landCoverFrac", "cVeg", "cSoil", "rh","fVegSoil" ]
-       }
-    }
-    d_name2varname_in_file = {
-        "npp": 'npp_nlim',
-        **{
-            vn: vn
-            for vn in ["fVegSoil", "mrsos", "tsl", "landCoverFrac", "cVeg", "cSoil", "rh"]
-        }
-
-    }
 
     o_tuples = [
         (
@@ -371,7 +346,7 @@ def make_StartVector(mvs):
 
 def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
     def xi_func(day):
-        mi = gh.day_2_month_index_vm(day)
+        mi = gh.day_2_month_index(day)
         # alternative FT
             # Q10 function (this is not what Clark et al 2011 Fig. 2 presented, the equation must be wrong)
         #FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
@@ -398,7 +373,7 @@ def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
 
 def make_npp_func(dvs):
     def func(day):
-        month = gh.day_2_month_index_vm(day)
+        month = gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;
         return (dvs.npp[month])
 
@@ -729,36 +704,33 @@ def make_tuple_traceability_iterator(mvs,dvs,cpa,epa):
     )
     return it
 
-def make_sim_day_2_day_since_a_D(conf_dict):
-    # this function is extremely important to syncronise our results
-    # because our data streams start at different times the first day of 
-    # a simulation day_ind=0 refers to different dates for different models
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced monthly with different numbers of days
-    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
-    times = ds.variables["time"]
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced with different numbers of days between monthly
-    # data point
-    # we can see this by looking at the first 24 months
-    # for i in range(24):
-    #     print((times[i + 1] - times[i])/(3600 * 24))
 
-    ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
-    td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
-    #td = (ts - 12 * 3600) / (3600 * 24)
-    import datetime as dt
-    ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(2010, 1, 1)
-    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## for jules the data points are actually spaced monthly with different numbers of days
+    ## 
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
+    #times = ds.variables["time"]
+    ## we have to check some assumptions on which this calculation is based
+    ## for jules the data points are actually spaced with different numbers of days between monthly
+    ## data point
+    ## we can see this by looking at the first 24 months
+    ## for i in range(24):
+    ##     print((times[i + 1] - times[i])/(3600 * 24))
 
-    def f(day_ind: int)->int:
-        return day_ind+td_aD
-
-    return f
-
-# Define start and end dates of the simulation
-import datetime as dt
-start_date=dt.date(1700, 1, 16) 
-end_date = dt.date(2019, 12, 16)
+    #ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
+    #td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(2010, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1700, 
+        month=1,
+        day=16
+    )

@@ -3,8 +3,10 @@ import netCDF4 as nc
 from unittest import TestCase, skip
 from numpy.core.fromnumeric import shape
 from pathlib import Path
+from time import time, sleep
 from testinfrastructure.InDirTest import InDirTest
 import general_helpers as gh
+import matplotlib.pyplot as plt
 
 class Test_general_helpers(InDirTest):
 
@@ -40,35 +42,35 @@ class Test_general_helpers(InDirTest):
         self.assertEqual(gh.day_2_month_index(31), 1) 
         self.assertEqual(gh.day_2_month_index(60), 2) 
 
+     
+    #def test_month_2_day_index_vm(self):
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([0]),
+    #            [0]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([1]),
+    #            [31]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([2]),
+    #            [59]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([3]),
+    #            [90]
+    #    ) 
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([1,3]),
+    #            [31,90]
+    #    ) 
     
-    def test_month_2_day_index_vm(self):
-        self.assertEqual(
-                gh.month_2_day_index_vm([0]),
-                [0]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([1]),
-                [31]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([2]),
-                [59]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([3]),
-                [90]
-        ) 
-        self.assertEqual(
-                gh.month_2_day_index_vm([1,3]),
-                [31,90]
-        ) 
-    
-    def test_day_2_month_index_vm(self):
-        # note that days are counted from zero so day 30 is January 31.
-        self.assertEqual(gh.day_2_month_index_vm( 0), 0) 
-        self.assertEqual(gh.day_2_month_index_vm(30), 0) 
-        self.assertEqual(gh.day_2_month_index_vm(31), 1) 
-        self.assertEqual(gh.day_2_month_index_vm(60), 2) 
+    #def test_day_2_month_index_vm(self):
+    #    # note that days are counted from zero so day 30 is January 31.
+    #    self.assertEqual(gh.day_2_month_index_vm( 0), 0) 
+    #    self.assertEqual(gh.day_2_month_index_vm(30), 0) 
+    #    self.assertEqual(gh.day_2_month_index_vm(31), 1) 
+    #    self.assertEqual(gh.day_2_month_index_vm(60), 2) 
 
 
     def test_pixel_area_on_unit_sphere(self):
@@ -279,10 +281,12 @@ class Test_general_helpers(InDirTest):
         ref_mask[0,0]=True
         ref_mask[2,3]=True
         ref_mask[1,3]=True
+        
         res = gh.get_nan_pixel_mask(test_var)
         self.assertTrue(
             (ref_mask == res).all()
         )
+        ds.close()
 
         ma_arr=np.ma.array(arg,mask=False)
         ds = nc.Dataset('diskless_example1.nc','w',diskless=True,persist=False)
@@ -298,6 +302,33 @@ class Test_general_helpers(InDirTest):
         self.assertTrue(
             (ref_mask == res).all()
         )
+        ds.close()
+        # 4-D-example
+        n_t=2
+        n_d=3
+        n_lats=4
+        n_lons=5
+        arg= np.zeros((n_t,n_d,n_lats,n_lons))
+        arg[0,0,2,3]=np.nan
+        arg[1,2,1,3]=np.nan
+        mask=np.zeros((n_t,n_d,n_lats,n_lons),dtype=np.bool_)
+        mask[:,0,0,0]=True
+        ma_arr=np.ma.array(arg,mask=mask)
+        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=False)
+        time = ds.createDimension('time',size=n_t)
+        depth = ds.createDimension('depth',size=n_d)
+        lat = ds.createDimension('lat',size=n_lats)
+        lon = ds.createDimension('lon',size=n_lons)
+        test_var=ds.createVariable("test_var",np.float64,['time','depth','lat','lon'])
+        test_var[:,:,:,:]=ma_arr
+        
+        res = gh.get_nan_pixel_mask(test_var)
+        from IPython import embed;embed()
+        self.assertTrue(
+            (ref_mask == res).all()
+        )
+        ds.close()
+
 
     def test_globalmean_var(self):
         # we create data similar to cmip6 and trendy. These are masked arrays:
@@ -496,97 +527,506 @@ class Test_general_helpers(InDirTest):
         
         ds.close()
 
-    def test_common_mask(self):
-        def i2c_maker(lat_0,lon_0,step_lat,step_lon):
-            def i2c(i_lat,i_lon):
-                return(
-                    lat_0+step_lat*i_lat,
-                    lon_0+step_lon*i_lon
-                )
-            return i2c
-        step_lat1,step_lon1=(1,1)
-        i2c_1=i2c_maker(
-            step_lat1/2,
-            step_lon1/2,
-            step_lat1,
-            step_lon1,
+    #def test_common_mask(self):
+    #    def i2c_maker(lat_0,lon_0,step_lat,step_lon):
+    #        def i2c(i_lat,i_lon):
+    #            return(
+    #                lat_0+step_lat*i_lat,
+    #                lon_0+step_lon*i_lon
+    #            )
+    #        return i2c
+    #    step_lat1,step_lon1=(1,1)
+    #    i2c_1=i2c_maker(
+    #        step_lat1/2,
+    #        step_lon1/2,
+    #        step_lat1,
+    #        step_lon1,
+    #    )
+    #    
+    #    
+    #    step_lat2,step_lon2=(.7,1)
+    #    i2c_2=i2c_maker(
+    #        .5+step_lat2/2,
+    #        step_lon2/2,
+    #        step_lat2,
+    #        step_lon2,
+    #    )
+
+    #    m1=np.array([0,1,0,0],dtype=np.bool_).reshape(4,1)
+    #    m2=np.array([1,1,0,0,0],dtype=np.bool_).reshape(5,1)
+    #    
+    #    m_res=gh.combine_masks([m1,m2],[i2c_1,i2c_2])
+    #    
+    #    m_ref=[
+    #            (1.0, 2.0, 0.0, 1.0),
+    #            (0.5, 1.2, 0.0, 1.0),
+    #            (1.2, 1.8999999999999997, 0.0, 1.0)
+    #    ]
+    #    print(m_ref==m_res)
+    #    self.assertTrue(m_res==m_ref)
+
+    #    
+
+    #    common_mask=m_res
+    #    m_ref=np.array([1,1,0,0]).reshape(4,1)
+    #    res= gh.project(
+    #        m1.shape,
+    #        i2c_1,
+    #        common_mask
+    #    )
+    #    self.assertTrue(
+    #            (
+    #                res==m_ref
+    #            ).all()
+    #    )
+
+    #    
+    #def test_open_interval_intersect(self):        
+    #    self.assertTrue(gh.open_interval_intersect((0,1),(0.5,1.5)))
+    #    self.assertTrue(gh.open_interval_intersect((0.5,1.5),(0,1)))
+    #    self.assertTrue(gh.open_interval_intersect((0,1),(0,1)))
+    #    self.assertTrue(gh.open_interval_intersect((0,1),(-1,2)))
+    #    self.assertFalse(gh.open_interval_intersect((0,1),(1,2)))
+    #    self.assertFalse(gh.open_interval_intersect((1,2),(0,1)))
+
+    #def test_pixel_intersect(self):
+    #    self.assertTrue(
+    #        gh.pixel_intersect(
+    #            gh.boundaries(0,1,0,1),
+    #            gh.boundaries(0,1,0,1)
+    #        )
+    #    )
+    #    self.assertTrue(
+    #        gh.pixel_intersect(
+    #            gh.boundaries(0,1,0,1),
+    #            gh.boundaries(.5,1.5,0,1)
+    #        )
+    #    )
+    #    self.assertTrue(
+    #        gh.pixel_intersect(
+    #            gh.boundaries(0,1,0,1),
+    #            gh.boundaries(.5,.7,.5,.7)
+    #        )
+    #    )
+    #    self.assertFalse(
+    #        gh.pixel_intersect(
+    #            gh.boundaries(0,1,0,1),
+    #            gh.boundaries(1,1.5,0,1)
+    #        )
+    #    )
+    #    self.assertFalse(
+    #        gh.pixel_intersect(
+    #            gh.boundaries(0,1,0,1),
+    #            gh.boundaries(1,1.5,1,1.5)
+    #        )
+    #    )
+    def test_transform_maker(self):
+        step_lat = 10
+        step_lon = 10
+        lat_0 = 5
+        lon_0 = 5
+        tr = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        # check that i2lat rejects arguments >n_lat-1
+        with self.assertRaises(IndexError):
+            lat = tr.i2lat(n_lat)
+        
+        # check that i2lon rejects arguments >n_lon-1
+        with self.assertRaises(IndexError):
+            lon = tr.i2lon(n_lon)
+
+        # test the inverse property (under too large indices)
+        for i in range(0,n_lat):
+            lat=tr.i2lat(i)
+            ii=tr.lat2i(lat)
+            #print("i={i},lat={lat},ii={ii}".format(i=i,lat=lat,ii=ii))
+            self.assertEqual(ii,i)
+
+        for i in range(0,n_lon):
+            lon=tr.i2lon(i)
+            ii=tr.lon2i(lon)
+            #print("i={i},lon={lon},ii={ii}".format(i=i,lon=lon,ii=ii))
+            self.assertEqual(tr.lon2i(tr.i2lon(i)),i)
+
+
+
+    def test_project_2_self_b(self):
+        #step_lat = 90
+        #lat_0 = -90+45
+        step_lat = -90
+        lat_0 = 90-45
+        step_lon = 90
+        lon_0 = -180+45
+        itr = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        # here we use the identical transformation
+        ctr=gh.identicalTransformers()
+        sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
+        cm_1=gh.CoordMask(
+            np.array([[0,1,0,0],[0,0,0,0]],dtype=np.bool_).reshape(2,4),
+            sym_tr
+        )
+        
+        # self projection
+        res= gh.project_2(
+            cm_1,
+            cm_1
+        )
+        f=plt.figure()
+        ax=f.add_subplot(3,1,1)
+        cm_1.plot_dots(ax)
+        ax=f.add_subplot(3,1,2)
+        res.plot_dots(ax)
+        f.savefig("cm_1.pdf")
+        self.assertTrue((res.index_mask==cm_1.index_mask).all())
+
+    def test_project_2_self_c(self):
+        #step_lat = 60
+        #lat_0 = -90+30 
+        
+        step_lat = -60
+        lat_0 = 90-30 
+        
+        step_lon = 90
+        lon_0 = -180+45
+        itr = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        # here we use the identical transformation
+        ctr=gh.identicalTransformers()
+        sym_tr = gh.SymTransformers(itr=itr,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_1=gh.CoordMask(
+            np.array([[1,0,0,0],[0,1,0,0],[0,0,0,0]],dtype=np.bool_).reshape(n_lat,n_lon),
+            sym_tr
         )
         
         
-        step_lat2,step_lon2=(.7,1)
-        i2c_2=i2c_maker(
-            .5+step_lat2/2,
-            step_lon2/2,
-            step_lat2,
-            step_lon2,
+        # self projection
+        res= gh.project_2(
+            cm_1,
+            cm_1
+        )
+        f=plt.figure()
+        ax=f.add_subplot(2,1,1)
+        cm_1.plot_dots(ax)
+        ax=f.add_subplot(2,1,2)
+        res.plot_dots(ax)
+        f.savefig("cm_1.pdf")
+        self.assertTrue((res.index_mask==cm_1.index_mask).all())
+
+        
+    
+    def test_project_2_higher_res_target(self):
+        # here we use the identical transformation
+        ctr=gh.identicalTransformers()
+        step_lat = 60
+        step_lon = 90
+        #lat_0 = 0
+        lat_0 = -90+30 
+        lon_0 = -180+45
+        itr_1 = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        sym_tr_1 = gh.SymTransformers(itr=itr_1,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_1=gh.CoordMask(
+            np.array(
+                [
+                    [0,0,0,0],
+                    [0,1,0,0],
+                    [0,0,0,0],
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat,n_lon),
+            sym_tr_1
         )
 
-        m1=np.array([0,1,0,0],dtype=np.bool_).reshape(4,1)
-        m2=np.array([1,1,0,0,0],dtype=np.bool_).reshape(5,1)
-        
-        m_res=gh.combine_masks([m1,m2],[i2c_1,i2c_2])
-        
-        m_ref=[
-                (1.0, 2.0, 0.0, 1.0),
-                (0.5, 1.2, 0.0, 1.0),
-                (1.2, 1.8999999999999997, 0.0, 1.0)
-        ]
-        print(m_ref==m_res)
-        self.assertTrue(m_res==m_ref)
-
-        
-
-        common_mask=m_res
-        m_ref=np.array([1,1,0,0]).reshape(4,1)
-        res= gh.project(
-            m1.shape,
-            i2c_1,
-            common_mask
+        step_lat = 45
+        step_lon = 60
+        #lat_0 = 0
+        lat_0 = -90+step_lat/2.0
+        lon_0 = -180+step_lon/2.0
+        itr_2 = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
         )
+        # here we use the identical transformation
+        sym_tr_2 = gh.SymTransformers(itr=itr_2,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_2=gh.CoordMask(
+            np.array(
+                [
+                    [0,0,0,0,0,0],
+                    [0,1,0,0,0,0],
+                    [0,0,0,0,0,0],
+                    [0,0,0,0,0,0],
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat,n_lon),
+            sym_tr_2
+        )
+        res= gh.project_2(
+            target=cm_2,
+            source=cm_1
+        )
+        f=plt.figure()
+        ax=f.add_subplot(3,1,1)
+        cm_1.plot(ax)
+        ax=f.add_subplot(3,1,2)
+        cm_2.plot(ax)
+        ax=f.add_subplot(3,1,3)
+        res.plot(ax)
+        f.savefig("cms.pdf")
+        #raise "the plot shows that something goes definitely wrong"
+        #m_ref=np.array([1,1,0,0]).reshape(4,1)
+        #self.assertTrue((res==m_ref).all())
+
+    def test_project_2_lower_res_target(self):
+        # here we use the identical transformation
+        ctr=gh.identicalTransformers()
+        step_lat = 45
+        step_lon = 60
+        #lat_0 = 0
+        lat_0 = -90+step_lat/2.0
+        lon_0 = -180+step_lon/2.0
+        itr_1 = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        # here we use the identical transformation
+        sym_tr_1 = gh.SymTransformers(itr=itr_1,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_1=gh.CoordMask(
+            np.array(
+                [
+                    [1,0,0,0,0,0],
+                    [1,1,0,0,0,0],
+                    [0,0,0,0,0,0],
+                    [0,0,0,0,0,0],
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat,n_lon),
+            sym_tr_1
+        )
+        step_lat = 60
+        step_lon = 90
+        #lat_0 = 0
+        lat_0 = -90+30 
+        lon_0 = -180+45
+        itr_2 = gh.transform_maker(
+            lat_0,
+            lon_0,
+            step_lat,
+            step_lon,
+        )
+        sym_tr_2 = gh.SymTransformers(itr=itr_2,ctr=ctr)
+        n_lat=int(180/step_lat)
+        n_lon=int(360/step_lon)
+        cm_2=gh.CoordMask(
+            np.array(
+                [
+                    [0,0,0,0],
+                    [0,1,0,0],
+                    [0,0,0,0],
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat,n_lon),
+            sym_tr_2
+        )
+
+        res= gh.project_2(
+            target=cm_2,
+            source=cm_1
+        )
+        f=plt.figure()
+        ax=f.add_subplot(3,1,1)
+        cm_1.plot(ax)
+        ax=f.add_subplot(3,1,2)
+        cm_2.plot(ax)
+        ax=f.add_subplot(3,1,3)
+        res.plot(ax)
+        f.savefig("cms.pdf")
+        #raise "the plot shows that something goes definitely wrong"
+        #m_ref=np.array([1,1,0,0]).reshape(4,1)
+        #self.assertTrue((res==m_ref).all())
+
+
+
+
+
+        ## shifted and different size
+        #
+        #i2lat_2, i2lon_2, lat2i_2,lon2i_2= gh.transform_maker(
+        #    .5+step_lat2/2,
+        #    step_lon2/2,
+        #)
+
+        #cm_2=gh.CoordMask(
+        #    np.array([1,1,0,0,0],dtype=np.bool_).reshape(5,1), 
+        #    45+(180/5)/2,
+        #    (360/1)/2
+        #)
+        #
+
+        #res=gh.project_2(
+        #    target=cm_1,
+        #    source=cm_2
+        #)
+        #print(res)
+        #m_ref=np.array([1,1,0,0]).reshape(4,1)
+
+        ##self.assertTrue(
+        ##        (
+        ##            res==m_ref
+        ##        ).all()
+        ##)
+
+    def test_InfiniteIterator(self):
+        I=np.array([1,1]).reshape(2,1),
+        k=.5
+        def f(i,X):
+            return X+(I-k*X)
+        itr=gh.InfiniteIterator(
+                x0=np.array([1,1]).reshape(2,1),
+                func=f
+        ) 
+        
+        # make sure that [] has no side effects
+        
+        # first we get a single value
+        # the results will be tuples of length 1
+        # of 2,1 arrays 
+        result_1=itr[0]
+        result_2=itr[0]
         self.assertTrue(
+            np.all(
                 (
-                    res==m_ref
-                ).all()
+                    np.all(result_1[0] == result_2[0])
+                )
+            )
         )
+
+        # tuples of arrays
+        results_1=np.stack(itr[0:10])
+        results_2=np.stack(itr[0:10])
+        self.assertTrue(
+            np.all(results_1 == results_2)
+        )
+
+    def test_TraceTupleIterator(self):
+        def B_func(it,X):
+            return -0.5*np.eye(2)
+
+        def I_func(it,X):
+            return  2*np.ones(shape=(2,1))
+        
+        X_0=np.array([2,1]).reshape(2,1)
+
+        V_init = gh.trace_tuple_instance(
+            X_0,
+            # in Yiqi's nomenclature: dx/dt=I-Bx 
+            # instead of           : dx/dt=I+Bx 
+            # as assumed by B_u_func  
+            - B_func(0,X_0), 
+            I_func(0,X_0)
+        )
+   
+        # define the function with V_{i+1}=f(i,V_i)
+        def f(
+                it: int,
+                V :gh.TraceTuple
+            ) -> gh.TraceTuple:
+                X = V.X
+                I = I_func(it,X) 
+                B = B_func(it,X)
+                X_new= X + I + B @ X
+                return gh.trace_tuple_instance(X_new,-B,I)
+        
+        itr=gh.TraceTupleIterator(
+                x0=V_init,
+                func=f
+        ) 
+        # assert side effect free [ ] application 
+        results_1=itr[0:10]
+        results_2=itr[0:10]
+        self.assertTrue(
+            np.all(
+                tuple( 
+                    np.all(
+                        results_1.__getattribute__(name) 
+                        == results_2.__getattribute__(name)
+                    )
+                    for name in gh.TraceTuple._fields
+                )
+            )
+        )
+        # test correct averaging
+        parts=gh.partitions(0,10,2)
+        res=itr.averaged_values(parts)
+        ref=results_1.averages(parts)
+        self.assertTrue(res == ref)
+        
 
         
-    def test_open_interval_intersect(self):        
-        self.assertTrue(gh.open_interval_intersect((0,1),(0.5,1.5)))
-        self.assertTrue(gh.open_interval_intersect((0.5,1.5),(0,1)))
-        self.assertTrue(gh.open_interval_intersect((0,1),(0,1)))
-        self.assertTrue(gh.open_interval_intersect((0,1),(-1,2)))
-        self.assertFalse(gh.open_interval_intersect((0,1),(1,2)))
-        self.assertFalse(gh.open_interval_intersect((1,2),(0,1)))
+    def test_read_or_create(self):
+        cachePath=Path("cache.nc")
+        var_name="test" 
+        def caw(path):
+            sleep(2)
+            n = 5
+            ds = nc.Dataset(path,'w',persist=True)
+            lat = ds.createDimension('lat',size=n)
+            lon = ds.createDimension('lon',size=n)
+            test=ds.createVariable(var_name,np.float64,['lat','lon'])
+            var=np.diag(np.arange(0,n))
+            test[:,:]=var
+            return var 
+            
+        
+        def r(path):
+            ds=nc.Dataset(path)
+            return ds.variables[var_name][:,:].data
+        
+        path=Path("cache","test.nc")
+        before=time()
+        res_1=gh.read_or_create(
+                path=path,
+                create_and_write=caw,
+                read=r
+        )
+        after_1=time()
+        res_2=gh.read_or_create(
+                path=path,
+                create_and_write=caw,
+                read=r
+        )
+        after_2=time()
+        self.assertTrue((res_1==res_2).all())
+        self.assertTrue(after_1-before> after_2-after_1)
 
-    def test_pixel_intersect(self):
-        self.assertTrue(
-	    gh.pixel_intersect(
-                gh.boundaries(0,1,0,1),
-                gh.boundaries(0,1,0,1)
-            )
-        )
-        self.assertTrue(
-	    gh.pixel_intersect(
-                gh.boundaries(0,1,0,1),
-                gh.boundaries(.5,1.5,0,1)
-            )
-        )
-        self.assertTrue(
-	    gh.pixel_intersect(
-                gh.boundaries(0,1,0,1),
-                gh.boundaries(.5,.7,.5,.7)
-            )
-        )
-        self.assertFalse(
-            gh.pixel_intersect(
-                gh.boundaries(0,1,0,1),
-                gh.boundaries(1,1.5,0,1)
-            )
-        )
-        self.assertFalse(
-            gh.pixel_intersect(
-                gh.boundaries(0,1,0,1),
-                gh.boundaries(1,1.5,1,1.5)
-            )
-        )
 

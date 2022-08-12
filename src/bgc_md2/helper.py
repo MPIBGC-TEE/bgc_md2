@@ -10,16 +10,32 @@ import nbformat as nbf
 import pkgutil
 import importlib
 import matplotlib.pyplot as plt
-from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from string import ascii_lowercase, ascii_uppercase
+from functools import _lru_cache_wrapper
+import inspect
 
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 # from .models.helpers import computable_mvars, get_single_mvar_value
 from .resolve.mvars import CompartmentalMatrix, StateVariableTuple
 from ComputabilityGraphs.CMTVS import CMTVS
 from ComputabilityGraphs.helpers import module_computers
-from functools import _lru_cache_wrapper
-import inspect
+from ComputabilityGraphs import helpers as cgh
 from .resolve import computers as cmod
 from . import models
+
+def list_mult(ll):
+    # tensor product of list....
+    if len(ll) == 0:
+        return []
+    if len(ll) == 1:
+        return ll[0]
+    if len(ll) == 2:
+        l1 = ll[-1]
+        l2 = ll[-2]
+        new_last = [t2+t1 for t1 in l1 for t2 in l2]
+        return new_last
+
+    return list_mult(ll[0:-2]+[new_last])
 
 def combine(
         d1: frozendict,
@@ -41,6 +57,35 @@ def batchSlices(nland, nproc):
         for i in range(int(nland/nproc)+1)
     ]
 
+def bgc_md2_computers():
+    sep = "."
+    pkg_name = __name__.split(sep)[0]
+    cmod = importlib.import_module(".resolve.computers", package=pkg_name)
+    def pred(a):
+        return inspect.isfunction(a) or isinstance(a,_lru_cache_wrapper)
+    return frozenset(
+        [
+            getattr(cmod, c)
+            for c in cmod.__dir__()
+            if pred(getattr(cmod, c)) 
+        ]
+    )
+
+def computer_aliases():
+    comp_abbreviations = list_mult([ascii_lowercase for i in range(2)])
+    return frozendict({
+        v.__name__: comp_abbreviations[i]
+        for i, v in enumerate(bgc_md2_computers())
+    })
+
+
+def type_aliases():
+    var_abbreviations = list_mult([ascii_uppercase for i in range(2)])
+    allVars = cgh.all_mvars(bgc_md2_computers())
+    return frozendict({
+        name: var_abbreviations[i]
+        for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
+    })
     # fixme mm:
 
 # @Thomas
@@ -324,19 +369,6 @@ def CMTVS_from_model_name(model_id):
             raise Exception(
                 "The variable mvs in the target module is not of type {}.".format(cls.__name__)              )
 
-def bgc_md2_computers():
-    sep = "."
-    pkg_name = __name__.split(sep)[0]
-    cmod = importlib.import_module(".resolve.computers", package=pkg_name)
-    def pred(a):
-        return inspect.isfunction(a) or isinstance(a,_lru_cache_wrapper)
-    return frozenset(
-        [
-            getattr(cmod, c)
-            for c in cmod.__dir__()
-            if pred(getattr(cmod, c)) 
-        ]
-    )
 
 def compartmental_graph(mvs):
     # fixme mm 11-04 2021 
