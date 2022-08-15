@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -88,11 +88,18 @@ comparison_table
 
 # ### Loading TRENDY data and model parameters
 
+# +
 # define same step size for each model (in days)
 delta_t_val=30
 # load data and parameters
 model_folders=[(k) for k in model_names]
 test_arg_list=gh.get_test_arg_list(model_folders)
+
+# fixme mm 8-12: 
+# it would make sense to create a dictionary indexed by the model name 
+# so it can be used for model comparisons by name like this one
+test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
+# -
 
 # ### Plots of traceable components
 
@@ -186,6 +193,24 @@ gh.plot_normalized_rt(model_names=model_names,
                      )
 
 # ## Contribution of Residense Time and C Input to the Differences in C Storage Capacity
+
+# +
+# mm test for two files,
+# fixme mm 8-12: 
+# test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
+
+mf_1=="yz_jules"
+mf_2="kv_visit2"
+gh.plot_attribute_X_c(
+    mf_1=mf_1,
+    mf_2=mf_2,
+    ta_1=test_args_dictionary[mf_1],
+    ta_2=test_args_dictionary[mf_2],
+    delta_t_val=delta_t_val,
+    part=1
+)
+
+# -
 
 count_rt=0
 count_u=0
