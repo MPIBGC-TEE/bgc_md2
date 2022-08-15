@@ -1,0 +1,15 @@
+The biogeochemical model database bgc_md2
+An open framework of python libraries to formulate, collect, analyze and compare element cycling models.
+
+bgc_md2 is build on top of three other python packages LAPM, CompartmentalSystems and ComputabilityGraphs.
+
+While LAPM and CompartmentalSystems provide the algorithms to compute sympolic and numeric diagnostic variables like pool content trajectories, transit times or age distributions of compartmental models ComptutabilityGraphs provides a mechanism to connect the building blocks of the models with these diagnostic variables. 
+Model building blocks as well as the diagnostic variables are expressed as types and connected via functions with type hints. This information constitutes a graph that can be used to compute which diagnostic variables are computable from the provided information available for different models.
+bgc_md2 uses these facilities in the following ways.
+It provides growing collections of 
+- types for model components like influxes and outfluxes and internal fluxes, statevectors or  compartmental matrices.
+- carbon cycle and carbon-nitrogen cycle model descriptions from the literature (46 as to date) expressed as ultra compact symbolic mathematical expression using sympy and the aforementioned types as short snippets of normal python code. 
+- functions with arguments and results of these types forming a computability graph.
+Thus models can be expressed in different ways depending on the information provided by the publication about a specific model and computable properties can be computed recursively by ComputabilityGraphs.
+This information can be used to implement the database aspects of bgc_md2 e.g. by computing which diagnostics are available for a set of model descriptions and then comparing the models in the set with respect to those diagnostics. 
+The packages can be use with great flexibiliyt interactively in a jupyter notebook to assist model creation or used on supercomputers using DASK.
