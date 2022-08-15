@@ -3055,6 +3055,7 @@ def plot_attribute_X_c(mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
         label="contribution of u",
         # color=model_cols[mf],
     )
+    
     ax.legend()
     ax.set_title("Contribution of Residense Time (RT) and C Input (u) Over Time")
     ax.set_ylabel("% contribution")

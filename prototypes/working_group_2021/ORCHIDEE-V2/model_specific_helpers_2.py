@@ -1,4 +1,4 @@
-                                                                from cmath import pi, sin
+from cmath import pi, sin
 import sys
 import json
 from pathlib import Path
@@ -243,6 +243,13 @@ def get_example_site_vars(dataPath):
     )
     return (obss, dvs)
 
+experiment_name="OCN_S2_"
+def nc_file_name(nc_var_name):
+    return experiment_name+"{}.nc".format(nc_var_name)
+
+
+def nc_global_mean_file_name(nc_var_name):
+    return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 def get_global_mean_vars(dataPath):
     o_names = Observables._fields
@@ -449,7 +456,6 @@ def make_StartVector(mvs):
     )
 
 
-# +
 def make_param2res_sym(
         mvs,
         cpa: Constants,
@@ -543,7 +549,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val = 1
+        delta_t_val = 15
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -639,8 +645,6 @@ def make_param2res_sym(
 
     return param2res
 
-
-# -
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
@@ -798,3 +802,58 @@ def make_traceability_iterator(mvs, dvs, cpa, epa):
         func_dict=fd
     )
     return it_sym_trace
+
+def numeric_X_0(mvs,dvs,cpa,epa):
+    # This function creates the startvector for the pools
+    # It can be used inside param_2_res and for other iterators that
+    # track all carbon stocks
+    #apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    X_0_dict = {
+        "C_wood1": epa.C_wood1_0,
+        "C_wood2": epa.C_wood2_0,
+        "C_wood3": epa.C_wood3_0,
+        "C_wood4": epa.C_wood4_0,
+        "C_leaf": epa.C_leaf_0,
+        "C_root": epa.C_root_0,
+        "C_fruit": cpa.cVeg_0 - (
+                    epa.C_wood1_0 + epa.C_wood2_0 + epa.C_wood3_0 + epa.C_wood4_0 + epa.C_leaf_0 + epa.C_root_0),
+        "C_litter1": epa.C_litter1_0,
+        "C_litter2": epa.C_litter2_0,
+        "C_litter3": epa.C_litter3_0,
+        "C_litter4": epa.C_litter4_0,
+        "C_litter5": epa.C_litter5_0,
+        "C_litter6": cpa.cLitter_0 - (
+                    epa.C_litter1_0 + epa.C_litter2_0 + epa.C_litter3_0 + epa.C_litter4_0 + epa.C_litter5_0),
+        "C_som1": epa.C_som1_0,
+        "C_som2": epa.C_som2_0,
+        "C_som3": epa.C_som3_0,
+        "C_som4": cpa.cSoil_0 - (epa.C_som1_0 + epa.C_som2_0 + epa.C_som3_0),
+    }
+    X_0= np.array(
+        [
+            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+        ]
+    ).reshape(len(X_0_dict),1)
+    return X_0
+
+def start_date():
+    ## this function is important to syncronise our results
+    ## because our data streams start at different times the first day of 
+    ## a simulation day_ind=0 refers to different dates for different models
+    ## we have to check some assumptions on which this calculation is based
+    ## Here is how to get these values
+    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_gpp.nc")))
+    #times = ds.variables["time"]
+    #tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
+    #td = int(tm *30)  #in days since_1860-01-01 
+    #import datetime as dt
+    #ad = dt.date(1, 1, 1) # first of January of year 1 
+    #sd = dt.date(1860, 1, 1)
+    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
+    ## from td_aD (days since 1-1-1) we can compute the year month and day
+    return gh.date(
+        year=1700, 
+        month=1,
+        day=1
+    )
