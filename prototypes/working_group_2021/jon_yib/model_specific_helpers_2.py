@@ -592,7 +592,7 @@ def make_param2res_sym(
         )
         
         # define time step and iterator
-        delta_t_val=15 
+        delta_t_val=30 
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
