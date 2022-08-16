@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -206,20 +206,20 @@ gh.plot_components_combined(model_names=model_names,
 # ## Contribution of Residense Time and C Input to the Differences in C Storage Capacity
 
 # +
-# mm test for two files,
-# fixme mm 8-12: 
-# test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
+# # mm test for two files,
+# # fixme mm 8-12: 
+# # test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
-mf_1="yz_jules"
-mf_2="kv_visit2"
-gh.plot_attribute_X_c(
-    mf_1=mf_1,
-    mf_2=mf_2,
-    ta_1=test_args_dictionary[mf_1],
-    ta_2=test_args_dictionary[mf_2],
-    delta_t_val=delta_t_val,
-    part=1
-)
+# mf_1="yz_jules"
+# mf_2="kv_visit2"
+# gh.plot_attribution_X_c(
+#     mf_1=mf_1,
+#     mf_2=mf_2,
+#     ta_1=test_args_dictionary[mf_1],
+#     ta_2=test_args_dictionary[mf_2],
+#     delta_t_val=delta_t_val,
+#     part=1
+# )
 
 # -
 
@@ -254,55 +254,56 @@ ax1 = fig1.subplots()
 ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
         startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
 ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Among All Pairs of Models')
+ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Across All Pairs of Models')
 plt.show()
+# +
+#         i=0
+#         j=1
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
+
+#         i=1
+#         j=0
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
+
+#         i=0
+#         j=2
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
+
+#         i=2
+#         j=0
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
 # -
-        i=0
-        j=1
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
-
-        i=1
-        j=0
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
-
-        i=0
-        j=2
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
-
-        i=2
-        j=0
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
 
  
