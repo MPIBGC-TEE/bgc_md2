@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.7
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -119,9 +119,9 @@ cpa = msh.Constants(
     ra_0=svs_0.ra,  # * 86400,   # kg/m2/s kg/m2/day
     # r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
     # r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
-    number_of_months=len(svs.rh)
+    #number_of_months=len(svs.rh)
     # number_of_months=120 # for testing and tuning mcmc
-    # number_of_months=3840 # for testing and tuning mcmc
+    number_of_months=3840 # for testing and tuning mcmc
 )
 
 # ### Finding better start values for the data assimilation
@@ -139,43 +139,73 @@ epa_0 = msh.EstimatedParameters(
     # r_C_wood_rh=0,
     # r_C_root_rh=0,
     r_C_litter1_rh=0.0012934,
-    r_C_litter2_rh=0.59747,
-    r_C_litter3_rh=0.01977,
-    r_C_litter4_rh=0.0006258,
-    r_C_litter5_rh=0.0000016211,
+    r_C_litter2_rh=0.0059747,
+    r_C_litter3_rh=0.001977,
+    r_C_litter4_rh=0.006258,
+    r_C_litter5_rh=0.00016211,
     r_C_litter6_rh=0.002435,
-    r_C_som1_rh=0.00229726,
-    r_C_som2_rh=0.0010939,
+    r_C_som1_rh=0.000229726,
+    r_C_som2_rh=0.00010939,
     r_C_som3_rh=0.0000455408,
     r_C_som4_rh=0.00028037,
 
-    r_C_wood1_2_C_wood3=0.0107,
-    r_C_wood1_2_C_litter1=0.066445,
-    r_C_wood2_2_C_wood4=0.00063076,
-    r_C_wood2_2_C_litter2=0.00168526,
-    r_C_wood3_2_C_litter1=0.000007645231,
+#     r_C_wood1_2_C_wood3=0.0107,
+#     r_C_wood1_2_C_litter1=0.066445,
+#     r_C_wood2_2_C_wood4=0.00063076,
+#     r_C_wood2_2_C_litter2=0.00168526,
+#     r_C_wood3_2_C_litter1=0.000007645231,
+#     r_C_wood4_2_C_litter2=0.000209176,
+#     r_C_leaf_2_C_litter3=0.0020595,
+#     r_C_leaf_2_C_litter5=0.0000250875,
+#     r_C_root_2_C_litter4=0.0000076896,
+#     r_C_root_2_C_litter6=0.000703836,
+#     r_C_fruit_2_C_litter3=0.00026986,
+#     r_C_fruit_2_C_litter5=0.00000463,
+#     r_C_litter1_2_C_som1=0.000001348,
+#     r_C_litter1_2_C_som2=0.0000192111,
+#     r_C_litter2_2_C_som2=0.00058924,
+#     r_C_litter2_2_C_som3=0.000645606,
+#     r_C_litter3_2_C_som1=0.000183481,
+#     r_C_litter3_2_C_som3=0.0001882826,
+#     r_C_litter4_2_C_som1=0.0001623,
+#     r_C_litter4_2_C_som2=0.0007858,
+#     r_C_litter5_2_C_som1=0.0000005513,
+#     r_C_litter6_2_C_som2=0.0829,
+#     r_C_som1_2_C_som3=0.000414588,
+#     r_C_som2_2_C_som3=0.005084,
+#     r_C_som2_2_C_som4=0.0000151975,
+#     r_C_som3_2_C_som2=0.0000509621,
+#     r_C_som3_2_C_som4=0.00000000396756,
+#     r_C_som4_2_C_som2=0.0004856444,
+#     r_C_som4_2_C_som3=0.00,
+    
+    r_C_wood1_2_C_wood3=0.00107,
+    r_C_wood1_2_C_litter1=0.0066445,
+    r_C_wood2_2_C_wood4=0.0063076,
+    r_C_wood2_2_C_litter2=0.000168526,
+    r_C_wood3_2_C_litter1=0.007645231,
     r_C_wood4_2_C_litter2=0.000209176,
     r_C_leaf_2_C_litter3=0.0020595,
-    r_C_leaf_2_C_litter5=0.0000250875,
-    r_C_root_2_C_litter4=0.0000076896,
+    r_C_leaf_2_C_litter5=0.000250875,
+    r_C_root_2_C_litter4=0.000076896,
     r_C_root_2_C_litter6=0.000703836,
-    r_C_fruit_2_C_litter3=0.00026986,
-    r_C_fruit_2_C_litter5=0.00000463,
-    r_C_litter1_2_C_som1=0.000001348,
-    r_C_litter1_2_C_som2=0.0000192111,
-    r_C_litter2_2_C_som2=0.00058924,
-    r_C_litter2_2_C_som3=0.000645606,
-    r_C_litter3_2_C_som1=0.000183481,
-    r_C_litter3_2_C_som3=0.0001882826,
-    r_C_litter4_2_C_som1=0.0001623,
-    r_C_litter4_2_C_som2=0.0007858,
-    r_C_litter5_2_C_som1=0.0000005513,
+    r_C_fruit_2_C_litter3=0.0026986,
+    r_C_fruit_2_C_litter5=0.0000463,
+    r_C_litter1_2_C_som1=0.00001348,
+    r_C_litter1_2_C_som2=0.000192111,
+    r_C_litter2_2_C_som2=0.0058924,
+    r_C_litter2_2_C_som3=0.00645606,
+    r_C_litter3_2_C_som1=0.00183481,
+    r_C_litter3_2_C_som3=0.001882826,
+    r_C_litter4_2_C_som1=0.001623,
+    r_C_litter4_2_C_som2=0.007858,
+    r_C_litter5_2_C_som1=0.00005513,
     r_C_litter6_2_C_som2=0.0829,
     r_C_som1_2_C_som3=0.000414588,
     r_C_som2_2_C_som3=0.005084,
     r_C_som2_2_C_som4=0.0000151975,
     r_C_som3_2_C_som2=0.0000509621,
-    r_C_som3_2_C_som4=0.00000000396756,
+    r_C_som3_2_C_som4=0.0000000396756,
     r_C_som4_2_C_som2=0.0004856444,
     r_C_som4_2_C_som3=0.00,
 
@@ -306,7 +336,7 @@ def make_steady_state_iterator_sym(
 
 
 # calculate steady state
-func_dict = msh.make_func_dict(svs, dvs)
+func_dict = msh.make_func_dict(svs, dvs, cpa, epa_0)
 B_func, u_func = gh.make_B_u_funcs_2(mvs, par_dict, func_dict)
 
 # +
@@ -347,8 +377,11 @@ print('Steadt_state_dict:', steady_state_dict)
 # -
 
 
-# +
-# svs_0.cLitter
+svs_0.cVeg
+
+c=(1,2,3)
+zero=np.zeros_like(c)
+(c>zero).all()
 
 # +
 # now test it
@@ -358,12 +391,13 @@ from general_helpers import plot_solutions
 
 param2res_sym = msh.make_param2res_sym(mvs, cpa, dvs)
 
-print(type(param2res_sym))
+#print(type(param2res_sym))
 
 obs_0 = param2res_sym(epa_0)
 # obs=np.column_stack([ np.array(v) for v in svs])
 # obs=np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
 # xs.shape
+obs_0[0].shape
 
 # +
 
@@ -487,62 +521,68 @@ epa_max = msh.EstimatedParameters(
     E=10,
     KM=100,
 
-    r_C_litter1_rh=0.0012934*100,
-    r_C_litter2_rh=0.59747*100,
-    r_C_litter3_rh=0.01977*100,
-    r_C_litter4_rh=0.0006258*100,
-    r_C_litter5_rh=0.0000016211*100,
-    r_C_litter6_rh=0.002435*100,
-    r_C_som1_rh=0.00229726*100,
-    r_C_som2_rh=0.0010939*100,
-    r_C_som3_rh=0.0000455408*100,
-    r_C_som4_rh=0.00028037*100,
+    r_C_litter1_rh=epa_0.r_C_litter1_rh*100,
+    r_C_litter2_rh=epa_0.r_C_litter2_rh*100,
+    r_C_litter3_rh=epa_0.r_C_litter3_rh*100,
+    r_C_litter4_rh=epa_0.r_C_litter4_rh*100,
+    r_C_litter5_rh=epa_0.r_C_litter5_rh*100,
+    r_C_litter6_rh=epa_0.r_C_litter6_rh*100,
+    r_C_som1_rh=epa_0.r_C_som1_rh*100,
+    r_C_som2_rh=epa_0.r_C_som2_rh*100,
+    r_C_som3_rh=epa_0.r_C_som3_rh*100,
+    r_C_som4_rh=epa_0.r_C_som4_rh*100,
 
-    r_C_wood1_2_C_wood3=0.0107*100,
-    r_C_wood1_2_C_litter1=0.066445*100,
-    r_C_wood2_2_C_wood4=0.00063076*100,
-    r_C_wood2_2_C_litter2=0.00168526*100,
-    r_C_wood3_2_C_litter1=0.000007645231*100,
-    r_C_wood4_2_C_litter2=0.000209176*100,
-    r_C_leaf_2_C_litter3=0.0020595*100,
-    r_C_leaf_2_C_litter5=0.0000250875*100,
-    r_C_root_2_C_litter4=0.0000076896*100,
-    r_C_root_2_C_litter6=0.000703836*100,
-    r_C_fruit_2_C_litter3=0.00026986*100,
-    r_C_fruit_2_C_litter5=0.00000463*100,
-    r_C_litter1_2_C_som1=0.000001348*100,
-    r_C_litter1_2_C_som2=0.0000192111*100,
-    r_C_litter2_2_C_som2=0.00058924*100,
-    r_C_litter2_2_C_som3=0.000645606*100,
-    r_C_litter3_2_C_som1=0.000183481*100,
-    r_C_litter3_2_C_som3=0.0001882826*100,
-    r_C_litter4_2_C_som1=0.0001623*100,
-    r_C_litter4_2_C_som2=0.0007858*100,
-    r_C_litter5_2_C_som1=0.0000005513*100,
-    r_C_litter6_2_C_som2=0.0829*100,
-    r_C_som1_2_C_som3=0.000414588*100,
-    r_C_som2_2_C_som3=0.005084*100,
-    r_C_som2_2_C_som4=0.0000151975*100,
-    r_C_som3_2_C_som2=0.0000509621*100,
-    r_C_som3_2_C_som4=0.00000000396756*100,
-    r_C_som4_2_C_som2=0.0004856444*100,
+    r_C_wood1_2_C_wood3=epa_0.r_C_wood1_2_C_wood3*100,
+    r_C_wood1_2_C_litter1=epa_0.r_C_wood1_2_C_litter1*100,
+    r_C_wood2_2_C_wood4=epa_0.r_C_wood2_2_C_wood4*100,
+    r_C_wood2_2_C_litter2=epa_0.r_C_wood2_2_C_litter2*100,
+    r_C_wood3_2_C_litter1=epa_0.r_C_wood3_2_C_litter1*100,
+    r_C_wood4_2_C_litter2=epa_0.r_C_wood4_2_C_litter2*100,
+    r_C_leaf_2_C_litter3=epa_0.r_C_leaf_2_C_litter3*100,
+    r_C_leaf_2_C_litter5=epa_0.r_C_leaf_2_C_litter5*100,
+    r_C_root_2_C_litter4=epa_0.r_C_root_2_C_litter4*100,
+    r_C_root_2_C_litter6=epa_0.r_C_root_2_C_litter6*100,
+    r_C_fruit_2_C_litter3=epa_0.r_C_fruit_2_C_litter3*100,
+    r_C_fruit_2_C_litter5=epa_0.r_C_fruit_2_C_litter5*100,
+    r_C_litter1_2_C_som1=epa_0.r_C_litter1_2_C_som1*100,
+    r_C_litter1_2_C_som2=epa_0.r_C_litter1_2_C_som2*100,
+    r_C_litter2_2_C_som2=epa_0.r_C_litter2_2_C_som2*100,
+    r_C_litter2_2_C_som3=epa_0.r_C_litter2_2_C_som3*100,
+    r_C_litter3_2_C_som1=epa_0.r_C_litter3_2_C_som1*100,
+    r_C_litter3_2_C_som3=epa_0.r_C_litter3_2_C_som3*100,
+    r_C_litter4_2_C_som1=epa_0.r_C_litter4_2_C_som1*100,
+    r_C_litter4_2_C_som2=epa_0.r_C_litter4_2_C_som2*100,
+    r_C_litter5_2_C_som1=epa_0.r_C_litter5_2_C_som1*100,
+    r_C_litter6_2_C_som2=epa_0.r_C_litter6_2_C_som2*100,
+    r_C_som1_2_C_som3=epa_0.r_C_som1_2_C_som3*100,
+    r_C_som2_2_C_som3=epa_0.r_C_som2_2_C_som3*100,
+    r_C_som2_2_C_som4=epa_0.r_C_som2_2_C_som4*100,
+    r_C_som3_2_C_som2=epa_0.r_C_som3_2_C_som2*100,
+    r_C_som3_2_C_som4=epa_0.r_C_som3_2_C_som4*100,
+    r_C_som4_2_C_som2=epa_0.r_C_som4_2_C_som2*100,
     r_C_som4_2_C_som3=0.00,
 
-    C_wood1_0=5,
-    C_wood2_0=5,
-    C_wood3_0=10,
-    C_wood4_0=5,
-    C_leaf_0=5,
-    C_root_0=5,
-    C_litter1_0=1,
-    C_litter2_0=1,
-    C_litter3_0=1,
-    C_litter4_0=1,
-    C_litter5_0=17,
-    C_som1_0=10,
-    C_som2_0=10,
-    C_som3_0=20,
+    C_wood1_0=svs_0.cVeg,
+    C_wood2_0=svs_0.cVeg,
+    C_wood3_0=svs_0.cVeg,
+    C_wood4_0=svs_0.cVeg,
+    C_leaf_0=svs_0.cVeg,
+    C_root_0=svs_0.cVeg,
+    C_litter1_0=svs_0.cLitter,
+    C_litter2_0=svs_0.cLitter,
+    C_litter3_0=svs_0.cLitter,
+    C_litter4_0=svs_0.cLitter,
+    C_litter5_0=svs_0.cLitter,
+    C_som1_0=svs_0.cSoil,
+    C_som2_0=svs_0.cSoil,
+    C_som3_0=svs_0.cSoil,
 )
+# -
+
+costfunction=msh.make_weighted_cost_func(svs)
+print(costfunction(obs_0))
+print(np.array(epa_0)-np.array(epa_min))
+print(np.array(epa_max)-np.array(epa_0))
 
 # +
 # import test_helpers as th
@@ -551,6 +591,28 @@ epa_max = msh.EstimatedParameters(
 
 # ### mcmc to optimize parameters
 #
+
+svs.rh.shape[0]
+
+cpa.number_of_months
+
+# adding additional year to rh and ra (due to wrong files used)
+# !!! Remove as soon as right files are used !!!
+if svs.rh.shape[0]<cpa.number_of_months:
+    last12rh=svs.rh[-12:]
+    last12ra=svs.ra[-12:]
+    rh=np.ma.append(svs.rh, last12rh, axis=None)
+    ra=np.ma.append(svs.ra, last12ra, axis=None)
+    #svs
+    svs1=msh.Observables(
+        cVeg=svs.cVeg,
+        cLitter=svs.cLitter,
+        cSoil=svs.cSoil,
+        rh=rh,
+        ra=ra,
+        )
+    svs=svs1
+svs.rh.shape[0]
 
 # +
 
@@ -567,13 +629,13 @@ C_autostep, J_autostep = autostep_mcmc(
     param2res=param2res,
     # costfunction=make_feng_cost_func(obs),
     costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=1500,  # for testing and tuning mcmc
+    nsimu=200,  # for testing and tuning mcmc
     # nsimu=20000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=40,  # default value | target acceptance rate in %
+    acceptance_rate=15,  # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,  # default value | increase value to reduce initial step size
+    D_init=1,  # default value | increase value to reduce initial step size
     K=2  # default value | increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
@@ -616,69 +678,68 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('OCN-V2_optimized_solutions.csv
 print("Optimized parameters: ", epa_opt)
 
 # +
-# Traceability Analysis
-it_sym_trace = msh.make_traceability_iterator(mvs, dvs, cpa, epa_opt)
-ns = 1500  # 10*360
-StartVectorTrace = gh.make_StartVectorTrace(mvs)
-nv = len(StartVectorTrace._fields)
-res_trace = np.zeros((ns, nv))
-for i in range(ns):
-    res_trace[i, :] = it_sym_trace.__next__().reshape(nv)
-# res_trace
+# # Traceability Analysis
+# it_sym_trace = msh.make_traceability_iterator(mvs, dvs, cpa, epa_opt)
+# ns = 1500  # 10*360
+# StartVectorTrace = gh.make_StartVectorTrace(mvs)
+# nv = len(StartVectorTrace._fields)
+# res_trace = np.zeros((ns, nv))
+# for i in range(ns):
+#     res_trace[i, :] = it_sym_trace.__next__().reshape(nv)
+# # res_trace
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-n = len(mvs.get_StateVariableTuple())
-fig = plt.figure(figsize=(20, (n + 1) * 10), dpi=80)
-axs = fig.subplots(n + 1, 2)
-days = list(range(ns))
+# n = len(mvs.get_StateVariableTuple())
+# fig = plt.figure(figsize=(20, (n + 1) * 10), dpi=80)
+# axs = fig.subplots(n + 1, 2)
+# days = list(range(ns))
 
-for i in range(n):
-    ax = axs[i, 0]
-    #  the solution
-    pos = i
-    ax.plot(
-        days,
-        res_trace[:, i],
-        label=StartVectorTrace._fields[pos],
-        color='blue'
-    )
-    # X_p
-    pos = i + n
-    ax.plot(
-        days,
-        res_trace[:, pos],
-        label=StartVectorTrace._fields[pos],
-        color='red'
-    )
-    # X_c
-    pos = i + 2 * n
-    ax.plot(
-        days,
-        res_trace[:, pos],
-        label=StartVectorTrace._fields[pos],
-        color='yellow'
-    )
-    ax.legend()
+# for i in range(n):
+#     ax = axs[i, 0]
+#     #  the solution
+#     pos = i
+#     ax.plot(
+#         days,
+#         res_trace[:, i],
+#         label=StartVectorTrace._fields[pos],
+#         color='blue'
+#     )
+#     # X_p
+#     pos = i + n
+#     ax.plot(
+#         days,
+#         res_trace[:, pos],
+#         label=StartVectorTrace._fields[pos],
+#         color='red'
+#     )
+#     # X_c
+#     pos = i + 2 * n
+#     ax.plot(
+#         days,
+#         res_trace[:, pos],
+#         label=StartVectorTrace._fields[pos],
+#         color='yellow'
+#     )
+#     ax.legend()
 
-    ax = axs[i, 1]
-    # RT
-    pos = i + 3 * n
-    ax.plot(
-        days,
-        res_trace[:, pos],
-        label=StartVectorTrace._fields[pos],
-        color='black'
-    )
-    ax.legend()
+#     ax = axs[i, 1]
+#     # RT
+#     pos = i + 3 * n
+#     ax.plot(
+#         days,
+#         res_trace[:, pos],
+#         label=StartVectorTrace._fields[pos],
+#         color='black'
+#     )
+#     ax.legend()
 
-axs[n, 0].plot(
-    days,
-    [msh.make_npp_func(dvs)(d) for d in days],
-    label='NPP',
-    color='green'
-)
-axs[n, 0].legend()
+# axs[n, 0].plot(
+#     days,
+#     [msh.make_npp_func(dvs)(d) for d in days],
+#     label='NPP',
+#     color='green'
+# )
+# axs[n, 0].legend()
 
-fig.savefig('solution_Traceability.pdf')
-# -
+# fig.savefig('solution_Traceability.pdf')

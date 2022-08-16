@@ -161,58 +161,59 @@ def nc_file_name(nc_var_name):
 def nc_global_mean_file_name(nc_var_name):
     return experiment_name + "{}_gm.nc".format(nc_var_name)
 
+# this function is deprecated: please use get_global_mean_vars
 
-def get_global_vars(dataPath):
-    # define function to average variables
-    def f(tup):
-        # define parts of function from nc file
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"]
-        lons = ds.variables["longitude"]
+# def get_global_vars(dataPath):
+    # # define function to average variables
+    # def f(tup):
+        # # define parts of function from nc file
+        # vn, fn = tup
+        # path = dataPath.joinpath(fn)
+        # ds = nc.Dataset(str(path))
+        # lats = ds.variables["latitude"]
+        # lons = ds.variables["longitude"]
 
-        # check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-        if vn in ["npp", "gpp", "rh", "ra"]:
-            # for name, variable in ds.variables.items():
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()) * 24 * 60 * 60)
-        else:
-            # for name, variable in ds.variables.items():
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+        # # check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
+        # if vn in ["npp", "gpp", "rh", "ra"]:
+            # # for name, variable in ds.variables.items():
+            # #    for attrname in variable.ncattrs():
+            # #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            # return (gh.global_mean(lats, lons, ds.variables[vn].__array__()) * 24 * 60 * 60)
+        # else:
+            # # for name, variable in ds.variables.items():
+            # #    for attrname in variable.ncattrs():
+            # #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+            # return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
 
-    # Link symbols and data:
-    # IBIS has annual vs monthly file names so they are linked separately
-    # If all your data is similarly named you can do this in one step
+    # # Link symbols and data:
+    # # IBIS has annual vs monthly file names so they are linked separately
+    # # If all your data is similarly named you can do this in one step
 
-    # Create annual file names (single step if files similarly named)
-    o_names = [(f, "OCN_{}.nc".format(f)) for f in Observables_annual._fields]
+    # # Create annual file names (single step if files similarly named)
+    # o_names = [(f, "OCN_{}.nc".format(f)) for f in Observables_annual._fields]
 
-    # Create monthly file names (can remove if done in one step above)
-    monthly_names = [(f, "OCN_{}.nc".format(f)) for f in Observables_monthly._fields]
-    # Extend name list with monthly names
-    o_names.extend(monthly_names)
+    # # Create monthly file names (can remove if done in one step above)
+    # monthly_names = [(f, "OCN_{}.nc".format(f)) for f in Observables_monthly._fields]
+    # # Extend name list with monthly names
+    # o_names.extend(monthly_names)
 
-    # create file names for Drivers
-    d_names = [(f, "OCN_{}.nc".format(f)) for f in Drivers._fields]
+    # # create file names for Drivers
+    # d_names = [(f, "OCN_{}.nc".format(f)) for f in Drivers._fields]
 
-    # we want to drive with npp and can create it from gpp and ra 
-    # observables
-    odvs = OrgDrivers(*map(f, d_names))
-    obss = Observables(*map(f, o_names))
+    # # we want to drive with npp and can create it from gpp and ra 
+    # # observables
+    # odvs = OrgDrivers(*map(f, d_names))
+    # obss = Observables(*map(f, o_names))
 
-    dvs = Drivers(
-        npp=odvs.gpp - obss.ra,
-        mrso=odvs.mrso,
-        Ts=odvs.Ts
-    )
+    # dvs = Drivers(
+        # npp=odvs.gpp - obss.ra,
+        # mrso=odvs.mrso,
+        # Ts=odvs.Ts
+    # )
 
-    # Link symbols and data for Observables/Drivers
-    # return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
-    return (obss, dvs)
+    # # Link symbols and data for Observables/Drivers
+    # # return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+    # return (obss, dvs)
 
 
 def get_example_site_vars(dataPath):
@@ -264,7 +265,8 @@ def get_global_mean_vars(dataPath):
             print(dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
-            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)), vn)
+            gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            return gm * 86400 if vn in ["gpp", "rh", "ra", "npp"] else gm
 
         return (
             Observables(*map(get_cached_global_mean, o_names)),
@@ -343,7 +345,7 @@ def make_xi_func(Ts):
     return xi_func
 
 
-def make_func_dict(mvs, dvs):
+def make_func_dict(mvs, dvs, cpa, epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs.Ts)
@@ -530,7 +532,7 @@ def make_param2res_sym(
             if Symbol(k) in model_par_dict_keys
         }
 
-        print('model_par_dict:', model_par_dict)
+        #print('model_par_dict:', model_par_dict)
         # from IPython import embed;embed()
 
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
@@ -544,12 +546,12 @@ def make_param2res_sym(
         #              'xi':xi_func
         #         }
 
-        func_dict = make_func_dict(mvs, dvs)
+        func_dict = make_func_dict(mvs, dvs, cpa, epa)
 
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val = 15
+        delta_t_val = 5
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -575,15 +577,19 @@ def make_param2res_sym(
         rhs = np.zeros(cpa.number_of_months)
         ras = np.zeros(cpa.number_of_months)
         number_of_years = int(cpa.number_of_months / 12)
-        print('number_of_years:', number_of_years)
+        #print('number_of_years:', number_of_years)
 
         cVegs = np.zeros(number_of_years)
         cLitters = np.zeros(number_of_years)
         cSoils = np.zeros(number_of_years)
         dpy = 30 * 12
         m_id = 0
-
+        steps_per_month=int(dpm/delta_t_val)
+        steps_per_year=int(dpm/delta_t_val)*12        
+        breaker=False
         for y in range(number_of_years):
+            if breaker==True:
+                break
             # print('y:',y)
             cVeg_ave = 0
             cLitter_ave = 0
@@ -593,12 +599,24 @@ def make_param2res_sym(
                 # dpm = days_per_month[ m % 12]
                 mra_ave = 0.0
                 mrh_ave = 0.0
-                for d in range(dpm):  # int(dpm/delta_t_val)
+                for d in range(steps_per_month):  # int(dpm/delta_t_val)
+                    if breaker==True:
+                        break
                     v = it_sym.__next__()  # .reshape(n,)
                     # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
                     # at the moment the iterator also computes a flux but in kg^-2 ^day
-
                     V = StartVector(*v)
+                   
+                    # check if negative values are produced
+                    # if yes - break the function and return zeros
+                    zero=np.zeros_like(V)
+                    if (V>=zero).all()==False:
+                        print ("WARNING: Negative pool values encountered. Returning zeros.")
+                        cVegs = np.zeros(number_of_years)
+                        cLitters = np.zeros(number_of_years)
+                        cSoils = np.zeros(number_of_years)
+                        breaker=True
+                        break
                     cVeg_ave=np.array(cVeg_ave, dtype=object)+ float(V.C_leaf + V.C_wood1 + V.C_wood2 + V.C_wood3 + V.C_wood4 + V.C_root + V.C_fruit)
                     cLitter_ave =np.array(cLitter_ave, dtype=object) +float(V.C_litter1 + V.C_litter2 + V.C_litter3 + V.C_litter4 + V.C_litter5 + V.C_litter6)
                     cSoil_ave =np.array(cSoil_ave, dtype=object)+ float(V.C_som1 + V.C_som2 + V.C_som3 + V.C_som4)
@@ -606,14 +624,14 @@ def make_param2res_sym(
                     mra_ave = np.array(mra_ave) + V.ra
 
                 # print('here:m_id:',m_id)
-                rhs[m_id] = mrh_ave / dpm
-                ras[m_id] = mrh_ave / dpm
+                rhs[m_id] = mrh_ave / steps_per_month
+                ras[m_id] = mrh_ave / steps_per_month
                 m_id = m_id + 1
 
             # print('Here:y:',y)
-            cVegs[y] = np.array(cVeg_ave, dtype=object) / dpy
-            cLitters[y] = np.array(cLitter_ave, dtype=object) / dpy
-            cSoils[y] = np.array(cSoil_ave, dtype=object) / dpy
+            cVegs[y] = np.array(cVeg_ave, dtype=object) / steps_per_year
+            cLitters[y] = np.array(cLitter_ave, dtype=object) / steps_per_year
+            cSoils[y] = np.array(cSoil_ave, dtype=object) / steps_per_year
 
         return Observables(
             cVeg=cVegs,
@@ -789,7 +807,7 @@ def make_traceability_iterator(mvs, dvs, cpa, epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(17, 1)
-    fd = make_func_dict(mvs, dvs)
+    fd = make_func_dict(mvs, dvs, cpa, epa)
     V_init = gh.make_InitialStartVectorTrace(
         X_0, mvs,
         par_dict=par_dict,

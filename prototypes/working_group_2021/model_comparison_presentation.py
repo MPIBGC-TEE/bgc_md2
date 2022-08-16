@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -67,6 +67,8 @@ model_names={
     "kv_ft_dlem": "DLEM",
     #"Aneesh_SDGVM":"SDGVM",
     "cj_isam": "ISAM",
+    "bian_ibis2":"IBIS",
+    #"ORCHIDEE-V2":"OCN",
 }
 
 # selecting colors for plotting models
@@ -75,8 +77,10 @@ model_cols={
     "kv_visit2": "orange",
     "jon_yib": "green",
     "kv_ft_dlem": "red",
-    "Aneesh_SDGVM":"teal",
-    "cj_isam": "purple"
+    "Aneesh_SDGVM":"yellow",
+    "cj_isam": "purple",
+    "bian_ibis2":"magenta",
+    "ORCHIDEE-V2":"teal",
 }
 # -
 
@@ -103,112 +107,119 @@ test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
 # ### Plots of traceable components
 
+var_names={
+    "x": "X and X_c",
+    #"x_p": "X_p",
+    "u": "C input",
+    "rt": "Residence time",
+}
+gh.plot_components_combined(model_names=model_names,
+                        test_arg_list=test_arg_list,   
+                        var_names=var_names,
+                        delta_t_val=delta_t_val,
+                        model_cols=model_cols,
+                        part=1,
+                        averaging=12  
+                       )
+
 # +
-# var_names={
-#     "x": "X and X_c",
-#     "x_p": "X_p",
-#     "u": "C input",
-#     "rt": "Residence time",
-# }
-# gh.plot_components_combined(model_names=model_names,
-#                         test_arg_list=test_arg_list,   
-#                         var_names=var_names,
-#                         delta_t_val=delta_t_val,
-#                         model_cols=model_cols,
-#                         part=1,
-#                         averaging=12  
-#                        )
+# gh.plot_x_xc(model_names=model_names,
+#              test_arg_list=test_arg_list,
+#              delta_t_val=delta_t_val, 
+#              model_cols=model_cols,
+#              part=1,
+#              averaging=12,
+#              overlap=True
+#              )
+
+# +
+# gh.plot_normalized_x(model_names=model_names,
+#                      delta_t_val=delta_t_val,
+#                      test_arg_list=test_arg_list,
+#                      model_cols=model_cols,
+#                      part=1,
+#                      averaging=12,
+#                      overlap=True
+#                      )
+
+# +
+# gh.plot_normalized_xc(model_names=model_names,
+#                       test_arg_list=test_arg_list,
+#                       delta_t_val=delta_t_val, 
+#                       model_cols=model_cols,
+#                       part=1,
+#                       averaging=12,
+#                       overlap=True
+#                      )
+
+# +
+# gh.plot_xp(model_names=model_names,
+#            test_arg_list=test_arg_list,
+#            delta_t_val=delta_t_val, 
+#            model_cols=model_cols,
+#            part=1,
+#            averaging=12,
+#            overlap=True
+#           )
+
+# +
+# gh.plot_u(model_names=model_names,
+#           test_arg_list=test_arg_list,
+#           delta_t_val=delta_t_val, 
+#           model_cols=model_cols,
+#           part=1,
+#           averaging=12,
+#           overlap=True
+#          )
+
+# +
+# gh.plot_normalized_u(model_names=model_names,
+#                      test_arg_list=test_arg_list,
+#                      delta_t_val=delta_t_val, 
+#                      model_cols=model_cols,
+#                      part=1,
+#                      averaging=12,
+#                      overlap=True
+#                      )
+
+# +
+# gh.plot_rt(model_names=model_names,
+#            test_arg_list=test_arg_list,
+#            delta_t_val=delta_t_val, 
+#            model_cols=model_cols,
+#            part=1,
+#            averaging=12,
+#            overlap=True
+#           )
+
+# +
+# gh.plot_normalized_rt(model_names=model_names,
+#                       test_arg_list=test_arg_list,
+#                      delta_t_val=delta_t_val, 
+#                      model_cols=model_cols,
+#                      part=1,
+#                      averaging=12,
+#                      overlap=True
+#                      )
 # -
-
-gh.plot_x_xc(model_names=model_names,
-             test_arg_list=test_arg_list,
-             delta_t_val=delta_t_val, 
-             model_cols=model_cols,
-             part=1,
-             averaging=12,
-             overlap=True
-             )
-
-gh.plot_normalized_x(model_names=model_names,
-                     delta_t_val=delta_t_val,
-                     test_arg_list=test_arg_list,
-                     model_cols=model_cols,
-                     part=1,
-                     averaging=12,
-                     overlap=True
-                     )
-
-gh.plot_normalized_xc(model_names=model_names,
-                      test_arg_list=test_arg_list,
-                      delta_t_val=delta_t_val, 
-                      model_cols=model_cols,
-                      part=1,
-                      averaging=12,
-                      overlap=True
-                     )
-
-gh.plot_xp(model_names=model_names,
-           test_arg_list=test_arg_list,
-           delta_t_val=delta_t_val, 
-           model_cols=model_cols,
-           part=1,
-           averaging=12,
-           overlap=True
-          )
-
-gh.plot_u(model_names=model_names,
-          test_arg_list=test_arg_list,
-          delta_t_val=delta_t_val, 
-          model_cols=model_cols,
-          part=1,
-          averaging=12,
-          overlap=True
-         )
-
-gh.plot_normalized_u(model_names=model_names,
-                     test_arg_list=test_arg_list,
-                     delta_t_val=delta_t_val, 
-                     model_cols=model_cols,
-                     part=1,
-                     averaging=12,
-                     overlap=True
-                     )
-
-gh.plot_rt(model_names=model_names,
-           test_arg_list=test_arg_list,
-           delta_t_val=delta_t_val, 
-           model_cols=model_cols,
-           part=1,
-           averaging=12,
-           overlap=True
-          )
-
-gh.plot_normalized_rt(model_names=model_names,
-                      test_arg_list=test_arg_list,
-                     delta_t_val=delta_t_val, 
-                     model_cols=model_cols,
-                     part=1,
-                     averaging=12,
-                     overlap=True
-                     )
 
 # ## Contribution of Residense Time and C Input to the Differences in C Storage Capacity
 
 # +
-# mm test for two files,
-# fixme mm 8-12: 
-# test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
+# # mm test for two files,
+# # fixme mm 8-12: 
+# # test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
-mf_1=="yz_jules"
-mf_2="kv_visit2"
-gh.plot_attribute_X_c(
-    mf_1=mf_1,
-    mf_2=mf_2,
-    ta_1=test_args_dictionary[mf_1],
-    ta_2=test_args_dictionary[mf_2],
-    delta_t_val=delta_t_val,
-    part=1
-)
+# mf_1="yz_jules"
+# mf_2="kv_visit2"
+# gh.plot_attribution_X_c(
+#     mf_1=mf_1,
+#     mf_2=mf_2,
+#     ta_1=test_args_dictionary[mf_1],
+#     ta_2=test_args_dictionary[mf_2],
+#     delta_t_val=delta_t_val,
+#     part=1
+# )
 
 # -
 
@@ -243,55 +254,56 @@ ax1 = fig1.subplots()
 ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
         startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
 ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Among All Pairs of Models')
+ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Across All Pairs of Models')
 plt.show()
+# +
+#         i=0
+#         j=1
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
+
+#         i=1
+#         j=0
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
+
+#         i=0
+#         j=2
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
+
+#         i=2
+#         j=0
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt=+rt
+#         count_u=+u
+#         count_combined=+combined
 # -
-        i=0
-        j=1
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
-
-        i=1
-        j=0
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
-
-        i=0
-        j=2
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
-
-        i=2
-        j=0
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt=+rt
-        count_u=+u
-        count_combined=+combined
 
  
