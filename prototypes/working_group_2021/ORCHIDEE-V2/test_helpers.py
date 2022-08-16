@@ -348,8 +348,8 @@ def make_test_args(conf_dict,msh,mvs):
         epa_max=epa_max,
         epa_opt=epa_opt,
         cpa=cpa,
-        lats=ds.variables["lat"][:],
-        lons=ds.variables["lon"][:],
+        lats=ds.variables["latitude"][:],
+        lons=ds.variables["longitude"][:],
         start_date=msh.start_date()
     )
 
