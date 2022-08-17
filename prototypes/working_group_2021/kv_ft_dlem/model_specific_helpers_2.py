@@ -544,50 +544,8 @@ def make_weighted_cost_func(
         return J_new
     return costfunction
 
-
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict=gh.make_param_dict(mvs,cpa,epa)
-    X_0_dict={
-        "C_leaf": apa['C_leaf_0'],
-        "C_wood": apa['C_wood_0'],
-        "C_root": apa['cVeg_0'] - (
-            apa['C_leaf_0'] + 
-            apa['C_wood_0']
-            ),
-        "C_aom1": apa['C_aom1_0'],
-        "C_aom2": apa['cLitter_0'] - apa['C_aom1_0'],
-        "C_smb1": apa['C_smb1_0'],
-        "C_smb2": apa['C_smb2_0'],
-        "C_smr": apa['C_smr_0'],
-        "C_nom": apa['C_nom_0'],
-        "C_dom": apa['C_dom_0'],
-        "C_psom": apa['cSoil_0'] - (
-            apa['C_smb1_0'] +
-            apa['C_smb2_0'] +
-            apa['C_smr_0'] +
-            apa['C_nom_0'] +
-            apa['C_dom_0'] 
-        )
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs)
-    V_init = gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
+# this function is deprecated - see general helpers traceability_iterator
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
 
 
 def numeric_X_0(mvs,dvs,cpa,epa):

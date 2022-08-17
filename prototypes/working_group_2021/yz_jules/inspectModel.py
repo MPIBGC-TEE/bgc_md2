@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -381,73 +381,3 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('JULES_optimized_solutions.csv'
 epa_opt
 
 ta.epa_min
-
-# +
-import model_specific_helpers_2 as msh
-import general_helpers as gh
-it_sym_trace = msh.make_traceability_iterator(mvs,dvs,cpa,epa_opt)
-ns=1500
-StartVectorTrace=gh.make_StartVectorTrace(mvs)
-nv=len(StartVectorTrace._fields)
-res_trace= np.zeros((ns,nv))
-for i in range(ns):
-    res_trace[i,:]=it_sym_trace.__next__().reshape(nv)
-#res_trace
-
-import matplotlib.pyplot as plt
-n=len(mvs.get_StateVariableTuple())
-fig=plt.figure(figsize=(20,(n+1)*10), dpi = 400)
-axs=fig.subplots(n+1,2)
-plt.rcParams['font.size'] = 20
-
-days=list(range(ns))
-
-
-for i in range(n):
-    
-    ax = axs[i,0]
-    #  the solution
-    pos=i
-    ax.plot(
-        days,
-        res_trace[:,i],
-        label=StartVectorTrace._fields[pos],
-        color='blue'
-    )
-    # X_p
-    pos=i+n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='red'
-    )
-    # X_c
-    pos=i+2*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='yellow'
-    )
-    ax.legend()
-    
-    ax = axs[i,1]
-    # RT
-    pos=i+3*n
-    ax.plot(
-        days,
-        res_trace[:,pos],
-        label=StartVectorTrace._fields[pos],
-        color='black'
-    )
-    ax.legend()
-    
-axs[n,0].plot(
-    days,
-    [msh.make_npp_func(dvs)(d) for d in days],
-    label='NPP',
-    color='green'
-)
-axs[n,0].legend()
-

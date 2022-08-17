@@ -3116,34 +3116,34 @@ def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
     percent_combined=abs(combined_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
     
+    averaging=12*30//delta_t_val # yearly averages
     fig1=plt.figure(figsize=(17,8))
     ax=fig1.subplots()
-    #ax=axs1[0]
-    #ax=fig1.subplot
     ax.plot(
         #times[60*12:60*12+36],                    
         #rt_contrib[60*12:60*12+36],            
-        avg_timeline(times, 12),
-        avg_timeline(percent_rt, 12),
+        avg_timeline(times, averaging), 
+        avg_timeline(percent_rt, averaging),
         label="contribution of $\Delta$ RT",
         color="darkorange",
     )
     ax.plot(
         #times[60*12:60*12+36],                    
         #u_contrib[60*12:60*12+36],            
-        avg_timeline(times, 12),
-        avg_timeline(percent_u, 12),
+        avg_timeline(times, averaging), 
+        avg_timeline(percent_u, averaging),
         label="contribution of $\Delta$ u",
         color="green",
     )
-    ax.plot(
-        #times[60*12:60*12+36],                    
-        #u_contrib[60*12:60*12+36],            
-        avg_timeline(times, 12),
-        avg_timeline(percent_combined, 12),
-        label="contribution of $\Delta$ u * $\Delta$ RT",
-        color="grey",
-    )
+    if np.mean(percent_combined) > 0.001:
+        ax.plot(
+            #times[60*12:60*12+36],                    
+            #u_contrib[60*12:60*12+36],            
+            avg_timeline(times, averaging),
+            avg_timeline(percent_combined, averaging),
+            label="contribution of $\Delta$ u * $\Delta$ RT",
+            color="grey",
+        )
     
     ax.legend()
     ax.set_title('Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Over Time')
@@ -3153,6 +3153,7 @@ def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     fig=plt.figure(figsize=(17,8))
     axs=fig.subplots(1,2)
     
+    # bar charts
     ax0=axs[0]  
     ax0.set_title('Average Contribution of RT and u to the difference in X_c')
     #labels = '$\Delta$ RT', '$\Delta$ U * $\Delta$ RT', '$\Delta$ U'
@@ -3160,14 +3161,13 @@ def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     #bar_labels = '$\Delta$ X_c', '$\Delta$ RT', '$\Delta$ U', '$\Delta$ U * $\Delta$ RT'
     #bar_sizes=[round(np.mean(rt_contrib),0), np.mean(u_contrib), np.mean(combined_contrib)]
     
-    #ax1.axhline(np.mean(delta_x_c), color='blue', ls='dotted', label='$\Delta$ X_c')
+    ax0.axhline(0, color='black', ls='dashed')
     ax0.bar ('$\Delta$ X_c', np.mean(delta_x_c), color="blue")
     ax0.bar ('$\Delta$ RT', np.mean(rt_contrib), color="darkorange")
     ax0.bar ('$\Delta$ u', np.mean(u_contrib), color="green")
-    ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")
-    
-    
-    
+    ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
+    ax0.grid()  
+    # pie charts
     ax1=axs[1]
     ax1.set_title('Average Contribution of RT and u')
       
@@ -3185,89 +3185,3 @@ def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     plt.show()
     
     return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined))    
-
-def barplot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
-    if part<0 | part >1: 
-        raise Exception('Invalid partitioning in plot_diff: use part between 0 and 1')
-    test_arg_list=[ta_1,ta_2]
-
-    itr_1=traceability_iterator_instance(mf_1,ta_1,delta_t_val)
-    itr_2=traceability_iterator_instance(mf_2,ta_2,delta_t_val)
-
-    start_min_1,stop_max_1=min_max_index(ta_1,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
-    start_min_2,stop_max_2=min_max_index(ta_2,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
-
-    # if we do not want the whole interval but look at a smaller part to observe the dynamics
-    start_1,stop_1 = int(stop_max_1-(stop_max_1-start_min_1)*part), stop_max_1
-    start_2,stop_2 = int(stop_max_2-(stop_max_2-start_min_2)*part), stop_max_2
-    times_1=times_in_days_aD(ta_1,delta_t_val)[start_1:stop_1]/days_per_year()
-    times_2=times_in_days_aD(ta_2,delta_t_val)[start_2:stop_2]/days_per_year()
-    vals_1=itr_1[start_1:stop_1]
-    vals_2=itr_2[start_2:stop_2]
-
-    x_c_1=interp1d(times_1,vals_1.x_c)
-    x_c_2=interp1d(times_2,vals_2.x_c)
-    u_1=interp1d(times_1,vals_1.u)
-    u_2=interp1d(times_2,vals_2.u)
-    rt_1=interp1d(times_1,vals_1.rt)
-    rt_2=interp1d(times_2,vals_2.rt)
-
-    # common plot times
-    start=max(times_1.min(),times_2.min())
-    stop=min(times_1.max(),times_2.max())
-    nstep=min(len(times_1),len(times_2))
-    times=np.linspace(start,stop,nstep)
-    
-    # values for plots
-    delta_u=u_1(times)-u_2(times)
-    delta_rt=rt_1(times)-rt_2(times)
-    delta_x_c=x_c_1(times)-x_c_2(times)
-
-    rt_contrib=delta_rt*(u_1(times)-delta_u/2)
-    u_contrib=delta_u*(rt_1(times)-delta_rt/2)
-    combined_contrib=delta_x_c-rt_contrib-u_contrib
-
-    percent_rt=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
-    percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
-    percent_combined=abs(combined_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
-    
-    fig=plt.figure(figsize=(17,8))
-    axs=fig.subplots(1,2)
-
-    ax1=axs[0]
-    ax1.set_title('Average Contribution of RT and u to the difference in X_c')
-    #labels = '$\Delta$ RT', '$\Delta$ U * $\Delta$ RT', '$\Delta$ U'
-    #sizes = [np.mean(percent_rt), np.mean(percent_combined), np.mean(percent_u)]
-    #bar_labels = '$\Delta$ X_c', '$\Delta$ RT', '$\Delta$ U', '$\Delta$ U * $\Delta$ RT'
-    #bar_sizes=[round(np.mean(rt_contrib),0), np.mean(u_contrib), np.mean(combined_contrib)]
-    
-    #ax1.axhline(np.mean(delta_x_c), color='blue', ls='dotted', label='$\Delta$ X_c')
-    ax1.bar ('$\Delta$ X_c', np.mean(delta_x_c), color="blue")
-    ax1.bar ('$\Delta$ RT', np.mean(rt_contrib), color="darkorange")
-    ax1.bar ('$\Delta$ u', np.mean(u_contrib), color="green")
-    ax1.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")
-    
-
-
-    # # for i, v in enumerate(bar_sizes):
-        # # ax1.text(v + 3, i + .25, str(v),
-                # # color = 'blue', fontweight = 'bold')
-    
-    # for index, value in enumerate(bar_sizes):
-        # ax1.text(value, index, str(value))
-    
-    #plt.show()
-    # x = np.arange(len(bar_labels))
-    # width = 0.35 # the width of the bars
-    # pps = ax1.bar(x - width/2, bar_sizes, width, label='contributions')
-    # for p in pps:
-       # height = p.get_height()
-       # ax1.annotate('{}'.format(height),
-          # xy=(p.get_x() + p.get_width() / 2, height),
-          # xytext=(0, 3), # 3 points vertical offset
-          # textcoords="offset points",
-          # ha='center', va='bottom')
-
-    
-    
-    return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined))  

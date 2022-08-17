@@ -692,51 +692,8 @@ def make_param_filter_func(
         
     return isQualified
 
-
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict=gh.make_param_dict(mvs,cpa,epa)
-    X_0_dict={
-        "c_leaf": apa['c_leaf_0'],     
-        "c_root": apa['c_root_0'],     
-        "c_wood": apa['c_veg_0'] - (apa['c_leaf_0'] +  apa['c_root_0']),  
-        "c_lit_cwd": apa['c_lit_cwd_0'],
-        "c_lit_met": apa['c_lit_met_0'],
-        "c_lit_str": apa['c_lit_str_0'],
-        "c_lit_mic": apa['c_lit_mic_0'],
-        "c_soil_met": apa['c_soil_met_0'],
-        "c_soil_str": apa['c_soil_str_0'],
-        "c_soil_mic": apa['c_soil_mic_0'],
-        "c_soil_slow": apa['c_soil_slow_0'],
-        "c_soil_passive": apa['c_soil_0'] - (
-                              apa['c_lit_cwd_0'] 
-                            + apa['c_lit_met_0'] 
-                            + apa['c_lit_str_0'] 
-                            + apa['c_lit_mic_0'] 
-                            + apa['c_soil_met_0'] 
-                            + apa['c_soil_str_0'] 
-                            + apa['c_soil_mic_0'] 
-                            + apa['c_soil_slow_0']
-                        )
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs,cpa,epa)
-    V_init = gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
+# this function is deprecated - see general helpers traceability_iterator
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
 
 def start_date():
     ## this function is important to syncronise our results

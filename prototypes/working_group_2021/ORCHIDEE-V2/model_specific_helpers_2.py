@@ -551,7 +551,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val = 5
+        delta_t_val = 15
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -728,98 +728,8 @@ def pesudo_yearly_to_monthly(yearly):
 
     return monthly_data
 
-
-def make_traceability_iterator(mvs, dvs, cpa, epa):
-    par_dict = {
-        Symbol(k): v for k, v in {
-            "beta_wood1": epa.beta_wood1,
-            "beta_wood2": epa.beta_wood2,
-            "beta_leaf": epa.beta_leaf,
-            "beta_root": epa.beta_root,
-            "T_0": epa.T_0,
-            "E": epa.E,
-            "KM": epa.KM,
-
-            "r_C_litter1_rh": epa.r_C_litter1_rh,
-            "r_C_litter2_rh": epa.r_C_litter2_rh,
-            "r_C_litter3_rh": epa.r_C_litter3_rh,
-            "r_C_litter4_rh": epa.r_C_litter4_rh,
-            "r_C_litter5_rh": epa.r_C_litter5_rh,
-            "r_C_litter6_rh": epa.r_C_litter6_rh,
-            "r_C_som1_rh": epa.r_C_som1_rh,
-            "r_C_som2_rh": epa.r_C_som2_rh,
-            "r_C_som3_rh": epa.r_C_som3_rh,
-            "r_C_som4_rh": epa.r_C_som4_rh,
-            "r_C_wood1_2_C_wood3": epa.r_C_wood1_2_C_wood3,
-            "r_C_wood1_2_C_litter1": epa.r_C_wood1_2_C_litter1,
-            "r_C_wood2_2_C_wood4": epa.r_C_wood2_2_C_wood4,
-            "r_C_wood2_2_C_litter2": epa.r_C_wood2_2_C_litter2,
-            "r_C_wood3_2_C_litter1": epa.r_C_wood3_2_C_litter1,
-            "r_C_wood4_2_C_litter2": epa.r_C_wood4_2_C_litter2,
-            "r_C_leaf_2_C_litter3": epa.r_C_leaf_2_C_litter3,
-            "r_C_leaf_2_C_litter5": epa.r_C_leaf_2_C_litter5,
-            "r_C_root_2_C_litter4": epa.r_C_root_2_C_litter4,
-            "r_C_root_2_C_litter6": epa.r_C_root_2_C_litter6,
-            "r_C_fruit_2_C_litter3": epa.r_C_fruit_2_C_litter3,
-            "r_C_fruit_2_C_litter5": epa.r_C_fruit_2_C_litter5,
-            "r_C_litter1_2_C_som1": epa.r_C_litter1_2_C_som1,
-            "r_C_litter1_2_C_som2": epa.r_C_litter1_2_C_som2,
-            "r_C_litter2_2_C_som2": epa.r_C_litter2_2_C_som2,
-            "r_C_litter2_2_C_som3": epa.r_C_litter2_2_C_som3,
-            "r_C_litter3_2_C_som1": epa.r_C_litter3_2_C_som1,
-            "r_C_litter3_2_C_som3": epa.r_C_litter3_2_C_som3,
-            "r_C_litter4_2_C_som1": epa.r_C_litter4_2_C_som1,
-            "r_C_litter4_2_C_som2": epa.r_C_litter4_2_C_som2,
-            "r_C_litter5_2_C_som1": epa.r_C_litter5_2_C_som1,
-            "r_C_litter6_2_C_som2": epa.r_C_litter6_2_C_som2,
-            "r_C_som1_2_C_som3": epa.r_C_som1_2_C_som3,
-            "r_C_som2_2_C_som3": epa.r_C_som2_2_C_som3,
-            "r_C_som2_2_C_som4": epa.r_C_som2_2_C_som4,
-            "r_C_som3_2_C_som2": epa.r_C_som3_2_C_som2,
-            "r_C_som3_2_C_som4": epa.r_C_som3_2_C_som4,
-            "r_C_som4_2_C_som2": epa.r_C_som4_2_C_som2,
-            "r_C_som4_2_C_som3": epa.r_C_som4_2_C_som3,
-        }.items()
-    }
-    X_0_dict = {
-        "C_wood1": epa.C_wood1_0,
-        "C_wood2": epa.C_wood2_0,
-        "C_wood3": epa.C_wood3_0,
-        "C_wood4": epa.C_wood4_0,
-        "C_leaf": epa.C_leaf_0,
-        "C_root": epa.C_root_0,
-        "C_fruit": cpa.cVeg_0 - (
-                    epa.C_wood1_0 + epa.C_wood2_0 + epa.C_wood3_0 + epa.C_wood4_0 + epa.C_leaf_0 + epa.C_root_0),
-        "C_litter1": epa.C_litter1_0,
-        "C_litter2": epa.C_litter2_0,
-        "C_litter3": epa.C_litter3_0,
-        "C_litter4": epa.C_litter4_0,
-        "C_litter5": epa.C_litter5_0,
-        "C_litter6": cpa.cLitter_0 - (
-                    epa.C_litter1_0 + epa.C_litter2_0 + epa.C_litter3_0 + epa.C_litter4_0 + epa.C_litter5_0),
-        "C_som1": epa.C_som1_0,
-        "C_som2": epa.C_som2_0,
-        "C_som3": epa.C_som3_0,
-        "C_som4": cpa.cSoil_0 - (epa.C_som1_0 + epa.C_som2_0 + epa.C_som3_0),
-    }
-    X_0 = np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(17, 1)
-    fd = make_func_dict(mvs, dvs, cpa, epa)
-    V_init = gh.make_InitialStartVectorTrace(
-        X_0, mvs,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
+# this function is deprecated - see general helpers traceability_iterator
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
 
 def numeric_X_0(mvs,dvs,cpa,epa):
     # This function creates the startvector for the pools
