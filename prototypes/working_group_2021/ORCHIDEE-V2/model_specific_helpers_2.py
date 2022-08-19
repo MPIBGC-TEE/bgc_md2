@@ -551,7 +551,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val = 15
+        delta_t_val = 30
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,

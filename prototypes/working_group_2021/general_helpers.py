@@ -3165,7 +3165,8 @@ def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     ax0.bar ('$\Delta$ X_c', np.mean(delta_x_c), color="blue")
     ax0.bar ('$\Delta$ RT', np.mean(rt_contrib), color="darkorange")
     ax0.bar ('$\Delta$ u', np.mean(u_contrib), color="green")
-    ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
+    if abs(np.mean(combined_contrib)) > 0.001:
+        ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
     ax0.grid()  
     # pie charts
     ax1=axs[1]
@@ -3184,4 +3185,4 @@ def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     plt.show()
     
-    return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined))    
+    return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined), np.mean(delta_x_c))    
