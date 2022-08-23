@@ -206,7 +206,7 @@ def nc_global_mean_file_name(nc_var_name):
 #         ds = nc.Dataset(str(path))
 #         lats = ds.variables["latitude"]
 #         lons = ds.variables["longitude"]
-        
+
 #         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
 #         if vn in ["npp","gpp","rh","ra"]:
 #             #for name, variable in ds.variables.items():            
@@ -244,7 +244,7 @@ def nc_global_mean_file_name(nc_var_name):
 #         mrso=odvs.mrso,
 #         tas=odvs.tas
 #     )
-    
+
 #     # Link symbols and data for Observables/Drivers
 #     # return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 #     return (obss, dvs)
@@ -372,9 +372,35 @@ def make_npp_func(dvs):
     return func
 
 
+import math
 def make_xi_func(dvs):
     def func(day):
-        return 1.0 # preliminary fake for lack of better data... 
+        
+        month = gh.day_2_month_index(day)
+        
+        tconst = 344.0 # constant for Lloyd and Taylor (1994) function
+        bconst = 10.0  # base temperrature used for carbon decompositon
+        btemp = 288.16 # maximum value of decomposition factor
+        
+        T = dvs.tas[month] # do not have soil temp so we use air temp to replace
+        
+        # temp regulates factor
+        if (T > 237.13):
+            factor = min(math.exp(tconst * ((1.0 /(btemp-227.13)) - (1.0 /(T-227.13)) )), bconst)
+        else:
+            factor = math.exp(tconst * ((1.0 /(btemp-227.13)) - (1.0 /(237.13-227.13)) ))
+        
+        wfps = 55.0 #
+        moist = math.exp((wfps - 60.0)**2 /-(800.0))   # moisture regulates factor
+        
+        factor = max(0.001, min(bconst, factor * moist))
+        
+        if (factor > 1.0):
+            factor = 1
+                        
+        #print(factor)
+        
+        return factor # preliminary fake for lack of better data... 
     return func
 
 
