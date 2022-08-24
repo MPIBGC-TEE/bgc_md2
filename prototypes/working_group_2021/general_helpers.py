@@ -2351,7 +2351,129 @@ def avg_timeline(timeline, averaging):  # array  # number of steps over which to
             i += x
     return output
 
+# this is to export yearly traceable components for use outside of framework (experimenting with Enqing's code)
+import pandas as pd
+def write_yearly_components(
+    model_names,  # dictionary (folder name : model name)
+    test_arg_list,  # a list of test_args from all models involved
+    var_names,  # dictionary (trace_tuple name : descriptive name)
+    delta_t_val,  # model time step
+    model_cols,  # dictionary (folder name :color)
+    part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+    averaging=12,  # number of iterator steps over which to average results. 1 for no averaging
+):
+    if (part < 0) | (part > 1):
+        raise Exception(
+            "Invalid partitioning in plot_components_combined: use part between 0 and 1"
+        )
+    model_folders = [(k) for k in model_names]
+    variables = [(k) for k in var_names]
+    n = len(variables)
 
+    # fig = plt.figure(figsize=(17, n * 8))
+    # axs = fig.subplots(n, 1)
+
+    Xs=np.array((0,))
+    X_cs=np.array((0,))
+    X_ps=np.array((0,))
+    us=np.array((0,))
+    RTs=np.array((0,))
+ 
+    for i, name in enumerate(variables):
+        k = 0
+        for mf in model_folders:
+            # print(k)
+            # print(model_folders[k])
+            # print(test_arg_list[k])
+            itr = traceability_iterator_instance(mf, test_arg_list[k], delta_t_val)
+            start_min, stop_max = min_max_index(
+                test_arg_list[k],
+                delta_t_val,
+                *t_min_tmax_overlap(test_arg_list, delta_t_val)
+            )
+            # if we do not want the whole interval but look at a smaller part to observe the dynamics
+            # start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+            start, stop = int(stop_max - (stop_max - start_min) * part), stop_max
+            times = (
+                times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
+                / days_per_year()
+            )
+            print("Gathering " + str(name) + " data for " + str(mf) + " model")
+            vals = itr[start:stop]
+            vals_output = avg_timeline(vals.__getattribute__(name), averaging)
+            
+            if name == "x":  
+                Xs=np.concatenate((Xs,vals_output))
+            if name == "x_c":  
+                X_cs=np.concatenate((X_cs,vals_output))  
+            if name == "x_p":  
+                X_ps=np.concatenate((X_ps,vals_output)) 
+            if name == "u":  
+                us=np.concatenate((us,vals_output))                  
+            if name == "rt":  
+                RTs=np.concatenate((RTs,vals_output)) 
+            k += 1       
+    
+    print("X")
+    print(Xs.shape)
+    #print(Xs)
+    
+    print("X_c")
+    print(X_cs.shape)
+    #print(X_cs)
+    
+    print("X_p")
+    print(X_ps.shape)
+    #print(X_ps)
+    
+    print("u")
+    print(us.shape)
+    #print(us)
+    
+    print("RT")
+    print(RTs.shape)
+    #print(RTs)
+    
+    # Saving yearly components to a csv for further analysis
+    test_keys = ["Model", "Year", "X", "X_c", "X_p", "u", "RT"]
+        
+    model = np.repeat(model_folders[0], 160).reshape(160,1) 
+    models=np.array((model)).reshape(160,1)
+    for i in range (len(model_folders)-1):
+        model=np.repeat(model_folders[i+1], 160).reshape(160,1) 
+        models=np.concatenate((models,model))
+        
+    print("Model")
+    print(models.shape)
+    #print(models)  
+        
+    year = np.array(range(1860,2020)).reshape(160,1)
+    years=np.array((year)).reshape(160,1)
+    for i in range (len(model_folders)-1):
+        years=np.concatenate((years,year))
+        
+    print("Year")
+    print(years.shape)
+    #print(years)
+  
+    # Xs=Xs.reshape(321,1)  
+    # X_cs=X_cs.reshape(321,1)
+    # X_ps=X_ps.reshape(321,1)
+    # us=us.reshape(321,1)
+    # RTs=RTs.reshape(321,1)
+    
+    test_values = [models.flatten(), years.flatten(), Xs.flatten()[1:], X_cs.flatten()[1:], X_ps.flatten()[1:], us.flatten()[1:], RTs.flatten()[1:]]
+    
+    #print("test_values")
+    #print(test_values.shape)
+    
+    template = {test_keys[i]: test_values[i] for i in range(len(test_keys))}
+    output = pd.DataFrame(template)    
+    
+    pd.DataFrame(output).to_csv('For_Enqings_method.csv', sep=',')
+    
+    return output
+    
 def plot_components_combined(
     model_names,  # dictionary (folder name : model name)
     test_arg_list,  # a list of test_args from all models involved
