@@ -66,9 +66,9 @@ model_names={
     "jon_yib": "YIBs",
     "kv_ft_dlem": "DLEM",
     #"Aneesh_SDGVM":"SDGVM",
-    "cj_isam": "ISAM",
+    #"cj_isam": "ISAM",
     "bian_ibis2":"IBIS",
-    "ORCHIDEE-V2":"OCN",
+    #"ORCHIDEE-V2":"OCN",
 }
 
 # selecting colors for plotting models
@@ -94,7 +94,7 @@ comparison_table
 
 # +
 # define same step size for each model (in days)
-delta_t_val=15
+delta_t_val=30
 # load data and parameters
 model_folders=[(k) for k in model_names]
 test_arg_list=gh.get_test_arg_list(model_folders)
@@ -105,8 +105,47 @@ test_arg_list=gh.get_test_arg_list(model_folders)
 test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 # -
 
+# ### Checking data assimilation quality for all models
+
+import matplotlib.lines as mlines
+plt.rcParams.update({'font.size': 32})
+for j, mf in enumerate(model_folders):
+    print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
+    print ('\033[0m')
+    fig = plt.figure(figsize=(50,10))
+    axs=fig.subplots(1, len(gh.msh(mf).Observables._fields))
+    
+    mvs=test_arg_list[j].mvs
+    dvs=test_arg_list[j].dvs
+    cpa=test_arg_list[j].cpa
+    epa_opt=test_arg_list[j].epa_opt
+    
+    param2res_sym = gh.msh(mf).make_param2res_sym(mvs,cpa,dvs)
+    out_simu=param2res_sym(epa_opt)._asdict()
+    obs=test_arg_list[j].svs._asdict()
+    print ("Amount of variance explined: ")
+    for i,f in enumerate(gh.msh(mf).Observables._fields):
+        resid=out_simu[f]-obs[f]
+        mean_obs = obs[f].mean()
+        mean_centered_obs = obs[f] - mean_obs
+        AVE=1 - np.sum( resid**2) / np.sum( mean_centered_obs**2 )
+        print(f+ " : " + str(round(AVE,3)) )
+    for i,f in enumerate(gh.msh(mf).Observables._fields):
+        axs[i].scatter(out_simu[f], obs[f], c='black')
+        line = mlines.Line2D([0, 1], [0, 1], color='red')
+        transform = axs[i].transAxes
+        line.set_transform(transform)
+        axs[i].add_line(line)
+        axs[i].set_title(f)
+        axs[i].set_xlabel('Matrix output')
+        axs[i].set_ylabel('Original Trendy output')
+        axs[i].grid()
+    plt.show()
+
+
 # ### Plots of traceable components
 
+plt.rcParams.update({'font.size': 18})
 var_names={
     "x": "X and X_c",
     #"x_p": "X_p",
@@ -142,23 +181,21 @@ gh.plot_normalized_x(model_names=model_names,
                      overlap=True
                      )
 
-# +
-# gh.plot_normalized_xc(model_names=model_names,
-#                       test_arg_list=test_arg_list,
-#                       delta_t_val=delta_t_val, 
-#                       model_cols=model_cols,
-#                       part=1,
-#                       averaging=12*30//delta_t_val,
-#                       overlap=True
-#                      )
-# -
+gh.plot_normalized_xc(model_names=model_names,
+                      test_arg_list=test_arg_list,
+                      delta_t_val=delta_t_val, 
+                      model_cols=model_cols,
+                      part=1,
+                      averaging=12*30*5//delta_t_val,
+                      overlap=True
+                     )
 
 gh.plot_xp(model_names=model_names,
            test_arg_list=test_arg_list,
            delta_t_val=delta_t_val, 
            model_cols=model_cols,
            part=1,
-           averaging=12*30//delta_t_val,
+           averaging=12*30*5//delta_t_val,
            overlap=True
           )
 
@@ -168,7 +205,7 @@ gh.plot_xp(model_names=model_names,
 #           delta_t_val=delta_t_val, 
 #           model_cols=model_cols,
 #           part=1,
-#           averaging=12*30//delta_t_val,
+#           averaging=30*12*5//delta_t_val,
 #           overlap=True
 #          )
 # -
@@ -178,7 +215,7 @@ gh.plot_normalized_u(model_names=model_names,
                      delta_t_val=delta_t_val, 
                      model_cols=model_cols,
                      part=1,
-                     averaging=12*30//delta_t_val,
+                     averaging=12*30*5//delta_t_val,
                      overlap=True
                      )
 
@@ -198,7 +235,7 @@ gh.plot_normalized_rt(model_names=model_names,
                      delta_t_val=delta_t_val, 
                      model_cols=model_cols,
                      part=1,
-                     averaging=12*30//delta_t_val,
+                     averaging=12*30*5//delta_t_val,
                      overlap=True
                      )
 
@@ -224,8 +261,8 @@ gh.plot_normalized_rt(model_names=model_names,
 
 count_rt_weighted=0
 count_u_weighted=0
-count_combine_weightedd=0
-count_delta_x_c_weighted=0
+count_combined_weighted=0
+count_delta_x_c=0
 for i in range(len(model_folders)-1):
     j=i
     while j<len(model_folders)-1:
@@ -262,54 +299,5 @@ else:
 ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Across All Pairs of Models')
 plt.show()
-# +
-#         i=0
-#         j=1
-#         mf_1=model_folders[i]
-#         mf_2=model_folders[j]
-#         ta_1=test_arg_list[i]
-#         ta_2=test_arg_list[j]
-#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-#         count_rt=+rt
-#         count_u=+u
-#         count_combined=+combined
-
-#         i=1
-#         j=0
-#         mf_1=model_folders[i]
-#         mf_2=model_folders[j]
-#         ta_1=test_arg_list[i]
-#         ta_2=test_arg_list[j]
-#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-#         count_rt=+rt
-#         count_u=+u
-#         count_combined=+combined
-
-#         i=0
-#         j=2
-#         mf_1=model_folders[i]
-#         mf_2=model_folders[j]
-#         ta_1=test_arg_list[i]
-#         ta_2=test_arg_list[j]
-#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-#         count_rt=+rt
-#         count_u=+u
-#         count_combined=+combined
-
-#         i=2
-#         j=0
-#         mf_1=model_folders[i]
-#         mf_2=model_folders[j]
-#         ta_1=test_arg_list[i]
-#         ta_2=test_arg_list[j]
-#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-#         rt,u,combined=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-#         count_rt=+rt
-#         count_u=+u
-#         count_combined=+combined
 # -
-
 
