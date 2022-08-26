@@ -65,7 +65,8 @@ Observables_annual = namedtuple(
 )
 Observables_monthly = namedtuple(
     'Observables_monthly',
-    ["rh","ra"]
+    #["rh","ra"]
+    ["rh"]
 )
 Observables = namedtuple(
     "Observables",
@@ -91,7 +92,7 @@ Constants = namedtuple(
         "cVeg_0",
         "npp_0",
         "rh_0",
-        "ra_0",
+        #"ra_0",
         
         # "k_C_mll",
         # "k_C_mwl",
@@ -103,20 +104,20 @@ Constants = namedtuple(
         # "k_C_lwl",
         # "k_C_lrl",
         
-        "r_C_mll_2_C_mic", # f13_4
-        "r_C_mwl_2_C_mic", # f13_5
-        "r_C_mrl_2_C_mic", # f13_6
-        "r_C_sll_2_C_mic", # f13_7
-        "r_C_swl_2_C_mic", # f13_8
-        "r_C_srl_2_C_mic", # f13_9
-        "r_C_pass_2_C_mic", # f13_16
+        # "r_C_mll_2_C_mic", # f13_4
+        # "r_C_mwl_2_C_mic", # f13_5
+        # "r_C_mrl_2_C_mic", # f13_6
+        # "r_C_sll_2_C_mic", # f13_7
+        # "r_C_swl_2_C_mic", # f13_8
+        # "r_C_srl_2_C_mic", # f13_9
+        # "r_C_pass_2_C_mic", # f13_16
 
-        "r_C_lll_2_C_prot", # f14_10
-        "r_C_lwl_2_C_prot", # f14_11
-        "r_C_lrl_2_C_prot", # f14_12
-        "r_C_lll_2_C_nonprot", # f15_10
-        "r_C_lwl_2_C_nonprot", # f15_11
-        "r_C_lrl_2_C_nonprot", # f15_12
+        # "r_C_lll_2_C_prot", # f14_10
+        # "r_C_lwl_2_C_prot", # f14_11
+        # "r_C_lrl_2_C_prot", # f14_12
+        # "r_C_lll_2_C_nonprot", # f15_10
+        # "r_C_lwl_2_C_nonprot", # f15_11
+        # "r_C_lrl_2_C_nonprot", # f15_12
         
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
@@ -185,6 +186,23 @@ EstimatedParameters = namedtuple(
          "r_C_prot_rh",
          "r_C_nonprot_rh",        
          "r_C_pass_rh",
+         
+         
+         
+        "r_C_mll_2_C_mic", # f13_4
+        "r_C_mwl_2_C_mic", # f13_5
+        "r_C_mrl_2_C_mic", # f13_6
+        "r_C_sll_2_C_mic", # f13_7
+        "r_C_swl_2_C_mic", # f13_8
+        "r_C_srl_2_C_mic", # f13_9
+        "r_C_pass_2_C_mic", # f13_16
+
+        "r_C_lll_2_C_prot", # f14_10
+        "r_C_lwl_2_C_prot", # f14_11
+        "r_C_lrl_2_C_prot", # f14_12
+        "r_C_lll_2_C_nonprot", # f15_10
+        "r_C_lwl_2_C_nonprot", # f15_11
+        "r_C_lrl_2_C_nonprot", # f15_12
 
     ]
 )
@@ -504,8 +522,9 @@ def make_iterator_sym(
     # the order later in the symbolic formulation....
     V_arr=np.array(
         [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.ra,V_init.rh]
-    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+        #[V_init.ra,V_init.rh]
+        [V_init.rh]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
     
     
     # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
@@ -521,13 +540,13 @@ def make_iterator_sym(
         X_new = X + b + B @ X
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         
-        ra = np.sum(
-            [
-              numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in ["C_leaf","C_wood","C_root"] 
-                if Symbol(k) in numOutFluxesBySymbol.keys()
-            ]
-        )
+        # ra = np.sum(
+            # [
+              # numOutFluxesBySymbol[Symbol(k)](it,*X)
+                # for k in ["C_leaf","C_wood","C_root"] 
+                # if Symbol(k) in numOutFluxesBySymbol.keys()
+            # ]
+        # )
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
@@ -535,7 +554,7 @@ def make_iterator_sym(
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
         
         return V_new
     
@@ -548,7 +567,8 @@ def make_StartVector(mvs):
     return namedtuple(
         "StartVector",
         [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["ra","rh"]
+        #["ra","rh"]
+        ["rh"]
     ) 
 
 
@@ -611,7 +631,7 @@ def make_param2res_sym(
             C_nonprot=epa.C_nonprot_0,
             C_pass=cpa.cSoil_0-(epa.C_mrl_0 + epa.C_srl_0 + epa.C_lrl_0 + epa.C_mic_0 + epa.C_prot_0 + epa.C_nonprot_0),
 
-            ra=cpa.ra_0,
+            #ra=cpa.ra_0,
             rh=cpa.rh_0
         )
         # next we create the parameter dict for the iterator
@@ -737,7 +757,7 @@ def make_param2res_sym(
         
         # added by cybian 
         rhs=np.zeros(cpa.number_of_months)
-        ras=np.zeros(cpa.number_of_months)
+        #ras=np.zeros(cpa.number_of_months)
         number_of_years=int(cpa.number_of_months/12)
         #print('number_of_years:',number_of_years)
         
@@ -763,9 +783,9 @@ def make_param2res_sym(
                 for d in range(steps_per_month): #int(dpm/delta_t_val)
                     v = it_sym.__next__()#.reshape(n,)
                     # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
-                    # at the moment the iterator also computes a flux but in kg^-2 ^day
-                    
+                    # at the moment the iterator also computes a flux but in kg^-2 ^day                    
                     V=StartVector(*v)
+                    
                     #cVeg_ave=np.array(cVeg_ave, dtype=object)+float(V.C_leaf+V.C_wood+V.C_root),
                     #cLitter_ave=np.array(cLitter_ave, dtype=object)+float(V.C_mll + V.C_mwl + V.C_sll + V.C_swl + V.C_lll + V.C_lwl),
                     #cSoil_ave=np.array(cSoil_ave, dtype=object)+float(V.C_mrl + V.C_srl + V.C_lrl + V.C_mic + V.C_prot + V.C_nonprot + V.C_pass),
@@ -791,7 +811,7 @@ def make_param2res_sym(
             cSoil=cSoils,
             cLitter=cLitters,
             rh=rhs,
-            ra=ras
+            #ra=ras
         )
     
             #comment by cybian
