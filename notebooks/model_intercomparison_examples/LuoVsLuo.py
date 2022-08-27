@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -17,7 +17,7 @@ from IPython.display import HTML
 
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# #%load_ext autoreload
+# %load_ext autoreload
 # %autoreload 2
 import bgc_md2.helper as h
 
