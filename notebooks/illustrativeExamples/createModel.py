@@ -105,7 +105,7 @@ mvs = CMTVS(
 #
 # I wanted to see the compartmental the pools, the matrix and the inputs.
 
-mvs.get_StateVariableTuple()
+mvs.get_CompartmentalMatrix()
 
 mvs.get_CompartmentalMatrix()
 
@@ -207,67 +207,177 @@ mvs = CMTVS(
 
 h.compartmental_graph(mvs)
 
+# +
+# We want to decompose the model into a soil and vegetation part
+# specify the pools belonging to 
+# vegetation
+vcsvt = (wood,leaf)
+# and soil
+scsvt = (lit, som, cwd)
+# find the internal fluxes that have a vegetation pool as source and a soil pool target
+v2sfls= {k:v for k,v in mvs.get_InternalFluxesBySymbol().items() if (k[0] in vcsvt and k[1] in scsvt) }
+
+# find the internal fluxes that have a vegetation pool as source and a soil pool target
+s2vfls= {k:v for k,v in mvs.get_InternalFluxesBySymbol().items() if (k[0] in scsvt and k[1] in vcsvt) }
+v2sfls,s2vfls
+
+# now we can sum those fluxes up
+v2sAgg = sum(
+    v2sfls.values()
+)
+s2vAgg = sum (
+    s2vfls.values()
+)
+v2sAgg,s2vAgg
+
+#vcsvt = VegetationCarbonStateVariableTuple(wood,leaf)
+#scsvt = SoilCarbonStateVariableTuple(lit, som, cwd)
+# -
+
 #
 # ### Add more meta information about existing variables
 # Our model consists of a vegetation part and a soil part. We can take it apart by providing 
-# the information which pools belong to the vegetatopm and which belong to the soil part.
+# the information which pools belong to the vegetation and which belong to the soil.
 #
 # Task:
 # To find out what `mvars` are available to describe what we know about the model we first look at all potentially computable properties:
 
-import ComputabilityGraphs.helpers as h
+import ComputabilityGraphs.helpers as cgh
 computers=module_computers(bgc_md2.resolve.computers)
-h.all_mvars(computers)
+cgh.all_mvars(computers)
 
-# Let's assume we are interested in the Compartmental Matrix for the Vegetation part
+# Let's assume we are interested in the Fluxes from the Vegetation part to the soil Part
 
-# ?bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix
+# +
+# #?bgc_md2.resolve.mvars.AggregatedVegetation2SoilCarbonFlux
+# -
 
-# We now use the `ComputabilityGraphs` package to find out what information (mvars) we have to provide to compute the `VegetationCarbonCompartmentalMatrix`
+# We now use the `ComputabilityGraphs` package to find out what information (mvars) we have to provide to compute the `AggregatedVegetation2SoilCarbonFlux`
 
-from ComputabilityGraphs.dep_graph_helpers import duplicated_computer_dict, all_dep_graphs
+# +
+
 import matplotlib.pyplot as plt
-root=bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix
+from ComputabilityGraphs.dep_graph_helpers import ( 
+    #duplicated_computer_dict, 
+    all_dep_graphs
+)
+root=bgc_md2.resolve.mvars.AggregatedVegetation2SoilCarbonFlux
 cs=computers
-gs= list(
+gs= set(
     all_dep_graphs(
         root_type=root,
         cs=cs,
-        given=frozenset()
+        #given=frozenset()
+        given=mvs.provided_mvar_types
     )
 )
-n=len(gs)
-n=10
-fig=plt.figure(figsize=(20,20*n))
-axs = fig.subplots(n,1)
-for i,ax in enumerate(axs):
-    g = gs[i]
-    g.draw_matplotlib(ax)
-#fig.savefig("depgraphs_" + root.__name__ + '.pdf')
+len(gs)
 
 
 # +
+#n=len(gs)
+#fig=plt.figure(figsize=(20,20*n))
+#if n>1:
+#    axs = fig.subplots(n,1)
+#    for i,ax in enumerate(axs):
+#        dg = list(gs)[i]
+#        dg.draw_matplotlib(ax)
+#else:
+#    dg=list(gs)[0]
+#    ax=fig.subplots(1,1)
+#    dg.draw_matplotlib(ax)
+#fig.savefig("depgraphs_" + root.__name__ + '.pdf')
+#dg.required_mvars(given=mvs.provided_mvar_types)
+
+
+type(mvs.provided_mvar_types)
+
+
+# +
+fig=plt.figure(figsize=(20,10))
+dg=list(gs)[0]
+
+ax = fig.add_subplot(1, 1, 1)
+B=dg.to_bipartite()
+mvs.provided_mvar_types.difference(B.types())
+
+ca=h.computer_aliases()
+ta=h.type_aliases()
+B.draw_matplotlib(
+    ax,
+    given=mvs.provided_mvar_types,
+    #computer_aliases=ca,
+    #type_aliases=ta
+)
+#B.draw_matplotlib(ax,target_node=root)
+# -
+
+
+[n for n in B.nodes if B.out_degree(n)==0]
+dg.jupyter_widget(
+    given=mvs.provided_mvar_types,
+    #computer_aliases=ca,
+    type_aliases=ta
+)
+
+# +
+from bokeh.io import output_file, show, output_notebook
 from ComputabilityGraphs.rec_graph_helpers import fast_graph
 from ComputabilityGraphs.fast_graph_helpers import project_to_multiDiGraph
-from ComputabilityGraphs.graph_plotting import draw_ComputerSetMultiDiGraph_matplotlib
+from ComputabilityGraphs.graph_plotting import (
+    draw_ComputerSetMultiDiGraph_matplotlib,
+    bokeh_plot
+)
+#from frozenset import frozenset
+
 fg = fast_graph(
     cs=cs,
     root_type=root,
-    given=frozenset()
+    given=mvs.provided_mvar_types
+    #given=frozenset()
 )
-fig=plt.figure(figsize=(20,20))
-ax1 = fig.add_subplot(1, 1, 1)
-fg.draw_matplotlib(
-    ax1
+G=project_to_multiDiGraph(fg)
+output_notebook()
+#plot=bokeh_plot(G,frozenset({bgc_md2.resolve.mvars.VegetationCarbonCompartmentalMatrix}))
+plot=bokeh_plot(
+    G
+    ,frozenset({bgc_md2.resolve.mvars.VegetationCarbonInFluxesBySymbol})
+)
+show(plot)
+#fig=plt.figure(figsize=(20,20))
+#ax1 = fig.add_subplot(1, 1, 1)
+#fg.draw_matplotlib(
+#    ax1
+#
+#)
 
-)
 
 
 # +
 
-fig=plt.figure(figsize=(20,20))
-ax1 = fig.add_subplot(1, 1, 1)
-draw_ComputerSetMultiDiGraph_matplotlib(ax=ax1,spsg=project_to_multiDiGraph(fg))
+#fig=plt.figure(figsize=(20,20))
+#ax1 = fig.add_subplot(1, 1, 1)
+#draw_ComputerSetMultiDiGraph_matplotlib(ax=ax1,spsg=project_to_multiDiGraph(fg))
 # -
+
+
+
+dict(G.edges)
+
+
+def d(ind):
+    d={1:["a","b"],2:["c","d"],3:['e']}
+    return d[ind]
+#[(a,b) for a in [1,2,3] for b in ["a","b","c"]]
+[(a,b) for a in [1,2,3] for b in d(a)]
+
+[1,2 if True else 4 ,3]
+
+import sympy;x=Symbol("x")
+
+
+isinstance(x**2,sympy.core.Basic)
+
+# ?sympy.core.Basic
 
 
