@@ -2,15 +2,17 @@ import numpy as np
 from numpy.lib.function_base import meshgrid
 from scipy import interpolate, sparse
 from tqdm import tqdm
-from typing import Callable, Tuple, Iterable, List
+from typing import Callable, Dict, Tuple, Iterable, List
 from functools import reduce, lru_cache
 from copy import copy, deepcopy
 from itertools import islice
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
+from sympy.core.expr import Expr
 from collections import namedtuple
 from frozendict import frozendict
 from importlib import import_module
+from collections import OrderedDict
 import matplotlib.pyplot as plt
 import os
 import inspect
@@ -137,55 +139,73 @@ class SymTransformers:
 #        max_lon=lon+step_lon/2
 #    )
 
-_TraceTuple = namedtuple(
-    "_TraceTuple",
-    [
-        "X",
-        "X_p",
-        "X_c",
-        "X_dot",
-        "RT",
-        #
-        "x",
-        "x_p",
-        "x_c",
-        "x_dot",
-        "rt",
-        "u",
-    ],
-)
+#_TraceTuple = namedtuple(
+#    "_TraceTuple",
+#    [
+#        "x",
+#        "x_p",
+#        "x_c",
+#        "x_dot",
+#        "rt",
+#        #
+#        "x",
+#        "x_p",
+#        "x_c",
+#        "x_dot",
+#        "rt",
+#        "u",
+#        "AggregatedVegetation2SoilCarbonFlux",
+#    ],
+#)
 
+class TraceTuple():
+    def __init__(
+        self,
+        fd: dict
+        ):    
+        for k,v in fd.items():
+            self.fd=fd
+            self.__setattr__(k,v)
 
-class TraceTuple(_TraceTuple):
+    @property     
+    def _fields(self):
+        return self.fd.keys()
+
     def averages(self, partitions):
         return self.__class__(
-            *tuple(
+            {
+                name:
                 averaged_1d_array(self.__getattribute__(name), partitions)
-                for name in TraceTuple._fields
-            )
+                for name in self._fields
+            }
         )
 
     def __add__(self, other):
         """overload + which is useful for averaging"""
         return self.__class__(
-            *tuple(
+            {   
+                name:
                 self.__getattribute__(name) + other.__getattribute__(name)
-                for name in TraceTuple._fields
-            )
+                for name in self._fields
+            }
         )
 
     def __truediv__(self, number):
         """overload / for scalars  which is useful for averaging"""
 
         return self.__class__(
-            *tuple(self.__getattribute__(name) / number for name in TraceTuple._fields)
+            { 
+                name: 
+                self.__getattribute__(name) / number 
+                for name in self._fields
+            }
         )
 
     def __eq__(self, other):
         """overload == which is useful for tests"""
         return np.all(
             self.__getattribute__(name) == other.__getattribute__(name)
-            for name in TraceTuple._fields
+            for name in self._fields
         )
 
 
@@ -233,7 +253,7 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
         mvs.get_CompartmentalMatrix(), cont_time=t, delta_t=delta_t, iteration=it
     )
     # from IPython import embed;embed()
-    sym_u = hr.euler_forward_net_u_sym(mvs.get_InputTuple(), t, delta_t, it)
+    sym_u = hr.discrete_time_sym(mvs.get_InputTuple(), t, delta_t, it)
 
     B_func = hr.numerical_array_func(
         state_vector=state_vector,
@@ -1101,25 +1121,26 @@ def plot_observations_vs_simulations(fig, svs_cut, obs_simu):
         axs[i].set_title(name)
 
 
-def reduce_is_infinite_over_first_dim(
-    arr: np.ma.core.MaskedArray,
-) -> np.ma.core.MaskedArray:
-    #
-    return reduce(
-        lambda acc, el: np.logical_or(acc, np.logical_not(np.isfinite(el))),
-        map(lambda i: arr[i], range(arr.shape[0])),
+def is_infinite_rec(chunk):
+    return reduce_or_rec(
+        np.logical_not(
+            np.isfinite(chunk)
+        )
     )
 
 
-def is_infinite_rec(chunk: np.ma.core.MaskedArray) -> np.ma.core.MaskedArray:
-    # works for any dimension (some variables are 4, most are 3 dimensional)
-    # The function reduce_is_infinite_over_first_dim reduces the array dimension by 1
-    # everytime it is called and is called
-    # until the result is a 2d array (lat,lon are always the last dimensions in our datasets)
-    if chunk.ndim == 2:
-        return chunk
+def reduce_or_rec(bool_arr: np.ma.core.MaskedArray) -> np.ma.core.MaskedArray:
+    # works recursively for any dimension (some variables are 4, most are 3 dimensional)
+    # 2d array (lat,lon are always the last dimensions in our datasets)
+    if bool_arr.ndim == 2:
+        return bool_arr 
     else:
-        return is_infinite_rec(reduce_is_infinite_over_first_dim(chunk))
+        return reduce_or_rec(
+            reduce(
+                np.logical_or,
+                map(lambda i: bool_arr[i], range(bool_arr.shape[0])),
+            )
+        )    
 
 
 def get_nan_pixel_mask(
@@ -1131,8 +1152,9 @@ def get_nan_pixel_mask(
     except:
         AttributeError()
 
-    # partition along the the chunks of the netcdf file (measured about a100 times faster)
-    # and much less memory consuming than reading the complete array which requiers more than 16GB RAM
+    # partition along the the chunks of the netcdf file (measured about a 100
+    # times faster) and much less memory consuming than reading the complete
+    # array which requiers more than 16GB RAM
 
     try:
         chunksizes = var.chunking()
@@ -1682,21 +1704,22 @@ def values_2_TraceTuple(tups):
     # instead of the tuple of TraceTuples that the InfiniteIterator returns
     # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
     return TraceTuple(
-        *(
+        {
+            name:
             np.stack(tuple((tup.__getattribute__(name) for tup in tups)))
-            for name in TraceTuple._fields
-        )
+            for name in tups[0]._fields
+        }
     )
 
 
 class TraceTupleIterator(InfiniteIterator):
-    # overload one method specific to the TraceTupleIterator
+    # overload methods specific to the TraceTupleIterator
     def __getitem__(self, arg):
         # we call the [] method of the superclass
         # which returns a tuple of TraceTuples
         tups = super().__getitem__(arg)
 
-        # But what we want is a TraceTuple of arrays
+        # But we want a TraceTuple of arrays
         return values_2_TraceTuple(tups)
 
     def averaged_values(self, partitions):
@@ -1722,53 +1745,122 @@ class TraceTupleIterator(InfiniteIterator):
         return values_2_TraceTuple(tts)
 
 
-def trace_tuple_instance(X, B, I):
-    u = I.sum()
-    b = I / u
-    B_inv = np.linalg.inv(B)
-    X_c = B_inv @ I
-    X_p = X_c - X
-    X_dot = I - B @ X
-    RT = X_c / u  # =B_inv@b but cheeper to compute
-    # we now compute the system X_c and X_p
-    # This is in general not equal to the sum of the component, but rather a property
-    # of a surrogate system.
-    x = X.sum()
-    x_dot = X_dot.sum()
-    m_s = (B @ X).sum() / x
-    x_c = 1 / m_s * u
-    x_p = x_c - x
-    rt = x_c / u
+def make_trace_tuple_func(
+        traced_functions: Dict[str, Callable]
+    ):
 
-    return TraceTuple(
-        X=X,
-        X_p=X_p,
-        X_c=X_c,
-        X_dot=X_dot,
-        RT=RT,
-        x=x,
-        x_p=x_p,
-        x_c=x_c,
-        x_dot=x_dot,
-        rt=rt,
-        u=u,
-    )
+    # create a function that produces all the values 
+    def f(X, B, I, it):
+        # These are values that are computable from the momentary values of X and B
+        u = I.sum()
+        b = I / u
+        B_inv = np.linalg.inv(B)
+        X_c = B_inv @ I
+        X_p = X_c - X
+        X_dot = I - B @ X
+        RT = X_c / u  # =B_inv@b but cheeper to compute
+        # we now compute the system X_c and X_p
+        # This is in general not equal to the sum of the component, but rather a property
+        # of a surrogate system.
+        x = X.sum()
+        x_dot = X_dot.sum()
+        m_s = (B @ X).sum() / x
+        x_c = 1 / m_s * u
+        x_p = x_c - x
+        rt = x_c / u
+            
+        static={ 
+            "X": X,
+            "X_p": X_p,
+            "X_c": X_c,
+            "X_dot": X_dot,
+            "RT": RT,
+            "x": x,
+            "x_p": x_p,
+            "x_c": x_c,
+            "x_dot": x_dot,
+            "rt": rt,
+            "u": u,
+        }
+        dynamic={
+            k: f(it,*X)
+            for k,f in traced_functions.items()
+        }
+        def dict_merge(d1,d2):
+            d=deepcopy(d1)
+            d.update(d2)
+            return d
 
+        return TraceTuple(
+            dict_merge(static,dynamic)
+        )
+
+    return f 
+
+# def trace_tuple_instance(X, B, I):
+#     # These are values that are computable from the momentary values of X and B
+#     u = I.sum()
+#     b = I / u
+#     B_inv = np.linalg.inv(B)
+#     X_c = B_inv @ I
+#     X_p = X_c - X
+#     X_dot = I - B @ X
+#     RT = X_c / u  # =B_inv@b but cheeper to compute
+#     # we now compute the system X_c and X_p
+#     # This is in general not equal to the sum of the component, but rather a property
+#     # of a surrogate system.
+#     x = X.sum()
+#     x_dot = X_dot.sum()
+#     m_s = (B @ X).sum() / x
+#     x_c = 1 / m_s * u
+#     x_p = x_c - x
+#     rt = x_c / u
+#
+#
+#     return TraceTuple(
+#         X=X,
+#         X_p=X_p,
+#         X_c=X_c,
+#         X_dot=X_dot,
+#         RT=RT,
+#         x=x,
+#         x_p=x_p,
+#         x_c=x_c,
+#         x_dot=x_dot,
+#         rt=rt,
+#         u=u,
+#         AggregatedVegetation2SoilCarbonFlux=0
+#     )
+#
 
 def traceability_iterator(
-    X_0,
-    func_dict,
-    mvs,  #: CMTVS,
-    dvs,  #: Drivers,
-    cpa,  #: Constants,
-    epa,  #: EstimatedParameters
-    delta_t_val: int = 1,  # defaults to 1day timestep
-):
+        X_0,
+        func_dict,
+        mvs,  #: CMTVS,
+        dvs,  #: Drivers,
+        cpa,  #: Constants,
+        epa,  #: EstimatedParameters
+        delta_t_val: int = 1,  # defaults to 1day timestep
+        traced_expressions: Dict[str, Expr] = dict()
+    ):
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
 
     B_func, I_func = make_B_u_funcs_2(mvs, par_dict, func_dict, delta_t_val)
 
+    # we produce functions of f(it,x_a,...,x_z) to compute the tracable expressions
+    traced_funcs = {
+        key: numfunc(
+            expr_cont=val,
+            mvs=mvs,
+            delta_t_val=delta_t_val,
+            par_dict=par_dict,
+            func_dict=func_dict
+        )
+        for key,val in traced_expressions.items()
+    }
+    #from IPython import embed; embed()
+    trace_tuple_instance = make_trace_tuple_func(traced_funcs)
     # define the start tuple for the iterator
     V_init = trace_tuple_instance(
         X_0,
@@ -1777,6 +1869,7 @@ def traceability_iterator(
         # as assumed by B_u_func
         -B_func(0, X_0),
         I_func(0, X_0),
+        it=0
     )
 
     # define the function with V_{i+1}=f(i,V_i)
@@ -1785,7 +1878,7 @@ def traceability_iterator(
         I = I_func(it, X)
         B = B_func(it, X)
         X_new = X + I + B @ X
-        return trace_tuple_instance(X_new, -B, I)
+        return trace_tuple_instance(X_new, -B, I, it)
 
     return TraceTupleIterator(x0=V_init, func=f)
 
@@ -2086,6 +2179,10 @@ def model_table(
 
 
 def transform_maker(lat_0, lon_0, step_lat, step_lon):
+    # fixme mm: 8-27-2022
+    # since we do not need the inverse transformation anymore
+    # we could use the lat lon variables of the users data sets
+    # if we cache them it might be fast enough.
     """
     The result of this function is a tuple of functions
     To translate from indices (i,j)  in the array  to (lat,lon) with the following
