@@ -2448,7 +2448,129 @@ def avg_timeline(timeline, averaging):  # array  # number of steps over which to
             i += x
     return output
 
+# this is to export yearly traceable components for use outside of framework (experimenting with Enqing's code)
+import pandas as pd
+def write_yearly_components(
+    model_names,  # dictionary (folder name : model name)
+    test_arg_list,  # a list of test_args from all models involved
+    var_names,  # dictionary (trace_tuple name : descriptive name)
+    delta_t_val,  # model time step
+    model_cols,  # dictionary (folder name :color)
+    part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+    averaging=12,  # number of iterator steps over which to average results. 1 for no averaging
+):
+    if (part < 0) | (part > 1):
+        raise Exception(
+            "Invalid partitioning in plot_components_combined: use part between 0 and 1"
+        )
+    model_folders = [(k) for k in model_names]
+    variables = [(k) for k in var_names]
+    n = len(variables)
 
+    # fig = plt.figure(figsize=(17, n * 8))
+    # axs = fig.subplots(n, 1)
+
+    Xs=np.array((0,))
+    X_cs=np.array((0,))
+    X_ps=np.array((0,))
+    us=np.array((0,))
+    RTs=np.array((0,))
+ 
+    for i, name in enumerate(variables):
+        k = 0
+        for mf in model_folders:
+            # print(k)
+            # print(model_folders[k])
+            # print(test_arg_list[k])
+            itr = traceability_iterator_instance(mf, test_arg_list[k], delta_t_val)
+            start_min, stop_max = min_max_index(
+                test_arg_list[k],
+                delta_t_val,
+                *t_min_tmax_overlap(test_arg_list, delta_t_val)
+            )
+            # if we do not want the whole interval but look at a smaller part to observe the dynamics
+            # start,stop = start_min, int(start_min+(stop_max-start_min)*part)
+            start, stop = int(stop_max - (stop_max - start_min) * part), stop_max
+            times = (
+                times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
+                / days_per_year()
+            )
+            print("Gathering " + str(name) + " data for " + str(mf) + " model")
+            vals = itr[start:stop]
+            vals_output = avg_timeline(vals.__getattribute__(name), averaging)
+            
+            if name == "x":  
+                Xs=np.concatenate((Xs,vals_output))
+            if name == "x_c":  
+                X_cs=np.concatenate((X_cs,vals_output))  
+            if name == "x_p":  
+                X_ps=np.concatenate((X_ps,vals_output)) 
+            if name == "u":  
+                us=np.concatenate((us,vals_output))                  
+            if name == "rt":  
+                RTs=np.concatenate((RTs,vals_output)) 
+            k += 1       
+    
+    print("X")
+    print(Xs.shape)
+    #print(Xs)
+    
+    print("X_c")
+    print(X_cs.shape)
+    #print(X_cs)
+    
+    print("X_p")
+    print(X_ps.shape)
+    #print(X_ps)
+    
+    print("u")
+    print(us.shape)
+    #print(us)
+    
+    print("RT")
+    print(RTs.shape)
+    #print(RTs)
+    
+    # Saving yearly components to a csv for further analysis
+    test_keys = ["Model", "Year", "X", "X_c", "X_p", "u", "RT"]
+        
+    model = np.repeat(model_folders[0], 160).reshape(160,1) 
+    models=np.array((model)).reshape(160,1)
+    for i in range (len(model_folders)-1):
+        model=np.repeat(model_folders[i+1], 160).reshape(160,1) 
+        models=np.concatenate((models,model))
+        
+    print("Model")
+    print(models.shape)
+    #print(models)  
+        
+    year = np.array(range(1860,2020)).reshape(160,1)
+    years=np.array((year)).reshape(160,1)
+    for i in range (len(model_folders)-1):
+        years=np.concatenate((years,year))
+        
+    print("Year")
+    print(years.shape)
+    #print(years)
+  
+    # Xs=Xs.reshape(321,1)  
+    # X_cs=X_cs.reshape(321,1)
+    # X_ps=X_ps.reshape(321,1)
+    # us=us.reshape(321,1)
+    # RTs=RTs.reshape(321,1)
+    
+    test_values = [models.flatten(), years.flatten(), Xs.flatten()[1:], X_cs.flatten()[1:], X_ps.flatten()[1:], us.flatten()[1:], RTs.flatten()[1:]]
+    
+    #print("test_values")
+    #print(test_values.shape)
+    
+    template = {test_keys[i]: test_values[i] for i in range(len(test_keys))}
+    output = pd.DataFrame(template)    
+    
+    pd.DataFrame(output).to_csv('For_Enqings_method.csv', sep=',')
+    
+    return output
+    
 def plot_components_combined(
     model_names,  # dictionary (folder name : model name)
     test_arg_list,  # a list of test_args from all models involved
@@ -3089,81 +3211,197 @@ def plot_diff(
                 plot_number += 1
 
 
-def plot_attribute_X_c(mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
-    if part < 0 | part > 1:
-        raise Exception("Invalid partitioning in plot_diff: use part between 0 and 1")
-    # ta_1=test_args(mf_1)
-    # ta_2=test_args(mf_2)
-    test_arg_list = [ta_1, ta_2]
+# def plot_attribute_X_c(mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
+    # if part < 0 | part > 1:
+        # raise Exception("Invalid partitioning in plot_diff: use part between 0 and 1")
+    # # ta_1=test_args(mf_1)
+    # # ta_2=test_args(mf_2)
+    # test_arg_list = [ta_1, ta_2]
 
-    itr_1 = traceability_iterator_instance(mf_1, ta_1, delta_t_val)
-    itr_2 = traceability_iterator_instance(mf_2, ta_2, delta_t_val)
+    # itr_1 = traceability_iterator_instance(mf_1, ta_1, delta_t_val)
+    # itr_2 = traceability_iterator_instance(mf_2, ta_2, delta_t_val)
 
-    start_min_1, stop_max_1 = min_max_index(
-        ta_1, delta_t_val, *t_min_tmax_overlap(test_arg_list, delta_t_val)
-    )
-    start_min_2, stop_max_2 = min_max_index(
-        ta_2, delta_t_val, *t_min_tmax_overlap(test_arg_list, delta_t_val)
-    )
+    # start_min_1, stop_max_1 = min_max_index(
+        # ta_1, delta_t_val, *t_min_tmax_overlap(test_arg_list, delta_t_val)
+    # )
+    # start_min_2, stop_max_2 = min_max_index(
+        # ta_2, delta_t_val, *t_min_tmax_overlap(test_arg_list, delta_t_val)
+    # )
+
+    # # if we do not want the whole interval but look at a smaller part to observe the dynamics
+    # start_1, stop_1 = int(stop_max_1 - (stop_max_1 - start_min_1) * part), stop_max_1
+    # start_2, stop_2 = int(stop_max_2 - (stop_max_2 - start_min_2) * part), stop_max_2
+    # times_1 = times_in_days_aD(ta_1, delta_t_val)[start_1:stop_1] / days_per_year()
+    # times_2 = times_in_days_aD(ta_2, delta_t_val)[start_2:stop_2] / days_per_year()
+    # vals_1 = itr_1[start_1:stop_1]
+    # vals_2 = itr_2[start_2:stop_2]
+
+    # x_c_1 = interp1d(times_1, vals_1.x_c)
+    # x_c_2 = interp1d(times_2, vals_2.x_c)
+    # u_1 = interp1d(times_1, vals_1.u)
+    # u_2 = interp1d(times_2, vals_2.u)
+    # rt_1 = interp1d(times_1, vals_1.rt)
+    # rt_2 = interp1d(times_2, vals_2.rt)
+
+    # # common plot times
+    # start = max(times_1.min(), times_2.min())
+    # stop = min(times_1.max(), times_2.max())
+    # nstep = min(len(times_1), len(times_2))
+    # times = np.linspace(start, stop, nstep)
+
+    # # values for plots
+    # delta_u = u_1(times) - u_2(times)
+    # delta_rt = rt_1(times) - rt_2(times)
+    # delta_x_c = x_c_1(times) - x_c_2(times)
+
+    # rt_contrib = delta_rt * u_1(times)
+    # u_contrib = delta_u * rt_1(times)
+    # percent_rt = abs(rt_contrib) / (abs(rt_contrib) + abs(u_contrib)) * 100
+    # percent_u = abs(u_contrib) / (abs(rt_contrib) + abs(u_contrib)) * 100
+
+    # fig = plt.figure(figsize=(17, 8))
+    # axs = fig.subplots(1, 2)
+    # ax = axs[0]
+    # ax.plot(
+        # times[0:60],
+        # percent_rt[0:60],
+        # label="contribution of RT",
+        # # color=model_cols[mf],
+    # )
+    # ax.plot(
+        # times[0:60],
+        # percent_u[0:60],
+        # label="contribution of u",
+        # # color=model_cols[mf],
+    # )
+    
+    # ax.legend()
+    # ax.set_title("Contribution of Residense Time (RT) and C Input (u) Over Time")
+    # ax.set_ylabel("% contribution")
+    # ax.grid()
+
+    # ax1 = axs[1]
+    # ax1.set_title("Average Contribution of RT and u")
+    # labels = "RT", "U"
+    # sizes = [np.mean(percent_rt), np.mean(percent_u)]
+    # ax1.pie(sizes, labels=labels, autopct="%1.1f%%", shadow=True, startangle=90)
+    # ax1.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
+    # plt.show()
+
+    # return (np.mean(percent_rt), np.mean(percent_u))
+    
+def plot_attribution_X_c (mf_1, mf_2, ta_1, ta_2, delta_t_val, part):
+    if part<0 | part >1: 
+        raise Exception('Invalid partitioning in plot_diff: use part between 0 and 1')
+    test_arg_list=[ta_1,ta_2]
+
+    itr_1=traceability_iterator_instance(mf_1,ta_1,delta_t_val)
+    itr_2=traceability_iterator_instance(mf_2,ta_2,delta_t_val)
+
+    start_min_1,stop_max_1=min_max_index(ta_1,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
+    start_min_2,stop_max_2=min_max_index(ta_2,delta_t_val,*t_min_tmax_overlap(test_arg_list,delta_t_val))
 
     # if we do not want the whole interval but look at a smaller part to observe the dynamics
-    start_1, stop_1 = int(stop_max_1 - (stop_max_1 - start_min_1) * part), stop_max_1
-    start_2, stop_2 = int(stop_max_2 - (stop_max_2 - start_min_2) * part), stop_max_2
-    times_1 = times_in_days_aD(ta_1, delta_t_val)[start_1:stop_1] / days_per_year()
-    times_2 = times_in_days_aD(ta_2, delta_t_val)[start_2:stop_2] / days_per_year()
-    vals_1 = itr_1[start_1:stop_1]
-    vals_2 = itr_2[start_2:stop_2]
+    start_1,stop_1 = int(stop_max_1-(stop_max_1-start_min_1)*part), stop_max_1
+    start_2,stop_2 = int(stop_max_2-(stop_max_2-start_min_2)*part), stop_max_2
+    times_1=times_in_days_aD(ta_1,delta_t_val)[start_1:stop_1]/days_per_year()
+    times_2=times_in_days_aD(ta_2,delta_t_val)[start_2:stop_2]/days_per_year()
+    vals_1=itr_1[start_1:stop_1]
+    vals_2=itr_2[start_2:stop_2]
 
-    x_c_1 = interp1d(times_1, vals_1.x_c)
-    x_c_2 = interp1d(times_2, vals_2.x_c)
-    u_1 = interp1d(times_1, vals_1.u)
-    u_2 = interp1d(times_2, vals_2.u)
-    rt_1 = interp1d(times_1, vals_1.rt)
-    rt_2 = interp1d(times_2, vals_2.rt)
+    x_c_1=interp1d(times_1,vals_1.x_c)
+    x_c_2=interp1d(times_2,vals_2.x_c)
+    u_1=interp1d(times_1,vals_1.u)
+    u_2=interp1d(times_2,vals_2.u)
+    rt_1=interp1d(times_1,vals_1.rt)
+    rt_2=interp1d(times_2,vals_2.rt)
 
     # common plot times
-    start = max(times_1.min(), times_2.min())
-    stop = min(times_1.max(), times_2.max())
-    nstep = min(len(times_1), len(times_2))
-    times = np.linspace(start, stop, nstep)
-
+    start=max(times_1.min(),times_2.min())
+    stop=min(times_1.max(),times_2.max())
+    nstep=min(len(times_1),len(times_2))
+    times=np.linspace(start,stop,nstep)
+    
     # values for plots
-    delta_u = u_1(times) - u_2(times)
-    delta_rt = rt_1(times) - rt_2(times)
-    delta_x_c = x_c_1(times) - x_c_2(times)
+    delta_u=u_1(times)-u_2(times)
+    delta_rt=rt_1(times)-rt_2(times)
+    delta_x_c=x_c_1(times)-x_c_2(times)
 
-    rt_contrib = delta_rt * u_1(times)
-    u_contrib = delta_u * rt_1(times)
-    percent_rt = abs(rt_contrib) / (abs(rt_contrib) + abs(u_contrib)) * 100
-    percent_u = abs(u_contrib) / (abs(rt_contrib) + abs(u_contrib)) * 100
+    rt_contrib=delta_rt*(u_1(times)-delta_u/2)
+    u_contrib=delta_u*(rt_1(times)-delta_rt/2)
+    combined_contrib=delta_x_c-rt_contrib-u_contrib
 
-    fig = plt.figure(figsize=(17, 8))
-    axs = fig.subplots(1, 2)
-    ax = axs[0]
+    percent_rt=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    percent_u=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    percent_combined=abs(combined_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(combined_contrib))*100
+    
+    averaging=12*30//delta_t_val # yearly averages
+    fig1=plt.figure(figsize=(17,8))
+    ax=fig1.subplots()
     ax.plot(
-        times[0:60],
-        percent_rt[0:60],
-        label="contribution of RT",
-        # color=model_cols[mf],
+        #times[60*12:60*12+36],                    
+        #rt_contrib[60*12:60*12+36],            
+        avg_timeline(times, averaging), 
+        avg_timeline(percent_rt, averaging),
+        label="contribution of $\Delta$ RT",
+        color="darkorange",
     )
     ax.plot(
-        times[0:60],
-        percent_u[0:60],
-        label="contribution of u",
-        # color=model_cols[mf],
+        #times[60*12:60*12+36],                    
+        #u_contrib[60*12:60*12+36],            
+        avg_timeline(times, averaging), 
+        avg_timeline(percent_u, averaging),
+        label="contribution of $\Delta$ u",
+        color="green",
     )
+    if np.mean(percent_combined) > 0.001:
+        ax.plot(
+            #times[60*12:60*12+36],                    
+            #u_contrib[60*12:60*12+36],            
+            avg_timeline(times, averaging),
+            avg_timeline(percent_combined, averaging),
+            label="contribution of $\Delta$ u * $\Delta$ RT",
+            color="grey",
+        )
     
     ax.legend()
-    ax.set_title("Contribution of Residense Time (RT) and C Input (u) Over Time")
-    ax.set_ylabel("% contribution")
+    ax.set_title('Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Over Time')
+    ax.set_ylabel('%')
     ax.grid()
-
-    ax1 = axs[1]
-    ax1.set_title("Average Contribution of RT and u")
-    labels = "RT", "U"
-    sizes = [np.mean(percent_rt), np.mean(percent_u)]
-    ax1.pie(sizes, labels=labels, autopct="%1.1f%%", shadow=True, startangle=90)
-    ax1.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
+    
+    fig=plt.figure(figsize=(17,8))
+    axs=fig.subplots(1,2)
+    
+    # bar charts
+    ax0=axs[0]  
+    ax0.set_title('Average Contribution of RT and u to the difference in X_c')
+    #labels = '$\Delta$ RT', '$\Delta$ U * $\Delta$ RT', '$\Delta$ U'
+    #sizes = [np.mean(percent_rt), np.mean(percent_combined), np.mean(percent_u)]
+    #bar_labels = '$\Delta$ X_c', '$\Delta$ RT', '$\Delta$ U', '$\Delta$ U * $\Delta$ RT'
+    #bar_sizes=[round(np.mean(rt_contrib),0), np.mean(u_contrib), np.mean(combined_contrib)]
+    
+    ax0.axhline(0, color='black', ls='dashed')
+    ax0.bar ('$\Delta$ X_c', np.mean(delta_x_c), color="blue")
+    ax0.bar ('$\Delta$ RT', np.mean(rt_contrib), color="darkorange")
+    ax0.bar ('$\Delta$ u', np.mean(u_contrib), color="green")
+    if abs(np.mean(combined_contrib)) > 0.001:
+        ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
+    ax0.grid()  
+    # pie charts
+    ax1=axs[1]
+    ax1.set_title('Average Contribution of RT and u')
+      
+    if np.mean(percent_combined) > 0.001:
+        labels = '$\Delta$ RT', '$\Delta$ U * $\Delta$ RT', '$\Delta$ U'
+        sizes = [np.mean(percent_rt), np.mean(percent_combined), np.mean(percent_u)]
+        ax1.pie(sizes, labels=labels, autopct='%1.1f%%', 
+            startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
+    else:
+        labels = '$\Delta$ RT', '$\Delta$ U'
+        sizes = [np.mean(percent_rt), np.mean(percent_u)]
+        ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+            startangle=90, counterclock=False, colors=("darkorange", "green"))        
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     plt.show()
-
-    return (np.mean(percent_rt), np.mean(percent_u))
+    
+    return (np.mean(percent_rt), np.mean(percent_u), np.mean(percent_combined), np.mean(delta_x_c))    

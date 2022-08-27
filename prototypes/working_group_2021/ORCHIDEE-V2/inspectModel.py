@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.7
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -119,138 +119,296 @@ cpa = msh.Constants(
     ra_0=svs_0.ra,  # * 86400,   # kg/m2/s kg/m2/day
     # r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
     # r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
-    number_of_months=len(svs.rh)
+    #number_of_months=len(svs.rh)
     # number_of_months=120 # for testing and tuning mcmc
-    # number_of_months=3840 # for testing and tuning mcmc
+    number_of_months=3840 # for testing and tuning mcmc
 )
 
 # ### Finding better start values for the data assimilation
 # You don't have to do this. It's a heuristic approach to find a better starting position.
-epa_0 = msh.EstimatedParameters(
-    beta_wood1=0.229,
-    beta_wood2=0.27112,
-    beta_leaf=0.2032,
-    beta_root=0.1303,
-    #   beta_fruit=0.1,
-    T_0=1.865,
-    E=3.246,
-    KM=10.2,
-    # r_C_leaf_rh=0,
-    # r_C_wood_rh=0,
-    # r_C_root_rh=0,
-    r_C_litter1_rh=0.0012934,
-    r_C_litter2_rh=0.59747,
-    r_C_litter3_rh=0.01977,
-    r_C_litter4_rh=0.0006258,
-    r_C_litter5_rh=0.0000016211,
-    r_C_litter6_rh=0.002435,
-    r_C_som1_rh=0.00229726,
-    r_C_som2_rh=0.0010939,
-    r_C_som3_rh=0.0000455408,
-    r_C_som4_rh=0.00028037,
+# epa_0 = msh.EstimatedParameters(
+#     beta_wood1=0.229,
+#     beta_wood2=0.27112,
+#     beta_leaf=0.2032,
+#     beta_root=0.1303,
+#     #   beta_fruit=0.1,
+#     T_0=1.865,
+#     E=3.246,
+#     KM=10.2,
+#     # r_C_leaf_rh=0,
+#     # r_C_wood_rh=0,
+#     # r_C_root_rh=0,
+#     r_C_litter1_rh=0.0012934,
+#     r_C_litter2_rh=0.0059747,
+#     r_C_litter3_rh=0.001977,
+#     r_C_litter4_rh=0.006258,
+#     r_C_litter5_rh=0.00016211,
+#     r_C_litter6_rh=0.002435,
+#     r_C_som1_rh=0.000229726,
+#     r_C_som2_rh=0.00010939,
+#     r_C_som3_rh=0.0000455408,
+#     r_C_som4_rh=0.00028037,
 
-    r_C_wood1_2_C_wood3=0.0107,
-    r_C_wood1_2_C_litter1=0.066445,
-    r_C_wood2_2_C_wood4=0.00063076,
-    r_C_wood2_2_C_litter2=0.00168526,
-    r_C_wood3_2_C_litter1=0.000007645231,
-    r_C_wood4_2_C_litter2=0.000209176,
-    r_C_leaf_2_C_litter3=0.0020595,
-    r_C_leaf_2_C_litter5=0.0000250875,
-    r_C_root_2_C_litter4=0.0000076896,
-    r_C_root_2_C_litter6=0.000703836,
-    r_C_fruit_2_C_litter3=0.00026986,
-    r_C_fruit_2_C_litter5=0.00000463,
-    r_C_litter1_2_C_som1=0.000001348,
-    r_C_litter1_2_C_som2=0.0000192111,
-    r_C_litter2_2_C_som2=0.00058924,
-    r_C_litter2_2_C_som3=0.000645606,
-    r_C_litter3_2_C_som1=0.000183481,
-    r_C_litter3_2_C_som3=0.0001882826,
-    r_C_litter4_2_C_som1=0.0001623,
-    r_C_litter4_2_C_som2=0.0007858,
-    r_C_litter5_2_C_som1=0.0000005513,
-    r_C_litter6_2_C_som2=0.0829,
-    r_C_som1_2_C_som3=0.000414588,
-    r_C_som2_2_C_som3=0.005084,
-    r_C_som2_2_C_som4=0.0000151975,
-    r_C_som3_2_C_som2=0.0000509621,
-    r_C_som3_2_C_som4=0.00000000396756,
-    r_C_som4_2_C_som2=0.0004856444,
-    r_C_som4_2_C_som3=0.00,
+# #     r_C_wood1_2_C_wood3=0.0107,
+# #     r_C_wood1_2_C_litter1=0.066445,
+# #     r_C_wood2_2_C_wood4=0.00063076,
+# #     r_C_wood2_2_C_litter2=0.00168526,
+# #     r_C_wood3_2_C_litter1=0.000007645231,
+# #     r_C_wood4_2_C_litter2=0.000209176,
+# #     r_C_leaf_2_C_litter3=0.0020595,
+# #     r_C_leaf_2_C_litter5=0.0000250875,
+# #     r_C_root_2_C_litter4=0.0000076896,
+# #     r_C_root_2_C_litter6=0.000703836,
+# #     r_C_fruit_2_C_litter3=0.00026986,
+# #     r_C_fruit_2_C_litter5=0.00000463,
+# #     r_C_litter1_2_C_som1=0.000001348,
+# #     r_C_litter1_2_C_som2=0.0000192111,
+# #     r_C_litter2_2_C_som2=0.00058924,
+# #     r_C_litter2_2_C_som3=0.000645606,
+# #     r_C_litter3_2_C_som1=0.000183481,
+# #     r_C_litter3_2_C_som3=0.0001882826,
+# #     r_C_litter4_2_C_som1=0.0001623,
+# #     r_C_litter4_2_C_som2=0.0007858,
+# #     r_C_litter5_2_C_som1=0.0000005513,
+# #     r_C_litter6_2_C_som2=0.0829,
+# #     r_C_som1_2_C_som3=0.000414588,
+# #     r_C_som2_2_C_som3=0.005084,
+# #     r_C_som2_2_C_som4=0.0000151975,
+# #     r_C_som3_2_C_som2=0.0000509621,
+# #     r_C_som3_2_C_som4=0.00000000396756,
+# #     r_C_som4_2_C_som2=0.0004856444,
+# #     r_C_som4_2_C_som3=0.00,
+    
+#     r_C_wood1_2_C_wood3=0.000507,
+#     r_C_wood1_2_C_litter1=0.00066445,
+#     r_C_wood2_2_C_wood4=0.00063076,
+#     r_C_wood2_2_C_litter2=0.000768526,
+#     r_C_wood3_2_C_litter1=0.0000745231,
+#     r_C_wood4_2_C_litter2=0.0000509176,
+#     r_C_leaf_2_C_litter3=0.0020595,
+#     r_C_leaf_2_C_litter5=0.000250875,
+#     r_C_root_2_C_litter4=0.000076896,
+#     r_C_root_2_C_litter6=0.000703836,
+#     r_C_fruit_2_C_litter3=0.0026986,
+#     r_C_fruit_2_C_litter5=0.0000463,
+#     r_C_litter1_2_C_som1=0.00001348,
+#     r_C_litter1_2_C_som2=0.000192111,
+#     r_C_litter2_2_C_som2=0.0058924,
+#     r_C_litter2_2_C_som3=0.00645606,
+#     r_C_litter3_2_C_som1=0.00183481,
+#     r_C_litter3_2_C_som3=0.001882826,
+#     r_C_litter4_2_C_som1=0.001623,
+#     r_C_litter4_2_C_som2=0.007858,
+#     r_C_litter5_2_C_som1=0.00005513,
+#     r_C_litter6_2_C_som2=0.0829,
+#     r_C_som1_2_C_som3=0.000414588,
+#     r_C_som2_2_C_som3=0.005084,
+#     r_C_som2_2_C_som4=0.0000151975,
+#     r_C_som3_2_C_som2=0.0000509621,
+#     r_C_som3_2_C_som4=0.0000000396756,
+#     r_C_som4_2_C_som2=0.0004856444,
+#     r_C_som4_2_C_som3=0.00,
 
-    C_wood1_0=0.1675,
-    C_wood2_0=0.4386777,
-    C_wood3_0=3.2784,
-    C_wood4_0=0.0293,
-    C_leaf_0=0.283,
-    C_root_0=0.039,
-    C_litter1_0=0.1177,
-    C_litter2_0=0.0903,
-    C_litter3_0=0.0243,
-    C_litter4_0=0.01146,
-    C_litter5_0=1.9707,
-    C_som1_0=0.0479,
-    C_som2_0=0.68511,
-    C_som3_0=6.8025,
-)
+#     C_wood1_0=0.4675,
+#     C_wood2_0=0.1386777,
+#     C_wood3_0=2.2784,
+#     C_wood4_0=1.0293,
+#     C_leaf_0=0.283,
+#     C_root_0=0.039,
+#     C_litter1_0=0.1177,
+#     C_litter2_0=0.0903,
+#     C_litter3_0=0.0243,
+#     C_litter4_0=0.01146,
+#     C_litter5_0=1.9707,
+#     C_som1_0=0.0479,
+#     C_som2_0=0.68511,
+#     C_som3_0=6.8025,
+# )
 # -
 
 from sympy import Symbol
 
-par_dict = {
-    Symbol(k): v for k, v in
-    {
-        "beta_wood1": 0.25,
-        "beta_wood2": 0.1,
-        "beta_leaf": 0.4,
-        "beta_root": 0.15,
-        #       "beta_fruit": 0.1,
-        "T_0": 2,
-        "E": 4,
-        "KM": 10,
-        "r_C_litter1_rh": 0.0000000000275,
-        "r_C_litter2_rh": 0.000000000228,
-        "r_C_litter3_rh": 0.000000000143,
-        "r_C_litter4_rh": 0.0000000000441,
-        "r_C_litter5_rh": 0.000000000119,
-        "r_C_litter6_rh": 0.000000000177,
-        "r_C_som1_rh": 0.000000000223,
-        "r_C_som2_rh": 0.000000000116,
-        "r_C_som3_rh": 0.00000000281,
-        "r_C_som4_rh": 0.00000000476,
-        "r_C_wood1_2_C_wood3": 0.00000000134,
-        "r_C_wood1_2_C_litter1": 0.0000234,
-        "r_C_wood2_2_C_wood4": 0.0000148,
-        "r_C_wood2_2_C_litter2": 0.00000154,
-        "r_C_wood3_2_C_litter1": 0.0000169,
-        "r_C_wood4_2_C_litter2": 0.0000000253,
-        "r_C_leaf_2_C_litter3": 0.000000719,
-        "r_C_leaf_2_C_litter5": 0.00000945,
-        "r_C_root_2_C_litter4": 0.00000743,
-        "r_C_root_2_C_litter6": 0.00000212,
-        "r_C_fruit_2_C_litter3": 0.0000159,
-        "r_C_fruit_2_C_litter5": 0.000000728,
-        "r_C_litter1_2_C_som1": 0.00001,
-        "r_C_litter1_2_C_som2": 0.00000143,
-        "r_C_litter2_2_C_som2": 0.0000185,
-        "r_C_litter2_2_C_som3": 0.00000635,
-        "r_C_litter3_2_C_som1": 0.00000117,
-        "r_C_litter3_2_C_som3": 0.00000000659,
-        "r_C_litter4_2_C_som1": 0.00000446,
-        "r_C_litter4_2_C_som2": 0.00000270,
-        "r_C_litter5_2_C_som1": 0.0000288,
-        "r_C_litter6_2_C_som2": 0.0000000747,
-        "r_C_som1_2_C_som3": 0.00000363,
+# +
+# par_dict = {
+#     Symbol(k): v for k, v in
+#     {
+#         "beta_wood1": 0.22877154801496366,
+#         "beta_wood2": 0.27105886616734787, 
+#         "beta_leaf": 0.22107830601036774,
+#         "beta_root": 0.15714387838179705,
+#         #beta_fruit": 0.1,
+#         "T_0": 2,
+#         "E": 4,
+#         "KM": 10,
+#         "r_C_litter1_rh": 0.00010671175898322236, 
+#         "r_C_litter2_rh": 0.010178710800936974, 
+#         "r_C_litter3_rh": 0.015203061301603886, 
+#         "r_C_litter4_rh": 0.016702123445176017, 
+#         "r_C_litter5_rh": 0.00023514296836874357, 
+#         "r_C_litter6_rh": 0.008289055384865513,
+#         "r_C_som1_rh": 0.0007171384519944395, 
+#         "r_C_som2_rh": 0.00022301039347960097, 
+#         "r_C_som3_rh": 0.0002825022995321478, 
+#         "r_C_som4_rh": 0.0001162776599638064, 
+#         "r_C_wood1_2_C_wood3": 0.004928919484099116, 
+#         "r_C_wood1_2_C_litter1": 0.006256684737690185, 
+#         "r_C_wood2_2_C_wood4": 0.00217953422350438, 
+#         "r_C_wood2_2_C_litter2": 0.0018073911322216475, 
+#         "r_C_wood3_2_C_litter1": 0.0384553289605736, 
+#         "r_C_wood4_2_C_litter2": 5.431884592671132e-05, 
+#         "r_C_leaf_2_C_litter3": 0.006284885870497801, 
+#         "r_C_leaf_2_C_litter5": 0.00037806917561193106, 
+#         "r_C_root_2_C_litter4": 0.00015681794955980385, 
+#         "r_C_root_2_C_litter6": 0.00046519784183239924, 
+#         "r_C_fruit_2_C_litter3": 0.004753571144341833, 
+#         "r_C_fruit_2_C_litter5": 0.00014812848285782678, 
+#         "r_C_litter1_2_C_som1": 5.025438958467177e-05, 
+#         "r_C_litter1_2_C_som2": 0.00044648860679763177, 
+#         "r_C_litter2_2_C_som2": 0.0156547203735249, 
+#         "r_C_litter2_2_C_som3": 0.011965105209883626, 
+#         "r_C_litter3_2_C_som1": 0.0014996323616631663, 
+#         "r_C_litter3_2_C_som3": 0.009082763807079477, 
+#         "r_C_litter4_2_C_som1": 0.008895958091190646, 
+#         "r_C_litter4_2_C_som2": 0.070351520657772, 
+#         "r_C_litter5_2_C_som1": 0.00026601269284842814, 
+#         "r_C_litter6_2_C_som2": 0.06559236914167413, 
+#         "r_C_som1_2_C_som3": 0.0034632100878440554,
+#         "r_C_som2_2_C_som3": 0.02752553514851257, 
+#         "r_C_som2_2_C_som4": 9.401293235880684e-05, 
+#         "r_C_som3_2_C_som2": 0.00024267005147667766, 
+#         "r_C_som3_2_C_som4": 6.8351229369685e-08, 
+#         "r_C_som4_2_C_som2": 0.0013613403610407717, 
+#         "r_C_som4_2_C_som3": 0.0, 
+#     }.items()
+# }
 
-        "r_C_som2_2_C_som3": 0.0074,
-        "r_C_som2_2_C_som4": 0.01278,
-        "r_C_som3_2_C_som2": 0.02027,
-        "r_C_som3_2_C_som4": 0.008349,
-        "r_C_som4_2_C_som2": 0.018376,
-        "r_C_som4_2_C_som3": 0.0,
-    }.items()
-}
+# +
+# # updated version
+# epa_0=msh.EstimatedParameters(
+#     beta_wood1=0.2183040322253002, 
+#     beta_wood2=0.16863096288181115, 
+#     beta_leaf=0.31943807491798112, 
+#     beta_root=0.16040533474423047, 
+#     T_0=1.950717867245791, 
+#     E=3.5293391839615964, 
+#     KM=5.159397430100239, 
+#     r_C_wood1_2_C_wood3=0.0003981115219153814, 
+#     r_C_wood1_2_C_litter1=0.0008361941501650308, 
+#     r_C_wood2_2_C_wood4=0.0002473652272277666, 
+#     r_C_wood2_2_C_litter2=0.0012921776077177455, 
+#     r_C_wood3_2_C_litter1=0.000051703768513993506, 
+#     r_C_wood4_2_C_litter2=0.000070215013792353313, 
+#     r_C_leaf_2_C_litter3=0.00052906426484573155, 
+#     r_C_leaf_2_C_litter5=0.0001362984730925845, 
+#     r_C_root_2_C_litter4=7.511838182173387e-05, 
+#     r_C_root_2_C_litter6=0.0000139216665393605, 
+#     r_C_fruit_2_C_litter3=0.005327641304999624, 
+#     r_C_fruit_2_C_litter5=0.0001564841236483191, 
+#     r_C_litter1_2_C_som1=8.065742707223306e-05, 
+#     r_C_litter1_2_C_som2=0.0001945680038686853, 
+#     r_C_litter2_2_C_som2=0.021855567720853678, 
+#     r_C_litter2_2_C_som3=0.008862640704241595, 
+#     r_C_litter3_2_C_som1=0.00044753314434899067, 
+#     r_C_litter3_2_C_som3=0.002920218828837676, 
+#     r_C_litter4_2_C_som1=0.0013627372863071966, 
+#     r_C_litter4_2_C_som2=0.08667028867036282, 
+#     r_C_litter5_2_C_som1=0.0003058160346834833, 
+#     r_C_litter6_2_C_som2=0.03198987317695222, 
+#     r_C_som1_2_C_som3=0.004199397889363635, 
+#     r_C_som2_2_C_som3=0.02386802237580712, 
+#     r_C_som2_2_C_som4=4.926778642156811e-05, 
+#     r_C_som3_2_C_som2=2.808847983166608e-05, 
+#     r_C_som3_2_C_som4=3.166786733299793e-08, 
+#     r_C_som4_2_C_som2=0.0030270107698128577, 
+#     r_C_som4_2_C_som3=0.0, 
+#     r_C_litter1_rh=8.999935134317453e-05, 
+#     r_C_litter2_rh=0.037467962743264034, 
+#     r_C_litter3_rh=0.06307149375148956, 
+#     r_C_litter4_rh=0.021679193567117776, 
+#     r_C_litter5_rh=0.0004665369868242155, 
+#     r_C_litter6_rh=0.015307799551151899, 
+#     r_C_som1_rh=0.00016380762353055268, 
+#     r_C_som2_rh=0.00014083989056868948, 
+#     r_C_som3_rh=0.00018008218714862852, 
+#     r_C_som4_rh=3.1578556336141246e-05, 
+#     C_wood1_0=0.42249144169921905, 
+#     C_wood2_0=0.37827830341457838, 
+#     C_wood3_0=1.878036354758859, 
+#     C_wood4_0=0.88151041816435299, 
+#     C_leaf_0=0.2994811118842396, 
+#     C_root_0=0.24114710798737556, 
+#     C_litter1_0=0.11245652183364362, 
+#     C_litter2_0=0.17008440913158368, 
+#     C_litter3_0=0.019144268016656297, 
+#     C_litter4_0=0.06666712778703499, 
+#     C_litter5_0=1.9444305717528556, 
+#     C_som1_0=0.2729065826369784, 
+#     C_som2_0=0.6556404511921593, 
+#     C_som3_0=6.4814853538118955
+# )
+
+epa_0=msh.EstimatedParameters(
+    beta_wood1=0.20380598765861427, 
+    beta_wood2=0.14421215658251457, 
+    beta_leaf=0.3221132545656779, 
+    beta_root=0.15614551545234245, 
+    T_0=1.870541682681143, 
+    E=3.43009045810382, 
+    KM=5.106942516500377, 
+    r_C_wood1_2_C_wood3=0.00023698933734508416, 
+    r_C_wood1_2_C_litter1=0.0005914399098448183, 
+    r_C_wood2_2_C_wood4=0.00028925184168621527, 
+    r_C_wood2_2_C_litter2=0.0004644259427229279, 
+    r_C_wood3_2_C_litter1=9.408595740752495e-05, 
+    r_C_wood4_2_C_litter2=6.595002712729189e-05, 
+    r_C_leaf_2_C_litter3=0.001435690359084922, 
+    r_C_leaf_2_C_litter5=1.2369996184196107e-05, 
+    r_C_root_2_C_litter4=9.464988029631437e-05, 
+    r_C_root_2_C_litter6=1.7872496196376618e-05, 
+    r_C_fruit_2_C_litter3=0.0073722895878252405, 
+    r_C_fruit_2_C_litter5=0.0003998096857558871, 
+    r_C_litter1_2_C_som1=0.00021674664699683854, 
+    r_C_litter1_2_C_som2=3.092077118792432e-05, 
+    r_C_litter2_2_C_som2=0.03642552967383119, 
+    r_C_litter2_2_C_som3=0.019086895442187137, 
+    r_C_litter3_2_C_som1=0.0005489107641486737, 
+    r_C_litter3_2_C_som3=0.0003536985793895211, 
+    r_C_litter4_2_C_som1=0.002384784389076963, 
+    r_C_litter4_2_C_som2=0.006313512313643039, 
+    r_C_litter5_2_C_som1=0.0003530661871068272, 
+    r_C_litter6_2_C_som2=0.006613848249818659, 
+    r_C_som1_2_C_som3=0.008770924691300211, 
+    r_C_som2_2_C_som3=0.0214712193916884, 
+    r_C_som2_2_C_som4=4.6136877024169834e-05, 
+    r_C_som3_2_C_som2=4.886961289907375e-05, 
+    r_C_som3_2_C_som4=9.956837456002728e-08, 
+    r_C_som4_2_C_som2=0.0027288890121411114, 
+    r_C_som4_2_C_som3=0.0, 
+    r_C_litter1_rh=9.37793117021962e-05, 
+    r_C_litter2_rh=0.057383664061103914, 
+    r_C_litter3_rh=0.1362338386269562, 
+    r_C_litter4_rh=0.03744771870697663, 
+    r_C_litter5_rh=0.0001046411035499773, 
+    r_C_litter6_rh=0.005539569355502046, 
+    r_C_som1_rh=0.00019934900466031137, 
+    r_C_som2_rh=5.502914098955782e-05, 
+    r_C_som3_rh=0.00011645113087480523, 
+    r_C_som4_rh=0.00011992309784969373, 
+    C_wood1_0=0.3890819260555819, 
+    C_wood2_0=0.3463490546704287, 
+    C_wood3_0=1.8956351307303945, 
+    C_wood4_0=1.0194520961238402, 
+    C_leaf_0=0.2989013253044458, 
+    C_root_0=0.2809408091053162, 
+    C_litter1_0=0.11110606352129054, 
+    C_litter2_0=0.19744554376685328, 
+    C_litter3_0=0.02114475361421892, 
+    C_litter4_0=0.05949983874420658, 
+    C_litter5_0=1.9388575824843872, 
+    C_som1_0=0.25477958920623306, 
+    C_som2_0=0.6371731360899058, 
+    C_som3_0=6.388334716149598
+)
 
 # +
 import numpy as np
@@ -277,6 +435,13 @@ X_0 = np.array((
     svs_0.cSoil / 4,
 
 ))  # .reshape(9,)
+# -
+
+apa = {**cpa._asdict(), **epa_0._asdict()}
+par_dict = {
+    Symbol(k): v for k, v in apa.items() if Symbol(k) in par_dict
+}
+par_dict
 
 # +
 import sys
@@ -306,7 +471,7 @@ def make_steady_state_iterator_sym(
 
 
 # calculate steady state
-func_dict = msh.make_func_dict(svs, dvs)
+func_dict = msh.make_func_dict(svs, dvs, cpa, epa_0)
 B_func, u_func = gh.make_B_u_funcs_2(mvs, par_dict, func_dict)
 
 # +
@@ -347,8 +512,102 @@ print('Steadt_state_dict:', steady_state_dict)
 # -
 
 
+svs_0.cVeg
+
 # +
-# svs_0.cLitter
+# deriving initail pool sizes proportional to steady state 
+C_Veg_steady=steady_state_dict.get("C_wood1")+steady_state_dict.get("C_wood2")+steady_state_dict.get("C_wood3")
++steady_state_dict.get("C_wood4")+steady_state_dict.get("C_leaf")+steady_state_dict.get("C_root")
++steady_state_dict.get("C_fruit")
+
+C_wood1_0_st=svs_0.cVeg*steady_state_dict.get("C_wood1")/C_Veg_steady
+C_wood2_0_st=svs_0.cVeg*steady_state_dict.get("C_wood2")/C_Veg_steady
+C_wood3_0_st=svs_0.cVeg*steady_state_dict.get("C_wood3")/C_Veg_steady
+C_wood4_0_st=svs_0.cVeg*steady_state_dict.get("C_wood4")/C_Veg_steady
+C_leaf_0_st=svs_0.cVeg*steady_state_dict.get("C_leaf")/C_Veg_steady
+C_root_0_st=svs_0.cVeg*steady_state_dict.get("C_root")/C_Veg_steady
+
+C_Litter_steady=steady_state_dict.get("C_litter1")+steady_state_dict.get("C_litter2")+steady_state_dict.get("C_litter3")
++steady_state_dict.get("C_litter4")+steady_state_dict.get("C_litter5")+steady_state_dict.get("C_litter6")
+
+C_litter1_0_st=svs_0.cLitter*steady_state_dict.get("C_litter1")/C_Litter_steady          
+C_litter2_0_st=svs_0.cLitter*steady_state_dict.get("C_litter2")/C_Litter_steady             
+C_litter3_0_st=svs_0.cLitter*steady_state_dict.get("C_litter3")/C_Litter_steady           
+C_litter4_0_st=svs_0.cLitter*steady_state_dict.get("C_litter4")/C_Litter_steady           
+C_litter5_0_st=svs_0.cLitter*steady_state_dict.get("C_litter5")/C_Litter_steady              
+
+C_Soil_steady=steady_state_dict.get("C_som1")+steady_state_dict.get("C_som2")
++steady_state_dict.get("C_som3")+steady_state_dict.get("C_som4")
+         
+C_som1_0_st=svs_0.cSoil*steady_state_dict.get("C_som1")/C_Soil_steady             
+C_som2_0_st=svs_0.cSoil*steady_state_dict.get("C_som2")/C_Soil_steady           
+C_som3_0_st=svs_0.cSoil*steady_state_dict.get("C_som3")/C_Soil_steady  
+# -
+
+# this includes derive initial pool sizes
+epa_1=msh.EstimatedParameters(
+    beta_wood1=epa_0.beta_wood1, 
+    beta_wood2=epa_0.beta_wood2, 
+    beta_leaf=epa_0.beta_leaf, 
+    beta_root=epa_0.beta_root, 
+    T_0=epa_0.T_0, 
+    E=epa_0.E, 
+    KM=epa_0.KM, 
+    r_C_wood1_2_C_wood3=epa_0.r_C_wood1_2_C_wood3, 
+    r_C_wood1_2_C_litter1=epa_0.r_C_wood1_2_C_litter1,
+    r_C_wood2_2_C_wood4=epa_0.r_C_wood2_2_C_wood4, 
+    r_C_wood2_2_C_litter2=epa_0.r_C_wood2_2_C_litter2, 
+    r_C_wood3_2_C_litter1=epa_0.r_C_wood3_2_C_litter1, 
+    r_C_wood4_2_C_litter2=epa_0.r_C_wood4_2_C_litter2, 
+    r_C_leaf_2_C_litter3=epa_0.r_C_leaf_2_C_litter3, 
+    r_C_leaf_2_C_litter5=epa_0.r_C_leaf_2_C_litter5, 
+    r_C_root_2_C_litter4=epa_0.r_C_root_2_C_litter4, 
+    r_C_root_2_C_litter6=epa_0.r_C_root_2_C_litter6, 
+    r_C_fruit_2_C_litter3=epa_0.r_C_fruit_2_C_litter3, 
+    r_C_fruit_2_C_litter5=epa_0.r_C_fruit_2_C_litter5, 
+    r_C_litter1_2_C_som1=epa_0.r_C_litter1_2_C_som1, 
+    r_C_litter1_2_C_som2=epa_0.r_C_litter1_2_C_som2, 
+    r_C_litter2_2_C_som2=epa_0.r_C_litter2_2_C_som2, 
+    r_C_litter2_2_C_som3=epa_0.r_C_litter2_2_C_som3, 
+    r_C_litter3_2_C_som1=epa_0.r_C_litter3_2_C_som1, 
+    r_C_litter3_2_C_som3=epa_0.r_C_litter3_2_C_som3, 
+    r_C_litter4_2_C_som1=epa_0.r_C_litter4_2_C_som1, 
+    r_C_litter4_2_C_som2=epa_0.r_C_litter4_2_C_som2, 
+    r_C_litter5_2_C_som1=epa_0.r_C_litter5_2_C_som1, 
+    r_C_litter6_2_C_som2=epa_0.r_C_litter6_2_C_som2, 
+    r_C_som1_2_C_som3=epa_0.r_C_som1_2_C_som3, 
+    r_C_som2_2_C_som3=epa_0.r_C_som2_2_C_som3, 
+    r_C_som2_2_C_som4=epa_0.r_C_som2_2_C_som4, 
+    r_C_som3_2_C_som2=epa_0.r_C_som3_2_C_som2, 
+    r_C_som3_2_C_som4=epa_0.r_C_som3_2_C_som4, 
+    r_C_som4_2_C_som2=epa_0.r_C_som4_2_C_som2, 
+    r_C_som4_2_C_som3=epa_0.r_C_som4_2_C_som3, 
+    r_C_litter1_rh=epa_0.r_C_litter1_rh, 
+    r_C_litter2_rh=epa_0.r_C_litter2_rh, 
+    r_C_litter3_rh=epa_0.r_C_litter3_rh, 
+    r_C_litter4_rh=epa_0.r_C_litter4_rh, 
+    r_C_litter5_rh=epa_0.r_C_litter5_rh, 
+    r_C_litter6_rh=epa_0.r_C_litter6_rh, 
+    r_C_som1_rh=epa_0.r_C_som1_rh, 
+    r_C_som2_rh=epa_0.r_C_som2_rh, 
+    r_C_som3_rh=epa_0.r_C_som3_rh, 
+    r_C_som4_rh=epa_0.r_C_som4_rh, 
+    C_wood1_0=C_wood1_0_st, 
+    C_wood2_0=C_wood2_0_st, 
+    C_wood3_0=C_wood3_0_st, 
+    C_wood4_0=C_wood4_0_st, 
+    C_leaf_0=C_leaf_0_st, 
+    C_root_0=C_root_0_st, 
+    C_litter1_0=C_litter1_0_st, 
+    C_litter2_0=C_litter2_0_st, 
+    C_litter3_0=C_litter3_0_st, 
+    C_litter4_0=C_litter4_0_st, 
+    C_litter5_0=C_litter5_0_st, 
+    C_som1_0=C_som1_0_st, 
+    C_som2_0=C_som2_0_st, 
+    C_som3_0=C_som3_0_st,
+)
+epa_1
 
 # +
 # now test it
@@ -358,12 +617,13 @@ from general_helpers import plot_solutions
 
 param2res_sym = msh.make_param2res_sym(mvs, cpa, dvs)
 
-print(type(param2res_sym))
+#print(type(param2res_sym))
 
 obs_0 = param2res_sym(epa_0)
 # obs=np.column_stack([ np.array(v) for v in svs])
 # obs=np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
 # xs.shape
+obs_0[0].shape
 
 # +
 
@@ -405,7 +665,6 @@ for ind, f in enumerate(msh.Observables._fields):
 fig.savefig('solutions.pdf')
 
 # +
-
 epa_min = msh.EstimatedParameters(
     beta_wood1=0.01,
     beta_wood2=0.01,
@@ -419,62 +678,77 @@ epa_min = msh.EstimatedParameters(
     # r_C_wood_rh=0,
     # r_C_root_rh=0,
 
-    r_C_litter1_rh=0.0012934/100,
-    r_C_litter2_rh=0.59747/100,
-    r_C_litter3_rh=0.01977/100,
-    r_C_litter4_rh=0.0006258/100,
-    r_C_litter5_rh=0.0000016211/100,
-    r_C_litter6_rh=0.002435/100,
-    r_C_som1_rh=0.00229726/100,
-    r_C_som2_rh=0.0010939/100,
-    r_C_som3_rh=0.0000455408/100,
-    r_C_som4_rh=0.00028037/100,
+    r_C_litter1_rh=epa_0.r_C_litter1_rh/100,
+    r_C_litter2_rh=epa_0.r_C_litter2_rh/100,
+    r_C_litter3_rh=epa_0.r_C_litter3_rh/100,
+    r_C_litter4_rh=epa_0.r_C_litter4_rh/100,
+    r_C_litter5_rh=epa_0.r_C_litter5_rh/100,
+    r_C_litter6_rh=epa_0.r_C_litter6_rh/100,
+    r_C_som1_rh=epa_0.r_C_som1_rh/100,
+    r_C_som2_rh=epa_0.r_C_som2_rh/100,
+    r_C_som3_rh=epa_0.r_C_som3_rh/100,
+    r_C_som4_rh=epa_0.r_C_som4_rh/100,
 
-    r_C_wood1_2_C_wood3=0.0107/100,
-    r_C_wood1_2_C_litter1=0.066445/100,
-    r_C_wood2_2_C_wood4=0.00063076/100,
-    r_C_wood2_2_C_litter2=0.00168526/100,
-    r_C_wood3_2_C_litter1=0.000007645231/100,
-    r_C_wood4_2_C_litter2=0.000209176/100,
-    r_C_leaf_2_C_litter3=0.0020595/100,
-    r_C_leaf_2_C_litter5=0.0000250875/100,
-    r_C_root_2_C_litter4=0.0000076896/100,
-    r_C_root_2_C_litter6=0.000703836/100,
-    r_C_fruit_2_C_litter3=0.00026986/100,
-    r_C_fruit_2_C_litter5=0.00000463/100,
-    r_C_litter1_2_C_som1=0.000001348/100,
-    r_C_litter1_2_C_som2=0.0000192111/100,
-    r_C_litter2_2_C_som2=0.00058924/100,
-    r_C_litter2_2_C_som3=0.000645606/100,
-    r_C_litter3_2_C_som1=0.000183481/100,
-    r_C_litter3_2_C_som3=0.0001882826/100,
-    r_C_litter4_2_C_som1=0.0001623/100,
-    r_C_litter4_2_C_som2=0.0007858/100,
-    r_C_litter5_2_C_som1=0.0000005513/100,
-    r_C_litter6_2_C_som2=0.0829/100,
-    r_C_som1_2_C_som3=0.000414588/100,
-    r_C_som2_2_C_som3=0.005084/100,
-    r_C_som2_2_C_som4=0.0000151975/100,
-    r_C_som3_2_C_som2=0.0000509621/100,
-    r_C_som3_2_C_som4=0.00000000396756/100,
-    r_C_som4_2_C_som2=0.0004856444/100,
+    r_C_wood1_2_C_wood3=epa_0.r_C_wood1_2_C_wood3/100,
+    r_C_wood1_2_C_litter1=epa_0.r_C_wood1_2_C_litter1/100,
+    r_C_wood2_2_C_wood4=epa_0.r_C_wood2_2_C_wood4/100,
+    r_C_wood2_2_C_litter2=epa_0.r_C_wood2_2_C_litter2/100,
+    r_C_wood3_2_C_litter1=epa_0.r_C_wood3_2_C_litter1/100,
+    r_C_wood4_2_C_litter2=epa_0.r_C_wood4_2_C_litter2/100,
+    r_C_leaf_2_C_litter3=epa_0.r_C_leaf_2_C_litter3/100,
+    r_C_leaf_2_C_litter5=epa_0.r_C_leaf_2_C_litter5/100,
+    r_C_root_2_C_litter4=epa_0.r_C_root_2_C_litter4/100,
+    r_C_root_2_C_litter6=epa_0.r_C_root_2_C_litter6/100,
+    r_C_fruit_2_C_litter3=epa_0.r_C_fruit_2_C_litter3/100,
+    r_C_fruit_2_C_litter5=epa_0.r_C_fruit_2_C_litter5/100,
+    r_C_litter1_2_C_som1=epa_0.r_C_litter1_2_C_som1/100,
+    r_C_litter1_2_C_som2=epa_0.r_C_litter1_2_C_som2/100,
+    r_C_litter2_2_C_som2=epa_0.r_C_litter2_2_C_som2/100,
+    r_C_litter2_2_C_som3=epa_0.r_C_litter2_2_C_som3/100,
+    r_C_litter3_2_C_som1=epa_0.r_C_litter3_2_C_som1/100,
+    r_C_litter3_2_C_som3=epa_0.r_C_litter3_2_C_som3/100,
+    r_C_litter4_2_C_som1=epa_0.r_C_litter4_2_C_som1/100,
+    r_C_litter4_2_C_som2=epa_0.r_C_litter4_2_C_som2/100,
+    r_C_litter5_2_C_som1=epa_0.r_C_litter5_2_C_som1/100,
+    r_C_litter6_2_C_som2=epa_0.r_C_litter6_2_C_som2/100,
+    r_C_som1_2_C_som3=epa_0.r_C_som1_2_C_som3/100,
+    r_C_som2_2_C_som3=epa_0.r_C_som2_2_C_som3/100,
+    r_C_som2_2_C_som4=epa_0.r_C_som2_2_C_som4/100,
+    r_C_som3_2_C_som2=epa_0.r_C_som3_2_C_som2/100,
+    r_C_som3_2_C_som4=epa_0.r_C_som3_2_C_som4/100,
+    r_C_som4_2_C_som2=epa_0.r_C_som4_2_C_som2/100,
     r_C_som4_2_C_som3=0.00,
 
-
-    C_wood1_0=0.016,
-    C_wood2_0=0.0072,
-    C_wood3_0=1,
-    C_wood4_0=0.001,
-    C_leaf_0=0.002,
-    C_root_0=0.0013,
-    C_litter1_0=0.0005,
-    C_litter2_0=0.0015,
-    C_litter3_0=0.0001,
-    C_litter4_0=0.00002,
-    C_litter5_0=0.1,
-    C_som1_0=0.0001,
-    C_som2_0=0.0001,
-    C_som3_0=1,
+#     C_wood1_0=0.016,
+#     C_wood2_0=0.0072,
+#     C_wood3_0=1,
+#     C_wood4_0=0.001,
+#     C_leaf_0=0.002,
+#     C_root_0=0.0013,
+#     C_litter1_0=0.0005,
+#     C_litter2_0=0.0015,
+#     C_litter3_0=0.0001,
+#     C_litter4_0=0.00002,
+#     C_litter5_0=0.1,
+#     C_som1_0=0.0001,
+#     C_som2_0=0.0001,
+#     C_som3_0=1,
+    
+    C_wood1_0=0.00001,
+    C_wood2_0=0.00001,
+    C_wood3_0=0.00001,
+    C_wood4_0=0.00001,
+    C_leaf_0=0.00001,
+    C_root_0=0.00001,
+    C_litter1_0=0.00001,
+    C_litter2_0=0.00001,
+    C_litter3_0=0.00001,
+    C_litter4_0=0.00001,
+    C_litter5_0=0.00001,
+    C_som1_0=0.00001,
+    C_som2_0=0.00001,
+    C_som3_0=0.00001,
+    
 )
 
 epa_max = msh.EstimatedParameters(
@@ -487,62 +761,68 @@ epa_max = msh.EstimatedParameters(
     E=10,
     KM=100,
 
-    r_C_litter1_rh=0.0012934*100,
-    r_C_litter2_rh=0.59747*100,
-    r_C_litter3_rh=0.01977*100,
-    r_C_litter4_rh=0.0006258*100,
-    r_C_litter5_rh=0.0000016211*100,
-    r_C_litter6_rh=0.002435*100,
-    r_C_som1_rh=0.00229726*100,
-    r_C_som2_rh=0.0010939*100,
-    r_C_som3_rh=0.0000455408*100,
-    r_C_som4_rh=0.00028037*100,
+    r_C_litter1_rh=epa_0.r_C_litter1_rh*100,
+    r_C_litter2_rh=epa_0.r_C_litter2_rh*100,
+    r_C_litter3_rh=epa_0.r_C_litter3_rh*100,
+    r_C_litter4_rh=epa_0.r_C_litter4_rh*100,
+    r_C_litter5_rh=epa_0.r_C_litter5_rh*100,
+    r_C_litter6_rh=epa_0.r_C_litter6_rh*100,
+    r_C_som1_rh=epa_0.r_C_som1_rh*100,
+    r_C_som2_rh=epa_0.r_C_som2_rh*100,
+    r_C_som3_rh=epa_0.r_C_som3_rh*100,
+    r_C_som4_rh=epa_0.r_C_som4_rh*100,
 
-    r_C_wood1_2_C_wood3=0.0107*100,
-    r_C_wood1_2_C_litter1=0.066445*100,
-    r_C_wood2_2_C_wood4=0.00063076*100,
-    r_C_wood2_2_C_litter2=0.00168526*100,
-    r_C_wood3_2_C_litter1=0.000007645231*100,
-    r_C_wood4_2_C_litter2=0.000209176*100,
-    r_C_leaf_2_C_litter3=0.0020595*100,
-    r_C_leaf_2_C_litter5=0.0000250875*100,
-    r_C_root_2_C_litter4=0.0000076896*100,
-    r_C_root_2_C_litter6=0.000703836*100,
-    r_C_fruit_2_C_litter3=0.00026986*100,
-    r_C_fruit_2_C_litter5=0.00000463*100,
-    r_C_litter1_2_C_som1=0.000001348*100,
-    r_C_litter1_2_C_som2=0.0000192111*100,
-    r_C_litter2_2_C_som2=0.00058924*100,
-    r_C_litter2_2_C_som3=0.000645606*100,
-    r_C_litter3_2_C_som1=0.000183481*100,
-    r_C_litter3_2_C_som3=0.0001882826*100,
-    r_C_litter4_2_C_som1=0.0001623*100,
-    r_C_litter4_2_C_som2=0.0007858*100,
-    r_C_litter5_2_C_som1=0.0000005513*100,
-    r_C_litter6_2_C_som2=0.0829*100,
-    r_C_som1_2_C_som3=0.000414588*100,
-    r_C_som2_2_C_som3=0.005084*100,
-    r_C_som2_2_C_som4=0.0000151975*100,
-    r_C_som3_2_C_som2=0.0000509621*100,
-    r_C_som3_2_C_som4=0.00000000396756*100,
-    r_C_som4_2_C_som2=0.0004856444*100,
+    r_C_wood1_2_C_wood3=epa_0.r_C_wood1_2_C_wood3*100,
+    r_C_wood1_2_C_litter1=epa_0.r_C_wood1_2_C_litter1*100,
+    r_C_wood2_2_C_wood4=epa_0.r_C_wood2_2_C_wood4*100,
+    r_C_wood2_2_C_litter2=epa_0.r_C_wood2_2_C_litter2*100,
+    r_C_wood3_2_C_litter1=epa_0.r_C_wood3_2_C_litter1*100,
+    r_C_wood4_2_C_litter2=epa_0.r_C_wood4_2_C_litter2*100,
+    r_C_leaf_2_C_litter3=epa_0.r_C_leaf_2_C_litter3*100,
+    r_C_leaf_2_C_litter5=epa_0.r_C_leaf_2_C_litter5*100,
+    r_C_root_2_C_litter4=epa_0.r_C_root_2_C_litter4*100,
+    r_C_root_2_C_litter6=epa_0.r_C_root_2_C_litter6*100,
+    r_C_fruit_2_C_litter3=epa_0.r_C_fruit_2_C_litter3*100,
+    r_C_fruit_2_C_litter5=epa_0.r_C_fruit_2_C_litter5*100,
+    r_C_litter1_2_C_som1=epa_0.r_C_litter1_2_C_som1*100,
+    r_C_litter1_2_C_som2=epa_0.r_C_litter1_2_C_som2*100,
+    r_C_litter2_2_C_som2=epa_0.r_C_litter2_2_C_som2*100,
+    r_C_litter2_2_C_som3=epa_0.r_C_litter2_2_C_som3*100,
+    r_C_litter3_2_C_som1=epa_0.r_C_litter3_2_C_som1*100,
+    r_C_litter3_2_C_som3=epa_0.r_C_litter3_2_C_som3*100,
+    r_C_litter4_2_C_som1=epa_0.r_C_litter4_2_C_som1*100,
+    r_C_litter4_2_C_som2=epa_0.r_C_litter4_2_C_som2*100,
+    r_C_litter5_2_C_som1=epa_0.r_C_litter5_2_C_som1*100,
+    r_C_litter6_2_C_som2=epa_0.r_C_litter6_2_C_som2*100,
+    r_C_som1_2_C_som3=epa_0.r_C_som1_2_C_som3*100,
+    r_C_som2_2_C_som3=epa_0.r_C_som2_2_C_som3*100,
+    r_C_som2_2_C_som4=epa_0.r_C_som2_2_C_som4*100,
+    r_C_som3_2_C_som2=epa_0.r_C_som3_2_C_som2*100,
+    r_C_som3_2_C_som4=epa_0.r_C_som3_2_C_som4*100,
+    r_C_som4_2_C_som2=epa_0.r_C_som4_2_C_som2*100,
     r_C_som4_2_C_som3=0.00,
 
-    C_wood1_0=5,
-    C_wood2_0=5,
-    C_wood3_0=10,
-    C_wood4_0=5,
-    C_leaf_0=5,
-    C_root_0=5,
-    C_litter1_0=1,
-    C_litter2_0=1,
-    C_litter3_0=1,
-    C_litter4_0=1,
-    C_litter5_0=17,
-    C_som1_0=10,
-    C_som2_0=10,
-    C_som3_0=20,
+    C_wood1_0=svs_0.cVeg,
+    C_wood2_0=svs_0.cVeg,
+    C_wood3_0=svs_0.cVeg,
+    C_wood4_0=svs_0.cVeg,
+    C_leaf_0=svs_0.cVeg,
+    C_root_0=svs_0.cVeg,
+    C_litter1_0=svs_0.cLitter,
+    C_litter2_0=svs_0.cLitter,
+    C_litter3_0=svs_0.cLitter,
+    C_litter4_0=svs_0.cLitter,
+    C_litter5_0=svs_0.cLitter,
+    C_som1_0=svs_0.cSoil,
+    C_som2_0=svs_0.cSoil,
+    C_som3_0=svs_0.cSoil,
 )
+# -
+
+costfunction=msh.make_weighted_cost_func(svs)
+print(costfunction(obs_0))
+print(np.array(epa_0)-np.array(epa_min))
+print(np.array(epa_max)-np.array(epa_0))
 
 # +
 # import test_helpers as th
@@ -551,6 +831,28 @@ epa_max = msh.EstimatedParameters(
 
 # ### mcmc to optimize parameters
 #
+
+svs.rh.shape[0]
+
+cpa.number_of_months
+
+# adding additional year to rh and ra (due to wrong files used)
+# !!! Remove as soon as right files are used !!!
+if svs.rh.shape[0]<cpa.number_of_months:
+    last12rh=svs.rh[-12:]
+    last12ra=svs.ra[-12:]
+    rh=np.ma.append(svs.rh, last12rh, axis=None)
+    ra=np.ma.append(svs.ra, last12ra, axis=None)
+    #svs
+    svs1=msh.Observables(
+        cVeg=svs.cVeg,
+        cLitter=svs.cLitter,
+        cSoil=svs.cSoil,
+        rh=rh,
+        ra=ra,
+        )
+    svs=svs1
+svs.rh.shape[0]
 
 # +
 
@@ -567,14 +869,14 @@ C_autostep, J_autostep = autostep_mcmc(
     param2res=param2res,
     # costfunction=make_feng_cost_func(obs),
     costfunction=msh.make_weighted_cost_func(svs),
-    nsimu=1500,  # for testing and tuning mcmc
-    # nsimu=20000,
+    #nsimu=200,  # for testing and tuning mcmc
+    nsimu=7000,
     c_max=np.array(epa_max),
     c_min=np.array(epa_min),
-    acceptance_rate=40,  # default value | target acceptance rate in %
+    acceptance_rate=10,  # default value | target acceptance rate in %
     chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-    D_init=10,  # default value | increase value to reduce initial step size
-    K=2  # default value | increase value to reduce acceptance of higher cost functions
+    D_init=2,  # increase value to reduce initial step size
+    K=1.5  # increase value to reduce acceptance of higher cost functions
 )
 print("Data assimilation finished!")
 
@@ -615,70 +917,4 @@ pd.DataFrame(mod_opt).to_csv(outputPath.joinpath('OCN-V2_optimized_solutions.csv
 
 print("Optimized parameters: ", epa_opt)
 
-# +
-# Traceability Analysis
-it_sym_trace = msh.make_traceability_iterator(mvs, dvs, cpa, epa_opt)
-ns = 1500  # 10*360
-StartVectorTrace = gh.make_StartVectorTrace(mvs)
-nv = len(StartVectorTrace._fields)
-res_trace = np.zeros((ns, nv))
-for i in range(ns):
-    res_trace[i, :] = it_sym_trace.__next__().reshape(nv)
-# res_trace
 
-import matplotlib.pyplot as plt
-
-n = len(mvs.get_StateVariableTuple())
-fig = plt.figure(figsize=(20, (n + 1) * 10), dpi=80)
-axs = fig.subplots(n + 1, 2)
-days = list(range(ns))
-
-for i in range(n):
-    ax = axs[i, 0]
-    #  the solution
-    pos = i
-    ax.plot(
-        days,
-        res_trace[:, i],
-        label=StartVectorTrace._fields[pos],
-        color='blue'
-    )
-    # X_p
-    pos = i + n
-    ax.plot(
-        days,
-        res_trace[:, pos],
-        label=StartVectorTrace._fields[pos],
-        color='red'
-    )
-    # X_c
-    pos = i + 2 * n
-    ax.plot(
-        days,
-        res_trace[:, pos],
-        label=StartVectorTrace._fields[pos],
-        color='yellow'
-    )
-    ax.legend()
-
-    ax = axs[i, 1]
-    # RT
-    pos = i + 3 * n
-    ax.plot(
-        days,
-        res_trace[:, pos],
-        label=StartVectorTrace._fields[pos],
-        color='black'
-    )
-    ax.legend()
-
-axs[n, 0].plot(
-    days,
-    [msh.make_npp_func(dvs)(d) for d in days],
-    label='NPP',
-    color='green'
-)
-axs[n, 0].legend()
-
-fig.savefig('solution_Traceability.pdf')
-# -

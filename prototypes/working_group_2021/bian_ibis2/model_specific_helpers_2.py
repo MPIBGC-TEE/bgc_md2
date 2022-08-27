@@ -17,6 +17,47 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+def spatial_mask(dataPath)->'CoorMask':
+    f_mask=nc.Dataset(dataPath.joinpath("IBIS_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    
+    print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+    
+    def f(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)
+
+    o_names=Observables._fields
+    d_names=Drivers._fields
+    names = o_names + d_names 
+
+    masks=[ f(name)    for name in names ]
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
+    print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
+    #from IPython import embed;embed() 
+    sym_tr= gh.SymTransformers(
+        itr=make_model_index_transforms(),
+        ctr=make_model_coord_transforms()
+    )
+    return gh.CoordMask(
+        combined_mask,
+        sym_tr
+        )
+        
+def make_model_coord_transforms():
+    return gh.identicalTransformers()
+
+def make_model_index_transforms():
+    return gh.transform_maker(
+    lat_0 = -89.5,
+    lon_0 = -179.5,
+    step_lat = 1,
+    step_lon = 1,
+ )
+
 # we will use the trendy output names directly in other parts of the output
 Observables_annual = namedtuple(
     'Observables_annual',
@@ -24,7 +65,8 @@ Observables_annual = namedtuple(
 )
 Observables_monthly = namedtuple(
     'Observables_monthly',
-    ["rh","ra"]
+    #["rh","ra"]
+    ["rh"]
 )
 Observables = namedtuple(
     "Observables",
@@ -50,32 +92,32 @@ Constants = namedtuple(
         "cVeg_0",
         "npp_0",
         "rh_0",
-        "ra_0",
+        #"ra_0",
         
-        "k_C_mll",
-        "k_C_mwl",
-        "k_C_mrl",
-        "k_C_sll",
-        "k_C_swl",
-        "k_C_srl",
-        "k_C_lll",
-        "k_C_lwl",
-        "k_C_lrl",
+        # "k_C_mll",
+        # "k_C_mwl",
+        # "k_C_mrl",
+        # "k_C_sll",
+        # "k_C_swl",
+        # "k_C_srl",
+        # "k_C_lll",
+        # "k_C_lwl",
+        # "k_C_lrl",
         
-        "r_C_mll_2_C_mic", # f13_4
-        "r_C_mwl_2_C_mic", # f13_5
-        "r_C_mrl_2_C_mic", # f13_6
-        "r_C_sll_2_C_mic", # f13_7
-        "r_C_swl_2_C_mic", # f13_8
-        "r_C_srl_2_C_mic", # f13_9
-        "r_C_pass_2_C_mic", # f13_16
+        # "r_C_mll_2_C_mic", # f13_4
+        # "r_C_mwl_2_C_mic", # f13_5
+        # "r_C_mrl_2_C_mic", # f13_6
+        # "r_C_sll_2_C_mic", # f13_7
+        # "r_C_swl_2_C_mic", # f13_8
+        # "r_C_srl_2_C_mic", # f13_9
+        # "r_C_pass_2_C_mic", # f13_16
 
-        "r_C_lll_2_C_prot", # f14_10
-        "r_C_lwl_2_C_prot", # f14_11
-        "r_C_lrl_2_C_prot", # f14_12
-        "r_C_lll_2_C_nonprot", # f15_10
-        "r_C_lwl_2_C_nonprot", # f15_11
-        "r_C_lrl_2_C_nonprot", # f15_12
+        # "r_C_lll_2_C_prot", # f14_10
+        # "r_C_lwl_2_C_prot", # f14_11
+        # "r_C_lrl_2_C_prot", # f14_12
+        # "r_C_lll_2_C_nonprot", # f15_10
+        # "r_C_lwl_2_C_nonprot", # f15_11
+        # "r_C_lrl_2_C_nonprot", # f15_12
         
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
@@ -98,6 +140,11 @@ EstimatedParameters = namedtuple(
         "r_C_leaf_2_C_sll",     # 5,  f7_1
         "r_C_wood_2_C_swl",     # 6,  f8_2
         "r_C_root_2_C_srl",     # 7,  f9_3
+        
+        "r_C_leaf_2_C_lll",
+        "r_C_wood_2_C_lwl",
+        "r_C_root_2_C_lrl",
+        
         "r_C_prot_2_C_mic",     # 8， f13_14
         "r_C_nonprot_2_C_mic",  # 9， f13_15
         "r_C_mic_2_C_prot",     # 10, f14_13
@@ -105,10 +152,10 @@ EstimatedParameters = namedtuple(
         "r_C_prot_2_C_pass",    # 12, f16_14
         "r_C_nonprot_2_C_pass", # 13, f16_15
 
-        "k_C_mic",              # 17
-        "k_C_protsom",          # 18
-        "k_C_nonprotsom",       # 19
-        "k_C_passsom",          # 20
+        # "k_C_mic",              # 17
+        # "k_C_protsom",          # 18
+        # "k_C_nonprotsom",       # 19
+        # "k_C_passsom",          # 20
 
         "C_wood_0",           # 23
         "C_root_0",           # 24
@@ -125,6 +172,37 @@ EstimatedParameters = namedtuple(
         "C_mic_0",            # 33 
         "C_prot_0",           # 34
         "C_nonprot_0",        # 35
+        
+         "r_C_mll_rh",
+         "r_C_mwl_rh",
+         "r_C_mrl_rh",
+         "r_C_sll_rh",
+         "r_C_swl_rh",
+         "r_C_srl_rh",          
+         "r_C_lll_rh",
+         "r_C_lwl_rh",
+         "r_C_lrl_rh",            
+         "r_C_mic_rh",           
+         "r_C_prot_rh",
+         "r_C_nonprot_rh",        
+         "r_C_pass_rh",
+         
+         
+         
+        "r_C_mll_2_C_mic", # f13_4
+        "r_C_mwl_2_C_mic", # f13_5
+        "r_C_mrl_2_C_mic", # f13_6
+        "r_C_sll_2_C_mic", # f13_7
+        "r_C_swl_2_C_mic", # f13_8
+        "r_C_srl_2_C_mic", # f13_9
+        "r_C_pass_2_C_mic", # f13_16
+
+        "r_C_lll_2_C_prot", # f14_10
+        "r_C_lwl_2_C_prot", # f14_11
+        "r_C_lrl_2_C_prot", # f14_12
+        "r_C_lll_2_C_nonprot", # f15_10
+        "r_C_lwl_2_C_nonprot", # f15_11
+        "r_C_lrl_2_C_nonprot", # f15_12
 
     ]
 )
@@ -154,58 +232,60 @@ def nc_global_mean_file_name(nc_var_name):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 
-def get_global_vars(dataPath):
-    #define function to average variables
-    def f(tup):
-        #define parts of function from nc file
-        vn, fn = tup
-        path = dataPath.joinpath(fn)
-        ds = nc.Dataset(str(path))
-        lats = ds.variables["latitude"]
-        lons = ds.variables["longitude"]
-        
-        #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-        if vn in ["npp","gpp","rh","ra"]:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean(lats, lons,ds.variables[vn].__array__())*24*60*60)
-        else:
-            #for name, variable in ds.variables.items():            
-            #    for attrname in variable.ncattrs():
-            #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
-            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
+# this function is deprecated: please use get_global_mean_vars
 
-    # Link symbols and data:
-    # IBIS has annual vs monthly file names so they are linked separately
-    # If all your data is similarly named you can do this in one step
+# def get_global_vars(dataPath):
+#     #define function to average variables
+#     def f(tup):
+#         #define parts of function from nc file
+#         vn, fn = tup
+#         path = dataPath.joinpath(fn)
+#         ds = nc.Dataset(str(path))
+#         lats = ds.variables["latitude"]
+#         lons = ds.variables["longitude"]
 
-    # Create annual file names (single step if files similarly named)
-    o_names=[(f,"IBIS_S2_{}.nc".format(f)) for f in Observables_annual._fields]
+#         #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
+#         if vn in ["npp","gpp","rh","ra"]:
+#             #for name, variable in ds.variables.items():            
+#             #    for attrname in variable.ncattrs():
+#             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+#             return (gh.global_mean(lats, lons,ds.variables[vn].__array__())*24*60*60)
+#         else:
+#             #for name, variable in ds.variables.items():            
+#             #    for attrname in variable.ncattrs():
+#             #        print("{} -- {}".format(attrname, getattr(variable, attrname)))
+#             return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
 
-    # Create monthly file names (can remove if done in one step above)
-    monthly_names=[(f,"IBIS_S2_{}.nc".format(f)) for f in Observables_monthly._fields]
-    # Extend name list with monthly names
-    o_names.extend(monthly_names)
+#     # Link symbols and data:
+#     # IBIS has annual vs monthly file names so they are linked separately
+#     # If all your data is similarly named you can do this in one step
 
-    # create file names for Drivers
-    d_names=[(f,"IBIS_S2_{}.nc".format(f)) for f in Drivers._fields]
+#     # Create annual file names (single step if files similarly named)
+#     o_names=[(f,"IBIS_S2_{}.nc".format(f)) for f in Observables_annual._fields]
 
-    # we want to drive with npp and can create it from gpp and ra 
-    # observables
-    odvs=OrgDrivers(*map(f,d_names))
-    obss=Observables(*map(f, o_names))
+#     # Create monthly file names (can remove if done in one step above)
+#     monthly_names=[(f,"IBIS_S2_{}.nc".format(f)) for f in Observables_monthly._fields]
+#     # Extend name list with monthly names
+#     o_names.extend(monthly_names)
 
-    dvs=Drivers(
-        npp=odvs.gpp-obss.ra,
-        mrso=odvs.mrso,
-        tas=odvs.tas
-    )
-    
-    # Link symbols and data for Observables/Drivers
-    # return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
-    return (obss, dvs)
+#     # create file names for Drivers
+#     d_names=[(f,"IBIS_S2_{}.nc".format(f)) for f in Drivers._fields]
 
+#     # we want to drive with npp and can create it from gpp and ra 
+#     # observables
+#     odvs=OrgDrivers(*map(f,d_names))
+#     obss=Observables(*map(f, o_names))
+
+#     dvs=Drivers(
+#         npp=odvs.gpp-obss.ra,
+#         mrso=odvs.mrso,
+#         tas=odvs.tas
+#     )
+
+#     # Link symbols and data for Observables/Drivers
+#     # return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
+#     return (obss, dvs)
+# -
 
 def get_example_site_vars(dataPath):
     # pick up 1 site
@@ -238,7 +318,10 @@ def get_global_mean_vars(dataPath):
     o_names=Observables._fields
     d_names=Drivers._fields
     names = o_names + d_names
-    
+    print("names")
+    print(names)
+    print("Observables")
+    print(Observables._fields)
     if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
         print(""" Found cached global mean files. If you want to recompute the global means
             remove the following files: """
@@ -247,7 +330,8 @@ def get_global_mean_vars(dataPath):
             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
-            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            return gm * 86400 if vn in ["gpp", "rh", "ra", "npp"] else gm
     
         return (
             Observables(*map(get_cached_global_mean, o_names)),
@@ -257,37 +341,69 @@ def get_global_mean_vars(dataPath):
     else:
         # we now check if any of the arrays has a time lime containing nan values 
         # APART FROM values that are already masked by the fillvalue
-        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
-        def f(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
-            #scale fluxes vs pools
-            var =ds.variables[vn]
-            return gh.get_nan_pixel_mask(var)
+        
+        # print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+        # def f(vn):
+            # path = dataPath.joinpath(nc_file_name(vn))
+            # ds = nc.Dataset(str(path))
+            # #scale fluxes vs pools
+            # var =ds.variables[vn]
+            # return gh.get_nan_pixel_mask(var)
 
-        masks=[ f(name)    for name in names ]
-        # We compute the common mask so that it yields valid pixels for ALL variables 
-        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        # masks=[ f(name)    for name in names ]
+        # # We compute the common mask so that it yields valid pixels for ALL variables 
+        # combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        
+        # now we use common mask for all models
+        gm=gh.globalMask()
+        # load an example file with mask
+        template = nc.Dataset(dataPath.joinpath("IBIS_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        gcm=gh.project_2(
+                source=gm,
+                target=gh.CoordMask(
+                    index_mask=np.zeros_like(template),
+                    tr=gh.SymTransformers(
+                        ctr=make_model_coord_transforms(),
+                        itr=make_model_index_transforms()
+                    )
+                )
+        )
+       
         print("computing means, this may also take some minutes...")
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(nc_file_name(vn))
             ds = nc.Dataset(str(path))
             vs=ds.variables
-            print(vs)
+            #print(vs)
             lats= vs["latitude"].__array__()
             lons= vs["longitude"].__array__()
-            print(vn)
             var=ds.variables[vn]
             # check if we have a cached version (which is much faster)
             gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+            
+            ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
+            print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+            def f(vn):
+                path = dataPath.joinpath(nc_file_name(vn))
+                ds = nc.Dataset(str(path))
+                #scale fluxes vs pools
+                var =ds.variables[vn]
+                return gh.get_nan_pixel_mask(var)
+
+            masks=[ f(name)    for name in names ]
+            # We compute the common mask so that it yields valid pixels for ALL variables 
+            combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+            
 
             gm=gh.global_mean_var(
                     lats,
                     lons,
+                    #gcm.index_mask,
                     combined_mask,
                     var
-            )
+            )                                
+           
             gh.write_global_mean_cache(
                     gm_path,
                     gm,
@@ -310,9 +426,35 @@ def make_npp_func(dvs):
     return func
 
 
+import math
 def make_xi_func(dvs):
     def func(day):
-        return 1.0 # preliminary fake for lack of better data... 
+        
+        month = gh.day_2_month_index(day)
+        
+        tconst = 344.0 # constant for Lloyd and Taylor (1994) function
+        bconst = 10.0  # base temperrature used for carbon decompositon
+        btemp = 288.16 # maximum value of decomposition factor
+        
+        T = dvs.tas[month] # do not have soil temp so we use air temp to replace
+        
+        # temp regulates factor
+        if (T > 237.13):
+            factor = min(math.exp(tconst * ((1.0 /(btemp-227.13)) - (1.0 /(T-227.13)) )), bconst)
+        else:
+            factor = math.exp(tconst * ((1.0 /(btemp-227.13)) - (1.0 /(237.13-227.13)) ))
+        
+        wfps = 55.0 #
+        moist = math.exp((wfps - 60.0)**2 /-(800.0))   # moisture regulates factor
+        
+        factor = max(0.001, min(bconst, factor * moist))
+        
+        if (factor > 1.0):
+            factor = 1
+                        
+        #print(factor)
+        
+        return factor # preliminary fake for lack of better data... 
     return func
 
 
@@ -380,8 +522,9 @@ def make_iterator_sym(
     # the order later in the symbolic formulation....
     V_arr=np.array(
         [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.ra,V_init.rh]
-    ).reshape(n+2,1) #reshaping is neccessary for matmul (the @ in B @ X)
+        #[V_init.ra,V_init.rh]
+        [V_init.rh]
+    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
     
     
     # To compute the ra and rh we have to some up the values for autotrophic and heterotrophic respiration we have to sum up outfluxes.
@@ -397,13 +540,13 @@ def make_iterator_sym(
         X_new = X + b + B @ X
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         
-        ra = np.sum(
-            [
-              numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in ["C_leaf","C_wood","C_root"] 
-                if Symbol(k) in numOutFluxesBySymbol.keys()
-            ]
-        )
+        # ra = np.sum(
+            # [
+              # numOutFluxesBySymbol[Symbol(k)](it,*X)
+                # for k in ["C_leaf","C_wood","C_root"] 
+                # if Symbol(k) in numOutFluxesBySymbol.keys()
+            # ]
+        # )
         rh = np.sum(
             [
                 numOutFluxesBySymbol[Symbol(k)](it,*X)
@@ -411,7 +554,7 @@ def make_iterator_sym(
                 if Symbol(k) in numOutFluxesBySymbol.keys()
             ]
         )
-        V_new = np.concatenate((X_new.reshape(n,1),np.array([ra,rh]).reshape(2,1)), axis=0)
+        V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
         
         return V_new
     
@@ -424,7 +567,8 @@ def make_StartVector(mvs):
     return namedtuple(
         "StartVector",
         [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["ra","rh"]
+        #["ra","rh"]
+        ["rh"]
     ) 
 
 
@@ -487,70 +631,90 @@ def make_param2res_sym(
             C_nonprot=epa.C_nonprot_0,
             C_pass=cpa.cSoil_0-(epa.C_mrl_0 + epa.C_srl_0 + epa.C_lrl_0 + epa.C_mic_0 + epa.C_prot_0 + epa.C_nonprot_0),
 
-            ra=cpa.ra_0,
+            #ra=cpa.ra_0,
             rh=cpa.rh_0
         )
         # next we create the parameter dict for the iterator
         # The iterator does not care if they are estimated or not so we look for them
         # in the combination
-        # apa = {**cpa._asdict(),**epa._asdict()}
+        apa = {**cpa._asdict(),**epa._asdict()}
+        model_par_dict = {
+            Symbol(k):v for k,v in apa.items()
+            if Symbol(k) in model_par_dict_keys
+        }
+        
+        # commented out by Kostia: par_dict should be computed from epa and cpa. 
+        # I changed epa and cpa to be consistent and use only flux rates (r), no turnover rates (k) and transfer coeffitients (f) 
+        # added by cybian for fix some errors
         # model_par_dict = {
-        #     Symbol(k):v for k,v in apa.items()
-        #     if Symbol(k) in model_par_dict_keys
+            # "r_C_mll_rh": cpa.k_C_mll*(1 - cpa.r_C_mll_2_C_mic),
+            # "r_C_mwl_rh": cpa.k_C_mwl*(1 - cpa.r_C_mwl_2_C_mic),
+            # "r_C_mrl_rh": cpa.k_C_mrl*(1 - cpa.r_C_mrl_2_C_mic),
+            # "r_C_sll_rh": cpa.k_C_sll*(1 - cpa.r_C_sll_2_C_mic),
+            # "r_C_swl_rh": cpa.k_C_swl*(1 - cpa.r_C_swl_2_C_mic),
+            # "r_C_srl_rh": cpa.k_C_srl*(1 - cpa.r_C_srl_2_C_mic),          
+            # "r_C_lll_rh": cpa.k_C_lll*(-cpa.r_C_lll_2_C_nonprot - cpa.r_C_lll_2_C_prot + 1),
+            # "r_C_lwl_rh": cpa.k_C_lwl*(-cpa.r_C_lwl_2_C_nonprot - cpa.r_C_lwl_2_C_prot + 1),
+            # "r_C_lrl_rh": cpa.k_C_lrl*(-cpa.r_C_lrl_2_C_nonprot - cpa.r_C_lrl_2_C_prot + 1),            
+            # "r_C_mic_rh": epa.k_C_mic*(-epa.r_C_mic_2_C_nonprot - epa.r_C_mic_2_C_prot + 1),           
+            # "r_C_prot_rh": epa.k_C_protsom*(-epa.r_C_prot_2_C_mic - epa.r_C_prot_2_C_pass + 1),
+            # "r_C_nonprot_rh": epa.k_C_nonprotsom*(-epa.r_C_nonprot_2_C_mic - epa.r_C_nonprot_2_C_pass + 1),            
+            # "r_C_pass_rh": epa.k_C_passsom*(1 - cpa.r_C_pass_2_C_mic),  
+            
+            # "r_C_mll_rh": cpa.k_C_mll*(1 - cpa.r_C_mll_2_C_mic),
+            # "r_C_mwl_rh": cpa.k_C_mwl*(1 - cpa.r_C_mwl_2_C_mic),
+            # "r_C_mrl_rh": cpa.k_C_mrl*(1 - cpa.r_C_mrl_2_C_mic),
+            # "r_C_sll_rh": cpa.k_C_sll*(1 - cpa.r_C_sll_2_C_mic),
+            # "r_C_swl_rh": cpa.k_C_swl*(1 - cpa.r_C_swl_2_C_mic),
+            # "r_C_srl_rh": cpa.k_C_srl*(1 - cpa.r_C_srl_2_C_mic),          
+            # "r_C_lll_rh": cpa.k_C_lll*(-cpa.r_C_lll_2_C_nonprot - cpa.r_C_lll_2_C_prot + 1),
+            # "r_C_lwl_rh": cpa.k_C_lwl*(-cpa.r_C_lwl_2_C_nonprot - cpa.r_C_lwl_2_C_prot + 1),
+            # "r_C_lrl_rh": cpa.k_C_lrl*(-cpa.r_C_lrl_2_C_nonprot - cpa.r_C_lrl_2_C_prot + 1),            
+            # "r_C_mic_rh": epa.k_C_mic*(-epa.r_C_mic_2_C_nonprot - epa.r_C_mic_2_C_prot + 1),           
+            # "r_C_prot_rh": epa.k_C_protsom*(-epa.r_C_prot_2_C_mic - epa.r_C_prot_2_C_pass + 1),
+            # "r_C_nonprot_rh": epa.k_C_nonprotsom*(-epa.r_C_nonprot_2_C_mic - epa.r_C_nonprot_2_C_pass + 1),            
+            # "r_C_pass_rh": epa.k_C_passsom*(1 - cpa.r_C_pass_2_C_mic),  
+
+            # #"r_C_leaf_2_C_lll": 1.0-(epa.r_C_leaf_2_C_mll + epa.r_C_leaf_2_C_sll),
+            # #"r_C_wood_2_C_lwl": 1.0-(epa.r_C_wood_2_C_mwl + epa.r_C_wood_2_C_swl),
+            # #"r_C_root_2_C_lrl": 1.0-(epa.r_C_root_2_C_mrl + epa.r_C_root_2_C_srl),
+            # "r_C_leaf_2_C_lll":epa.r_C_leaf_2_C_lll,
+            # "r_C_wood_2_C_lwl":epa.r_C_wood_2_C_lwl,
+            # "r_C_root_2_C_lrl":epa.r_C_root_2_C_lrl,
+
+            # "r_C_mll_2_C_mic": cpa.r_C_mll_2_C_mic,
+            # "r_C_mwl_2_C_mic": cpa.r_C_mwl_2_C_mic,
+            # "r_C_mrl_2_C_mic": cpa.r_C_mrl_2_C_mic,
+            # "r_C_sll_2_C_mic": cpa.r_C_sll_2_C_mic,
+            # "r_C_swl_2_C_mic": cpa.r_C_swl_2_C_mic,
+            # "r_C_srl_2_C_mic": cpa.r_C_srl_2_C_mic,
+            # "r_C_pass_2_C_mic": cpa.r_C_pass_2_C_mic,
+            # "r_C_lll_2_C_prot": cpa.r_C_lll_2_C_prot,
+            # "r_C_lwl_2_C_prot": cpa.r_C_lwl_2_C_prot,
+            # "r_C_lrl_2_C_prot": cpa.r_C_lrl_2_C_prot,
+            # "r_C_lll_2_C_nonprot": cpa.r_C_lll_2_C_nonprot,
+            # "r_C_lwl_2_C_nonprot": cpa.r_C_lwl_2_C_nonprot,
+            # "r_C_lrl_2_C_nonprot": cpa.r_C_lrl_2_C_nonprot,
+            
+            # "beta_leaf": epa.beta_leaf,
+            # "beta_wood": epa.beta_wood,
+
+            # "r_C_leaf_2_C_mll": epa.r_C_leaf_2_C_mll,
+            # "r_C_wood_2_C_mwl": epa.r_C_wood_2_C_mwl,
+            # "r_C_root_2_C_mrl": epa.r_C_root_2_C_mrl,
+            # "r_C_leaf_2_C_sll": epa.r_C_leaf_2_C_sll,
+            # "r_C_wood_2_C_swl": epa.r_C_wood_2_C_swl,
+            # "r_C_root_2_C_srl": epa.r_C_root_2_C_srl,
+            # "r_C_prot_2_C_mic": epa.r_C_prot_2_C_mic,
+            # "r_C_nonprot_2_C_mic": epa.r_C_nonprot_2_C_mic,
+            # "r_C_mic_2_C_prot": epa.r_C_mic_2_C_prot,
+            # "r_C_mic_2_C_nonprot": epa.r_C_mic_2_C_nonprot,
+            # "r_C_prot_2_C_pass": epa.r_C_prot_2_C_pass,
+            # "r_C_nonprot_2_C_pass": epa.r_C_nonprot_2_C_pass
         # }
 
-        # added by cybian for fix some errors
-        model_par_dict = {
-            "r_C_mll_rh": cpa.k_C_mll*(1 - cpa.r_C_mll_2_C_mic),
-            "r_C_mwl_rh": cpa.k_C_mwl*(1 - cpa.r_C_mwl_2_C_mic),
-            "r_C_mrl_rh": cpa.k_C_mrl*(1 - cpa.r_C_mrl_2_C_mic),
-            "r_C_sll_rh": cpa.k_C_sll*(1 - cpa.r_C_sll_2_C_mic),
-            "r_C_swl_rh": cpa.k_C_swl*(1 - cpa.r_C_swl_2_C_mic),
-            "r_C_srl_rh": cpa.k_C_srl*(1 - cpa.r_C_srl_2_C_mic),          
-            "r_C_lll_rh": cpa.k_C_lll*(-cpa.r_C_lll_2_C_nonprot - cpa.r_C_lll_2_C_prot + 1),
-            "r_C_lwl_rh": cpa.k_C_lwl*(-cpa.r_C_lwl_2_C_nonprot - cpa.r_C_lwl_2_C_prot + 1),
-            "r_C_lrl_rh": cpa.k_C_lrl*(-cpa.r_C_lrl_2_C_nonprot - cpa.r_C_lrl_2_C_prot + 1),            
-            "r_C_mic_rh": epa.k_C_mic*(-epa.r_C_mic_2_C_nonprot - epa.r_C_mic_2_C_prot + 1),           
-            "r_C_prot_rh": epa.k_C_protsom*(-epa.r_C_prot_2_C_mic - epa.r_C_prot_2_C_pass + 1),
-            "r_C_nonprot_rh": epa.k_C_nonprotsom*(-epa.r_C_nonprot_2_C_mic - epa.r_C_nonprot_2_C_pass + 1),            
-            "r_C_pass_rh": epa.k_C_passsom*(1 - cpa.r_C_pass_2_C_mic),            
-            "r_C_leaf_2_C_lll": 1.0-(epa.r_C_leaf_2_C_mll + epa.r_C_leaf_2_C_sll),
-            "r_C_wood_2_C_lwl": 1.0-(epa.r_C_wood_2_C_mwl + epa.r_C_wood_2_C_swl),
-            "r_C_root_2_C_lrl": 1.0-(epa.r_C_root_2_C_mrl + epa.r_C_root_2_C_srl),
 
-            "r_C_mll_2_C_mic": cpa.r_C_mll_2_C_mic,
-            "r_C_mwl_2_C_mic": cpa.r_C_mwl_2_C_mic,
-            "r_C_mrl_2_C_mic": cpa.r_C_mrl_2_C_mic,
-            "r_C_sll_2_C_mic": cpa.r_C_sll_2_C_mic,
-            "r_C_swl_2_C_mic": cpa.r_C_swl_2_C_mic,
-            "r_C_srl_2_C_mic": cpa.r_C_srl_2_C_mic,
-            "r_C_pass_2_C_mic": cpa.r_C_pass_2_C_mic,
-            "r_C_lll_2_C_prot": cpa.r_C_lll_2_C_prot,
-            "r_C_lwl_2_C_prot": cpa.r_C_lwl_2_C_prot,
-            "r_C_lrl_2_C_prot": cpa.r_C_lrl_2_C_prot,
-            "r_C_lll_2_C_nonprot": cpa.r_C_lll_2_C_nonprot,
-            "r_C_lwl_2_C_nonprot": cpa.r_C_lwl_2_C_nonprot,
-            "r_C_lrl_2_C_nonprot": cpa.r_C_lrl_2_C_nonprot,
-            
-            "beta_leaf": epa.beta_leaf,
-            "beta_wood": epa.beta_wood,
-
-            "r_C_leaf_2_C_mll": epa.r_C_leaf_2_C_mll,
-            "r_C_wood_2_C_mwl": epa.r_C_wood_2_C_mwl,
-            "r_C_root_2_C_mrl": epa.r_C_root_2_C_mrl,
-            "r_C_leaf_2_C_sll": epa.r_C_leaf_2_C_sll,
-            "r_C_wood_2_C_swl": epa.r_C_wood_2_C_swl,
-            "r_C_root_2_C_srl": epa.r_C_root_2_C_srl,
-            "r_C_prot_2_C_mic": epa.r_C_prot_2_C_mic,
-            "r_C_nonprot_2_C_mic": epa.r_C_nonprot_2_C_mic,
-            "r_C_mic_2_C_prot": epa.r_C_mic_2_C_prot,
-            "r_C_mic_2_C_nonprot": epa.r_C_mic_2_C_nonprot,
-            "r_C_prot_2_C_pass": epa.r_C_prot_2_C_pass,
-            "r_C_nonprot_2_C_pass": epa.r_C_nonprot_2_C_pass
-        }
-
-
-        print('model_par_dict:',model_par_dict)
+        #print('model_par_dict:',model_par_dict)
         #from IPython import embed;embed()
         
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
@@ -569,7 +733,7 @@ def make_param2res_sym(
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2) 
-        delta_t_val=15 
+        delta_t_val=30
         it_sym = make_iterator_sym(
             mvs,
             V_init=V_init,
@@ -593,15 +757,18 @@ def make_param2res_sym(
         
         # added by cybian 
         rhs=np.zeros(cpa.number_of_months)
-        ras=np.zeros(cpa.number_of_months)
+        #ras=np.zeros(cpa.number_of_months)
         number_of_years=int(cpa.number_of_months/12)
-        print('number_of_years:',number_of_years)
+        #print('number_of_years:',number_of_years)
         
         cVegs=np.zeros(number_of_years)
         cLitters=np.zeros(number_of_years)
         cSoils=np.zeros(number_of_years)
-        dpy=30*12
+        dpm=30
+        dpy=dpm*12
         m_id=0
+        steps_per_month=int(dpm/delta_t_val)
+        steps_per_year=int(dpm/delta_t_val)*12
         
         for y in range(number_of_years):
             #print('y:',y)
@@ -611,36 +778,40 @@ def make_param2res_sym(
             for m in range(12):
                 #print('y:',y,'m:',m,'m_id:',m_id)
                 #dpm = days_per_month[ m % 12]  
-                mra_ave=0.0
-                mrh_ave=0.0
-                for d in range(dpm): #int(dpm/delta_t_val)
+                #mra_ave=0
+                mrh_ave=0
+                for d in range(steps_per_month): #int(dpm/delta_t_val)
                     v = it_sym.__next__()#.reshape(n,)
                     # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
-                    # at the moment the iterator also computes a flux but in kg^-2 ^day
-                    
+                    # at the moment the iterator also computes a flux but in kg^-2 ^day                    
                     V=StartVector(*v)
-                    cVeg_ave=np.array(cVeg_ave, dtype=object)+float(V.C_leaf+V.C_wood+V.C_root),
-                    cLitter_ave=np.array(cLitter_ave, dtype=object)+float(V.C_mll + V.C_mwl + V.C_sll + V.C_swl + V.C_lll + V.C_lwl),
-                    cSoil_ave=np.array(cSoil_ave, dtype=object)+float(V.C_mrl + V.C_srl + V.C_lrl + V.C_mic + V.C_prot + V.C_nonprot + V.C_pass),
-                    mrh_ave=np.array(mrh_ave)+V.rh
-                    mra_ave=np.array(mra_ave)+V.ra
-                
+                    
+                    #cVeg_ave=np.array(cVeg_ave, dtype=object)+float(V.C_leaf+V.C_wood+V.C_root),
+                    #cLitter_ave=np.array(cLitter_ave, dtype=object)+float(V.C_mll + V.C_mwl + V.C_sll + V.C_swl + V.C_lll + V.C_lwl),
+                    #cSoil_ave=np.array(cSoil_ave, dtype=object)+float(V.C_mrl + V.C_srl + V.C_lrl + V.C_mic + V.C_prot + V.C_nonprot + V.C_pass),
+                    #mrh_ave=np.array(mrh_ave)+V.rh
+                    #mra_ave=np.array(mra_ave)+V.ra
+                    cVeg_ave+=float(V.C_leaf+V.C_wood+V.C_root)
+                    cLitter_ave+=float(V.C_mll + V.C_mwl + V.C_sll + V.C_swl + V.C_lll + V.C_lwl)
+                    cSoil_ave+=float(V.C_mrl + V.C_srl + V.C_lrl + V.C_mic + V.C_prot + V.C_nonprot + V.C_pass)
+                    mrh_ave+=V.rh
+                    #mra_ave+=V.ra                    
                 #print('here:m_id:',m_id)
-                rhs[m_id]=mrh_ave/dpm
-                ras[m_id]=mrh_ave/dpm
+                rhs[m_id]=mrh_ave/steps_per_month
+                #ras[m_id]=mra_ave/steps_per_month
                 m_id=m_id+1
             
             #print('Here:y:',y)
-            cVegs[y]=np.array(cVeg_ave, dtype=object)/dpy
-            cLitters[y]=np.array(cLitter_ave, dtype=object)/dpy
-            cSoils[y]=np.array(cSoil_ave, dtype=object)/dpy
+            cVegs[y]=cVeg_ave/steps_per_year
+            cLitters[y]=cLitter_ave/steps_per_year
+            cSoils[y]=cSoil_ave/steps_per_year
             
         return Observables(
             cVeg=cVegs,
             cSoil=cSoils,
             cLitter=cLitters,
             rh=rhs,
-            ra=ras
+            #ra=ras
         )
     
             #comment by cybian
@@ -730,97 +901,9 @@ def pesudo_yearly_to_monthly(yearly):
 
     return monthly_data
 
+# this function is deprecated - see general helpers traceability_iterator
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
 
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    par_dict={
-    Symbol(k): v for k,v in {
-        "beta_leaf": epa.beta_leaf,
-        "beta_wood": epa.beta_wood,
-        
-        "r_C_mll_rh": cpa.k_C_mll*(1 - cpa.r_C_mll_2_C_mic),
-        "r_C_mwl_rh": cpa.k_C_mwl*(1 - cpa.r_C_mwl_2_C_mic),
-        "r_C_mrl_rh": cpa.k_C_mrl*(1 - cpa.r_C_mrl_2_C_mic),
-        "r_C_sll_rh": cpa.k_C_sll*(1 - cpa.r_C_sll_2_C_mic),
-        "r_C_swl_rh": cpa.k_C_swl*(1 - cpa.r_C_swl_2_C_mic),
-        "r_C_srl_rh": cpa.k_C_srl*(1 - cpa.r_C_srl_2_C_mic),          
-        "r_C_lll_rh": cpa.k_C_lll*(-cpa.r_C_lll_2_C_nonprot - cpa.r_C_lll_2_C_prot + 1),
-        "r_C_lwl_rh": cpa.k_C_lwl*(-cpa.r_C_lwl_2_C_nonprot - cpa.r_C_lwl_2_C_prot + 1),
-        "r_C_lrl_rh": cpa.k_C_lrl*(-cpa.r_C_lrl_2_C_nonprot - cpa.r_C_lrl_2_C_prot + 1),            
-        "r_C_mic_rh": epa.k_C_mic*(-epa.r_C_mic_2_C_nonprot - epa.r_C_mic_2_C_prot + 1),           
-        "r_C_prot_rh": epa.k_C_protsom*(-epa.r_C_prot_2_C_mic - epa.r_C_prot_2_C_pass + 1),
-        "r_C_nonprot_rh": epa.k_C_nonprotsom*(-epa.r_C_nonprot_2_C_mic - epa.r_C_nonprot_2_C_pass + 1),            
-        "r_C_pass_rh": epa.k_C_passsom*(1 - cpa.r_C_pass_2_C_mic), 
-        
-        "r_C_leaf_2_C_lll": 1.0-(epa.r_C_leaf_2_C_mll + epa.r_C_leaf_2_C_sll),
-        "r_C_wood_2_C_lwl": 1.0-(epa.r_C_wood_2_C_mwl + epa.r_C_wood_2_C_swl),
-        "r_C_root_2_C_lrl": 1.0-(epa.r_C_root_2_C_mrl + epa.r_C_root_2_C_srl),
-        "r_C_mll_2_C_mic": cpa.r_C_mll_2_C_mic,
-        "r_C_mwl_2_C_mic": cpa.r_C_mwl_2_C_mic,
-        "r_C_mrl_2_C_mic": cpa.r_C_mrl_2_C_mic,
-        "r_C_sll_2_C_mic": cpa.r_C_sll_2_C_mic,
-        "r_C_swl_2_C_mic": cpa.r_C_swl_2_C_mic,
-        "r_C_srl_2_C_mic": cpa.r_C_srl_2_C_mic,
-        "r_C_pass_2_C_mic": cpa.r_C_pass_2_C_mic,
-        "r_C_lll_2_C_prot": cpa.r_C_lll_2_C_prot,
-        "r_C_lwl_2_C_prot": cpa.r_C_lwl_2_C_prot,
-        "r_C_lrl_2_C_prot": cpa.r_C_lrl_2_C_prot,
-        "r_C_lll_2_C_nonprot": cpa.r_C_lll_2_C_nonprot,
-        "r_C_lwl_2_C_nonprot": cpa.r_C_lwl_2_C_nonprot,
-        "r_C_lrl_2_C_nonprot": cpa.r_C_lrl_2_C_nonprot,
-
-        "r_C_leaf_2_C_mll": epa.r_C_leaf_2_C_mll,
-        "r_C_wood_2_C_mwl": epa.r_C_wood_2_C_mwl,
-        "r_C_root_2_C_mrl": epa.r_C_root_2_C_mrl,
-        "r_C_leaf_2_C_sll": epa.r_C_leaf_2_C_sll,
-        "r_C_wood_2_C_swl": epa.r_C_wood_2_C_swl,
-        "r_C_root_2_C_srl": epa.r_C_root_2_C_srl,
-        "r_C_prot_2_C_mic": epa.r_C_prot_2_C_mic,
-        "r_C_nonprot_2_C_mic": epa.r_C_nonprot_2_C_mic,
-        "r_C_mic_2_C_prot": epa.r_C_mic_2_C_prot,
-        "r_C_mic_2_C_nonprot": epa.r_C_mic_2_C_nonprot,
-        "r_C_prot_2_C_pass": epa.r_C_prot_2_C_pass,
-        "r_C_nonprot_2_C_pass": epa.r_C_nonprot_2_C_pass
-    }.items()
-}
-    X_0_dict={
-        "C_leaf":cpa.cVeg_0-(epa.C_wood_0 + epa.C_root_0),
-        "C_wood":epa.C_wood_0,            
-        "C_root":epa.C_root_0,
-
-        "C_mll":epa.C_mll_0,
-        "C_mwl":epa.C_mwl_0,
-        "C_mrl":epa.C_mrl_0,
-        "C_sll":epa.C_sll_0,
-        "C_swl":epa.C_swl_0,
-        "C_srl":epa.C_srl_0,
-        "C_lll":epa.C_lll_0,
-        "C_lwl":cpa.cLitter_0-(epa.C_mll_0 + epa.C_mwl_0 + epa.C_sll_0 + epa.C_swl_0 + epa.C_lll_0),
-        "C_lrl":epa.C_lrl_0,
-
-        "C_mic":epa.C_mic_0,
-        "C_prot":epa.C_prot_0,
-        "C_nonprot":epa.C_nonprot_0,
-        "C_pass":cpa.cSoil_0-(epa.C_mrl_0 + epa.C_srl_0 + epa.C_lrl_0 + epa.C_mic_0 + epa.C_prot_0 + epa.C_nonprot_0),
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(16,1)
-    fd=make_func_dict(mvs,dvs,cpa,epa)
-    V_init=gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
-    
 def numeric_X_0(mvs,dvs,cpa,epa):
     # This function creates the startvector for the pools
     # It can be used inside param_2_res and for other iterators that

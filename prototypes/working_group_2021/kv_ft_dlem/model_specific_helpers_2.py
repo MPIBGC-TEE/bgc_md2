@@ -65,7 +65,7 @@ def make_model_coord_transforms():
             lon2LON=lambda lon: lon,
             LON2lon=lambda LON: LON,
     )
-    
+
 
 def make_model_index_transforms():
     return gh.transform_maker(
@@ -197,6 +197,7 @@ def nc_file_name(nc_var_name):
 def nc_global_mean_file_name(nc_var_name):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
+# +
 def get_global_mean_vars(dataPath):
     o_names=Observables._fields
     d_names=Drivers._fields
@@ -220,17 +221,32 @@ def get_global_mean_vars(dataPath):
     else:
         # we now check if any of the arrays has a time lime containing nan values 
         # APART FROM values that are already masked by the fillvalue
-        print("computing masks to exclude pixels with nan entries, this may take some minutes...")
-        def f(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
-            #scale fluxes vs pools
-            var =ds.variables[vn]
-            return gh.get_nan_pixel_mask(var)
+#         print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+#         def f(vn):
+#             path = dataPath.joinpath(nc_file_name(vn))
+#             ds = nc.Dataset(str(path))
+#             #scale fluxes vs pools
+#             var =ds.variables[vn]
+#             return gh.get_nan_pixel_mask(var)
 
-        masks=[ f(name)    for name in names ]
-        # We compute the common mask so that it yields valid pixels for ALL variables 
-        combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+#         masks=[ f(name)    for name in names ]
+#         # We compute the common mask so that it yields valid pixels for ALL variables 
+#         combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+        
+        gm=gh.globalMask()
+        # load an example file with mask
+        template = nc.Dataset(dataPath.joinpath("DLEM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        gcm=gh.project_2(
+                source=gm,
+                target=gh.CoordMask(
+                    index_mask=np.zeros_like(template),
+                    tr=gh.SymTransformers(
+                        ctr=make_model_coord_transforms(),
+                        itr=make_model_index_transforms()
+                    )
+                )
+        )
+
         print("computing means, this may also take some minutes...")
 
         def compute_and_cache_global_mean(vn):
@@ -247,7 +263,7 @@ def get_global_mean_vars(dataPath):
             gm=gh.global_mean_var(
                     lats,
                     lons,
-                    combined_mask,
+                    gcm.index_mask,
                     var
             )
             #scale per second to per day before caching
@@ -266,6 +282,9 @@ def get_global_mean_vars(dataPath):
             Observables(*map(compute_and_cache_global_mean, o_names)),
             Drivers(*map(compute_and_cache_global_mean, d_names))
         )
+
+
+# -
 
 def make_iterator_sym(
         mvs,
@@ -525,50 +544,8 @@ def make_weighted_cost_func(
         return J_new
     return costfunction
 
-
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict=gh.make_param_dict(mvs,cpa,epa)
-    X_0_dict={
-        "C_leaf": apa['C_leaf_0'],
-        "C_wood": apa['C_wood_0'],
-        "C_root": apa['cVeg_0'] - (
-            apa['C_leaf_0'] + 
-            apa['C_wood_0']
-            ),
-        "C_aom1": apa['C_aom1_0'],
-        "C_aom2": apa['cLitter_0'] - apa['C_aom1_0'],
-        "C_smb1": apa['C_smb1_0'],
-        "C_smb2": apa['C_smb2_0'],
-        "C_smr": apa['C_smr_0'],
-        "C_nom": apa['C_nom_0'],
-        "C_dom": apa['C_dom_0'],
-        "C_psom": apa['cSoil_0'] - (
-            apa['C_smb1_0'] +
-            apa['C_smb2_0'] +
-            apa['C_smr_0'] +
-            apa['C_nom_0'] +
-            apa['C_dom_0'] 
-        )
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(len(X_0_dict),1)
-    fd=make_func_dict(mvs,dvs)
-    V_init = gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
+# this function is deprecated - see general helpers traceability_iterator
+# def make_traceability_iterator(mvs,dvs,cpa,epa):
 
 
 def numeric_X_0(mvs,dvs,cpa,epa):

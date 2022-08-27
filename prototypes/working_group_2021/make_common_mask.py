@@ -11,7 +11,8 @@ model_folders = [
     'Aneesh_SDGVM',
     'kv_ft_dlem',
     'kv_visit2',
-    'jon_yib'
+    'jon_yib',
+    'bian_ibis2'
 ]
 
 
@@ -20,7 +21,6 @@ def mask(mf):
     print("#######   {}   ######".format(mf))
     msh = gh.msh(mf)
     return msh.spatial_mask(Path(gh.confDict(mf)['dataPath']))
-
 
 masks = list(
     map(
