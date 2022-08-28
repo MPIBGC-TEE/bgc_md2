@@ -6,7 +6,11 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
+<<<<<<< HEAD
 #       jupytext_version: 1.13.6
+=======
+#       jupytext_version: 1.11.1
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -123,14 +127,21 @@ xs_rel_err_da = xs_abs_err_da/xs_da * 100
 # age moment vectors
 mean_pool_age_vector_da = data_da[:, :, :, :, 1, :]
 pool_age_moment_vector_2_da = data_da[:, :, :, :, 2, :]
+<<<<<<< HEAD
 pool_age_moment_vector_3_da = data_da[:, :, :, :, 3, :]
 pool_age_moment_vector_4_da = data_da[:, :, :, :, 4, :]
+=======
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 pool_age_sd_vector_da = da.sqrt(pool_age_moment_vector_2_da - mean_pool_age_vector_da**2)
 
 # system age moments
 mean_system_age_da = (solution_da * mean_pool_age_vector_da).sum(-1) / solution_da.sum(-1)
 system_age_moment_2_da = (solution_da * pool_age_moment_vector_2_da).sum(-1) / solution_da.sum(-1)
+<<<<<<< HEAD
 system_age_sd_da = da.sqrt(system_age_moment_2_da - mean_system_age_da)
+=======
+system_age_sd_da = da.sqrt(system_age_moment_2_da - mean_system_age_da**2)
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 
 ## pool age median and quantiles
 #pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
@@ -157,6 +168,7 @@ elif model_type == "discrete":
     btt_moment_4_da = (acc_net_external_output_vector_da * pool_age_moment_vector_4_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
 else:
     raise(TypeError("unknown model type '%s'" % model_type))
+<<<<<<< HEAD
 
 # backward transtit time standard deviation
 btt_sd_da = np.sqrt(btt_moment_2_da - mean_btt_da**2)
@@ -164,6 +176,9 @@ btt_sd_da = np.sqrt(btt_moment_2_da - mean_btt_da**2)
 # backward transit time skewness and kurtosis
 btt_skewness_da = (btt_moment_3_da - 3*mean_btt_da*btt_sd_da - mean_btt_da**3) / btt_sd_da**3
 btt_kurtosis_da = (btt_moment_4_da - 4*mean_btt_da*btt_moment_3_da + 6*mean_btt_da**2*btt_moment_2_da - 3*mean_btt_da**4) / btt_sd_da**4
+=======
+btt_sd_da = np.sqrt(btt_moment_2_da - mean_btt_da**2)
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 
 # backward transit time median and quantiles
 btt_median_da = da.from_zarr(str(project_path.joinpath("btt_median")))
