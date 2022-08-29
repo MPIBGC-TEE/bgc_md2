@@ -66,6 +66,12 @@ class OutFluxesBySymbol(DictLike):
 class InternalFluxesBySymbol(DictLike):
     pass
 
+class ConstOutFluxRatesBySymbol(DictLike):
+    pass
+
+
+class ConstInternalFluxRateesBySymbol(DictLike):
+    pass
 
 class CarbonInFluxesBySymbol(DictLike):
     pass
@@ -87,6 +93,14 @@ class VegetationCarbonInternalFluxesBySymbol(DictLike):
     pass
 
 
+class AggregatedVegetation2SoilCarbonFlux(Expr):
+    pass
+
+
+#class AggregatedSoil2VegetationCarbonFlux(Expr):
+#    pass
+#
+
 class CarbonInternalFluxesBySymbol(DictLike):
     pass
 
@@ -102,9 +116,18 @@ class NitrogenOutFluxesBySymbol(DictLike):
 class NitrogenInternalFluxesBySymbol(DictLike):
     pass
 
+
 class TimeSymbol(Symbol):
-    # should become a quantity with dimension time
     pass
+
+
+class Temperature(Expr):
+    pass
+
+
+class LuoXiBySymbol(DictLike):
+    pass
+
 
 from mpmath.matrices.matrices import _matrix
 
@@ -166,6 +189,9 @@ class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...
     pass
 
+class LuoXiDiagonalMatrix(MatrixLike):
+    pass
+
 class StateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
@@ -206,6 +232,7 @@ class CarbonStoragePotential(ColumnVectorLike):
     # C_p=M_inv(t) dx/dt
     pass
 
+
 class VegetationCarbonStateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
@@ -219,6 +246,7 @@ class VegetationCarbonStateVariableTuple(ColumnVectorLike):
     be consistent."""
     pass
 
+
 class CarbonStateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
@@ -229,6 +257,19 @@ class CarbonStateVariableTuple(ColumnVectorLike):
     on a physical level the coordinate based variables like the
     VegetationInputTuple or the VegetationInputTupleCompartmentalMatrix depend
     on the ordering and have to be consistent."""
+    pass
+
+
+class SoilCarbonStateVariableTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """Defines the set and ordering of the soil carbon state variables.  The
+    order defines the order of the axes in a carbon related coordinate system
+    and thereby the interpretation of all tuple or matrix related soil carbon
+    variables.  Although two models with identical carbon fluxes between their
+    pools are identical on a physical level the coordinate based variables like
+    the SoilCarbonInputTuple or the SoilCarbonCompartmentalMatrix depend on the
+    ordering and have to be consistent."""
     pass
 
 
@@ -284,7 +325,11 @@ class VegetationCarbonInputScalar(Expr):
     pass
 
 
-#class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
+class CarbonInputScalar(Expr):
+    pass
+
+
+# class CompartmentalMatrix(ImmutableMatrix, MatrixExpr):
 class CompartmentalMatrix(MatrixLike):
     """Create a CompartmentalMatrix (which is immutable).
 
@@ -303,6 +348,11 @@ class CompartmentalMatrix(MatrixLike):
     ...
     TypeError: Cannot set values of CompartmentalMatrix
     """
+    pass
+
+
+class LuoTau(MatrixLike):
+    """The inverse of the CompartmentalMatrix """
     pass
 
 
@@ -326,6 +376,7 @@ class CarbonCompartmentalMatrix(MatrixLike):
     """
     pass
 
+
 class NitrogenCompartmentalMatrix(MatrixLike):
     """Create a CompartmentalMatrix (which is immutable).
 
@@ -346,22 +397,39 @@ class NitrogenCompartmentalMatrix(MatrixLike):
     """
     pass
 
+class CarbonInputPartitioningTuple(ColumnVectorLike):
+    """The partitioning components vector
+    The order will affect the CarbonInput"""
+    pass
+
+class LuoRT(ColumnVectorLike):
+    """The product of allocation vector with
+    The inverse compartmental matrix.
+    In Yiqi Luo's nomenclature called
+    Residence Time (RT)
+    For a system in equilibrium this coinciedes with 
+    the mean backward transit time.
+    """
+    pass
+
+
+
 class VegetationCarbonInputPartitioningTuple(ColumnVectorLike):
-    # fixme mm 02/14/2021
-    # Check that we only allow column vectors
     """The partitioning components vector
     The order will affect the VegetationCarbonInput"""
     pass
 
 
 class VegetationCarbonCompartmentalMatrix(MatrixLike):  # cycling matrix
-    """Create a CompartmentalMatrix for the vegetation part only.
-    Note that for the same physical model this matrix can take different shapes, depending
-    on the order of the vegetation state variables (as defined via the VegetationStateVariableTuple)
+    """Create a CompartmentalMatrix for the vegetation part only.  Note that
+    for the same physical model this matrix can take different shapes,
+    depending on the order of the vegetation state variables (as defined via
+    the VegetationStateVariableTuple)
     
-    It is more likely that you will NOT create this matrix yourself since it can easily be computed
-    from the VegetationCarbonStateVariables and the CompartmentalMatrix for the whole system. 
-    Note that the resulting matrix is immuatable.
+    It is more likely that you will NOT create this matrix yourself since it
+    can easily be computed from the VegetationCarbonStateVariables and the
+    CompartmentalMatrix for the whole system.  Note that the resulting matrix
+    is immuatable.
     Examples
     ========
 

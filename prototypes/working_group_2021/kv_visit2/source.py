@@ -7,7 +7,12 @@ from bgc_md2.resolve.mvars import (
     OutFluxesBySymbol,
     InternalFluxesBySymbol,
     TimeSymbol,
+    Temperature,
     StateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
+    CarbonStateVariableTuple,
+    LuoXiBySymbol,
 )
 import bgc_md2.resolve.computers as bgc_c
 
@@ -65,18 +70,34 @@ for k in func_dict.keys():
 t=TimeSymbol("t")
 TAS_C=TAS(t)-273.15
 TS = 0.748*TAS_C + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-xi=Piecewise(
-    (exp(E*(1/(10-T_0)-1/(TS-T_0))) * mrso(t)/(KM+mrso(t)),TS > T_0),
-    (0,True)
-)
+#xi=Piecewise(
+#    (exp(E*(1/(10-T_0)-1/(TS-T_0))) * mrso(t)/(KM+mrso(t)),TS > T_0),
+#    (0,True)
+#)
+xi= exp(E*(1/(10-T_0)-1/(TS-T_0))) * mrso(t)/(KM+mrso(t))
 beta_root = 1.0- (beta_leaf+beta_wood)
-mvs = CMTVS(
-    {
-        t,
-        StateVariableTuple((
+svt= (
             C_leaf,
 	        C_wood,
 	        C_root,
+	        C_leaf_litter,
+	        C_wood_litter,
+	        C_root_litter,
+	        C_soil_fast,
+	        C_soil_slow,
+	        C_soil_passive,
+)
+mvs = CMTVS(
+    {
+        t,
+        StateVariableTuple(svt),
+        CarbonStateVariableTuple(svt), # the same since we here have only carbon pools
+        VegetationCarbonStateVariableTuple((
+            C_leaf,
+	        C_wood,
+	        C_root,
+        )),
+        SoilCarbonStateVariableTuple((
 	        C_leaf_litter,
 	        C_wood_litter,
 	        C_root_litter,
@@ -101,6 +122,16 @@ mvs = CMTVS(
                 C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,
             }
         ),
+        LuoXiBySymbol(
+            {
+                C_leaf_litter: xi,
+                C_wood_litter: xi,
+                C_root_litter: xi,
+                C_soil_fast: xi,
+                C_soil_slow: xi,
+                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,
+            }
+        ),
         InternalFluxesBySymbol(
             {
                 (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
@@ -117,6 +148,7 @@ mvs = CMTVS(
                 (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi,
             }
         ),
+        Temperature(TAS),
         BibInfo(# Bibliographical Information
             name="Visit",
             longName="",

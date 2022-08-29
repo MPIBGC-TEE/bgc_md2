@@ -1,7 +1,7 @@
 import sys
 import json 
 from pathlib import Path
-from collections import namedtuple 
+from collections import namedtuple
 import netCDF4 as nc
 import numpy as np
 from sympy import Symbol
@@ -414,8 +414,8 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(9,1)
-    fd=make_func_dict(mvs,dvs,epa)
-    V_init=gh.make_InitialStartVectorTrace(
+    fd = make_func_dict(mvs, dvs, cpa, epa)
+    V_init = gh.make_InitialStartVectorTrace(
             X_0,mvs,
             par_dict=par_dict,
             func_dict=fd

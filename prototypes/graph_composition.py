@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -17,14 +17,14 @@ from IPython.display import HTML
 
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# #%load_ext autoreload
+# %load_ext autoreload
 # %autoreload 2
 import bgc_md2.helper as h
 
 model_inspection = h.MvarSetInspectionBox()
 
 from bgc_md2.resolve.mvars import CompartmentalMatrix, StateVariableTuple, VegetationCarbonInputPartitioningTuple,VegetationCarbonInputTuple
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS
 from sympy import Matrix,Symbol,symbols
 import networkx as nx
 
@@ -51,7 +51,12 @@ import networkx as nx
 # From these we chose two models to investigate more thoroughly.
 #
 
-mvs_mm =  MVarSet.from_model_name('TECOmm')
+# +
+from importlib import import_module
+
+mvs_mm=import_module("bgc_md2.models.TECOmm.source").mvs 
+mvs_mm.get_StateVariableTuple()
+# -
 
 combined = (
     set(mvs_mm.get_StateVariableTuple()),
@@ -65,7 +70,7 @@ sv_set_veg = frozenset(mvs_mm.get_VegetationCarbonStateVariableTuple())
 C_foliage,C_wood,C_roots,C_metlit,C_stlit,C_fastsom,C_slowsom,C_passsom=symbols("C_foliage,C_wood,C_roots,C_metlit,C_stlit,C_fastsom,C_slowsom,C_passsom")
 # state_vector_soil = Matrix([C_fastsom,C_slowsom,C_passsom])
 # Probably the litter pools would be also  considered to be part of the soil subsystem.
-# I just wanted to show that the division does not have tp be complete
+# I just wanted to show that the disassembly does not have tp be complete
 state_vector_soil = Matrix([C_metlit,C_stlit,C_fastsom,C_slowsom,C_passsom])
 sv_set_soil = frozenset({sv for sv in state_vector_soil})
 
@@ -223,7 +228,7 @@ def virtual_to_internal(
     g.remove_node(v_in)
     g.add_edge(m,n) # to do: add expression that was saved
     return g
-    
+
 
 
 g1=virtual_to_internal(g0,(C_roots,Symbol('v_out_from_C_roots_to_C_metlit')),(Symbol('v_in_from_C_roots_to_C_metlit'),C_metlit))
@@ -252,6 +257,8 @@ g5=virtual_to_internal(g4,(C_foliage,Symbol('v_out_from_C_foliage_to_C_stlit')),
 # %matplotlib notebook
 ax1=plt.subplot(1,1,1)
 plot(g5,ax1,pos,sv_set_veg,sv_set_soil)
+
+
 
 
 

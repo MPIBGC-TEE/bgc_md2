@@ -248,7 +248,9 @@ class Test_general_helpers(InDirTest):
         ref[1,1,3]=np.nan
         mask=np.zeros((n_t,n_lats,n_lons))
         ma_arr=np.ma.array(ref,mask=mask)
-        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=True)
+        # diskless would require different filenames in different
+        # tests making them depend on each other
+        ds = nc.Dataset('example.nc','w')#,diskless=True,persist=False)
         time = ds.createDimension('time',size=n_t)
         lat = ds.createDimension('lat',size=n_lats)
         lon = ds.createDimension('lon',size=n_lons)
@@ -259,8 +261,9 @@ class Test_general_helpers(InDirTest):
             ((1,3),(2,3)),
             gh.get_nan_pixels(test)
         )
+        ds.close()
 
-    def test_get_nan_pixel_mask(self):
+    def test_get_nan_pixel_mask_3D(self):
         n_t=2
         n_lats=3
         n_lons=4
@@ -270,7 +273,9 @@ class Test_general_helpers(InDirTest):
         mask=np.zeros((n_t,n_lats,n_lons),dtype=np.bool_)
         mask[:,0,0]=True
         ma_arr=np.ma.array(arg,mask=mask)
-        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=False)
+        # diskless would require different filenames in different
+        # tests making them depend on each other
+        ds = nc.Dataset('example.nc','w')#,diskless=True,persist=False)
         time = ds.createDimension('time',size=n_t)
         lat = ds.createDimension('lat',size=n_lats)
         lon = ds.createDimension('lon',size=n_lons)
@@ -289,7 +294,9 @@ class Test_general_helpers(InDirTest):
         ds.close()
 
         ma_arr=np.ma.array(arg,mask=False)
-        ds = nc.Dataset('diskless_example1.nc','w',diskless=True,persist=False)
+        # diskless would require different filenames in different
+        # tests making them depend on each other
+        ds = nc.Dataset('example1.nc','w')#,diskless=True,persist=False)
         time = ds.createDimension('time',size=n_t)
         lat = ds.createDimension('lat',size=n_lats)
         lon = ds.createDimension('lon',size=n_lons)
@@ -303,6 +310,9 @@ class Test_general_helpers(InDirTest):
             (ref_mask == res).all()
         )
         ds.close()
+
+
+    def test_get_nan_pixel_mask_4D(self):
         # 4-D-example
         n_t=2
         n_d=3
@@ -314,7 +324,9 @@ class Test_general_helpers(InDirTest):
         mask=np.zeros((n_t,n_d,n_lats,n_lons),dtype=np.bool_)
         mask[:,0,0,0]=True
         ma_arr=np.ma.array(arg,mask=mask)
-        ds = nc.Dataset('diskless_example.nc','w',diskless=True,persist=False)
+        # diskless would require different filenames in different
+        # tests making them depend on each other
+        ds = nc.Dataset('example.nc','w')#,diskless=True,persist=False)
         time = ds.createDimension('time',size=n_t)
         depth = ds.createDimension('depth',size=n_d)
         lat = ds.createDimension('lat',size=n_lats)
@@ -322,13 +334,39 @@ class Test_general_helpers(InDirTest):
         test_var=ds.createVariable("test_var",np.float64,['time','depth','lat','lon'])
         test_var[:,:,:,:]=ma_arr
         
+        ref_mask=np.zeros((n_lats,n_lons),dtype=np.bool_) #2 dimensional
+        # NAN contribution
+        ref_mask[2,3]=True
+        ref_mask[1,3]=True
+        # mask contribution
+        ref_mask[0,0]=True
+
         res = gh.get_nan_pixel_mask(test_var)
-        from IPython import embed;embed()
         self.assertTrue(
-            (ref_mask == res).all()
+            np.all(ref_mask == res)
         )
         ds.close()
 
+    def test_covariance_allocation(self):
+        ts=np.linspace(0,2*np.pi,10000)
+        x1s=np.sin(ts)
+        x2s=np.cos(ts)
+        ys=1*x1s+x2s
+    
+        def cov_mat(a,b):
+            return np.cov(a,b,bias=True)
+
+        def sum_attribution(y,x1,x2):
+            cm1=cov_mat(x1,y)
+            var_y = cm1[1, 1] 
+            cov_x1_y = cm1[0, 1] 
+            
+            cm2=cov_mat(x2,y)
+            cov_x2_y = cm2[0, 1] 
+
+            return tuple((c/var_y for c in (cov_x1_y,cov_x2_y)))
+        print(sum_attribution(ys,x1s,x2s))  
+        print(np.sum(sum_attribution(ys,x1s,x2s)))  
 
     def test_globalmean_var(self):
         # we create data similar to cmip6 and trendy. These are masked arrays:
@@ -641,18 +679,18 @@ class Test_general_helpers(InDirTest):
         with self.assertRaises(IndexError):
             lon = tr.i2lon(n_lon)
 
-        # test the inverse property (under too large indices)
-        for i in range(0,n_lat):
-            lat=tr.i2lat(i)
-            ii=tr.lat2i(lat)
-            #print("i={i},lat={lat},ii={ii}".format(i=i,lat=lat,ii=ii))
-            self.assertEqual(ii,i)
+        ## test the inverse property (under too large indices)
+        #for i in range(0,n_lat):
+        #    lat=tr.i2lat(i)
+        #    ii=tr.lat2i(lat)
+        #    #print("i={i},lat={lat},ii={ii}".format(i=i,lat=lat,ii=ii))
+        #    self.assertEqual(ii,i)
 
-        for i in range(0,n_lon):
-            lon=tr.i2lon(i)
-            ii=tr.lon2i(lon)
-            #print("i={i},lon={lon},ii={ii}".format(i=i,lon=lon,ii=ii))
-            self.assertEqual(tr.lon2i(tr.i2lon(i)),i)
+        #for i in range(0,n_lon):
+        #    lon=tr.i2lon(i)
+        #    ii=tr.lon2i(lon)
+        #    #print("i={i},lon={lon},ii={ii}".format(i=i,lon=lon,ii=ii))
+        #    self.assertEqual(tr.lon2i(tr.i2lon(i)),i)
 
 
 
@@ -793,11 +831,11 @@ class Test_general_helpers(InDirTest):
         )
         f=plt.figure()
         ax=f.add_subplot(3,1,1)
-        cm_1.plot(ax)
+        cm_1.plot_dots(ax)
         ax=f.add_subplot(3,1,2)
-        cm_2.plot(ax)
+        cm_2.plot_dots(ax)
         ax=f.add_subplot(3,1,3)
-        res.plot(ax)
+        res.plot_dots(ax)
         f.savefig("cms.pdf")
         #raise "the plot shows that something goes definitely wrong"
         #m_ref=np.array([1,1,0,0]).reshape(4,1)
@@ -865,11 +903,11 @@ class Test_general_helpers(InDirTest):
         )
         f=plt.figure()
         ax=f.add_subplot(3,1,1)
-        cm_1.plot(ax)
+        cm_1.plot_dots(ax)
         ax=f.add_subplot(3,1,2)
-        cm_2.plot(ax)
+        cm_2.plot_dots(ax)
         ax=f.add_subplot(3,1,3)
-        res.plot(ax)
+        res.plot_dots(ax)
         f.savefig("cms.pdf")
         #raise "the plot shows that something goes definitely wrong"
         #m_ref=np.array([1,1,0,0]).reshape(4,1)
@@ -946,14 +984,19 @@ class Test_general_helpers(InDirTest):
             return  2*np.ones(shape=(2,1))
         
         X_0=np.array([2,1]).reshape(2,1)
-
-        V_init = gh.trace_tuple_instance(
+        traced_functions={
+         # in our case X has 
+         'test': lambda i,x1,x2: x1**2
+        }
+        trace_tuple_instance = gh.make_trace_tuple_func(traced_functions)
+        V_init = trace_tuple_instance(
             X_0,
             # in Yiqi's nomenclature: dx/dt=I-Bx 
             # instead of           : dx/dt=I+Bx 
             # as assumed by B_u_func  
             - B_func(0,X_0), 
-            I_func(0,X_0)
+            I_func(0,X_0),
+            0
         )
    
         # define the function with V_{i+1}=f(i,V_i)
@@ -965,7 +1008,7 @@ class Test_general_helpers(InDirTest):
                 I = I_func(it,X) 
                 B = B_func(it,X)
                 X_new= X + I + B @ X
-                return gh.trace_tuple_instance(X_new,-B,I)
+                return trace_tuple_instance(X_new,-B,I,it)
         
         itr=gh.TraceTupleIterator(
                 x0=V_init,
@@ -981,7 +1024,7 @@ class Test_general_helpers(InDirTest):
                         results_1.__getattribute__(name) 
                         == results_2.__getattribute__(name)
                     )
-                    for name in gh.TraceTuple._fields
+                    for name in results_1._fields
                 )
             )
         )
