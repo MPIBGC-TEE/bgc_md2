@@ -173,6 +173,8 @@ cpa=msh.Constants(
 # You don't have to do this. It's a heuristic approach to find a better starting position.
 # -
 
+cpa
+
 from sympy import Symbol
 par_dict={
     Symbol(k):v for k,v in 
