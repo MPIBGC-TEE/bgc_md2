@@ -58,7 +58,6 @@ from bgc_md2.resolve.mvars import (
 
 # ### Selecting models to compare
 
-# +
 # define models to compare as a dictionary (folder name : model name)
 model_names={
     "yz_jules": "JULES",
@@ -71,19 +70,6 @@ model_names={
     #"ORCHIDEE-V2":"OCN",
 }
 
-# selecting colors for plotting models
-model_cols={
-    "yz_jules": "blue",
-    "kv_visit2": "orange",
-    "jon_yib": "green",
-    "kv_ft_dlem": "red",
-    "Aneesh_SDGVM":"yellow",
-    "cj_isam": "purple",
-    "bian_ibis2":"magenta",
-    "ORCHIDEE-V2":"teal",
-}
-# -
-
 # ### Exploring model structures
 
 # bgc_md2 automatically generates a flow diagram, input allocation vector and compartmental matrix for each model
@@ -92,9 +78,10 @@ comparison_table
 
 # ### Loading TRENDY data and model parameters
 
-# +
 # define same step size for each model (in days)
 delta_t_val=30
+
+# +
 # load data and parameters
 model_folders=[(k) for k in model_names]
 test_arg_list=gh.get_test_arg_list(model_folders)
@@ -107,8 +94,11 @@ test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
 # ### Checking data assimilation quality for all models
 
-import matplotlib.lines as mlines
 plt.rcParams.update({'font.size': 32})
+
+# +
+import matplotlib.lines as mlines
+
 for j, mf in enumerate(model_folders):
     print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
     print ('\033[0m')
@@ -141,25 +131,27 @@ for j, mf in enumerate(model_folders):
         axs[i].set_ylabel('Original Trendy output')
         axs[i].grid()
     plt.show()
+# -
 
 
 # ### Plots of traceable components
 
-plt.rcParams.update({'font.size': 18})
-var_names={
-    "x": "X and X_c",
-    #"x_p": "X_p",
-    "u": "C input",
-    "rt": "Residence time",
-}
-gh.plot_components_combined(model_names=model_names,
-                        test_arg_list=test_arg_list,   
-                        var_names=var_names,
-                        delta_t_val=delta_t_val,
-                        model_cols=model_cols,
-                        part=1,
-                        averaging=12*30//delta_t_val # yearly averaging
-                       )
+# +
+# plt.rcParams.update({'font.size': 18})
+# var_names={
+#     "x": "X and X_c",
+#     #"x_p": "X_p",
+#     "u": "C input",
+#     "rt": "Residence time",
+# }
+# gh.plot_components_combined(model_names=model_names,
+#                         test_arg_list=test_arg_list,   
+#                         var_names=var_names,
+#                         delta_t_val=delta_t_val,
+#                         model_cols=model_cols,
+#                         part=1,
+#                         averaging=12*30//delta_t_val # yearly averaging
+#                        )
 
 # +
 # gh.plot_x_xc(model_names=model_names,
@@ -170,34 +162,36 @@ gh.plot_components_combined(model_names=model_names,
 #              averaging=12,
 #              overlap=True
 #              )
-# -
 
-gh.plot_normalized_x(model_names=model_names,
-                     delta_t_val=delta_t_val,
-                     test_arg_list=test_arg_list,
-                     model_cols=model_cols,
-                     part=1,
-                     averaging=12*30//delta_t_val,
-                     overlap=True
-                     )
+# +
+# gh.plot_normalized_x(model_names=model_names,
+#                      delta_t_val=delta_t_val,
+#                      test_arg_list=test_arg_list,
+#                      model_cols=model_cols,
+#                      part=1,
+#                      averaging=12*30//delta_t_val,
+#                      overlap=True
+#                      )
 
-gh.plot_normalized_xc(model_names=model_names,
-                      test_arg_list=test_arg_list,
-                      delta_t_val=delta_t_val, 
-                      model_cols=model_cols,
-                      part=1,
-                      averaging=12*30*5//delta_t_val,
-                      overlap=True
-                     )
+# +
+# gh.plot_normalized_xc(model_names=model_names,
+#                       test_arg_list=test_arg_list,
+#                       delta_t_val=delta_t_val, 
+#                       model_cols=model_cols,
+#                       part=1,
+#                       averaging=12*30*5//delta_t_val,
+#                       overlap=True
+#                      )
 
-gh.plot_xp(model_names=model_names,
-           test_arg_list=test_arg_list,
-           delta_t_val=delta_t_val, 
-           model_cols=model_cols,
-           part=1,
-           averaging=12*30*5//delta_t_val,
-           overlap=True
-          )
+# +
+# gh.plot_xp(model_names=model_names,
+#            test_arg_list=test_arg_list,
+#            delta_t_val=delta_t_val, 
+#            model_cols=model_cols,
+#            part=1,
+#            averaging=12*30*5//delta_t_val,
+#            overlap=True
+#           )
 
 # +
 # gh.plot_u(model_names=model_names,
@@ -208,16 +202,16 @@ gh.plot_xp(model_names=model_names,
 #           averaging=30*12*5//delta_t_val,
 #           overlap=True
 #          )
-# -
 
-gh.plot_normalized_u(model_names=model_names,
-                     test_arg_list=test_arg_list,
-                     delta_t_val=delta_t_val, 
-                     model_cols=model_cols,
-                     part=1,
-                     averaging=12*30*5//delta_t_val,
-                     overlap=True
-                     )
+# +
+# gh.plot_normalized_u(model_names=model_names,
+#                      test_arg_list=test_arg_list,
+#                      delta_t_val=delta_t_val, 
+#                      model_cols=model_cols,
+#                      part=1,
+#                      averaging=12*30*5//delta_t_val,
+#                      overlap=True
+#                      )
 
 # +
 # gh.plot_rt(model_names=model_names,
@@ -228,16 +222,17 @@ gh.plot_normalized_u(model_names=model_names,
 #            averaging=12*30//delta_t_val,
 #            overlap=True
 #           )
-# -
 
-gh.plot_normalized_rt(model_names=model_names,
-                      test_arg_list=test_arg_list,
-                     delta_t_val=delta_t_val, 
-                     model_cols=model_cols,
-                     part=1,
-                     averaging=12*30*5//delta_t_val,
-                     overlap=True
-                     )
+# +
+# gh.plot_normalized_rt(model_names=model_names,
+#                       test_arg_list=test_arg_list,
+#                      delta_t_val=delta_t_val, 
+#                      model_cols=model_cols,
+#                      part=1,
+#                      averaging=12*30*5//delta_t_val,
+#                      overlap=True
+#                      )
+# -
 
 # ## Contribution of Residense Time and C Input to the Differences in C Storage Capacity
 
@@ -257,47 +252,122 @@ gh.plot_normalized_rt(model_names=model_names,
 #     part=1
 # )
 
-# -
-
-count_rt_weighted=0
-count_u_weighted=0
-count_combined_weighted=0
-count_delta_x_c=0
-for i in range(len(model_folders)-1):
-    j=i
-    while j<len(model_folders)-1:
-        j+=1
-        mf_1=model_folders[i]
-        mf_2=model_folders[j]
-        ta_1=test_arg_list[i]
-        ta_2=test_arg_list[j]
-        print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-        rt,u,combined,delta_x_c=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-        count_rt_weighted=count_rt_weighted+rt*abs(delta_x_c)
-        count_u_weighted=count_u_weighted+u*abs(delta_x_c)
-        count_combined_weighted=count_combined_weighted+combined*abs(delta_x_c)
-        count_delta_x_c=count_delta_x_c+abs(delta_x_c)
 
 # +
-overall_rt_perc=count_rt_weighted/count_delta_x_c
-overall_u_perc=count_u_weighted/count_delta_x_c
-overall_combined_perc=count_combined_weighted/count_delta_x_c
+# count_rt_weighted=0
+# count_u_weighted=0
+# count_combined_weighted=0
+# count_delta_x_c=0
+# for i in range(len(model_folders)-1):
+#     j=i
+#     while j<len(model_folders)-1:
+#         j+=1
+#         mf_1=model_folders[i]
+#         mf_2=model_folders[j]
+#         ta_1=test_arg_list[i]
+#         ta_2=test_arg_list[j]
+#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
+#         rt,u,combined,delta_x_c=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
+#         count_rt_weighted=count_rt_weighted+rt*abs(delta_x_c)
+#         count_u_weighted=count_u_weighted+u*abs(delta_x_c)
+#         count_combined_weighted=count_combined_weighted+combined*abs(delta_x_c)
+#         count_delta_x_c=count_delta_x_c+abs(delta_x_c)
 
-# Pie chart, where the slices will be ordered and plotted counter-clockwise:
-fig1=plt.figure(figsize=(8,8))
-ax1 = fig1.subplots()
-if overall_combined_perc > 0.001:
-    ax1.pie([overall_rt_perc, overall_combined_perc, overall_u_perc], 
-            labels=('$\Delta$ RT', ' $\Delta$ u * $\Delta$ RT', '$\Delta$ u'), 
-            autopct='%1.1f%%',
-            startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
-else: 
-    ax1.pie([overall_rt_perc, overall_u_perc], 
-            labels= ('$\Delta$ RT', '$\Delta$ u'), 
-            autopct='%1.1f%%',
-            startangle=90, counterclock=False, colors=("darkorange", "green"))    
-ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Across All Pairs of Models')
-plt.show()
+# +
+# overall_rt_perc=count_rt_weighted/count_delta_x_c
+# overall_u_perc=count_u_weighted/count_delta_x_c
+# overall_combined_perc=count_combined_weighted/count_delta_x_c
+
+# # Pie chart, where the slices will be ordered and plotted counter-clockwise:
+# fig1=plt.figure(figsize=(8,8))
+# ax1 = fig1.subplots()
+# if overall_combined_perc > 0.001:
+#     ax1.pie([overall_rt_perc, overall_combined_perc, overall_u_perc], 
+#             labels=('$\Delta$ RT', ' $\Delta$ u * $\Delta$ RT', '$\Delta$ u'), 
+#             autopct='%1.1f%%',
+#             startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
+# else: 
+#     ax1.pie([overall_rt_perc, overall_u_perc], 
+#             labels= ('$\Delta$ RT', '$\Delta$ u'), 
+#             autopct='%1.1f%%',
+#             startangle=90, counterclock=False, colors=("darkorange", "green"))    
+# ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+# ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Across All Pairs of Models')
+# plt.show()
 # -
+plt.rcParams.update({'font.size': 16})
+
+model_cols={
+    "JULES": "blue",
+    "VISIT": "orange",
+    "YIBs": "green",
+    "DLEM": "red",
+    "SDGVM":"yellow",
+    "ISAM": "purple",
+    "IBIS":"magenta",
+    "OCN":"teal",
+}
+
+all_comp_dict= gh.get_traceable_components(model_names=model_names,
+             test_arg_list=test_arg_list,
+             delta_t_val=delta_t_val, 
+             model_cols=model_cols,
+             part=1,
+             averaging=12*30//delta_t_val, # yearly averaging
+             overlap=True
+             )
+
+gh.plot_traceable_component(
+    all_comp_dict,
+    "x_x_c",
+    model_cols,
+    #delta=True,
+)
+
+gh.plot_traceable_component(
+    all_comp_dict,
+    "x",
+    model_cols,
+    delta=True,
+)
+
+gh.plot_traceable_component(
+    all_comp_dict,
+    "x_c",
+    model_cols,
+    delta=True,
+)
+
+gh.plot_traceable_component(
+    all_comp_dict,
+    "x_p",
+    model_cols,
+    #delta=True,
+)
+
+gh.plot_traceable_component(
+    all_comp_dict,
+    "u",
+    model_cols,
+    #delta=True,
+)
+
+gh.plot_traceable_component(
+    all_comp_dict,
+    "rt",
+    model_cols,
+    delta=True,
+)
+
+gh.plot_attribution(
+    all_comp_dict=all_comp_dict,
+    uncertainty=True,
+)
+
+delta_x = np.array((1,2,3,0,-2,-3))
+
+positive_delta_X=sum(delta_x[delta_x<0])
+
+positive_delta_X
+
 
