@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-from sympy import var,Function,Symbol
+from sympy import var,Function,Symbol,Rational
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import bgc_md2_computers
 from bgc_md2.resolve.mvars import (
@@ -88,12 +88,12 @@ mvs = CMTVS(
         }),
         OutFluxesBySymbol({    # CO2 losses
             STDEDC: fallrt * STDEDC,
-            STRUCC_1: ((k_STRUCC_1 * 0.3 * strlig_1) + (0.45 * k_STRUCC_1 * (1 - strlig_1))) * STRUCC_1,
+            STRUCC_1: ((k_STRUCC_1 * Rational(3,10) * strlig_1) + (Rational(45,100)* k_STRUCC_1 * (1 - strlig_1))) * STRUCC_1,
             STRUCC_2: (dec1_2 * defac_0 * (e**(-3*strlig_2))) * STRUCC_2  # anerb=1 see litdec.F
         }),
         InternalFluxesBySymbol({
-            (STRUCC_1, SOM1C_1): 0.55 * (k_STRUCC_1 * (1 - strlig_1)) * STRUCC_1,
-            (STRUCC_1, SOM2C): (dec1_1 * defac_0 * (e**(-3*strlig_1))) * (0.7 * strlig_1) * STRUCC_1  
+            (STRUCC_1, SOM1C_1): Rational(55,100) * (k_STRUCC_1 * (1 - strlig_1)) * STRUCC_1,
+            (STRUCC_1, SOM2C): (dec1_1 * defac_0 * (e**(-3*strlig_1))) * (Rational(7,10) * strlig_1) * STRUCC_1  
         }),
     },
     bgc_md2_computers()
@@ -137,4 +137,7 @@ s=x**2-x
 s
 # -
 
-type(s)
+from sympy import Rational
+Rational(45,100)
+
+
