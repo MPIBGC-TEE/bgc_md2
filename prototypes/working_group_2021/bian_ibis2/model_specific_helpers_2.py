@@ -99,7 +99,7 @@ Constants = namedtuple(
         # "k_C_mrl",
         # "k_C_sll",
         # "k_C_swl",
-        # "k_C_srl",
+        # "k_C_srl"test_get_global_mean_vars,
         # "k_C_lll",
         # "k_C_lwl",
         # "k_C_lrl",
@@ -220,7 +220,7 @@ def download_my_TRENDY_output(conf_dict):
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['IBIS'],
-        variables = Observables._fields + OrgDrivers._fields
+        variables = Observables._fields + Drivers._fields
     )
 
 experiment_name="IBIS_S2_"
