@@ -1,3 +1,18 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:light
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.13.8
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
 from sympy import var,Function,Symbol
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import bgc_md2_computers
@@ -19,39 +34,6 @@ for line in params_in:
     
 params_in.close()
 
-# -
-
-#define all the symbols you are going to use in the equations
-sym_dict={
-    "AGLIVC": "Above ground live grass C pool ", 
-    "BGLIVC": "Below ground live grass root C pool ",
-    "STDEDC": "Standing dead C pool ", 
-    "STRUCC_1": "Surface structural C pool",
-    "STRUCC_2": "Below ground structural C pool",
-    "SOM1C_1": "Surface microbe C pool",
-    "SOM1C_2": "Active organic C pool",
-    "SOM2C": "Slow organic C pool",
-    "SOM3C": "Passive soil organic matter C pool",
-    "METABC_1": "Surface metabolic C ",
-    "METABC_2": "Below ground metabolic C ",
-    "CROOTC": "C in forest system coarse root component",
-    "FBRCHC": "C in forest system fine branch component",
-    "FROOTC": "C in forest system fine root component",
-    "RLEAVC": "C in forest system leaf component",
-    "RLWODC": "C in forest system large wood component",
-    "WOOD1C": "C in dead fine branch component of forest system",
-    "WOOD2C": "C in dead large wood component of forest system",
-    "WOOD3C": "C in dead coarse roots component of forest system",
-    "cprodc_A": "fraction of Gpp that goes to the above ground part",
-    "cprodc_B": "fraction of Gpp that goes to the below ground part",
-    "dec1_1":"",
-    "defac_0": "",
-    "strlig_1":"",
-    "fallrt": "",
-    "dec1_2": "",
-    "strlig_2": "",
-}
-
 # +
 #define all the symbols you are going to use in the equations
 
@@ -71,7 +53,7 @@ t=TimeSymbol("t") # the symbol used for time since it has a special role
 e = Symbol("e")   # for exponential functions
 
 cprodc_B = 1 - cprodc_A
-k_STRUCC_1 = dec1_1 * defac_0 * (e**(-3*strlig_1))
+k_STRUCC_1 = dec1_1 * defac_0 * (e**(-3*strlig_1))   # total C flow from surf strucc layer
 
 # formulate the model
 mvs = CMTVS(
@@ -104,21 +86,20 @@ mvs = CMTVS(
             AGLIVC: Gpp_grass(t)*cprodc_A, 
             BGLIVC: Gpp_grass(t)*cprodc_B
         }),
-        OutFluxesBySymbol({
+        OutFluxesBySymbol({    # CO2 losses
             STDEDC: fallrt * STDEDC,
-            STRUCC_1: (k_STRUCC_1) * (0.3 * strlig_1 + (0.55 - 0.55 * strlig_1)) * STRUCC_1, 
+            STRUCC_1: ((k_STRUCC_1 * 0.3 * strlig_1) + (0.45 * k_STRUCC_1 * (1 - strlig_1))) * STRUCC_1,
             STRUCC_2: (dec1_2 * defac_0 * (e**(-3*strlig_2))) * STRUCC_2  # anerb=1 see litdec.F
         }),
         InternalFluxesBySymbol({
-            (STRUCC_1, SOM1C_1): ((k_STRUCC_1 - strlig_1 * k_STRUCC_1) - (k_STRUCC_1 - strlig_1 * k_STRUCC_1) * 0.55) * STRUCC_1,
-            (STRUCC_1, SOM2C): k_STRUCC_1 * (strlig_1 - strlig_1 * 0.3) * STRUCC_1  
+            (STRUCC_1, SOM1C_1): 0.55 * (k_STRUCC_1 * (1 - strlig_1)) * STRUCC_1,
+            (STRUCC_1, SOM2C): (dec1_1 * defac_0 * (e**(-3*strlig_1))) * (0.7 * strlig_1) * STRUCC_1  
         }),
     },
     bgc_md2_computers()
 
 )
 # -
-
 
 #start to query the model description..
 M=mvs.get_CompartmentalMatrix()
@@ -131,13 +112,11 @@ mvs.get_StateVariableTuple()
 from bgc_md2.helper import compartmental_graph
 compartmental_graph(mvs)
 
-
 from bgc_md2.display_helpers import mass_balance_equation
 mass_balance_equation(mvs)
 
 # for comparison the century model as found in our database
 from bgc_md2.models.Parton1987SoilSciSocAmJ.source_by_name import mvs as mvs_century
-
 
 mvs.computable_mvar_types()
 
@@ -153,7 +132,6 @@ BI.sym_dict
 x=Symbol("x")
 
 # +
-
 s=x**2-x
 
 s
