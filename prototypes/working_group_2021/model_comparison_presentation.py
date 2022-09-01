@@ -65,9 +65,9 @@ model_names={
     "jon_yib": "YIBs",
     "kv_ft_dlem": "DLEM",
     #"Aneesh_SDGVM":"SDGVM",
-    #"cj_isam": "ISAM",
+    "cj_isam": "ISAM",
     "bian_ibis2":"IBIS",
-    #"ORCHIDEE-V2":"OCN",
+    "ORCHIDEE-V2":"OCN",
 }
 
 # ### Exploring model structures
@@ -94,43 +94,44 @@ test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
 # ### Checking data assimilation quality for all models
 
-plt.rcParams.update({'font.size': 32})
+# +
+# plt.rcParams.update({'font.size': 32})
 
 # +
-import matplotlib.lines as mlines
+# import matplotlib.lines as mlines
 
-for j, mf in enumerate(model_folders):
-    print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
-    print ('\033[0m')
-    fig = plt.figure(figsize=(50,10))
-    axs=fig.subplots(1, len(gh.msh(mf).Observables._fields))
+# for j, mf in enumerate(model_folders):
+#     print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
+#     print ('\033[0m')
+#     fig = plt.figure(figsize=(50,10))
+#     axs=fig.subplots(1, len(gh.msh(mf).Observables._fields))
     
-    mvs=test_arg_list[j].mvs
-    dvs=test_arg_list[j].dvs
-    cpa=test_arg_list[j].cpa
-    epa_opt=test_arg_list[j].epa_opt
+#     mvs=test_arg_list[j].mvs
+#     dvs=test_arg_list[j].dvs
+#     cpa=test_arg_list[j].cpa
+#     epa_opt=test_arg_list[j].epa_opt
     
-    param2res_sym = gh.msh(mf).make_param2res_sym(mvs,cpa,dvs)
-    out_simu=param2res_sym(epa_opt)._asdict()
-    obs=test_arg_list[j].svs._asdict()
-    print ("Amount of variance explined: ")
-    for i,f in enumerate(gh.msh(mf).Observables._fields):
-        resid=out_simu[f]-obs[f]
-        mean_obs = obs[f].mean()
-        mean_centered_obs = obs[f] - mean_obs
-        AVE=1 - np.sum( resid**2) / np.sum( mean_centered_obs**2 )
-        print(f+ " : " + str(round(AVE,3)) )
-    for i,f in enumerate(gh.msh(mf).Observables._fields):
-        axs[i].scatter(out_simu[f], obs[f], c='black')
-        line = mlines.Line2D([0, 1], [0, 1], color='red')
-        transform = axs[i].transAxes
-        line.set_transform(transform)
-        axs[i].add_line(line)
-        axs[i].set_title(f)
-        axs[i].set_xlabel('Matrix output')
-        axs[i].set_ylabel('Original Trendy output')
-        axs[i].grid()
-    plt.show()
+#     param2res_sym = gh.msh(mf).make_param2res_sym(mvs,cpa,dvs)
+#     out_simu=param2res_sym(epa_opt)._asdict()
+#     obs=test_arg_list[j].svs._asdict()
+#     print ("Amount of variance explined: ")
+#     for i,f in enumerate(gh.msh(mf).Observables._fields):
+#         resid=out_simu[f]-obs[f]
+#         mean_obs = obs[f].mean()
+#         mean_centered_obs = obs[f] - mean_obs
+#         AVE=1 - np.sum( resid**2) / np.sum( mean_centered_obs**2 )
+#         print(f+ " : " + str(round(AVE,3)) )
+#     for i,f in enumerate(gh.msh(mf).Observables._fields):
+#         axs[i].scatter(out_simu[f], obs[f], c='black')
+#         line = mlines.Line2D([0, 1], [0, 1], color='red')
+#         transform = axs[i].transAxes
+#         line.set_transform(transform)
+#         axs[i].add_line(line)
+#         axs[i].set_title(f)
+#         axs[i].set_xlabel('Matrix output')
+#         axs[i].set_ylabel('Original Trendy output')
+#         axs[i].grid()
+#     plt.show()
 # -
 
 
@@ -349,7 +350,7 @@ gh.plot_traceable_component(
     all_comp_dict,
     "u",
     model_cols,
-    #delta=True,
+    delta=True,
 )
 
 gh.plot_traceable_component(
@@ -359,15 +360,284 @@ gh.plot_traceable_component(
     delta=True,
 )
 
-gh.plot_attribution(
+x=gh.plot_attribution(
     all_comp_dict=all_comp_dict,
     uncertainty=True,
 )
 
-delta_x = np.array((1,2,3,0,-2,-3))
+x
 
-positive_delta_X=sum(delta_x[delta_x<0])
+delta_x=x[0]
+rt_contrib=x[1]
+u_contrib=x[2]
+rt_u_inter=x[3]
+x_p_contrib=x[4]
+abs_total=abs(x_p_contrib)+abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter)
+percent_x_p=abs(x_p_contrib)/abs_total
+percent_rt=abs(rt_contrib)/abs_total
+percent_u=abs(u_contrib)/abs_total
+percent_inter=abs(rt_u_inter)/abs_total
 
-positive_delta_X
+        ####### Figure 3 
+        print ('\033[1m'+'Attribution of sum of absolute differences from the multi-model mean ' +
+            'to the absolute differences of traceable components')         
+        fig3=plt.figure(figsize=(15,15))
+        axs=fig3.subplots(2,2)
+        
+        # contributions timeline
+        ax=axs[0,0]
+
+        # quadratic trends
+        z = np.polyfit(all_comp_dict["Times"],  x_p_contrib, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="blue",
+        ) 
+        ax.fill_between(
+                all_comp_dict["Times"],
+                x_p_contrib, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="blue",
+                #linewidth=0.1,
+                alpha=0.2                
+                )         
+
+        z = np.polyfit(all_comp_dict["Times"],  u_contrib, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="green",
+        ) 
+        ax.fill_between(
+                all_comp_dict["Times"],
+                u_contrib, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="green",
+                #linewidth=0.1,
+                alpha=0.2                
+                )   
+                
+        z = np.polyfit(all_comp_dict["Times"],  rt_contrib, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="darkorange",
+        )              
+        ax.fill_between(
+                all_comp_dict["Times"],
+                rt_contrib, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="darkorange",
+                #linewidth=0.1,
+                alpha=0.2                
+                )         
+
+        z = np.polyfit(all_comp_dict["Times"],  rt_u_inter, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="grey",
+        )         
+        ax.fill_between(
+                all_comp_dict["Times"],
+                rt_u_inter, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="grey",
+                #linewidth=0.1,
+                alpha=0.2                
+                )          
+                 
+        
+        #ax.legend()
+        ax.set_title('Contributions over time')
+        #ax.set_ylabel('%')
+        ax.grid()
+        
+        # % timeline
+        ax=axs[1,0]
+        ax.plot(          
+            all_comp_dict["Times"], 
+            percent_rt*100,
+            label="contribution of $\Delta$ R_t",
+            color="darkorange",
+            linewidth=0.8,
+            alpha=0.5,
+        )
+        ax.plot(        
+            all_comp_dict["Times"], 
+            percent_u*100,
+            label="contribution of $\Delta$ u",
+            color="green",
+            linewidth=0.8,
+            alpha=0.5,
+        )     
+        
+        # ax.plot(        
+            # all_comp_dict["Times"], 
+            # delta_x,
+            # label="$\Delta$ X",
+            # color="black",
+        # )
+        ax.plot(        
+            all_comp_dict["Times"], 
+            percent_x_p*100,
+            label="$\Delta$ X_p",
+            color="blue",
+            linewidth=0.8,
+            alpha=0.5,
+        )        
+        if np.mean(percent_inter) > 0.001:
+            ax.plot(            
+                all_comp_dict["Times"], 
+                percent_inter*100,
+                label="contribution of interaction terms",
+                color="grey",
+                linewidth=0.5,
+                #alpha=0.1,
+            )      
+        # quadratic trends
+        z = np.polyfit(all_comp_dict["Times"],  percent_x_p*100, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="blue",
+        ) 
+        ax.fill_between(
+                all_comp_dict["Times"],
+                percent_x_p*100, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="blue",
+                #linewidth=0.1,
+                alpha=0.2                
+                )  
+                
+        z = np.polyfit(all_comp_dict["Times"],  percent_u*100, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="green",
+        ) 
+        ax.fill_between(
+                all_comp_dict["Times"],
+                percent_u*100, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="green",
+                #linewidth=0.1,
+                alpha=0.2                
+                )  
+
+        z = np.polyfit(all_comp_dict["Times"],  percent_rt*100, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="darkorange",
+        )         
+        ax.fill_between(
+                all_comp_dict["Times"],
+                percent_rt*100, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="darkorange",
+                #linewidth=0.1,
+                alpha=0.2                
+                )  
+
+        z = np.polyfit(all_comp_dict["Times"],  percent_inter*100, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="grey",
+        ) 
+        ax.fill_between(
+                all_comp_dict["Times"],
+                percent_inter*100, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="grey",
+                #linewidth=0.1,
+                alpha=0.2                
+                )  
+        
+        #ax.legend()
+        ax.set_title('% Contributions over time')
+        ax.set_ylabel('%')
+        ax.grid()
+
+        # bar charts
+        
+        positive_delta_X=sum(delta_x[delta_x>0])/len(delta_x)
+        negative_delta_X=sum(delta_x[delta_x<0])/len(delta_x)
+        #positive_x_c_contrib=sum(x_c_contrib[x_c_contrib>0])/len(x_c_contrib)
+        #negative_x_c_contrib=sum(x_c_contrib[x_c_contrib<0])/len(x_c_contrib)
+        positive_x_p_contrib=sum(x_p_contrib[x_p_contrib>0])/len(x_p_contrib)
+        negative_x_p_contrib=sum(x_p_contrib[x_p_contrib<0])/len(x_p_contrib)        
+        positive_rt_contrib=sum(rt_contrib[rt_contrib>0])/len(rt_contrib)
+        negative_rt_contrib=sum(rt_contrib[rt_contrib<0])/len(rt_contrib)
+        positive_u_contrib=sum(u_contrib[u_contrib>0])/len(u_contrib)
+        negative_u_contrib=sum(u_contrib[u_contrib<0])/len(u_contrib)      
+        positive_rt_u_inter=sum(rt_u_inter[rt_u_inter>0])/len(rt_u_inter)
+        negative_rt_u_inter=sum(rt_u_inter[rt_u_inter<0])/len(rt_u_inter)        
+        
+        ax0=axs[0,1]  
+        ax0.set_title('Average contributions')       
+        ax0.axhline(0, color='black', ls='dashed')
+        
+        # ax0.bar ('$\Delta$ X', positive_delta_X, color="black")
+        # ax0.bar ('$\Delta$ X', negative_delta_X, color="black")
+        ax0.bar ('$\Delta$ RT', positive_rt_contrib, color="darkorange")
+        ax0.bar ('$\Delta$ RT', negative_rt_contrib, color="darkorange")        
+        ax0.bar ('$\Delta$ NPP', positive_u_contrib, color="green")
+        ax0.bar ('$\Delta$ NPP', negative_u_contrib, color="green")
+        ax0.bar ('$\Delta$npp*$\Delta$rt', positive_rt_u_inter, color="lightgrey")
+        ax0.bar ('$\Delta$npp*$\Delta$rt', negative_rt_u_inter, color="lightgrey")        
+        ax0.bar ('$\Delta$ X_p', positive_x_p_contrib, color="blue")
+        ax0.bar ('$\Delta$ X_p', negative_x_p_contrib, color="blue")   
+        
+        # if abs(np.mean(combined_contrib)) > 0.001:
+           # ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
+        ax0.grid() 
+        
+        # pie charts
+
+        ax1=axs[1,1]
+        ax1.set_title('% Contributions')
+          
+        if np.mean(percent_inter) > 0.001:
+            labels = '$\Delta$ RT', '$\Delta$ NPP', '$\Delta$NPP*$\Delta$RT', '$\Delta$ X_p'
+            sizes = [np.mean(percent_rt), np.mean(percent_u), 
+                np.mean(percent_inter), np.mean(percent_x_p)]
+            ax1.pie(sizes, autopct='%1.1f%%', 
+                startangle=90, counterclock=False, colors=("darkorange", "green", "lightgrey", "blue"))
+        else:
+            labels = '$\Delta$ RT','$\Delta$ NPP', '$\Delta$ X_p'
+            sizes = [np.mean(percent_rt), np.mean(percent_u), np.mean(percent_x_p)]
+            ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+                startangle=90, counterclock=False, colors=("darkorange", "green", "blue"))        
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
+        ax1.legend(labels, bbox_to_anchor =(1.42, 2.22))
+        plt.show()
 
 
