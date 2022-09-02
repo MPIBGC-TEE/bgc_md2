@@ -360,26 +360,45 @@ gh.plot_traceable_component(
     delta=True,
 )
 
-x=gh.plot_attribution(
+x=gh.plot_attribution_all(
     all_comp_dict=all_comp_dict,
     uncertainty=True,
 )
 
 x
 
-delta_x=x[0]
-rt_contrib=x[1]
-u_contrib=x[2]
-rt_u_inter=x[3]
-x_p_contrib=x[4]
-abs_total=abs(x_p_contrib)+abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter)
-percent_x_p=abs(x_p_contrib)/abs_total
-percent_rt=abs(rt_contrib)/abs_total
-percent_u=abs(u_contrib)/abs_total
-percent_inter=abs(rt_u_inter)/abs_total
+# +
+delta_x_pos=x[0] 
+delta_x_neg=x[1]
+rt_contrib_pos=x[2]
+rt_contrib_neg=x[3]
+u_contrib_pos=x[4]
+u_contrib_neg=x[5]
+rt_u_inter_pos=x[6]
+rt_u_inter_neg=x[7]
+x_p_contrib_pos=x[8]
+x_p_contrib_neg=x[9]
+
+x_p_contrib=x_p_contrib_pos-x_p_contrib_neg
+rt_contrib=rt_contrib_pos-rt_contrib_neg
+u_contrib=u_contrib_pos-u_contrib_neg
+rt_u_inter=rt_u_inter_pos-rt_u_inter_neg
+
+abs_total=(x_p_contrib_pos-x_p_contrib_neg+
+    rt_contrib_pos-rt_contrib_neg+
+    u_contrib_pos-u_contrib_neg+
+    rt_u_inter_pos-rt_u_inter_neg)
+
+percent_x_p=(x_p_contrib_pos-x_p_contrib_neg)/abs_total*100
+percent_rt=(rt_contrib_pos-rt_contrib_neg)/abs_total*100
+percent_u=(u_contrib_pos-u_contrib_neg)/abs_total*100
+percent_inter=abs(rt_u_inter_pos-rt_u_inter_neg)/abs_total*100
+# -
+
+abs_total
 
         ####### Figure 3 
-        print ('\033[1m'+'Attribution of sum of absolute differences from the multi-model mean ' +
+        print ('\033[1m'+'Attribution of summed differences from the multi-model mean ' +
             'to the absolute differences of traceable components')         
         fig3=plt.figure(figsize=(15,15))
         axs=fig3.subplots(2,2)
@@ -462,7 +481,7 @@ percent_inter=abs(rt_u_inter)/abs_total
                  
         
         #ax.legend()
-        ax.set_title('Contributions over time')
+        ax.set_title('Absolute contributions over time')
         #ax.set_ylabel('%')
         ax.grid()
         
@@ -470,7 +489,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         ax=axs[1,0]
         ax.plot(          
             all_comp_dict["Times"], 
-            percent_rt*100,
+            percent_rt,
             label="contribution of $\Delta$ R_t",
             color="darkorange",
             linewidth=0.8,
@@ -478,7 +497,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         )
         ax.plot(        
             all_comp_dict["Times"], 
-            percent_u*100,
+            percent_u,
             label="contribution of $\Delta$ u",
             color="green",
             linewidth=0.8,
@@ -493,7 +512,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         # )
         ax.plot(        
             all_comp_dict["Times"], 
-            percent_x_p*100,
+            percent_x_p,
             label="$\Delta$ X_p",
             color="blue",
             linewidth=0.8,
@@ -502,14 +521,14 @@ percent_inter=abs(rt_u_inter)/abs_total
         if np.mean(percent_inter) > 0.001:
             ax.plot(            
                 all_comp_dict["Times"], 
-                percent_inter*100,
+                percent_inter,
                 label="contribution of interaction terms",
                 color="grey",
                 linewidth=0.5,
                 #alpha=0.1,
             )      
         # quadratic trends
-        z = np.polyfit(all_comp_dict["Times"],  percent_x_p*100, 2)
+        z = np.polyfit(all_comp_dict["Times"],  percent_x_p, 2)
         p = np.poly1d(z)  
         ax.plot(        
             all_comp_dict["Times"], 
@@ -519,7 +538,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         ) 
         ax.fill_between(
                 all_comp_dict["Times"],
-                percent_x_p*100, 
+                percent_x_p, 
                 p(all_comp_dict["Times"]),
                 #label="\u00B12$\sigma$ confidence interval",
                 color="blue",
@@ -527,7 +546,7 @@ percent_inter=abs(rt_u_inter)/abs_total
                 alpha=0.2                
                 )  
                 
-        z = np.polyfit(all_comp_dict["Times"],  percent_u*100, 2)
+        z = np.polyfit(all_comp_dict["Times"],  percent_u, 2)
         p = np.poly1d(z)  
         ax.plot(        
             all_comp_dict["Times"], 
@@ -537,7 +556,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         ) 
         ax.fill_between(
                 all_comp_dict["Times"],
-                percent_u*100, 
+                percent_u, 
                 p(all_comp_dict["Times"]),
                 #label="\u00B12$\sigma$ confidence interval",
                 color="green",
@@ -545,7 +564,7 @@ percent_inter=abs(rt_u_inter)/abs_total
                 alpha=0.2                
                 )  
 
-        z = np.polyfit(all_comp_dict["Times"],  percent_rt*100, 2)
+        z = np.polyfit(all_comp_dict["Times"],  percent_rt, 2)
         p = np.poly1d(z)  
         ax.plot(        
             all_comp_dict["Times"], 
@@ -555,7 +574,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         )         
         ax.fill_between(
                 all_comp_dict["Times"],
-                percent_rt*100, 
+                percent_rt, 
                 p(all_comp_dict["Times"]),
                 #label="\u00B12$\sigma$ confidence interval",
                 color="darkorange",
@@ -563,7 +582,7 @@ percent_inter=abs(rt_u_inter)/abs_total
                 alpha=0.2                
                 )  
 
-        z = np.polyfit(all_comp_dict["Times"],  percent_inter*100, 2)
+        z = np.polyfit(all_comp_dict["Times"],  percent_inter, 2)
         p = np.poly1d(z)  
         ax.plot(        
             all_comp_dict["Times"], 
@@ -573,7 +592,7 @@ percent_inter=abs(rt_u_inter)/abs_total
         ) 
         ax.fill_between(
                 all_comp_dict["Times"],
-                percent_inter*100, 
+                percent_inter, 
                 p(all_comp_dict["Times"]),
                 #label="\u00B12$\sigma$ confidence interval",
                 color="grey",
@@ -588,18 +607,18 @@ percent_inter=abs(rt_u_inter)/abs_total
 
         # bar charts
         
-        positive_delta_X=sum(delta_x[delta_x>0])/len(delta_x)
-        negative_delta_X=sum(delta_x[delta_x<0])/len(delta_x)
+        positive_delta_X=sum(delta_x_pos)/len(delta_x_pos)
+        negative_delta_X=sum(delta_x_neg)/len(delta_x_neg)
         #positive_x_c_contrib=sum(x_c_contrib[x_c_contrib>0])/len(x_c_contrib)
         #negative_x_c_contrib=sum(x_c_contrib[x_c_contrib<0])/len(x_c_contrib)
-        positive_x_p_contrib=sum(x_p_contrib[x_p_contrib>0])/len(x_p_contrib)
-        negative_x_p_contrib=sum(x_p_contrib[x_p_contrib<0])/len(x_p_contrib)        
-        positive_rt_contrib=sum(rt_contrib[rt_contrib>0])/len(rt_contrib)
-        negative_rt_contrib=sum(rt_contrib[rt_contrib<0])/len(rt_contrib)
-        positive_u_contrib=sum(u_contrib[u_contrib>0])/len(u_contrib)
-        negative_u_contrib=sum(u_contrib[u_contrib<0])/len(u_contrib)      
-        positive_rt_u_inter=sum(rt_u_inter[rt_u_inter>0])/len(rt_u_inter)
-        negative_rt_u_inter=sum(rt_u_inter[rt_u_inter<0])/len(rt_u_inter)        
+        positive_x_p_contrib=sum(x_p_contrib_pos)/len(x_p_contrib_pos)
+        negative_x_p_contrib=sum(x_p_contrib_neg)/len(x_p_contrib_neg)        
+        positive_rt_contrib=sum(rt_contrib_pos)/len(rt_contrib_pos)
+        negative_rt_contrib=sum(rt_contrib_neg)/len(rt_contrib_neg)
+        positive_u_contrib=sum(u_contrib_pos)/len(u_contrib_pos)
+        negative_u_contrib=sum(u_contrib_neg)/len(u_contrib_neg)      
+        positive_rt_u_inter=sum(rt_u_inter_pos)/len(rt_u_inter_pos)
+        negative_rt_u_inter=sum(rt_u_inter_neg)/len(rt_u_inter_neg)        
         
         ax0=axs[0,1]  
         ax0.set_title('Average contributions')       
@@ -639,5 +658,38 @@ percent_inter=abs(rt_u_inter)/abs_total
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
         ax1.legend(labels, bbox_to_anchor =(1.42, 2.22))
         plt.show()
+
+y=gh.difference_attribution (
+        x_1=all_comp_dict["JULES"]["x"],
+        x_c_1=all_comp_dict["JULES"]["x_c"],
+        x_p_1=all_comp_dict["JULES"]["x_p"],
+        u_1=all_comp_dict["JULES"]["u"],
+        rt_1=all_comp_dict["JULES"]["rt"],
+        x_2=x-all_comp_dict["Mean"]["x"],
+        x_c_2=all_comp_dict["Mean"]["x_c"],
+        x_p_2=all_comp_dict["Mean"]["x_p"],
+        u_2=all_comp_dict["Mean"]["u"],
+        rt_2=all_comp_dict["Mean"]["rt"],    
+        percent=True,
+)
+y
+
+delta_x=np.array((1,2,0,-3,-4))
+
+pos_delta_x=delta_x.copy(); pos_delta_x[pos_delta_x<0]=0
+neg_delta_x=delta_x.copy(); neg_delta_x[neg_delta_x>0]=0
+
+pos_delta_x=delta_x
+
+delta_x
+
+pos_delta_x
+
+pos_delta_x[pos_delta_x<0]=0
+pos_delta_x
+
+pos_delta_x
+
+neg_delta_x
 
 

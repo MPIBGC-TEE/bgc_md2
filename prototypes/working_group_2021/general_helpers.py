@@ -2868,18 +2868,72 @@ def plot_traceable_component(
         ax.set_title(comp_name)
     #ax.set_ylabel("Gt C")
     ax.legend(bbox_to_anchor =(1.3, 1))
+ 
+
+def difference_attribution (
+    x_1, x_c_1, x_p_1, u_1, rt_1, # traceble components of 1st data stream
+    x_2, x_c_2, x_p_2, u_2, rt_2, # traceble components of 2nd data stream
+    percent=False # results in real values or percents
+    ):
+    x=x_1
+    x_c=x_c_1
+    x_p=x_p_1
+    u=u_1
+    rt=rt_1
+
+    # differences
+    delta_x=x-x_2
+    delta_x_c=x_c-x_c_2
+    delta_x_p=x_p-x_p_2
+    delta_u=u-u_2
+    delta_rt=rt-rt_2
     
-def plot_attribution (
+    # contributions in the difference
+    x_c_contrib=delta_x_c 
+    x_p_contrib=-delta_x_p
+    rt_contrib=delta_rt*(u-delta_u/2)
+    u_contrib=delta_u*(rt-delta_rt/2) 
+    rt_u_inter=delta_x_c-rt_contrib-u_contrib#delta_u*delta_rt     
+
+    # contributions in percent
+    abs_total=abs(x_p_contrib)+abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter)
+    percent_x_p=abs(x_p_contrib)/abs_total*100
+    percent_x_c=abs(x_c_contrib)/abs_total*100
+    percent_rt=abs(rt_contrib)/abs_total*100
+    percent_u=abs(u_contrib)/abs_total*100
+    percent_inter=abs(rt_u_inter)/abs_total*100
+    
+    # output    
+    attribution_dict = {
+        "x": 100 if percent else delta_x,
+        "x_c": percent_x_c if percent else x_c_contrib,
+        "x_p": percent_x_p if percent else x_p_contrib,
+        "rt": percent_rt if percent else rt_contrib,
+        "u": percent_u if percent else u_contrib,
+        "rt_u_inter": percent_inter if percent else rt_u_inter,
+    }       
+    return (attribution_dict)
+
+#def plot_attribution (attribution_dict):
+    
+ 
+def plot_attribution_all (
     all_comp_dict,
     uncertainty,
 ):
     models=list(all_comp_dict.keys())[:-2]   
     
-    sum_abs_diff_x=0
-    sum_abs_cont_rt=0
-    sum_abs_cont_u=0
-    sum_abs_cont_rt_u_inter=0
-    sum_abs_cont_x_p=0
+    sum_pos_diff_x=0
+    sum_pos_cont_rt=0
+    sum_pos_cont_u=0
+    sum_pos_cont_rt_u_inter=0
+    sum_pos_cont_x_p=0
+    
+    sum_neg_diff_x=0
+    sum_neg_cont_rt=0
+    sum_neg_cont_u=0
+    sum_neg_cont_rt_u_inter=0
+    sum_neg_cont_x_p=0    
     
     for m in models: 
         x=all_comp_dict[m]["x"]
@@ -2903,7 +2957,7 @@ def plot_attribution (
         # attribution of delta X_c to delta u and delta RT
         rt_contrib=delta_rt*(u-delta_u/2)
         u_contrib=delta_u*(rt-delta_rt/2) 
-        rt_u_inter=delta_u*delta_rt 
+        rt_u_inter=delta_x_c-rt_contrib-u_contrib#delta_u*delta_rt  
 
         # # attribution of delta X_p to delta NEP and delta RT
         # rt_contrib2=delta_rt*(nep-delta_nep/2)
@@ -2912,16 +2966,10 @@ def plot_attribution (
 
         # attribution in percents
         abs_total=abs(x_p_contrib)+abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter)
-        percent_x_p=abs(x_p_contrib)/abs_total
-        percent_rt=abs(rt_contrib)/abs_total
-        percent_u=abs(u_contrib)/abs_total
-        percent_inter=abs(rt_u_inter)/abs_total
-        
-        sum_abs_diff_x+=abs(delta_x)
-        sum_abs_cont_rt+=abs(rt_contrib)
-        sum_abs_cont_u+=abs(u_contrib)
-        sum_abs_cont_rt_u_inter+=abs(rt_u_inter)
-        sum_abs_cont_x_p+=abs(x_p_contrib)        
+        percent_x_p=abs(x_p_contrib)/abs_total*100
+        percent_rt=abs(rt_contrib)/abs_total*100
+        percent_u=abs(u_contrib)/abs_total*100
+        percent_inter=abs(rt_u_inter)/abs_total*100             
         
         print ('\033[1m'+m)
         
@@ -2947,10 +2995,10 @@ def plot_attribution (
             # all_comp_dict["Times"], 
             # delta_x,
             # label="$\Delta$ X",
-            # color="black",
+            # color="grey",
         # )
   
-        # ax.axhline(0, color='black', ls='dashed')
+        # ax.axhline(0, color='grey', ls='dashed')
         # #ax.legend()
         # ax.set_title('Contributions over time')
         # #ax.set_ylabel('%')
@@ -2966,10 +3014,10 @@ def plot_attribution (
         # positive_x_p_contrib=sum(x_p_contrib[x_p_contrib>0])/len(x_p_contrib)
         # negative_x_p_contrib=sum(x_p_contrib[x_p_contrib<0])/len(x_p_contrib)
         
-        # ax0.axhline(0, color='black', ls='dashed')
+        # ax0.axhline(0, color='grey', ls='dashed')
         
-        # ax0.bar ('$\Delta$ X', positive_delta_X, color="black")
-        # ax0.bar ('$\Delta$ X', negative_delta_X, color="black")
+        # ax0.bar ('$\Delta$ X', positive_delta_X, color="grey")
+        # ax0.bar ('$\Delta$ X', negative_delta_X, color="grey")
         # ax0.bar ('$\Delta$ X_c', positive_x_c_contrib, color="red")
         # ax0.bar ('$\Delta$ X_c', negative_x_c_contrib, color="red")        
         # ax0.bar ('$\Delta$ X_p', positive_x_p_contrib, color="blue")
@@ -2987,7 +3035,7 @@ def plot_attribution (
             # # labels = '$\Delta$ X_c', 'Residual', '$\Delta$ X_p'
             # # sizes = [np.mean(percent_x_c), np.mean(percent_inter_1), np.mean(percent_x_p)]
             # # ax1.pie(sizes, labels=labels, autopct='%1.1f%%', 
-                # # startangle=90, counterclock=False, colors=("blue", "lightgrey", "red"))
+                # # startangle=90, counterclock=False, colors=("blue", "purple", "red"))
         # # else:
             # # labels = '$\Delta$ X_c', '$\Delta$ X_p'
             # # sizes = [np.mean(percent_x_c), np.mean(percent_x_p)]
@@ -3037,10 +3085,10 @@ def plot_attribution (
                 # #percent_rt_u_inter,
                 # rt_u_inter,
                 # label="contribution of $\Delta$NPP*$\Delta$RT",
-                # color="grey",
+                # color="purple",
             # )        
         # #ax.legend()
-        # ax.axhline(0, color='black', ls='dashed')
+        # ax.axhline(0, color='grey', ls='dashed')
         # ax.set_title('Contributions over time')
         # #ax.set_ylabel('%')
         # ax.grid()  
@@ -3057,7 +3105,7 @@ def plot_attribution (
         # positive_rt_u_inter=sum(rt_u_inter[rt_u_inter>0])/len(rt_u_inter)
         # negative_rt_u_inter=sum(rt_u_inter[rt_u_inter<0])/len(rt_u_inter)
         
-        # ax0.axhline(0, color='black', ls='dashed')
+        # ax0.axhline(0, color='grey', ls='dashed')
         
         # ax0.bar ('$\Delta$ X_c', positive_delta_X_c, color="red")
         # ax0.bar ('$\Delta$ X_c', negative_delta_X_c, color="red")
@@ -3065,8 +3113,8 @@ def plot_attribution (
         # ax0.bar ('$\Delta$ RT', negative_rt_contrib, color="darkorange")        
         # ax0.bar ('$\Delta$ u', positive_u_contrib, color="green")
         # ax0.bar ('$\Delta$ u', negative_u_contrib, color="green")
-        # ax0.bar ('$\Delta$NPP*$\Delta$RT', positive_rt_u_inter, color="lightgrey")
-        # ax0.bar ('$\Delta$NPP*$\Delta$RT', negative_rt_u_inter, color="lightgrey")        
+        # ax0.bar ('$\Delta$NPP*$\Delta$RT', positive_rt_u_inter, color="purple")
+        # ax0.bar ('$\Delta$NPP*$\Delta$RT', negative_rt_u_inter, color="purple")        
         
         # ax0.grid() 
         # plt.show()
@@ -3080,7 +3128,7 @@ def plot_attribution (
             # # labels = '$\Delta$ RT', '$\Delta$NPP*$\Delta$RT', '$\Delta$ NPP'
             # # sizes = [np.mean(percent_rt), np.mean(percent_rt_u_inter), np.mean(percent_u)]
             # # ax1.pie(sizes, labels=labels, autopct='%1.1f%%', 
-                # # startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
+                # # startangle=90, counterclock=False, colors=("darkorange", "purple", "green"))
         # # else:
             # # labels = '$\Delta$ RT', '$\Delta$ NPP'
             # # sizes = [np.mean(percent_x_c), np.mean(percent_x_p)]
@@ -3131,10 +3179,10 @@ def plot_attribution (
                 # all_comp_dict["Times"], 
                 # rt_nep_inter,
                 # label="contribution of $\Delta$NEP*$\Delta$RT",
-                # color="grey",
+                # color="purple",
             # )        
         # #ax.legend()
-        # ax.axhline(0, color='black', ls='dashed')
+        # ax.axhline(0, color='grey', ls='dashed')
         # ax.set_title('Contributions over time')
         # #ax.set_ylabel('%')
         # ax.grid()  
@@ -3150,7 +3198,7 @@ def plot_attribution (
         # negative_nep_contrib=sum(nep_contrib[nep_contrib<0])/len(nep_contrib)      
         # positive_rt_nep_inter=sum(rt_nep_inter[rt_nep_inter>0])/len(rt_nep_inter)
         # negative_rt_nep_inter=sum(rt_nep_inter[rt_nep_inter<0])/len(rt_nep_inter)
-        # ax0.axhline(0, color='black', ls='dashed')
+        # ax0.axhline(0, color='grey', ls='dashed')
         
         # ax0.bar ('$\Delta$ X_p', positive_delta_X_p, color="red")
         # ax0.bar ('$\Delta$ X_p', negative_delta_X_p, color="red")
@@ -3158,8 +3206,8 @@ def plot_attribution (
         # ax0.bar ('$\Delta$ RT', negative_rt_contrib2, color="darkorange")        
         # ax0.bar ('$\Delta$ NEP', positive_nep_contrib, color="teal")
         # ax0.bar ('$\Delta$ NEP', negative_nep_contrib, color="teal")
-        # ax0.bar ('$\Delta$NEP*$\Delta$RT', positive_rt_nep_inter, color="lightgrey")
-        # ax0.bar ('$\Delta$NEP*$\Delta$RT', negative_rt_nep_inter, color="lightgrey")        
+        # ax0.bar ('$\Delta$NEP*$\Delta$RT', positive_rt_nep_inter, color="purple")
+        # ax0.bar ('$\Delta$NEP*$\Delta$RT', negative_rt_nep_inter, color="purple")        
         
         # ax0.grid() 
         # plt.show()
@@ -3173,7 +3221,7 @@ def plot_attribution (
             # # labels = '$\Delta$ RT', '$\Delta$NPP*$\Delta$RT', '$\Delta$ NPP'
             # # sizes = [np.mean(percent_rt), np.mean(percent_rt_u_inter), np.mean(percent_u)]
             # # ax1.pie(sizes, labels=labels, autopct='%1.1f%%', 
-                # # startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
+                # # startangle=90, counterclock=False, colors=("darkorange", "purple", "green"))
         # # else:
             # # labels = '$\Delta$ RT', '$\Delta$ NPP'
             # # sizes = [np.mean(percent_x_c), np.mean(percent_x_p)]
@@ -3240,7 +3288,7 @@ def plot_attribution (
                 # #percent_inter,
                 # rt_u_inter,
                 # label="contribution of interaction terms",
-                # color="grey",
+                # color="lightgrey",
                 # linewidth=0.8,
                 # alpha=0.5,                
             # )    
@@ -3305,143 +3353,178 @@ def plot_attribution (
             all_comp_dict["Times"], 
             p(all_comp_dict["Times"]),
             label="$\Delta$ X_p",
-            color="grey",
+            color="lightgrey",
         )         
         ax.fill_between(
                 all_comp_dict["Times"],
                 rt_u_inter, 
                 p(all_comp_dict["Times"]),
                 #label="\u00B12$\sigma$ confidence interval",
-                color="grey",
+                color="lightgrey",
                 #linewidth=0.1,
                 alpha=0.2                
-                )          
-                 
-        
+                )   
+
+        z = np.polyfit(all_comp_dict["Times"],  delta_x, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_p",
+            color="black",
+        )         
+        ax.fill_between(
+                all_comp_dict["Times"],
+                delta_x, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="black",
+                #linewidth=0.1,
+                alpha=0.2                
+                )                 
+        z = np.polyfit(all_comp_dict["Times"],  x_c_contrib, 2)
+        p = np.poly1d(z)  
+        ax.plot(        
+            all_comp_dict["Times"], 
+            p(all_comp_dict["Times"]),
+            label="$\Delta$ X_c",
+            color="red",
+        )         
+        ax.fill_between(
+                all_comp_dict["Times"],
+                x_c_contrib, 
+                p(all_comp_dict["Times"]),
+                #label="\u00B12$\sigma$ confidence interval",
+                color="red",
+                #linewidth=0.1,
+                alpha=0.2                
+                )                  
+
         #ax.legend()
         ax.set_title('Contributions over time')
         #ax.set_ylabel('%')
         ax.grid()
-        
-        # % timeline
-        ax=axs[1,0]
-        ax.plot(          
-            all_comp_dict["Times"], 
-            percent_rt*100,
-            label="contribution of $\Delta$ R_t",
-            color="darkorange",
-            linewidth=0.8,
-            alpha=0.5,
-        )
-        ax.plot(        
-            all_comp_dict["Times"], 
-            percent_u*100,
-            label="contribution of $\Delta$ u",
-            color="green",
-            linewidth=0.8,
-            alpha=0.5,
-        )     
-        
+               
+        # # % timeline
+        # ax=axs[1,0]
+        # ax.plot(          
+            # all_comp_dict["Times"], 
+            # percent_rt*100,
+            # label="contribution of $\Delta$ R_t",
+            # color="darkorange",
+            # linewidth=0.8,
+            # alpha=0.5,
+        # )
         # ax.plot(        
             # all_comp_dict["Times"], 
-            # delta_x,
-            # label="$\Delta$ X",
-            # color="black",
-        # )
-        ax.plot(        
-            all_comp_dict["Times"], 
-            percent_x_p*100,
-            label="$\Delta$ X_p",
-            color="blue",
-            linewidth=0.8,
-            alpha=0.5,
-        )        
-        if np.mean(percent_inter) > 0.001:
-            ax.plot(            
-                all_comp_dict["Times"], 
-                percent_inter*100,
-                label="contribution of interaction terms",
-                color="grey",
-                linewidth=0.5,
-                #alpha=0.1,
-            )      
-        # quadratic trends
-        z = np.polyfit(all_comp_dict["Times"],  percent_x_p*100, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="blue",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_x_p*100, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="blue",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-                
-        z = np.polyfit(all_comp_dict["Times"],  percent_u*100, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="green",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_u*100, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="green",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-
-        z = np.polyfit(all_comp_dict["Times"],  percent_rt*100, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="darkorange",
-        )         
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_rt*100, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="darkorange",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-
-        z = np.polyfit(all_comp_dict["Times"],  percent_inter*100, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="grey",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_inter*100, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="grey",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
+            # percent_u*100,
+            # label="contribution of $\Delta$ u",
+            # color="green",
+            # linewidth=0.8,
+            # alpha=0.5,
+        # )     
         
-        #ax.legend()
-        ax.set_title('% Contributions over time')
-        ax.set_ylabel('%')
-        ax.grid()
+        # # ax.plot(        
+            # # all_comp_dict["Times"], 
+            # # delta_x,
+            # # label="$\Delta$ X",
+            # # color="black",
+        # # )
+        # ax.plot(        
+            # all_comp_dict["Times"], 
+            # percent_x_p*100,
+            # label="$\Delta$ X_p",
+            # color="blue",
+            # linewidth=0.8,
+            # alpha=0.5,
+        # )        
+        # if np.mean(percent_inter) > 0.001:
+            # ax.plot(            
+                # all_comp_dict["Times"], 
+                # percent_inter*100,
+                # label="contribution of interaction terms",
+                # color="lightgrey",
+                # linewidth=0.5,
+                # #alpha=0.1,
+            # )      
+        # # quadratic trends
+        # z = np.polyfit(all_comp_dict["Times"],  percent_x_p*100, 2)
+        # p = np.poly1d(z)  
+        # ax.plot(        
+            # all_comp_dict["Times"], 
+            # p(all_comp_dict["Times"]),
+            # label="$\Delta$ X_p",
+            # color="blue",
+        # ) 
+        # ax.fill_between(
+                # all_comp_dict["Times"],
+                # percent_x_p*100, 
+                # p(all_comp_dict["Times"]),
+                # #label="\u00B12$\sigma$ confidence interval",
+                # color="blue",
+                # #linewidth=0.1,
+                # alpha=0.2                
+                # )  
+                
+        # z = np.polyfit(all_comp_dict["Times"],  percent_u*100, 2)
+        # p = np.poly1d(z)  
+        # ax.plot(        
+            # all_comp_dict["Times"], 
+            # p(all_comp_dict["Times"]),
+            # label="$\Delta$ X_p",
+            # color="green",
+        # ) 
+        # ax.fill_between(
+                # all_comp_dict["Times"],
+                # percent_u*100, 
+                # p(all_comp_dict["Times"]),
+                # #label="\u00B12$\sigma$ confidence interval",
+                # color="green",
+                # #linewidth=0.1,
+                # alpha=0.2                
+                # )  
+
+        # z = np.polyfit(all_comp_dict["Times"],  percent_rt*100, 2)
+        # p = np.poly1d(z)  
+        # ax.plot(        
+            # all_comp_dict["Times"], 
+            # p(all_comp_dict["Times"]),
+            # label="$\Delta$ X_p",
+            # color="darkorange",
+        # )         
+        # ax.fill_between(
+                # all_comp_dict["Times"],
+                # percent_rt*100, 
+                # p(all_comp_dict["Times"]),
+                # #label="\u00B12$\sigma$ confidence interval",
+                # color="darkorange",
+                # #linewidth=0.1,
+                # alpha=0.2                
+                # )  
+
+        # z = np.polyfit(all_comp_dict["Times"],  percent_inter*100, 2)
+        # p = np.poly1d(z)  
+        # ax.plot(        
+            # all_comp_dict["Times"], 
+            # p(all_comp_dict["Times"]),
+            # label="$\Delta$ X_p",
+            # color="lightgrey",
+        # ) 
+        # ax.fill_between(
+                # all_comp_dict["Times"],
+                # percent_inter*100, 
+                # p(all_comp_dict["Times"]),
+                # #label="\u00B12$\sigma$ confidence interval",
+                # color="lightgrey",
+                # #linewidth=0.1,
+                # alpha=0.2                
+                # )  
+                
+        
+        # #ax.legend()
+        # ax.set_title('% Contributions over time')
+        # ax.set_ylabel('%')
+        # ax.grid()
 
         # bar charts
         
@@ -3456,26 +3539,68 @@ def plot_attribution (
         positive_u_contrib=sum(u_contrib[u_contrib>0])/len(u_contrib)
         negative_u_contrib=sum(u_contrib[u_contrib<0])/len(u_contrib)      
         positive_rt_u_inter=sum(rt_u_inter[rt_u_inter>0])/len(rt_u_inter)
-        negative_rt_u_inter=sum(rt_u_inter[rt_u_inter<0])/len(rt_u_inter)        
+        negative_rt_u_inter=sum(rt_u_inter[rt_u_inter<0])/len(rt_u_inter)         
         
         ax0=axs[0,1]  
         ax0.set_title('Average contributions')       
         ax0.axhline(0, color='black', ls='dashed')
         
-        # ax0.bar ('$\Delta$ X', positive_delta_X, color="black")
-        # ax0.bar ('$\Delta$ X', negative_delta_X, color="black")
+        ax0.bar ('$\Delta$ X', positive_delta_X, color="black")
+        ax0.bar ('$\Delta$ X', negative_delta_X, color="black")
+        ax0.bar ('$\Delta$ X_p', positive_x_p_contrib, color="blue")
+        ax0.bar ('$\Delta$ X_p', negative_x_p_contrib, color="blue")
+        ax0.bar ('$\Delta$ X_c', positive_x_c_contrib, color="red")
+        ax0.bar ('$\Delta$ X_c', negative_x_c_contrib, color="red") 
         ax0.bar ('$\Delta$ RT', positive_rt_contrib, color="darkorange")
         ax0.bar ('$\Delta$ RT', negative_rt_contrib, color="darkorange")        
         ax0.bar ('$\Delta$ NPP', positive_u_contrib, color="green")
         ax0.bar ('$\Delta$ NPP', negative_u_contrib, color="green")
         ax0.bar ('$\Delta$npp*$\Delta$rt', positive_rt_u_inter, color="lightgrey")
         ax0.bar ('$\Delta$npp*$\Delta$rt', negative_rt_u_inter, color="lightgrey")        
-        ax0.bar ('$\Delta$ X_p', positive_x_p_contrib, color="blue")
-        ax0.bar ('$\Delta$ X_p', negative_x_p_contrib, color="blue")   
+  
         
         # if abs(np.mean(combined_contrib)) > 0.001:
            # ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
         ax0.grid() 
+
+        # pie chart incorrect
+        ax=axs[1,0]
+        
+        x_c_in_x=abs(x_c_contrib)/(abs(x_c_contrib)+abs(x_p_contrib))   
+        x_p_in_x=abs(x_p_contrib)/(abs(x_c_contrib)+abs(x_p_contrib))   
+        
+        rt_in_xc=abs(rt_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter))  
+        u_in_xc=abs(u_contrib)/(abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter))  
+        inter_in_xc=abs(rt_u_inter)/(abs(rt_contrib)+abs(u_contrib)+abs(rt_u_inter))  
+        print(np.mean(rt_in_xc))
+        print(np.mean(u_in_xc))
+        print(np.mean(inter_in_xc))
+        #print(np.mean(x_p_in_x))
+
+        percent_rt1=rt_in_xc*x_c_in_x*100
+        percent_u1=u_in_xc*x_c_in_x*100
+        percent_inter1=inter_in_xc*x_c_in_x*100 
+        percent_x_p1=x_p_in_x*100        
+
+        print(np.mean(percent_rt1))  
+        print(np.mean(percent_u1))
+        print(np.mean(percent_x_p))
+        
+        ax.set_title('% Contributions - if applied hierarchically')
+          
+        if np.mean(percent_inter) > 0.001:
+            labels = '$\Delta$ RT', '$\Delta$ NPP', '$\Delta$NPP*$\Delta$RT', '$\Delta$ X_p'
+            sizes = [np.mean(percent_rt1), np.mean(percent_u1), 
+                np.mean(percent_inter1), np.mean(percent_x_p1)]
+            ax.pie(sizes, autopct='%1.1f%%', 
+                startangle=90, counterclock=False, colors=("darkorange", "green", "lightgrey", "blue"))
+        else:
+            labels = '$\Delta$ RT','$\Delta$ NPP', '$\Delta$ X_p'
+            sizes = [np.mean(percent_rt1), np.mean(percent_u1), np.mean(percent_x_p1)]
+            ax.pie(sizes, labels=labels, autopct='%1.1f%%',
+                startangle=90, counterclock=False, colors=("darkorange", "green", "blue"))        
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
+        #ax.legend(labels, bbox_to_anchor =(1.42, 2.22)) 
         
         # pie charts
 
@@ -3513,11 +3638,38 @@ def plot_attribution (
         # )  
         plt.show()
         
-    return (sum_abs_diff_x,
-        sum_abs_cont_rt,
-        sum_abs_cont_u,
-        sum_abs_cont_rt_u_inter,
-        sum_abs_cont_x_p
+                # summation of positive and negative contributions separately
+        pos_delta_x=delta_x.copy(); pos_delta_x[pos_delta_x<0]=0
+        neg_delta_x=delta_x.copy(); neg_delta_x[neg_delta_x>0]=0
+        sum_pos_diff_x+=pos_delta_x
+        sum_neg_diff_x+=neg_delta_x
+
+        pos_cont_rt=rt_contrib.copy(); pos_cont_rt[pos_cont_rt<0]=0
+        neg_cont_rt=rt_contrib.copy(); neg_cont_rt[neg_cont_rt>0]=0
+        sum_pos_cont_rt+=pos_cont_rt
+        sum_neg_cont_rt+=neg_cont_rt
+
+        pos_cont_u=u_contrib.copy(); pos_cont_u[pos_cont_u<0]=0
+        neg_cont_u=u_contrib.copy(); neg_cont_u[neg_cont_u>0]=0
+        sum_pos_cont_u+=pos_cont_u
+        sum_neg_cont_u+=neg_cont_u
+
+        pos_cont_rt_u_inter=rt_u_inter.copy(); pos_cont_rt_u_inter[pos_cont_rt_u_inter<0]=0
+        neg_cont_rt_u_inter=rt_u_inter.copy(); neg_cont_rt_u_inter[neg_cont_rt_u_inter>0]=0
+        sum_pos_cont_rt_u_inter+=pos_cont_rt_u_inter
+        sum_neg_cont_rt_u_inter+=neg_cont_rt_u_inter
+
+        pos_cont_x_p=x_p_contrib.copy(); pos_cont_x_p[pos_cont_x_p<0]=0
+        neg_cont_x_p=x_p_contrib.copy(); neg_cont_x_p[neg_cont_x_p>0]=0
+        sum_pos_cont_x_p+=pos_cont_x_p
+        sum_neg_cont_x_p+=neg_cont_x_p    
+        
+        
+    return (sum_pos_diff_x, sum_neg_diff_x,
+        sum_pos_cont_rt, sum_neg_cont_rt,
+        sum_pos_cont_u, sum_neg_cont_u,
+        sum_pos_cont_rt_u_inter, sum_neg_cont_rt_u_inter,
+        sum_pos_cont_x_p, sum_neg_cont_x_p,
         )
             
     # if part<0 | part >1: 
@@ -3590,7 +3742,7 @@ def plot_attribution (
             # avg_timeline(times, averaging),
             # avg_timeline(percent_combined, averaging),
             # label="contribution of $\Delta$ u * $\Delta$ RT",
-            # color="grey",
+            # color="lightgrey",
         # )
     
     # ax.legend()
