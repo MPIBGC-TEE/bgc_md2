@@ -291,6 +291,7 @@ def get_example_site_vars(dataPath):
     # pick up 1 site
     s = slice(None, None, None)  # this is the same as :
     t = s, 72, 117  # [t] = [:,49,325]
+
     def f(tup):
         vn, fn = tup
         path = dataPath.joinpath(fn)
@@ -298,21 +299,17 @@ def get_example_site_vars(dataPath):
         ds = nc.Dataset(str(path))
         return ds.variables[vn][t]
 
-    # note that there use S3 for IBIS model
-    o_names=[(f,"IBIS_S3_{}.nc".format(f)) for f in Observables._fields]
-    d_names=[(f,"IBIS_S3_{}.nc".format(f)) for f in OrgDrivers._fields]
+    # note that there use S2 for IBIS model
+    o_names = [(f, "IBIS_S2_{}.nc".format(f)) for f in Observables._fields]
+    d_names = [(f, "IBIS_S2_{}.nc".format(f)) for f in Drivers._fields]
 
     # we want to drive with npp and can create it from gpp and ra 
     # observables
-    odvs=OrgDrivers(*map(f,d_names))
-    obss=Observables(*map(f, o_names))
+    dvs = Drivers(*map(f, d_names))
+    obss = Observables(*map(f, o_names))
 
-    dvs=Drivers(
-        npp=odvs.gpp-obss.ra,
-        mrso=odvs.mrso,
-        tas=odvs.tas
-    )
     return (obss, dvs)
+
 
 def get_global_mean_vars(dataPath):
     o_names=Observables._fields
