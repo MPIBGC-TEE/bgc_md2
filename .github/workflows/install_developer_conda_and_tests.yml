@@ -42,3 +42,7 @@ jobs:
         python -m unittest discover -t . -p 'Test*'
         
         
+    - name: Test with unittest
+      run: |
+        cd prototypes/working_group_2021
+        python -m unittest Test_general_helpers.py
