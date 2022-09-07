@@ -451,6 +451,9 @@ def make_param2res_sym(
             Symbol(k):v for k,v in apa.items()
             if Symbol(k) in model_par_dict_keys
         }
+        #for k,v in model_par_dict.items():
+        #    print('"{}": {},'.format(k,v))
+
 #         model_par_dict = {
 #             'r_C_AGMS_rh':cpa.r_C_AGMS_rh,
 #             'r_C_AGML_2_C_AGMS':cpa.r_C_AGML_2_C_AGMS,
