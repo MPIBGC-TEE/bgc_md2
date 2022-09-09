@@ -2544,9 +2544,9 @@ def get_traceable_components(
     averaging,  # number of iterator steps over which to average results. 1 for no averaging
     overlap=True,  # compute overlapping timeframe or plot whole duration for all models
 ):
-    if (part < 0) | (part > 1):
+    if (part < -1) | (part > 1) | (part == 0):
         raise Exception(
-            "Invalid partitioning in plot_components_combined: use part between 0 and 1"
+            "Invalid partitioning in plot_components_combined: use part between -1 and 1 excluding 0"
         )
     model_folders = [(k) for k in model_names]
     k = 0
@@ -2572,7 +2572,10 @@ def get_traceable_components(
                 *t_min_tmax_full(test_arg_list, delta_t_val)
             )
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        start, stop = int(stop_max - (stop_max - start_min) * part), stop_max
+        if part < 0:
+            start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
+        else:
+            start, stop = start_min, int(start_min + (stop_max - start_min) * part)
         times = (
             times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
             / days_per_year()
@@ -2631,6 +2634,8 @@ def plot_traceable_component(
     models=list(all_comp_dict.keys())[:-2]
     fig = plt.figure(figsize=(17, 8))
     ax = fig.subplots(1, 1)
+    vals_mean=0
+    st_dev=0
     if comp_name == "x_x_c":
         ax.plot(
                 all_comp_dict["Times"],
@@ -2718,7 +2723,6 @@ def plot_traceable_component(
                 vals_mean+st_dev*2,
                 label="\u00B12$\sigma$ confidence interval",
                 color="grey",
-                #linewidth=3,
                 alpha=0.2                
                 )                          
     ax.grid()
@@ -2728,6 +2732,7 @@ def plot_traceable_component(
         ax.set_title(comp_name)
     #ax.set_ylabel("Gt C")
     ax.legend(bbox_to_anchor =(1.3, 1))   
+    return(vals_mean, st_dev)
          
 def plot_attribution (
     times,
@@ -2755,7 +2760,7 @@ def plot_attribution (
         ax=axs[0]
 
         # quadratic trends
-        
+            
         if abs(np.mean(x_p_contrib_pos))>0.01:
             z = np.polyfit(times,  x_p_contrib_pos, 2)
             p = np.poly1d(z)  
@@ -2784,7 +2789,7 @@ def plot_attribution (
             ) 
             ax.fill_between(
                     times,
-                    +x_p_contrib_neg, 
+                    x_p_contrib_neg, 
                     p(times),
                     color="blue",
                     #linewidth=0.1,
@@ -2945,10 +2950,10 @@ def plot_attribution (
         percent_inter=rt_u_inter/abs_total*100
         
         ######### Percents
-        if percent==True:
-      
+        if percent==True:   
             fig3=plt.figure(figsize=(15,5))
             axs=fig3.subplots(1,2, gridspec_kw={'width_ratios': [2, 1]})         
+            # if delta==False: 
             ax=axs[0]      
             
             # % timeline
@@ -3160,8 +3165,21 @@ def plot_attribution_per_model (
 def plot_attribution_sum (
     all_comp_dict,
     percent=False,
+    part=1,
 ):
-    models=list(all_comp_dict.keys())[:-2]   
+    models=list(all_comp_dict.keys())[:-2]  
+
+    # if we do not want the whole interval but look at a smaller part to observe the dynamics
+    start_min=0
+    stop_max=len(all_comp_dict["Times"])
+    
+    # if we do not want the whole interval but look at a smaller part to observe the dynamics
+    if part < 0:
+        start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
+    else:
+        start, stop = start_min, int(start_min + (stop_max - start_min) * part)
+    
+    times=all_comp_dict["Times"][start:stop]   
     
     sum_pos_diff_x=0
     sum_pos_cont_rt=0
@@ -3173,22 +3191,28 @@ def plot_attribution_sum (
     sum_neg_cont_rt=0
     sum_neg_cont_u=0
     sum_neg_cont_rt_u_inter=0
-    sum_neg_cont_x_p=0    
+    sum_neg_cont_x_p=0  
+    
     print ('\033[1m'+'Attribution of summed deviations from the mean for all models ' +
         'to the differences in traceable components')     
     for m in models: 
            
-        x=all_comp_dict[m]["x"]
-        x_c=all_comp_dict[m]["x_c"]
-        x_p=all_comp_dict[m]["x_p"]
-        u=all_comp_dict[m]["u"]
-        rt=all_comp_dict[m]["rt"]   
-        
-        delta_x=x-all_comp_dict["Mean"]["x"]
-        delta_x_c=x_c-all_comp_dict["Mean"]["x_c"]
-        delta_x_p=x_p-all_comp_dict["Mean"]["x_p"]
-        delta_u=u-all_comp_dict["Mean"]["u"]
-        delta_rt=rt-all_comp_dict["Mean"]["rt"] 
+        x=all_comp_dict[m]["x"][start:stop]
+        x_c=all_comp_dict[m]["x_c"][start:stop]
+        x_p=all_comp_dict[m]["x_p"][start:stop]
+        u=all_comp_dict[m]["u"][start:stop]
+        rt=all_comp_dict[m]["rt"][start:stop]
+        x_mean=all_comp_dict["Mean"]["x"][start:stop]
+        x_c_mean=all_comp_dict["Mean"]["x_c"][start:stop]
+        x_p_mean=all_comp_dict["Mean"]["x_p"][start:stop]
+        u_mean=all_comp_dict["Mean"]["u"][start:stop]
+        rt_mean=all_comp_dict["Mean"]["rt"][start:stop]           
+            
+        delta_x=x-x_mean
+        delta_x_c=x_c-x_c_mean
+        delta_x_p=x_p-x_p_mean
+        delta_u=u-u_mean
+        delta_rt=rt-rt_mean
         
         # attribution of delta X to delta X_c and delta X_p
         x_c_contrib=delta_x_c
@@ -3200,6 +3224,7 @@ def plot_attribution_sum (
         rt_u_inter=delta_x_c-rt_contrib-u_contrib         
 
         # summation of positive and negative contributions separately         
+        
         pos_delta_x=delta_x.copy(); pos_delta_x[pos_delta_x<0]=0
         neg_delta_x=delta_x.copy(); neg_delta_x[neg_delta_x>0]=0
         sum_pos_diff_x+=pos_delta_x
@@ -3226,7 +3251,7 @@ def plot_attribution_sum (
         sum_neg_cont_x_p+=neg_cont_x_p 
         
     plot_attribution (
-        times=all_comp_dict["Times"],
+        times=times,
         delta_x_pos=sum_pos_diff_x,
         delta_x_neg=sum_neg_diff_x,
         rt_contrib_pos=sum_pos_cont_rt,
@@ -3239,4 +3264,217 @@ def plot_attribution_sum (
         x_p_contrib_neg=sum_neg_cont_x_p,
         percent=percent,
     )    
+
+def plot_single_trend(var, times, polynom_order,title):
+    fig=plt.figure(figsize=(15,5))
+    ax=fig.subplots()
+    z = np.polyfit(times, var, polynom_order)
+    p = np.poly1d(z)  
+    ax.fill_between(
+            times,
+            var, 
+            p(times),
+            color="black",
+            label="original value",
+            alpha=0.2                
+            ) 
+    ax.plot(        
+        times, 
+        p(times),
+        label="polynomial trend",
+        color="black",
+        ) 
+    ax.grid()
+    ax.set_title(title)
+    ax.legend()
+    plt.show()
+    
+def get_components_from_output(
+    model_names,  # dictionary (folder name : model name)
+    test_arg_list,  # a list of test_args from all models involved
+    delta_t_val,  # model time step
+    model_cols,  # dictionary (folder name :color)
+    part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+    averaging,  # number of iterator steps over which to average results. 1 for no averaging
+    overlap=True,  # compute overlapping timeframe or plot whole duration for all models
+):
+    if (part < -1) | (part > 1) | (part == 0):
+        raise Exception(
+            "Invalid partitioning in plot_components_combined: use part between -1 and 1 excluding 0"
+        )
+    model_folders = [(k) for k in model_names]
+    k = 0
+    sum_cVeg = np.array(0)
+    sum_cSoil = np.array(0)
+    sum_npp = np.array(0)
+    sum_rh = np.array(0)
+    sum_x = np.array(0)
+    sum_rt = np.array(0)
+    sum_x_c = np.array(0)
+    sum_x_p = np.array(0)
+    
+    all_components = list ()
+    for mf in model_folders:
+        print ("Getting traceable components for "+mf+"...")
+        # if overlap == True:
+            # start_min, stop_max = min_max_index(
+                # test_arg_list[k],
+                # delta_t_val,
+                # *t_min_tmax_overlap(test_arg_list, delta_t_val)
+            # )
+        # else:
+            # start_min, stop_max = min_max_index(
+                # test_arg_list[k],
+                # delta_t_val,
+                # *t_min_tmax_full(test_arg_list, delta_t_val)
+            # )
+        # # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        # if part < 0:
+            # start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
+        # else:
+            # start, stop = start_min, int(start_min + (stop_max - start_min) * part)
+        # times = (
+            # times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
+            # / days_per_year()
+        # )
+        if len(test_arg_list[k].svs.cVeg)==320:
+            start_pool=160
+            stop_pool=320
+        elif len(test_arg_list[k].svs.cVeg)==3840:
+            start_pool=1920
+            stop_pool=3839
+        else:    
+            start_pool=0
+            stop_pool=1919        
+        if len(test_arg_list[k].svs.rh)==320:
+            start_flux=160
+            stop_flux=320
+        elif len(test_arg_list[k].svs.rh)==3840:
+            start_flux=1920
+            stop_flux=3839            
+        else:
+            start_flux=0
+            stop_flux=1919  
+        times = np.array(range(1860,2020))
+        times +=1
+        # harmonising model outputs
+        cVeg=test_arg_list[k].svs.cVeg[start_pool:stop_pool]
+        if cVeg.shape[0]>500: cVeg=avg_timeline(cVeg, averaging)
+        if "cLitter" in test_arg_list[k].svs._fields: 
+            cSoil=(test_arg_list[k].svs.cLitter[start_pool:stop_pool]+
+                test_arg_list[k].svs.cSoil[start_pool:stop_pool])
+        else: cSoil=test_arg_list[k].svs.cSoil[start_pool:stop_pool]
+        if cSoil.shape[0]>500: cSoil=avg_timeline(cSoil, averaging)
+        npp=test_arg_list[k].dvs.npp[start_flux:stop_flux]
+        if npp.shape[0]>500: npp=avg_timeline(npp, averaging)
+        rh=test_arg_list[k].svs.rh[start_flux:stop_flux]
+        if rh.shape[0]>500: rh=avg_timeline(rh, averaging)
+        #print(times)
+        # print(cVeg.shape)
+        # print(cSoil.shape)
+        # print(npp.shape)
+        # print(rh.shape)
+        # print(start_pool, stop_pool)
+        # print(start_flux, stop_flux)        
+        # traditional traceable components
+        x=cVeg+cSoil
+        rt=x/rh
+        x_c=rt*npp
+        x_p=x_c-x
+        # pool-wise
+        #rt_soil=rh/cSoil
+        comp_dict = {
+            "cVeg": cVeg,
+            "cSoil": cSoil,
+            "u":npp,
+            "rh":rh,
+            "x":x,
+            "rt":rt,
+            "x_c":x_c,
+            "x_p":x_p
+            #"rt_soil":rt_soil,           
+            }                
+        all_components.append(comp_dict)
+        if sum_cVeg.all()==0:
+            sum_cVeg = np.append(sum_cVeg,cVeg)[1:]
+            sum_cSoil = np.append(sum_cSoil,cSoil)[1:]
+            sum_npp = np.append(sum_npp,npp)[1:]
+            sum_rh = np.append(sum_rh,rh)[1:]
+            sum_x = np.append(sum_x,x)[1:]
+            sum_rt = np.append(sum_rt,rt)[1:]
+            sum_x_c = np.append(sum_x_c,x_c)[1:]
+            sum_x_p = np.append(sum_x_p,x_p)[1:]
+        else:
+            sum_cVeg = sum_cVeg + cVeg
+            sum_cSoil = sum_cSoil + cSoil
+            sum_npp = sum_npp + npp
+            sum_rh = sum_rh + rh
+            sum_x = sum_x + x
+            sum_rt = sum_rt + rt
+            sum_x_c = sum_x_c + x_c
+            sum_x_p = sum_x_p + x_p
+        k += 1
+    ave_dict = {
+            "cVeg": sum_cVeg / len(model_folders),
+            "cSoil": sum_cSoil / len(model_folders), 
+            "u": sum_npp / len(model_folders), 
+            "rh": sum_rh / len(model_folders), 
+            "x": sum_x / len(model_folders), 
+            "rt": sum_rt / len(model_folders),
+            "x_c": sum_x_c / len(model_folders),
+            "x_p": sum_x_p / len(model_folders),           
+            }    
+    all_components.append(ave_dict) 
+    
+    times_avg = times #avg_timeline(times, averaging)
+    all_components.append(times_avg)  
+    mods=list(model_names.values())
+    mods.append("Mean")
+    mods.append("Times")
+    all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}             
         
+    return all_comp_dict
+        
+        # k += 1       
+        
+        # times_avg = avg_timeline(times, averaging)    
+        
+        # comp_dict = {
+            # "x": avg_timeline(vals.x, averaging),
+            # "x_c": avg_timeline(vals.x_c, averaging),
+            # "x_p": avg_timeline(vals.x_p, averaging),
+            # "u": avg_timeline(vals.u, averaging),
+            # "rt": avg_timeline(vals.rt, averaging),
+            # }
+        # all_components.append(comp_dict) 
+        # if sum_x.all()==0:
+            # sum_x = np.append(sum_x,vals.x)[1:]
+            # sum_x_c = np.append(sum_x_c,vals.x_c)[1:]
+            # sum_x_p = np.append(sum_x_p,vals.x_p)[1:]
+            # sum_u = np.append(sum_u,vals.u)[1:]
+            # sum_rt = np.append(sum_rt,vals.rt)[1:]
+        # else:
+            # sum_x = sum_x + vals.x
+            # sum_x_c = sum_x_c + vals.x_c
+            # sum_x_p = sum_x_p + vals.x_p
+            # sum_u = sum_u + vals.u
+            # sum_rt = sum_rt + vals.rt   
+                
+    
+    # ave_dict = {
+            # "x": avg_timeline(sum_x / len(model_folders), averaging),
+            # "x_c": avg_timeline(sum_x_c / len(model_folders), averaging),
+            # "x_p": avg_timeline(sum_x_p / len(model_folders), averaging),
+            # "u": avg_timeline(sum_u / len(model_folders), averaging),
+            # "rt": avg_timeline(sum_rt / len(model_folders), averaging),
+            # }       
+    
+    # all_components.append(ave_dict)
+    # all_components.append(times_avg)       
+    
+    # mods=list(model_names.values())
+    # mods.append("Mean")
+    # mods.append("Times")
+    # all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}      
+
+    # return all_comp_dict
