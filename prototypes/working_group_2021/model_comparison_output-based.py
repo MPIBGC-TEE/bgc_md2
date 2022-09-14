@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -16,8 +16,10 @@
 
 # # O'Sullivan / Koven method
 
-from IPython.display import Markdown, display
-display(Markdown("TracebilityText.md"))
+# +
+# from IPython.display import Markdown, display
+# display(Markdown("TracebilityText.md"))
+# -
 
 # ### Loading required packages  and functions
 
@@ -41,7 +43,7 @@ model_names={
     "kv_visit2": "VISIT",
     "jon_yib": "YIBs",
     "kv_ft_dlem": "DLEM",
-    #"Aneesh_SDGVM":"SDGVM",
+#     "Aneesh_SDGVM":"SDGVM",
     #"cj_isam": "ISAM",
     "bian_ibis2":"IBIS",
     #"ORCHIDEE-V2":"OCN",
@@ -72,7 +74,7 @@ model_cols={
     "VISIT": "orange",
     "YIBs": "green",
     "DLEM": "red",
-    "SDGVM":"yellow",
+    "SDGVM":"cyan",
     "ISAM": "purple",
     "IBIS":"magenta",
     "OCN":"teal",
@@ -95,8 +97,12 @@ all_comp_dict_out=gh.get_components_from_output(model_names=model_names,
              part=1,
              averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
-             overlap=True
+             #overlap=True
              )
+
+# +
+# all_comp_dict=all_comp_dict_out
+# -
 
 x_x_c,sigma_x_x_c=gh.plot_traceable_component(
     all_comp_dict,
@@ -235,6 +241,11 @@ gh.plot_attribution_sum (
     all_comp_dict=all_comp_dict_out,
     percent=True,
     part=1,
+)
+
+gh.plot_attribution_per_model(
+    all_comp_dict=all_comp_dict_out,
+    #percent=True,    
 )
 
 

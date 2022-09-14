@@ -1385,6 +1385,7 @@ def download_TRENDY_output(
     dataPath: Path,
     models: List[str],
     variables: List[str],
+    experiments = ["S2"] # We are using s2 data, can add more
 ):
     import paramiko
     import tarfile
@@ -1411,8 +1412,8 @@ def download_TRENDY_output(
     transport.connect(None, username=username, password=password)
     sftp = paramiko.SFTPClient.from_transport(transport)
 
-    # We are using s2 data
-    experiments = ["S2"]
+    # We are using s2 data, can add more
+    experiments = experiments
 
     # Loop through models, experiments, and variables to download
     for model in models:
@@ -1431,7 +1432,7 @@ def download_TRENDY_output(
                     modelname_file = "ORCHIDEEv3"
                 elif model == "ISBA_CTRIP":
                     modelname_file = "ISBA-CTRIP"
-                elif model == "JULES-ES":
+                elif model == "JULES-ES"or model == "JULES-ES-1.0":
                     modelname = "JULES-ES-1.0"
                     modelname_file = "JULES-ES-1p0"
                 elif model == "SDGVM" or model == "VISIT":
@@ -2684,7 +2685,7 @@ def plot_traceable_component(
     else:
         if delta:
             vals_array_mean = all_comp_dict["Mean"][comp_name]
-            vals_mean = (vals_array_mean-vals_array_mean[0]) / vals_array_mean[0] * 100
+            vals_mean = (vals_array_mean-vals_array_mean[0]) #/ vals_array_mean[0] * 100
         else:
             vals_mean = all_comp_dict["Mean"][comp_name]
                 
@@ -2701,7 +2702,7 @@ def plot_traceable_component(
         for m in models:
             if delta:
                 vals_array = all_comp_dict[m][comp_name]
-                vals=(vals_array-vals_array[0])/vals_array[0] * 100
+                vals=(vals_array-vals_array[0])#/vals_array[0] * 100
             else:
                 vals = all_comp_dict[m][comp_name]  
                       
@@ -3316,48 +3317,59 @@ def get_components_from_output(
     all_components = list ()
     for mf in model_folders:
         print ("Getting traceable components for "+mf+"...")
-        # if overlap == True:
-            # start_min, stop_max = min_max_index(
-                # test_arg_list[k],
-                # delta_t_val,
-                # *t_min_tmax_overlap(test_arg_list, delta_t_val)
-            # )
-        # else:
-            # start_min, stop_max = min_max_index(
-                # test_arg_list[k],
-                # delta_t_val,
-                # *t_min_tmax_full(test_arg_list, delta_t_val)
-            # )
-        # # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        # if part < 0:
-            # start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
-        # else:
-            # start, stop = start_min, int(start_min + (stop_max - start_min) * part)
-        # times = (
-            # times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
-            # / days_per_year()
-        # )
-        if len(test_arg_list[k].svs.cVeg)==320:
-            start_pool=160
-            stop_pool=320
-        elif len(test_arg_list[k].svs.cVeg)==3840:
-            start_pool=1920
-            stop_pool=3839
-        else:    
-            start_pool=0
-            stop_pool=1919        
-        if len(test_arg_list[k].svs.rh)==320:
-            start_flux=160
-            stop_flux=320
-        elif len(test_arg_list[k].svs.rh)==3840:
-            start_flux=1920
-            stop_flux=3839            
+        if overlap == True:
+            start_min, stop_max = min_max_index(
+                test_arg_list[k],
+                delta_t_val,
+                *t_min_tmax_overlap(test_arg_list, delta_t_val)
+            )
         else:
-            start_flux=0
-            stop_flux=1919  
-        times = np.array(range(1860,2020))
-        times +=1
+            start_min, stop_max = min_max_index(
+                test_arg_list[k],
+                delta_t_val,
+                *t_min_tmax_full(test_arg_list, delta_t_val)
+            )
+        # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        if part < 0:
+            start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
+        else:
+            start, stop = start_min, int(start_min + (stop_max - start_min) * part)
+        times = (
+            times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
+            / days_per_year()
+        )
+        # if len(test_arg_list[k].svs.cVeg)==320:
+            # start_pool=160
+            # stop_pool=320
+        # elif len(test_arg_list[k].svs.cVeg)==3840:
+            # start_pool=1920
+            # stop_pool=3839
+        # else:    
+            # start_pool=0
+            # stop_pool=1919        
+        # if len(test_arg_list[k].svs.rh)==320:
+            # start_flux=160
+            # stop_flux=320
+        # elif len(test_arg_list[k].svs.rh)==3840:
+            # start_flux=1920
+            # stop_flux=3839            
+        # else:
+            # start_flux=0
+            # stop_flux=1919  
+        # times = np.array(range(1860,2020))
+        # times +=1
         # harmonising model outputs
+        start_flux=start
+        stop_flux=stop
+        print(start)
+        print(stop)
+        print(len(test_arg_list[k].svs.cVeg)<1000)
+        if len(test_arg_list[k].svs.cVeg)<1000:
+            start_pool=start//12
+            stop_pool=stop//12+1
+        else:
+            start_pool=start
+            stop_pool=stop        
         cVeg=test_arg_list[k].svs.cVeg[start_pool:stop_pool]
         if cVeg.shape[0]>500: cVeg=avg_timeline(cVeg, averaging)
         if "cLitter" in test_arg_list[k].svs._fields: 
@@ -3369,7 +3381,7 @@ def get_components_from_output(
         if npp.shape[0]>500: npp=avg_timeline(npp, averaging)
         rh=test_arg_list[k].svs.rh[start_flux:stop_flux]
         if rh.shape[0]>500: rh=avg_timeline(rh, averaging)
-        #print(times)
+        # print(times)
         # print(cVeg.shape)
         # print(cSoil.shape)
         # print(npp.shape)
@@ -3426,7 +3438,8 @@ def get_components_from_output(
             }    
     all_components.append(ave_dict) 
     
-    times_avg = times #avg_timeline(times, averaging)
+    #times_avg = times
+    times_avg = avg_timeline(times, averaging)
     all_components.append(times_avg)  
     mods=list(model_names.values())
     mods.append("Mean")
@@ -3435,46 +3448,3 @@ def get_components_from_output(
         
     return all_comp_dict
         
-        # k += 1       
-        
-        # times_avg = avg_timeline(times, averaging)    
-        
-        # comp_dict = {
-            # "x": avg_timeline(vals.x, averaging),
-            # "x_c": avg_timeline(vals.x_c, averaging),
-            # "x_p": avg_timeline(vals.x_p, averaging),
-            # "u": avg_timeline(vals.u, averaging),
-            # "rt": avg_timeline(vals.rt, averaging),
-            # }
-        # all_components.append(comp_dict) 
-        # if sum_x.all()==0:
-            # sum_x = np.append(sum_x,vals.x)[1:]
-            # sum_x_c = np.append(sum_x_c,vals.x_c)[1:]
-            # sum_x_p = np.append(sum_x_p,vals.x_p)[1:]
-            # sum_u = np.append(sum_u,vals.u)[1:]
-            # sum_rt = np.append(sum_rt,vals.rt)[1:]
-        # else:
-            # sum_x = sum_x + vals.x
-            # sum_x_c = sum_x_c + vals.x_c
-            # sum_x_p = sum_x_p + vals.x_p
-            # sum_u = sum_u + vals.u
-            # sum_rt = sum_rt + vals.rt   
-                
-    
-    # ave_dict = {
-            # "x": avg_timeline(sum_x / len(model_folders), averaging),
-            # "x_c": avg_timeline(sum_x_c / len(model_folders), averaging),
-            # "x_p": avg_timeline(sum_x_p / len(model_folders), averaging),
-            # "u": avg_timeline(sum_u / len(model_folders), averaging),
-            # "rt": avg_timeline(sum_rt / len(model_folders), averaging),
-            # }       
-    
-    # all_components.append(ave_dict)
-    # all_components.append(times_avg)       
-    
-    # mods=list(model_names.values())
-    # mods.append("Mean")
-    # mods.append("Times")
-    # all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}      
-
-    # return all_comp_dict
