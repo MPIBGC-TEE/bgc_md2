@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,10 +18,10 @@
 # %autoreload 2
 import general_helpers as gh
 from pathlib import Path
-variables=["cVeg", "cLitter", "cSoil","gpp","npp","ra","rh","tas","mrso","rh_annual","tsl","lai"]
+variables=["cVeg", "cLitter", "cSoil","gpp","npp","ra","rh","rh_annual"]#,"tas","mrso","tsl","lai"]
 models=np.array(("CLASSIC","CLM5","DLEM","IBIS","ISAM","ISBA_CTRIP",
 "JSBACH","JULES-ES-1.0","LPJ-GUESS","LPJwsl","LPX-Bern","OCN",
-"ORCHIDEE","ORCHIDEE-CNP","ORCHIDEEv3","ORCHIDEEv3_0.5deg",
+"ORCHIDEE","ORCHIDEE-CNP","ORCHIDEEv3",#"ORCHIDEEv3_0.5deg", #"CABLE_POP"
 "SDGVM","VISIT","YIBs"))
 for i in range(len(models)):
     dataPath="C:/Users/konst/OneDrive - Cornell University/Data/Matrix MIP data/TRENDY/"+models[i]

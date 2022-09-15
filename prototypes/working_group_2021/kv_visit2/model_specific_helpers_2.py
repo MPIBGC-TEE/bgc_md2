@@ -58,7 +58,7 @@ Observables = namedtuple(
 )
 OrgDrivers=namedtuple(
     "OrgDrivers",
-    ["gpp", "ra", "mrso", "tas"]#, "xi_t", "xi_w"]
+    ["gpp", "ra", "mrso", "tas"]
 )    
 Drivers=namedtuple(
     "Drivers",
@@ -75,11 +75,8 @@ Constants = namedtuple(
         "cSoil_0",
         "cVeg_0",
         "npp_0",
-        #"xi_0",
         "rh_0",
         #"ra_0",
-        #"r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates
-        #"r_C_root_litter_2_C_soil_slow",# it would be much better to know more
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
 )
@@ -96,10 +93,6 @@ EstimatedParameters = namedtuple(
         "T_0",
         "E",
         "KM",
-        #"env_modifier",
-        #"r_C_leaf_rh",
-        #"r_C_wood_rh",
-        #"r_C_root_rh",
         "r_C_leaf_litter_rh",
         "r_C_wood_litter_rh",
         "r_C_root_litter_rh",
@@ -173,42 +166,6 @@ def get_example_site_vars(dataPath):
     )
     return (obss, dvs)
 
-# fixme mm: 04-22-2022
-# is the following commented code obsolete?
-# def get_global_vars(dataPath):
-#    # pick up 1 site
-#    # s = slice(None, None, None)  # this is the same as :
-#    # t = s, 50, 33  # [t] = [:,49,325]
-#    def f(tup):
-#        vn, fn = tup
-#        path = dataPath.joinpath(fn)
-#        # Read NetCDF data but only at the point where we want them
-#        ds = nc.Dataset(str(path))
-#        lats = ds.variables["lat"].__array__()
-#        lons = ds.variables["lon"].__array__()
-#        if vn in ["npp","gpp","rh","ra"]:
-#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
-#        else:
-#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
-#        #return ds.variables[vn][t]
-#
-#    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-#    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
-#
-#    # we want to drive with npp and can create it from gpp and ra
-#    # observables
-#    odvs=OrgDrivers(*map(f,d_names))
-#    obss=Observables(*map(f, o_names))
-#
-#    dvs=Drivers(
-#        npp=odvs.gpp-odvs.ra,
-#        mrso=odvs.mrso,
-#        tas=odvs.tas#,
-#        #xi=odvs.xi_t*odvs.xi_w
-#    )
-#    return (obss, dvs)
-
-
 experiment_name="VISIT_S2_"
 def nc_file_name(nc_var_name):
     return experiment_name+"{}.nc".format(nc_var_name)
@@ -246,8 +203,6 @@ def get_global_mean_vars(dataPath):
         return (
             obss,
             dvs
-            #Observables(*map(get_cached_global_mean, o_names)),
-            #OrgDrivers(*map(get_cached_global_mean,d_names))
         )
 
     else:
@@ -303,44 +258,8 @@ def get_global_mean_vars(dataPath):
     
         return (
             obss,
-            dvs
-            #Observables(*map(compute_and_cache_global_mean, o_names)),
-            #Drivers(*map(compute_and_cache_global_mean, d_names))            
+            dvs           
         )
-
-
-
-# +
-# def make_sim_day_2_day_since_a_D(conf_dict):
-#     # this function is extremely important to syncronise our results
-#     # because our data streams start at different times the first day of 
-#     # a simulation day_ind=0 refers to different dates for different models
-#     # we have to check some assumptions on which this calculation is based
-#     # for jules the data points are actually spaced monthly with different numbers of days
-#     ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
-#     times = ds.variables["time"]
-
-#     # we have to check some assumptions on which this calculation is based
-
-#     tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
-#     td = int(tm *31)  #in days since_1860-01-01 
-#     #NOT assuming a 30 day month...
-#     import datetime as dt
-#     ad = dt.date(1, 1, 1) # first of January of year 1 
-#     sd = dt.date(1860, 1, 1)
-#     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
-
-#     def f(day_ind: int)->int:
-#         return day_ind+td_aD
-
-#     return f
-# -
-
-# # Define start and end dates of the simulation
-# import datetime as dt
-# start_date=dt.date(1860, 1, 16)
-# end_date = dt.date(2019, 12, 16)
 
 
 
@@ -374,10 +293,6 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
         "T_0": epa.T_0,
         "E": epa.E,
         "KM": epa.KM,
-        #"env_modifier": epa.env_modifier,
-        #"r_C_leaf_rh": 0,
-        #"r_C_wood_rh": 0,
-        #"r_C_root_rh": 0,
         "r_C_leaf_litter_rh": epa.r_C_leaf_litter_rh,
         "r_C_wood_litter_rh": epa.r_C_wood_litter_rh,
         "r_C_root_litter_rh": epa.r_C_root_litter_rh,
@@ -861,30 +776,6 @@ def make_param2res_full_output(
             #ra=ra_arr)
     return param2res_full_output
 # -
-
-# moved to general_helpers
-# def make_feng_cost_func_2(
-#    svs #: Observables
-#    ):
-#    # now we compute a scaling factor per observable stream
-#    # fixme mm 10-28-2021
-#    # The denominators in this case are actually the TEMPORAL variances of the data streams
-#    obs_arr=np.stack([ arr for arr in svs],axis=1)
-#    means = obs_arr.mean(axis=0)
-#    mean_centered_obs= obs_arr - means
-#    denominators = np.sum(mean_centered_obs ** 2, axis=0)
-#
-#
-#    def feng_cost_func_2(simu: Observables):
-#        def f(i):
-#            arr=simu[i]
-#            obs=obs_arr[:,i]
-#            diff=((arr-obs)**2).sum()/denominators[i]*100 
-#            return diff
-#        return np.array([f(i) for i  in range(len(simu))]).mean()
-#    
-#    return feng_cost_func_2
-
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
