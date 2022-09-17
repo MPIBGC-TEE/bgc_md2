@@ -3290,15 +3290,74 @@ def plot_single_trend(var, times, polynom_order,title):
     ax.legend()
     plt.show()
     
+def get_vars_all_list(model_folders, experiment_names):
+    vars_all_list = []
+    i=0
+    for mf in model_folders:
+        current_var_list = msh(mf).get_global_mean_vars_all(experiment_name=experiment_names[i])
+        vars_all_list.append(current_var_list)
+        i+=1
+    print("Done!")
+    return vars_all_list        
+    
 def get_components_from_output(
     model_names,  # dictionary (folder name : model name)
-    test_arg_list,  # a list of test_args from all models involved
+    vars_all_list,  # a list of test_args from all models involved
     delta_t_val,  # model time step
-    model_cols,  # dictionary (folder name :color)
+    #model_cols,  # dictionary (folder name :color)
     part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
     averaging,  # number of iterator steps over which to average results. 1 for no averaging
     overlap=True,  # compute overlapping timeframe or plot whole duration for all models
 ):
+
+    def times_in_days_aD(
+        vars_all,  # a tuple defined in model-specific test_helpers.py
+        delta_t_val,  # iterator time step
+        start_date,
+    ):
+        n_months = len(vars_all.gpp)
+        n_days = month_2_day_index([n_months], start_date)[0]
+        n_iter = int(n_days / delta_t_val)
+        return np.array(
+            tuple(
+                (
+                    days_since_AD(i, delta_t_val, start_date)
+                    for i in np.arange(n_iter)  # days_after_sim_start
+                )
+            )
+        )
+    # function to determine overlapping time frames for models simulations
+    def t_min_tmax_overlap(
+        vars_all_list,  # a list of test_args from all models involved
+        delta_t_val,  # iterator time step
+        start_date,
+    ):
+        td = {
+            i: times_in_days_aD(vars_all_list[i], delta_t_val, start_date)
+            for i in range(len(vars_all_list))
+        }
+        t_min = max([t.min() for t in td.values()])
+        t_max = min([t.max() for t in td.values()])
+        return (t_min, t_max)
+    
+    def min_max_index(
+    vars_all,  # a tuple defined in model-specific test_helpers.py
+    delta_t_val,  # iterator time step
+    t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
+    t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
+    start_date,
+    ):
+        ts = times_in_days_aD(vars_all, delta_t_val, start_date)
+
+        def count(acc, i):
+            min_i, max_i = acc
+            t = ts[i]
+            min_i = min_i + 1 if t < t_min else min_i
+            max_i = max_i + 1 if t < t_max else max_i
+            return (min_i, max_i)
+
+        return reduce(count, range(len(ts)), (0, 0))
+
     if (part < -1) | (part > 1) | (part == 0):
         raise Exception(
             "Invalid partitioning in plot_components_combined: use part between -1 and 1 excluding 0"
@@ -3307,50 +3366,48 @@ def get_components_from_output(
     k = 0
     sum_cVeg = np.array(0)
     sum_cSoil = np.array(0)
+    sum_gpp = np.array(0)    
     sum_npp = np.array(0)
+    sum_ra = np.array(0)
     sum_rh = np.array(0)
     sum_x = np.array(0)
     sum_rt = np.array(0)
     sum_x_c = np.array(0)
     sum_x_p = np.array(0)
+    sum_nep = np.array(0)    
     
     all_components = list ()
     for mf in model_folders:
         print ("Getting traceable components for "+mf+"...")
-        if overlap == True:
-            start_min, stop_max = min_max_index(
-                test_arg_list[k],
-                delta_t_val,
-                *t_min_tmax_overlap(test_arg_list, delta_t_val)
-            )
-        else:
-            start_min, stop_max = min_max_index(
-                test_arg_list[k],
-                delta_t_val,
-                *t_min_tmax_full(test_arg_list, delta_t_val)
-            )
+        start_date=msh(mf).start_date()
+        start_min, stop_max = min_max_index(
+            vars_all_list[k],
+            delta_t_val,
+            *t_min_tmax_overlap(vars_all_list, delta_t_val, start_date),
+            start_date
+        )
         # if we do not want the whole interval but look at a smaller part to observe the dynamics
         if part < 0:
             start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
         else:
             start, stop = start_min, int(start_min + (stop_max - start_min) * part)
         times = (
-            times_in_days_aD(test_arg_list[k], delta_t_val)[start:stop]
+            times_in_days_aD(vars_all_list[k], delta_t_val, start_date)[start:stop]
             / days_per_year()
         )
-        # if len(test_arg_list[k].svs.cVeg)==320:
+        # if len(vars_all_list[k].cVeg)==320:
             # start_pool=160
             # stop_pool=320
-        # elif len(test_arg_list[k].svs.cVeg)==3840:
+        # elif len(vars_all_list[k].cVeg)==3840:
             # start_pool=1920
             # stop_pool=3839
         # else:    
             # start_pool=0
             # stop_pool=1919        
-        # if len(test_arg_list[k].svs.rh)==320:
+        # if len(vars_all_list[k].rh)==320:
             # start_flux=160
             # stop_flux=320
-        # elif len(test_arg_list[k].svs.rh)==3840:
+        # elif len(vars_all_list[k].rh)==3840:
             # start_flux=1920
             # stop_flux=3839            
         # else:
@@ -3363,24 +3420,25 @@ def get_components_from_output(
         stop_flux=stop
         print(start)
         print(stop)
-        print(len(test_arg_list[k].svs.cVeg)<1000)
-        if len(test_arg_list[k].svs.cVeg)<1000:
+        print(len(vars_all_list[k].cVeg)<1000)
+        if len(vars_all_list[k].cVeg)<1000:
             start_pool=start//12
             stop_pool=stop//12+1
         else:
             start_pool=start
             stop_pool=stop        
-        cVeg=test_arg_list[k].svs.cVeg[start_pool:stop_pool]
+        cVeg=vars_all_list[k].cVeg[start_pool:stop_pool]
         if cVeg.shape[0]>500: cVeg=avg_timeline(cVeg, averaging)
-        if "cLitter" in test_arg_list[k].svs._fields: 
-            cSoil=(test_arg_list[k].svs.cLitter[start_pool:stop_pool]+
-                test_arg_list[k].svs.cSoil[start_pool:stop_pool])
-        else: cSoil=test_arg_list[k].svs.cSoil[start_pool:stop_pool]
+        cSoil=vars_all_list[k].cSoil[start_pool:stop_pool]
         if cSoil.shape[0]>500: cSoil=avg_timeline(cSoil, averaging)
-        npp=test_arg_list[k].dvs.npp[start_flux:stop_flux]
+        gpp=vars_all_list[k].gpp[start_flux:stop_flux]
+        if gpp.shape[0]>500: gpp=avg_timeline(gpp, averaging)        
+        npp=vars_all_list[k].npp[start_flux:stop_flux]
         if npp.shape[0]>500: npp=avg_timeline(npp, averaging)
-        rh=test_arg_list[k].svs.rh[start_flux:stop_flux]
+        rh=vars_all_list[k].rh[start_flux:stop_flux]
         if rh.shape[0]>500: rh=avg_timeline(rh, averaging)
+        ra=vars_all_list[k].ra[start_flux:stop_flux]
+        if ra.shape[0]>500: ra=avg_timeline(ra, averaging)        
         # print(times)
         # print(cVeg.shape)
         # print(cSoil.shape)
@@ -3390,51 +3448,62 @@ def get_components_from_output(
         # print(start_flux, stop_flux)        
         # traditional traceable components
         x=cVeg+cSoil
-        rt=x/rh
-        x_c=rt*npp
+        rt=x/(rh+ra)
+        x_c=rt*gpp
         x_p=x_c-x
+        nep=gpp-rh-ra
         # pool-wise
         #rt_soil=rh/cSoil
         comp_dict = {
             "cVeg": cVeg,
             "cSoil": cSoil,
-            "u":npp,
+            "u":gpp,
             "rh":rh,
+            "ra":ra,
             "x":x,
             "rt":rt,
             "x_c":x_c,
-            "x_p":x_p
+            "x_p":x_p,
+            "nep":nep,
             #"rt_soil":rt_soil,           
             }                
         all_components.append(comp_dict)
         if sum_cVeg.all()==0:
             sum_cVeg = np.append(sum_cVeg,cVeg)[1:]
             sum_cSoil = np.append(sum_cSoil,cSoil)[1:]
+            sum_gpp = np.append(sum_gpp,gpp)[1:]
             sum_npp = np.append(sum_npp,npp)[1:]
             sum_rh = np.append(sum_rh,rh)[1:]
+            sum_ra = np.append(sum_ra,ra)[1:]            
             sum_x = np.append(sum_x,x)[1:]
             sum_rt = np.append(sum_rt,rt)[1:]
             sum_x_c = np.append(sum_x_c,x_c)[1:]
             sum_x_p = np.append(sum_x_p,x_p)[1:]
+            sum_nep = np.append(sum_nep,nep)[1:]            
         else:
             sum_cVeg = sum_cVeg + cVeg
             sum_cSoil = sum_cSoil + cSoil
+            sum_gpp = sum_gpp + gpp
             sum_npp = sum_npp + npp
             sum_rh = sum_rh + rh
+            sum_ra = sum_ra + ra            
             sum_x = sum_x + x
             sum_rt = sum_rt + rt
             sum_x_c = sum_x_c + x_c
             sum_x_p = sum_x_p + x_p
+            sum_nep = sum_nep + nep            
         k += 1
     ave_dict = {
             "cVeg": sum_cVeg / len(model_folders),
             "cSoil": sum_cSoil / len(model_folders), 
-            "u": sum_npp / len(model_folders), 
-            "rh": sum_rh / len(model_folders), 
+            "u": sum_gpp / len(model_folders), 
+            "rh": sum_rh / len(model_folders),
+            "ra": sum_ra / len(model_folders),
             "x": sum_x / len(model_folders), 
             "rt": sum_rt / len(model_folders),
             "x_c": sum_x_c / len(model_folders),
-            "x_p": sum_x_p / len(model_folders),           
+            "x_p": sum_x_p / len(model_folders), 
+            "nep": sum_nep / len(model_folders), 
             }    
     all_components.append(ave_dict) 
     
@@ -3447,4 +3516,39 @@ def get_components_from_output(
     all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}             
         
     return all_comp_dict
-        
+
+data_streams = namedtuple(
+    'data_streams',
+    ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
+    )        
+
+def write_data_streams_cache(gm_path, gm):
+    # var=ds.variables[var_name]
+    if gm_path.exists():
+        print("removing old cache file{}")
+        os.remove(gm_path)
+    names=gm._fields    
+
+    n_t = gm.cVeg.shape[0]
+    time_dim_name = "time"
+    ds_gm = nc.Dataset(str(gm_path), "w", persist=True)
+    time = ds_gm.createDimension(time_dim_name, size=n_t)
+    var_gm0 = ds_gm.createVariable(names[0], np.float64, [time_dim_name])
+    var_gm1 = ds_gm.createVariable(names[1], np.float64, [time_dim_name])
+    var_gm2 = ds_gm.createVariable(names[2], np.float64, [time_dim_name])
+    var_gm3 = ds_gm.createVariable(names[3], np.float64, [time_dim_name])
+    var_gm4 = ds_gm.createVariable(names[4], np.float64, [time_dim_name])
+    var_gm5 = ds_gm.createVariable(names[5], np.float64, [time_dim_name])    
+    gm_ma0 = np.ma.array(gm[0], mask=np.zeros(gm[0].shape, dtype=np.bool_))
+    gm_ma1 = np.ma.array(gm[1], mask=np.zeros(gm[1].shape, dtype=np.bool_))
+    gm_ma2 = np.ma.array(gm[2], mask=np.zeros(gm[2].shape, dtype=np.bool_))
+    gm_ma3 = np.ma.array(gm[3], mask=np.zeros(gm[3].shape, dtype=np.bool_))
+    gm_ma4 = np.ma.array(gm[4], mask=np.zeros(gm[4].shape, dtype=np.bool_))
+    gm_ma5 = np.ma.array(gm[5], mask=np.zeros(gm[5].shape, dtype=np.bool_))    
+    var_gm0[:] = gm_ma0
+    var_gm1[:] = gm_ma1
+    var_gm2[:] = gm_ma2
+    var_gm3[:] = gm_ma3
+    var_gm4[:] = gm_ma4
+    var_gm5[:] = gm_ma5    
+    ds_gm.close()    

@@ -15,8 +15,8 @@ from pathlib import Path
 #     'bian_ibis2'
 # ]
 model_folders = [
-                #"ab_classic",
-                #"jsbach",
+                "ab_classic",
+                "jsbach",
                 "clm5",
                 "ORCHIDEE-CNP","ORCHIDEEv3",
                 "kv_ft_dlem","cj_isam","isba-ctrip",
