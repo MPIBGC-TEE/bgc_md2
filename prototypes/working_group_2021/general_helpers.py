@@ -3294,6 +3294,8 @@ def get_vars_all_list(model_folders, experiment_names):
     vars_all_list = []
     i=0
     for mf in model_folders:
+        print('\033[1m'+mf)
+        print ('\033[0m')
         current_var_list = msh(mf).get_global_mean_vars_all(experiment_name=experiment_names[i])
         vars_all_list.append(current_var_list)
         i+=1
@@ -3375,8 +3377,23 @@ def get_components_from_output(
     sum_x_c = np.array(0)
     sum_x_p = np.array(0)
     sum_nep = np.array(0)    
+    sum_rt_soil = np.array(0)
+    sum_f_vs = np.array(0)
+    sum_rt_soil = np.array(0)
+    sum_rt_veg = np.array(0)
+    sum_x_c_soil = np.array(0)
+    sum_x_c_veg = np.array(0)
+    sum_x_p_veg = np.array(0)
+    sum_ra_rate = np.array(0)
+    sum_rh_rate = np.array(0)
     
     all_components = list ()
+    
+    def annual_delta (data_stream):
+        delta=np.zeros_like(data_stream)
+        for i in range(len(data_stream)-1):
+            delta[i]=data_stream[i]-data_stream[i+1]  
+            
     for mf in model_folders:
         print ("Getting traceable components for "+mf+"...")
         start_date=msh(mf).start_date()
@@ -3395,31 +3412,11 @@ def get_components_from_output(
             times_in_days_aD(vars_all_list[k], delta_t_val, start_date)[start:stop]
             / days_per_year()
         )
-        # if len(vars_all_list[k].cVeg)==320:
-            # start_pool=160
-            # stop_pool=320
-        # elif len(vars_all_list[k].cVeg)==3840:
-            # start_pool=1920
-            # stop_pool=3839
-        # else:    
-            # start_pool=0
-            # stop_pool=1919        
-        # if len(vars_all_list[k].rh)==320:
-            # start_flux=160
-            # stop_flux=320
-        # elif len(vars_all_list[k].rh)==3840:
-            # start_flux=1920
-            # stop_flux=3839            
-        # else:
-            # start_flux=0
-            # stop_flux=1919  
-        # times = np.array(range(1860,2020))
-        # times +=1
         # harmonising model outputs
         start_flux=start
         stop_flux=stop
-        print(start)
-        print(stop)
+        #print(start)
+        #print(stop)
         print(len(vars_all_list[k].cVeg)<1000)
         if len(vars_all_list[k].cVeg)<1000:
             start_pool=start//12
@@ -3446,14 +3443,29 @@ def get_components_from_output(
         # print(rh.shape)
         # print(start_pool, stop_pool)
         # print(start_flux, stop_flux)        
-        # traditional traceable components
+        
+        # traditional traceable components                 
         x=cVeg+cSoil
+        delta_cVeg=annual_delta(cVeg)
+        delta_cSoil=annual_delta(cSoil)
         rt=x/(rh+ra)
         x_c=rt*gpp
         x_p=x_c-x
         nep=gpp-rh-ra
-        # pool-wise
-        #rt_soil=rh/cSoil
+        # veg vs soil
+        f_vs=rh+delta_cSoil
+        rt_soil=cSoil/rh
+        rt_veg=cVeg/(gpp-delta_cVeg)
+        #rt_veg2=cVeg/(ra+f_vs)
+        x_c_soil=f_vs*rt_soil
+        x_c_veg=gpp*rt_veg1
+        #x_c_veg2=gpp*rt_veg2
+        x_p_soil=x_c_soil-cSoil
+        x_p_veg=x_c_veg-cVeg
+        #x_p_veg2=x_c_veg2-cVeg
+        ra_rate=ra/cVeg
+        rh_rate=rh/cSoil
+        
         comp_dict = {
             "cVeg": cVeg,
             "cSoil": cSoil,
@@ -3465,7 +3477,18 @@ def get_components_from_output(
             "x_c":x_c,
             "x_p":x_p,
             "nep":nep,
-            #"rt_soil":rt_soil,           
+            "rt_soil":rt_soil,
+            "f_vs":f_vs,
+            "rt_soil":rt_soil,
+            "rt_veg":rt_veg,
+            #"rt_veg2":rt_veg2,
+            "x_c_soil":x_c_soil,
+            "x_c_veg":x_c_veg,
+            #"x_c_veg2":x_c_veg2,
+            "x_p_veg":x_p_veg,
+            #"x_p_veg2":x_p_veg2,
+            "ra_rate":ra_rate,
+            "rh_rate":rh_rate,
             }                
         all_components.append(comp_dict)
         if sum_cVeg.all()==0:
@@ -3479,7 +3502,16 @@ def get_components_from_output(
             sum_rt = np.append(sum_rt,rt)[1:]
             sum_x_c = np.append(sum_x_c,x_c)[1:]
             sum_x_p = np.append(sum_x_p,x_p)[1:]
-            sum_nep = np.append(sum_nep,nep)[1:]            
+            sum_nep = np.append(sum_nep,nep)[1:]  
+            sum_rt_soil = np.append(sum_rt_soil,rt_soil)[1:]
+            sum_f_vs = np.append(sum_f_vs,f_vs)[1:]
+            sum_rt_soil = np.append(sum_rt_soil,rt_soil)[1:]
+            sum_rt_veg = np.append(sum_rt_veg,rt_veg)[1:]
+            sum_x_c_soil = np.append(sum_x_c_soil,x_c_soil)[1:]
+            sum_x_c_veg = np.append(sum_x_c_veg,x_c_veg)[1:]
+            sum_x_p_veg = np.append(sum_x_p_veg,x_p_veg)[1:]
+            sum_ra_rate = np.append(sum_ra_rate,ra_rate)[1:]
+            sum_rh_rate = np.append(sum_rh_rate,rh_rate)[1:]            
         else:
             sum_cVeg = sum_cVeg + cVeg
             sum_cSoil = sum_cSoil + cSoil
@@ -3491,7 +3523,17 @@ def get_components_from_output(
             sum_rt = sum_rt + rt
             sum_x_c = sum_x_c + x_c
             sum_x_p = sum_x_p + x_p
-            sum_nep = sum_nep + nep            
+            sum_nep = sum_nep + nep  
+            sum_rt_soil = sum_rt_soil + rt_soil
+            sum_f_vs = sum_f_vs + f_vs
+            sum_rt_soil = sum_rt_soil + rt_soil
+            sum_rt_veg = sum_rt_veg + rt_veg
+            sum_x_c_soil = sum_x_c_soil + x_c_soil
+            sum_x_c_veg = sum_x_c_veg + x_c_veg
+            sum_x_p_veg = sum_x_p_veg + x_p_veg
+            sum_ra_rate = sum_ra_rate + ra_rate
+            sum_rh_rate = sum_rh_rate + rh_rate
+            
         k += 1
     ave_dict = {
             "cVeg": sum_cVeg / len(model_folders),
@@ -3504,6 +3546,15 @@ def get_components_from_output(
             "x_c": sum_x_c / len(model_folders),
             "x_p": sum_x_p / len(model_folders), 
             "nep": sum_nep / len(model_folders), 
+            "rt_soil": sum_rt_soil / len(model_folders), 
+            "f_vs": sum_f_vs / len(model_folders),
+            "rt_soil": sum_rt_soil / len(model_folders),
+            "rt_veg": sum_rt_veg / len(model_folders),
+            "x_c_soil": sum_x_c_soil / len(model_folders),
+            "x_c_veg": sum_x_c_veg / len(model_folders),
+            "x_p_veg": sum_x_p_veg / len(model_folders),
+            "ra_rate": sum_ra_rate / len(model_folders),
+            "rh_rate": sum_rh_rate / len(model_folders),
             }    
     all_components.append(ave_dict) 
     
@@ -3559,15 +3610,15 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
                             lon_var,
                             ):
     def nc_file_name(nc_var_name, experiment_name):
-        return experiment_name+"{}.nc".format(nc_var_name)
+        return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
 
     def nc_global_mean_file_name(experiment_name):
         return experiment_name+"gm_all_vars.nc"
-  
+
+    data_str = msh(model_folder).data_str   
     names = data_str._fields
-    conf_dict = gh.confDict("model_folder")
-    dataPath=Path(conf_dict["dataPath"])   
-    data_str = gh.msh(model_folder).data.str   
+    conf_dict = confDict(model_folder)
+    dataPath=Path(conf_dict["dataPath"])     
     
     if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
         print(""" Found cached global mean files. If you want to recompute the global means
@@ -3576,11 +3627,10 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
 
         def get_cached_global_mean(vn):
-            gm = get_cached_global_mean(dataPath.joinpath(
-                nc_global_mean_file_name(experiment_name=experiment_name)),vn)
-            return gm
+            gm_path=dataPath.joinpath(
+                nc_global_mean_file_name(experiment_name=experiment_name))               
+            return nc.Dataset(str(gm_path)).variables[vn].__array__() 
 
-        #map variables to data
         output=data_streams(*map(get_cached_global_mean, data_streams._fields))      
         return (
             output
@@ -3589,14 +3639,14 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
     else:
         gm=globalMask()
         # load an example file with mask
-        template = nc.Dataset(dataPath.joinpath(experiment_name+"_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        template = nc.Dataset(dataPath.joinpath(experiment_name+"cSoil.nc")).variables['cSoil'][0,:,:].mask
         gcm=project_2(
                 source=gm,
-                target=gh.CoordMask(
+                target=CoordMask(
                     index_mask=np.zeros_like(template),
-                    tr=gh.SymTransformers(
-                        ctr=gh.msh(model_folder).make_model_coord_transforms(),
-                        itr=gh.msh(model_folder).make_model_index_transforms()
+                    tr=SymTransformers(
+                        ctr=msh(model_folder).make_model_coord_transforms(),
+                        itr=msh(model_folder).make_model_index_transforms()
                     )
                 )
         )
@@ -3620,27 +3670,32 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
                     gcm.index_mask,
                     var
             )
-            return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+            return gm * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
         
         #map variables to data
         output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
-        cVeg=output.cVeg if output.cVeg.shape[0]<500 else gh.avg_timeline(output.cVeg, 12)
-        cLitter=output.cLitter if output.cLitter.shape[0]<500 else gh.avg_timeline(output.cLitter, 12)
-        cSoil=output.cSoil if output.cSoil.shape[0]<500 else gh.avg_timeline(output.cSoil, 12)        
-        gpp=output.gpp if output.gpp.shape[0]<500 else gh.avg_timeline(output.gpp, 12)
-        npp=output.npp if output.npp.shape[0]<500 else gh.avg_timeline(output.npp, 12)
-        ra=output.ra if output.ra.shape[0]<500 else gh.avg_timeline(output.ra, 12)
-        rh=output.rh if output.rh.shape[0]<500 else gh.avg_timeline(output.rh, 12)
-        output_final=gh.data_streams(
+        cVeg=output.cVeg if output.cVeg.shape[0]<500 else avg_timeline(output.cVeg, 12)
+        if "cLitter" in names:
+            cLitter=output.cLitter if output.cLitter.shape[0]<500 else avg_timeline(output.cLitter, 12)
+        cSoil=output.cSoil if output.cSoil.shape[0]<500 else avg_timeline(output.cSoil, 12)        
+        gpp=output.gpp if output.gpp.shape[0]<500 else avg_timeline(output.gpp, 12)
+        if "npp" in names:
+            npp=output.npp if output.npp.shape[0]<500 else avg_timeline(output.npp, 12)
+        if "npp_nlim" in names:
+            npp=output.npp_nlim if output.npp_nlim.shape[0]<500 else avg_timeline(output.npp_nlim, 12)            
+        if "ra" in names:
+            ra=output.ra if output.ra.shape[0]<500 else avg_timeline(output.ra, 12)
+        rh=output.rh if output.rh.shape[0]<500 else avg_timeline(output.rh, 12)
+        output_final=data_streams(
             cVeg=cVeg,
             cSoil=cLitter+cSoil if "cLitter" in names else cSoil,
             gpp=gpp, 
-            npp=npp if "npp" in names else gpp-ra,
+            npp=npp if ("npp" in names) or ("npp_nlim" in names) else gpp-ra,
             ra=ra if "ra" in names else gpp-npp,
             rh=rh,
             )      
         gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-        gh.write_data_streams_cache(gm_path, output_final)        
+        write_data_streams_cache(gm_path, output_final)        
         return (
             output_final
         )    

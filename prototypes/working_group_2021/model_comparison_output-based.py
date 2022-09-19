@@ -248,28 +248,28 @@ gh.plot_attribution_per_model(
     #percent=True,    
 )
 
-mf="ab_classic"
+mf="yz_jules"
 # # Read username, password, dataPath from config.json file
 # with Path('config.json').open(mode='r') as f:
 #     conf_dict = frozendict(json.load(f))
 # dataPath==Path(conf_dict["dataPath"])
-test1=gh.msh(mf).get_global_mean_vars_all(experiment_name="CLASSIC_S2_")
-test2=gh.msh(mf).get_global_mean_vars_all(experiment_name="CLASSIC_S3_")
+test1=gh.msh(mf).get_global_mean_vars_all(experiment_name="JULES-ES-1p0_S2_")
+test2=gh.msh(mf).get_global_mean_vars_all(experiment_name="JULES-ES-1p0_S3_")
 print(test2._fields)
 #print(test1.cVeg-test2.cVeg)
 test2.npp[0:10]
 
 model_names={
     "ab_classic":"CLASSIC",  
-    "clm5":"CLM5",
+    "clm5":"CLM5.0",
     "kv_ft_dlem": "DLEM", 
     "bian_ibis2":"IBIS",    
     "cj_isam": "ISAM",    
     "isba-ctrip":"ISBA-CTRIP",    
     "jsbach":"JSBACH",
-    "yz_jules": "JULES",    
+    "yz_jules": "JULES-ES-1p0",    
     #"lpj-guess":"LPJ-GUESS",
-    "lpjwsl":"LPJwsl",
+    "lpjwsl":"LPJ",
     "lpx-bern":"LPX-Bern",
     #"ORCHIDEE-V2":"OCN",    
     "ORCHIDEE":"ORCHIDEE",

@@ -81,7 +81,7 @@ data_str = namedtuple( # data streams available in the model
     
 def get_global_mean_vars_all(experiment_name):
         return(
-            gh.get_global_mean_vars_all(model_folder="isba_ctrip", 
+            gh.get_global_mean_vars_all(model_folder="isba-ctrip", 
                             experiment_name=experiment_name,
                             lat_var="lat_FULL",
                             lon_var="lon_FULL",

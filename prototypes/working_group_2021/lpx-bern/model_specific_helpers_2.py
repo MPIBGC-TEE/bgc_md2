@@ -77,7 +77,7 @@ data_str = namedtuple( # data streams available in the model
     ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
     )
         
- def get_global_mean_vars_all(experiment_name):
+def get_global_mean_vars_all(experiment_name):
         return(
             gh.get_global_mean_vars_all(model_folder="lpx-bern", 
                             experiment_name=experiment_name,
