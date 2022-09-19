@@ -248,94 +248,105 @@ def start_date():
         
 
 ################ function for computing global mean for custom data streams ###################  
+
+data_str = namedtuple(
+    'data_str',
+    ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
+    )     
     
-def get_global_mean_vars_all(experiment_name="CLASSIC_S2_"):
-    def nc_file_name(nc_var_name, experiment_name="CLASSIC_S2_"):
-        return experiment_name+"{}.nc".format(nc_var_name)
+def get_global_mean_vars_all(experiment_name):
+        return(
+            gh.get_global_mean_vars_all(model_folder="ab_classic", 
+                            experiment_name=experiment_name,
+                            lat_var="latitude",
+                            lon_var="longitude",
+                            ) 
+        )
 
-    def nc_global_mean_file_name(experiment_name="CLASSIC_S2_"):
-        return experiment_name+"gm_all_vars.nc"
-
-    data_str = namedtuple(
-        'data_str',
-        ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
-        )      
-    names = data_str._fields
-    conf_dict = gh.confDict("ab_classic")
-    dataPath=Path(conf_dict["dataPath"])    
     
-    if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
-        print(""" Found cached global mean files. If you want to recompute the global means
-            remove the following files: """
-        )
-        print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
+# names = data_str._fields
+# conf_dict = gh.confDict("ab_classic")
+# dataPath=Path(conf_dict["dataPath"])  
+    
+# def get_global_mean_vars_all(experiment_name="CLASSIC_S2_"):
+    # def nc_file_name(nc_var_name, experiment_name="CLASSIC_S2_"):
+        # return experiment_name+"{}.nc".format(nc_var_name)
 
-        def get_cached_global_mean(vn):
-            gm = gh.get_cached_global_mean(dataPath.joinpath(
-                nc_global_mean_file_name(experiment_name=experiment_name)),vn)
-            return gm
+    # def nc_global_mean_file_name(experiment_name="CLASSIC_S2_"):
+        # return experiment_name+"gm_all_vars.nc"  
+    
+    # if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
+        # print(""" Found cached global mean files. If you want to recompute the global means
+            # remove the following files: """
+        # )
+        # print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
 
-        #map variables to data
-        output=gh.data_streams(*map(get_cached_global_mean, gh.data_streams._fields))      
-        return (
-            output
-        )
+        # def get_cached_global_mean(vn):
+            # gm = gh.get_cached_global_mean(dataPath.joinpath(
+                # nc_global_mean_file_name(experiment_name=experiment_name)),vn)
+            # return gm
 
-    else:
-        gm=gh.globalMask()
-        # load an example file with mask
-        template = nc.Dataset(dataPath.joinpath("CLASSIC_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
-        gcm=gh.project_2(
-                source=gm,
-                target=gh.CoordMask(
-                    index_mask=np.zeros_like(template),
-                    tr=gh.SymTransformers(
-                        ctr=make_model_coord_transforms(),
-                        itr=make_model_index_transforms()
-                    )
-                )
-        )
+        # #map variables to data
+        # output=gh.data_streams(*map(get_cached_global_mean, gh.data_streams._fields))      
+        # return (
+            # output
+        # )
 
-        print("computing means, this may take some minutes...")
+    # else:
+        # gm=gh.globalMask()
+        # # load an example file with mask
+        # template = nc.Dataset(dataPath.joinpath("CLASSIC_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        # gcm=gh.project_2(
+                # source=gm,
+                # target=gh.CoordMask(
+                    # index_mask=np.zeros_like(template),
+                    # tr=gh.SymTransformers(
+                        # ctr=make_model_coord_transforms(),
+                        # itr=make_model_index_transforms()
+                    # )
+                # )
+        # )
 
-        def compute_and_cache_global_mean(vn):
-            path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
-            ds = nc.Dataset(str(path))
-            vs=ds.variables
-            lats= vs["latitude"].__array__()
-            lons= vs["longitude"].__array__()
-            print(vn)
-            var=ds.variables[vn]
-            # check if we have a cached version (which is much faster)
-            gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
+        # print("computing means, this may take some minutes...")
 
-            gm=gh.global_mean_var(
-                    lats,
-                    lons,
-                    gcm.index_mask,
-                    var
-            )
-            return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+        # def compute_and_cache_global_mean(vn):
+            # path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
+            # ds = nc.Dataset(str(path))
+            # vs=ds.variables
+            # lats= vs["latitude"].__array__()
+            # lons= vs["longitude"].__array__()
+            # print(vn)
+            # var=ds.variables[vn]
+            # # check if we have a cached version (which is much faster)
+            # gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
+
+            # gm=gh.global_mean_var(
+                    # lats,
+                    # lons,
+                    # gcm.index_mask,
+                    # var
+            # )
+            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
         
-        #map variables to data
-        output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
-        cVeg=output.cVeg if output.cVeg.shape[0]<500 else gh.avg_timeline(output.cVeg, 12)
-        cLitter=output.cLitter if output.cLitter.shape[0]<500 else gh.avg_timeline(output.cLitter, 12)
-        cSoil=output.cSoil if output.cSoil.shape[0]<500 else gh.avg_timeline(output.cSoil, 12)        
-        gpp=output.gpp if output.gpp.shape[0]<500 else gh.avg_timeline(output.gpp, 12)
-        npp=output.npp if output.npp.shape[0]<500 else gh.avg_timeline(output.npp, 12)
-        ra=output.ra if output.ra.shape[0]<500 else gh.avg_timeline(output.ra, 12)
-        rh=output.rh if output.rh.shape[0]<500 else gh.avg_timeline(output.rh, 12)
-        output_final=gh.data_streams(
-            cVeg=cVeg,
-            cSoil=cLitter+cSoil,
-            gpp=gpp, 
-            npp=npp,
-            ra=ra,
-            rh=rh,
-            )      
-        gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-        gh.write_data_streams_cache(gm_path, output_final)        
-        return (
-            output_final
-        )
+        # #map variables to data
+        # output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
+        # cVeg=output.cVeg if output.cVeg.shape[0]<500 else gh.avg_timeline(output.cVeg, 12)
+        # cLitter=output.cLitter if output.cLitter.shape[0]<500 else gh.avg_timeline(output.cLitter, 12)
+        # cSoil=output.cSoil if output.cSoil.shape[0]<500 else gh.avg_timeline(output.cSoil, 12)        
+        # gpp=output.gpp if output.gpp.shape[0]<500 else gh.avg_timeline(output.gpp, 12)
+        # npp=output.npp if output.npp.shape[0]<500 else gh.avg_timeline(output.npp, 12)
+        # ra=output.ra if output.ra.shape[0]<500 else gh.avg_timeline(output.ra, 12)
+        # rh=output.rh if output.rh.shape[0]<500 else gh.avg_timeline(output.rh, 12)
+        # output_final=gh.data_streams(
+            # cVeg=cVeg,
+            # cSoil=cLitter+cSoil,
+            # gpp=gpp, 
+            # npp=npp,
+            # ra=ra,
+            # rh=rh,
+            # )      
+        # gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
+        # gh.write_data_streams_cache(gm_path, output_final)        
+        # return (
+            # output_final
+        # )

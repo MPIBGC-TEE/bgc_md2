@@ -850,6 +850,20 @@ def start_date():
         day=1
     )
 
+data_str = namedtuple(
+    'data_str',
+    ["cVeg", "cLitter", "cSoil", "gpp", "ra", "rh"]
+    )    
+    
+def get_global_mean_vars_all(experiment_name):
+        return(
+            gh.get_global_mean_vars_all(model_folder="kv_visit2", 
+                            experiment_name=experiment_name,
+                            lat_var="lat",
+                            lon_var="lon",
+                            ) 
+        )
+
 # ################ function for computing global mean for custom data streams ###################  
     
 # def get_global_mean_vars_all(experiment_name="VISIT_S2_"):
