@@ -13,7 +13,7 @@ from CompartmentalSystems.TimeStepIterator import (
 from copy import copy
 from typing import Callable
 from functools import reduce
-
+import matplotlib.pyplot as plt
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
@@ -31,11 +31,15 @@ def spatial_mask(dataPath)->'CoorMask':
 
     o_names=Observables._fields
     d_names=Drivers._fields
-    names = o_names + d_names 
-
+    names = o_names + d_names + ("ra", "gpp")
+    print(names)
     masks=[ f(name)    for name in names ]
     # We compute the common mask so that it yields valid pixels for ALL variables 
-    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
+    combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)#,f_mask)
+    # f = plt.figure(figsize=(20,10))
+    # ax = f.add_subplot()
+    # combined_mask.plot_dots(ax)   
+    # plt.show()    
     print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
     #from IPython import embed;embed() 
     sym_tr= gh.SymTransformers(
@@ -227,7 +231,7 @@ def nc_file_name(nc_var_name,experiment_name="IBIS_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 
-def nc_global_mean_file_name(nc_var_name):
+def nc_global_mean_file_name(nc_var_name, experiment_name="IBIS_S2_"):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 
@@ -378,25 +382,25 @@ def get_global_mean_vars(dataPath):
             # check if we have a cached version (which is much faster)
             gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
             
-            # ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
-            # print("computing masks to exclude pixels with nan entries, this may take some minutes...")
-            # def f(vn):
-                # path = dataPath.joinpath(nc_file_name(vn))
-                # ds = nc.Dataset(str(path))
-                # #scale fluxes vs pools
-                # var =ds.variables[vn]
-                # return gh.get_nan_pixel_mask(var)
+            ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
+            print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+            def f(vn):
+                path = dataPath.joinpath(nc_file_name(vn))
+                ds = nc.Dataset(str(path))
+                #scale fluxes vs pools
+                var =ds.variables[vn]
+                return gh.get_nan_pixel_mask(var)
 
-            # masks=[ f(name)    for name in names ]
-            # # We compute the common mask so that it yields valid pixels for ALL variables 
-            # combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
+            masks=[ f(name)    for name in names ]
+            # We compute the common mask so that it yields valid pixels for ALL variables 
+            combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks)
             
 
             gm=gh.global_mean_var(
                     lats,
                     lons,
-                    gcm.index_mask,
-                    #combined_mask,
+                    #gcm.index_mask,
+                    combined_mask,
                     var
             )                                
            

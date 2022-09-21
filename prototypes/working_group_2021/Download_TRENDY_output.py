@@ -12,6 +12,7 @@
 #     name: python3
 # ---
 
+# +
 # make changes to imported files immidiately available 
 # avoiding the need to reload (in most cases)
 # %load_ext autoreload
@@ -44,6 +45,17 @@ gh.download_TRENDY_output(
     variables = ["tas"], #Observables._fields + OrgDrivers._fields
     experiments = ["S2", "S3"]
     )
+
+# OCN does not have ra and rh for S2. We download them from S1.
+gh.download_TRENDY_output(
+    username="trendy-v9",
+    password="gcb-2020",
+    dataPath="C:/Users/konst/OneDrive - Cornell University/Data/Matrix MIP data/TRENDY/OCN",
+    models=["OCN"],
+    variables = ["ra","rh"], #Observables._fields + OrgDrivers._fields
+    experiments = ["S1"]
+    )
+# -
 
 
 

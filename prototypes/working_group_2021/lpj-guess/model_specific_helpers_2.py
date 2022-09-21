@@ -77,12 +77,15 @@ data_str = namedtuple( # data streams available in the model
     ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
     )
     
+# def nc_file_name(nc_var_name, experiment_name):
+    # return experiment_name+"{}.nc".format(nc_var_name)      
+
 def nc_file_name(nc_var_name, experiment_name):
-    return experiment_name+"{}.nc".format(nc_var_name)      
+        return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="rh" else experiment_name+"rh_annual.nc"
 
 def get_global_mean_vars_all(experiment_name):
         return(
-            gh.get_global_mean_vars_all(model_folder="lpj_guess", 
+            gh.get_global_mean_vars_all(model_folder="lpj-guess", 
                             experiment_name=experiment_name,
                             lat_var="latitude",
                             lon_var="longitude",

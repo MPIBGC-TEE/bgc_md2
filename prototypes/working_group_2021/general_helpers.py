@@ -2633,7 +2633,7 @@ def plot_traceable_component(
     delta=False,
 ):
     models=list(all_comp_dict.keys())[:-2]
-    fig = plt.figure(figsize=(17, 8))
+    fig = plt.figure(figsize=(20, 10))
     ax = fig.subplots(1, 1)
     vals_mean=0
     st_dev=0
@@ -2644,7 +2644,7 @@ def plot_traceable_component(
                 * 148940000
                 * 1000000
                 * 0.000000000001,  # convert to global C in Gt
-                label="Multi-model mean - X",
+                label="Ensemble mean - X",
                 color="black",
                 linewidth=3,
         )
@@ -2654,7 +2654,7 @@ def plot_traceable_component(
                 * 148940000
                 * 1000000
                 * 0.000000000001,  # convert to global C in Gt
-                label="Multi-model mean - X_c",
+                label="Ensemble mean - X_c",
                 color="black",
                 linestyle="dashed",
                 linewidth=2,
@@ -2669,7 +2669,7 @@ def plot_traceable_component(
                     * 0.000000000001,  # convert to global C in Gt
                     label=m + " - X",
                     color=model_cols[m],
-                    linewidth=0.8,
+                    linewidth=1,
                 )
             ax.plot(
                     all_comp_dict["Times"],
@@ -2680,7 +2680,7 @@ def plot_traceable_component(
                     label=m + " - X_c",
                     color=model_cols[m],
                     linestyle="dashed",
-                    linewidth=0.8,
+                    linewidth=1,
             )
     else:
         if delta:
@@ -2692,7 +2692,7 @@ def plot_traceable_component(
         ax.plot(
                 all_comp_dict["Times"],
                 vals_mean,
-                label="Multi-model mean",
+                label="Ensemble mean",
                 color="black",
                 linewidth=3, 
                 )                
@@ -2713,7 +2713,7 @@ def plot_traceable_component(
                     vals,
                     label=m,
                     color=model_cols[m],
-                    linewidth=1, 
+                    linewidth=1.2, 
                 )
         variance = diff_sqr / (len(models)-1)
         st_dev=np.sqrt(variance)
@@ -2722,7 +2722,7 @@ def plot_traceable_component(
                 all_comp_dict["Times"],
                 vals_mean-st_dev*2, 
                 vals_mean+st_dev*2,
-                label="\u00B12$\sigma$ confidence interval",
+                label="\u00B12$\sigma$ interval",
                 color="grey",
                 alpha=0.2                
                 )                          
@@ -2732,7 +2732,7 @@ def plot_traceable_component(
     else:
         ax.set_title(comp_name)
     #ax.set_ylabel("Gt C")
-    ax.legend(bbox_to_anchor =(1.3, 1))   
+    ax.legend(bbox_to_anchor =(1.2, 1))   
     return(vals_mean, st_dev)
          
 def plot_attribution (
@@ -3429,7 +3429,7 @@ def get_components_from_output(
         
         
         
-        stop=len(vars_all_list[k].cVeg)-20
+        stop=len(vars_all_list[k].cVeg)#-20
         start=len(vars_all_list[k].cVeg)-min_len
         
         times=np.array(range(start,stop))+1700
@@ -3458,13 +3458,20 @@ def get_components_from_output(
         if rh.shape[0]>500: rh=avg_timeline(rh, averaging)
         ra=vars_all_list[k].ra[start_flux:stop_flux]
         if ra.shape[0]>500: ra=avg_timeline(ra, averaging)        
-        print(times.shape)
-        print(cVeg.shape)
-        print(cSoil.shape)
-        print(npp.shape)
-        print(rh.shape)
-        print(start_pool, stop_pool)
-        print(start_flux, stop_flux)        
+        # print(times.shape)
+        # print(cVeg.shape)
+        # print(cSoil.shape)
+        # print(npp.shape)
+        # print(rh.shape)
+        # print(start_pool, stop_pool)
+        # print(start_flux, stop_flux)        
+        
+        # correction for ISAM data issue
+        if mf=="cj_isam": 
+            # print (cVeg[-9])
+            # print(cVeg[-8])
+            # print(cVeg[-10])
+            cVeg[-9]=np.mean((cVeg[-8], cVeg[-10]))
         
         # traditional traceable components                 
         x=cVeg+cSoil
@@ -3684,24 +3691,38 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(msh(model_folder).nc_file_name(vn, experiment_name=experiment_name))
+            print(path)
             ds = nc.Dataset(str(path))
             vs=ds.variables
             lats= vs[lat_var].__array__()
             lons= vs[lon_var].__array__()
-            print(vn)
             var=ds.variables[vn]
             # check if we have a cached version (which is much faster)
             gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
 
-            gm=global_mean_var(
-                    lats,
-                    lons,
-                    gcm.index_mask,
-                    var
-            )
+            # ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR IBIS RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
+            if model_folder=="bian_ibis2":
+                # print("IBIS! computing masks to exclude pixels with nan entries, this may take some minutes...")
+                combined_mask= msh("bian_ibis2").spatial_mask(dataPath=Path(conf_dict["dataPath"]))
+                gm=global_mean_var(
+                        lats,
+                        lons,
+                        combined_mask.index_mask,
+                        var      
+                ) 
+            else: 
+                gm=global_mean_var(
+                        lats,
+                        lons,
+                        gcm.index_mask,
+                        var
+                )
+            print(vn)
+            print(np.mean(gm))     
             return gm * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
         
         #map variables to data
+        print(data_str._fields)
         output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
         cVeg=output.cVeg if output.cVeg.shape[0]<500 else avg_timeline(output.cVeg, 12)
         if "cLitter" in names:
@@ -3713,9 +3734,8 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         if "npp_nlim" in names:
             npp=output.npp_nlim if output.npp_nlim.shape[0]<500 else avg_timeline(output.npp_nlim, 12)            
         if "ra" in names:
-            ra=output.ra if output.ra.shape[0]<500 else avg_timeline(output.ra, 12)
-        rh=output.rh if output.rh.shape[0]<500 else avg_timeline(output.rh, 12)
-        
+            ra=output.ra if output.ra.shape[0]<500 else avg_timeline(output.ra, 12)    
+        rh=output.rh if output.rh.shape[0]<500 else avg_timeline(output.rh, 12)          
         # for models like SDGVM where pool data starts earlier than gpp data
         if cVeg.shape[0]>gpp.shape[0]: cVeg=cVeg[cVeg.shape[0]-gpp.shape[0]:]        
         if "cLitter" in names and cLitter.shape[0]>gpp.shape[0]: 

@@ -819,3 +819,28 @@ def start_date():
         month=1,
         day=31
     )
+
+data_str = namedtuple( # data streams available in the model
+    'data_str',
+    ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
+    )
+    
+# def nc_file_name(nc_var_name, experiment_name):
+    # return experiment_name+"{}.nc".format(nc_var_name)      
+
+def nc_file_name(nc_var_name, experiment_name):
+        output=experiment_name+"{}.nc".format(nc_var_name) 
+        if nc_var_name=="ra" and experiment_name=="OCN_S2_":
+            output="OCN_S1_ra.nc"
+        if nc_var_name=="rh" and experiment_name=="OCN_S2_":
+            output="OCN_S1_rh.nc"    
+        return output
+
+def get_global_mean_vars_all(experiment_name):
+        return(
+            gh.get_global_mean_vars_all(model_folder="ORCHIDEE-V2", 
+                            experiment_name=experiment_name,
+                            lat_var="latitude",
+                            lon_var="longitude",
+                            ) 
+        )  

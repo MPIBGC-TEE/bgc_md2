@@ -37,20 +37,19 @@ from bgc_md2.resolve.mvars import (
 
 # ### Selecting models to compare
 
-# +
 model_names={
     "ab_classic":"CLASSIC",  
     "clm5":"CLM5.0",
     #"kv_ft_dlem": "DLEM", 
-    #"bian_ibis2":"IBIS",    
+    "bian_ibis2":"IBIS",    
     "cj_isam": "ISAM",    
     "isba-ctrip":"ISBA-CTRIP",    
     "jsbach":"JSBACH",
     "yz_jules": "JULES-ES-1p0",    
-    #"lpj-guess":"LPJ-GUESS",
+    "lpj-guess":"LPJ-GUESS",
     "lpjwsl":"LPJ",
     "lpx-bern":"LPX-Bern",
-    #"ORCHIDEE-V2":"OCN",    
+    "ORCHIDEE-V2":"OCN",    
     "ORCHIDEE":"ORCHIDEE",
     "ORCHIDEE-CNP":"ORCHIDEE-CNP",    
     "ORCHIDEEv3":"ORCHIDEEv3",
@@ -66,19 +65,14 @@ for name in m_names:
 experiment_names_S3=list()
 for name in m_names:
     experiment_names_S3.append(name + "_S3_") 
-
-# colors require installation of the "seaborn" package (not part of bgc_md2)
-import seaborn as sns
-cols = sns.color_palette("tab20", len(m_names))
-model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
-# -
+#experiment_names_S2
 
 # ### Loading TRENDY data and model parameters
 
 vars_all_list_S2=gh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=gh.get_vars_all_list(model_folders, experiment_names_S3)
 
-vars_all_list_S2[5].gpp[119]
+np.mean(vars_all_list_S2[10].ra)
 
 # define same step size for all models (in days)
 delta_t_val=30
@@ -102,16 +96,17 @@ all_comp_dict_S3=gh.get_components_from_output(model_names=model_names,
              #overlap=True
              )
 
+all_comp_dict_S2["OCN"]["ra"]
+
 # ### Plots of traceable components and their uncertainty
 
-plt.rcParams.update({'font.size': 14})
-
-all_comp_dict_S2["Mean"]["cVeg"].shape
-
-# for name in m_names:
-#     print(name)
-#     print(all_comp_dict_S3[name]["rt"].mask)
-all_comp_dict_S3["ISAM"]["cVeg"]
+plt.rcParams.update({'font.size': 15})
+import plotly.express as px
+cols = px.colors.qualitative.Light24
+model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
+# import seaborn as sns # requires installation of the "seaborn" package (not part of bgc_md2)
+#cols = sns.color_palette("tab20", len(m_names))
+# cols = sns.color_palette("cubehelix", len(m_names))
 
 x_x_c1,sigma_x_x_c1=gh.plot_traceable_component(
     all_comp_dict_S2,
@@ -204,26 +199,26 @@ u1, sigma_u1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "u",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 u2, sigma_u2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "u",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 
 # +
 times=all_comp_dict_S2["Times"]
-var=sigma_u1
-gh.plot_single_trend(var,times,3,"Standard deviation of u over time - S2")
+var=sigma_u1/u1*100
+gh.plot_single_trend(var,times,3,"Standard deviation in % of u over time - S2")
 
 times=all_comp_dict_S3["Times"]
-var=sigma_u2
-gh.plot_single_trend(var,times,3, "Standard deviation of u over time - S3")
+var=sigma_u2/u2*100
+gh.plot_single_trend(var,times,3, "Standard deviation in % of u over time - S3")
 
 times=all_comp_dict_S3["Times"]
-var=(sigma_u2-sigma_u1)/sigma_u1*100
+var=(sigma_u2/u2*100-sigma_u1/u1*100)
 gh.plot_single_trend(var,times,3, "Uncertainty of u increase S3-S2 in % of S2")
 # -
 
@@ -231,26 +226,26 @@ rt1,sigma_rt1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "rt",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 rt2,sigma_rt2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "rt",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 
 # +
 times=all_comp_dict_S2["Times"]
-var=sigma_rt1
-gh.plot_single_trend(var,times,3,"Standard deviation of rt over time - S2")
+var=sigma_rt1/rt1*100
+gh.plot_single_trend(var,times,3,"Standard deviation in % of rt over time - S2")
 
 times=all_comp_dict_S3["Times"]
-var=sigma_rt2
-gh.plot_single_trend(var,times,3, "Standard deviation of rt over time - S3")
+var=sigma_rt2/rt2*100
+gh.plot_single_trend(var,times,3, "Standard deviation in % of rt over time - S3")
 
 times=all_comp_dict_S3["Times"]
-var=(sigma_rt2-sigma_rt1)/sigma_u1*100
+var=(sigma_rt2/rt2*100-sigma_rt1/rt1*100)
 gh.plot_single_trend(var,times,3, "Uncertainty of rt increase S3-S2 in % of S2")
 # -
 
@@ -258,13 +253,13 @@ nep1,sigma_nep1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "nep",
     model_cols,
-    #delta=True,
+    delta=True,
 )
 nep2,sigma_nep2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "nep",
     model_cols,
-    #delta=True,
+    delta=True,
 )
 
 # +
@@ -280,6 +275,32 @@ times=all_comp_dict_S3["Times"]
 var=(sigma_nep2-sigma_nep1)/sigma_u1*100
 gh.plot_single_trend(var,times,3, "Uncertainty of nep increase S3-S2 in % of S2")
 # -
+
+rh1,sigma_rh1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "rh",
+    model_cols,
+    delta=True,
+)
+rh2,sigma_rh2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "rh",
+    model_cols,
+    delta=True,
+)
+
+ra1,sigma_ra1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "ra",
+    model_cols,
+    delta=True,
+)
+ra2,sigma_ra2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "ra",
+    model_cols,
+    delta=True,
+)
 
 # ### Uncertainty attribution
 
