@@ -1,0 +1,301 @@
+# -*- coding: utf-8 -*-
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:light
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.14.0
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# # O'Sullivan / Koven method
+
+# +
+# from IPython.display import Markdown, display
+# display(Markdown("TracebilityText.md"))
+# -
+
+# ### Loading required packages  and functions
+
+# %load_ext autoreload
+# %autoreload 2
+import matplotlib.pyplot as plt
+import numpy as np
+from functools import lru_cache
+import general_helpers as gh
+from bgc_md2.resolve.mvars import (
+    CompartmentalMatrix,
+    InputTuple,
+    StateVariableTuple
+)
+
+# ### Selecting models to compare
+
+# +
+model_names={
+    "ab_classic":"CLASSIC",  
+    "clm5":"CLM5.0",
+    #"kv_ft_dlem": "DLEM", 
+    #"bian_ibis2":"IBIS",    
+    "cj_isam": "ISAM",    
+    "isba-ctrip":"ISBA-CTRIP",    
+    "jsbach":"JSBACH",
+    "yz_jules": "JULES-ES-1p0",    
+    #"lpj-guess":"LPJ-GUESS",
+    "lpjwsl":"LPJ",
+    "lpx-bern":"LPX-Bern",
+    #"ORCHIDEE-V2":"OCN",    
+    "ORCHIDEE":"ORCHIDEE",
+    "ORCHIDEE-CNP":"ORCHIDEE-CNP",    
+    "ORCHIDEEv3":"ORCHIDEEv3",
+    "Aneesh_SDGVM":"SDGVM",
+    "kv_visit2": "VISIT",
+    "jon_yib": "YIBs"    
+}
+model_folders=[(k) for k in model_names]
+m_names=list(model_names.values())
+experiment_names_S2=list()
+for name in m_names:
+    experiment_names_S2.append(name + "_S2_") 
+experiment_names_S3=list()
+for name in m_names:
+    experiment_names_S3.append(name + "_S3_") 
+
+# colors require installation of the "seaborn" package (not part of bgc_md2)
+import seaborn as sns
+cols = sns.color_palette("tab20", len(m_names))
+model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
+# -
+
+# ### Loading TRENDY data and model parameters
+
+vars_all_list_S2=gh.get_vars_all_list(model_folders, experiment_names_S2)
+vars_all_list_S3=gh.get_vars_all_list(model_folders, experiment_names_S3)
+
+vars_all_list_S2[5].gpp[119]
+
+# define same step size for all models (in days)
+delta_t_val=30
+
+all_comp_dict_S2=gh.get_components_from_output(model_names=model_names,
+             vars_all_list=vars_all_list_S2,
+             delta_t_val=delta_t_val, 
+             #model_cols=model_cols,
+             part=1,
+             #averaging=12*30//delta_t_val, # yearly averaging
+             #averaging=30//delta_t_val, # monthly averaging
+             #overlap=True
+             )
+all_comp_dict_S3=gh.get_components_from_output(model_names=model_names,
+             vars_all_list=vars_all_list_S3,
+             delta_t_val=delta_t_val, 
+             #model_cols=model_cols,
+             part=1,
+             #averaging=12*30//delta_t_val, # yearly averaging
+             #averaging=30//delta_t_val, # monthly averaging
+             #overlap=True
+             )
+
+# ### Plots of traceable components and their uncertainty
+
+plt.rcParams.update({'font.size': 14})
+
+all_comp_dict_S2["Mean"]["cVeg"].shape
+
+# for name in m_names:
+#     print(name)
+#     print(all_comp_dict_S3[name]["rt"].mask)
+all_comp_dict_S3["ISAM"]["cVeg"]
+
+x_x_c1,sigma_x_x_c1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "x_x_c",
+    model_cols,
+    #delta=True,
+)
+x_x_c2,sigma_x_x_c2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "x_x_c",
+    model_cols,
+    #delta=True,
+)
+
+x1,sigma_x1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "x",
+    model_cols,
+    delta=True,
+)
+x2,sigma_x2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "x",
+    model_cols,
+    delta=True,
+)
+
+# +
+times=all_comp_dict_S2["Times"]
+var=sigma_x1
+gh.plot_single_trend(var,times,3,"Standard deviation of X over time - S2")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_x2
+gh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_x2-sigma_x1
+gh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3-S2")
+# -
+
+x_c1,sigma_x_c1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "x_c",
+    model_cols,
+    delta=True,
+)
+x_c2,sigma_x_c2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "x_c",
+    model_cols,
+    delta=True,
+)
+
+# +
+times=all_comp_dict_S2["Times"]
+var=sigma_x_c1
+gh.plot_single_trend(var,times,3,"Standard deviation of X_c over time - S2")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_x_c2
+gh.plot_single_trend(var,times,3, "Standard deviation of X_c over time - S3")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_x_c2-sigma_x_c1
+gh.plot_single_trend(var,times,3, "Standard deviation of X_c over time - S3-S2")
+# -
+
+x_p1,sigma_x_p1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "x_p",
+    model_cols,
+    #delta=True,
+)
+x_p2,sigma_x_p2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "x_p",
+    model_cols,
+    #delta=True,
+)
+
+times=all_comp_dict_S2["Times"]
+var=x_p1
+gh.plot_single_trend(var,times,3,"Mean X_p over time")
+times=all_comp_dict_S3["Times"]
+var=x_p1
+gh.plot_single_trend(var,times,3,"Mean X_p over time")
+
+u1, sigma_u1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "u",
+    model_cols,
+    delta=True,
+)
+u2, sigma_u2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "u",
+    model_cols,
+    delta=True,
+)
+
+# +
+times=all_comp_dict_S2["Times"]
+var=sigma_u1
+gh.plot_single_trend(var,times,3,"Standard deviation of u over time - S2")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_u2
+gh.plot_single_trend(var,times,3, "Standard deviation of u over time - S3")
+
+times=all_comp_dict_S3["Times"]
+var=(sigma_u2-sigma_u1)/sigma_u1*100
+gh.plot_single_trend(var,times,3, "Uncertainty of u increase S3-S2 in % of S2")
+# -
+
+rt1,sigma_rt1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "rt",
+    model_cols,
+    delta=True,
+)
+rt2,sigma_rt2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "rt",
+    model_cols,
+    delta=True,
+)
+
+# +
+times=all_comp_dict_S2["Times"]
+var=sigma_rt1
+gh.plot_single_trend(var,times,3,"Standard deviation of rt over time - S2")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_rt2
+gh.plot_single_trend(var,times,3, "Standard deviation of rt over time - S3")
+
+times=all_comp_dict_S3["Times"]
+var=(sigma_rt2-sigma_rt1)/sigma_u1*100
+gh.plot_single_trend(var,times,3, "Uncertainty of rt increase S3-S2 in % of S2")
+# -
+
+nep1,sigma_nep1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "nep",
+    model_cols,
+    #delta=True,
+)
+nep2,sigma_nep2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "nep",
+    model_cols,
+    #delta=True,
+)
+
+# +
+times=all_comp_dict_S2["Times"]
+var=sigma_nep1
+gh.plot_single_trend(var,times,3,"Standard deviation of nep over time - S2")
+
+times=all_comp_dict_S3["Times"]
+var=sigma_nep2
+gh.plot_single_trend(var,times,3, "Standard deviation of nep over time - S3")
+
+times=all_comp_dict_S3["Times"]
+var=(sigma_nep2-sigma_nep1)/sigma_u1*100
+gh.plot_single_trend(var,times,3, "Uncertainty of nep increase S3-S2 in % of S2")
+# -
+
+# ### Uncertainty attribution
+
+plt.rcParams.update({'font.size': 12})
+
+gh.plot_attribution_sum (
+    all_comp_dict=all_comp_dict_S2,
+    percent=True,
+    part=1,
+)
+gh.plot_attribution_sum (
+    all_comp_dict=all_comp_dict_S3,
+    percent=True,
+    part=1,
+)
+
+
+
+

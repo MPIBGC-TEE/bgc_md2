@@ -961,7 +961,7 @@ def days_since_AD(iteration, delta_t_val, start_date):
     # To get the startdate we used the model specific function start_date()
     # where it can be derivde using the original calendar (365 day or 360 day)
     # from then on we might use a different counting (see days_per_month())
-    start_year, start_month, start_day = start_date
+    start_year, start_month, start_day = start_date 
     td_AD = (
         start_year * days_per_year()
         + sum(days_per_month()[0 : (start_month - 1)])
@@ -2134,7 +2134,7 @@ class CoordMask:
 def project_2(source: CoordMask, target: CoordMask):
 
     s_mask = source.index_mask  # .astype(np.float64,casting='safe')
-    print(s_mask.mean())
+    #print(s_mask.mean())
     s_n_lat, s_n_lon = s_mask.shape
 
     t_mask = target.index_mask
@@ -2155,7 +2155,7 @@ def project_2(source: CoordMask, target: CoordMask):
     otlats, p_lat, p_lat_inv = target.ordered_lats()
     otlons, p_lon, p_lon_inv = target.ordered_lons()
     float_grid = p_lat_inv @ f(otlons, otlats) @ p_lon_inv
-    print(float_grid.mean())
+    #print(float_grid.mean())
     projected_mask = float_grid > 0.5
     # from IPython import embed; embed()
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
@@ -2713,7 +2713,7 @@ def plot_traceable_component(
                     vals,
                     label=m,
                     color=model_cols[m],
-                    linewidth=0.8, 
+                    linewidth=1, 
                 )
         variance = diff_sqr / (len(models)-1)
         st_dev=np.sqrt(variance)
@@ -3289,6 +3289,9 @@ def plot_single_trend(var, times, polynom_order,title):
     ax.set_title(title)
     ax.legend()
     plt.show()
+
+
+
     
 def get_vars_all_list(model_folders, experiment_names):
     vars_all_list = []
@@ -3308,7 +3311,7 @@ def get_components_from_output(
     delta_t_val,  # model time step
     #model_cols,  # dictionary (folder name :color)
     part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
-    averaging,  # number of iterator steps over which to average results. 1 for no averaging
+    averaging=12,  # number of iterator steps over which to average results. 12 - avarage monthly to yearly 
     overlap=True,  # compute overlapping timeframe or plot whole duration for all models
 ):
 
@@ -3317,9 +3320,12 @@ def get_components_from_output(
         delta_t_val,  # iterator time step
         start_date,
     ):
-        n_months = len(vars_all.gpp)
-        n_days = month_2_day_index([n_months], start_date)[0]
-        n_iter = int(n_days / delta_t_val)
+        n_months = len(vars_all.gpp)*12
+        #n_days = month_2_day_index([n_months], start_date)[0]
+        n_iter = n_months #int(n_days / delta_t_val)
+        #print("n_months: "+ str(n_months))
+        #print("n_days: "+ str(n_days))
+        #print("n_iter: "+ str(n_iter))
         return np.array(
             tuple(
                 (
@@ -3334,6 +3340,7 @@ def get_components_from_output(
         delta_t_val,  # iterator time step
         start_date,
     ):
+        delta_t_val=1
         td = {
             i: times_in_days_aD(vars_all_list[i], delta_t_val, start_date)
             for i in range(len(vars_all_list))
@@ -3384,6 +3391,7 @@ def get_components_from_output(
     sum_x_c_soil = np.array(0)
     sum_x_c_veg = np.array(0)
     sum_x_p_veg = np.array(0)
+    sum_x_p_soil = np.array(0)
     sum_ra_rate = np.array(0)
     sum_rh_rate = np.array(0)
     
@@ -3393,37 +3401,51 @@ def get_components_from_output(
         delta=np.zeros_like(data_stream)
         for i in range(len(data_stream)-1):
             delta[i]=data_stream[i]-data_stream[i+1]  
-            
+        return delta
+
+    min_len=1000
+    for i in range (len(model_folders)):
+        if len(vars_all_list[i].cVeg)<min_len: min_len=len(vars_all_list[i].cVeg)
+    print(min_len)
+    
     for mf in model_folders:
         print ("Getting traceable components for "+mf+"...")
         start_date=msh(mf).start_date()
-        start_min, stop_max = min_max_index(
-            vars_all_list[k],
-            delta_t_val,
-            *t_min_tmax_overlap(vars_all_list, delta_t_val, start_date),
-            start_date
-        )
-        # if we do not want the whole interval but look at a smaller part to observe the dynamics
-        if part < 0:
-            start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
-        else:
-            start, stop = start_min, int(start_min + (stop_max - start_min) * part)
-        times = (
-            times_in_days_aD(vars_all_list[k], delta_t_val, start_date)[start:stop]
-            / days_per_year()
-        )
+        # start_min, stop_max = min_max_index(
+            # vars_all_list[k],
+            # delta_t_val,
+            # *t_min_tmax_overlap(vars_all_list, delta_t_val, start_date),
+            # start_date
+        # )
+        # # if we do not want the whole interval but look at a smaller part to observe the dynamics
+        # if part < 0:
+            # start, stop = int(stop_max - (stop_max - start_min) * abs(part)), stop_max
+        # else:
+            # start, stop = start_min, int(start_min + (stop_max - start_min) * part)
+        # # times = (
+            # # times_in_days_aD(vars_all_list[k], delta_t_val, start_date)[start:stop]
+            # # / days_per_year()
+        # # )
+        
+        
+        
+        stop=len(vars_all_list[k].cVeg)-20
+        start=len(vars_all_list[k].cVeg)-min_len
+        
+        times=np.array(range(start,stop))+1700
+        
+        #print(times)
         # harmonising model outputs
         start_flux=start
         stop_flux=stop
-        #print(start)
-        #print(stop)
-        print(len(vars_all_list[k].cVeg)<1000)
-        if len(vars_all_list[k].cVeg)<1000:
-            start_pool=start//12
-            stop_pool=stop//12+1
-        else:
-            start_pool=start
-            stop_pool=stop        
+        #print(len(vars_all_list[k].cVeg)>1000)
+        # if len(vars_all_list[k].cVeg)>1000:
+            # start_pool=start//12
+            # stop_pool=stop//12+1
+        # else:
+        start_pool=start
+        stop_pool=stop       
+           
         cVeg=vars_all_list[k].cVeg[start_pool:stop_pool]
         if cVeg.shape[0]>500: cVeg=avg_timeline(cVeg, averaging)
         cSoil=vars_all_list[k].cSoil[start_pool:stop_pool]
@@ -3436,13 +3458,13 @@ def get_components_from_output(
         if rh.shape[0]>500: rh=avg_timeline(rh, averaging)
         ra=vars_all_list[k].ra[start_flux:stop_flux]
         if ra.shape[0]>500: ra=avg_timeline(ra, averaging)        
-        # print(times)
-        # print(cVeg.shape)
-        # print(cSoil.shape)
-        # print(npp.shape)
-        # print(rh.shape)
-        # print(start_pool, stop_pool)
-        # print(start_flux, stop_flux)        
+        print(times.shape)
+        print(cVeg.shape)
+        print(cSoil.shape)
+        print(npp.shape)
+        print(rh.shape)
+        print(start_pool, stop_pool)
+        print(start_flux, stop_flux)        
         
         # traditional traceable components                 
         x=cVeg+cSoil
@@ -3458,7 +3480,7 @@ def get_components_from_output(
         rt_veg=cVeg/(gpp-delta_cVeg)
         #rt_veg2=cVeg/(ra+f_vs)
         x_c_soil=f_vs*rt_soil
-        x_c_veg=gpp*rt_veg1
+        x_c_veg=gpp*rt_veg
         #x_c_veg2=gpp*rt_veg2
         x_p_soil=x_c_soil-cSoil
         x_p_veg=x_c_veg-cVeg
@@ -3486,6 +3508,7 @@ def get_components_from_output(
             "x_c_veg":x_c_veg,
             #"x_c_veg2":x_c_veg2,
             "x_p_veg":x_p_veg,
+            "x_p_soil":x_p_soil,
             #"x_p_veg2":x_p_veg2,
             "ra_rate":ra_rate,
             "rh_rate":rh_rate,
@@ -3503,13 +3526,13 @@ def get_components_from_output(
             sum_x_c = np.append(sum_x_c,x_c)[1:]
             sum_x_p = np.append(sum_x_p,x_p)[1:]
             sum_nep = np.append(sum_nep,nep)[1:]  
-            sum_rt_soil = np.append(sum_rt_soil,rt_soil)[1:]
             sum_f_vs = np.append(sum_f_vs,f_vs)[1:]
             sum_rt_soil = np.append(sum_rt_soil,rt_soil)[1:]
             sum_rt_veg = np.append(sum_rt_veg,rt_veg)[1:]
             sum_x_c_soil = np.append(sum_x_c_soil,x_c_soil)[1:]
             sum_x_c_veg = np.append(sum_x_c_veg,x_c_veg)[1:]
             sum_x_p_veg = np.append(sum_x_p_veg,x_p_veg)[1:]
+            sum_x_p_soil = np.append(sum_x_p_soil,x_p_soil)[1:]            
             sum_ra_rate = np.append(sum_ra_rate,ra_rate)[1:]
             sum_rh_rate = np.append(sum_rh_rate,rh_rate)[1:]            
         else:
@@ -3524,16 +3547,15 @@ def get_components_from_output(
             sum_x_c = sum_x_c + x_c
             sum_x_p = sum_x_p + x_p
             sum_nep = sum_nep + nep  
-            sum_rt_soil = sum_rt_soil + rt_soil
             sum_f_vs = sum_f_vs + f_vs
             sum_rt_soil = sum_rt_soil + rt_soil
             sum_rt_veg = sum_rt_veg + rt_veg
             sum_x_c_soil = sum_x_c_soil + x_c_soil
             sum_x_c_veg = sum_x_c_veg + x_c_veg
             sum_x_p_veg = sum_x_p_veg + x_p_veg
+            sum_x_p_soil = sum_x_p_soil + x_p_soil
             sum_ra_rate = sum_ra_rate + ra_rate
-            sum_rh_rate = sum_rh_rate + rh_rate
-            
+            sum_rh_rate = sum_rh_rate + rh_rate 
         k += 1
     ave_dict = {
             "cVeg": sum_cVeg / len(model_folders),
@@ -3553,13 +3575,14 @@ def get_components_from_output(
             "x_c_soil": sum_x_c_soil / len(model_folders),
             "x_c_veg": sum_x_c_veg / len(model_folders),
             "x_p_veg": sum_x_p_veg / len(model_folders),
+            "x_p_soil": sum_x_p_soil / len(model_folders),
             "ra_rate": sum_ra_rate / len(model_folders),
             "rh_rate": sum_rh_rate / len(model_folders),
             }    
     all_components.append(ave_dict) 
     
-    #times_avg = times
-    times_avg = avg_timeline(times, averaging)
+    times_avg = times
+    #times_avg = avg_timeline(times, averaging)
     all_components.append(times_avg)  
     mods=list(model_names.values())
     mods.append("Mean")
@@ -3609,8 +3632,8 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
                             lat_var,
                             lon_var,
                             ):
-    def nc_file_name(nc_var_name, experiment_name):
-        return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
+    # def nc_file_name(nc_var_name, experiment_name):
+        # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
 
     def nc_global_mean_file_name(experiment_name):
         return experiment_name+"gm_all_vars.nc"
@@ -3639,7 +3662,13 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
     else:
         gm=globalMask()
         # load an example file with mask
-        template = nc.Dataset(dataPath.joinpath(experiment_name+"cSoil.nc")).variables['cSoil'][0,:,:].mask
+        # special case for YIBS that doesn't have a mask in all files ecept tas
+        if model_folder=="jon_yib":
+            template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("tas", 
+                experiment_name=experiment_name))).variables['tas'][0,:,:].mask
+        else:
+            template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("cSoil", 
+                experiment_name=experiment_name))).variables['cSoil'][0,:,:].mask
         gcm=project_2(
                 source=gm,
                 target=CoordMask(
@@ -3654,7 +3683,7 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         print("computing means, this may take some minutes...")
 
         def compute_and_cache_global_mean(vn):
-            path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
+            path = dataPath.joinpath(msh(model_folder).nc_file_name(vn, experiment_name=experiment_name))
             ds = nc.Dataset(str(path))
             vs=ds.variables
             lats= vs[lat_var].__array__()
@@ -3686,6 +3715,13 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         if "ra" in names:
             ra=output.ra if output.ra.shape[0]<500 else avg_timeline(output.ra, 12)
         rh=output.rh if output.rh.shape[0]<500 else avg_timeline(output.rh, 12)
+        
+        # for models like SDGVM where pool data starts earlier than gpp data
+        if cVeg.shape[0]>gpp.shape[0]: cVeg=cVeg[cVeg.shape[0]-gpp.shape[0]:]        
+        if "cLitter" in names and cLitter.shape[0]>gpp.shape[0]: 
+            cLitter=cLitter[cLitter.shape[0]-gpp.shape[0]:]
+        if cSoil.shape[0]>gpp.shape[0]: cSoil=cSoil[cSoil.shape[0]-gpp.shape[0]:]
+        
         output_final=data_streams(
             cVeg=cVeg,
             cSoil=cLitter+cSoil if "cLitter" in names else cSoil,

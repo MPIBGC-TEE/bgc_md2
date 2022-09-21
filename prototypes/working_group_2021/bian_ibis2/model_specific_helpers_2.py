@@ -223,8 +223,7 @@ def download_my_TRENDY_output(conf_dict):
         variables = Observables._fields + Drivers._fields
     )
 
-experiment_name="IBIS_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name,experiment_name="IBIS_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 

@@ -190,8 +190,7 @@ def get_example_site_vars(dataPath):
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
-experiment_name="DLEM_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name,experiment_name="DLEM_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 def nc_global_mean_file_name(nc_var_name):

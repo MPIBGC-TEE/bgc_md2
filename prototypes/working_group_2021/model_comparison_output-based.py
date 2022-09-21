@@ -248,17 +248,24 @@ gh.plot_attribution_per_model(
     #percent=True,    
 )
 
-mf="yz_jules"
+test_arr1=np.array((0,1,2,3,4,5))
+test_arr2=np.array((0,1,2,3,4,5,6,7,8,9,10))
+if test_arr2.shape[0]>test_arr1.shape[0]: test_arr2=test_arr2[test_arr2.shape[0]-test_arr1.shape[0]:]
+test_arr2  
+type(test_arr2.shape[0])
+
+mf="jon_yib"
 # # Read username, password, dataPath from config.json file
 # with Path('config.json').open(mode='r') as f:
 #     conf_dict = frozendict(json.load(f))
 # dataPath==Path(conf_dict["dataPath"])
-test1=gh.msh(mf).get_global_mean_vars_all(experiment_name="JULES-ES-1p0_S2_")
-test2=gh.msh(mf).get_global_mean_vars_all(experiment_name="JULES-ES-1p0_S3_")
+test1=gh.msh(mf).get_global_mean_vars_all(experiment_name="YIBs_S2_")
+test2=gh.msh(mf).get_global_mean_vars_all(experiment_name="YIBs_S3_")
 print(test2._fields)
 #print(test1.cVeg-test2.cVeg)
 test2.npp[0:10]
 
+# +
 model_names={
     "ab_classic":"CLASSIC",  
     "clm5":"CLM5.0",
@@ -280,26 +287,28 @@ model_names={
     "jon_yib": "YIBs"    
 }
 model_folders=[(k) for k in model_names]
-experiment_names_S2=[
-    "CLASSIC_S2_",
-    "CLM5.0_S2_",
-    "DLEM_S2_", 
-    "IBIS_S2_",    
-    "ISAM_S2_",    
-    "ISBA-CTRIP_S2_",    
-    "JSBACH_S2_",
-    "JULES-ES-1p0_S2_",    
-    #"LPJ-GUESS_S2_",
-    "LPJ_S2_",
-    "LPX-Bern_S2_",
-    #"OCN_S2_",    
-    "ORCHIDEE_S2_",
-    "ORCHIDEE-CNP_S2_",    
-    "ORCHIDEEv3_S2_",
-    "SDGVM_S2_",
-    "VISIT_S2_",
-    "YIBs_S2_"         
-]
+m_names=model_names.values()
+experiment_names_S2
+# experiment_names_S2=[
+#     "CLASSIC_S2_",
+#     "CLM5.0_S2_",
+#     "DLEM_S2_", 
+#     "IBIS_S2_",    
+#     "ISAM_S2_",    
+#     "ISBA-CTRIP_S2_",    
+#     "JSBACH_S2_",
+#     "JULES-ES-1p0_S2_",    
+#     #"LPJ-GUESS_S2_",
+#     "LPJ_S2_",
+#     "LPX-Bern_S2_",
+#     #"OCN_S2_",    
+#     "ORCHIDEE_S2_",
+#     "ORCHIDEE-CNP_S2_",    
+#     "ORCHIDEEv3_S2_",
+#     "SDGVM_S2_",
+#     "VISIT_S2_",
+#     "YIBs_S2_"         
+# ]
 experiment_names_S3=[
     "CLASSIC_S3_",
     "CLM5.0_S3_",
@@ -320,6 +329,12 @@ experiment_names_S3=[
     "VISIT_S3_",
     "YIBs_S3_"         
 ]
+import seaborn as sns
+cols = sns.color_palette("tab20", len(m_names))
+model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
+
+experiment_names_S2
+# -
 
 vars_all_list_S2=gh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=gh.get_vars_all_list(model_folders, experiment_names_S3)
@@ -334,7 +349,7 @@ all_comp_dict_S2=gh.get_components_from_output(model_names=model_names,
              delta_t_val=delta_t_val, 
              #model_cols=model_cols,
              part=1,
-             averaging=12*30//delta_t_val, # yearly averaging
+             #averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
              #overlap=True
              )
@@ -343,20 +358,20 @@ all_comp_dict_S3=gh.get_components_from_output(model_names=model_names,
              delta_t_val=delta_t_val, 
              #model_cols=model_cols,
              part=1,
-             averaging=12*30//delta_t_val, # yearly averaging
+             #averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
              #overlap=True
              )
 
 # +
-import matplotlib.pyplot as plt
-import numpy as np
+# import matplotlib.pyplot as plt
+# import numpy as np
 
-cmap = plt.cm.viridis
+# cmap = plt.cm.viridis
 
-cm = plt.pcolormesh(np.random.randn(10, 10), cmap=cmap)
+# cm = plt.pcolormesh(np.random.randn(10, 10), cmap=cmap)
 
-print(cmap(cm.norm(2.2)))
+# print(cmap(cm.norm(2.2)))
 # -
 
 x1,sigma_x1=gh.plot_traceable_component(

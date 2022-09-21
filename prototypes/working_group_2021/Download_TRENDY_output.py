@@ -35,6 +35,15 @@ for i in range(len(models)):
         variables = variables, #Observables._fields + OrgDrivers._fields
         experiments = ["S2", "S3"]
     )
+# tas is always necessary for YIBs due to mask
+gh.download_TRENDY_output(
+    username="trendy-v9",
+    password="gcb-2020",
+    dataPath="C:/Users/konst/OneDrive - Cornell University/Data/Matrix MIP data/TRENDY/YIBs",
+    models=["YIBs"],
+    variables = ["tas"], #Observables._fields + OrgDrivers._fields
+    experiments = ["S2", "S3"]
+    )
 
 
 

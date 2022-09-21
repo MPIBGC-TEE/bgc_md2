@@ -76,6 +76,9 @@ data_str = namedtuple( # data streams available in the model
     'data_str',
     ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
     )
+    
+def nc_file_name(nc_var_name, experiment_name):
+    return experiment_name+"{}.nc".format(nc_var_name)     
         
 def get_global_mean_vars_all(experiment_name):
         return(

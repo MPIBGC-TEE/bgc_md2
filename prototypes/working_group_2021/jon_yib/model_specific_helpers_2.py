@@ -283,8 +283,7 @@ def get_example_site_vars(dataPath):
 # +
 # deprecated because it uses an already deprecated global_mean_JULES function
 
-experiment_name="YIBs_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name, experiment_name="YIBs_S2_"):
     if nc_var_name in ["cVeg", "cSoil"]:
         return experiment_name+"Annual_{}.nc".format(nc_var_name)
     else:
@@ -780,7 +779,7 @@ data_str = namedtuple( # data streams available in the model
     'data_str',
     ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
     )
-
+    
 def get_global_mean_vars_all(experiment_name):
         return(
             gh.get_global_mean_vars_all(model_folder="jon_yib", 

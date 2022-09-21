@@ -77,6 +77,9 @@ data_str = namedtuple( # data streams available in the model
     ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
     )
     
+def nc_file_name(nc_var_name, experiment_name):
+    return experiment_name+"{}.nc".format(nc_var_name)     
+    
 def get_global_mean_vars_all(experiment_name):
         return(
             gh.get_global_mean_vars_all(model_folder="ORCHIDEEv3", 

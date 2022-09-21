@@ -639,8 +639,7 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     return X_0
 
 
-experiment_name="SDGVM_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name,experiment_name="SDGVM_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 
