@@ -40,7 +40,7 @@ from bgc_md2.resolve.mvars import (
 model_names={
     "ab_classic":"CLASSIC",  
     "clm5":"CLM5.0",
-    #"kv_ft_dlem": "DLEM", 
+    "kv_ft_dlem": "DLEM", 
     "bian_ibis2":"IBIS",    
     "cj_isam": "ISAM",    
     "isba-ctrip":"ISBA-CTRIP",    
@@ -72,7 +72,8 @@ for name in m_names:
 vars_all_list_S2=gh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=gh.get_vars_all_list(model_folders, experiment_names_S3)
 
-np.mean(vars_all_list_S2[10].ra)
+np.mean(vars_all_list_S3[2].ra)
+#vars_all_list_S3[2].ra
 
 # define same step size for all models (in days)
 delta_t_val=30
@@ -96,7 +97,7 @@ all_comp_dict_S3=gh.get_components_from_output(model_names=model_names,
              #overlap=True
              )
 
-all_comp_dict_S2["OCN"]["ra"]
+all_comp_dict_S2["DLEM"]["ra"]
 
 # ### Plots of traceable components and their uncertainty
 
@@ -125,27 +126,27 @@ x1,sigma_x1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "x",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 x2,sigma_x2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "x",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 
 # +
 times=all_comp_dict_S2["Times"]
-var=sigma_x1
-gh.plot_single_trend(var,times,3,"Standard deviation of X over time - S2")
+var=sigma_x1/x1*100
+gh.plot_single_trend(var,times,3,"Standard deviation in % of X over time - S2")
 
 times=all_comp_dict_S3["Times"]
-var=sigma_x2
-gh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3")
+var=sigma_x2/x2*100
+gh.plot_single_trend(var,times,3, "Standard deviation in % of X over time - S3")
 
 times=all_comp_dict_S3["Times"]
-var=sigma_x2-sigma_x1
-gh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3-S2")
+var=sigma_x2/x2*100-sigma_x1/x1*100
+gh.plot_single_trend(var,times,3, "Standard deviation in % of X over time - S3-S2")
 # -
 
 x_c1,sigma_x_c1=gh.plot_traceable_component(
@@ -189,11 +190,11 @@ x_p2,sigma_x_p2=gh.plot_traceable_component(
 )
 
 times=all_comp_dict_S2["Times"]
-var=x_p1
-gh.plot_single_trend(var,times,3,"Mean X_p over time")
+var=x_p1/x1*100
+gh.plot_single_trend(var,times,3,"Mean X_p in % of X over time")
 times=all_comp_dict_S3["Times"]
-var=x_p1
-gh.plot_single_trend(var,times,3,"Mean X_p over time")
+var=x_p2/x2*100
+gh.plot_single_trend(var,times,3,"Mean X_p in % of X over time")
 
 u1, sigma_u1=gh.plot_traceable_component(
     all_comp_dict_S2,
@@ -253,13 +254,13 @@ nep1,sigma_nep1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "nep",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 nep2,sigma_nep2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "nep",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 
 # +

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# %load_ext autoreload
+# %autoreload 2
 import numpy as np
 import general_helpers as gh
 import matplotlib.pyplot as plt
@@ -62,19 +64,19 @@ for i in range(n):
     m.plot_dots(ax)
     
 # At the end of the list add the  ultimate target mask (empty)
-common_mask = gh.combine_masks(masks)
+common_mask = gh.combine_masks_2(masks)
 # common_mask=gh.project_2(source=masks[0],target=masks[1])
 # common_mask=gh.project_2(source=masks[0],target=ut)
 
 #common_mask.write_netCDF4(Path("common_mask.nc"))
-common_mask.write_netCDF4(Path("common_mask_all_models.nc"))
+common_mask.write_netCDF4(Path("common_mask_all.nc"))
 
 ax = f.add_subplot(n+1, 1, n+1)
 common_mask.plot_dots(ax)
 # -
 
 #f.savefig("common_mask.pdf")
-f.savefig("common_mask_all_models.pdf")
+f.savefig("common_mask_all.pdf")
 
 
 

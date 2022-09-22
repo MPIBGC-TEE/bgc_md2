@@ -86,12 +86,12 @@ def globalMaskTransformers(mask: np.ndarray) -> "SymTransformers":
     return SymTransformers(itr=itr, ctr=ctr)
 
 
-def globalMask() -> "CoordMask":
+def globalMask(file_name="common_mask.nc") -> "CoordMask":
     # fixme mm 6-20-2022
     # this should actually be  package data
     # We create a target
     this_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    ds = nc.Dataset(Path(this_dir).joinpath("common_mask.nc"))
+    ds = nc.Dataset(Path(this_dir).joinpath(file_name))
     mask = ds.variables["mask"][:, :].data
     return CoordMask(index_mask=mask, tr=globalMaskTransformers(mask))
 
@@ -2160,6 +2160,60 @@ def project_2(source: CoordMask, target: CoordMask):
     # from IPython import embed; embed()
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
 
+def resample_grid (source_coord_mask, target_coord_mask, var, method="nearest"):
+    # NEED TO INSTALL PACKAGE: conda install -c conda-forge pyresample
+    import pyresample 
+    lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)  
+    lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
+    orig_def = pyresample.geometry.SwathDefinition(lons=lon2d, lats=lat2d)
+    targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
+    if method=="nearest":
+      target_var = pyresample.kd_tree.resample_nearest(orig_def, var, \
+          targ_def, radius_of_influence=500000, fill_value=None)
+    elif method=="idw":
+        wf = lambda r: 1/r**2
+        target_var = pyresample.kd_tree.resample_custom(orig_def, var, \
+                              targ_def, radius_of_influence=500000, neighbours=10,\
+                              weight_funcs=wf, fill_value=None)
+    elif method=="gauss":
+        target_var = pyresample.kd_tree.resample_gauss(orig_def, var, \
+                               targ_def, radius_of_influence=500000, neighbours=10,\
+                               sigmas=250000, fill_value=None)
+    else:
+              raise Exception(
+           "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
+       )
+    return(
+        CoordMask (
+          index_mask=target_var,
+          tr=target_coord_mask.tr
+        )
+    )    
+    
+def combine_masks_2(coord_masks: List["CoordMask"]):
+    # def k(cm):
+        # arr = cm.index_mask
+        # return arr.shape[0] + arr.shape[1]
+    
+    def combine (source, target):
+        resampled_mask=resample_grid(
+            source_coord_mask=source,
+            target_coord_mask=target,
+            var=source.index_mask,
+            method="nearest"
+            )
+        combined_mask=CoordMask(
+            index_mask=np.logical_or(resampled_mask.index_mask, target.index_mask), 
+            tr=target.tr)
+        return combined_mask
+    target_mask = coord_masks[-1] # we use last mask in the list as template grid
+    for i in range(len(coord_masks)-1):
+        target_mask = combine (coord_masks[i], target_mask)
+    return target_mask    
+    # return reduce(
+        # combine,  # (acc,el)
+        # sorted(coord_masks, key=k)  # we want the finest grid as the last
+    # )    
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -3667,7 +3721,7 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         )
 
     else:
-        gm=globalMask()
+        gm=globalMask(file_name="common_mask_all.nc")
         # load an example file with mask
         # special case for YIBS that doesn't have a mask in all files ecept tas
         if model_folder=="jon_yib":
@@ -3676,16 +3730,28 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         else:
             template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("cSoil", 
                 experiment_name=experiment_name))).variables['cSoil'][0,:,:].mask
-        gcm=project_2(
-                source=gm,
-                target=CoordMask(
+        # gcm=project_2(
+                # source=gm,
+                # target=CoordMask(
+                    # index_mask=np.zeros_like(template),
+                    # tr=SymTransformers(
+                        # ctr=msh(model_folder).make_model_coord_transforms(),
+                        # itr=msh(model_folder).make_model_index_transforms()
+                    # )
+                # )
+        # )
+        gcm=resample_grid(
+            source_coord_mask=gm, 
+            target_coord_mask=CoordMask(
                     index_mask=np.zeros_like(template),
                     tr=SymTransformers(
                         ctr=msh(model_folder).make_model_coord_transforms(),
-                        itr=msh(model_folder).make_model_index_transforms()
-                    )
-                )
-        )
+                        itr=msh(model_folder).make_model_index_transforms(), 
+                        ),
+                    ),    
+            var=gm.index_mask, 
+            method="nearest"
+            )
 
         print("computing means, this may take some minutes...")
 
@@ -3699,26 +3765,36 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
             var=ds.variables[vn]
             # check if we have a cached version (which is much faster)
             gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-
-            # ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR IBIS RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
-            if model_folder=="bian_ibis2":
+            
+            #model_mask = msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
+            #combined_mask = combine_masks ([model_mask,gcm])
+            gm=global_mean_var(
+                    lats,
+                    lons,
+                    #combined_mask.index_mask,
+                    gcm.index_mask,
+                    var      
+            ) 
+            ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR IBIS RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
+            # if model_folder=="kv_ft_dlem":
                 # print("IBIS! computing masks to exclude pixels with nan entries, this may take some minutes...")
-                combined_mask= msh("bian_ibis2").spatial_mask(dataPath=Path(conf_dict["dataPath"]))
-                gm=global_mean_var(
-                        lats,
-                        lons,
-                        combined_mask.index_mask,
-                        var      
-                ) 
-            else: 
-                gm=global_mean_var(
-                        lats,
-                        lons,
-                        gcm.index_mask,
-                        var
-                )
-            print(vn)
-            print(np.mean(gm))     
+                # #combined_mask= msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
+                # gm=global_mean_var(
+                        # lats,
+                        # lons,
+                        # model_mask.index_mask,
+                        # var      
+                # ) 
+            # else: 
+                # gm=global_mean_var(
+                        # lats,
+                        # lons,
+                        # combined_mask.index_mask,
+                        # #gcm.index_mask,
+                        # var
+                # )
+            #print(vn)
+            #print(np.mean(gm))     
             return gm * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
         
         #map variables to data
