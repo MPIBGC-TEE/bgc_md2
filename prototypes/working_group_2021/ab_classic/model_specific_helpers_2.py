@@ -16,16 +16,50 @@ from functools import reduce
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
 
+# def spatial_mask(dataPath)->'CoorMask':
+    # mask=nc.Dataset(dataPath.joinpath("CLASSIC_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    # sym_tr= gh.SymTransformers(
+        # itr=make_model_index_transforms(),
+        # ctr=make_model_coord_transforms()
+    # )
+    # return gh.CoordMask(
+        # mask,
+        # sym_tr
+    # )
+    
 def spatial_mask(dataPath)->'CoorMask':
-    mask=nc.Dataset(dataPath.joinpath("CLASSIC_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+    cache_path=dataPath.joinpath('mask.nc')
+    
+
+    # We read the mask of a file and also create a masks by checking for the NANs
+    # we now check if any of the arrays has a time lime containing nan values 
+    # APART FROM values that are already masked by the fillvalue
+    
+    print("computing masks to exclude pixels with nan entries, this may take some minutes...")
+    
+
+    # We compute the common mask so that it yields valid pixels for ALL variables 
+    def f(vn):
+        path = dataPath.joinpath(nc_file_name(vn))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)
+
+    names=data_str._fields
+
+    
+    masks=[ f(name)    for name in names ]
+    combined_mask = reduce(lambda acc,m: np.logical_or(acc,m),masks)
+
     sym_tr= gh.SymTransformers(
         itr=make_model_index_transforms(),
         ctr=make_model_coord_transforms()
     )
     return gh.CoordMask(
-        mask,
+        combined_mask,
         sym_tr
-    )
+    )    
 
 def make_model_coord_transforms():
     """ This function can is used to achieve a target grid LAT,LON with
@@ -254,7 +288,7 @@ data_str = namedtuple(
     ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
     )     
     
-def nc_file_name(nc_var_name, experiment_name):
+def nc_file_name(nc_var_name, experiment_name="CLASSIC_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)      
     
 def get_global_mean_vars_all(experiment_name):

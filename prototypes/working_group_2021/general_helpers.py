@@ -2129,7 +2129,7 @@ class CoordMask:
         lats[:] = list(map(self.tr.i2lat, range(n_lats)))
         lons = ds.createVariable("lon", "float64", ["lon"])
         lons[:] = list(map(self.tr.i2lon, range(n_lons)))
-
+        ds.close()
 
 def project_2(source: CoordMask, target: CoordMask):
 
@@ -2160,32 +2160,79 @@ def project_2(source: CoordMask, target: CoordMask):
     # from IPython import embed; embed()
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
 
-def resample_grid (source_coord_mask, target_coord_mask, var, method="nearest"):
+def resample_grid (source_coord_mask, target_coord_mask, var, 
+            method="nearest", radius_of_influence=50000, neighbours=10):
     # NEED TO INSTALL PACKAGE: conda install -c conda-forge pyresample
-    import pyresample 
+    import pyresample
+    from pyresample.bilinear import NumpyBilinearResampler    
     lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)  
-    lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
+    #lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
+    
+    lats_source=source_coord_mask.lats
+    lons_source=source_coord_mask.lons
+    
+    lats=target_coord_mask.lats
+    lons=target_coord_mask.lons
     orig_def = pyresample.geometry.SwathDefinition(lons=lon2d, lats=lat2d)
-    targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
-    if method=="nearest":
-      target_var = pyresample.kd_tree.resample_nearest(orig_def, var, \
-          targ_def, radius_of_influence=500000, fill_value=None)
-    elif method=="idw":
-        wf = lambda r: 1/r**2
-        target_var = pyresample.kd_tree.resample_custom(orig_def, var, \
-                              targ_def, radius_of_influence=500000, neighbours=10,\
-                              weight_funcs=wf, fill_value=None)
-    elif method=="gauss":
-        target_var = pyresample.kd_tree.resample_gauss(orig_def, var, \
-                               targ_def, radius_of_influence=500000, neighbours=10,\
-                               sigmas=250000, fill_value=None)
-    else:
-              raise Exception(
-           "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
-       )
+    
+    # orig_def = pyresample.AreaDefinition(area_id="world", description="CLASSIC mask", 
+                          # proj_id="lat_lon", 
+                          # projection='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs',
+                          # width=len(lons_source), height=len(lats_source), 
+                          # area_extent=(min(lons_source),min(lats_source),max(lons_source),max(lats_source)),
+                          # )      
+    #orig_def = pyresample.geometry.GridDefinition(lons=lons_source, lats=lats_source)
+    # print(orig_def.description)
+    # print(orig_def.width)
+    # print(orig_def.height)
+    # print(orig_def.area_extent)
+    #targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
+    targ_def = pyresample.AreaDefinition(area_id="world", description="global mask", 
+                          proj_id="lat_lon", 
+                          projection='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs',
+                          width=len(lons), height=len(lats), 
+                          area_extent=(min(lons),min(lats),max(lons),max(lats)),
+                          )   
+    orig_con = pyresample.image.ImageContainerNearest(var, orig_def, radius_of_influence=5000)
+    target_con = orig_con.resample(targ_def)
+    result = target_con.image_data
+                                      
+    #grid_def = pyresample.geometry.GridDefinition(lons=lons, lats=lats)                      
+    # print(targ_def.description)
+    # print(targ_def.width)
+    # print(targ_def.height)
+    # print(targ_def.area_extent)    
+    # if method=="nearest":
+      # target_var = pyresample.kd_tree.resample_nearest(orig_def, var, 
+          # targ_def, radius_of_influence=radius_of_influence, fill_value=None)
+          
+    # elif method=="idw":
+        # wf = lambda r: 1/r**2
+        # target_var = pyresample.kd_tree.resample_custom(orig_def, var, 
+                              # targ_def, radius_of_influence=radius_of_influence, 
+                              # neighbours=neighbours,
+                              # weight_funcs=wf, fill_value=None)
+    # elif method=="gauss":
+        # target_var = pyresample.kd_tree.resample_gauss(orig_def, var, 
+                               # targ_def, radius_of_influence=radius_of_influence, 
+                               # neighbours=neighbours,
+                               # sigmas=250000, fill_value=None)
+    # # elif method=="bilinear":
+        # # source_def = geometry.SwathDefinition(lons=lon2d, lats=lat2d)
+        # # resampler = NumpyBilinearResampler(orig_def, targ_def, 30e3)
+        # # target_var = resampler.resample(var)
+        # # target_var = pyresample.kd_tree.resample_gauss(orig_def, var, 
+                               # # targ_def, radius_of_influence=radius_of_influence, 
+                               # # neighbours=neighbours,
+                               # # sigmas=250000, fill_value=None)
+    # else:
+              # raise Exception(
+           # "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
+       # )
+
     return(
         CoordMask (
-          index_mask=target_var,
+          index_mask=result,#target_var,
           tr=target_coord_mask.tr
         )
     )    
@@ -3757,6 +3804,7 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(msh(model_folder).nc_file_name(vn, experiment_name=experiment_name))
+            if vn=="npp_nlim": path=dataPath.joinpath(msh(model_folder).nc_file_name("npp", experiment_name=experiment_name))
             print(path)
             ds = nc.Dataset(str(path))
             vs=ds.variables
