@@ -28,18 +28,26 @@ def spatial_mask(dataPath)->'CoorMask':
     print("computing masks to exclude pixels with nan entries, this may take some minutes...")
     
     def f(vn):
-        path = dataPath.joinpath(nc_file_name(vn, experiment_name="DLEM_S3_"))
+        path = dataPath.joinpath(nc_file_name(vn, experiment_name="DLEM_S2_"))
         ds = nc.Dataset(str(path))
         var =ds.variables[vn]
         ##return after assessing NaN data values
         return gh.get_nan_pixel_mask(var)
+    
+    # DLEM has additional issues in S3     
+    def f2(vn):
+        path = dataPath.joinpath(nc_file_name(vn, experiment_name="DLEM_S3_"))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)    
 
     o_names=Observables._fields
     d_names=Drivers._fields
     #names = o_names + d_names + ("gpp", "ra")
     names = data_str._fields
     
-    masks=[ f(name)    for name in names ]
+    masks=[ f(name)    for name in names ] + [ f2(name)    for name in names ]
     # We compute the common mask so that it yields valid pixels for ALL variables 
     combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
     print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
