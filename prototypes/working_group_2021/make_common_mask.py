@@ -26,7 +26,8 @@ model_folders = [
                 "yz_jules","lpj-guess","lpjwsl","lpx-bern",
                 "ORCHIDEE-V2","Aneesh_SDGVM","kv_visit2","jon_yib",    
                 "ORCHIDEE",
-                #"ORCHIDEEv3_0.5deg", #"CABLE_POP"          
+                #"ORCHIDEEv3_0.5deg", 
+                #"CABLE_POP"          
                 ]
 
 
@@ -69,14 +70,14 @@ common_mask = gh.combine_masks_2(masks)
 # common_mask=gh.project_2(source=masks[0],target=ut)
 
 #common_mask.write_netCDF4(Path("common_mask.nc"))
-common_mask.write_netCDF4(Path("common_mask_all.nc"))
+common_mask.write_netCDF4(Path("common_mask_all_models.nc"))
 
 ax = f.add_subplot(n+1, 1, n+1)
 common_mask.plot_dots(ax)
 # -
 
 #f.savefig("common_mask.pdf")
-f.savefig("common_mask_all.pdf")
+f.savefig("common_mask_all_models.pdf")
 
 
 

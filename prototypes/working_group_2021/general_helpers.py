@@ -1903,7 +1903,7 @@ def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
 def get_cached_global_mean(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-
+#fixme: possibly obsolete - see combined_masks_2 using nearest neighbor resampling
 def combine_masks(coord_masks: List["CoordMask"]):
     def k(cm):
         arr = cm.index_mask
@@ -2161,12 +2161,12 @@ def project_2(source: CoordMask, target: CoordMask):
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
 
 def resample_grid (source_coord_mask, target_coord_mask, var, 
-            method="nearest", radius_of_influence=50000, neighbours=10):
+            method="nearest", radius_of_influence=500000, neighbours=10):
     # NEED TO INSTALL PACKAGE: conda install -c conda-forge pyresample
     import pyresample
     from pyresample.bilinear import NumpyBilinearResampler    
     lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)  
-    #lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
+    lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
     
     lats_source=source_coord_mask.lats
     lons_source=source_coord_mask.lons
@@ -2182,72 +2182,204 @@ def resample_grid (source_coord_mask, target_coord_mask, var,
                           # area_extent=(min(lons_source),min(lats_source),max(lons_source),max(lats_source)),
                           # )      
     #orig_def = pyresample.geometry.GridDefinition(lons=lons_source, lats=lats_source)
-    # print(orig_def.description)
-    # print(orig_def.width)
-    # print(orig_def.height)
-    # print(orig_def.area_extent)
-    #targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
-    targ_def = pyresample.AreaDefinition(area_id="world", description="global mask", 
-                          proj_id="lat_lon", 
-                          projection='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs',
-                          width=len(lons), height=len(lats), 
-                          area_extent=(min(lons),min(lats),max(lons),max(lats)),
-                          )   
-    orig_con = pyresample.image.ImageContainerNearest(var, orig_def, radius_of_influence=5000)
-    target_con = orig_con.resample(targ_def)
-    result = target_con.image_data
-                                      
-    #grid_def = pyresample.geometry.GridDefinition(lons=lons, lats=lats)                      
-    # print(targ_def.description)
-    # print(targ_def.width)
-    # print(targ_def.height)
-    # print(targ_def.area_extent)    
-    # if method=="nearest":
-      # target_var = pyresample.kd_tree.resample_nearest(orig_def, var, 
-          # targ_def, radius_of_influence=radius_of_influence, fill_value=None)
+
+    targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
+    # targ_def = pyresample.AreaDefinition(area_id="world", description="global mask", 
+                          # proj_id="lat_lon", 
+                          # projection='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs',
+                          # width=len(lons), height=len(lats), 
+                          # area_extent=(min(lons),min(lats),max(lons),max(lats)),
+                          # )   
+    # orig_con = pyresample.image.ImageContainerNearest(var, orig_def, radius_of_influence=5000)
+    # target_con = orig_con.resample(targ_def)
+    # result = target_con.image_data
+                  
+    if method=="nearest":
+      target_var = pyresample.kd_tree.resample_nearest(orig_def, var, 
+          targ_def, radius_of_influence=radius_of_influence, fill_value=None) 
           
-    # elif method=="idw":
-        # wf = lambda r: 1/r**2
-        # target_var = pyresample.kd_tree.resample_custom(orig_def, var, 
-                              # targ_def, radius_of_influence=radius_of_influence, 
-                              # neighbours=neighbours,
-                              # weight_funcs=wf, fill_value=None)
-    # elif method=="gauss":
-        # target_var = pyresample.kd_tree.resample_gauss(orig_def, var, 
-                               # targ_def, radius_of_influence=radius_of_influence, 
-                               # neighbours=neighbours,
-                               # sigmas=250000, fill_value=None)
-    # # elif method=="bilinear":
-        # # source_def = geometry.SwathDefinition(lons=lon2d, lats=lat2d)
-        # # resampler = NumpyBilinearResampler(orig_def, targ_def, 30e3)
-        # # target_var = resampler.resample(var)
-        # # target_var = pyresample.kd_tree.resample_gauss(orig_def, var, 
-                               # # targ_def, radius_of_influence=radius_of_influence, 
-                               # # neighbours=neighbours,
-                               # # sigmas=250000, fill_value=None)
-    # else:
-              # raise Exception(
-           # "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
-       # )
+    elif method=="idw":
+        wf = lambda r: 1/r**2
+        target_var = pyresample.kd_tree.resample_custom(orig_def, var, 
+                              targ_def, radius_of_influence=radius_of_influence, 
+                              neighbours=neighbours,
+                              weight_funcs=wf, fill_value=None)
+    elif method=="gauss":
+        target_var = pyresample.kd_tree.resample_gauss(orig_def, var, 
+                               targ_def, radius_of_influence=radius_of_influence, 
+                               neighbours=neighbours,
+                               sigmas=250000, fill_value=None)                               
+    else:
+              raise Exception(
+           "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
+       )
 
     return(
         CoordMask (
-          index_mask=result,#target_var,
+          index_mask=target_var,
           tr=target_coord_mask.tr
         )
-    )    
+    ) 
+    
+def resample_nc(
+            model_names, # dictionary e.g. "ab_classic":"CLASSIC"
+            experiment_names, # e.g. ['S2', 'S3']
+            target_mask,
+            method="nearest",
+            radius_of_influence=500000,
+            ):
+    for experiment in experiment_names:
+        print('\033[1m'+'. . . Resampling data for '+experiment+' experiment . . .')
+        k=0
+        model_folders=[(m) for m in model_names] 
+        m_names=list(model_names.values())  
+        g_mask = target_mask.index_mask
+        k=0 # model counter
+        for mf in model_folders:
+            print('\033[1m'+m_names[k])
+            print('\033[0m')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            conf_dict = confDict(mf)
+            dataPath=Path(conf_dict["dataPath"])
+            model_mask=msh(mf).spatial_mask(dataPath=Path(conf_dict["dataPath"]))    
+            for vn in msh(mf).data_str._fields:
+                print("Resampling "+vn)        
+                file_path = dataPath.joinpath(msh(mf).nc_file_name(vn, experiment_name=experiment_name))
+                ds = nc.Dataset(str(file_path))
+                var=ds.variables[vn][:, :, :].data             
+                # preparing a narray to store results
+                zero_array=np.zeros((var.shape[0],g_mask.shape[0],g_mask.shape[1]))
+                gm=zero_array.copy()
+                for i in range(gm.shape[0]):
+                    gm[i,:,:]=g_mask
+                var_array=zero_array
+                # procesing all time steps
+                for i in range(var.shape[0]):
+                    var_current=var[i,:,:]
+                    # initial masking
+                    var_masked = np.ma.array(var_current, mask = model_mask.index_mask)    
+                    # resampling
+                    var_resampled=resample_grid (
+                        source_coord_mask=model_mask, 
+                        target_coord_mask=target_mask, 
+                        var=var_masked, 
+                        method=method,
+                        radius_of_influence=radius_of_influence,               
+                    )
+                    var_array[i,:,:]=var_resampled.index_mask
+                    if i//100 == i/100:
+                        print(str(i+1)+" out of "+str(var.shape[0])+" time steps completed")
+                # final masking
+                var_final = np.ma.array(var_array,mask = gm)
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=dataPath.joinpath(dataPath,experiment_name+vn+"_res.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimentions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)
+                source_times=ds.variables["time"][:].data        
+                time = ds_new.createDimension("time", size=len(source_times))               
+                # creating variables                         
+                nc_var = ds_new.createVariable(vn, "float32", ["time", "lat", "lon"])
+                nc_var[:, :, :] = var_final
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(target_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(target_mask.tr.i2lon, range(n_lons)))               
+                times = ds_new.createVariable ("time", "float32", ["time"])
+                times[:] = source_times
+                # closing NetCDF files
+                ds.close()        
+                ds_new.close() 
+            k+=1 # model counter
+        print("Done!")
+        
+def average_and_resample_nc(
+            model_names, # dictionary e.g. "ab_classic":"CLASSIC"
+            experiment_names, # e.g. ['S2', 'S3']
+            target_mask,
+            method="nearest",
+            radius_of_influence=500000,
+            ):
+    for experiment in experiment_names:
+        print('\033[1m'+'Resampling data for '+experiment+' experiment...')
+        k=0 # model counter
+        model_folders=[(m) for m in model_names] 
+        m_names=list(model_names.values())  
+        for mf in model_folders:
+            print('\033[1m'+m_names[k])
+            print('\033[0m')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            conf_dict = confDict(mf)
+            dataPath=Path(conf_dict["dataPath"])
+            model_mask=msh(mf).spatial_mask(dataPath=Path(conf_dict["dataPath"]))       
+            for vn in msh(mf).data_str._fields:      
+                if vn=="npp_nlim": file_path = dataPath.joinpath(msh(mf).nc_file_name("npp", experiment_name=experiment_name))
+                else: file_path = dataPath.joinpath(msh(mf).nc_file_name(vn, experiment_name=experiment_name))
+                print(file_path)
+                ds = nc.Dataset(str(file_path))
+                var=ds.variables[vn][:, :, :].data
+                # temporal average + difference
+                var_avg=np.ma.mean(var, axis=0)    
+                var_diff=var[-1,:,:]-var[0,:,:]
+                # masking
+                var_masked_avg = np.ma.array(var_avg, mask = model_mask.index_mask)
+                var_masked_diff = np.ma.array(var_diff, mask = model_mask.index_mask) 
+                # resampling to target grid
+                var_resampled_avg=resample_grid (
+                    source_coord_mask=model_mask, 
+                    target_coord_mask=target_mask, 
+                    var=var_masked_avg, 
+                    method=method,
+                    radius_of_influence=radius_of_influence,
+                )
+                var_resampled_diff=resample_grid (
+                    source_coord_mask=model_mask, 
+                    target_coord_mask=target_mask, 
+                    var=var_masked_diff, 
+                    method=method,
+                    radius_of_influence=radius_of_influence,
+                )
+                # final masking
+                var_final_avg = np.ma.array(var_resampled_avg.index_mask, 
+                                            mask = target_mask.index_mask)
+                var_final_diff = np.ma.array(var_resampled_diff.index_mask, 
+                                            mask = target_mask.index_mask)            
+                # creating and writing a new NetCDF file               
+                s = target_mask.index_mask.shape
+                n_lats, n_lons = s
+                new_path=dataPath.joinpath(dataPath,experiment_name+vn+"_ave_res.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimentions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)
+                # creating variables            
+                avg = ds_new.createVariable(vn, "float32", ["lat", "lon"])     
+                avg[:, :] = var_final_avg                
+                diff = ds_new.createVariable(str(vn)+"_diff", "float32", ["lat", "lon"])                 
+                diff[:, :] = var_final_diff
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(target_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(target_mask.tr.i2lon, range(n_lons)))        
+                # closing NetCDF files
+                ds.close()        
+                ds_new.close()
+            k+=1 # model counter
+        print("Done!")    
     
 def combine_masks_2(coord_masks: List["CoordMask"]):
-    # def k(cm):
-        # arr = cm.index_mask
-        # return arr.shape[0] + arr.shape[1]
-    
+   
     def combine (source, target):
         resampled_mask=resample_grid(
             source_coord_mask=source,
             target_coord_mask=target,
             var=source.index_mask,
-            method="nearest"
+            method="nearest",
+            radius_of_influence=500000, 
+            neighbours=10
             )
         combined_mask=CoordMask(
             index_mask=np.logical_or(resampled_mask.index_mask, target.index_mask), 
@@ -2257,10 +2389,6 @@ def combine_masks_2(coord_masks: List["CoordMask"]):
     for i in range(len(coord_masks)-1):
         target_mask = combine (coord_masks[i], target_mask)
     return target_mask    
-    # return reduce(
-        # combine,  # (acc,el)
-        # sorted(coord_masks, key=k)  # we want the finest grid as the last
-    # )    
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -3768,7 +3896,7 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         )
 
     else:
-        gm=globalMask(file_name="common_mask_all.nc")
+        gm=globalMask(file_name="common_mask_all_models.nc")
         # load an example file with mask
         # special case for YIBS that doesn't have a mask in all files ecept tas
         if model_folder=="jon_yib":
