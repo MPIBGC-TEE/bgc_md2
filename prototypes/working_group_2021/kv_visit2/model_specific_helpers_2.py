@@ -58,7 +58,7 @@ Observables = namedtuple(
 )
 OrgDrivers=namedtuple(
     "OrgDrivers",
-    ["gpp", "ra", "mrso", "tas"]#, "xi_t", "xi_w"]
+    ["gpp", "ra", "mrso", "tas"]
 )    
 Drivers=namedtuple(
     "Drivers",
@@ -75,11 +75,8 @@ Constants = namedtuple(
         "cSoil_0",
         "cVeg_0",
         "npp_0",
-        #"xi_0",
         "rh_0",
         #"ra_0",
-        #"r_C_root_litter_2_C_soil_passive",# here  we pretend to know these two rates
-        #"r_C_root_litter_2_C_soil_slow",# it would be much better to know more
         "number_of_months" # necessary to prepare the output in the correct lenght 
     ]
 )
@@ -96,10 +93,6 @@ EstimatedParameters = namedtuple(
         "T_0",
         "E",
         "KM",
-        #"env_modifier",
-        #"r_C_leaf_rh",
-        #"r_C_wood_rh",
-        #"r_C_root_rh",
         "r_C_leaf_litter_rh",
         "r_C_wood_litter_rh",
         "r_C_root_litter_rh",
@@ -173,44 +166,7 @@ def get_example_site_vars(dataPath):
     )
     return (obss, dvs)
 
-# fixme mm: 04-22-2022
-# is the following commented code obsolete?
-# def get_global_vars(dataPath):
-#    # pick up 1 site
-#    # s = slice(None, None, None)  # this is the same as :
-#    # t = s, 50, 33  # [t] = [:,49,325]
-#    def f(tup):
-#        vn, fn = tup
-#        path = dataPath.joinpath(fn)
-#        # Read NetCDF data but only at the point where we want them
-#        ds = nc.Dataset(str(path))
-#        lats = ds.variables["lat"].__array__()
-#        lons = ds.variables["lon"].__array__()
-#        if vn in ["npp","gpp","rh","ra"]:
-#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
-#        else:
-#            return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
-#        #return ds.variables[vn][t]
-#
-#    o_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in Observables._fields]
-#    d_names=[(f,"VISIT_S2_{}.nc".format(f)) for f in OrgDrivers._fields]
-#
-#    # we want to drive with npp and can create it from gpp and ra
-#    # observables
-#    odvs=OrgDrivers(*map(f,d_names))
-#    obss=Observables(*map(f, o_names))
-#
-#    dvs=Drivers(
-#        npp=odvs.gpp-odvs.ra,
-#        mrso=odvs.mrso,
-#        tas=odvs.tas#,
-#        #xi=odvs.xi_t*odvs.xi_w
-#    )
-#    return (obss, dvs)
-
-
-experiment_name="VISIT_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name, experiment_name="VISIT_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 
@@ -246,8 +202,6 @@ def get_global_mean_vars(dataPath):
         return (
             obss,
             dvs
-            #Observables(*map(get_cached_global_mean, o_names)),
-            #OrgDrivers(*map(get_cached_global_mean,d_names))
         )
 
     else:
@@ -303,44 +257,8 @@ def get_global_mean_vars(dataPath):
     
         return (
             obss,
-            dvs
-            #Observables(*map(compute_and_cache_global_mean, o_names)),
-            #Drivers(*map(compute_and_cache_global_mean, d_names))            
+            dvs           
         )
-
-
-
-# +
-# def make_sim_day_2_day_since_a_D(conf_dict):
-#     # this function is extremely important to syncronise our results
-#     # because our data streams start at different times the first day of 
-#     # a simulation day_ind=0 refers to different dates for different models
-#     # we have to check some assumptions on which this calculation is based
-#     # for jules the data points are actually spaced monthly with different numbers of days
-#     ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_cVeg.nc")))
-#     times = ds.variables["time"]
-
-#     # we have to check some assumptions on which this calculation is based
-
-#     tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
-#     td = int(tm *31)  #in days since_1860-01-01 
-#     #NOT assuming a 30 day month...
-#     import datetime as dt
-#     ad = dt.date(1, 1, 1) # first of January of year 1 
-#     sd = dt.date(1860, 1, 1)
-#     td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
-
-#     def f(day_ind: int)->int:
-#         return day_ind+td_aD
-
-#     return f
-# -
-
-# # Define start and end dates of the simulation
-# import datetime as dt
-# start_date=dt.date(1860, 1, 16)
-# end_date = dt.date(2019, 12, 16)
 
 
 
@@ -374,10 +292,6 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
         "T_0": epa.T_0,
         "E": epa.E,
         "KM": epa.KM,
-        #"env_modifier": epa.env_modifier,
-        #"r_C_leaf_rh": 0,
-        #"r_C_wood_rh": 0,
-        #"r_C_root_rh": 0,
         "r_C_leaf_litter_rh": epa.r_C_leaf_litter_rh,
         "r_C_wood_litter_rh": epa.r_C_wood_litter_rh,
         "r_C_root_litter_rh": epa.r_C_root_litter_rh,
@@ -862,30 +776,6 @@ def make_param2res_full_output(
     return param2res_full_output
 # -
 
-# moved to general_helpers
-# def make_feng_cost_func_2(
-#    svs #: Observables
-#    ):
-#    # now we compute a scaling factor per observable stream
-#    # fixme mm 10-28-2021
-#    # The denominators in this case are actually the TEMPORAL variances of the data streams
-#    obs_arr=np.stack([ arr for arr in svs],axis=1)
-#    means = obs_arr.mean(axis=0)
-#    mean_centered_obs= obs_arr - means
-#    denominators = np.sum(mean_centered_obs ** 2, axis=0)
-#
-#
-#    def feng_cost_func_2(simu: Observables):
-#        def f(i):
-#            arr=simu[i]
-#            obs=obs_arr[:,i]
-#            diff=((arr-obs)**2).sum()/denominators[i]*100 
-#            return diff
-#        return np.array([f(i) for i  in range(len(simu))]).mean()
-#    
-#    return feng_cost_func_2
-
-
 def make_param_filter_func(
         c_max: EstimatedParameters,
         c_min: EstimatedParameters 
@@ -958,3 +848,103 @@ def start_date():
         month=1,
         day=1
     )
+
+data_str = namedtuple(
+    'data_str',
+    ["cVeg", "cLitter", "cSoil", "gpp", "ra", "rh"]
+    )    
+    
+def get_global_mean_vars_all(experiment_name):
+        return(
+            gh.get_global_mean_vars_all(model_folder="kv_visit2", 
+                            experiment_name=experiment_name,
+                            lat_var="lat",
+                            lon_var="lon",
+                            ) 
+        )
+
+# ################ function for computing global mean for custom data streams ###################  
+    
+# def get_global_mean_vars_all(experiment_name="VISIT_S2_"):
+    # def nc_file_name(nc_var_name, experiment_name="VISIT_S2_"):
+        # return experiment_name+"{}.nc".format(nc_var_name)
+
+    # def nc_global_mean_file_name(experiment_name="VISIT_S2_"):
+        # return experiment_name+"mean_vars.nc"
+
+    # data_str = namedtuple(
+        # 'data_str',
+        # ["cVeg", "cLitter", "cSoil", "gpp", "ra", "rh"]
+        # )      
+    # names = data_str._fields
+    # conf_dict = gh.confDict("kv_visit2")
+    # dataPath=Path(conf_dict["dataPath"])    
+    
+    # if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
+        # print(""" Found cached global mean files. If you want to recompute the global means
+            # remove the following files: """
+        # )
+        # print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
+
+        # def get_cached_global_mean(vn):
+            # gm = gh.get_cached_global_mean(dataPath.joinpath(
+                # nc_global_mean_file_name(experiment_name=experiment_name)),vn)
+            # return gm
+
+        # #map variables to data
+        # output=gh.data_streams(*map(get_cached_global_mean, gh.data_streams._fields))      
+        # return (
+            # output
+        # )
+
+    # else:
+        # gm=gh.globalMask()
+        # # load an example file with mask
+        # template = nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        # gcm=gh.project_2(
+                # source=gm,
+                # target=gh.CoordMask(
+                    # index_mask=np.zeros_like(template),
+                    # tr=gh.SymTransformers(
+                        # ctr=make_model_coord_transforms(),
+                        # itr=make_model_index_transforms()
+                    # )
+                # )
+        # )
+
+        # print("computing means, this may take some minutes...")
+
+        # def compute_and_cache_global_mean(vn):
+            # path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
+            # ds = nc.Dataset(str(path))
+            # vs=ds.variables
+            # lats= vs["lat"].__array__()
+            # lons= vs["lon"].__array__()
+            # print(vn)
+            # var=ds.variables[vn]
+            # # check if we have a cached version (which is much faster)
+            # gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
+
+            # gm=gh.global_mean_var(
+                    # lats,
+                    # lons,
+                    # gcm.index_mask,
+                    # var
+            # )
+            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+        
+        # #map variables to data
+        # output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
+        # output_final=gh.data_streams(
+            # cVeg=output.cVeg,
+            # cSoil=output.cLitter+output.cSoil,
+            # gpp=output.gpp,
+            # npp=output.gpp-output.ra,
+            # ra=output.ra,
+            # rh=output.rh,
+            # )      
+        # gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
+        # gh.write_data_streams_cache(gm_path, output_final)        
+        # return (
+            # output_final
+        # )

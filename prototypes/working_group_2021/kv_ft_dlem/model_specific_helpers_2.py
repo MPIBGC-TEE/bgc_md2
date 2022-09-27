@@ -28,17 +28,26 @@ def spatial_mask(dataPath)->'CoorMask':
     print("computing masks to exclude pixels with nan entries, this may take some minutes...")
     
     def f(vn):
-        path = dataPath.joinpath(nc_file_name(vn))
+        path = dataPath.joinpath(nc_file_name(vn, experiment_name="DLEM_S2_"))
         ds = nc.Dataset(str(path))
         var =ds.variables[vn]
         ##return after assessing NaN data values
         return gh.get_nan_pixel_mask(var)
+    
+    # DLEM has additional issues in S3     
+    def f2(vn):
+        path = dataPath.joinpath(nc_file_name(vn, experiment_name="DLEM_S3_"))
+        ds = nc.Dataset(str(path))
+        var =ds.variables[vn]
+        ##return after assessing NaN data values
+        return gh.get_nan_pixel_mask(var)    
 
     o_names=Observables._fields
     d_names=Drivers._fields
-    names = o_names + d_names 
-
-    masks=[ f(name)    for name in names ]
+    #names = o_names + d_names + ("gpp", "ra")
+    names = data_str._fields
+    
+    masks=[ f(name)    for name in names ] + [ f2(name)    for name in names ]
     # We compute the common mask so that it yields valid pixels for ALL variables 
     combined_mask= reduce(lambda acc,m: np.logical_or(acc,m),masks,f_mask)
     print("found additional {} NaN pixels".format(combined_mask.sum()-f_mask.sum()))
@@ -190,11 +199,10 @@ def get_example_site_vars(dataPath):
     d_names=[(f,"DLEM_S2_{}.nc".format(f)) for f in Drivers._fields]
     return (Observables(*map(f, o_names)),Drivers(*map(f,d_names)))
 
-experiment_name="DLEM_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name,experiment_name="DLEM_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
-def nc_global_mean_file_name(nc_var_name):
+def nc_global_mean_file_name(nc_var_name,experiment_name="DLEM_S2_"):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 # +
@@ -601,3 +609,109 @@ def start_date():
         month=1,
         day=1
     )
+
+data_str = namedtuple( # data streams available in the model
+    'data_str',
+    ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
+    )
+
+def get_global_mean_vars_all(experiment_name):
+        return(
+            gh.get_global_mean_vars_all(model_folder="kv_ft_dlem", 
+                            experiment_name=experiment_name,
+                            lat_var="lat",
+                            lon_var="lon",
+                            ) 
+        )  
+        
+################ function for computing global mean for custom data streams ###################
+    
+# def get_global_mean_vars_all(experiment_name="DLEM_S2_"):
+    
+    # def nc_file_name(nc_var_name, experiment_name="DLEM_S2_"):
+        # return experiment_name+"{}.nc".format(nc_var_name)
+
+    # def nc_global_mean_file_name(nc_var_name, experiment_name="DLEM_S2_"):
+        # return experiment_name+"{}_gm_all.nc".format(nc_var_name)
+
+    # data_str = namedtuple( # data streams available in the model
+        # 'data_str',
+        # ["cVeg", "cLitter", "cSoil", "gpp", "npp", "ra", "rh"]
+        # )
+        
+    # names = data_str._fields
+    # conf_dict = gh.confDict("kv_ft_dlem")
+    # # with Path('config.json').open(mode='r') as f:
+        # # conf_dict = frozendict(json.load(f))
+    # dataPath=Path(conf_dict["dataPath"])    
+    
+    # if all([dataPath.joinpath(nc_global_mean_file_name(vn, experiment_name=experiment_name)).exists() for vn in names]):
+        # print(""" Found cached global mean files. If you want to recompute the global means
+            # remove the following files: """
+        # )
+        # for vn in names:
+            # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
+
+        # def get_cached_global_mean(vn):
+            # gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
+            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+
+        # #map variables to data
+        # output=gh.data_streams(*map(get_cached_global_mean, data_str._fields))
+        # return (
+            # output
+        # )
+
+    # else:
+        # gm=gh.globalMask()
+        # # load an example file with mask
+        # template = nc.Dataset(dataPath.joinpath("DLEM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
+        # gcm=gh.project_2(
+                # source=gm,
+                # target=gh.CoordMask(
+                    # index_mask=np.zeros_like(template),
+                    # tr=gh.SymTransformers(
+                        # ctr=make_model_coord_transforms(),
+                        # itr=make_model_index_transforms()
+                    # )
+                # )
+        # )
+
+        # print("computing means, this may take some minutes...")
+
+        # def compute_and_cache_global_mean(vn):
+            # path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
+            # ds = nc.Dataset(str(path))
+            # vs=ds.variables
+            # lats= vs["lat"].__array__()
+            # lons= vs["lon"].__array__()
+            # print(vn)
+            # var=ds.variables[vn]
+            # # check if we have a cached version (which is much faster)
+            # gm_path = dataPath.joinpath(nc_global_mean_file_name(vn, experiment_name=experiment_name))
+
+            # gm=gh.global_mean_var(
+                    # lats,
+                    # lons,
+                    # gcm.index_mask,
+                    # var
+            # )
+            # gh.write_global_mean_cache(
+                    # gm_path,
+                    # gm,
+                    # vn
+            # )
+            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+        
+        # #map variables to data
+        # output=data_str(*map(compute_and_cache_global_mean, data_str._fields))
+        # return (
+            # gh.data_streams( # required data streams
+                # cVeg=output.cVeg,
+                # cSoil=output.cLitter+output.cSoil,
+                # gpp=output.gpp,
+                # npp=output.npp,
+                # ra=output.ra,
+                # rh=output.rh,
+            # )
+        # )

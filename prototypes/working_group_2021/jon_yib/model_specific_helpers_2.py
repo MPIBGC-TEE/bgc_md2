@@ -283,8 +283,7 @@ def get_example_site_vars(dataPath):
 # +
 # deprecated because it uses an already deprecated global_mean_JULES function
 
-experiment_name="YIBs_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name, experiment_name="YIBs_S2_"):
     if nc_var_name in ["cVeg", "cSoil"]:
         return experiment_name+"Annual_{}.nc".format(nc_var_name)
     else:
@@ -776,4 +775,177 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     ).reshape(len(X_0_dict),1)
     return X_0
 
+data_str = namedtuple( # data streams available in the model
+    'data_str',
+    ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
+    )
+    
+def get_global_mean_vars_all(experiment_name):
+        return(
+            gh.get_global_mean_vars_all(model_folder="jon_yib", 
+                            experiment_name=experiment_name,
+                            lat_var="latitude",
+                            lon_var="longitude",
+                            ) 
+        )       
+################ function for computing global mean for custom data streams ###################
+    
+# def get_global_mean_vars_all(experiment_name="YIBs_S2_"):
 
+    # def nc_file_name(nc_var_name, experiment_name="YIBs_S2_"):
+        # if nc_var_name in ["cVeg", "cSoil"]: return experiment_name+"Annual_{}.nc".format(nc_var_name)
+        # else: return experiment_name+"Monthly_{}.nc".format(nc_var_name)
+
+    # def nc_global_mean_file_name(nc_var_name, experiment_name="YIBs_S2_"):
+        # return experiment_name+"{}_gm_all.nc".format(nc_var_name)
+
+    # data_str = namedtuple( # data streams available in the model
+        # 'data_str',
+        # ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
+        # )
+
+    # names = data_str._fields
+    # conf_dict = gh.confDict("jon_yib")
+    # # with Path('config.json').open(mode='r') as f:
+        # # conf_dict = frozendict(json.load(f))
+    # dataPath=Path(conf_dict["dataPath"])    
+    
+    # if all([dataPath.joinpath(nc_global_mean_file_name(vn, experiment_name=experiment_name)).exists() for vn in names]):
+        # print(""" Found cached global mean files. If you want to recompute the global means
+            # remove the following files: """
+        # )
+        # for vn in names:
+            # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
+
+        # def get_cached_global_mean(vn):
+            # gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
+            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+
+        # #map variables to data
+        # output=gh.data_streams(*map(get_cached_global_mean, data_str._fields))
+        # return (
+            # output
+        # )
+
+    # else:
+        # gm=gh.globalMask()
+        # # load an example file with mask
+        # template = nc.Dataset(dataPath.joinpath("YIBs_S2_Monthly_tas.nc")).variables['tas'][0,:,:].mask
+        # gcm=gh.project_2(
+                # source=gm,
+                # target=gh.CoordMask(
+                    # index_mask=np.zeros_like(template),
+                    # tr=gh.SymTransformers(
+                        # ctr=make_model_coord_transforms(),
+                        # itr=make_model_index_transforms()
+                    # )
+                # )
+        # )
+
+        # print("computing means, this may take some minutes...")
+
+        # def compute_and_cache_global_mean(vn):
+            # path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
+            # ds = nc.Dataset(str(path))
+            # vs=ds.variables
+            # lats= vs["latitude"].__array__()
+            # lons= vs["longitude"].__array__()
+            # print(vn)
+            # var=ds.variables[vn]
+            # # check if we have a cached version (which is much faster)
+            # gm_path = dataPath.joinpath(nc_global_mean_file_name(vn, experiment_name=experiment_name))
+
+            # gm=gh.global_mean_var(
+                    # lats,
+                    # lons,
+                    # gcm.index_mask,
+                    # var
+            # )
+            # gh.write_global_mean_cache(
+                    # gm_path,
+                    # gm,
+                    # vn
+            # )
+            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
+        
+        # #map variables to data
+        # output=data_str(*map(compute_and_cache_global_mean, data_str._fields))
+        # return (
+            # gh.data_streams( # required data streams
+                # cVeg=output.cVeg,
+                # cSoil=output.cSoil,
+                # gpp=output.gpp,
+                # npp=output.npp,
+                # ra=output.ra,
+                # rh=output.rh,
+            # )
+        # )
+
+# ################## remove after
+    # if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+        # print(""" Found cached global mean files. If you want to recompute the global means
+            # remove the following files: """
+        # )
+        # for vn in names:
+            # print( dataPath.joinpath(nc_global_mean_file_name(vn)))
+
+        # def get_cached_global_mean(vn):
+            # return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+    
+        # return (
+            # Observables(*map(get_cached_global_mean, o_names)),
+            # Drivers(*map(get_cached_global_mean,d_names))
+        # )
+
+    # else:
+        # print("computing means, this may also take some minutes...")
+
+        # gm=gh.globalMask()
+        # # load an example file with mask
+        # template = nc.Dataset(
+                        # dataPath.joinpath("YIBs_S2_Monthly_tas.nc")
+                    # ).variables['tas'][0,:,:].mask
+        # gcm=gh.project_2(
+                # source=gm,
+                # target=gh.CoordMask(
+                    # index_mask=np.zeros_like(template),
+                    # tr=gh.SymTransformers(
+                        # ctr=make_model_coord_transforms(),
+                        # itr=make_model_index_transforms()
+                    # )
+                # )
+        # )
+        # def compute_and_cache_global_mean(vn):
+            # path = dataPath.joinpath(nc_file_name(vn))
+            # ds = nc.Dataset(str(path))
+            # vs=ds.variables
+            # lats= vs["latitude"].__array__()
+            # lons= vs["longitude"].__array__()
+            # print(vn)
+            # var=ds.variables[vn]
+            # # check if we have a cached version (which is much faster)
+            # gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+
+            # gm=gh.global_mean_var(
+                    # lats,
+                    # lons,
+                    # gcm.index_mask,
+                    # var
+            # )
+            
+            # #scale per second to per day before caching
+            # if vn in ["npp","gpp","rh","ra"]:
+                # gm = gm * 86400
+                
+            # gh.write_global_mean_cache(
+                    # gm_path,
+                    # gm,
+                    # vn
+            # )
+            # return gm
+    
+        # #map variables to data
+        # return (
+            # Observables(*map(compute_and_cache_global_mean, o_names)),
+            # Drivers(*map(compute_and_cache_global_mean, d_names))
+        # )

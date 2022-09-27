@@ -92,7 +92,7 @@ dvs_0 = msh.Drivers(*map(lambda v: v[0],dvs))
 print('svs_0=',svs_0)
 print('dvs_0=',dvs_0)
 # -
-svs
+np.mean(svs.rh)
 
 # To be able to run the model forward we not only have to replace parameter symbols by values but symbolic functions by normal python functions.
 # In our case the functions for NPP and ξ have to be provided. NPP_fun will interpolate the NPP for the day in question from the data. Which we have to load. 

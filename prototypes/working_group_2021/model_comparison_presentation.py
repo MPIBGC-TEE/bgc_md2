@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -137,165 +137,6 @@ test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
 # ### Plots of traceable components
 
-# +
-# plt.rcParams.update({'font.size': 18})
-# var_names={
-#     "x": "X and X_c",
-#     #"x_p": "X_p",
-#     "u": "C input",
-#     "rt": "Residence time",
-# }
-# gh.plot_components_combined(model_names=model_names,
-#                         test_arg_list=test_arg_list,   
-#                         var_names=var_names,
-#                         delta_t_val=delta_t_val,
-#                         model_cols=model_cols,
-#                         part=1,
-#                         averaging=12*30//delta_t_val # yearly averaging
-#                        )
-
-# +
-# gh.plot_x_xc(model_names=model_names,
-#              test_arg_list=test_arg_list,
-#              delta_t_val=delta_t_val, 
-#              model_cols=model_cols,
-#              part=1,
-#              averaging=12,
-#              overlap=True
-#              )
-
-# +
-# gh.plot_normalized_x(model_names=model_names,
-#                      delta_t_val=delta_t_val,
-#                      test_arg_list=test_arg_list,
-#                      model_cols=model_cols,
-#                      part=1,
-#                      averaging=12*30//delta_t_val,
-#                      overlap=True
-#                      )
-
-# +
-# gh.plot_normalized_xc(model_names=model_names,
-#                       test_arg_list=test_arg_list,
-#                       delta_t_val=delta_t_val, 
-#                       model_cols=model_cols,
-#                       part=1,
-#                       averaging=12*30*5//delta_t_val,
-#                       overlap=True
-#                      )
-
-# +
-# gh.plot_xp(model_names=model_names,
-#            test_arg_list=test_arg_list,
-#            delta_t_val=delta_t_val, 
-#            model_cols=model_cols,
-#            part=1,
-#            averaging=12*30*5//delta_t_val,
-#            overlap=True
-#           )
-
-# +
-# gh.plot_u(model_names=model_names,
-#           test_arg_list=test_arg_list,
-#           delta_t_val=delta_t_val, 
-#           model_cols=model_cols,
-#           part=1,
-#           averaging=30*12*5//delta_t_val,
-#           overlap=True
-#          )
-
-# +
-# gh.plot_normalized_u(model_names=model_names,
-#                      test_arg_list=test_arg_list,
-#                      delta_t_val=delta_t_val, 
-#                      model_cols=model_cols,
-#                      part=1,
-#                      averaging=12*30*5//delta_t_val,
-#                      overlap=True
-#                      )
-
-# +
-# gh.plot_rt(model_names=model_names,
-#            test_arg_list=test_arg_list,
-#            delta_t_val=delta_t_val, 
-#            model_cols=model_cols,
-#            part=1,
-#            averaging=12*30//delta_t_val,
-#            overlap=True
-#           )
-
-# +
-# gh.plot_normalized_rt(model_names=model_names,
-#                       test_arg_list=test_arg_list,
-#                      delta_t_val=delta_t_val, 
-#                      model_cols=model_cols,
-#                      part=1,
-#                      averaging=12*30*5//delta_t_val,
-#                      overlap=True
-#                      )
-# -
-
-# ## Contribution of Residense Time and C Input to the Differences in C Storage Capacity
-
-# +
-# # mm test for two files,
-# # fixme mm 8-12: 
-# # test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
-
-# mf_1="yz_jules"
-# mf_2="kv_visit2"
-# gh.plot_attribution_X_c(
-#     mf_1=mf_1,
-#     mf_2=mf_2,
-#     ta_1=test_args_dictionary[mf_1],
-#     ta_2=test_args_dictionary[mf_2],
-#     delta_t_val=delta_t_val,
-#     part=1
-# )
-
-
-# +
-# count_rt_weighted=0
-# count_u_weighted=0
-# count_combined_weighted=0
-# count_delta_x_c=0
-# for i in range(len(model_folders)-1):
-#     j=i
-#     while j<len(model_folders)-1:
-#         j+=1
-#         mf_1=model_folders[i]
-#         mf_2=model_folders[j]
-#         ta_1=test_arg_list[i]
-#         ta_2=test_arg_list[j]
-#         print("Attribution of difference in C storage capacity between "+model_names[mf_1]+" and "+model_names[mf_2])
-#         rt,u,combined,delta_x_c=gh.plot_attribution_X_c(mf_1=mf_1, mf_2=mf_2, ta_1=ta_1,ta_2=ta_2, delta_t_val=delta_t_val, part=1)
-#         count_rt_weighted=count_rt_weighted+rt*abs(delta_x_c)
-#         count_u_weighted=count_u_weighted+u*abs(delta_x_c)
-#         count_combined_weighted=count_combined_weighted+combined*abs(delta_x_c)
-#         count_delta_x_c=count_delta_x_c+abs(delta_x_c)
-
-# +
-# overall_rt_perc=count_rt_weighted/count_delta_x_c
-# overall_u_perc=count_u_weighted/count_delta_x_c
-# overall_combined_perc=count_combined_weighted/count_delta_x_c
-
-# # Pie chart, where the slices will be ordered and plotted counter-clockwise:
-# fig1=plt.figure(figsize=(8,8))
-# ax1 = fig1.subplots()
-# if overall_combined_perc > 0.001:
-#     ax1.pie([overall_rt_perc, overall_combined_perc, overall_u_perc], 
-#             labels=('$\Delta$ RT', ' $\Delta$ u * $\Delta$ RT', '$\Delta$ u'), 
-#             autopct='%1.1f%%',
-#             startangle=90, counterclock=False, colors=("darkorange", "lightgrey", "green"))
-# else: 
-#     ax1.pie([overall_rt_perc, overall_u_perc], 
-#             labels= ('$\Delta$ RT', '$\Delta$ u'), 
-#             autopct='%1.1f%%',
-#             startangle=90, counterclock=False, colors=("darkorange", "green"))    
-# ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-# ax1.set_title('Average Contribution of $\Delta$ Residense Time (RT) and $\Delta$ C Input (u) Across All Pairs of Models')
-# plt.show()
-# -
 plt.rcParams.update({'font.size': 16})
 
 model_cols={
@@ -315,381 +156,151 @@ all_comp_dict= gh.get_traceable_components(model_names=model_names,
              model_cols=model_cols,
              part=1,
              averaging=12*30//delta_t_val, # yearly averaging
+             #averaging=30//delta_t_val, # monthly averaging
              overlap=True
              )
 
-gh.plot_traceable_component(
+x_x_c,sigma_x_x_c=gh.plot_traceable_component(
     all_comp_dict,
     "x_x_c",
     model_cols,
     #delta=True,
 )
 
-gh.plot_traceable_component(
+x1,sigma_x1=gh.plot_traceable_component(
+    all_comp_dict,
+    "x",
+    model_cols,
+    #delta=True,
+)
+x2,sigma_x2=gh.plot_traceable_component(
     all_comp_dict,
     "x",
     model_cols,
     delta=True,
 )
 
-gh.plot_traceable_component(
+# +
+times=all_comp_dict["Times"]
+var=sigma_x1
+gh.plot_single_trend(var,times,3,"Standard deviation of X over time")
+
+times=all_comp_dict["Times"]
+var=sigma_x2
+gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$X over time")
+# -
+
+x_c1,sigma_x_c1=gh.plot_traceable_component(
+    all_comp_dict,
+    "x_c",
+    model_cols,
+    #delta=True,
+)
+x_c2,sigma_x_c2=gh.plot_traceable_component(
     all_comp_dict,
     "x_c",
     model_cols,
     delta=True,
 )
 
-gh.plot_traceable_component(
+# +
+times=all_comp_dict["Times"]
+var=sigma_x_c1
+gh.plot_single_trend(var,times,3,"Standard deviation of X_c over time")
+
+times=all_comp_dict["Times"]
+var=sigma_x_c2
+gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$X_c over time")
+# -
+
+x_p1,sigma_x_p1=gh.plot_traceable_component(
     all_comp_dict,
     "x_p",
     model_cols,
     #delta=True,
 )
+# x_p2,sigma_x_p2=gh.plot_traceable_component(
+#     all_comp_dict,
+#     "x_p",
+#     model_cols,
+#     delta=True,
+# )
 
-gh.plot_traceable_component(
+# +
+# times=all_comp_dict["Times"]
+# var=sigma_x_p1
+# gh.plot_single_trend(var,times,3,"Uncertainty of X_p over time")
+
+# times=all_comp_dict["Times"]
+# var=sigma_x_p2
+# gh.plot_single_trend(var,times,3, "Uncertainty of $\Delta$X_p over time")
+# -
+
+times=all_comp_dict["Times"]
+var=x_p1
+gh.plot_single_trend(var,times,3,"Mean X_p over time")
+
+u1, sigma_u1=gh.plot_traceable_component(
+    all_comp_dict,
+    "u",
+    model_cols,
+    #delta=True,
+)
+u2, sigma_u2=gh.plot_traceable_component(
     all_comp_dict,
     "u",
     model_cols,
     delta=True,
 )
 
-gh.plot_traceable_component(
+# +
+times=all_comp_dict["Times"]
+var=sigma_u1
+gh.plot_single_trend(var,times,3,"Standard deviation of NPP over time")
+
+times=all_comp_dict["Times"]
+var=sigma_u2
+gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$NPP over time")
+# -
+
+rt1,sigma_rt1=gh.plot_traceable_component(
+    all_comp_dict,
+    "rt",
+    model_cols,
+    #delta=True,
+)
+rt2,sigma_rt2=gh.plot_traceable_component(
     all_comp_dict,
     "rt",
     model_cols,
     delta=True,
 )
 
-x=gh.plot_attribution_all(
-    all_comp_dict=all_comp_dict,
-    uncertainty=True,
-)
-
-x
-
 # +
-delta_x_pos=x[0] 
-delta_x_neg=x[1]
-rt_contrib_pos=x[2]
-rt_contrib_neg=x[3]
-u_contrib_pos=x[4]
-u_contrib_neg=x[5]
-rt_u_inter_pos=x[6]
-rt_u_inter_neg=x[7]
-x_p_contrib_pos=x[8]
-x_p_contrib_neg=x[9]
+times=all_comp_dict["Times"]
+var=sigma_rt1
+gh.plot_single_trend(var,times,3,"Standard deviation of RT over time")
 
-x_p_contrib=x_p_contrib_pos-x_p_contrib_neg
-rt_contrib=rt_contrib_pos-rt_contrib_neg
-u_contrib=u_contrib_pos-u_contrib_neg
-rt_u_inter=rt_u_inter_pos-rt_u_inter_neg
-
-abs_total=(x_p_contrib_pos-x_p_contrib_neg+
-    rt_contrib_pos-rt_contrib_neg+
-    u_contrib_pos-u_contrib_neg+
-    rt_u_inter_pos-rt_u_inter_neg)
-
-percent_x_p=(x_p_contrib_pos-x_p_contrib_neg)/abs_total*100
-percent_rt=(rt_contrib_pos-rt_contrib_neg)/abs_total*100
-percent_u=(u_contrib_pos-u_contrib_neg)/abs_total*100
-percent_inter=abs(rt_u_inter_pos-rt_u_inter_neg)/abs_total*100
+times=all_comp_dict["Times"]
+var=sigma_rt2
+gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$RT over time")
 # -
 
-abs_total
+# ## Contribution of traceable components to the uncertainty of C storage (X)
 
-        ####### Figure 3 
-        print ('\033[1m'+'Attribution of summed differences from the multi-model mean ' +
-            'to the absolute differences of traceable components')         
-        fig3=plt.figure(figsize=(15,15))
-        axs=fig3.subplots(2,2)
-        
-        # contributions timeline
-        ax=axs[0,0]
+plt.rcParams.update({'font.size': 12})
 
-        # quadratic trends
-        z = np.polyfit(all_comp_dict["Times"],  x_p_contrib, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="blue",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                x_p_contrib, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="blue",
-                #linewidth=0.1,
-                alpha=0.2                
-                )         
-
-        z = np.polyfit(all_comp_dict["Times"],  u_contrib, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="green",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                u_contrib, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="green",
-                #linewidth=0.1,
-                alpha=0.2                
-                )   
-                
-        z = np.polyfit(all_comp_dict["Times"],  rt_contrib, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="darkorange",
-        )              
-        ax.fill_between(
-                all_comp_dict["Times"],
-                rt_contrib, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="darkorange",
-                #linewidth=0.1,
-                alpha=0.2                
-                )         
-
-        z = np.polyfit(all_comp_dict["Times"],  rt_u_inter, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="grey",
-        )         
-        ax.fill_between(
-                all_comp_dict["Times"],
-                rt_u_inter, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="grey",
-                #linewidth=0.1,
-                alpha=0.2                
-                )          
-                 
-        
-        #ax.legend()
-        ax.set_title('Absolute contributions over time')
-        #ax.set_ylabel('%')
-        ax.grid()
-        
-        # % timeline
-        ax=axs[1,0]
-        ax.plot(          
-            all_comp_dict["Times"], 
-            percent_rt,
-            label="contribution of $\Delta$ R_t",
-            color="darkorange",
-            linewidth=0.8,
-            alpha=0.5,
-        )
-        ax.plot(        
-            all_comp_dict["Times"], 
-            percent_u,
-            label="contribution of $\Delta$ u",
-            color="green",
-            linewidth=0.8,
-            alpha=0.5,
-        )     
-        
-        # ax.plot(        
-            # all_comp_dict["Times"], 
-            # delta_x,
-            # label="$\Delta$ X",
-            # color="black",
-        # )
-        ax.plot(        
-            all_comp_dict["Times"], 
-            percent_x_p,
-            label="$\Delta$ X_p",
-            color="blue",
-            linewidth=0.8,
-            alpha=0.5,
-        )        
-        if np.mean(percent_inter) > 0.001:
-            ax.plot(            
-                all_comp_dict["Times"], 
-                percent_inter,
-                label="contribution of interaction terms",
-                color="grey",
-                linewidth=0.5,
-                #alpha=0.1,
-            )      
-        # quadratic trends
-        z = np.polyfit(all_comp_dict["Times"],  percent_x_p, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="blue",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_x_p, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="blue",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-                
-        z = np.polyfit(all_comp_dict["Times"],  percent_u, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="green",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_u, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="green",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-
-        z = np.polyfit(all_comp_dict["Times"],  percent_rt, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="darkorange",
-        )         
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_rt, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="darkorange",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-
-        z = np.polyfit(all_comp_dict["Times"],  percent_inter, 2)
-        p = np.poly1d(z)  
-        ax.plot(        
-            all_comp_dict["Times"], 
-            p(all_comp_dict["Times"]),
-            label="$\Delta$ X_p",
-            color="grey",
-        ) 
-        ax.fill_between(
-                all_comp_dict["Times"],
-                percent_inter, 
-                p(all_comp_dict["Times"]),
-                #label="\u00B12$\sigma$ confidence interval",
-                color="grey",
-                #linewidth=0.1,
-                alpha=0.2                
-                )  
-        
-        #ax.legend()
-        ax.set_title('% Contributions over time')
-        ax.set_ylabel('%')
-        ax.grid()
-
-        # bar charts
-        
-        positive_delta_X=sum(delta_x_pos)/len(delta_x_pos)
-        negative_delta_X=sum(delta_x_neg)/len(delta_x_neg)
-        #positive_x_c_contrib=sum(x_c_contrib[x_c_contrib>0])/len(x_c_contrib)
-        #negative_x_c_contrib=sum(x_c_contrib[x_c_contrib<0])/len(x_c_contrib)
-        positive_x_p_contrib=sum(x_p_contrib_pos)/len(x_p_contrib_pos)
-        negative_x_p_contrib=sum(x_p_contrib_neg)/len(x_p_contrib_neg)        
-        positive_rt_contrib=sum(rt_contrib_pos)/len(rt_contrib_pos)
-        negative_rt_contrib=sum(rt_contrib_neg)/len(rt_contrib_neg)
-        positive_u_contrib=sum(u_contrib_pos)/len(u_contrib_pos)
-        negative_u_contrib=sum(u_contrib_neg)/len(u_contrib_neg)      
-        positive_rt_u_inter=sum(rt_u_inter_pos)/len(rt_u_inter_pos)
-        negative_rt_u_inter=sum(rt_u_inter_neg)/len(rt_u_inter_neg)        
-        
-        ax0=axs[0,1]  
-        ax0.set_title('Average contributions')       
-        ax0.axhline(0, color='black', ls='dashed')
-        
-        # ax0.bar ('$\Delta$ X', positive_delta_X, color="black")
-        # ax0.bar ('$\Delta$ X', negative_delta_X, color="black")
-        ax0.bar ('$\Delta$ RT', positive_rt_contrib, color="darkorange")
-        ax0.bar ('$\Delta$ RT', negative_rt_contrib, color="darkorange")        
-        ax0.bar ('$\Delta$ NPP', positive_u_contrib, color="green")
-        ax0.bar ('$\Delta$ NPP', negative_u_contrib, color="green")
-        ax0.bar ('$\Delta$npp*$\Delta$rt', positive_rt_u_inter, color="lightgrey")
-        ax0.bar ('$\Delta$npp*$\Delta$rt', negative_rt_u_inter, color="lightgrey")        
-        ax0.bar ('$\Delta$ X_p', positive_x_p_contrib, color="blue")
-        ax0.bar ('$\Delta$ X_p', negative_x_p_contrib, color="blue")   
-        
-        # if abs(np.mean(combined_contrib)) > 0.001:
-           # ax0.bar ('$\Delta$ U * $\Delta$ RT', np.mean(combined_contrib), color="lightgrey")   
-        ax0.grid() 
-        
-        # pie charts
-
-        ax1=axs[1,1]
-        ax1.set_title('% Contributions')
-          
-        if np.mean(percent_inter) > 0.001:
-            labels = '$\Delta$ RT', '$\Delta$ NPP', '$\Delta$NPP*$\Delta$RT', '$\Delta$ X_p'
-            sizes = [np.mean(percent_rt), np.mean(percent_u), 
-                np.mean(percent_inter), np.mean(percent_x_p)]
-            ax1.pie(sizes, autopct='%1.1f%%', 
-                startangle=90, counterclock=False, colors=("darkorange", "green", "lightgrey", "blue"))
-        else:
-            labels = '$\Delta$ RT','$\Delta$ NPP', '$\Delta$ X_p'
-            sizes = [np.mean(percent_rt), np.mean(percent_u), np.mean(percent_x_p)]
-            ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
-                startangle=90, counterclock=False, colors=("darkorange", "green", "blue"))        
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
-        ax1.legend(labels, bbox_to_anchor =(1.42, 2.22))
-        plt.show()
-
-y=gh.difference_attribution (
-        x_1=all_comp_dict["JULES"]["x"],
-        x_c_1=all_comp_dict["JULES"]["x_c"],
-        x_p_1=all_comp_dict["JULES"]["x_p"],
-        u_1=all_comp_dict["JULES"]["u"],
-        rt_1=all_comp_dict["JULES"]["rt"],
-        x_2=x-all_comp_dict["Mean"]["x"],
-        x_c_2=all_comp_dict["Mean"]["x_c"],
-        x_p_2=all_comp_dict["Mean"]["x_p"],
-        u_2=all_comp_dict["Mean"]["u"],
-        rt_2=all_comp_dict["Mean"]["rt"],    
-        percent=True,
+gh.plot_attribution_sum (
+    all_comp_dict=all_comp_dict,
+    percent=True,
+    part=1,
 )
-y
 
-delta_x=np.array((1,2,0,-3,-4))
+# ### Per model
 
-pos_delta_x=delta_x.copy(); pos_delta_x[pos_delta_x<0]=0
-neg_delta_x=delta_x.copy(); neg_delta_x[neg_delta_x>0]=0
-
-pos_delta_x=delta_x
-
-delta_x
-
-pos_delta_x
-
-pos_delta_x[pos_delta_x<0]=0
-pos_delta_x
-
-pos_delta_x
-
-neg_delta_x
+gh.plot_attribution_per_model(
+    all_comp_dict=all_comp_dict,
+    #percent=True,    
+)
 
 
