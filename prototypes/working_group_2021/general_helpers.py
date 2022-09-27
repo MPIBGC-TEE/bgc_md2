@@ -4428,3 +4428,23 @@ def plot_attribution_all (
                     # )
                 # )
                 # plot_number += 1
+
+
+def cov_mat(a, b):
+    return np.cov(a, b, bias=True)
+
+
+def sum_attribution(y, x1, x2):
+    cm1 = cov_mat(x1, y)
+    var_y = cm1[1, 1]
+    cov_x1_y = cm1[0, 1]
+
+    cm2 = cov_mat(x2, y)
+    cov_x2_y = cm2[0, 1]
+
+    return tuple((c/var_y for c in (cov_x1_y, cov_x2_y)))
+
+def product_attribution(v, z1, z2):
+    y, x1, x2 = map(np.log, (v, z1, z2))
+    return sum_attribution(y, x1, x2)
+
