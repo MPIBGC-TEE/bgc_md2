@@ -101,7 +101,7 @@ def identicalTransformers():
     - lat ==   0 at the equator with
     - lat == -90 at the south pole,
     - lat == +90 at the north pole,
-    - lon ==   0 at Greenich and
+    - lon ==   0 at Greenwich and
     - lon is counted positive eastwards from -180 to 180
     """
     return CoordTransformers(
@@ -2230,7 +2230,6 @@ def resample_nc(
             ):
     for experiment in experiment_names:
         print('\033[1m'+'. . . Resampling data for '+experiment+' experiment . . .')
-        k=0
         model_folders=[(m) for m in model_names] 
         m_names=list(model_names.values())  
         g_mask = target_mask.index_mask
@@ -2368,7 +2367,7 @@ def average_and_resample_nc(
                 ds.close()        
                 ds_new.close()
             k+=1 # model counter
-        print("Done!")    
+        print("Done!")
     
 def combine_masks_2(coord_masks: List["CoordMask"]):
    
@@ -3950,27 +3949,7 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
                     #combined_mask.index_mask,
                     gcm.index_mask,
                     var      
-            ) 
-            ## THIS IS TEMPORARY. GLOBAL MASK DOES NOT WORK FOR IBIS RH AND RA, THEREFORE COMPUTING MODEL-SPECIFIC MASK HERE
-            # if model_folder=="kv_ft_dlem":
-                # print("IBIS! computing masks to exclude pixels with nan entries, this may take some minutes...")
-                # #combined_mask= msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
-                # gm=global_mean_var(
-                        # lats,
-                        # lons,
-                        # model_mask.index_mask,
-                        # var      
-                # ) 
-            # else: 
-                # gm=global_mean_var(
-                        # lats,
-                        # lons,
-                        # combined_mask.index_mask,
-                        # #gcm.index_mask,
-                        # var
-                # )
-            #print(vn)
-            #print(np.mean(gm))     
+            )     
             return gm * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
         
         #map variables to data
@@ -4007,4 +3986,74 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         return (
             output_final
         )    
-    
+
+def uncertainty_grids (
+        model_names,
+        experiment_names,
+        global_mask,    
+        output_path,    
+        ):
+    model_folders=[(m) for m in model_names] 
+    m_names=list(model_names.values())      
+    g_mask=global_mask.index_mask    
+    for experiment in experiment_names:
+        print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .')   
+        print('\033[0m')        
+        for vn in ['cVeg', 'cSoil', 'gpp']:# data_streams._fields:
+            print(vn)
+            var_sum_zero=np.zeros_like(g_mask)
+            var_sum=np.ma.array(var_sum_zero,mask = g_mask)
+            var_diff_sqr_zero=np.zeros_like(g_mask)
+            var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
+            # computing ensemble mean       
+            k=0 # model counter        
+            for mf in model_folders:
+                experiment_name=m_names[k]+"_"+experiment+"_"
+                conf_dict = confDict(mf)
+                dataPath=Path(conf_dict["dataPath"])       
+                file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var=ds.variables[vn][:, :].data
+                var_sum=var_sum+var
+                k+=1 # model counter
+                ds.close() 
+            mean=var_sum/len(model_folders) 
+            # computing standard deviation                   
+            k=0 # model counter        
+            for mf in model_folders:
+                experiment_name=m_names[k]+"_"+experiment+"_"
+                conf_dict = confDict(mf)
+                dataPath=Path(conf_dict["dataPath"])             
+                file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var=ds.variables[vn][:, :].data           
+                var_diff_sqr=var_diff_sqr + (var-mean)**2
+                k+=1 # model counter 
+                ds.close()             
+            variance = var_diff_sqr / (len(model_folders)-1)
+            st_dev=np.sqrt(variance)           
+            # final masking
+            var_mean_final = np.ma.array(mean,mask = g_mask)
+            var_sd_final = np.ma.array(st_dev,mask = g_mask)
+            # creating and writing a new NetCDF file 
+            s = g_mask.shape
+            n_lats, n_lons = s
+            new_path=Path(output_path).joinpath(experiment+"_"+vn+"_uncertanty.nc")
+            ds_new = nc.Dataset(str(new_path), "w", persist=True)
+            # creating dimentions
+            lat = ds_new.createDimension("lat", size=n_lats)
+            lon = ds_new.createDimension("lon", size=n_lons)         
+            # creating variables                         
+            var_mean = ds_new.createVariable(vn+'_mean', "float32", ["lat", "lon"])
+            var_mean[:, :] = var_mean_final
+            var_sd = ds_new.createVariable(vn+'_sd', "float32", ["lat", "lon"])
+            var_sd[:, :] = var_sd_final            
+            var_sd_relative = ds_new.createVariable(vn+'_sd_relative', "float32", ["lat", "lon"])
+            var_sd_relative[:, :] = var_sd_final/var_mean_final
+            lats = ds_new.createVariable("lat", "float32", ["lat"])
+            lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+            lons = ds_new.createVariable("lon", "float32", ["lon"])
+            lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+            # closing NetCDF file      
+            ds_new.close()  
+    print('Done!')    

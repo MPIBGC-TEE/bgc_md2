@@ -13,7 +13,7 @@ model_names={
     "ab_classic":"CLASSIC",  
     "clm5":"CLM5.0",
     "kv_ft_dlem": "DLEM", 
-    "bian_ibis2":"IBIS",    
+    "bian_ibis2":"IBIS",  # exclude IBIS to get results with deserts  
     "cj_isam": "ISAM",    
     "isba-ctrip":"ISBA-CTRIP",    
     "jsbach":"JSBACH",
@@ -30,7 +30,8 @@ model_names={
     "jon_yib": "YIBs"    
 }
 
-global_mask=gh.globalMask(file_name="common_mask_all.nc")    
+global_mask=gh.globalMask(file_name="common_mask_all_models.nc")    
+#global_mask=gh.globalMask(file_name="common_mask_all_models_w_deserts.nc")   
 # -
 
 # Compute temporal average + difference(last-first) and resample all NetCDF4 data streams for each model to the global mask
@@ -41,13 +42,6 @@ gh.average_and_resample_nc(
     method="nearest",
     radius_of_influence=500000, 
     )
-# gh.average_and_resample_nc(
-#     model_names=model_names,
-#     experiment_names=experiment_names_S3,
-#     target_mask=global_mask,
-#     method="nearest",
-#     radius_of_influence=500000, 
-#     )
 
 # Resample all NetCDF4 data streams for each model to the global mask (takes time and creates large .nc files)
 gh.resample_nc(
@@ -57,13 +51,13 @@ gh.resample_nc(
     method="nearest",
     radius_of_influence=500000, 
     )
-# gh.average_and_resample_nc(
-#     model_names=model_names,
-#     experiment_names=experiment_names_S3,
-#     target_mask=global_mask,
-#     method="nearest",
-#     radius_of_influence=500000, 
-#     )
+
+gh.uncertainty_grids(
+    model_names=model_names,
+    experiment_names=['S2','S3'],
+    global_mask=global_mask,
+    output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
 
 

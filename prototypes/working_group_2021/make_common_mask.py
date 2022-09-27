@@ -17,7 +17,7 @@ from pathlib import Path
 #     'bian_ibis2'
 # ]
 model_folders = [
-                "bian_ibis2",
+                "bian_ibis2", # to get a mask with deserts exclude IBIS models
                 "ab_classic",
                 "jsbach",
                 "clm5",
@@ -71,6 +71,7 @@ common_mask = gh.combine_masks_2(masks)
 
 #common_mask.write_netCDF4(Path("common_mask.nc"))
 common_mask.write_netCDF4(Path("common_mask_all_models.nc"))
+#common_mask.write_netCDF4(Path("common_mask_all_models_w_deserts.nc"))
 
 ax = f.add_subplot(n+1, 1, n+1)
 common_mask.plot_dots(ax)
@@ -78,6 +79,7 @@ common_mask.plot_dots(ax)
 
 #f.savefig("common_mask.pdf")
 f.savefig("common_mask_all_models.pdf")
+#f.savefig("common_mask_all_models_w_deserts.pdf")
 
 
 
