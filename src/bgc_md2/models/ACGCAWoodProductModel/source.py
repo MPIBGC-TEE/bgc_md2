@@ -26,10 +26,10 @@ input_fluxes = {
 
 internal_fluxes = dict()
 
-r_S, r_L = symbols("r_S r_L")
+k_S, k_L = symbols("k_S k_L")
 output_fluxes = {
-    WP_S: r_S * WP_S,
-    WP_L: r_L * WP_L
+    WP_S: k_S * WP_S,
+    WP_L: k_L * WP_L
 }
 
 t = symbols("t")
