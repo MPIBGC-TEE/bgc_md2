@@ -52,12 +52,19 @@ gh.resample_nc(
     radius_of_influence=500000, 
     )
 
+gh.adding_data_streams (
+        model_names=model_names,
+        experiment_names=['S2','S3'],
+        global_mask=global_mask,       
+        )
+
 gh.uncertainty_grids(
     model_names=model_names,
     experiment_names=['S2','S3'],
     global_mask=global_mask,
     output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
+
 
 
 

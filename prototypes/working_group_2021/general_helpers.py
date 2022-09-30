@@ -2320,9 +2320,18 @@ def average_and_resample_nc(
                 print(file_path)
                 ds = nc.Dataset(str(file_path))
                 var=ds.variables[vn][:, :, :].data
+                
+                # finding start value (differs for different models)
+                if var.shape[0]>1000: # monthly data
+                    start=var.shape[0]-1440 # smallest time range - SDGVM fluxes 
+                else: # yearly data
+                    start=var.shape[0]-120 # smallest time range - SDGVM fluxes
+                #print(mf)
+                #print(start)
+                #print(var[start:,:,:].shape)
                 # temporal average + difference
-                var_avg=np.ma.mean(var, axis=0)    
-                var_diff=var[-1,:,:]-var[0,:,:]
+                var_avg=np.ma.mean(var[start:,:,:], axis=0)    
+                var_diff=var[-1,:,:]-var[start,:,:]
                 # masking
                 var_masked_avg = np.ma.array(var_avg, mask = model_mask.index_mask)
                 var_masked_diff = np.ma.array(var_diff, mask = model_mask.index_mask) 
@@ -4077,3 +4086,365 @@ def product_attribution(v, z1, z2):
     y, x1, x2 = map(np.log, (v, z1, z2))
     return sum_attribution(y, x1, x2)
 
+def adding_data_streams (
+        model_names,
+        experiment_names,
+        global_mask,       
+        ):
+    model_folders=[(m) for m in model_names] 
+    m_names=list(model_names.values())      
+    g_mask=global_mask.index_mask    
+    for experiment in experiment_names:
+        print('\033[1m'+'. . . Adding missing data streams for '+experiment+' experiment . . .')   
+        print('\033[0m')                         
+        k=0 # model counter         
+        for mf in model_folders:
+            print(model_names[mf])
+            print('cSoil_total')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            conf_dict = confDict(mf)
+            dataPath=Path(conf_dict["dataPath"])              
+            file_path = dataPath.joinpath(experiment_name+"cSoil_ave_res.nc")
+            ds = nc.Dataset(str(file_path))
+            var_soil_avg=ds.variables["cSoil"][:, :].data
+            var_soil_diff=ds.variables["cSoil_diff"][:, :].data
+            ds.close()
+            if "cLitter" in msh(mf).data_str._fields:           
+                file_path = dataPath.joinpath(experiment_name+"cLitter_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var_litter_avg=ds.variables["cLitter"][:, :].data
+                var_litter_diff=ds.variables["cLitter_diff"][:, :].data                
+                ds.close()
+                var_soil_total_avg=np.ma.array(var_soil_avg+var_litter_avg, mask=g_mask)
+                var_soil_total_diff=np.ma.array(var_soil_diff+var_litter_diff, mask=g_mask)                
+            else:
+                var_soil_total_avg=np.ma.array(var_soil_avg, mask=g_mask)
+                var_soil_total_diff=np.ma.array(var_soil_diff, mask=g_mask)                           
+            # creating and writing a new NetCDF file 
+            s = g_mask.shape
+            n_lats, n_lons = s
+            new_path=dataPath.joinpath(experiment_name+"cSoil_total_ave_res.nc")
+            ds_new = nc.Dataset(str(new_path), "w", persist=True)
+            # creating dimentions
+            lat = ds_new.createDimension("lat", size=n_lats)
+            lon = ds_new.createDimension("lon", size=n_lons)         
+            # creating variables                         
+            var_avg = ds_new.createVariable('cSoil_total', "float32", ["lat", "lon"])
+            var_avg[:, :] = var_soil_total_avg
+            var_diff = ds_new.createVariable('cSoil_total_diff', "float32", ["lat", "lon"])
+            var_diff[:, :] = var_soil_total_diff            
+            lats = ds_new.createVariable("lat", "float32", ["lat"])
+            lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+            lons = ds_new.createVariable("lon", "float32", ["lon"])
+            lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+            # closing NetCDF file      
+            ds_new.close()                      
+            if "npp_nlim" in msh(mf).data_str._fields:  
+                print('npp_nlim')            
+                file_path = dataPath.joinpath(experiment_name+"npp_nlim_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var_npp_nlim_avg=ds.variables["npp_nlim"][:, :].data
+                var_npp_nlim_diff=ds.variables["npp_nlim_diff"][:, :].data                
+                ds.close()
+                var_npp_avg=np.ma.array(var_npp_nlim_avg, mask=g_mask)
+                var_npp_diff=np.ma.array(var_npp_nlim_diff, mask=g_mask)
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=dataPath.joinpath(experiment_name+"npp_ave_res.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimentions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)         
+                # creating variables                         
+                var_avg = ds_new.createVariable('npp', "float32", ["lat", "lon"])
+                var_avg[:, :] = var_npp_avg
+                var_diff = ds_new.createVariable('npp_diff', "float32", ["lat", "lon"])
+                var_diff[:, :] = var_npp_diff            
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+                # closing NetCDF file      
+                ds_new.close()                       
+            elif not ("npp" in msh(mf).data_str._fields):  
+                print('npp')            
+                file_path = dataPath.joinpath(experiment_name+"gpp_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var_gpp_avg=ds.variables["gpp"][:, :].data
+                var_gpp_diff=ds.variables["gpp_diff"][:, :].data                
+                ds.close()
+                file_path = dataPath.joinpath(experiment_name+"ra_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var_ra_avg=ds.variables["ra"][:, :].data
+                var_ra_diff=ds.variables["ra_diff"][:, :].data                
+                ds.close()                                              
+                var_npp_avg=np.ma.array(var_gpp_avg-var_ra_avg, mask=g_mask)
+                var_npp_diff=np.ma.array(var_gpp_diff-var_ra_diff, mask=g_mask)            
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=dataPath.joinpath(experiment_name+"npp_ave_res.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimentions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)         
+                # creating variables                         
+                var_avg = ds_new.createVariable('npp', "float32", ["lat", "lon"])
+                var_avg[:, :] = var_npp_avg
+                var_diff = ds_new.createVariable('npp_diff', "float32", ["lat", "lon"])
+                var_diff[:, :] = var_npp_diff            
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+                # closing NetCDF file      
+                ds_new.close() 
+            if not ("ra" in msh(mf).data_str._fields):  
+                print('ra')             
+                file_path = dataPath.joinpath(experiment_name+"gpp_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var_gpp_avg=ds.variables["gpp"][:, :].data
+                var_gpp_diff=ds.variables["gpp_diff"][:, :].data                
+                ds.close()
+                file_path = dataPath.joinpath(experiment_name+"npp_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var_npp_avg=ds.variables["npp"][:, :].data
+                var_npp_diff=ds.variables["npp_diff"][:, :].data                
+                ds.close()                                              
+                var_ra_avg=np.ma.array(var_gpp_avg-var_npp_avg, mask=g_mask)
+                var_ra_diff=np.ma.array(var_gpp_diff-var_npp_diff, mask=g_mask)            
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=dataPath.joinpath(experiment_name+"ra_ave_res.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimentions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)         
+                # creating variables                         
+                var_avg = ds_new.createVariable('ra', "float32", ["lat", "lon"])
+                var_avg[:, :] = var_ra_avg
+                var_diff = ds_new.createVariable('ra_diff', "float32", ["lat", "lon"])
+                var_diff[:, :] = var_ra_diff            
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+                # closing NetCDF file      
+                ds_new.close()                                                                     
+            k+=1 # model counter  
+    print('Done!')  
+    
+def uncertainty_grids (
+        model_names,
+        experiment_names,
+        global_mask,    
+        output_path,    
+        ):
+    model_folders=[(m) for m in model_names] 
+    m_names=list(model_names.values())      
+    g_mask=global_mask.index_mask    
+    for experiment in experiment_names:
+        print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .')   
+        print('\033[0m')        
+                  
+        print('computing uncertainties...')
+        for vn in ['cVeg', 'cSoil_total', 'gpp','npp','ra','rh']:# data_streams._fields:
+            print(vn)
+            var_sum_zero=np.zeros_like(g_mask)
+            var_sum=np.ma.array(var_sum_zero,mask = g_mask)
+            var_diff_sqr_zero=np.zeros_like(g_mask)
+            var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
+            delta_sum_zero=np.zeros_like(g_mask)
+            delta_sum=np.ma.array(delta_sum_zero,mask = g_mask)
+            delta_diff_sqr_zero=np.zeros_like(g_mask)
+            delta_diff_sqr=np.ma.array(delta_diff_sqr_zero,mask = g_mask)            
+            # computing ensemble mean       
+            k=0 # model counter        
+            for mf in model_folders:
+                experiment_name=m_names[k]+"_"+experiment+"_"
+                conf_dict = confDict(mf)
+                dataPath=Path(conf_dict["dataPath"])       
+                file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var=ds.variables[vn][:, :].data
+                var_sum=var_sum+var
+                if vn=="cVeg" or vn=="cSoil_total":
+                    delta=ds.variables[vn+"_diff"][:, :].data
+                    delta_sum=delta_sum+delta
+                k+=1 # model counter
+                ds.close() 
+            mean=var_sum/len(model_folders) 
+            delta_mean=delta_sum/len(model_folders)
+            # computing standard deviation                   
+            k=0 # model counter        
+            for mf in model_folders:
+                experiment_name=m_names[k]+"_"+experiment+"_"
+                conf_dict = confDict(mf)
+                dataPath=Path(conf_dict["dataPath"])             
+                file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")
+                ds = nc.Dataset(str(file_path))
+                var=ds.variables[vn][:, :].data           
+                var_diff_sqr=var_diff_sqr + (var-mean)**2
+                if vn=="cVeg" or vn=="cSoil_total":
+                    delta=ds.variables[vn+"_diff"][:, :].data
+                    delta_diff_sqr=delta_diff_sqr+(delta-delta_mean)**2                                                
+                k+=1 # model counter 
+                ds.close()             
+            variance = var_diff_sqr / (len(model_folders)-1)
+            st_dev=np.sqrt(variance)              
+            # final masking
+            var_mean_final = np.ma.array(mean,mask = g_mask)
+            var_sd_final = np.ma.array(st_dev,mask = g_mask)
+            # creating and writing a new NetCDF file 
+            s = g_mask.shape
+            n_lats, n_lons = s
+            new_path=Path(output_path).joinpath(experiment+"_"+vn+"_uncertainty.nc")
+            ds_new = nc.Dataset(str(new_path), "w", persist=True)
+            # creating dimentions
+            lat = ds_new.createDimension("lat", size=n_lats)
+            lon = ds_new.createDimension("lon", size=n_lons)         
+            # creating variables                         
+            var_mean = ds_new.createVariable(vn+'_mean', "float32", ["lat", "lon"])
+            var_mean[:, :] = var_mean_final
+            var_sd = ds_new.createVariable(vn+'_sd', "float32", ["lat", "lon"])
+            var_sd[:, :] = var_sd_final            
+            var_sd_relative = ds_new.createVariable(vn+'_sd_relative', "float32", ["lat", "lon"])
+            var_sd_relative[:, :] = var_sd_final/var_mean_final
+            lats = ds_new.createVariable("lat", "float32", ["lat"])
+            lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+            lons = ds_new.createVariable("lon", "float32", ["lon"])
+            lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+            # closing NetCDF file      
+            ds_new.close() 
+            if vn=="cVeg" or vn=="cSoil_total":
+                delta_variance = delta_diff_sqr / (len(model_folders)-1)
+                delta_st_dev=np.sqrt(delta_variance)
+                # final masking
+                var_mean_final = np.ma.array(delta_mean,mask = g_mask)
+                var_sd_final = np.ma.array(delta_st_dev,mask = g_mask)
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=Path(output_path).joinpath(experiment+"_"+vn+"_diff_uncertainty.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimentions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)         
+                # creating variables                         
+                var_mean = ds_new.createVariable(vn+'_diff_mean', "float32", ["lat", "lon"])
+                var_mean[:, :] = var_mean_final
+                var_sd = ds_new.createVariable(vn+'_diff_sd', "float32", ["lat", "lon"])
+                var_sd[:, :] = var_sd_final            
+                var_sd_relative = ds_new.createVariable(vn+'_diff_sd_relative', "float32", ["lat", "lon"])
+                var_sd_relative[:, :] = var_sd_final/var_mean_final
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+                # closing NetCDF file      
+                ds_new.close()                 
+            k=0 # model counter 
+
+        # adding X (cVeg+cSoil_total) 
+        print ('adding X')
+        file_path = Path(output_path).joinpath(experiment+'_'+"cVeg_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        var_cVeg_mean=ds.variables["cVeg_mean"][:, :].data
+        var_cVeg_sd=ds.variables["cVeg_sd"][:, :].data
+        ds.close()        
+        file_path = Path(output_path).joinpath(experiment+'_'+"cSoil_total_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        var_cSoil_total_mean=ds.variables["cSoil_total_mean"][:, :].data
+        var_cSoil_total_sd=ds.variables["cSoil_total_sd"][:, :].data     
+        ds.close()        
+        var_X_mean=var_cVeg_mean+var_cSoil_total_mean
+        var_X_sd=var_cVeg_sd+var_cSoil_total_sd      
+        
+        # final masking
+        var_mean_final = np.ma.array(var_X_mean,mask = g_mask)
+        var_sd_final = np.ma.array(var_X_sd,mask = g_mask)
+        # creating and writing a new NetCDF file 
+        s = g_mask.shape
+        n_lats, n_lons = s
+        new_path=Path(output_path).joinpath(experiment+"_"+"X_uncertainty.nc")
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimentions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)         
+        # creating variables                         
+        var_mean = ds_new.createVariable('X_mean', "float32", ["lat", "lon"])
+        var_mean[:, :] = var_mean_final
+        var_sd = ds_new.createVariable('X_sd', "float32", ["lat", "lon"])
+        var_sd[:, :] = var_sd_final            
+        var_sd_relative = ds_new.createVariable('X_sd_relative', "float32", ["lat", "lon"])
+        var_sd_relative[:, :] = var_sd_final/var_mean_final
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+        # closing NetCDF file      
+        ds_new.close() 
+
+        # adding cumulative nep (cVeg_diff+cSoil_total_diff)
+        print ('adding NEP')        
+        file_path = Path(output_path).joinpath(experiment+'_'+"cVeg_diff_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        var_cVeg_mean=ds.variables["cVeg_diff_mean"][:, :].data
+        var_cVeg_sd=ds.variables["cVeg_diff_sd"][:, :].data
+        ds.close()
+        file_path = Path(output_path).joinpath(experiment+'_'+"cSoil_total_diff_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        var_cSoil_total_mean=ds.variables["cSoil_total_diff_mean"][:, :].data
+        var_cSoil_total_sd=ds.variables["cSoil_total_diff_sd"][:, :].data     
+        ds.close()        
+        var_X_mean=var_cVeg_mean+var_cSoil_total_mean
+        var_X_sd=var_cVeg_sd+var_cSoil_total_sd      
+        
+        # final masking
+        var_mean_final = np.ma.array(var_X_mean,mask = g_mask)
+        var_sd_final = np.ma.array(var_X_sd,mask = g_mask)
+        # creating and writing a new NetCDF file 
+        s = g_mask.shape
+        n_lats, n_lons = s
+        new_path=Path(output_path).joinpath(experiment+"_"+"nep_uncertainty.nc")
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimentions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)         
+        # creating variables                         
+        var_mean = ds_new.createVariable('nep_mean', "float32", ["lat", "lon"])
+        var_mean[:, :] = var_mean_final
+        var_sd = ds_new.createVariable('nep_sd', "float32", ["lat", "lon"])
+        var_sd[:, :] = var_sd_final            
+        var_sd_relative = ds_new.createVariable('nep_sd_relative', "float32", ["lat", "lon"])
+        var_sd_relative[:, :] = var_sd_final/var_mean_final
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+        # closing NetCDF file      
+        ds_new.close() 
+        
+    print('Done!')    
+
+def grid_attribution (
+        experiment_names,
+        global_mask,    
+        data_path,    
+        ):
+    for experiment in experiment_names:
+        # attribution of uncertainty in X to u, RT and X_p 
+        file_path = Path(data_path).joinpath(experiment+"_X_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        X_sd=ds.variables["x_sd"][:, :].data
+        ds.close()        
+        file_path = Path(data_path).joinpath(experiment+"_gpp_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        u_sd=ds.variables["gpp_sd"][:, :].data
+        ds.close() 
+        file_path = Path(data_path).joinpath(experiment+"_gpp_uncertainty.nc")
+        ds = nc.Dataset(str(file_path))
+        u_sd=ds.variables["gpp_sd"][:, :].data
+        ds.close()         
