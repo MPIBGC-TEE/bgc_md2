@@ -43,16 +43,18 @@ gh.average_and_resample_nc(
     radius_of_influence=500000, 
     )
 
+# +
 # Resample all NetCDF4 data streams for each model to the global mask (takes time and creates large .nc files)
-gh.resample_nc(
-    model_names=model_names,
-    experiment_names=['S2'],#,'S3'],
-    target_mask=global_mask,
-    method="nearest",
-    radius_of_influence=500000, 
-    )
+# gh.resample_nc(
+#     model_names=model_names,
+#     experiment_names=['S2'],#,'S3'],
+#     target_mask=global_mask,
+#     method="nearest",
+#     radius_of_influence=500000, 
+#     )
+# -
 
-gh.adding_data_streams (
+gh.add_gridded_vars (
         model_names=model_names,
         experiment_names=['S2','S3'],
         global_mask=global_mask,       
@@ -65,6 +67,16 @@ gh.uncertainty_grids(
     output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
 
+gh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2','S3'],
+    global_mask=global_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
+
+a=[1,2,3,4,5]
+start=len(a)-3
+a[-1]-a[start]
 
 
 
