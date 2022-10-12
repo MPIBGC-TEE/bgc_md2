@@ -72,7 +72,7 @@ for name in m_names:
 vars_all_list_S2=gh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=gh.get_vars_all_list(model_folders, experiment_names_S3)
 
-np.mean(vars_all_list_S3[2].ra)
+np.mean(vars_all_list_S2[2].cSoil)
 #vars_all_list_S3[2].ra
 
 # define same step size for all models (in days)
@@ -97,7 +97,7 @@ all_comp_dict_S3=gh.get_components_from_output(model_names=model_names,
              #overlap=True
              )
 
-all_comp_dict_S2["DLEM"]["ra"]
+all_comp_dict_S2["DLEM"]["cSoil"]
 
 # ### Plots of traceable components and their uncertainty
 
@@ -135,14 +135,27 @@ x2,sigma_x2=gh.plot_traceable_component(
     #delta=True,
 )
 
+x1,sigma_x1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "x",
+    model_cols,
+    delta=True,
+)
+x2,sigma_x2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "x",
+    model_cols,
+    delta=True,
+)
+
 # +
 times=all_comp_dict_S2["Times"]
-var=sigma_x1/x1*100
-gh.plot_single_trend(var,times,3,"Standard deviation in % of X over time - S2")
+var=sigma_x1#/x1*100
+gh.plot_single_trend(var,times,3,"Standard deviation of X over time - S2")
 
 times=all_comp_dict_S3["Times"]
-var=sigma_x2/x2*100
-gh.plot_single_trend(var,times,3, "Standard deviation in % of X over time - S3")
+var=sigma_x2#/x2*100
+gh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3")
 
 times=all_comp_dict_S3["Times"]
 var=sigma_x2/x2*100-sigma_x1/x1*100
@@ -277,15 +290,41 @@ var=(sigma_nep2-sigma_nep1)/sigma_u1*100
 gh.plot_single_trend(var,times,3, "Uncertainty of nep increase S3-S2 in % of S2")
 # -
 
+cSoil1,sigma_cSoil1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "cSoil",
+    model_cols,
+    delta=True,
+)
+cSoil2,sigma_cSoil2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "cSoil",
+    model_cols,
+    delta=True,
+)
+
 rh1,sigma_rh1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "rh",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 rh2,sigma_rh2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "rh",
+    model_cols,
+    #delta=True,
+)
+
+cVeg1,sigma_cVeg1=gh.plot_traceable_component(
+    all_comp_dict_S2,
+    "cVeg",
+    model_cols,
+    delta=True,
+)
+cVeg2,sigma_cVeg2=gh.plot_traceable_component(
+    all_comp_dict_S3,
+    "cVeg",
     model_cols,
     delta=True,
 )
@@ -294,14 +333,16 @@ ra1,sigma_ra1=gh.plot_traceable_component(
     all_comp_dict_S2,
     "ra",
     model_cols,
-    delta=True,
+    #delta=True,
 )
 ra2,sigma_ra2=gh.plot_traceable_component(
     all_comp_dict_S3,
     "ra",
     model_cols,
-    delta=True,
+    #delta=True,
 )
+
+all_comp_dict_S2
 
 # ### Uncertainty attribution
 
@@ -318,6 +359,34 @@ gh.plot_attribution_sum (
     part=1,
 )
 
+# +
+from collections import namedtuple
 
+data_str = namedtuple(
+    'data_str',
+    ["cVeg", "cSoil_total","cVeg_diff", "cSoil_total_diff","nep", "gpp", "ra", "rh",  "dist", "f_v2s", 
+    "X", "X_c", "X_p","RT", "RT_veg", "RT_soil"]
+    )  
+data_str._fields
+# -
+
+avd=gh.get_global_mean_uncertainty(
+    dataPath="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",  
+    experiment_name="S2", # string, e.g. "S2"
+    data_str=data_str, # named tuple
+    avd=True
+    )
+mean=gh.get_global_mean_uncertainty(
+    dataPath="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",  
+    experiment_name="S2", # string, e.g. "S2"
+    data_str=data_str, # named tuple
+    avd=False
+    )
+
+avd
+
+mean
+
+mean.gpp*mean.RT/120
 
 
