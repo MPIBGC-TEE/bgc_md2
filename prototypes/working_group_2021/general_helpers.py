@@ -4768,24 +4768,24 @@ def grid_attribution (
         X_p_mean=np.ma.array(X_p_mean_array, mask=g_mask)
         ds.close()
         
-        gpp_contrib = np.ma.array(gpp_avd * rt_mean, mask=g_mask)
+        gpp_contrib_ecosystem = np.ma.array(gpp_avd * rt_mean, mask=g_mask)
         rt_contrib = np.ma.array(rt_avd * gpp_mean, mask=g_mask)
         #gpp_rt_contrib = np.ma.array(X_c_avd - (gpp_contrib + rt_contrib), mask=g_mask)
         X_c=np.ma.array(X_c_avd, mask=g_mask)
         
-        print('RT_contrib: '+str(np.ma.mean(rt_contrib))) 
-        print('gpp_contrib: '+str(np.ma.mean(gpp_contrib)))         
-        print('X_c_avd: '+str(np.ma.mean(X_c_avd))) 
-        print('X_p_contrib: '+str(np.ma.mean(X_p_avd)))
+        # print('RT_contrib: '+str(np.ma.mean(rt_contrib))) 
+        # print('gpp_contrib: '+str(np.ma.mean(gpp_contrib_ecosystem)))         
+        # print('X_c_avd: '+str(np.ma.mean(X_c_avd))) 
+        # print('X_p_contrib: '+str(np.ma.mean(X_p_avd)))
        
-        print('gpp: '+str(np.ma.mean(gpp_mean)))   
-        print('RT: '+str(np.ma.mean(rt_mean))) 
-        print('X_c: '+str(np.ma.mean(X_c_mean))) 
+        # print('gpp: '+str(np.ma.mean(gpp_mean)))   
+        # print('RT: '+str(np.ma.mean(rt_mean))) 
+        # print('X_c: '+str(np.ma.mean(X_c_mean))) 
 
-        print('X_c reconstr: '+str(np.ma.mean(rt_mean*gpp_mean)))
-        print('X_p: '+str(np.ma.mean(X_p_mean)))        
-        print('X: '+str(np.ma.mean(X_mean)))         
-        print('X_p reconstr: '+str(np.ma.mean(X_c_mean - X_mean)))   
+        # print('X_c reconstr: '+str(np.ma.mean(rt_mean*gpp_mean)))
+        # print('X_p: '+str(np.ma.mean(X_p_mean)))        
+        # print('X: '+str(np.ma.mean(X_mean)))         
+        # print('X_p reconstr: '+str(np.ma.mean(X_c_mean - X_mean)))   
 
         file_path = Path(data_path).joinpath(experiment+"_RT_veg_uncertainty.nc")
         ds = nc.Dataset(str(file_path))
@@ -4868,33 +4868,240 @@ def grid_attribution (
         #X_p_soil_contrib = np.ma.array(RT_soil_contrib+f_v2s_contrib-cSoil_avd)
         #X_p_soil_mean = np.ma.array(RT_soil_mean+f_v2s_mean-cSoil_mean)
                 
-        print('veg:')
-        print('gpp_contrib: '+str(np.ma.mean(gpp_contrib)))         
-        print('RT_contrib: '+str(np.ma.mean(RT_veg_contrib))) 
-        print('cVeg_avd: '+str(np.ma.mean(cVeg_avd))) 
-        print('X_p_veg_contrib: '+str(np.ma.mean(X_p_veg_avd))) 
-        print('gpp_mean: '+str(np.ma.mean(gpp_mean)))         
-        print('RT_mean: '+str(np.ma.mean(RT_veg_mean)))         
-        print('X_c_mean: '+str(np.ma.mean(X_c_veg_mean))) 
-        print('cVeg_mean:'+str(np.ma.mean(cVeg_mean)))  
-        print('X_p_veg_mean: '+str(np.ma.mean(X_p_veg_mean)))         
+        # print('veg:')
+        # print('gpp_contrib: '+str(np.ma.mean(gpp_contrib)))         
+        # print('RT_contrib: '+str(np.ma.mean(RT_veg_contrib))) 
+        # print('cVeg_avd: '+str(np.ma.mean(cVeg_avd))) 
+        # print('X_p_veg_contrib: '+str(np.ma.mean(X_p_veg_avd))) 
+        # print('gpp_mean: '+str(np.ma.mean(gpp_mean)))         
+        # print('RT_mean: '+str(np.ma.mean(RT_veg_mean)))         
+        # print('X_c_mean: '+str(np.ma.mean(X_c_veg_mean))) 
+        # print('cVeg_mean:'+str(np.ma.mean(cVeg_mean)))  
+        # print('X_p_veg_mean: '+str(np.ma.mean(X_p_veg_mean)))         
             
-        print('soil:')
-        print('f_v2s_contrib: '+str(np.ma.mean(f_v2s_contrib)))   
-        print('RT_contrib: '+str(np.ma.mean(RT_soil_contrib))) 
-        print('cSoil_avd: '+str(np.ma.mean(cSoil_avd)))         
-        print('X_p_soil_contrib: '+str(np.ma.mean(X_p_soil_avd)))         
-        print('f_v2s_mean: '+str(np.ma.mean(f_v2s_mean)))   
-        print('RT_mean: '+str(np.ma.mean(RT_soil_mean)))         
-        print('X_c_mean: '+str(np.ma.mean(X_c_soil_mean)))  
-        print('cSoil_mean:'+str(np.ma.mean(cSoil_mean))) 
-        print('X_p_soil_mean: '+str(np.ma.mean(X_p_soil_mean)))  
+        # print('soil:')
+        # print('f_v2s_contrib: '+str(np.ma.mean(f_v2s_contrib)))   
+        # print('RT_contrib: '+str(np.ma.mean(RT_soil_contrib))) 
+        # print('cSoil_avd: '+str(np.ma.mean(cSoil_avd)))         
+        # print('X_p_soil_contrib: '+str(np.ma.mean(X_p_soil_avd)))         
+        # print('f_v2s_mean: '+str(np.ma.mean(f_v2s_mean)))   
+        # print('RT_mean: '+str(np.ma.mean(RT_soil_mean)))         
+        # print('X_c_mean: '+str(np.ma.mean(X_c_soil_mean)))  
+        # print('cSoil_mean:'+str(np.ma.mean(cSoil_mean))) 
+        # print('X_p_soil_mean: '+str(np.ma.mean(X_p_soil_mean)))  
+        
+        
+        gcm=globalMask(file_name="common_mask_all_models.nc")
+
+        print("computing means, this may take some minutes...")
+
+        # data_str = namedtuple(
+        # 'data_str',
+        # ["cVeg", "cSoil_total","cVeg_diff", "cSoil_total_diff","nep", "gpp", "ra", "rh",  "dist", "f_v2s", 
+        # "X", "X_c", "X_p","RT", "RT_veg", "RT_soil"]
+        # )  
+                
+        def global_mean_var(
+            lats: np.ma.core.MaskedArray,
+            lons: np.ma.core.MaskedArray,
+            mask: np.array,
+            var: nc._netCDF4.Variable,
+        ) -> np.array:
+
+            weight_mat = np.ma.array(get_weight_mat(lats, lons), mask=mask)
+            wms = weight_mat.sum()
+            res = (weight_mat * var[:, :]).sum() / wms #np.zeros(n_t)
+            return res
         
         
         
+        rt_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=rt_contrib)
+        print("rt_contrib_global: "+str(rt_contrib_global))        
+        gpp_contrib_eco_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=gpp_contrib_ecosystem)
+        print("gpp_contrib_eco_global: "+str(gpp_contrib_eco_global)) 
+        X_p_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=X_p_avd)
+        print("X_p_contrib_global: "+str(X_p_contrib_global))         
+
+
+        cVeg_avd_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=cVeg_avd)
+        print("cVeg_avd_global: "+str(cVeg_avd_global)) 
+
+        cSoil_avd_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=cSoil_avd)
+        print("cSoil_total_avd_global: "+str(cSoil_avd_global)) 
+
+        rt_veg_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=RT_veg_contrib)
+        print("rt_veg_contrib_global: "+str(rt_veg_contrib_global))        
+        gpp_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=gpp_contrib)
+        print("gpp_contrib_global: "+str(gpp_contrib_global)) 
+        X_p_veg_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=X_p_veg_avd)
+        print("X_p_veg_contrib_global: "+str(X_p_veg_contrib_global))
+
+        rt_soil_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=RT_soil_contrib)
+        print("rt_soil_contrib_global: "+str(rt_soil_contrib_global))        
+        f_v2s_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=f_v2s_contrib)
+        print("f_v2s_contrib_global: "+str(f_v2s_contrib_global)) 
+        X_p_soil_contrib_global=global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                mask=gcm.index_mask,
+                var=X_p_soil_avd)
+        print("rt_soil_contrib_global: "+str(X_p_soil_contrib_global))        
+        
+        total_eco=rt_contrib_global+gpp_contrib_eco_global+X_p_contrib_global
+        percent_rt=rt_contrib_global/total_eco*100
+        percent_gpp_eco=gpp_contrib_eco_global/total_eco*100
+        percent_X_p=X_p_contrib_global/total_eco*100        
         
         
+        total_C=cVeg_avd_global+cSoil_avd_global
+        cVeg_avd_part=cVeg_avd_global/total_C
+        cSoil_avd_part=cSoil_avd_global/total_C
+        print('total_C: '+str(total_C))
+        print('cVeg_avd_part: '+str(cVeg_avd_part))
+        print('cSoil_avd_part: '+str(cSoil_avd_part))
         
+        # total_veg_soil=(rt_veg_contrib_global+gpp_contrib_global+X_p_veg_contrib_global+
+                            # rt_soil_contrib_global+f_v2s_contrib_global+X_p_soil_contrib_global)        
+        total_veg=rt_veg_contrib_global+gpp_contrib_global+X_p_veg_contrib_global
+        total_soil=rt_soil_contrib_global+f_v2s_contrib_global+X_p_soil_contrib_global
+        
+        percent_rt_veg=rt_veg_contrib_global/total_veg*100*cVeg_avd_part
+        percent_gpp=gpp_contrib_global/total_veg*100*cVeg_avd_part
+        percent_X_p_veg=X_p_veg_contrib_global/total_veg*100*cVeg_avd_part      
+        percent_rt_soil=rt_soil_contrib_global/total_soil*100*cSoil_avd_part
+        percent_f_v2s=f_v2s_contrib_global/total_soil*100*cSoil_avd_part
+        percent_X_p_soil=X_p_soil_contrib_global/total_soil*100*cSoil_avd_part       
+        
+        # pie charts
+        
+        fig=plt.figure(figsize=(7,7))
+        ax1=fig.subplots()#axs[1]
+        ax1.set_title('Global average % attribution of uncertainty in C storage')
+                        
+        #labels = '$\Delta$ GPP', '$\Delta$ RA', '$\Delta$NPP*$\Delta$ RH'#, '$\Delta$ Dist'
+        labels = 'GPP', 'RT', 'X_p'#, '$\Delta$ Dist'
+        sizes = [percent_gpp_eco, percent_rt, percent_X_p]
+        ax1.pie(sizes, autopct='%1.1f%%', 
+            startangle=90, counterclock=False, colors=("green", "darkorange", "blue"))#, "purple"))
+   
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
+        ax1.legend(labels, bbox_to_anchor =(1,1))
+    
+        plt.show() 
+
+        # pie charts
+        
+        fig=plt.figure(figsize=(7,7))
+        ax1=fig.subplots()#axs[1]
+        ax1.set_title('Global average % attribution of uncertainty in C storage: veg + soil')
+                        
+        #labels = '$\Delta$ GPP', '$\Delta$ RA', '$\Delta$NPP*$\Delta$ RH'#, '$\Delta$ Dist'
+        labels = 'GPP', 'RT_veg', 'X_p_veg', 'f_v2s', 'RT_soil', 'X_p_soil'#, '$\Delta$ Dist'
+        sizes = [percent_gpp, percent_rt_veg, percent_X_p_veg, percent_f_v2s, percent_rt_soil, percent_X_p_soil ]
+        ax1.pie(sizes, autopct='%1.1f%%', 
+            startangle=90, counterclock=False, colors=("green", "darkorange", "blue", "cyan", "brown", "purple"))#, "purple"))
+   
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
+        ax1.legend(labels, bbox_to_anchor =(1,1))
+    
+        plt.show()
+        
+        #rt_contrib_global
+        #gpp_contrib_eco_global
+        #X_p_contrib_global
+        #RGB = np.array(list(zip(rt_contrib_global, gpp_contrib_eco_global, X_p_contrib_global)))
+        
+        # height = len(gcm.lats) # can be any value
+        # width = len(gcm.lons) # can be any value
+        # channel = 3 # should be 3 for RGB images
+
+        # rt_2d = np.reshape(rt_contrib, (-1, width))
+        # gpp_2d=np.reshape(gpp_contrib_ecosystem, (-1, width))
+        # X_p_2d=np.reshape(X_p_avd, (-1, width))
+
+        # array = np.zeros((height, width, channel))
+        # array[:,:,0] = rt_2d
+        # array[:,:,1] = gpp_2d
+        # array[:,:,2] = X_p_2d
+        
+        # image_data = array.astype(np.uint8)
+        # image_filename = "3Dmap_image.jpeg"
+        # image_data.save(image_filename)
+        ############ flux approach ####################
+        
+        
+    
+        # if avd: suffix = '_avd' 
+        # else: suffix = '_mean'
+        
+        # def compute_and_cache_global_mean(vn):
+            # path = Path(dataPath).joinpath(experiment_name+'_'+vn+'_uncertainty.nc')
+            # #if vn=="npp_nlim": path=dataPath.joinpath(msh(model_folder).nc_file_name("npp", experiment_name=experiment_name))
+            # print(path)
+            # ds = nc.Dataset(str(path))
+            # vs=ds.variables
+            # lats= vs['lat'].__array__()
+            # lons= vs['lon'].__array__()
+            # var=ds.variables[vn+suffix]
+            # # check if we have a cached version (which is much faster)
+            # #gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
+            
+            # #model_mask = msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
+            # #combined_mask = combine_masks ([model_mask,gcm])
+            # gm=global_mean_var(
+                    # lats,
+                    # lons,
+                    # #combined_mask.index_mask,
+                    # gcm.index_mask,
+                    # var      
+            # )     
+            # return gm #* 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
+            
+        # #map variables to data
+        # #print(data_str._fields)
+        # output=data_str(*map(compute_and_cache_global_mean, data_str._fields))         
+        
+       
         
         
         

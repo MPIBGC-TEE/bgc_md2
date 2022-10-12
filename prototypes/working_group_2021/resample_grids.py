@@ -67,11 +67,12 @@ gh.uncertainty_grids(
     output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
 
+plt.rcParams.update({'font.size': 15})
 gh.grid_attribution(
     #model_names=model_names,
-    experiment_names=['S2','S3'],
+    experiment_names=['S2'],#'S3'],
     global_mask=global_mask,
-    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    data_path="C:\\Users\\konst\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
 
 a=[1,2,3,4,5]
