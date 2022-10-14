@@ -4986,11 +4986,16 @@ def grid_attribution (
                 mask=gcm.index_mask,
                 var=X_p_soil_avd)
         print("rt_soil_contrib_global: "+str(X_p_soil_contrib_global))        
-        
+
+        total_eco_grid=rt_contrib+gpp_contrib_ecosystem+X_p_avd
+        percent_rt_grid=rt_contrib/total_eco_grid
+        percent_gpp_eco_grid=gpp_contrib_ecosystem/total_eco_grid
+        percent_X_p_grid=X_p_avd/total_eco_grid   
+
         total_eco=rt_contrib_global+gpp_contrib_eco_global+X_p_contrib_global
-        percent_rt=rt_contrib_global/total_eco*100
-        percent_gpp_eco=gpp_contrib_eco_global/total_eco*100
-        percent_X_p=X_p_contrib_global/total_eco*100        
+        percent_rt=rt_contrib_global/total_eco
+        percent_gpp_eco=gpp_contrib_eco_global/total_eco
+        percent_X_p=X_p_contrib_global/total_eco        
         
         
         total_C=cVeg_avd_global+cSoil_avd_global
@@ -5051,23 +5056,89 @@ def grid_attribution (
         #X_p_contrib_global
         #RGB = np.array(list(zip(rt_contrib_global, gpp_contrib_eco_global, X_p_contrib_global)))
         
-        # height = len(gcm.lats) # can be any value
-        # width = len(gcm.lons) # can be any value
-        # channel = 3 # should be 3 for RGB images
+        height = len(gcm.lats) # can be any value
+        width = len(gcm.lons) # can be any value
+        #channel = 3 # should be 3 for RGB images
 
-        # rt_2d = np.reshape(rt_contrib, (-1, width))
-        # gpp_2d=np.reshape(gpp_contrib_ecosystem, (-1, width))
-        # X_p_2d=np.reshape(X_p_avd, (-1, width))
+        rt_2d = np.reshape(percent_rt_grid, (-1, width))
+        gpp_2d=np.reshape(percent_gpp_eco_grid, (-1, width))
+        X_p_2d=np.reshape(percent_X_p_grid, (-1, width))
 
-        # array = np.zeros((height, width, channel))
-        # array[:,:,0] = rt_2d
-        # array[:,:,1] = gpp_2d
-        # array[:,:,2] = X_p_2d
+        #percent_X_p_grid[percent_X_p_grid>0]=0
+        array = np.zeros((height, width, 4))
+        array[:,:,0] = percent_rt_grid # red
+        array[:,:,1] = percent_gpp_eco_grid # green
+        array[:,:,2] = percent_X_p_grid # blue
+        array[:,:,3] = X_avd / np.ma.max(X_avd)*10 # alpha
+        #array[:,:,3] = np.zeros_like(X_p_2d) # blue
         
-        # image_data = array.astype(np.uint8)
-        # image_filename = "3Dmap_image.jpeg"
-        # image_data.save(image_filename)
-        ############ flux approach ####################
+        rgb_map = array.copy()
+        #rgb_map[rgb_map>1]=0
+        
+        for i in range(height): 
+            rgb_map[i,:,:] = array[height-i-1,:,:] 
+        fig2=plt.figure(figsize=(200,100))
+        plt.rcParams.update({'font.size': 150})
+        axs=fig2.subplots(1,2, gridspec_kw={'width_ratios': [10, 1]})        
+        ax2=axs[0]
+        ax2.axis("off")
+        ax2.imshow(rgb_map)
+        ax2.set_title("Spatial attribution of uncetainty in X to uncertainty in GPP (green), RT (red), and X_p (blue)")
+        #im=cv2.CreateImage()
+        #ax2.imshow(cv2.cvtColor(rgb_map, cv2.COLOR_BGR2RGB))
+        ax3=axs[1]
+        green=np.arange(0.8,0.2,-0.05)
+        red=np.arange(0.2,0.8,0.05)        
+        blue=np.zeros(13)
+        #alpha=np.arange(0.2,0.8,0.05)
+        legend = np.zeros((13, 1, 3))
+        legend [:,:,0]=red.reshape(13,1)
+        legend [:,:,1]=green.reshape(13,1)
+        legend [:,:,2]=blue.reshape(13,1)
+        ax3.set_title("Legend")
+        #ax3.axis("off")
+        ax3.get_xaxis().set_visible(False)
+        ax3.set_yticks ([0,2,4,6,8,10,12])
+        ax3.set_yticklabels(   ["GPP 80% - RT 20%",
+                                #"GPP 75% - RT 25%",
+                                "GPP 70% - RT 30%",
+                                #"GPP 65% - RT 35%",
+                                "GPP 60% - RT 40%",
+                                #"GPP 55% - RT 45%",
+                                "GPP 50% - RT 50%",
+                                #"GPP 45% - RT 55%",
+                                "GPP 40% - RT 60%",
+                                #"GPP 35% - RT 65%",
+                                "GPP 30% - RT 70%",
+                                #"GPP 35% - RT 75%",
+                                "GPP 20% - RT 80%"])
+        
+        ax3.imshow(legend)
+        plt.show()    
+        plt.rcParams.update({'font.size': 15})
+        # import PIL.Image as Image
+        # # img_bytes = list()
+        # # for i in range(percent_rt_grid.shape[0]):
+            # # for j in range(percent_rt_grid.shape[1]):
+                # # #print(percent_rt_grid.data[i,j])
+                # # #print(type(percent_rt_grid[i,j]))
+                # # img_bytes.append(round(percent_rt_grid.data[i,j]))
+                # # img_bytes.append(round(percent_gpp_eco_grid.data[i,j]))
+                # # img_bytes.append(round(percent_X_p_grid.data[i,j]))
+        # # bytes_array=np.array(img_bytes)
+        # # bytes_array[bytes_array>1]=0        
+        # #im = Image.frombytes("RGB", (height,width), bytes(bytes_array))
+        # #im = Image.new(mode="RGBA", size=(width,height))
+        # #rgb_map2 = round(rgb_map.data)
+        # #rgb_map2 = rgb_map2[rgb_map2>1]=0
+        # im = Image.fromarray(rgb_map, 'RGB')
+        # #im = Image.fromarray(rgb_map.astype('uint8'), 'RGB')
+        # im.show()
+        # im.save("map3d.jpg")
+        # #cv2.imwrite('3Dmap_image.jpeg', rgb_map)
+        # #image_filename = "3Dmap_image.jpeg"
+        # #image_data.save(image_filename)
+        # ############ flux approach ####################
         
         
     
