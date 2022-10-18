@@ -1,0 +1,290 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{german}
+\usepackage{color}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\newcommand{\om}[1]{{\color{red} objection $^{#1}$}: }
+\newcommand{\cm}[1]{{\color{green} statement $^{#1}$} }
+\newcommand{\oc}[2]{{\color{red} #1  $^{#2}$}}
+\newcommand{\cc}[2]{{\color{green} #1  $^{#2}$}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\I}{\mathbf{I}}
+\begin{document}
+
+\section{Intro}
+This document's purpose is to discuss a paragraph in Yiqi's 2017 Biogeosciences paper
+of with Martin is a coauthor.
+
+It is accompanied by two jupyter notebooks:
+
+\url{https://github.com/MPIBGC-TEE/bgc_md2/blob/test/prototypes/problem_X_c_1D.ipynb}
+
+\url{https://github.com/MPIBGC-TEE/bgc_md2/blob/test/prototypes/problem_X_c.ipynb}
+
+Here is the paragraph from the paper:
+
+
+{\bf 3.2 Direction and rate of C storage change at a given time}
+
+Like studying any moving object, quantifying dynamics of land C storage needs to determine both the direction and the rate of its change at a given time. To determine the direction
+and rate of C storage change, we rearranged Eq. (2) to be 
+$$
+\mathbf{ \tau }_{ch} \X^{\prime}(t) = \X_c (t) - \X(t) = \X_p (t)
+\quad (8a)
+$$ 
+or rearranging Eq. (6a) leads to:
+$$
+\X^{\prime}(t) = \mathbf{A \xi }(t)\mathbf{K X}_p (t)
+\quad (8b) .
+$$
+\oc{Since}{1} 
+\cc{all the elements in $\mathbf{\tau}_{ch}$ are positive}{a}
+, the \oc{sign}{2}of $\X^{\prime} (t)$ is
+the same as for $\X_p (t)$.
+\oc{That means}{3} that \oc{$\X^{\prime}(t)$ increases when
+$\X_c (t) > \X(t)$} {4}, does not change when $\X_c (t) = \X(t)$ , and decreases when $\X_c(t) < \X(t)$ \cc{at the ecosystem scale}{b}. 
+
+\oc{Thus, the C storage capacity, $\X_c(t)$, is an attractor and hence determines the direction toward which the C storage, $\X(t)$, chases
+at any given time point.}{5} 
+The rate of C storage change, $\X^{\prime}(t)$,
+is \oc{proportional}{6} to $\X_p(t)$ and is also regulated by $\mathbf{\tau}_{ch}.$
+\\
+\section{Markus's objections}
+\om{1}
+Assuming that \cm{a} is true (which I think it very well could be, it should be proven, or the existing proof should be referenced (in  Holger's LAPM paper or even in Jacques ?), since it is not trivial) 
+the {\bf real} problem is that this is not sufficient to draw this conclusion (Which is not even clearly defined,  since at this point we do not yet know \om{2}  what  {\bf the }(singular) {\bf sign} of a vector is.)
+In good will we can try to interpret the sign of the vectors in two ways. 
+\begin{enumerate}
+  \item
+     The sign of the vector refers to the signs (plural) of the components, 
+     which I think most people would be lead to assume by the use of vector notation for $\X_p$ and $\X^{\prime}$) and which Yiqi himself seems to to think is correct.(@Yiqi: If I understood  our conversations correctly)  
+    Then the argument becomes that the multiplication by a matrix with only positive components 
+    does not  change the signs of the the components of the multiplied vector, which does not hold 
+    as the following tiny example shows. 
+    $$
+     \left(
+        \begin{matrix}
+            1 &2 \\   
+            0 &1   
+         \end{matrix}
+    \right)
+    \left(
+        \begin{matrix}
+            -1 \\   
+             1   
+         \end{matrix}
+    \right)
+    =
+    \left(
+        \begin{matrix}
+             1 \\   
+             1   
+         \end{matrix}
+    \right)
+    $$
+    We can also easily construct counter examples  with compartmental systems:
+    $$
+    \frac{d}{dt}\left[\begin{matrix}x_{1}\\x_{2}\end{matrix}\right]=\left[\begin{matrix}1\\0\end{matrix}\right]+\left[\begin{matrix}-5 & 0\\4.5 & -1\end{matrix}\right]\left[\begin{matrix}x_{1}\\x_{2}\end{matrix}\right]
+    $$
+    If we choose: 
+    $$
+    \X_0=\left[\begin{matrix}1\\1\end{matrix}\right] 
+    $$
+    With the definitions from the paper we get:
+    $\tau=\left[\begin{matrix}\frac{1}{5} & 0\\0.9 & 1\end{matrix}\right]$,
+    $\X_c=\left[\begin{matrix}\frac{1}{5}\\0.9\end{matrix}\right]$,
+    $\X_0=\left[\begin{matrix}1\\1\end{matrix}\right]$,
+    $\X_p=\left[\begin{matrix}- \frac{4}{5}\\-0.1\end{matrix}\right]$,
+    $\X^\prime=\left[\begin{matrix}-4\\3.5\end{matrix}\right]$
+    \\
+    The components of the vectors $\mathbf{X}_p$ and $\dot{\mathbf{X}}$ have 
+    different signs in the second component. 
+    In this example we first chose a Matrix with internal fluxes, then an input vector $\mathbf{I}$ which fixes $\X_c$ and then chose $\X_0$ to get a $\X_p$ that we could flip...
+    This situation has however not to be forced by a choice of $\X_0$ but also develops dynamically as the plots in the notebook show where it is triggered either by a 
+    time dependent matrix or time dependent inputs.  
+    \url{https://github.com/MPIBGC-TEE/bgc_md2/blob/test/prototypes/problem_X_c.ipynb}
+
+    {\bf 
+    Remark:\\
+    }
+    At this point the counterexamples already prove that claim \om{5} is not only unproven but 
+    {\bf definitely false}. \\
+    As a consequence some links in the chain of arguments must be missing or broken.
+    I will point them out in the remainder and also make some statements that we actually 
+    could prove in the hope to elucidate the geometric situation we are really in.
+    \\
+    @Yiqi: Alongside the arguments that refute the present formalization of your intuition 
+    I will also try to provide some arguments in it's favor and hopefully show why they are insufficient for the claims made, and ultimately show how those claims could be adjusted.
+    
+    
+
+  \item
+    We could also interpret the sign of a vector as the sum of the components (if it had been defined in this way). I mention this since Yiqi suggested this to me.
+    This would not work either. Consider the above system but this time with another input and another startvector.    
+    $I=\left[\begin{matrix}1\\1\end{matrix}\right]$,
+    $\X_c=\left[\begin{matrix}\frac{1}{5}\\\frac{19}{10}\end{matrix}\right]$,
+    $\X_0=\left[\begin{matrix}\frac{1}{3}\\\frac{9}{5}\end{matrix}\right]$,
+    $\X_p=\left[\begin{matrix}- \frac{2}{15}\\\frac{1}{10}\end{matrix}\right]$,
+    $\X^\prime=\left[\begin{matrix}- \frac{2}{3}\\\frac{7}{10}\end{matrix}\right]$
+
+    \begin{align*}
+      \operatorname{sign}\left(
+          \sum_i \left(\mathbf{X_p}\right)_i 
+      \right) 
+      &=& \operatorname{sign}\left(-\frac{1}{30}\right)
+      \\
+      &\ne& \operatorname{sign}\left(\frac{1}{30}\right)
+      \\
+      &=&\operatorname{sign}\left(
+        \sum_i 
+          \left(\mathbf{X}^{\prime} \right)_i
+      \right)
+    \end{align*}
+    \\
+    \om{3}
+    Even if ``That'' was right (which it is not in general as our counter example just showed ) 
+    this conclusion could not be drawn, 
+    because claiming that $\X^{\prime}$ increases is a statement about the sign of the {\bf second} derivative.
+    If $\X_p$ had the same sign as $\X^{\prime}$ it would mean that \mbox{ $\X$ (without $^{\prime}$)} increases when $\X_c-\X$ is positive.
+
+    \om{4}
+    @Yiqi: I considered the possibility that even if the argument is flawed, the 
+    statement might be right and plotted the second derivative for the 1-d system $x^{\prime}=2-(sin(t)+2) x$. The plots show that the statement is also wrong about half of the time.
+    \url{https://github.com/MPIBGC-TEE/bgc_md2/blob/test/prototypes/problem_X_c_1D.ipynb}
+
+    One could also compute the second derivative symbolically using the ode and then choose a suitable $t$ and $x_t$ (which is allowed as a start position) and show that it can have a different sign than $x_p$. 
+
+\end{enumerate}
+
+\cm{b}
+We could define the meaning of {\color{green} at the ecosystem scale} formally by introducing a 1-d replacement or ``surrogate'' system that captures the dynamics of the overall carbon.
+We are aiming at something like this:
+$$
+\dot{x}=u(t)-m(t)x
+$$ 
+where $x$ is the aggregated mass over all pools.
+The task is to specify $m(t)$ to insure this.
+
+We start with the special case of a linear but nonautonomous system as used in the paper:
+$$
+\frac{d \X}{d t}= \I(t) - M(t) \X 
+$$
+Taking the sum over all pools yields.
+$$
+\sum_{p \in pools} \left( \frac{d \X}{d t} \right)_p
+=
+\left( \I(t) - M(t) \X \right)_p
+$$
+With:\\ 
+$
+u=\sum_{p \in pools} (\I)_p 
+$,
+$
+x = \sum_{p \in pools} (\X)_p
+$, and 
+$$
+\sum_{p \in pools} \left( \frac{d \X}{d t} \right)_p
+=\frac{d}{d t}\sum_{p \in pools} (\mathbf X )_p
+=\frac{d}{d t} x
+$$ 
+we get:
+$$
+\dot{x}
+=u(t)-m(t) x 
+=\sum_{p \in pools} \left( \I(t) - M(t) \X \right)_p
+=u(t)-\sum_{p \in pools} ( M(t) \X )_p
+$$
+This yields: 
+$$
+m(t) = \frac{
+    \sum_{p \in pools} ( M(t) \X )_p
+    }{
+    \sum_{p \in pools} (\X)_p
+    }
+$$
+
+%Remark: (not relevant for the paper but interesting)\\
+%We can even extend this treatment to nonlinear systems:
+%$$
+%\frac{d \X}{d t}= \I(\X,t) - M(\X,t) \X 
+%$$
+%Assume that we first solve the system numerically and therefore have $\X(t)$ available.
+%Substituting the solution we get a linear system:
+%$$
+%\frac{d \X}{d t}= \tilde{\I}(t) - \tilde{M}(t) \X 
+%$$
+%with 
+%$$
+%\tilde{\I}(t)=\I(\X(t),t)
+%$$
+%and
+%$$
+%\tilde{M}(t)=M(\X(t),t)
+%$$ 
+With a sensible $M(t)$ (all pools outflux connected and the outflux $>0$ at all times (which we need anyway to guarantee the existence of $M^{-1}(t)$, we get $m(t)>0$ and the inverse $\frac{1}{m(t)}$ is defined.\\
+
+{\bf Remarks:}
+\begin{enumerate}
+\item
+Interestingly the above statement (with the $^{\prime}$ removed) could be made about the surrogate system. The reason is that the `direction' of the derivative is in the one dimensional case completely defined by it's sign. 
+
+{\it 
+Since $\tau(t) = \frac{1}{m(t)}$ is positive , the sign of $x^{\prime}(t)$ is
+identical to the sign of $x_p(t)$.
+That means that $x(t)$ increases when
+$x_c(t) > x(t)$, does not change when $x_c(t) = x(t)$ , and decreases when $x_c(t) < x(t)$.
+Thus, the C storage capacity of the whole ecosystem, $x_c(t)$, determines the direction towards which the C storage, $x(t)$, chases
+at any given time point.
+The rate of C storage change, $x^{\prime}(t)$,
+is proportional  to $x_p(t)$ with the factor $\tau(t) .$
+}
+\item
+The statement just {\bf cannot be generalized} to the components of the {\bf vector}$\X_c$ . 
+Stated for vectors it is just wrong and this bluff can be called.
+This is also apparent in \om{6}. A proportional vector has the same direction as the one it is proportional to and just a different length. The only {\bf matrices} that produce a `proportional' vector are of the form (2-d example)
+$$
+M(t)=
+m(t) \left[ 
+\begin{matrix} 
+  1 & 0 \\ 
+  0 & 1 
+\end{matrix} 
+\right]
+$$ 
+and they are overpaid since the scalar $m(t)$ could do the same job.
+In this light it becomes apparent that Eq.(8) is the very reason for \om{5}, since 
+M is in general not a multiple of the identity but a `real' matrix that changes the direction of the vectors it is multiplied to. 
+
+\item
+  The word attractor has a certain connotation in the theory of dynamical systems. 
+  Examples are fixed points, limit circles or more extravagantly shaped objects like the 
+  famous Lorenz attractor. \url{https://en.wikipedia.org/wiki/Attractor}
+  In the theory of linear autonomous systems the word raises even more concrete expectations, 
+  especially if Martin is a coauthor of the paper.  
+  All these definitions have a certain asymptotic component in common like `remain close' which is absent from the definition of $x_c$ as attractor even in the scalar case where $x^{\prime}$ does point in the direction of $x_c$. I would avoid the word `Attractor' for this reason even in this case.   
+\end{enumerate}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Who is attracted to $\X_c$?}
+There is actually a vector that is `attracted' to the vector $\X_c$. It is just not (proven that it is) the solution $\X(t)$ of the original system, but the solution of the autonomous linear system 
+$$
+\tilde{\X}^{\prime} = I_t - M_t \tilde{\X}
+$$ 
+with constant $M_t$ and $\I_t$  obtained
+when we fix $M(t)$ and $\I(t)$ at the same time when we compute $\X_c(t)=M^{-1}(t)\I(t)$.
+$X_c(t)$ is just the fixpoint of this system. 
+This is also the basis for the definitions of residence time. It represents the real mean residence times {\bf in case the system stays in equilibrium}. 
+\\
+@Yiqi:
+This attractivity of $\X_c$ for $\tilde{\X}$ might explain why $\X(t)$ sometimes {\bf looks} as if it was tracing $\X_c(t)$.
+It is certainly {\bf possible} that the changes in $M(t)$ and $\I(t)$ are either too small to hamper the `pursuit' of $\X$ significantly or occasionally temporarily even help to close the gap.
+This is just not consistently the case, but possibly even `most of the time' in observed systems.
+
+Fun fact:\\
+Although $\X_c$ IS the unique stable fixpoint (and therefore an attractor) for $\tilde{\X}$ the  solution of the autonomous system, even $\tilde{\X}^{\prime}$ does in general NOT point in the direction of $\X_c-\tilde{\X}$. This is a reflection of the internal pool structure as represented in  $M$. Compartmental systems can in general not move straight in phase space.   
+E.g. a serial system of three pools can only get material from pool 1 to pool 3 via pool 2. This might dictate a curved path to the equilibrium value, temporarily increasing the content of the
+intermediate pool.
+
+\end{document}
