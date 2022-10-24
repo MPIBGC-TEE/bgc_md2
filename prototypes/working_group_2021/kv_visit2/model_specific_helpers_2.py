@@ -170,7 +170,7 @@ def nc_file_name(nc_var_name, experiment_name="VISIT_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 
-def nc_global_mean_file_name(nc_var_name):
+def nc_global_mean_file_name(nc_var_name, experiment_name="VISIT_S2_"):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 
