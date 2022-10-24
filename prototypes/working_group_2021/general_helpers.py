@@ -1750,7 +1750,7 @@ def make_trace_tuple_func(
         traced_functions: Dict[str, Callable]
     ):
 
-    # create a function that produces all the values 
+    # create a function that produces all the values we want to track for every timestep 
     def f(X, B, I, it):
         # These are values that are computable from the momentary values of X and B
         u = I.sum()
@@ -1769,7 +1769,7 @@ def make_trace_tuple_func(
         x_c = 1 / m_s * u
         x_p = x_c - x
         rt = x_c / u
-            
+        #tt=    
         static={ 
             "X": X,
             "X_p": X_p,
@@ -1777,6 +1777,7 @@ def make_trace_tuple_func(
             "X_dot": X_dot,
             "RT": RT,
             "x": x,
+            "m_s": m_s,
             "x_p": x_p,
             "x_c": x_c,
             "x_dot": x_dot,
