@@ -4895,7 +4895,7 @@ def grid_attribution (
         gcm=globalMask(file_name="common_mask_all_models.nc")
 
         print("computing means, this may take some minutes...")
-
+        
         # data_str = namedtuple(
         # 'data_str',
         # ["cVeg", "cSoil_total","cVeg_diff", "cSoil_total_diff","nep", "gpp", "ra", "rh",  "dist", "f_v2s", 
@@ -4905,10 +4905,12 @@ def grid_attribution (
         def global_mean_var(
             lats: np.ma.core.MaskedArray,
             lons: np.ma.core.MaskedArray,
-            mask: np.array,
+            #mask: np.array,
             var: nc._netCDF4.Variable,
         ) -> np.array:
-
+            #lats=np.ma.array(gcm.lats),
+            #lons=np.ma.array(gcm.lons),
+            mask=gcm.index_mask,
             weight_mat = np.ma.array(get_weight_mat(lats, lons), mask=mask)
             wms = weight_mat.sum()
             res = (weight_mat * var[:, :]).sum() / wms #np.zeros(n_t)
@@ -4919,19 +4921,19 @@ def grid_attribution (
         rt_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=rt_contrib)
         print("rt_contrib_global: "+str(rt_contrib_global))        
         gpp_contrib_eco_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=gpp_contrib_ecosystem)
         print("gpp_contrib_eco_global: "+str(gpp_contrib_eco_global)) 
         X_p_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=X_p_avd)
         print("X_p_contrib_global: "+str(X_p_contrib_global))         
 
@@ -4939,52 +4941,52 @@ def grid_attribution (
         cVeg_avd_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=cVeg_avd)
         print("cVeg_avd_global: "+str(cVeg_avd_global)) 
 
         cSoil_avd_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=cSoil_avd)
         print("cSoil_total_avd_global: "+str(cSoil_avd_global)) 
 
         rt_veg_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=RT_veg_contrib)
         print("rt_veg_contrib_global: "+str(rt_veg_contrib_global))        
         gpp_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=gpp_contrib)
         print("gpp_contrib_global: "+str(gpp_contrib_global)) 
         X_p_veg_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=X_p_veg_avd)
         print("X_p_veg_contrib_global: "+str(X_p_veg_contrib_global))
 
         rt_soil_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=RT_soil_contrib)
         print("rt_soil_contrib_global: "+str(rt_soil_contrib_global))        
         f_v2s_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=f_v2s_contrib)
         print("f_v2s_contrib_global: "+str(f_v2s_contrib_global)) 
         X_p_soil_contrib_global=global_mean_var(
                 lats=gcm.lats,
                 lons=gcm.lons,
-                mask=gcm.index_mask,
+                #mask=gcm.index_mask,
                 var=X_p_soil_avd)
         print("rt_soil_contrib_global: "+str(X_p_soil_contrib_global))        
 
@@ -4992,13 +4994,42 @@ def grid_attribution (
         percent_rt_grid=rt_contrib/total_eco_grid
         percent_gpp_eco_grid=gpp_contrib_ecosystem/total_eco_grid
         percent_X_p_grid=X_p_avd/total_eco_grid   
+        
+        total_veg_soil_grid=cVeg_avd+cSoil_avd
+        percent_veg_grid=cVeg_avd/total_veg_soil_grid
+        percent_soil_grid=cSoil_avd/total_veg_soil_grid
 
-        total_eco=rt_contrib_global+gpp_contrib_eco_global+X_p_contrib_global
-        percent_rt=rt_contrib_global/total_eco
-        percent_gpp_eco=gpp_contrib_eco_global/total_eco
-        percent_X_p=X_p_contrib_global/total_eco        
-        
-        
+        percent_rt = global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                #mask=gcm.index_mask,
+                var=percent_rt_grid)
+        percent_gpp_eco = global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                #mask=gcm.index_mask,
+                var=percent_gpp_eco_grid)
+        percent_X_p = global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                #mask=gcm.index_mask,               
+                var=percent_X_p_grid)
+                
+        percent_veg = global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                #mask=gcm.index_mask,
+                var=percent_veg_grid)
+        percent_soil = global_mean_var(
+                lats=gcm.lats,
+                lons=gcm.lons,
+                #mask=gcm.index_mask,                                
+                var=percent_soil_grid)                
+        #total_eco=rt_contrib_global+gpp_contrib_eco_global+X_p_contrib_global
+        #percent_rt=rt_contrib_global/total_eco
+        #percent_gpp_eco=gpp_contrib_eco_global/total_eco
+        #percent_X_p=X_p_contrib_global/total_eco        
+               
         total_C=cVeg_avd_global+cSoil_avd_global
         cVeg_avd_part=cVeg_avd_global/total_C
         cSoil_avd_part=cSoil_avd_global/total_C
@@ -5008,6 +5039,7 @@ def grid_attribution (
         
         # total_veg_soil=(rt_veg_contrib_global+gpp_contrib_global+X_p_veg_contrib_global+
                             # rt_soil_contrib_global+f_v2s_contrib_global+X_p_soil_contrib_global)        
+        
         total_veg=rt_veg_contrib_global+gpp_contrib_global+X_p_veg_contrib_global
         total_soil=rt_soil_contrib_global+f_v2s_contrib_global+X_p_soil_contrib_global
         
@@ -5052,71 +5084,109 @@ def grid_attribution (
     
         plt.show()
         
-        #rt_contrib_global
-        #gpp_contrib_eco_global
-        #X_p_contrib_global
-        #RGB = np.array(list(zip(rt_contrib_global, gpp_contrib_eco_global, X_p_contrib_global)))
+        # RGB map of attribution to GPP, RT and X_p
+        rgba_map (
+            grid_red = percent_rt_grid, 
+            greed_green = percent_gpp_eco_grid, 
+            grid_blue = percent_X_p_grid, 
+            grid_alpha = X_avd / np.ma.max(X_avd)*10, 
+            labels = ["GPP 80% - RT 20%",
+                    #"GPP 75% - RT 25%",
+                    "GPP 70% - RT 30%",
+                    #"GPP 65% - RT 35%",
+                    "GPP 60% - RT 40%",
+                    #"GPP 55% - RT 45%",
+                    "GPP 50% - RT 50%",
+                    #"GPP 45% - RT 55%",
+                    "GPP 40% - RT 60%",
+                    #"GPP 35% - RT 65%",
+                    "GPP 30% - RT 70%",
+                    #"GPP 35% - RT 75%",
+                    "GPP 20% - RT 80%"],
+            title = "Spatial attribution of uncetainty in X to uncertainty in GPP (green) and RT (red)",         
+        )
         
-        height = len(gcm.lats) # can be any value
-        width = len(gcm.lons) # can be any value
-        #channel = 3 # should be 3 for RGB images
+        # creating and writing a new NetCDF file 
+        s = g_mask.shape
+        n_lats, n_lons = s
+        new_path=Path(data_path).joinpath("gpp_vs_RT_ecosystem.nc")
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimensions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)         
+        # creating variables                         
+        var = ds_new.createVariable('percent_rt_uncertainty', "float32", ["lat", "lon"])
+        var[:, :] = percent_rt_grid 
+        var2 = ds_new.createVariable('percent_gpp_uncertainty', "float32", ["lat", "lon"])
+        var2[:, :] = percent_gpp_eco_grid 
+        var3 = ds_new.createVariable('percent_X_p_uncertainty', "float32", ["lat", "lon"])
+        var3[:, :] = percent_X_p_grid
+        var4 = ds_new.createVariable('X_uncertainty', "float32", ["lat", "lon"])
+        var4[:, :] = X_avd                
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))      
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))
+        print(ds)
+        print("LATS: ")
+        print(lats[:])
+        print("LONS: ")
+        print(lons[:])          
+        # closing NetCDF file      
+        ds_new.close()    
+        
+        # #height = len(gcm.lats) # can be any value
+        # #width = len(gcm.lons) # can be any value
 
-        rt_2d = np.reshape(percent_rt_grid, (-1, width))
-        gpp_2d=np.reshape(percent_gpp_eco_grid, (-1, width))
-        X_p_2d=np.reshape(percent_X_p_grid, (-1, width))
+        # height = percent_rt_grid.shape[0]
+        # width = percent_rt_grid.shape[1]
 
-        #percent_X_p_grid[percent_X_p_grid>0]=0
-        array = np.zeros((height, width, 4))
-        array[:,:,0] = percent_rt_grid # red
-        array[:,:,1] = percent_gpp_eco_grid # green
-        array[:,:,2] = percent_X_p_grid # blue
-        array[:,:,3] = X_avd / np.ma.max(X_avd)*10 # alpha
-        #array[:,:,3] = np.zeros_like(X_p_2d) # blue
+        # rt_2d = np.reshape(percent_rt_grid, (-1, width))
+        # gpp_2d=np.reshape(percent_gpp_eco_grid, (-1, width))
+        # X_p_2d=np.reshape(percent_X_p_grid, (-1, width))
+
+        # array = np.zeros((height, width, 4))
+        # array[:,:,0] = percent_rt_grid # red
+        # array[:,:,1] = percent_gpp_eco_grid # green
+        # array[:,:,2] = percent_X_p_grid # blue
+        # array[:,:,3] = X_avd / np.ma.max(X_avd)*10 # alpha
+        # #array[:,:,3] = np.zeros_like(X_p_2d) # blue
         
-        rgb_map = array.copy()
-        #rgb_map[rgb_map>1]=0
+        # rgb_map = array.copy()
+        # #rgb_map[rgb_map>1]=0
         
-        for i in range(height): 
-            rgb_map[i,:,:] = array[height-i-1,:,:] 
-        fig2=plt.figure(figsize=(200,100))
-        plt.rcParams.update({'font.size': 150})
-        axs=fig2.subplots(1,2, gridspec_kw={'width_ratios': [10, 1]})        
-        ax2=axs[0]
-        ax2.axis("off")
-        ax2.imshow(rgb_map)
-        ax2.set_title("Spatial attribution of uncetainty in X to uncertainty in GPP (green), RT (red), and X_p (blue)")
-        #im=cv2.CreateImage()
-        #ax2.imshow(cv2.cvtColor(rgb_map, cv2.COLOR_BGR2RGB))
-        ax3=axs[1]
-        green=np.arange(0.8,0.2,-0.05)
-        red=np.arange(0.2,0.8,0.05)        
-        blue=np.zeros(13)
-        #alpha=np.arange(0.2,0.8,0.05)
-        legend = np.zeros((13, 1, 3))
-        legend [:,:,0]=red.reshape(13,1)
-        legend [:,:,1]=green.reshape(13,1)
-        legend [:,:,2]=blue.reshape(13,1)
-        ax3.set_title("Legend")
-        #ax3.axis("off")
-        ax3.get_xaxis().set_visible(False)
-        ax3.set_yticks ([0,2,4,6,8,10,12])
-        ax3.set_yticklabels(   ["GPP 80% - RT 20%",
-                                #"GPP 75% - RT 25%",
-                                "GPP 70% - RT 30%",
-                                #"GPP 65% - RT 35%",
-                                "GPP 60% - RT 40%",
-                                #"GPP 55% - RT 45%",
-                                "GPP 50% - RT 50%",
-                                #"GPP 45% - RT 55%",
-                                "GPP 40% - RT 60%",
-                                #"GPP 35% - RT 65%",
-                                "GPP 30% - RT 70%",
-                                #"GPP 35% - RT 75%",
-                                "GPP 20% - RT 80%"])
-        
-        ax3.imshow(legend)
-        plt.show()    
-        plt.rcParams.update({'font.size': 15})
+        # for i in range(height): 
+            # rgb_map[i,:,:] = array[height-i-1,:,:] 
+        # fig2=plt.figure(figsize=(200,100))
+        # plt.rcParams.update({'font.size': 150})
+        # axs=fig2.subplots(1,2, gridspec_kw={'width_ratios': [10, 1]})        
+        # ax2=axs[0]
+        # ax2.axis("off")
+        # ax2.imshow(rgb_map)
+        # ax2.set_title("Spatial attribution of uncetainty in X to uncertainty in GPP (green), RT (red), and X_p (blue)")
+        # #im=cv2.CreateImage()
+        # #ax2.imshow(cv2.cvtColor(rgb_map, cv2.COLOR_BGR2RGB))
+        # ax3=axs[1]
+        # green=np.arange(0.8,0.2,-0.05)
+        # red=np.arange(0.2,0.8,0.05)        
+        # blue=np.zeros(13)
+        # #alpha=np.arange(0.2,0.8,0.05)
+        # legend = np.zeros((13, 1, 3))
+        # legend [:,:,0]=red.reshape(13,1)
+        # legend [:,:,1]=green.reshape(13,1)
+        # legend [:,:,2]=blue.reshape(13,1)
+        # #plt.rcParams.update({'font.size': 8})
+        # ax3.set_title("Legend")
+        # #ax3.axis("off")
+        # ax3.get_xaxis().set_visible(False)
+        # ax3.set_yticks ([0,2,4,6,8,10,12])
+        # plt.rcParams.update({'font.size': 120})
+        # ax3.set_yticklabels(   )
+
+        # ax3.imshow(legend)
+        # plt.show()
+        # fig2.savefig("common_mask_all_models.pdf")
+        # plt.rcParams.update({'font.size': 15})
         # import PIL.Image as Image
         # # img_bytes = list()
         # # for i in range(percent_rt_grid.shape[0]):
@@ -5140,9 +5210,8 @@ def grid_attribution (
         # #image_filename = "3Dmap_image.jpeg"
         # #image_data.save(image_filename)
         # ############ flux approach ####################
-        
-        
-    
+
+
         # if avd: suffix = '_avd' 
         # else: suffix = '_mean'
         
@@ -5185,7 +5254,60 @@ def grid_attribution (
         ds = nc.Dataset(str(file_path))
         rh_avd=ds.variables["rh_avd"][:, :].data
         ds.close() 
+
+def rgba_map (grid_red, greed_green, grid_blue, grid_alpha, labels, title = "RGB map"):
+
+        #height = len(gcm.lats) # can be any value
+        #width = len(gcm.lons) # can be any value
+
+        height = grid_red.shape[0]
+        width = grid_red.shape[1]
+
+        array = np.zeros((height, width, 4))
+        array[:,:,0] = grid_red # red
+        array[:,:,1] = greed_green # green
+        array[:,:,2] = grid_blue # blue
+        array[:,:,3] = grid_alpha # alpha
+        #array[:,:,3] = np.zeros_like(X_p_2d) # blue
         
+        rgb_map = array.copy()
+        #rgb_map[rgb_map>1]=0
+        
+        for i in range(height): 
+            rgb_map[i,:,:] = array[height-i-1,:,:] 
+        fig=plt.figure(figsize=(200,100))
+        #plt.rcParams.update({'font.size': 150})
+        axs=fig.subplots(1,2, gridspec_kw={'width_ratios': [15, 1]})        
+        ax=axs[0]
+        ax.axis("off")
+        ax.imshow(rgb_map)
+        ax.set_title(title, fontsize=160)
+        #im=cv2.CreateImage()
+        #ax2.imshow(cv2.cvtColor(rgb_map, cv2.COLOR_BGR2RGB))
+        ax_legend=axs[1]
+        green=np.arange(0.8,0.2,-0.05)
+        red=np.arange(0.2,0.8,0.05)        
+        blue=np.zeros(13)
+        #alpha=np.arange(0.2,0.8,0.05)
+        legend = np.zeros((13, 1, 3))
+        legend [:,:,0]=red.reshape(13,1)
+        legend [:,:,1]=green.reshape(13,1)
+        legend [:,:,2]=blue.reshape(13,1)
+        #plt.rcParams.update({'font.size': 8})
+        ax_legend.set_title(" ", fontsize=140)
+        #ax3.axis("off")
+        ax_legend.get_xaxis().set_visible(False)
+        ticks=np.array(range(0,13,round(13/len(labels))))
+        ax_legend.set_yticks (ticks)
+        ax_legend.set_yticklabels(labels,fontsize=120)
+
+        ax_legend.imshow(legend)
+        plt.show()
+        # save RGB pdf
+        fig.savefig("rgb_map.pdf")       
+        plt.rcParams.update({'font.size': 15})
+        return ()
+       
 def plot_attribution_output (
     all_comp_dict,
     percent=False,
