@@ -17,11 +17,11 @@ import matplotlib.pyplot as plt
 import os
 import inspect
 import datetime as dt
-
 from pathlib import Path
 import json
 import netCDF4 as nc
-
+import gdal  # new package: to update bgc_md2 run install_developer_conda script    
+    
 from ComputabilityGraphs.CMTVS import CMTVS
 import CompartmentalSystems.helpers_reservoir as hr
 from bgc_md2.resolve.mvars import (
@@ -2163,8 +2163,7 @@ def project_2(source: CoordMask, target: CoordMask):
 
 def resample_grid (source_coord_mask, target_coord_mask, var, 
             method="nearest", radius_of_influence=500000, neighbours=10):
-    # NEED TO INSTALL PACKAGE: conda install -c conda-forge pyresample
-    import pyresample
+    import pyresample  # new package: to update bgc_md2 run install_developer_conda script  
     from pyresample.bilinear import NumpyBilinearResampler    
     lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)  
     lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
@@ -2176,24 +2175,7 @@ def resample_grid (source_coord_mask, target_coord_mask, var,
     lons=target_coord_mask.lons
     orig_def = pyresample.geometry.SwathDefinition(lons=lon2d, lats=lat2d)
     
-    # orig_def = pyresample.AreaDefinition(area_id="world", description="CLASSIC mask", 
-                          # proj_id="lat_lon", 
-                          # projection='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs',
-                          # width=len(lons_source), height=len(lats_source), 
-                          # area_extent=(min(lons_source),min(lats_source),max(lons_source),max(lats_source)),
-                          # )      
-    #orig_def = pyresample.geometry.GridDefinition(lons=lons_source, lats=lats_source)
-
     targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
-    # targ_def = pyresample.AreaDefinition(area_id="world", description="global mask", 
-                          # proj_id="lat_lon", 
-                          # projection='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs',
-                          # width=len(lons), height=len(lats), 
-                          # area_extent=(min(lons),min(lats),max(lons),max(lats)),
-                          # )   
-    # orig_con = pyresample.image.ImageContainerNearest(var, orig_def, radius_of_influence=5000)
-    # target_con = orig_con.resample(targ_def)
-    # result = target_con.image_data
                   
     if method=="nearest":
       target_var = pyresample.kd_tree.resample_nearest(orig_def, var, 
@@ -5903,73 +5885,9 @@ def get_global_mean_uncertainty(dataPath,
                             #lat_var,
                             #lon_var,
                             ):
-    # def nc_file_name(nc_var_name, experiment_name):
-        # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
-
-    # def nc_global_mean_file_name(experiment_name):
-        # return experiment_name+"gm_all_vars.nc"
-
-    #data_str = msh(model_folder).data_str   
-    #names = data_str._fields
-    #conf_dict = confDict(model_folder)
-    #dataPath=Path(conf_dict["dataPath"])     
-    
-    # if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
-        # print(""" Found cached global mean files. If you want to recompute the global means
-            # remove the following files: """
-        # )
-        # print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
-
-        # def get_cached_global_mean(vn):
-            # gm_path=dataPath.joinpath(
-                # nc_global_mean_file_name(experiment_name=experiment_name))               
-            # return nc.Dataset(str(gm_path)).variables[vn].__array__() 
-
-        # output=data_streams(*map(get_cached_global_mean, data_streams._fields))      
-        # return (
-            # output
-        # )
-
-    # else:
     gcm=globalMask(file_name="common_mask_all_models.nc")
-    # # load an example file with mask
-    # # special case for YIBS that doesn't have a mask in all files ecept tas
-    # if model_folder=="jon_yib":
-        # template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("tas", 
-            # experiment_name=experiment_name))).variables['tas'][0,:,:].mask
-    # else:
-        # template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("cSoil", 
-            # experiment_name=experiment_name))).variables['cSoil'][0,:,:].mask
-    # # gcm=project_2(
-            # # source=gm,
-            # # target=CoordMask(
-                # # index_mask=np.zeros_like(template),
-                # # tr=SymTransformers(
-                    # # ctr=msh(model_folder).make_model_coord_transforms(),
-                    # # itr=msh(model_folder).make_model_index_transforms()
-                # # )
-            # # )
-    # # )
-    # gcm=resample_grid(
-        # source_coord_mask=gm, 
-        # target_coord_mask=CoordMask(
-                # index_mask=np.zeros_like(template),
-                # tr=SymTransformers(
-                    # ctr=msh(model_folder).make_model_coord_transforms(),
-                    # itr=msh(model_folder).make_model_index_transforms(), 
-                    # ),
-                # ),    
-        # var=gm.index_mask, 
-        # method="nearest"
-        # )
-
     print("computing means, this may take some minutes...")
 
-    # data_str = namedtuple(
-    # 'data_str',
-    # ["cVeg", "cSoil_total","cVeg_diff", "cSoil_total_diff","nep", "gpp", "ra", "rh",  "dist", "f_v2s", 
-    # "X", "X_c", "X_p","RT", "RT_veg", "RT_soil"]
-    # )  
     def global_mean_var(
         lats: np.ma.core.MaskedArray,
         lons: np.ma.core.MaskedArray,
@@ -5986,17 +5904,13 @@ def get_global_mean_uncertainty(dataPath,
         the mask array is used to block out extra pixels that are not
         masked in var
         """
-
         weight_mat = np.ma.array(get_weight_mat(lats, lons), mask=mask)
 
         # to compute the sum of weights we add only those weights that
         # do not correspond to an unmasked grid cell
         wms = weight_mat.sum()
-        #n_t = var.shape[0]
-        res = (weight_mat * var[:, :]).sum() / wms #np.zeros(n_t)
-        # for it in tqdm(range(n_t)):
-            # el = (weight_mat * var[it, :, :]).sum() / wms
-            # res[it] = el
+        res = (weight_mat * var[:, :]).sum() / wms 
+        
         return res
     
     if avd: suffix = '_avd' 
@@ -6025,38 +5939,50 @@ def get_global_mean_uncertainty(dataPath,
         )     
         return gm #* 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
         
-    #map variables to data
-    #print(data_str._fields)
     output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
-    # cVeg=output.cVeg if output.cVeg.shape[0]<500 else avg_timeline(output.cVeg, 12)
-    # if "cLitter" in names:
-        # cLitter=output.cLitter if output.cLitter.shape[0]<500 else avg_timeline(output.cLitter, 12)
-    # cSoil=output.cSoil if output.cSoil.shape[0]<500 else avg_timeline(output.cSoil, 12)        
-    # gpp=output.gpp if output.gpp.shape[0]<500 else avg_timeline(output.gpp, 12)
-    # if "npp" in names:
-        # npp=output.npp if output.npp.shape[0]<500 else avg_timeline(output.npp, 12)
-    # if "npp_nlim" in names:
-        # npp=output.npp_nlim if output.npp_nlim.shape[0]<500 else avg_timeline(output.npp_nlim, 12)            
-    # if "ra" in names:
-        # ra=output.ra if output.ra.shape[0]<500 else avg_timeline(output.ra, 12)    
-    # rh=output.rh if output.rh.shape[0]<500 else avg_timeline(output.rh, 12)          
-    # # for models like SDGVM where pool data starts earlier than gpp data
-    # if cVeg.shape[0]>gpp.shape[0]: cVeg=cVeg[cVeg.shape[0]-gpp.shape[0]:]        
-    # if "cLitter" in names and cLitter.shape[0]>gpp.shape[0]: 
-        # cLitter=cLitter[cLitter.shape[0]-gpp.shape[0]:]
-    # if cSoil.shape[0]>gpp.shape[0]: cSoil=cSoil[cSoil.shape[0]-gpp.shape[0]:]
+    return (output)         
+
+def TIFF_2_NetCDF (FilePath, NewPath, VarName='var'): 
+    ds = gdal.Open(FilePath)
+
+    a = ds.ReadAsArray()
+    nlat, nlon = np.shape(a)
+
+    b = ds.GetGeoTransform()  # bbox, interval
+
+    # creating and writing a new NetCDF file 
+    ds_new = nc.Dataset(str(NewPath), "w", persist=True)
+    # creating dimensions
+    lat = ds_new.createDimension("lat", size=nlat)
+    lon = ds_new.createDimension("lon", size=nlon)         
+    # creating variables                         
+    var = ds_new.createVariable(VarName, "float32", ["lat", "lon"])
+    var[:, :] = a               
+    lats = ds_new.createVariable("lat", "float32", ["lat"])
+    lats[:] = np.arange(nlat)*b[5]+b[3]
+    lons = ds_new.createVariable("lon", "float32", ["lon"])
+    lons[:] = np.arange(nlon)*b[1]+b[0]   
+    # closing NetCDF file      
+    ds_new.close() 
+    print('File written as '+NewPath)
     
-    # output_final=data_streams(
-        # cVeg=cVeg,
-        # cSoil=cLitter+cSoil if "cLitter" in names else cSoil,
-        # gpp=gpp, 
-        # npp=npp if ("npp" in names) or ("npp_nlim" in names) else gpp-ra,
-        # ra=ra if "ra" in names else gpp-npp,
-        # rh=rh,
-        # )      
-    # gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-    # write_data_streams_cache(gm_path, output_final)        
-    return (
-        output
-        #output_final
-    )         
+def nc_classes_2_masks (FilePath, var_name, classes, global_mask):
+    g_mask=global_mask.index_mask
+    ds = nc.Dataset(FilePath)    
+    var=ds.variables[var_name][:]    
+    ds.close()    
+    for nclass in classes:    
+        var_0=var.copy()
+        var_0[var_0!=nclass]=-9999      
+        var_0[var_0==nclass]=0
+        var_0[var_0==-9999]=1
+        var_0_corrected=var_0.copy()
+        for i in range(var_0.shape[0]):
+            var_0_corrected[i,:]=var_0[var_0.shape[0]-1-i,:]
+        var_0_masked=np.logical_or(var_0_corrected,g_mask)           
+        cm_0=CoordMask(var_0_masked, global_mask.tr)
+        FileName=FilePath+"_mask_"+str(nclass)+".nc"
+        cm_0.write_netCDF4(FileName)
+        print('File written as '+FileName)        
+    
+
