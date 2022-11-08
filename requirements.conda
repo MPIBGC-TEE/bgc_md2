@@ -38,5 +38,8 @@ pygraphviz
 sphinx
 pip
 zarr
+# recommended but not essential
 py2cytoscape
 ipycytoscape
+gdal
+pyresample
