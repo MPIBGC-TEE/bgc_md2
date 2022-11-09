@@ -279,11 +279,11 @@ def get_example_site_vars(dataPath):
     return (obss, dvs)
 
 experiment_name="OCN_S2_"
-def nc_file_name(nc_var_name):
+def nc_file_name(nc_var_name, experiment_name=experiment_name):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 
-def nc_global_mean_file_name(nc_var_name):
+def nc_global_mean_file_name(nc_var_name, experiment_name=experiment_name):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 def get_global_mean_vars(dataPath):
@@ -313,7 +313,7 @@ def get_global_mean_vars(dataPath):
         print("computing masks to exclude pixels with nan entries, this may take some minutes...")
 
         def f(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
+            path = dataPath.joinpath(nc_file_name(vn,experiment_name=experiment_name))
             ds = nc.Dataset(str(path))
             # scale fluxes vs pools
             var = ds.variables[vn]
@@ -325,7 +325,7 @@ def get_global_mean_vars(dataPath):
         print("computing means, this may also take some minutes...")
 
         def compute_and_cache_global_mean(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
+            path = dataPath.joinpath(nc_file_name(vn,experiment_name=experiment_name))
             ds = nc.Dataset(str(path))
             vs = ds.variables
             print(vs)

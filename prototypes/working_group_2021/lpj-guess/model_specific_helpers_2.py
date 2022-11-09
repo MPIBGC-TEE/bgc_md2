@@ -117,7 +117,7 @@ data_str = namedtuple( # data streams available in the model
 # def nc_file_name(nc_var_name, experiment_name):
     # return experiment_name+"{}.nc".format(nc_var_name)      
 
-def nc_file_name(nc_var_name, experiment_name):
+def nc_file_name(nc_var_name, experiment_name="LPJ-GUESS_S2_"):
         return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="rh" else experiment_name+"rh_annual.nc"
 
 def get_global_mean_vars_all(experiment_name):

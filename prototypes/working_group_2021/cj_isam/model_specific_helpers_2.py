@@ -193,7 +193,7 @@ def get_example_site_vars(dataPath):
 def nc_file_name(nc_var_name,experiment_name="ISAM_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
-def nc_global_mean_file_name(nc_var_name):
+def nc_global_mean_file_name(nc_var_name,experiment_name="ISAM_S2_"):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 # +

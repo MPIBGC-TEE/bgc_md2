@@ -3,6 +3,7 @@
 # %autoreload 2
 import numpy as np
 import general_helpers as gh
+import MIP_output_helpers as moh
 import matplotlib.pyplot as plt
 from pathlib import Path
 import netCDF4 as nc
@@ -34,8 +35,12 @@ global_mask=gh.globalMask(file_name="common_mask_all_models.nc")
 #global_mask=gh.globalMask(file_name="common_mask_all_models_w_deserts.nc")   
 # -
 
+from pyproj import Geod, Proj, transform
+
+from pyproj.aoi import AreaOfUse
+
 # Compute temporal average + difference(last-first) and resample all NetCDF4 data streams for each model to the global mask
-gh.average_and_resample_nc(
+moh.average_and_resample_nc(
     model_names=model_names,
     experiment_names=['S2','S3'],
     target_mask=global_mask,
@@ -54,13 +59,13 @@ gh.average_and_resample_nc(
 #     )
 # -
 
-gh.add_gridded_vars (
+moh.add_gridded_vars (
         model_names=model_names,
         experiment_names=['S2','S3'],
         global_mask=global_mask,       
         )
 
-gh.uncertainty_grids(
+moh.uncertainty_grids(
     model_names=model_names,
     experiment_names=['S2','S3'],
     global_mask=global_mask,
@@ -68,55 +73,121 @@ gh.uncertainty_grids(
     )
 
 plt.rcParams.update({'font.size': 15})
-gh.grid_attribution(
+moh.grid_attribution(
     #model_names=model_names,
     experiment_names=['S2'],#'S3'],
     global_mask=global_mask,
     data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
 
-a=[1,2,3,4,5]
-start=len(a)-3
-a[-1]-a[start]
+gh.nc_classes_2_masks(
+    FilePath = "C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\global_biomes_geotiff\\biomes_05deg_rasterized.nc", 
+    var_name = 'biomes', 
+    classes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], 
+    global_mask = global_mask)
 
-# +
-#change
-# -
-a=np.array((1,1,1,1))
-b=np.array((2,2,2,2))
-c=np.array((3,3,3,3))
-d=zip(a,b,c)
-np.array(list(d))
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_1.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-np.concatenate((a,b))
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_2.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-a=list()
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_3.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-a.append((1,2,3))
-a.append((1,2,3))
-a
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_4.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-d
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_5.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-a=np.array(((1,1,1),(2,2,2),(3,3,3)))
-a[a>2]=0
-a
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_6.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-a=(10, 50, 90, 100)
-a
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_7.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-np.log(a)
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_8.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-        green=np.arange(0.8,0.2,-0.05)
-        red=np.arange(0.2,0.8,0.05)        
-        blue=np.zeros(13)
-#ar=np.array((red, green, blue))
-array = np.zeros((13, 1, 3))
-array [:,:,0]=red.reshape(13,1)
-array [:,:,1]=green.reshape(13,1)
-array [:,:,2]=blue.reshape(13,1)
-array
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_9.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
-red
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_10.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
+
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_11.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
+
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_12.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
+
+biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_13.nc")
+moh.grid_attribution(
+    #model_names=model_names,
+    experiment_names=['S2'],#'S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
 
 

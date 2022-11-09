@@ -50,6 +50,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from functools import lru_cache
 import general_helpers as gh
+import MIP_output_helpers as moh
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
     InputTuple,
@@ -150,7 +151,7 @@ model_cols={
     "OCN":"teal",
 }
 
-all_comp_dict= gh.get_traceable_components(model_names=model_names,
+all_comp_dict= moh.get_traceable_components(model_names=model_names,
              test_arg_list=test_arg_list,
              delta_t_val=delta_t_val, 
              model_cols=model_cols,
@@ -160,20 +161,20 @@ all_comp_dict= gh.get_traceable_components(model_names=model_names,
              overlap=True
              )
 
-x_x_c,sigma_x_x_c=gh.plot_traceable_component(
+x_x_c,sigma_x_x_c=moh.plot_traceable_component(
     all_comp_dict,
     "x_x_c",
     model_cols,
     #delta=True,
 )
 
-x1,sigma_x1=gh.plot_traceable_component(
+x1,sigma_x1=moh.plot_traceable_component(
     all_comp_dict,
     "x",
     model_cols,
     #delta=True,
 )
-x2,sigma_x2=gh.plot_traceable_component(
+x2,sigma_x2=moh.plot_traceable_component(
     all_comp_dict,
     "x",
     model_cols,
@@ -183,20 +184,20 @@ x2,sigma_x2=gh.plot_traceable_component(
 # +
 times=all_comp_dict["Times"]
 var=sigma_x1
-gh.plot_single_trend(var,times,3,"Standard deviation of X over time")
+moh.plot_single_trend(var,times,3,"Standard deviation of X over time")
 
 times=all_comp_dict["Times"]
 var=sigma_x2
-gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$X over time")
+moh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$X over time")
 # -
 
-x_c1,sigma_x_c1=gh.plot_traceable_component(
+x_c1,sigma_x_c1=moh.plot_traceable_component(
     all_comp_dict,
     "x_c",
     model_cols,
     #delta=True,
 )
-x_c2,sigma_x_c2=gh.plot_traceable_component(
+x_c2,sigma_x_c2=moh.plot_traceable_component(
     all_comp_dict,
     "x_c",
     model_cols,
@@ -206,20 +207,20 @@ x_c2,sigma_x_c2=gh.plot_traceable_component(
 # +
 times=all_comp_dict["Times"]
 var=sigma_x_c1
-gh.plot_single_trend(var,times,3,"Standard deviation of X_c over time")
+moh.plot_single_trend(var,times,3,"Standard deviation of X_c over time")
 
 times=all_comp_dict["Times"]
 var=sigma_x_c2
-gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$X_c over time")
+moh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$X_c over time")
 # -
 
-x_p1,sigma_x_p1=gh.plot_traceable_component(
+x_p1,sigma_x_p1=moh.plot_traceable_component(
     all_comp_dict,
     "x_p",
     model_cols,
     #delta=True,
 )
-# x_p2,sigma_x_p2=gh.plot_traceable_component(
+# x_p2,sigma_x_p2=moh.plot_traceable_component(
 #     all_comp_dict,
 #     "x_p",
 #     model_cols,
@@ -229,24 +230,24 @@ x_p1,sigma_x_p1=gh.plot_traceable_component(
 # +
 # times=all_comp_dict["Times"]
 # var=sigma_x_p1
-# gh.plot_single_trend(var,times,3,"Uncertainty of X_p over time")
+# moh.plot_single_trend(var,times,3,"Uncertainty of X_p over time")
 
 # times=all_comp_dict["Times"]
 # var=sigma_x_p2
-# gh.plot_single_trend(var,times,3, "Uncertainty of $\Delta$X_p over time")
+# moh.plot_single_trend(var,times,3, "Uncertainty of $\Delta$X_p over time")
 # -
 
 times=all_comp_dict["Times"]
 var=x_p1
-gh.plot_single_trend(var,times,3,"Mean X_p over time")
+moh.plot_single_trend(var,times,3,"Mean X_p over time")
 
-u1, sigma_u1=gh.plot_traceable_component(
+u1, sigma_u1=moh.plot_traceable_component(
     all_comp_dict,
     "u",
     model_cols,
     #delta=True,
 )
-u2, sigma_u2=gh.plot_traceable_component(
+u2, sigma_u2=moh.plot_traceable_component(
     all_comp_dict,
     "u",
     model_cols,
@@ -256,20 +257,20 @@ u2, sigma_u2=gh.plot_traceable_component(
 # +
 times=all_comp_dict["Times"]
 var=sigma_u1
-gh.plot_single_trend(var,times,3,"Standard deviation of NPP over time")
+moh.plot_single_trend(var,times,3,"Standard deviation of NPP over time")
 
 times=all_comp_dict["Times"]
 var=sigma_u2
-gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$NPP over time")
+moh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$NPP over time")
 # -
 
-rt1,sigma_rt1=gh.plot_traceable_component(
+rt1,sigma_rt1=moh.plot_traceable_component(
     all_comp_dict,
     "rt",
     model_cols,
     #delta=True,
 )
-rt2,sigma_rt2=gh.plot_traceable_component(
+rt2,sigma_rt2=moh.plot_traceable_component(
     all_comp_dict,
     "rt",
     model_cols,
@@ -279,18 +280,22 @@ rt2,sigma_rt2=gh.plot_traceable_component(
 # +
 times=all_comp_dict["Times"]
 var=sigma_rt1
-gh.plot_single_trend(var,times,3,"Standard deviation of RT over time")
+moh.plot_single_trend(var,times,3,"Standard deviation of RT over time")
 
 times=all_comp_dict["Times"]
 var=sigma_rt2
-gh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$RT over time")
+moh.plot_single_trend(var,times,3, "Standard deviation of $\Delta$RT over time")
 # -
 
 # ## Contribution of traceable components to the uncertainty of C storage (X)
 
 plt.rcParams.update({'font.size': 12})
 
-gh.plot_attribution_sum (
+all_comp_dict['VISIT'].keys()
+
+"u" in all_comp_dict['VISIT'].keys()
+
+moh.plot_attribution_sum (
     all_comp_dict=all_comp_dict,
     percent=True,
     part=1,
@@ -298,7 +303,7 @@ gh.plot_attribution_sum (
 
 # ### Per model
 
-gh.plot_attribution_per_model(
+moh.plot_attribution_per_model(
     all_comp_dict=all_comp_dict,
     #percent=True,    
 )
