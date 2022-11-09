@@ -1,5 +1,5 @@
 from sympy import Symbol, Function, exp, Piecewise, diff
-import source_1 as s1
+from . import source_1 as s1
 sym_dict={
     'T_0': 'critical temperature',
     'E': 'activation energy',
@@ -34,6 +34,10 @@ d_xi=diff(xi,s1.TAS)
 ##)
 #
 sym2func={s1.TAS: TAS(t)}
+
+# the main part of this module is this little dictionary
+# that makes it possible to exchange the symbolic xi with 
+# the actual one.
 subs_dict={
     s1.xi: xi.subs(sym2func),
     diff(s1.xi,s1.TAS): d_xi.subs(sym2func)

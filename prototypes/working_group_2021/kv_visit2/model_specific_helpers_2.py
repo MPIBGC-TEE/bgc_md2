@@ -12,6 +12,7 @@ from CompartmentalSystems.TimeStepIterator import (
 from copy import copy
 from typing import Callable
 from functools import reduce
+from scipy.interpolate import interp1d
 
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
@@ -261,8 +262,22 @@ def get_global_mean_vars(dataPath):
         )
 
 
-
 def make_func_dict(mvs, dvs, cpa, epa):
+    def compose(f_of_month: Callable):
+        def f_of_day(day):
+            return f_of_month(day/30.0)
+
+        return f_of_day
+
+    f_d={
+        "TAS": compose(interp1d(x=np.arange(0,len(dvs.tas)),y=dvs.tas)),
+        "mrso":compose(interp1d(x=np.arange(0,len(dvs.mrso)),y=dvs.mrso)) ,
+        "NPP": compose(interp1d(x=np.arange(0,len(dvs.npp)),y=dvs.npp)),
+        #"xi": make_xi_func(dvs, epa)
+    }
+    return f_d
+
+def make_func_dict_old(mvs, dvs, cpa, epa):
     def npp_func(day):
         month=gh.day_2_month_index(day)
         # kg/m2/s kg/m2/day;

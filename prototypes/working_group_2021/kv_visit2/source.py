@@ -1,9 +1,10 @@
+from pathlib import Path
 from sympy import Symbol, Function, exp, Piecewise
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.models.BibInfo import BibInfo
-import source_1 as s1
-from subs_1 import subs_dict
-
+from bgc_md2.resolve.mvars import NumericParameterization, NumericParameterizedSmoothReservoirModel
+from . import source_1 as s1
+from .subs_1 import subs_dict
 def subs_xi(var):
     return var.subs(subs_dict)
 
@@ -18,6 +19,8 @@ mvs=CMTVS(
         subs_xi(s1.mvs.get_InFluxesBySymbol()),
         subs_xi(s1.mvs.get_OutFluxesBySymbol()),
         subs_xi(s1.mvs.get_InternalFluxesBySymbol()),
+        #NumericParameterization(
+        #    par_dict=)
     },
     computers=s1.mvs.computers
 )    
