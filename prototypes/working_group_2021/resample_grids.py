@@ -35,10 +35,6 @@ global_mask=gh.globalMask(file_name="common_mask_all_models.nc")
 #global_mask=gh.globalMask(file_name="common_mask_all_models_w_deserts.nc")   
 # -
 
-from pyproj import Geod, Proj, transform
-
-from pyproj.aoi import AreaOfUse
-
 # Compute temporal average + difference(last-first) and resample all NetCDF4 data streams for each model to the global mask
 moh.average_and_resample_nc(
     model_names=model_names,
@@ -190,4 +186,114 @@ moh.grid_attribution(
     data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
 
+new_mask=moh.subset_and_resample_nc(
+    model_names=model_names,    
+    experiment_names=['S2','S3'],
+    target_mask=global_mask,
+    method="nearest",
+    radius_of_influence=500000, 
+    )
 
+a=np.array([1,2,3,4,5,6,7,8,9,10])
+
+np.mean(a[0:5])
+
+mid=(a.shape[0]-6)//2
+mid
+
+np.mean(a[mid:mid+5])
+
+last5 = a.shape[0]-5
+last5
+
+np.mean(a[last5:last5+5])
+
+a[last5+4]
+
+arr = np.array([[11, -1, 15, -7, 12, 14],
+               [1,   2,  3,  4,  5,  7]])
+arr.flatten()
+
+np.where(arr < 0)
+
+arr[np.where(arr < 0)]=-50
+arr
+
+np.mean(arr)
+np.std(arr)
+arr[np.where(abs(arr) > np.mean(arr)+2*np.std(arr))]=-50
+arr
+
+arr1=np.ma.array(data=[(1, 1.0), (2, 2.0)],
+             mask=[(0, 0), (1, 0)],)
+
+arr1 
+
+mask=[(0, 1), (1, 0)]
+arr1=np.ma.array(arr1,
+             mask=mask)
+arr1
+
+arr_m=arr1.data[np.where(arr1.mask==0)]
+arr_m
+
+# +
+#np.random.seed(42)
+data = np.random.normal(size=259200)
+mask=np.random.randint(2, size=259200)
+data_masked = np.ma.array(data,mask=mask)
+n, bins, patches = plt.hist(data_masked, density=True, bins=[-3. , -2.5, -2. , -1.5, -1. , -0.5,  0. ,  0.5,  1. ,  1.5,  2. ,
+        2.5], facecolor='green', alpha=0.75)
+import matplotlib.mlab as mlab
+import scipy.stats as stat 
+# best fit of data
+(mu, sigma) = stat.norm.fit(data_masked)
+y = stat.norm.pdf ( bins, mu, sigma)
+l = plt.plot(bins, y, 'r--', linewidth=2)
+
+
+
+# plt.hist(x, density=False, bins=20)  # density=False would make counts
+# plt.ylabel('Probability')
+# plt.xlabel('Data');
+# -
+
+n
+
+bins
+
+patches
+
+# +
+# Empirical average and variance are computed
+avg = np.mean(data)
+var = np.var(data)
+# From that, we know the shape of the fitted Gaussian.
+pdf_x = np.linspace(np.min(data),np.max(data),100)
+pdf_y = 1.0/np.sqrt(2*np.pi*var)*np.exp(-0.5*(pdf_x-avg)**2/var)
+
+# Then we plot :
+plt.figure()
+plt.hist(data,30,normed=True)
+plt.plot(pdf_x,pdf_y,'k--')
+#plt.legend(("Fit","Data"),"best")
+plt.show()
+# -
+
+
+
+H, bins =np.histogram(data, bins=10, range=None, normed=None, weights=None, density=None)
+H
+
+plt.bar(bins[:-1],H,width=1,color="green")
+
+a=np.array([1,2,3,4,5,6,7,8,9])
+a
+
+b=np.array([2,3,4])
+b
+
+a[np.where(np.isin(a,b))]=50
+a
+
+any(elem in list1  for elem in list2)
