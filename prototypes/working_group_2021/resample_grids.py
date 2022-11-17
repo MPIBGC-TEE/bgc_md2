@@ -194,6 +194,14 @@ new_mask=moh.subset_and_resample_nc(
     radius_of_influence=500000, 
     )
 
+new_global_mask=gh.globalMask(file_name="common_mask_expanded.nc")    
+moh.ensamble_uncertainty (
+        model_names=model_names,
+        experiment_names=["S2","S3"],
+        global_mask=new_global_mask,
+        output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+        )
+
 a=np.array([1,2,3,4,5,6,7,8,9,10])
 
 np.mean(a[0:5])
@@ -296,4 +304,20 @@ b
 a[np.where(np.isin(a,b))]=50
 a
 
-any(elem in list1  for elem in list2)
+all_data = [np.random.normal(0, std, 100) for std in range(6, 10)]
+
+all_data.append(np.random.normal(0, 3, 100))
+
+np.array(all_data).shape
+
+all_data=list()
+
+all_data
+
+a=["1","2"]
+a
+
+b=a+["3"]
+b
+
+

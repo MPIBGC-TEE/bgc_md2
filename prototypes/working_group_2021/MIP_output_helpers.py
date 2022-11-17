@@ -1,6 +1,7 @@
 import numpy as np
 from copy import copy
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 from pathlib import Path
 import json
 import netCDF4 as nc    
@@ -3005,9 +3006,7 @@ def get_global_mean_uncertainty(dataPath,
             # ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
             # ax1.legend(labels, bbox_to_anchor =(1,1))
         
-        # plt.show()       
-        
-        
+        # plt.show()              
         
 def subset_and_resample_nc(
             model_names, # dictionary e.g. "ab_classic":"CLASSIC"
@@ -3047,135 +3046,7 @@ def subset_and_resample_nc(
         lons[:] = list(map(target_mask.tr.i2lon, range(n_lons)))        
         # closing NetCDF files     
         ds_new.close() 
-        
-    # def mask_add_non_positive(mask, data):
-        # new_mask_index=mask.index_mask
-        
-        # # checking data before masking
-        # data_masked=np.ma.array(data, mask=new_mask_index)
-        # #print("mean: " + str(np.ma.mean(data_masked)))
-        # #print("max: " + str(np.ma.max(data_masked)))
-        # #print("min: " + str(np.ma.min(data_masked)))        
-        
-        # # adding non-positive values to the mask
-        # new_mask_index[np.where(data <= 0)]=1
-        
-        # return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)    
-
-    def mask_add_outliers(mask, data, outlier_tolerance=4, log=False, plot_hist=False):
-        new_mask_index=mask.index_mask
-        #new_mask_index=data.mask
-        print(new_mask_index.shape)
-        print(data.shape)
-        # checking data before masking
-        #data_masked=np.ma.array(data, mask=new_mask_index).flatten()
-        data_masked=data[np.where(new_mask_index==0)].flatten()
-        print(data_masked.shape)
-        # print("data_masked shape")
-        # print(data_masked.shape)
-        # print("numpy histogram")
-        # print(np.histogram(data_masked, bins=30))
-        if plot_hist:
-            print("mean: " + str(np.mean(data_masked)))
-            print("max: " + str(np.max(data_masked)))
-            print("min: " + str(np.min(data_masked))) 
-                
-        # adding outliers based on standard deviation        
-        if log: data_masked=np.log(data_masked)
-        #else: data_masked=np.ma.array(data, mask=new_mask_index)
-        data_mean=np.mean(data_masked)
-        data_sd=np.std(data_masked)
-        upper_limit = data_mean + outlier_tolerance * data_sd
-        lower_limit = data_mean - outlier_tolerance * data_sd
-        if log: 
-            upper_limit=np.exp(upper_limit)
-            lower_limit=np.exp(lower_limit)
-            data_masked=np.exp(data_masked)
-        #print("initial unmasked pixels: ")    
-        #print(len(data_masked))   
-        #print("newly masked pixels: ") 
-        #newly_masked=np.concatenate((data_masked[np.where(data_masked > upper_limit)],data_masked[np.where(data_masked < lower_limit)]))
-        #print(len(data_masked[np.where(data_masked > upper_limit)])+
-        #      len(data_masked[np.where(data_masked < lower_limit)]))
-        #print(len(newly_masked))
-        #print(newly_masked)        
-        #print("initial new_mask_index")
-        #print(len(new_mask_index[np.where(new_mask_index==0)]))        
-        dat=data.data
-        #print("length of non masked data")
-        #print(len(dat[np.where(data.mask==0)]))
-        new_mask_index[np.where(dat > upper_limit)]=1
-        new_mask_index[np.where(dat < lower_limit)]=1  
-        #new_mask_index[np.where(np.isin(new_mask_index,newly_masked))]=1  
-        #print("new new_mask_index") 
-        #print(len(new_mask_index[np.where(new_mask_index==0)]))
-        if plot_hist:
-            #if log: data_masked=np.exp(data_masked)
-            print("upper limit: " + str(upper_limit)) 
-            print("lower limit: " + str(lower_limit))
-            #fig, ax = plt.subplots(figsize =(10, 7))
-            #ax.hist(data_masked, bins = 10)  
-           
-            # the histogram of the data
-            n, bins, patches = plt.hist(data_masked, density=True, bins=50, facecolor='green', edgecolor='black', alpha=0.7)
-            #n, bins =np.histogram(data_masked, bins=30)
-            #plt.bar(bins[:-1],n,color="green")
-            # if (data_mean + outlier_tolerance * data_sd)<np.max(data_masked):
-                # plt.axvline(x=data_mean + outlier_tolerance * data_sd, color="blue", linewidth=2)
-            # if (data_mean - outlier_tolerance * data_sd)>np.min(data_masked):
-                # plt.axvline(x=data_mean - outlier_tolerance * data_sd, color="blue", linewidth=2)
-            if upper_limit<np.max(data_masked):
-                plt.axvline(x=upper_limit, color="red", linewidth=1)
-            if lower_limit>np.min(data_masked):
-                plt.axvline(x=lower_limit, color="red", linewidth=1)               
-                
-            # print("n")
-            # print(n)
-            # print("bins")
-            # print(bins)
-            #print("patches")
-            #print(patches)
-            # add a 'best fit' line
-            # import matplotlib.mlab as mlab
-            # import scipy.stats as stat 
-            # # best fit of data
-            # (mu, sigma) = stat.norm.fit(data_masked)
-            # y = stat.norm.pdf ( bins, mu, sigma)
-            # l = plt.plot(bins, y, 'r--', linewidth=2)
             
-            # from scipy.optimize import leastsq
-            # out   = leastsq(errfunc, init, args=(xdata, ydata))
-            # c = out[0]
-
-            # print "A exp[-0.5((x-mu)/sigma)^2] + k "
-            # print "Parent Coefficients:"
-            # print "1.000, 0.200, 0.300, 0.625"
-            # print "Fit Coefficients:"
-            # print c[0],c[1],abs(c[2]),c[3]
-
-            # plot(xdata, fitfunc(c, xdata))
-            # plot(xdata, ydata)
-            
-            # avg = np.mean(data_masked)
-            # var = np.var(data_masked)
-            # # From that, we know the shape of the fitted Gaussian.
-            # pdf_x = np.linspace(np.min(data_masked),np.max(data_masked),100)
-            # pdf_y = 1.0/np.sqrt(2*np.pi*var)*np.exp(-0.5*(pdf_x-avg)**2/var)            
-            # plt.plot(pdf_x,pdf_y,'k--')
-            
-            from scipy.stats import gaussian_kde
-            #data = [1.5]*7 + [2.5]*2 + [3.5]*8 + [4.5]*3 + [5.5]*1 + [6.5]*8
-            density = gaussian_kde(data_masked)
-            xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
-            #density.covariance_factor = lambda : .25
-            #density._compute_covariance()
-            plt.plot(xs,density(xs),'b--')
-            #plt.show()
-            
-            
-            plt.show()   
-        return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)  
-    
     #### processing model output data ####    
     for experiment in experiment_names:
         print('\033[1m'+'Resampling data for '+experiment+' experiment...')
@@ -3222,12 +3093,7 @@ def subset_and_resample_nc(
                     vn = 'npp'
                     
                 # changing npp_nlim to npp (for JULES model) 
-                if vn=="npp_nlim": 
-                    # file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("npp", experiment_name=experiment_name))
-                    # ds = nc.Dataset(str(file_path))   
-                    # var = ds.variables[vn][:, :, :].data*
-                    # ds.close()
-                    vn = 'npp'
+                if vn=="npp_nlim": vn = 'npp'
                     
                 #### converting all data to yearly averages ####               
                 def averaged_3d_array(array, averaging):  # 3d array  # number of steps over which to average
@@ -3300,7 +3166,7 @@ def subset_and_resample_nc(
                 var_diff_total_resampled=gh.resample_grid (
                     model_mask, target_mask, var_diff_total_masked, method, radius_of_influence)                    
                                                                                               
-                # updaating mask
+                # updating mask
                 # if vn in ("npp", "rh", "cVeg", "cSoil"):
                     # target_mask=mask_add_non_positive(target_mask,var_1st_resampled.index_mask)
                     # target_mask=mask_add_non_positive(target_mask,var_mid_resampled.index_mask)
@@ -3396,13 +3262,13 @@ def subset_and_resample_nc(
             tau_soil_diff_2 = tau_soil_last - tau_soil_mid
             tau_soil_diff_total = tau_soil_last - tau_soil_1st 
 
-            # updating mask
+            # updating mask to remove extreme outliers
             print("#########################################tau_veg")
             #target_mask=mask_add_non_positive(target_mask, tau_veg_1st)
             #target_mask=mask_add_non_positive(target_mask, tau_veg_mid)
             #target_mask=mask_add_non_positive(target_mask, tau_veg_last)          
             
-            if np.min(tau_veg_1st) < 0 or np.max(tau_veg_1st) > 1000 and mf!='bian_ibis2':
+            if (np.min(tau_veg_1st) < 0 or np.max(tau_veg_1st) > 1000) and mf!='bian_ibis2':
                 target_mask=mask_add_outliers(target_mask, tau_veg_1st, log=True, plot_hist=True)
                 target_mask=mask_add_outliers(target_mask, tau_veg_mid, log=True, plot_hist=True)
                 target_mask=mask_add_outliers(target_mask, tau_veg_last, log=True, plot_hist=True)
@@ -3415,8 +3281,7 @@ def subset_and_resample_nc(
             #target_mask=mask_add_non_positive(target_mask, tau_soil_1st)
             #target_mask=mask_add_non_positive(target_mask, tau_soil_mid)
             #target_mask=mask_add_non_positive(target_mask, tau_soil_last)               
-            
-            if np.min(tau_soil_1st < 0) or np.max(tau_soil_1st) > 1000 and mf!='bian_ibis2':
+            if (np.min(tau_soil_1st < 0) or np.max(tau_soil_1st) > 1000) and mf!='bian_ibis2':
                 target_mask=mask_add_outliers(target_mask, tau_soil_1st, log=True, plot_hist=True)
                 target_mask=mask_add_outliers(target_mask, tau_soil_mid, log=True, plot_hist=True)
                 target_mask=mask_add_outliers(target_mask, tau_soil_last, log=True, plot_hist=True)
@@ -3471,135 +3336,293 @@ def ensamble_uncertainty (
     model_folders=[(m) for m in model_names]
     m_names=list(model_names.values())
     g_mask=global_mask.index_mask
+    import plotly.express as px
+    cols = px.colors.qualitative.Light24
+    model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}    
     for experiment in experiment_names:
         print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .')
-        print('\033[0m')
-                  
+        print('\033[0m')                  
         print('computing uncertainties...')
-        for vn in ['npp', 'tau', 'tau_veg', 'tau_soil']:
-            for subset in ['first_5_years','mid_5_years','last_5_years',
-                            'diff_1st_half', 'diff_1st_half', 'diff_total']:
-                                
-                #print(vn)
+        for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil']:
+            for subset in ['first_5_years','middle_5_years','last_5_years',
+                            'diff_1st_half', 'diff_2nd_half', 'diff_total']:                            
+                # fig, ax = plt.subplots(figsize =(10, 7))                
                 var_sum_zero=np.zeros_like(g_mask)
                 var_sum=np.ma.array(var_sum_zero,mask = g_mask)
-                # var_diff_sqr_zero=np.zeros_like(g_mask)
-                # var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
-                # var_abs_diff_zero=np.zeros_like(g_mask)
-                # var_abs_diff=np.ma.array(var_abs_diff_zero,mask = g_mask)            
-                # delta_sum_zero=np.zeros_like(g_mask)
-                # delta_sum=np.ma.array(delta_sum_zero,mask = g_mask)
-                # delta_diff_sqr_zero=np.zeros_like(g_mask)
-                # delta_diff_sqr=np.ma.array(delta_diff_sqr_zero,mask = g_mask)   
-                # delta_abs_diff_zero=np.zeros_like(g_mask)
-                # delta_abs_diff=np.ma.array(delta_abs_diff_zero,mask = g_mask)            
+                var_diff_sqr_zero=np.zeros_like(g_mask)
+                var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
+                var_abs_diff_zero=np.zeros_like(g_mask)
+                var_abs_diff=np.ma.array(var_abs_diff_zero,mask = g_mask)                       
                 # computing ensemble mean       
                 k=0 # model counter        
+                
+                # set limits for plotting
+                if subset in ['first_5_years','middle_5_years','last_5_years']: 
+                    lower_lim=0
+                    if vn=="npp":upper_lim=3.5
+                    elif vn=="cVeg":upper_lim=50
+                    elif vn=="cSoil":upper_lim=100
+                    elif vn=="tau_veg":upper_lim=8
+                    else: upper_lim=250
+                else: 
+                    if vn in ["npp", "tau_veg"]:
+                        lower_lim=-0.7
+                        upper_lim=1
+                    elif vn in ["cVeg", "cSoil"]:
+                        lower_lim=-4
+                        upper_lim=5    
+                    else: 
+                        lower_lim=-40
+                        upper_lim=20                
+                all_data=list()                
                 for mf in model_folders:
                     experiment_name=m_names[k]+"_"+experiment+"_"
                     conf_dict = gh.confDict(mf)
                     dataPath=Path(conf_dict["dataPath"])       
-                    # if vn in ['gpp','ra','rh','cVeg','cSoil_total']: # for fluxes we use sum
-                        # file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")                
-                    # else: # for pools we use mean
-                        # file_path = dataPath.joinpath(experiment_name+vn+"_res.nc")
-                    file_path = dataPath.joinpath(experiment_name+vn+"subset.nc") 
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
                     ds = nc.Dataset(str(file_path))
                     var_name=vn+"_"+subset
                     var=ds.variables[var_name][:, :].data
                     var_sum=var_sum+var
-                    # if vn=="cVeg" or vn=="cSoil_total":
-                        # delta=ds.variables[vn+"_diff"][:, :].data
-                        # delta_sum=delta_sum+delta
-                    k+=1 # model counter
                     ds.close() 
-                mean=var_sum/len(model_folders) 
-                delta_mean=delta_sum/len(model_folders)
+                    
+                    # add model density function to the plot 
+                    data_masked=var[np.where(g_mask==0)].flatten()
+                    data_masked_mean=np.mean(data_masked)
+                    data_masked_sd=np.std(data_masked)
+                    
+                    #all_data.append(data_masked)
+                    #lower_lim=data_masked_mean-3*data_masked_sd
+                    #upper_lim=data_masked_mean+3*data_masked_sd 
+                    
+                    data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
+                    data_masked=data_masked[np.where(data_masked<=upper_lim)]    
+                    # density = gaussian_kde(data_masked)                     
+                    # #xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
+                    # xs = np.linspace(lower_lim,upper_lim,100)
+                    # m=m_names[k]
+                    # ax.plot(xs,density(xs),color=model_cols[m],label=m,linewidth=1) 
+                    k+=1 # model counter
+                    
+                    all_data.append(data_masked)
+                    
+                mean=var_sum/len(model_folders)             
                 # computing uncertainty measures: standard deviation and average deviation                   
                 k=0 # model counter        
                 for mf in model_folders:
                     experiment_name=m_names[k]+"_"+experiment+"_"
                     conf_dict = gh.confDict(mf)
-                    dataPath=Path(conf_dict["dataPath"])             
-                    # if vn in ['gpp','ra','rh','cVeg','cSoil_total']: # for fluxes we use sum    
-                        # file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")                
-                    # else:
-                        # file_path = dataPath.joinpath(experiment_name+vn+"_res.nc")    
-                    file_path = dataPath.joinpath(experiment_name+vn+"_ave_res.nc")    
+                    dataPath=Path(conf_dict["dataPath"])               
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc")    
                     ds = nc.Dataset(str(file_path))
-                    var=ds.variables[vn][:, :].data           
+                    var_name=vn+"_"+subset
+                    var=ds.variables[var_name][:, :].data           
                     var_diff_sqr = var_diff_sqr + (var-mean)**2
                     var_abs_diff = var_abs_diff + np.abs(var-mean)
-                    if vn=="cVeg" or vn=="cSoil_total":
-                        delta=ds.variables[vn+"_diff"][:, :].data
-                        delta_diff_sqr=delta_diff_sqr+(delta-delta_mean)**2 
-                        delta_abs_diff=delta_abs_diff+np.abs(delta-delta_mean)
                     k+=1 # model counter 
                     ds.close()             
-            variance = var_diff_sqr / (len(model_folders)-1)
-            st_dev=np.sqrt(variance) 
-            ave_dev=var_abs_diff / len(model_folders)
-            # final masking
-            var_mean_final = np.ma.array(mean,mask = g_mask)
-            var_sd_final = np.ma.array(st_dev,mask = g_mask)
-            var_avd_final = np.ma.array(ave_dev,mask = g_mask)
-            # creating and writing a new NetCDF file 
-            s = g_mask.shape
-            n_lats, n_lons = s
-            new_path=Path(output_path).joinpath(experiment+"_"+vn+"_uncertainty.nc")
-            ds_new = nc.Dataset(str(new_path), "w", persist=True)
-            # creating dimensions
-            lat = ds_new.createDimension("lat", size=n_lats)
-            lon = ds_new.createDimension("lon", size=n_lons)         
-            # creating variables                         
-            var_mean = ds_new.createVariable(vn+'_mean', "float32", ["lat", "lon"])
-            var_mean[:, :] = var_mean_final
-            var_sd = ds_new.createVariable(vn+'_sd', "float32", ["lat", "lon"])
-            var_sd[:, :] = var_sd_final            
-            var_avd = ds_new.createVariable(vn+'_avd', "float32", ["lat", "lon"])
-            var_avd[:, :] = var_avd_final
-            var_avd_relative = ds_new.createVariable(vn+'_avd_relative', "float32", ["lat", "lon"])
-            relative_uncertainty = var_avd_final / abs(var_mean_final) *100
-            relative_uncertainty [relative_uncertainty>300]=300
-            var_avd_relative[:, :] = relative_uncertainty              
-            lats = ds_new.createVariable("lat", "float32", ["lat"])
-            lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
-            lons = ds_new.createVariable("lon", "float32", ["lon"])
-            lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
-            # closing NetCDF file      
-            ds_new.close() 
-            print(vn+': '+str(np.ma.mean(var_mean_final)))
-            if vn=="cVeg" or vn=="cSoil_total":
-                delta_variance = delta_diff_sqr / (len(model_folders)-1)
-                delta_st_dev=np.sqrt(delta_variance)
-                delta_ave_dev=delta_abs_diff / len(model_folders)
+                variance = var_diff_sqr / (len(model_folders)-1)
+                st_dev=np.sqrt(variance) 
+                ave_dev=var_abs_diff / len(model_folders)
                 # final masking
-                var_mean_final = np.ma.array(delta_mean,mask = g_mask)
-                var_sd_final = np.ma.array(delta_st_dev,mask = g_mask)
-                var_avd_final = np.ma.array(delta_st_dev,mask = g_mask)                
+                var_mean_final = np.ma.array(mean,mask = g_mask)
+                var_sd_final = np.ma.array(st_dev,mask = g_mask)
+                var_avd_final = np.ma.array(ave_dev,mask = g_mask)
                 # creating and writing a new NetCDF file 
                 s = g_mask.shape
                 n_lats, n_lons = s
-                new_path=Path(output_path).joinpath(experiment+"_"+vn+"_diff_uncertainty.nc")
+                new_path=Path(output_path).joinpath(experiment+"_"+var_name+"_uncertainty.nc")
                 ds_new = nc.Dataset(str(new_path), "w", persist=True)
                 # creating dimensions
                 lat = ds_new.createDimension("lat", size=n_lats)
                 lon = ds_new.createDimension("lon", size=n_lons)         
                 # creating variables                         
-                var_mean = ds_new.createVariable(vn+'_diff_mean', "float32", ["lat", "lon"])
+                var_mean = ds_new.createVariable(var_name+'_mean', "float32", ["lat", "lon"])
                 var_mean[:, :] = var_mean_final
-                var_sd = ds_new.createVariable(vn+'_diff_sd', "float32", ["lat", "lon"])
+                var_sd = ds_new.createVariable(var_name+'_sd', "float32", ["lat", "lon"])
                 var_sd[:, :] = var_sd_final            
-                var_avd = ds_new.createVariable(vn+'_diff_avd', "float32", ["lat", "lon"])
+                var_avd = ds_new.createVariable(var_name+'_avd', "float32", ["lat", "lon"])
                 var_avd[:, :] = var_avd_final
-                var_avd_relative = ds_new.createVariable(vn+'_diff_avd_relative', "float32", ["lat", "lon"])
-                var_avd_relative[:, :] = var_avd_final / var_mean_final               
+                var_avd_relative = ds_new.createVariable(var_name+'_avd_relative', "float32", ["lat", "lon"])
+                relative_uncertainty = var_avd_final / abs(var_mean_final)
+                #relative_uncertainty [relative_uncertainty>300]=300
+                var_avd_relative[:, :] = relative_uncertainty              
                 lats = ds_new.createVariable("lat", "float32", ["lat"])
                 lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
                 lons = ds_new.createVariable("lon", "float32", ["lon"])
                 lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
                 # closing NetCDF file      
-                ds_new.close()                 
-            k=0 # model counter 
-        
+                ds_new.close() 
+                print(var_name+' mean: '+str(np.ma.mean(var_mean_final)))
+                # add mean density function to the plot 
+                data_masked=mean[np.where(g_mask==0)].flatten() 
+                data_masked_mean=np.mean(data_masked)
+                data_masked_sd=np.std(data_masked)
+                
+                #all_data.append(data_masked)
+                #lower_lim=data_masked_mean-4*data_masked_sd
+                #upper_lim=data_masked_mean+4*data_masked_sd
+              
+                data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
+                data_masked=data_masked[np.where(data_masked<=upper_lim)] 
+                all_data.append(data_masked)
+                # #print("data_masked_mean: "+ str(data_masked_mean))
+                # #print("data_masked_sd: "+ str(data_masked_sd))
+                # density = gaussian_kde(data_masked)
+                # #xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
+                # xs = np.linspace(lower_lim,upper_lim,200)
+                # ax.plot(xs,density(xs),color="black",label="Ensemble mean",linewidth=2) 
+                # plt.axvline(x=0, color="black", linestyle="dashed", linewidth=1) 
+                # ax.set_title("Multi-Model Distribution of "+var_name)
+                # ax.grid()
+                # ax.legend(bbox_to_anchor =(1.3, 1))             
+                # #plt.xlim(lower_lim, upper_lim)
+                # plt.show() 
+                
+                #adding uncertainty               
+                data_masked2=var_avd_final.data[np.where(g_mask==0)].flatten() 
+                lower_lim2 = np.min(data_masked2)
+                upper_lim2 = np.max(data_masked2)
+                if vn in ["tau", "tau_soil"]:
+                    if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 200
+                    else: upper_lim2 = 100  
+                elif vn=="tau_veg":
+                    if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 5
+                    else: upper_lim2 = 5
+                data_masked2=data_masked2[np.where(data_masked2>=lower_lim2)]                    
+                data_masked2=data_masked2[np.where(data_masked2<=upper_lim2)]                        
+                all_data.append(data_masked2)
+                # violin plots
+                fig3, ax3 = plt.subplots(figsize =(10, 5))
+                all_data
+                ax3.violinplot(all_data,
+                    showmeans=True,
+                    showmedians=False,
+                    #color=model_cols[m]
+                    )
+                #ax3.scatter(k,data_masked_mean,s=70,color=model_cols[m])
+                #ax3.errorbar(k, data_masked_mean, yerr=data_masked_sd)
+                ax3.set_title('Spatial heterogeneity - '+var_name)
+                ax3.grid()
+                plt.xticks(range(1,21),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
+                # plt.setp(ax3, xticks=[y+1 for y in range(len(all_data))],
+                    # xticklabels=m_names+["Ensamble mean"])
+                plt.show()
+                
+                # box plot
+                fig4, ax4 = plt.subplots(figsize =(10, 5))
+                ax4.boxplot(all_data, flierprops={'marker': '*', 'markersize': 1, 'markerfacecolor': 'fuchsia'})
+                ax4.set_title('Spatial heterogeneity - '+var_name)
+                ax4.grid()
+                plt.xticks(range(1,21),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
+                plt.show()
+                
+                # # uncertainty distributions                
+                # fig2=plt.figure(figsize=(15,5))
+                # axs=fig2.subplots(1,2)
+               
+                # # absolute uncertainty        
+                # ax0=axs[0]
+                # data_masked2=var_avd_final.data[np.where(g_mask==0)].flatten() 
+                # #data_masked2=crop_data_by_sd(data_masked2)
+                # density2 = gaussian_kde(data_masked2)               
+                # lower_lim2 = np.min(data_masked2)
+                # upper_lim2 = np.max(data_masked2)
+                # if vn in ["tau", "tau_soil"]:
+                    # if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 200
+                    # else: upper_lim2 = 100  
+                # elif vn=="tau_veg":
+                    # if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 5
+                    # else: upper_lim2 = 5                                   
+                # xs2 = np.linspace(lower_lim2,upper_lim2,200)                    
+                # xs2 = np.linspace(lower_lim2,upper_lim2,200)
+                # ax0.plot(xs2,density2(xs2),color="black",label="Average deviation",linewidth=1.5)                
+                
+                # ax0.set_title("Absolute uncertainty of "+var_name)
+                # ax0.grid()
+                
+                # # relative uncertainty  
+                # ax1=axs[1]
+                # data_masked2=relative_uncertainty.data[np.where(g_mask==0)].flatten() 
+                # #data_masked2=crop_data_by_sd(data_masked2)
+                # #data_masked2=data_masked2[np.where(data_masked2<=10)]                 
+                # density2 = gaussian_kde(data_masked2)
+                                
+                # lower_lim2 = np.min(data_masked2)
+                # upper_lim2 = np.max(data_masked2)                
+                # if subset in ["diff_1st_half"]:
+                    # upper_lim2 = 200
+                # elif subset in ["diff_2nd_half", "diff_total"]:
+                    # upper_lim2 = 100
+                # elif vn in ["tau", "tau_soil"]:
+                    # upper_lim2 = 2 
+                # elif vn=="tau_veg":
+                    # upper_lim2 = 5                  
+                # xs2 = np.linspace(lower_lim2,upper_lim2,200)
+                # ax1.plot(xs2,density2(xs2),color="black",label="Relative uncertainty",linewidth=1.5)                
+                
+                # ax1.set_title("Relative uncertainty of "+var_name)
+                # ax1.grid()                
+                                
+                # #ax2.legend(bbox_to_anchor =(1.3, 1))
+                # plt.show() 
+                
     print('\033[1m'+'Done!')                
+    
+# def crop_data_by_sd (data, tolerance=3):    
+        # data_mean=np.mean(data)
+        # data_sd=np.std(data)
+        # lower_lim=data_mean-tolerance*data_sd
+        # upper_lim=data_mean+tolerance*data_sd              
+        # data=data[np.where(data>=lower_lim)]                    
+        # data=data[np.where(data<=upper_lim)] 
+        # return data
+                
+# def mask_add_non_positive(mask, data):
+    # new_mask_index=mask.index_mask
+    # data_masked=np.ma.array(data, mask=new_mask_index)     
+    # # adding non-positive values to the mask
+    # new_mask_index[np.where(data <= 0)]=1    
+    # return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)    
+
+def mask_add_outliers(mask, data, outlier_tolerance=4, log=False, plot_hist=False):
+    new_mask_index=mask.index_mask
+    data_masked=data[np.where(new_mask_index==0)].flatten()
+
+    if plot_hist:
+        print("mean: " + str(np.mean(data_masked)))
+        print("max: " + str(np.max(data_masked)))
+        print("min: " + str(np.min(data_masked))) 
+            
+    # adding outliers based on standard deviation        
+    if log: data_masked=np.log(data_masked)
+    #else: data_masked=np.ma.array(data, mask=new_mask_index)
+    data_mean=np.mean(data_masked)
+    data_sd=np.std(data_masked)
+    upper_limit = data_mean + outlier_tolerance * data_sd
+    lower_limit = data_mean - outlier_tolerance * data_sd
+    if log: 
+        upper_limit=np.exp(upper_limit)
+        lower_limit=np.exp(lower_limit)
+        data_masked=np.exp(data_masked)     
+    dat=data.data
+    new_mask_index[np.where(dat > upper_limit)]=1
+    new_mask_index[np.where(dat < lower_limit)]=1  
+    if plot_hist:
+        print("upper limit: " + str(upper_limit)) 
+        print("lower limit: " + str(lower_limit))          
+        # histogram of the data
+        n, bins, patches = plt.hist(data_masked, density=True, bins=50, facecolor='green', edgecolor='black', alpha=0.7)
+        if upper_limit<np.max(data_masked):
+            plt.axvline(x=upper_limit, color="red", linewidth=1)
+        if lower_limit>np.min(data_masked):
+            plt.axvline(x=lower_limit, color="red", linewidth=1)               
+        # density curve    
+        density = gaussian_kde(data_masked)
+        xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
+        #density.covariance_factor = lambda : .25
+        #density._compute_covariance()
+        plt.plot(xs,density(xs),'b--')                       
+        plt.show()  
+        
+    return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)                 
