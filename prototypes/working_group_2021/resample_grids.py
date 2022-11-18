@@ -202,6 +202,12 @@ moh.ensamble_uncertainty (
         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
         )
 
+moh.C_sink_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=new_global_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
+    )
+
 a=np.array([1,2,3,4,5,6,7,8,9,10])
 
 np.mean(a[0:5])
