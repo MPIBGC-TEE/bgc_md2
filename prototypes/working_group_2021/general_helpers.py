@@ -20,15 +20,22 @@ import datetime as dt
 from pathlib import Path
 import json
 import netCDF4 as nc
-      
+
 from ComputabilityGraphs.CMTVS import CMTVS
 import CompartmentalSystems.helpers_reservoir as hr
+from CompartmentalSystems.BlockArrayIterator import BlockArrayIterator 
+from CompartmentalSystems.ArrayDict import ArrayDict 
 from bgc_md2.resolve.mvars import (
-    #    OutFluxesBySymbol,
-    #    InternalFluxesBySymbol
+    TimeSymbol,
     CompartmentalMatrix,
     InputTuple,
+    InFluxesBySymbol,
+    OutFluxesBySymbol,
+    InternalFluxesBySymbol,
     StateVariableTuple,
+    NumericParameterization,
+    NumericSimulationTimes,
+    NumericStartValueArray,
 )
 
 # from bgc_md2.helper import bgc_md2_computers
@@ -248,7 +255,7 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
     parameter_dict = {**model_params, delta_t: delta_t_val}
     state_vector = mvs.get_StateVariableTuple()
 
-    sym_B = hr.euler_forward_B_sym(
+    sym_B = hr.discrete_time_sym( #hr.euler_forward_B_sym(
         mvs.get_CompartmentalMatrix(), cont_time=t, delta_t=delta_t, iteration=it
     )
     # from IPython import embed;embed()
@@ -261,6 +268,7 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
         parameter_dict=parameter_dict,
         func_dict=func_dict,
     )
+    #u_func = hr.numerical_1d_vector_func(
     u_func = hr.numerical_array_func(
         state_vector=state_vector,
         time_symbol=it,
@@ -270,7 +278,8 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
     )
     return (B_func, u_func)
 
-
+# fixme mm 11-15-2022
+# should be obsolete with the new iterator
 def numfunc(expr_cont, mvs, delta_t_val, par_dict, func_dict):
     # This function
     # build the discrete expression (which depends on it,delta_t instead of
@@ -1833,7 +1842,7 @@ def make_trace_tuple_func(
 #         AggregatedVegetation2SoilCarbonFlux=0
 #     )
 #
-
+ 
 def traceability_iterator(
         X_0,
         func_dict,
@@ -1842,46 +1851,120 @@ def traceability_iterator(
         cpa,  #: Constants,
         epa,  #: EstimatedParameters
         delta_t_val: int = 1,  # defaults to 1day timestep
-        traced_expressions: Dict[str, Expr] = dict()
+        traced_expressions: Dict[str, Expr] = dict(),
+        extra_functions: Dict[str, Callable] = dict()
     ):
+
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
-
-    B_func, I_func = make_B_u_funcs_2(mvs, par_dict, func_dict, delta_t_val)
-
-    # we produce functions of f(it,x_a,...,x_z) to compute the tracable expressions
-    traced_funcs = {
-        key: numfunc(
-            expr_cont=val,
-            mvs=mvs,
-            delta_t_val=delta_t_val,
+    t = mvs.get_TimeSymbol()
+    state_vector = mvs.get_StateVariableTuple()
+    delta_t = Symbol("delta_t")
+    
+    mvs=mvs.update({
+        NumericParameterization(
             par_dict=par_dict,
             func_dict=func_dict
-        )
-        for key,val in traced_expressions.items()
-    }
-    #from IPython import embed; embed()
-    trace_tuple_instance = make_trace_tuple_func(traced_funcs)
-    # define the start tuple for the iterator
-    V_init = trace_tuple_instance(
-        X_0,
-        # in Yiqi's nomenclature: dx/dt=I-Bx
-        # instead of           : dx/dt=I+Bx
-        # as assumed by B_u_func
-        -B_func(0, X_0),
-        I_func(0, X_0),
-        it=0
+        ),
+        NumericStartValueArray(X_0),
+        #NumericSimulationTimes(times)
+    })
+
+    disc_par_dict = {**par_dict, delta_t: delta_t_val}
+    B_func = hr.numerical_array_func(
+        state_vector=state_vector,
+        time_symbol=t,
+        expr=mvs.get_CompartmentalMatrix(),
+        parameter_dict=par_dict,
+        func_dict=func_dict,
     )
+    I_func = hr.numerical_1d_vector_func(
+        state_vector=state_vector,
+        time_symbol=t,
+        expr=mvs.get_InputTuple(),
+        parameter_dict=par_dict,
+        func_dict=func_dict,
+    )
+    # produce functions of t,X for our expressions
+    (
+        x_veg_func,
+        x_soil_func,
+        out_2_veg_func,
+        veg_2_soil_func,
+        veg_2_out_func, 
+        soil_2_out_func, 
+    ) = map(
+        lambda expr: hr.numerical_func_of_t_and_Xvec(
+           state_vector=mvs.get_StateVariableTuple(),
+           time_symbol=mvs.get_TimeSymbol(),
+           expr=expr,
+           parameter_dict=par_dict,
+           func_dict=func_dict
+        ),
+        [
+            mvs.get_AggregatedVegetationCarbon(),
+            mvs.get_AggregatedSoilCarbon(),
+            mvs.get_AggregatedVegetationCarbonInFlux(),
+            mvs.get_AggregatedVegetation2SoilCarbonFlux(),
+            mvs.get_AggregatedVegetationCarbonOutFlux(),
+            mvs.get_AggregatedSoilCarbonOutFlux(),
+        ]    
+    )
+    # make sure that the startvector X_0 is a ONE dimensional  vector
+    # since it is important that  X_0 and the result of I(t,X) have 
+    # the same dimension
+    X_0 = X_0.reshape(-1)
+    assert(I_func(0, X_0).ndim == 1)
 
-    # define the function with V_{i+1}=f(i,V_i)
-    def f(it: int, V: TraceTuple) -> TraceTuple:
-        X = V.X
-        I = I_func(it, X)
-        B = B_func(it, X)
-        X_new = X + I + B @ X
-        return trace_tuple_instance(X_new, -B, I, it)
+    bit = BlockArrayIterator(
+        iteration_str = "it", # access the inner counter
+        start_seed_dict=ArrayDict({"X": X_0, "t": 0}),
+        present_step_funcs=OrderedDict({
+            # these are functions that are  applied in order
+            # on the start_seed_dict
+            # they might compute variables that are purely  
+            # diagnostic or those that are necessary for the
+            # next step
+            # 
+            # The first 2 are essential for any compartmental system
+            "B": lambda t, X: - B_func(t, X), 
+            "I": lambda t, X: I_func(t, X), 
+            # 
+            "u": lambda I: I.sum(),
+            "b": lambda I, u: I / u,
+            "B_inv": lambda B: np.linalg.inv(B),
+            "X_c": lambda B_inv, I: B_inv @ I,
+            "X_p": lambda X_c, X: X_c - X,
+            "X_dot": lambda I, B, X: I - B @ X,
+            "RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
+            "x": lambda X: X.sum(),
+            "x_dot": lambda X_dot: X_dot.sum(),
+            "m_s": lambda B, X, x: (B @ X).sum() / x, #rate of the surrogate system
+            "tot_s": lambda m_s: 1 / m_s, 
+            "x_c": lambda m_s, u: 1 / m_s * u, # x_c of the surrogate system
+            "x_p": lambda x_c, x: x_c - x,
+            "rt": lambda x_c, u: x_c / u,
+            'x_veg': lambda t, X: x_veg_func(t,X), 
+            'x_soil': lambda t, X: x_soil_func(t,X),
+            'out_2_veg': lambda t, X: out_2_veg_func(t,X),
+            'veg_2_soil': lambda t, X: veg_2_soil_func(t,X),
+            'veg_2_out': lambda t, X: veg_2_out_func(t,X),
+            'soil_2_out': lambda t, X: soil_2_out_func(t,X),
+            'm_veg': lambda veg_2_out, veg_2_soil, x_veg:\
+                (veg_2_out + veg_2_soil)/ x_veg, # veg rate
+            'tot_veg': lambda m_veg: 1 / m_veg ,   
+            'm_soil': lambda soil_2_out, x_soil: soil_2_out / x_soil, # soil rate 
+            'tot_soil': lambda m_soil: 1 / m_soil,    
+            #**extra_functions
+        }),
+        next_step_funcs=OrderedDict({
+            # these functions have to compute the seed for the next timestep
+            "X": lambda X,B,I : X + (I - B@X) * delta_t_val , 
+            "t": lambda t: t + delta_t_val,
+        })
+    )
+    return bit
 
-    return TraceTupleIterator(x0=V_init, func=f)
 
 
 def write_global_mean_cache(gm_path, gm: np.array, var_name: str):

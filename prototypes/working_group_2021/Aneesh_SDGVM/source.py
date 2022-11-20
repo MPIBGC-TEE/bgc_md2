@@ -10,6 +10,8 @@ from bgc_md2.resolve.mvars import (
     InternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
 # together with some description that we can use later to display some metainformation
@@ -110,17 +112,34 @@ t=TimeSymbol("t")
 beta_root=1-(beta_leaf+beta_wood)
 mvs = CMTVS(
     {
-        StateVariableTuple((C_leaf, 
-                            C_wood, 
-                            C_root, 
-                            C_abvstrlit,
-                            C_abvmetlit, 
-                            C_belowstrlit, 
-                            C_belowmetlit, 
-                            C_surface_microbe, 
-                            C_soil_microbe, 
-                            C_slowsom, 
-                            C_passsom)),
+        StateVariableTuple((
+            C_leaf, 
+            C_wood, 
+            C_root, 
+            C_abvstrlit,
+            C_abvmetlit, 
+            C_belowstrlit, 
+            C_belowmetlit, 
+            C_surface_microbe, 
+            C_soil_microbe, 
+            C_slowsom, 
+            C_passsom
+        )),
+        VegetationCarbonStateVariableTuple((
+            C_leaf, 
+            C_wood, 
+            C_root, 
+        )),
+        SoilCarbonStateVariableTuple((
+            C_abvstrlit,
+            C_abvmetlit, 
+            C_belowstrlit, 
+            C_belowmetlit, 
+            C_surface_microbe, 
+            C_soil_microbe, 
+            C_slowsom, 
+            C_passsom
+        )),
         t,
         InFluxesBySymbol(
             {

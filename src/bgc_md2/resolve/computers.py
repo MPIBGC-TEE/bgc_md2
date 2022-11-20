@@ -26,6 +26,7 @@ from .mvars import (
     NitrogenCompartmentalMatrix,
     # CompartmentalMatrixStructure,
     InputTuple,
+    OutputTuple,
     CarbonInputTuple,
     CarbonInputScalar,
     NitrogenInputTuple,
@@ -44,6 +45,7 @@ from .mvars import (
     NumericParameterizedSmoothReservoirModel,
     NumericSolutionArray,
     NumericCompartmentalMatrixFunc,
+    NumericStartAgeDensityFunc,
     NumericCompartmentalMatrixSolutionTuple,
     # NumericCarbonStoragePotentialSolutionList,
     # NumericCarbonStorageCapacitySolutionList,
@@ -55,7 +57,14 @@ from .mvars import (
     QuantityModelRun,
     QuantitySolutionArray,
     StateVarUnitTuple,
+    AggregatedVegetationCarbon,
+    AggregatedSoilCarbon,
+    AggregatedVegetationCarbonInFlux,
+    AggregatedVegetationCarbonOutFlux,
+    AggregatedSoilCarbonInFlux,
+    AggregatedSoilCarbonOutFlux,
     AggregatedVegetation2SoilCarbonFlux,
+    AggregatedSoil2VegetationCarbonFlux,
     SoilCarbonStateVariableTuple,
     LuoTau,
     LuoRT,
@@ -64,6 +73,15 @@ from .mvars import (
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
+def aggregated_vegetation_carbon(
+        vcsvt: VegetationCarbonStateVariableTuple,
+    ) -> AggregatedVegetationCarbon:
+    return sum(vcsvt)
+
+def aggregated_soil_carbon(
+        scsvt: SoilCarbonStateVariableTuple,
+    ) -> AggregatedSoilCarbon:
+    return sum(scsvt)
 
 def luo_rt_vec(
         tau: LuoTau,
@@ -74,14 +92,38 @@ def luo_rt_vec(
 def luo_Tau(
         ccm: CarbonCompartmentalMatrix
     ) -> LuoTau:
+    # very expensive (symbolic inverse)    
     print("start")
     return LuoTau(-ccm.inv())
 
 #def temperature_derivative_of_RT(
 #    rt:LuoRT
-#    T: TemperatureSymbol
+#    T: Temperature
 #) -> TemperatureDerivativeOfRT:    
     
+def aggregated_vegetation_carbon_influx(
+        in_fluxes: InFluxesBySymbol,
+        vcsvt: VegetationCarbonStateVariableTuple,
+    ) -> AggregatedVegetationCarbonInFlux:
+    return sum(
+            [v for k, v in in_fluxes.items() if k in vcsvt] 
+    )
+
+def aggregated_vegetation_carbon_outflux(
+        out_fluxes: OutFluxesBySymbol,
+        vcsvt: VegetationCarbonStateVariableTuple,
+    ) -> AggregatedVegetationCarbonOutFlux:
+    return sum(
+            [v for k, v in out_fluxes.items() if k in vcsvt] 
+    )
+
+def aggregated_soil_carbon_outflux(
+        out_fluxes: OutFluxesBySymbol,
+        vcsvt: SoilCarbonStateVariableTuple,
+    ) -> AggregatedSoilCarbonOutFlux:
+    return sum(
+            [v for k, v in out_fluxes.items() if k in vcsvt] 
+    )
 
 def aggregated_vegetation_to_soil_carbon_flux(
         internal_fluxes: InternalFluxesBySymbol,
@@ -106,25 +148,25 @@ def aggregated_vegetation_to_soil_carbon_flux(
 #NitrogenCompartmentalMatrix,
     # CompartmentalMatrixStructure,
 @lru_cache
-#def aggregated_soil_to_vegetation_carbon_fluxes(
-#        internal_fluxes: InternalFluxesBySymbol,
-#        svt: StateVariableTuple,
-#        vcsvt: VegetationCarbonStateVariableTuple,
-#        scsvt: SoilCarbonStateVariableTuple,
-#    ) -> AggregatedSoil2VegetationCarbonFlux:
-#    # find the internal fluxes that have a vegetation pool as source and a soil
-#    # pool target
-#    s2vfls = {
-#        k: v 
-#        for k, v in mvs.get_InternalFluxesBySymbol().items()
-#        if (k[0] in scsvt and k[1] in vcsvt)
-#    }
-#
-#    # now we can sum those fluxes up
-#    return  sum (
-#        s2vfls.values()
-#    )
-#
+def aggregated_soil_to_vegetation_carbon_fluxes(
+        internal_fluxes: InternalFluxesBySymbol,
+        svt: StateVariableTuple,
+        vcsvt: VegetationCarbonStateVariableTuple,
+        scsvt: SoilCarbonStateVariableTuple,
+    ) -> AggregatedSoil2VegetationCarbonFlux:
+    # find the internal fluxes that have a vegetation pool as source and a soil
+    # pool target
+    s2vfls = {
+        k: v 
+        for k, v in internal_fluxes.items()
+        if (k[0] in scsvt and k[1] in vcsvt)
+    }
+
+    # now we can sum those fluxes up
+    return  sum (
+        s2vfls.values()
+    )
+
 
 @lru_cache
 def vegetation_carbon_in_fluxes_by_symbol_1(
@@ -508,6 +550,19 @@ def input_tuple(ifl: InFluxesBySymbol, svt: StateVariableTuple) -> InputTuple:
         )
     )
     return InputTuple(v)
+
+@lru_cache
+def out_tuple(ofl: OutFluxesBySymbol, svt: StateVariableTuple) -> OutputTuple:
+    out_fluxes_by_index = hr.to_int_keys_1(ofl, svt)
+    ks = out_fluxes_by_index.keys()
+    v = ImmutableMatrix(
+        list(
+            map(
+                lambda ind: out_fluxes_by_index[ind] if ind in ks else 0, range(len(svt))
+            )
+        )
+    )
+    return OutputTuple(v)
 
 
 @lru_cache

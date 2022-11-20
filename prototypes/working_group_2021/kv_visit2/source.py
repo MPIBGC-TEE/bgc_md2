@@ -21,6 +21,7 @@ mvs=CMTVS(
         subs_xi(s1.mvs.get_InternalFluxesBySymbol()),
         #NumericParameterization(
         #    par_dict=)
+        s1.mvs.get_BibInfo(),
     },
     computers=s1.mvs.computers
 )    

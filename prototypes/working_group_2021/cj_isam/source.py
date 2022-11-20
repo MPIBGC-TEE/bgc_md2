@@ -21,6 +21,8 @@ from bgc_md2.resolve.mvars import (
     InternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
 
@@ -150,6 +152,23 @@ mvs = CMTVS(
 	        C_TR,
 	        C_GVF,
 	        C_GVR,
+	        C_AGML,
+	        C_AGSL,
+	        C_AGMS,
+	        C_YHMS,
+	        C_BGDL,
+	        C_BGRL,
+	        C_BGMS,
+	        C_SHMS,            
+        )),
+        VegetationCarbonStateVariableTuple((
+            C_NWT,
+	        C_AGWT,
+	        C_TR,
+	        C_GVF,
+	        C_GVR,
+        )),
+        SoilCarbonStateVariableTuple((
 	        C_AGML,
 	        C_AGSL,
 	        C_AGMS,

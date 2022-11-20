@@ -14,6 +14,7 @@ from sympy import (
     pi,
     lambdify,
     simplify,
+    sympify,
     factor,
     ImmutableMatrix,
     Expr,
@@ -50,7 +51,7 @@ from testinfrastructure.helpers import pp, pe
 class DictLike(frozendict):
     def subs(self,subsdict):
         res = {
-                k:v.subs(subsdict) 
+                sympify(k).subs(subsdict):sympify(v).subs(subsdict) 
                 for k,v in self.items()
         }
         return self.__class__(res)
@@ -97,9 +98,27 @@ class AggregatedVegetation2SoilCarbonFlux(Expr):
     pass
 
 
-#class AggregatedSoil2VegetationCarbonFlux(Expr):
-#    pass
-#
+class AggregatedVegetationCarbonOutFlux(Expr):
+    """AKA autotrophic respiration.
+    If there are direct outfluxes from the vegetation pools the 
+    input was not given as NPP but GPP"""
+    pass
+
+
+class AggregatedVegetationCarbonInFlux(Expr):
+    pass
+
+
+class AggregatedSoilCarbonInFlux(Expr):
+    pass
+ 
+
+class AggregatedSoilCarbonOutFlux(Expr):
+    pass
+
+class AggregatedSoil2VegetationCarbonFlux(Expr):
+    pass
+
 
 class CarbonInternalFluxesBySymbol(DictLike):
     pass
@@ -122,6 +141,14 @@ class TimeSymbol(Symbol):
 
 
 class Temperature(Expr):
+    pass
+
+
+class AggregatedSoilCarbon(Expr):
+    pass
+
+
+class AggregatedVegetationCarbon(Expr):
     pass
 
 
@@ -181,16 +208,25 @@ class FunctionLike:
     def __call__(self,*args,**kwargs):
         return self.f(*args,**kwargs)
 
+
 class NumericCompartmentalMatrixFunc(FunctionLike):
     # fixme mm: We could add a check for the right arguments and return values here
     pass
+
+
+class NumericStartAgeDensityFunc(FunctionLike):
+    # fixme mm: We could add a check for the right arguments and return values here
+    pass
+
 
 class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...
     pass
 
+
 class LuoXiDiagonalMatrix(MatrixLike):
     pass
+
 
 class StateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
@@ -203,8 +239,10 @@ class StateVariableTuple(ColumnVectorLike):
     on the ordering and have to be consistent."""
     pass
 
+
 class StateVariableTupleTimeDerivative(ColumnVectorLike):
     pass
+
 
 class CarbonStorageCapacity(ColumnVectorLike):
     # see doi:10.5194/bg-14-145-2017
@@ -218,6 +256,7 @@ class CarbonStorageCapacity(ColumnVectorLike):
     # so the first term is
     # C_p=M_inv(t) dx/dt
     pass
+
 
 class CarbonStoragePotential(ColumnVectorLike):
     # see doi:10.5194/bg-14-145-2017
@@ -289,11 +328,18 @@ class NitrogenStateVariableTuple(ColumnVectorLike):
 class InputTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
-    """The coordinates of the input flux vector
+    """The components the input flux vector
     The interpretation requires the statevector since the nth entry is interpreted as input to 
     the pool denoted by the nth state variable"""
     pass
  
+class OutputTuple(ColumnVectorLike):
+    # fixme mm 02/14/2021
+    # Check that we only allow column vectors
+    """The components of the dwinput flux vector The interpretation requires
+    the statevector since the nth entry is interpreted as output (to the
+    outside of the system) from the pool denoted by the nth state variable"""
+    pass
 
 class CarbonInputTuple(ColumnVectorLike):
     # fixme mm 02/14/2021

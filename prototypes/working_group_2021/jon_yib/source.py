@@ -8,6 +8,9 @@ from bgc_md2.resolve.mvars import (
     InternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
+    CarbonStateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
 
@@ -96,6 +99,22 @@ mvs = CMTVS(
             c_leaf,
             c_root,
             c_wood,
+            c_lit_cwd,
+            c_lit_met,
+            c_lit_str,
+            c_lit_mic,
+            c_soil_met,
+            c_soil_str,
+            c_soil_mic,
+            c_soil_slow,
+            c_soil_passive,
+        )),
+        VegetationCarbonStateVariableTuple((
+            c_leaf,
+            c_root,
+            c_wood,
+        )),
+        SoilCarbonStateVariableTuple((
             c_lit_cwd,
             c_lit_met,
             c_lit_str,

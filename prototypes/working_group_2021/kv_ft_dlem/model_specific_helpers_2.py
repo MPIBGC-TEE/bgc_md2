@@ -177,7 +177,8 @@ def download_my_TRENDY_output(conf_dict):
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['DLEM'],
-        variables = Observables._fields + Drivers._fields
+        variables = Observables._fields + Drivers._fields,
+        experiments=["S2", "S3"]
     )
 
 

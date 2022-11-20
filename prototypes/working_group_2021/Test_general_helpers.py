@@ -14,6 +14,10 @@ class Test_general_helpers(InDirTest):
     # def test_make_fluxrates_from_kf(,xi_d):
 
     @skip
+    # the test is now obsolete since we 
+    # decided to work with a continuous function
+    # and a constant factor of 30 between days and months.
+
     def test_month_2_day_index(self):
         self.assertEqual(month_2_day_index([0]), [0])
         self.assertEqual(month_2_day_index([1]), [31])

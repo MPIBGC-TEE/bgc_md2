@@ -12,24 +12,12 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 #display(HTML("<style>.container { width:100% !important; }</style>"))
 
 
-
 def mass_balance_equation(mvs):
     try:
         ip = mvs.get_InputTuple()
         cm = mvs.get_CompartmentalMatrix()
         sv = mvs.get_StateVariableTuple()
-    
-        eq = Math(
-            r'\frac{d}{dt}'+
-            rf'{latex(sv)}'+
-            "="+
-            rf'{latex(ip)}'+
-            r'+'+
-            rf'{latex(cm)}'+
-            rf'{latex(sv)}'
-        )
-        return eq
-    except Exception():
+    except Exception as e:
         print(
             """The provided argument mvs does not allow all necessary computations to show the mass 
             balance equation:
@@ -38,6 +26,17 @@ def mass_balance_equation(mvs):
              mvs.get_StateVariableTuple()
             """
         )
+
+    eq = Math(
+        r'\frac{d}{dt}'+
+        rf'{latex(sv)}'+
+        "="+
+        rf'{latex(ip)}'+
+        r'+'+
+        rf'{latex(cm)}'+
+        rf'{latex(sv)}'
+    )
+    return eq
 
 
 class ExpandBox(VBox):

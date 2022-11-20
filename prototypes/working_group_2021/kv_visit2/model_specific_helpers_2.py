@@ -12,7 +12,12 @@ from CompartmentalSystems.TimeStepIterator import (
 from copy import copy
 from typing import Callable
 from functools import reduce
+from collections import OrderedDict
 from scipy.interpolate import interp1d
+
+import CompartmentalSystems.helpers_reservoir as hr
+from CompartmentalSystems.BlockArrayIterator import BlockArrayIterator 
+from CompartmentalSystems.ArrayDict import ArrayDict 
 
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
@@ -263,16 +268,27 @@ def get_global_mean_vars(dataPath):
 
 
 def make_func_dict(mvs, dvs, cpa, epa):
-    def compose(f_of_month: Callable):
+   
+    #we to  extend the interpolating functions beyond the last month
+    def extend_by_one(field):
+        return np.concatenate([field,field[-2:-1]])
+    
+    def func_maker(field):
+        y = extend_by_one(field)
+        f_of_month=  interp1d(
+            x=np.arange( 0.,len(y)),
+            y=y
+        )
         def f_of_day(day):
             return f_of_month(day/30.0)
 
         return f_of_day
+        
 
     f_d={
-        "TAS": compose(interp1d(x=np.arange(0,len(dvs.tas)),y=dvs.tas)),
-        "mrso":compose(interp1d(x=np.arange(0,len(dvs.mrso)),y=dvs.mrso)) ,
-        "NPP": compose(interp1d(x=np.arange(0,len(dvs.npp)),y=dvs.npp)),
+        "TAS": func_maker(dvs.tas),
+        "mrso": func_maker(dvs.mrso),
+        "NPP": func_maker(dvs.npp),
         #"xi": make_xi_func(dvs, epa)
     }
     return f_d
@@ -299,63 +315,63 @@ def make_func_dict_old(mvs, dvs, cpa, epa):
     }
     return f_d
 
-def make_traceability_iterator(mvs,dvs,cpa,epa):
-    par_dict={
-    Symbol(k): v for k,v in {
-        "beta_leaf": epa.beta_leaf,
-        "beta_wood": epa.beta_wood,
-        "T_0": epa.T_0,
-        "E": epa.E,
-        "KM": epa.KM,
-        "r_C_leaf_litter_rh": epa.r_C_leaf_litter_rh,
-        "r_C_wood_litter_rh": epa.r_C_wood_litter_rh,
-        "r_C_root_litter_rh": epa.r_C_root_litter_rh,
-        "r_C_soil_fast_rh": epa.r_C_soil_fast_rh,
-        "r_C_soil_slow_rh": epa.r_C_soil_slow_rh,
-        "r_C_soil_passive_rh": epa.r_C_soil_passive_rh,
-        "r_C_leaf_2_C_leaf_litter": epa.r_C_leaf_2_C_leaf_litter,
-        "r_C_wood_2_C_wood_litter": epa.r_C_wood_2_C_wood_litter,
-        "r_C_root_2_C_root_litter": epa.r_C_root_2_C_root_litter,
-        "r_C_leaf_litter_2_C_soil_fast": epa.r_C_leaf_litter_2_C_soil_fast,
-        "r_C_leaf_litter_2_C_soil_slow": epa.r_C_leaf_litter_2_C_soil_slow,
-        "r_C_leaf_litter_2_C_soil_passive": epa.r_C_leaf_litter_2_C_soil_passive,
-        "r_C_wood_litter_2_C_soil_fast": epa.r_C_wood_litter_2_C_soil_fast,
-        "r_C_wood_litter_2_C_soil_slow": epa.r_C_wood_litter_2_C_soil_slow,
-        "r_C_wood_litter_2_C_soil_passive": epa.r_C_wood_litter_2_C_soil_passive,
-        "r_C_root_litter_2_C_soil_fast": epa.r_C_root_litter_2_C_soil_fast,
-        "r_C_root_litter_2_C_soil_slow": epa.r_C_root_litter_2_C_soil_slow,
-        "r_C_root_litter_2_C_soil_passive": epa.r_C_root_litter_2_C_soil_passive
-    }.items()
-}
-    X_0_dict={
-        "C_leaf": epa.C_leaf_0,
-        "C_wood": epa.C_wood_0,
-        "C_root": cpa.cVeg_0-(epa.C_leaf_0 + epa.C_wood_0),
-        "C_leaf_litter": epa.C_leaf_litter_0,
-        "C_wood_litter": epa.C_wood_litter_0,
-        "C_root_litter": cpa.cLitter_0-(epa.C_leaf_litter_0 + epa.C_wood_litter_0),
-        "C_soil_fast": epa.C_soil_fast_0,
-        "C_soil_slow": epa.C_soil_slow_0,
-        "C_soil_passive": cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0)
-    }
-    X_0= np.array(
-        [
-            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
-        ]
-    ).reshape(9,1)
-    fd = make_func_dict(mvs, dvs, cpa, epa)
-    V_init = gh.make_InitialStartVectorTrace(
-            X_0,mvs,
-            par_dict=par_dict,
-            func_dict=fd
-    )
-    it_sym_trace = gh.make_daily_iterator_sym_trace(
-        mvs,
-        V_init=V_init,
-        par_dict=par_dict,
-        func_dict=fd
-    )
-    return it_sym_trace
+#def make_traceability_iterator(mvs,dvs,cpa,epa):
+#    par_dict={
+#    Symbol(k): v for k,v in {
+#        "beta_leaf": epa.beta_leaf,
+#        "beta_wood": epa.beta_wood,
+#        "T_0": epa.T_0,
+#        "E": epa.E,
+#        "KM": epa.KM,
+#        "r_C_leaf_litter_rh": epa.r_C_leaf_litter_rh,
+#        "r_C_wood_litter_rh": epa.r_C_wood_litter_rh,
+#        "r_C_root_litter_rh": epa.r_C_root_litter_rh,
+#        "r_C_soil_fast_rh": epa.r_C_soil_fast_rh,
+#        "r_C_soil_slow_rh": epa.r_C_soil_slow_rh,
+#        "r_C_soil_passive_rh": epa.r_C_soil_passive_rh,
+#        "r_C_leaf_2_C_leaf_litter": epa.r_C_leaf_2_C_leaf_litter,
+#        "r_C_wood_2_C_wood_litter": epa.r_C_wood_2_C_wood_litter,
+#        "r_C_root_2_C_root_litter": epa.r_C_root_2_C_root_litter,
+#        "r_C_leaf_litter_2_C_soil_fast": epa.r_C_leaf_litter_2_C_soil_fast,
+#        "r_C_leaf_litter_2_C_soil_slow": epa.r_C_leaf_litter_2_C_soil_slow,
+#        "r_C_leaf_litter_2_C_soil_passive": epa.r_C_leaf_litter_2_C_soil_passive,
+#        "r_C_wood_litter_2_C_soil_fast": epa.r_C_wood_litter_2_C_soil_fast,
+#        "r_C_wood_litter_2_C_soil_slow": epa.r_C_wood_litter_2_C_soil_slow,
+#        "r_C_wood_litter_2_C_soil_passive": epa.r_C_wood_litter_2_C_soil_passive,
+#        "r_C_root_litter_2_C_soil_fast": epa.r_C_root_litter_2_C_soil_fast,
+#        "r_C_root_litter_2_C_soil_slow": epa.r_C_root_litter_2_C_soil_slow,
+#        "r_C_root_litter_2_C_soil_passive": epa.r_C_root_litter_2_C_soil_passive
+#    }.items()
+#}
+#    X_0_dict={
+#        "C_leaf": epa.C_leaf_0,
+#        "C_wood": epa.C_wood_0,
+#        "C_root": cpa.cVeg_0-(epa.C_leaf_0 + epa.C_wood_0),
+#        "C_leaf_litter": epa.C_leaf_litter_0,
+#        "C_wood_litter": epa.C_wood_litter_0,
+#        "C_root_litter": cpa.cLitter_0-(epa.C_leaf_litter_0 + epa.C_wood_litter_0),
+#        "C_soil_fast": epa.C_soil_fast_0,
+#        "C_soil_slow": epa.C_soil_slow_0,
+#        "C_soil_passive": cpa.cSoil_0-(epa.C_soil_fast_0 + epa.C_soil_slow_0)
+#    }
+#    X_0= np.array(
+#        [
+#            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
+#        ]
+#    ).reshape(9,1)
+#    fd = make_func_dict(mvs, dvs, cpa, epa)
+#    V_init = gh.make_InitialStartVectorTrace(
+#            X_0,mvs,
+#            par_dict=par_dict,
+#            func_dict=fd
+#    )
+#    it_sym_trace = gh.make_daily_iterator_sym_trace(
+#        mvs,
+#        V_init=V_init,
+#        par_dict=par_dict,
+#        func_dict=fd
+#    )
+#    return it_sym_trace
 
 # We now build the essential object to run the model forward. We have a 
 # - startvector $V_0$ and 
@@ -426,10 +442,11 @@ def make_iterator_sym(
         for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
     } 
     def f(it,V):
-        X = V[0:n]
+        X = V[0:n]#.reshape(-1)
         b = u_func(it,X)
         B = B_func(it,X)
         X_new = X + b + B @ X
+        #from IPython import embed; embed()
         # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
         
 #         ra = np.sum(
@@ -455,7 +472,7 @@ def make_iterator_sym(
         initial_values=V_arr,
         f=f,
     )
-
+    
 
 # -
 

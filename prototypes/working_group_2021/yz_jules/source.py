@@ -27,6 +27,8 @@ from bgc_md2.resolve.mvars import (
     InternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
 
@@ -116,6 +118,17 @@ mvs = CMTVS(
                 c_HUM   # full name: long-lived humified
             ]
         ),
+        VegetationCarbonStateVariableTuple((
+                c_leaf,  # Names: c_poolname
+                c_wood,
+                c_root,
+        )),
+        SoilCarbonStateVariableTuple((
+                c_DPM,  # full name: decomposable plant material
+                c_RPM,  # full name: resistant plant material
+                c_BIO,  # full name: microbial biomass
+                c_HUM   # full name: long-lived humified
+        )),
         InFluxesBySymbol(
             {  # define input/allocation
                 # RecievingPool: Input * Allocation
