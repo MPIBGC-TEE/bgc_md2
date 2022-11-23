@@ -14,7 +14,7 @@ model_names={
     "ab_classic":"CLASSIC",  
     "clm5":"CLM5.0",
     "kv_ft_dlem": "DLEM", 
-    "bian_ibis2":"IBIS",  # exclude IBIS to get results with deserts  
+    #"bian_ibis2":"IBIS",  # exclude IBIS to get results with deserts  
     "cj_isam": "ISAM",    
     "isba-ctrip":"ISBA-CTRIP",    
     "jsbach":"JSBACH",
@@ -31,8 +31,8 @@ model_names={
     "jon_yib": "YIBs"    
 }
 
-global_mask=gh.globalMask(file_name="common_mask_all_models.nc")    
-#global_mask=gh.globalMask(file_name="common_mask_all_models_w_deserts.nc")   
+#global_mask=gh.globalMask(file_name="common_mask_all_models.nc")    
+global_mask=gh.globalMask(file_name="common_mask_all_models_w_deserts.nc")   
 # -
 
 # Compute temporal average + difference(last-first) and resample all NetCDF4 data streams for each model to the global mask
@@ -68,7 +68,7 @@ moh.uncertainty_grids(
     output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble"
     )
 
-plt.rcParams.update({'font.size': 15})
+#plt.rcParams.update({'font.size': 15})
 moh.grid_attribution(
     #model_names=model_names,
     experiment_names=['S2'],#'S3'],
@@ -194,28 +194,82 @@ new_mask=moh.subset_and_resample_nc(
     radius_of_influence=500000, 
     )
 
-new_global_mask=gh.globalMask(file_name="common_mask_expanded.nc")    
-moh.ensamble_uncertainty (
+new_global_mask=gh.globalMask(file_name="common_mask_expanded.nc")  
+
+updated_mask=moh.find_global_outliers (
         model_names=model_names,
         experiment_names=["S2","S3"],
         global_mask=new_global_mask,
         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
         )
 
+final_mask=gh.globalMask(file_name="Final_mask.nc")  
+
+moh.ensamble_uncertainty (
+        model_names=model_names,
+        experiment_names=["S2","S3"],
+        global_mask=final_mask,
+        output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+        )
+
+moh.ensamble_uncertainty (
+        model_names=model_names,
+        experiment_names=["S2","S3"],
+        global_mask=new_global_mask,
+        output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_included",
+        )
+
 plt.rcParams.update(plt.rcParamsDefault)
 
 moh.C_sink_uncertainty_attribution(
     experiment_names=['S2','S3'],
-    global_mask=new_global_mask,
+    global_mask=final_mask,
     data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
     biome="Global"
+    )
+
+moh.C_sink_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=new_global_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_included",
+    biome="Global"
+    )
+
+outlier_veg_mask=gh.globalMask(file_name="Outlier_veg_mask.nc") 
+moh.ensamble_uncertainty (
+        model_names=model_names,
+        experiment_names=["S2","S3"],
+        global_mask=outlier_veg_mask,
+        output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_veg",
+        )
+
+moh.C_sink_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=outlier_veg_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_veg",
+    biome="Veg_Outliers"
+    )
+
+outlier_soil_mask=gh.globalMask(file_name="Outlier_soil_mask.nc") 
+moh.ensamble_uncertainty (
+        model_names=model_names,
+        experiment_names=["S2","S3"],
+        global_mask=outlier_veg_mask,
+        output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_soil",
+        )
+
+moh.C_sink_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=outlier_soil_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_soil",
+    biome="Soil_Outliers"
     )
 
 gh.nc_classes_2_masks(
     FilePath = "C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\global_biomes_geotiff\\biomes_05deg_rasterized.nc", 
     var_name = 'biomes', 
     classes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], 
-    global_mask = new_global_mask)
+    global_mask = final_mask)
 
 biome_mask=gh.globalMask(file_name="biomes_05deg_rasterized.nc_mask_1.nc")
 moh.C_sink_uncertainty_attribution(
@@ -318,17 +372,8 @@ moh.C_sink_uncertainty_attribution(
     experiment_names=['S2','S3'],
     global_mask=biome_mask,
     data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
-    biome=" TROPICAL_Humid"
+    biome="TROPICAL_Humid"
     )
-
-np.mean(a[mid:mid+5])
-
-last5 = a.shape[0]-5
-last5
-
-np.mean(a[last5:last5+5])
-
-a[last5+4]
 
 arr = np.array([[11, -1, 15, -7, 12, 14],
                [1,   2,  3,  4,  5,  7]])
@@ -408,10 +453,15 @@ H
 plt.bar(bins[:-1],H,width=1,color="green")
 
 a=np.array([1,2,3,4,5,6,7,8,9])
-a
+a[1:]
 
 b=np.array([2,3,4])
 b
+
+b[:]=1
+b
+
+np.concatenate((a,b))
 
 a[np.where(np.isin(a,b))]=50
 a
@@ -431,5 +481,7 @@ a
 
 b=a+["3"]
 b
+
+a
 
 
