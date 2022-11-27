@@ -326,15 +326,18 @@ def plot_traceable_component(
         ax.set_title(comp_name)
     #ax.set_ylabel("Gt C")
     ax.legend(bbox_to_anchor =(1.2, 1))   
-    if all_comp_dict["Times"][0]<=1905:
-        plt.axvline(x = 1900, color = 'k', linestyle='-', alpha=0.5) #label = 'axvline - full height')
-        plt.axvline(x = 1905, color = 'k', linestyle='-' , alpha=0.5)#label = 'axvline - full height')  
-    plt.axvline(x = 1955, color = 'k', linestyle='-', alpha=0.5) #label = 'axvline - full height')
-    plt.axvline(x = 1960, color = 'k', linestyle='-', alpha=0.5 )#label = 'axvline - full height') 
+    if all_comp_dict["Times"][0]<=1911:
+        plt.axvline(x = 1911, color = 'k', linestyle='--', alpha=0.5) 
+        plt.axvline(x = 1913, color = 'k', linestyle='-', alpha=1 )         
+        plt.axvline(x = 1915, color = 'k', linestyle='--' , alpha=0.5)  
+    plt.axvline(x = 1963, color = 'k', linestyle='--', alpha=0.5) 
+    plt.axvline(x = 1965, color = 'k', linestyle='-', alpha=1 )    
+    plt.axvline(x = 1967, color = 'k', linestyle='--', alpha=0.5 )
     if all_comp_dict["Times"][-1]>=2015:
-        plt.axvline(x = 2010, color = 'k', linestyle='-', alpha=0.5) #label = 'axvline - full height')
-        plt.axvline(x = 2015, color = 'k', linestyle='-' , alpha=0.5)#label = 'axvline - full height')     
-    plt.axhline(y = 0, color = 'k', linestyle='--', linewidth=2 )#label = 'axvline - full height')     
+        plt.axvline(x = 2015, color = 'k', linestyle='--', alpha=0.5) 
+        plt.axvline(x = 2017, color = 'k', linestyle='-', alpha=1 )         
+        plt.axvline(x = 2019, color = 'k', linestyle='--' , alpha=0.5)   
+    plt.axhline(y = 0, color = 'k', linestyle='--', linewidth=2)    
     plt.show()
     return(vals_mean, st_dev)
          
@@ -3179,12 +3182,13 @@ def subset_and_resample_nc(
                 #### computing selected timeframes ####
                 
                 # cropping to last 100 years of simulation
-                var_cropped = var_yearly[var_yearly.shape[0]-105:,:,:]                                               
+                var_cropped = var_yearly[var_yearly.shape[0]-109:,:,:]                                               
+                #print("N years: "+str(len(var_cropped)))
                 # 1st 5 years 
                 var_1st = np.mean(var_cropped[0:5,:,:], axis=0)
                 # middle 5 years 
-                mid=(var_cropped.shape[0]-6)//2
-                var_mid =  np.mean(var_cropped[mid:mid+5,:,:], axis=0)
+                mid=(var_cropped.shape[0]-5)//2
+                var_mid = np.mean(var_cropped[mid:mid+5,:,:], axis=0)
                 # last 5 years
                 last5 = var_cropped.shape[0]-5
                 var_last =  np.mean(var_cropped[last5:last5+5,:,:], axis=0)
@@ -3216,22 +3220,7 @@ def subset_and_resample_nc(
                     model_mask, target_mask, var_diff_2_masked, method, radius_of_influence)
                 var_diff_total_resampled=gh.resample_grid (
                     model_mask, target_mask, var_diff_total_masked, method, radius_of_influence)                    
-                                                                                              
-                # updating mask
-                # if vn in ("npp", "rh", "cVeg", "cSoil"):
-                    # target_mask=mask_add_wrong_values(target_mask,var_1st_resampled.index_mask)
-                    # target_mask=mask_add_wrong_values(target_mask,var_mid_resampled.index_mask)
-                    # target_mask=mask_add_wrong_values(target_mask,var_last_resampled.index_mask)                                       
-                    
-                #var_1st=var_1st_resampled.index_mask
-                #var_mid=var_mid_resampled.index_mask
-                #var_last=var_last_resampled.index_mask
-                
-                # # correcting negative and 0 values                
-                # var_1st[np.where(var_1st<0.00001)]=0.00001
-                # var_mid[np.where(var_mid<0.00001)]=0.00001
-                # var_last[np.where(var_last<0.00001)]=0.00001
-                    
+                                                                                                                 
                 # writing NetCDF
                 write_new_NetCDF (
                     mask=target_mask, 
@@ -3344,8 +3333,8 @@ def subset_and_resample_nc(
             # tau_soil_1st_masked = tau_soil_1st.data
             # tau_soil_1st_masked=np.max(tau_soil_1st_masked[np.where(target_mask.index_mask==0)])
             # print(tau_soil_1st_masked)
-            #tau_soil_last_masked=np.ma.array(tau_soil_last, target_mask.index_mask)
-            #print(np.ma.max(tau_soil_last_masked))
+            # tau_soil_last_masked=np.ma.array(tau_soil_last[:,:], mask=target_mask.index_mask)
+            # print(np.ma.max(tau_soil_last_masked))
             # writing NetCDFs            
             write_new_NetCDF (
                 mask=target_mask, 
@@ -3382,7 +3371,7 @@ def subset_and_resample_nc(
     # write updated mask
     target_mask.write_netCDF4(Path("common_mask_expanded.nc"))
     #return (target_mask)
-
+        
 def find_global_outliers (
         model_names,
         experiment_names,
@@ -3548,7 +3537,9 @@ def ensamble_uncertainty (
                     # else: 
                         # lower_lim=-40
                         # upper_lim=20                
-                all_data=list()                
+                all_data=list()
+                #all_data=np.ma.array([0],mask=[0])  
+                #print("all data initial: " + str(np.max(all_data)))
                 for mf in model_folders:
                     experiment_name=m_names[k]+"_"+experiment+"_"
                     conf_dict = gh.confDict(mf)
@@ -3557,13 +3548,18 @@ def ensamble_uncertainty (
                     ds = nc.Dataset(str(file_path))
                     var_name=vn+"_"+subset
                     var=ds.variables[var_name][:, :]#.data                    
+                    #print(type(var))
+                    #print("var.data: " + str(np.ma.max(var.data)))
                     var_sum=var_sum+var
                     ds.close() 
                     
+                    #g_mask=np.logical_or(g_mask,var.mask)
                     # add model density function to the plot 
-                    data_masked=var[np.where(g_mask==0)].flatten()
+                    data_masked=var.data[np.where(g_mask==0)].flatten()
                     data_masked_mean=np.mean(data_masked)
                     data_masked_sd=np.std(data_masked)
+                    #print("data masked: " + str(np.max(data_masked)))
+                    #print(type(data_masked))
                     #print("data_masked max: "+str(np.max(data_masked)))
                     #all_data.append(data_masked)
                     #lower_lim=data_masked_mean-3*data_masked_sd
@@ -3577,9 +3573,10 @@ def ensamble_uncertainty (
                     # m=m_names[k]
                     # ax.plot(xs,density(xs),color=model_cols[m],label=m,linewidth=1) 
                     k+=1 # model counter
-                    
+                    #all_data=np.append(all_data,data_masked)
                     all_data.append(data_masked)
-                    
+                    #print("all data: " + str(np.max(all_data)))
+                    #print(type(all_data))
                 mean=var_sum/len(model_folders)             
                 # computing uncertainty measures: standard deviation and average deviation                   
                 k=0 # model counter        
@@ -3628,12 +3625,12 @@ def ensamble_uncertainty (
                 # closing NetCDF file      
                 ds_new.close() 
                                               
-                print(var_name+' mean: '+str(np.ma.mean(var_mean_final)))
+                #print(var_name+' mean: '+str(np.ma.mean(var_mean_final)))
                 # add mean density function to the plot 
                 data_masked=mean[np.where(g_mask==0)].flatten() 
                 data_masked_mean=np.mean(data_masked)
                 data_masked_sd=np.std(data_masked)
-                
+                #print("data masked mean: " + str(np.max(data_masked)))
                 #all_data.append(data_masked)
                 #lower_lim=data_masked_mean-4*data_masked_sd
                 #upper_lim=data_masked_mean+4*data_masked_sd
@@ -3641,6 +3638,7 @@ def ensamble_uncertainty (
                 #data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
                 #data_masked=data_masked[np.where(data_masked<=upper_lim)] 
                 all_data.append(data_masked)
+                #all_data=np.append(all_data,data_masked)
                 # #print("data_masked_mean: "+ str(data_masked_mean))
                 # #print("data_masked_sd: "+ str(data_masked_sd))
                 # density = gaussian_kde(data_masked)
@@ -3656,6 +3654,7 @@ def ensamble_uncertainty (
                 
                 #adding uncertainty               
                 data_masked2=var_avd_final.data[np.where(g_mask==0)].flatten() 
+                #print("data masked2: " + str(np.max(data_masked2)))
                 # lower_lim2 = np.min(data_masked2)
                 # upper_lim2 = np.max(data_masked2)
                 # if vn in ["tau", "tau_soil"]:
@@ -3667,6 +3666,8 @@ def ensamble_uncertainty (
                 #data_masked2=data_masked2[np.where(data_masked2>=lower_lim2)]                    
                 #data_masked2=data_masked2[np.where(data_masked2<=upper_lim2)]                        
                 all_data.append(data_masked2)
+                #all_data=np.append(all_data,data_masked2)
+                #all_data=all_data[1:]
                 
                 if subset in ["last_5_years", "diff_total"]:
                     # violin plots
@@ -3801,10 +3802,11 @@ def ensamble_uncertainty (
                 
 def mask_add_wrong_values(mask, data):
     new_mask_index=mask.index_mask
+    new_mask_index=np.logical_or(new_mask_index,data.mask)
     data_masked=np.ma.array(data, mask=new_mask_index)     
     # adding non-positive values to the mask
     new_mask_index[np.where(data <= 0)] = 1    
-    new_mask_index[np.where(data >= 3.7e9)] = 1 # approximate age of life on Earth
+    new_mask_index[np.where(data >= 1e5)] = 1 
     return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)    
 
 # def mask_add_outliers(mask, data, outlier_tolerance=4, log=False, plot_hist=False):
@@ -3944,11 +3946,12 @@ def read_uncert_file(data_path, experiment, var, mask):
     ds.close()
     return (var_mean, var_avd)     
     
-def biome_masks_aggregated (FilePath, var_name, classes, global_mask):
+def biome_masks_aggregated (mask_file, output_path, var_name, classes, global_mask):
     g_mask=global_mask.index_mask
-    ds = nc.Dataset(FilePath)    
+    ds = nc.Dataset(mask_file)    
     var=ds.variables[var_name][:]    
-    ds.close()    
+    ds.close() 
+    mask_list=list()    
     for nclass in classes:    
         var_0=var.copy()
         var_0[var_0!=nclass]=-9999      
@@ -3958,11 +3961,24 @@ def biome_masks_aggregated (FilePath, var_name, classes, global_mask):
         for i in range(var_0.shape[0]):
             var_0_corrected[i,:]=var_0[var_0.shape[0]-1-i,:]
         var_0_masked=np.logical_or(var_0_corrected,g_mask)
-        mask_list.append()
-    cm_0=CoordMask(var_0_masked, global_mask.tr) 
-    FileName=FilePath+"_mask_"+str(nclass)+".nc"
-    cm_0.write_netCDF4(FileName)
-    print('File written as '+FileName)         
+        mask_list.append(var_0_masked)
+    mask_tundra=gh.CoordMask(np.logical_and(mask_list[1],mask_list[2]), global_mask.tr) 
+    mask_tundra.write_netCDF4(Path(output_path).joinpath("mask_tundra.nc"))
+    mask_boreal=gh.CoordMask(np.logical_and(mask_list[3],mask_list[4]), global_mask.tr) 
+    mask_boreal.write_netCDF4(Path(output_path).joinpath("mask_boreal.nc"))   
+    mask_temperate=gh.CoordMask(np.logical_and(mask_list[5],mask_list[6]), global_mask.tr) 
+    mask_temperate.write_netCDF4(Path(output_path).joinpath("mask_temperate.nc"))      
+    mask_mediterranean=gh.CoordMask(np.logical_and(mask_list[7],mask_list[8]), global_mask.tr) 
+    mask_mediterranean.write_netCDF4(Path(output_path).joinpath("mask_mediterranean.nc"))  
+    mask_desert=gh.CoordMask(np.logical_and(mask_list[9],mask_list[10],mask_list[11]), global_mask.tr) 
+    mask_desert.write_netCDF4(Path(output_path).joinpath("mask_desert.nc"))  
+    mask_tropical=gh.CoordMask(np.logical_and(mask_list[12],mask_list[13]), global_mask.tr) 
+    mask_tropical.write_netCDF4(Path(output_path).joinpath("mask_tropical.nc"))      
+    # cm_0=CoordMask(var_0_masked, global_mask.tr) 
+    # FileName=FilePath+"_mask_"+str(nclass)+".nc"
+    # cm_0.write_netCDF4(FileName)
+    # print('File written as '+FileName)  
+    print("Done!")
     
 def C_sink_uncertainty_attribution (
         experiment_names,
@@ -4287,12 +4303,18 @@ def C_sink_uncertainty_attribution (
         fig=plt.figure(figsize=(15,7))
         axs=fig.subplots(1,3)
         fig.suptitle('Average uncertainty contributions')                       
+        # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+        # colors = ("#5CACEE",  "#63B8FF",   "#00CD00",     "#90EE90",     "#EE9A00",       "#FFD39B")
+        # labels_2 = ['NPP', 'τ']        
+        # colors_2 = ("#4F94CD", "#FF8000") 
+        
         labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
-        colors = ("#5CACEE",  "#63B8FF",   "#00CD00",     "#90EE90",     "#EE9A00",       "#FFD39B")
+        colors = ("#43CD80",  "#90EE90",   "#5CACEE",     "#63B8FF",     "#FFA07A",       "#FFD39B")
         labels_2 = ['NPP', 'τ']        
-        colors_2 = ("#4F94CD", "#FF8000") 
+        colors_2 = ("#3CB371", "#FF8247") 
+        
         # 1st half        
-        ax0=axs[0]; title='1920-1970'   
+        ax0=axs[0]; title='1913-1965'   
         sizes = [npp_0_contrib_1_percent_global,
                  delta_npp_contrib_1_percent_global, 
                  tau_veg_0_contrib_1_percent_global,
@@ -4306,7 +4328,7 @@ def C_sink_uncertainty_attribution (
                         text_displacement=[[2,-0.02],[3,0.05]], 
                         pct_displacement=[[2,-0.02],[3,0.08]],
                         font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
-        ax1=axs[1]; title='1970-2020'
+        ax1=axs[1]; title='1965-2017'
         sizes = [npp_1_contrib_2_percent_global,
                  delta_npp_contrib_2_percent_global, 
                  tau_veg_1_contrib_2_percent_global,
@@ -4321,7 +4343,7 @@ def C_sink_uncertainty_attribution (
                         pct_displacement=[[2,-0.02],[3,0.08]],
                         font_size_change=[[2,14],[3,14],[4,14],[5,14]])        
         # total period
-        ax2=axs[2]; title='1920-2020'
+        ax2=axs[2]; title='1913-2017'
         sizes = [npp_0_contrib_total_percent_global,
                  delta_npp_contrib_total_percent_global, 
                  tau_veg_0_contrib_total_percent_global,
@@ -4546,12 +4568,19 @@ def C_storage_uncertainty_attribution (
         fig=plt.figure(figsize=(15,7))
         axs=fig.subplots(1,3)
         fig.suptitle('Average uncertainty contributions')                       
+        
+        # labels = '$NPP$', '$τ_{veg}$', '$τ_{soil}$'     
+        # colors = ("#5CACEE",  "#00CD00",   "#EE9A00")
+        # labels_2 = ['NPP', 'τ']           
+        # colors_2 = ("#4F94CD", "#FF8000") 
+
         labels = '$NPP$', '$τ_{veg}$', '$τ_{soil}$'     
-        colors = ("#5CACEE",  "#00CD00",   "#EE9A00")
+        colors = ("#43CD80",  "#5CACEE",   "#FFA07A")
         labels_2 = ['NPP', 'τ']           
-        colors_2 = ("#4F94CD", "#FF8000") 
+        colors_2 = ("#3CB371", "#FF8247")          
+                
         # first 5 years              
-        ax0=axs[0]; title='1915-1920'
+        ax0=axs[0]; title='1911-1915'
         sizes = [npp_0_contrib_1_percent_global,
                  tau_veg_0_contrib_1_percent_global, 
                  tau_soil_0_contrib_1_percent_global]
@@ -4560,7 +4589,7 @@ def C_storage_uncertainty_attribution (
         pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
                                       
         # middle 5 years
-        ax1=axs[1]; title='1965-1970'  
+        ax1=axs[1]; title='1963-1967'  
         sizes = [npp_1_contrib_2_percent_global,
                  tau_veg_1_contrib_2_percent_global, 
                  tau_soil_1_contrib_2_percent_global]
@@ -4568,14 +4597,563 @@ def C_storage_uncertainty_attribution (
                   tau_veg_1_contrib_2_percent_global+tau_soil_1_contrib_2_percent_global]                    
         pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
         # last 5 years
-        ax2=axs[2]; title='2015-2020'        
+        ax2=axs[2]; title='2015-2019'        
         sizes = [npp_2_contrib_3_percent_global,
                  tau_veg_2_contrib_3_percent_global, 
                  tau_soil_2_contrib_3_percent_global]
-        sizes_3 = [npp_2_contrib_3_percent_global, 
+        sizes_2 = [npp_2_contrib_3_percent_global, 
                   tau_veg_2_contrib_3_percent_global+tau_soil_2_contrib_3_percent_global]                      
         pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
                  
         plt.show() 
         plt.rcParams.update(plt.rcParamsDefault)
      
+     
+def subset_and_resample_nc_2(
+            model_names, # dictionary e.g. "ab_classic":"CLASSIC"
+            experiment_names, # e.g. ['S2', 'S3']
+            target_mask,
+            method="nearest",
+            radius_of_influence=500000,
+            ):
+ 
+    def write_new_NetCDF (mask, vn, var1, var2, var3, var4, var5, var6):
+        s = mask.index_mask.shape
+        n_lats, n_lons = s
+        
+        new_path=dataPath.joinpath(dataPath,experiment_name+vn+"_subset.nc")                    
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimensions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)
+        # creating variables
+        var_1st = ds_new.createVariable(vn+"_first_5_years", "float32", ["lat", "lon"]) 
+        var_1st[:, :] = np.ma.array(var1, mask = mask.index_mask)                
+        var_mid = ds_new.createVariable(vn+"_middle_5_years", "float32", ["lat", "lon"]) 
+        var_mid[:, :] = np.ma.array(var2, mask = mask.index_mask) 
+        var_last = ds_new.createVariable(vn+"_last_5_years", "float32", ["lat", "lon"])                 
+        var_last[:, :] = np.ma.array(var3, mask = mask.index_mask) 
+        var_diff_1 = ds_new.createVariable(vn+"_diff_1st_half", "float32", ["lat", "lon"]) 
+        var_diff_1[:, :] = np.ma.array(var4, mask = mask.index_mask)    
+        var_diff_2 = ds_new.createVariable(vn+"_diff_2nd_half", "float32", ["lat", "lon"]) 
+        var_diff_2[:, :] = np.ma.array(var5, mask = mask.index_mask)    
+        var_diff_total = ds_new.createVariable(vn+"_diff_total", "float32", ["lat", "lon"])                
+        var_diff_total[:, :] = np.ma.array(var6, mask = mask.index_mask)
+
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(mask.tr.i2lat, range(n_lats)))
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
+        # closing NetCDF files     
+        ds_new.close() 
+        
+    def averaged_3d_array(array, averaging):  # 3d array  # number of steps over which to average
+        if averaging < 1:
+            raise Exception("Invalid averaging in gh.avg_timeline: should be >=1")
+        output = array
+        if averaging > 1:
+            n = array.shape[0] // averaging
+            if array.shape[0] % averaging > 0:
+                n += 1
+            output = np.zeros((n,array.shape[1], array.shape[2]))
+            counter = 0
+            i = 0
+            while i < (array.shape[0]):
+                x = 0
+                sum = np.zeros((array.shape[1], array.shape[2]))
+                while x < (averaging):
+                    if i + x > (array.shape[0] - 1):
+                        break
+                    sum += array[i + x, :, :]
+                    x += 1
+                output[counter] = sum / (x)
+                counter += 1
+                i += x
+        return output   
+
+    # function for computing turnover times
+    def tau(cVeg, delta_cVeg, cSoil, npp, rh):
+        X = cVeg + cSoil  # total ecosystem carbon
+        f_veg_out = npp*5 - delta_cVeg # outflux of vegetation (litterfall + disturbance)
+        tau = X / rh # ecosystem turnover time
+        tau_veg = cVeg / f_veg_out # vegetation turnover time (not considering ra)
+        tau_soil = cSoil / rh # soil turnover time
+        mask=cVeg.mask
+        return np.ma.array(tau, mask=mask), np.ma.array(tau_veg, mask=mask), np.ma.array(tau_soil, mask=mask)        
+        
+    #### processing model output data ####    
+    for experiment in experiment_names:
+        print('\033[1m'+'Resampling data for '+experiment+' experiment...')
+        k=0 # model counter
+        model_folders=[(m) for m in model_names] 
+        m_names=list(model_names.values())  
+        for mf in model_folders:
+            print('\033[1m'+m_names[k])
+            print('\033[0m')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            conf_dict = gh.confDict(mf)
+            dataPath=Path(conf_dict["dataPath"])
+            model_mask=gh.msh(mf).spatial_mask(dataPath=dataPath)      
+            for var_name in gh.msh(mf).data_str._fields:      
+                
+                #### loading files, adding and correcting variables ####
+                vn=var_name
+                if vn=="npp_nlim": file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("npp", experiment_name=experiment_name))
+                else: file_path = dataPath.joinpath(gh.msh(mf).nc_file_name(vn, experiment_name=experiment_name))
+                print(file_path)
+                ds = nc.Dataset(str(file_path))
+                var = ds.variables[vn][:, :, :].data
+                ds.close()
+                
+                # converting flux units from 'per sec' to 'per year'
+                if vn in ['gpp', 'npp', 'ra', 'rh', 'npp_nlim']:
+                            var=var*86400*365  
+                
+                # adding litter to soil for models where it is separate
+                if (vn=="cSoil") and ("cLitter" in gh.msh(mf).data_str._fields):  
+                    file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("cLitter", experiment_name=experiment_name))
+                    ds = nc.Dataset(str(file_path))
+                    cLitter = ds.variables["cLitter"][:, :, :].data
+                    var=var+cLitter
+                    ds.close()
+                              
+                # computing npp for models that don't have it                                  
+                if (vn=='gpp') and (not "npp" in gh.msh(mf).data_str._fields) and (not "npp_nlim" in gh.msh(mf).data_str._fields):  
+                    file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("ra", experiment_name=experiment_name))
+                    ds = nc.Dataset(str(file_path))
+                    ra = ds.variables["ra"][:, :, :].data
+                    var=var-ra
+                    ds.close()
+                    vn = 'npp'
+                    
+                # changing npp_nlim to npp (for JULES model) 
+                if vn=="npp_nlim": vn = 'npp'
+                    
+                #### converting all data to yearly averages ####                                                             
+                if var.shape[0]>1000: # monthly data                
+                    var_yearly = averaged_3d_array(var,12)
+                else:
+                    var_yearly = var
+                
+                #### computing selected timeframes ####
+                
+                # cropping to last 100 years of simulation
+                var_cropped = var_yearly[var_yearly.shape[0]-109:,:,:]                                               
+                #print("N years: "+str(len(var_cropped)))
+                # 1st 5 years 
+                var_1st = np.mean(var_cropped[0:5,:,:], axis=0)
+                # middle 5 years 
+                mid=(var_cropped.shape[0]-5)//2
+                var_mid = np.mean(var_cropped[mid:mid+5,:,:], axis=0)
+                # last 5 years
+                last5 = var_cropped.shape[0]-5
+                var_last =  np.mean(var_cropped[last5:last5+5,:,:], axis=0)
+                # 1st half difference
+                var_diff_1 = var_mid-var_1st              
+                # 2nd half difference
+                var_diff_2 = var_last-var_mid
+                # total difference
+                var_diff_total = var_last - var_1st
+                                
+                # masking
+                var_1st_masked = np.ma.array(var_1st, mask = model_mask.index_mask)
+                var_mid_masked = np.ma.array(var_mid, mask = model_mask.index_mask)
+                var_last_masked = np.ma.array(var_last, mask = model_mask.index_mask)
+                var_diff_1_masked = np.ma.array(var_diff_1, mask = model_mask.index_mask)
+                var_diff_2_masked = np.ma.array(var_diff_2, mask = model_mask.index_mask)
+                var_diff_total_masked = np.ma.array(var_diff_total, mask = model_mask.index_mask)                
+
+                # resampling to target grid
+                var_1st_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_1st_masked, method, radius_of_influence)
+                var_mid_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_mid_masked, method, radius_of_influence)                    
+                var_last_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_last_masked, method, radius_of_influence)
+                var_diff_1_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_diff_1_masked, method, radius_of_influence)
+                var_diff_2_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_diff_2_masked, method, radius_of_influence)
+                var_diff_total_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_diff_total_masked, method, radius_of_influence)                    
+                
+                # writing NetCDF
+                write_new_NetCDF (
+                    mask=target_mask, 
+                    vn=vn, 
+                    var1=var_1st_resampled.index_mask,
+                    var2=var_mid_resampled.index_mask ,
+                    var3=var_last_resampled.index_mask,
+                    var4=var_diff_1_resampled.index_mask,
+                    var5=var_diff_2_resampled.index_mask,
+                    var6=var_diff_total_resampled.index_mask,                   
+                    )
+                #### saving necessary data for computing turnover time ####
+                if vn=="cVeg": 
+                    cVeg_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_total=np.ma.array(var_diff_total_resampled.index_mask, mask=target_mask.index_mask)
+                    # additional computation of delta_cVeg
+                    delta_cVeg_1st=var_cropped[4,:,:] - var_cropped[0,:,:]
+                    delta_cVeg_mid=var_cropped[mid+4,:,:] - var_cropped[mid,:,:]
+                    delta_cVeg_last=var_cropped[last5+4,:,:] - var_cropped[last5,:,:]  
+                    # masking
+                    delta_cVeg_1st_masked = np.ma.array(delta_cVeg_1st, mask = model_mask.index_mask)
+                    delta_cVeg_mid_masked = np.ma.array(delta_cVeg_mid, mask = model_mask.index_mask)
+                    delta_cVeg_last_masked = np.ma.array(delta_cVeg_last, mask = model_mask.index_mask)            
+                    # resampling to target grid
+                    delta_cVeg_1st=gh.resample_grid (
+                        model_mask, target_mask, delta_cVeg_1st_masked, method, radius_of_influence).index_mask
+                    delta_cVeg_mid=gh.resample_grid (
+                        model_mask, target_mask, delta_cVeg_mid_masked, method, radius_of_influence).index_mask                    
+                    delta_cVeg_last=gh.resample_grid (
+                        model_mask, target_mask, delta_cVeg_last_masked, method, radius_of_influence).index_mask                                        
+                    
+                if vn=="npp": 
+                    npp_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_total=np.ma.array(var_diff_total_resampled.index_mask, mask=target_mask.index_mask)
+                                                    
+                if vn=="cSoil": 
+                    cSoil_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_total=np.ma.array(var_diff_total_resampled.index_mask  , mask=target_mask.index_mask)
+
+                if vn=="rh": 
+                    rh_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_total=np.ma.array(var_diff_total_resampled.index_mask  , mask=target_mask.index_mask)                                      
+            
+            # adding C_ecosystem
+            write_new_NetCDF (
+                mask = target_mask, 
+                vn = "C_ecosystem", 
+                var1 = cVeg_1st + cSoil_1st,
+                var2 = cVeg_mid + cSoil_mid,
+                var3 = cVeg_last + cSoil_last,
+                var4 = cVeg_diff_1 + cSoil_diff_1,
+                var5 = cVeg_diff_2 + cSoil_diff_2,
+                var6 = cVeg_diff_total + cSoil_diff_total,                   
+                )            
+            
+            #### computing turnover times ####
+            tau_1st, tau_veg_1st, tau_soil_1st=tau(cVeg_1st, delta_cVeg_1st, cSoil_1st, npp_1st, rh_1st)
+            tau_mid, tau_veg_mid, tau_soil_mid=tau(cVeg_mid, delta_cVeg_mid, cSoil_mid, npp_mid, rh_mid)            
+            tau_last, tau_veg_last, tau_soil_last=tau(cVeg_last, delta_cVeg_last, cSoil_last, npp_last, rh_last)
+            tau_diff_1 = tau_mid - tau_1st
+            tau_diff_2 = tau_last - tau_mid
+            tau_diff_total = tau_last - tau_1st
+            tau_veg_diff_1 = tau_veg_mid - tau_veg_1st
+            tau_veg_diff_2 = tau_veg_last - tau_veg_mid
+            tau_veg_diff_total = tau_veg_last - tau_veg_1st
+            tau_soil_diff_1 = tau_soil_mid - tau_soil_1st
+            tau_soil_diff_2 = tau_soil_last - tau_soil_mid
+            tau_soil_diff_total = tau_soil_last - tau_soil_1st            
+            
+            # cleaning non-positive and erroneous npp and tau values
+            model_mask_resampled=gh.resample_grid (
+                model_mask, target_mask, model_mask.index_mask, method, radius_of_influence)            
+            
+            #npp_masked=npp_1st.data[np.where(npp_1st.mask==0)]
+            #print ('npp non-positive count: ' + str(len(npp_masked[np.where(npp_masked<=0)])))
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,npp_1st)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,npp_mid)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,npp_last)         
+            
+            #tau_veg_masked=tau_veg_1st.data[np.where(tau_veg_1st.mask==0)]
+            #print ('tau_veg non-positive count: ' + str(len(tau_veg_masked[np.where(tau_veg_masked<=0)])))
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_veg_1st)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_veg_mid)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_veg_last)
+            
+            #tau_soil_masked=tau_soil_1st.data[np.where(tau_soil_1st.mask==0)]
+            #print ('tau_soil non-positive count: ' + str(len(tau_soil_masked[np.where(tau_soil_masked<=0)])))           
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_soil_1st[:,:])
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_soil_mid[:,:])
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_soil_last[:,:])
+            
+            model_mask_inverse=-(model_mask_resampled.index_mask-1)
+            # print("TEST VALUES")
+            # print(type(tau_soil_1st))
+            # print(np.max(tau_soil_1st[:,:]))           
+            # print(np.max(tau_soil_mid[:,:]))
+            # print(np.max(tau_soil_last[:,:]))     
+            # tau_soil_1st_masked = tau_soil_1st.data
+            # tau_soil_1st_masked=np.max(tau_soil_1st_masked[np.where(target_mask.index_mask==0)])
+            # print(tau_soil_1st_masked)
+            # tau_soil_last_masked=np.ma.array(tau_soil_last[:,:], mask=target_mask.index_mask)
+            # print(np.ma.max(tau_soil_last_masked))
+            # writing NetCDFs            
+            write_new_NetCDF (
+                mask=target_mask, 
+                vn="tau", 
+                var1=tau_1st,
+                var2=tau_mid,
+                var3=tau_last,
+                var4=tau_diff_1,
+                var5=tau_diff_2,
+                var6=tau_diff_total,                   
+                )    
+            write_new_NetCDF (
+                mask=target_mask, 
+                vn="tau_veg", 
+                var1=tau_veg_1st,
+                var2=tau_veg_mid,
+                var3=tau_veg_last,
+                var4=tau_veg_diff_1,
+                var5=tau_veg_diff_2,
+                var6=tau_veg_diff_total,                   
+                )    
+            write_new_NetCDF (
+                mask=target_mask, 
+                vn="tau_soil", 
+                var1=tau_soil_1st,
+                var2=tau_soil_mid,
+                var3=tau_soil_last,
+                var4=tau_soil_diff_1,
+                var5=tau_soil_diff_2,
+                var6=tau_soil_diff_total,                   
+                )                             
+            model_mask_inv=gh.CoordMask(model_mask_inverse,model_mask_resampled.tr)
+            mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+            model_mask_inv.write_netCDF4(mask_path)    
+            print("Inverse mask written to: "+str(mask_path))
+            k+=1 # model counter            
+        print('\033[1m'+'Done!')        
+    # write updated mask
+    #target_mask.write_netCDF4(Path("common_mask_expanded.nc"))
+    #return (target_mask)
+
+def mask_inverse_sum (model_names, experiment_names, global_mask, output_path, threshold):
+    
+    def read_mask(mf, experiment):
+        conf_dict = gh.confDict(mf)
+        dataPath=Path(conf_dict["dataPath"])
+        file_path = dataPath.joinpath(experiment+"_mask_inverse.nc")
+        ds = nc.Dataset(str(file_path))
+        model_inv_mask = ds.variables["mask"][:, :]   
+        ds.close() 
+        return(model_inv_mask)
+    
+    k=0 # model counter
+    model_folders=[(m) for m in model_names] 
+    m_names=list(model_names.values())      
+    
+    template_inv_mask=read_mask(model_folders[0], experiment_names[0])
+    inv_mask_sum=np.zeros_like(template_inv_mask)
+    
+    for mf in model_folders:
+        model_inv_mask=read_mask(mf, experiment_names[0])
+        for experiment in experiment_names:
+            #print('\033[1m'+m_names[k])
+            #print('\033[0m')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            model_inv_mask_current=read_mask(mf, experiment)
+            model_inv_mask=np.logical_and(model_inv_mask, model_inv_mask_current)
+        k=k+1
+        inv_mask_sum=inv_mask_sum+model_inv_mask
+    
+    inverse_mask_sum=gh.CoordMask(inv_mask_sum, tr=global_mask.tr)
+    inverse_mask_sum.write_netCDF4(Path(output_path).joinpath("inv_mask_sum.nc"))
+    combined_mask=inv_mask_sum.copy()
+    combined_mask[combined_mask<threshold]=1
+    combined_mask[combined_mask>=threshold]=0
+    combined_global_mask=gh.CoordMask(combined_mask, tr=global_mask.tr)
+    combined_global_mask.write_netCDF4(Path(output_path).joinpath("combined_global_mask.nc"))    
+    print('\033[1m'+"Done!"+'\033[0m')
+    
+def ensamble_uncertainty_2 (
+        model_names,
+        experiment_names,
+        global_mask,
+        inverse_mask_sum,
+        output_path,
+        ):
+    model_folders=[(m) for m in model_names]
+    m_names=list(model_names.values())
+    g_mask=global_mask.index_mask
+    cols = px.colors.qualitative.Light24
+    model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}    
+    inv_mask_sum = inverse_mask_sum.index_mask
+    for experiment in experiment_names:
+        print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .'+'\033[0m')               
+        print('computing uncertainties...')  
+        for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil', 'C_ecosystem']:            
+            print(vn)
+            for subset in ['first_5_years','middle_5_years','last_5_years',
+                            'diff_1st_half', 'diff_2nd_half', 'diff_total']:                       
+                var_sum_zero=np.zeros_like(g_mask)
+                var_sum=np.ma.array(var_sum_zero,mask = g_mask)
+                var_diff_sqr_zero=np.zeros_like(g_mask)
+                var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
+                var_abs_diff_zero=np.zeros_like(g_mask)
+                var_abs_diff=np.ma.array(var_abs_diff_zero,mask = g_mask)                       
+                
+                # computing ensemble mean       
+                k=0 # model counter                                   
+                all_data=list()
+
+                for mf in model_folders:
+                    experiment_name=m_names[k]+"_"+experiment+"_"
+                    conf_dict = gh.confDict(mf)                                        
+                    dataPath=Path(conf_dict["dataPath"])  
+                    mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+                    ds = nc.Dataset(str(mask_path))
+                    inv_mask=ds.variables['mask'][:, :]  
+                    ds.close() 
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
+                    ds = nc.Dataset(str(file_path))
+                    var_name=vn+"_"+subset
+                    var=ds.variables[var_name][:, :]*inv_mask
+                    ds.close()                     
+                    var_sum=var_sum+var
+                    
+                    data_masked=var.data[np.where(g_mask==0)].flatten()
+                    #data_masked=var.flatten()
+                    #print("var: "+str(np.max(var)))
+                    #print("data_masked: "+str(np.max(data_masked)))
+                    #data_masked_mean=np.mean(data_masked)
+                    #data_masked_sd=np.std(data_masked)
+
+                    k+=1 # model counter
+                    all_data.append(data_masked[data_masked<=1e5])
+                mean=var_sum/inv_mask_sum
+                
+                # computing uncertainty measures: standard deviation and average deviation                   
+                k=0 # model counter        
+                for mf in model_folders:
+                    experiment_name=m_names[k]+"_"+experiment+"_"
+                    conf_dict = gh.confDict(mf)
+                    dataPath=Path(conf_dict["dataPath"])    
+                    mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+                    ds = nc.Dataset(str(mask_path))
+                    inv_mask=ds.variables['mask'][:, :]  
+                    ds.close()                     
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc")    
+                    ds = nc.Dataset(str(file_path))
+                    var_name=vn+"_"+subset
+                    var=ds.variables[var_name][:, :].data           
+                    var_diff_sqr = var_diff_sqr + ((var-mean)**2)*inv_mask
+                    var_abs_diff = var_abs_diff + (np.abs(var-mean))*inv_mask
+                    k+=1 # model counter 
+                    ds.close()             
+                variance = var_diff_sqr / (inv_mask_sum-1)
+                st_dev=np.sqrt(variance) 
+                ave_dev=var_abs_diff / inv_mask_sum
+                # final masking
+                var_mean_final = np.ma.array(mean,mask = g_mask)
+                var_sd_final = np.ma.array(st_dev,mask = g_mask)
+                var_avd_final = np.ma.array(ave_dev,mask = g_mask)
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=Path(output_path).joinpath(experiment+"_"+var_name+"_uncertainty.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimensions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)         
+                # creating variables                         
+                var_mean = ds_new.createVariable(var_name+'_mean', "float32", ["lat", "lon"])
+                var_mean[:, :] = var_mean_final
+                var_sd = ds_new.createVariable(var_name+'_sd', "float32", ["lat", "lon"])
+                var_sd[:, :] = var_sd_final            
+                var_avd = ds_new.createVariable(var_name+'_avd', "float32", ["lat", "lon"])
+                var_avd[:, :] = var_avd_final
+                var_avd_relative = ds_new.createVariable(var_name+'_avd_relative', "float32", ["lat", "lon"])
+                relative_uncertainty = var_avd_final / abs(var_mean_final)
+                #relative_uncertainty [relative_uncertainty>300]=300
+                var_avd_relative[:, :] = relative_uncertainty              
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+                # closing NetCDF file      
+                ds_new.close() 
+                                              
+                # add mean density function to the plot 
+                #data_masked=mean.flatten()
+                data_masked=mean[np.where(g_mask==0)].flatten() 
+                #data_masked_mean=np.mean(data_masked)
+                #data_masked_sd=np.std(data_masked)
+                all_data.append(data_masked)
+               
+                #adding uncertainty               
+                #data_masked2=var_avd_final.flatten()
+                data_masked2=var_avd_final.data[np.where(g_mask==0)].flatten()                     
+                all_data.append(data_masked2)
+                #print("all data: ")
+                #print(len(all_data))
+                if subset in ["last_5_years"]:#, "diff_total"]:
+                    
+                    # compute ylim from interquartile range
+                    all_data_all=np.array([0])
+                    for i in range(len(all_data)):all_data_all=np.append(all_data_all, all_data[i])
+                    # Q1 = np.quantile(all_data_all, 0.25) 
+                    # Q3 = np.quantile(all_data_all, 0.75)
+                    # IQR = Q3 - Q1
+                    # if subset=="last_5_years": ymin=0
+                    # else: ymin = Q1 - 20 * IQR
+                    # ymax = Q3 + 20 * IQR
+                    ymin=0
+                    if vn in ['tau_soil', 'tau']: ymax=300
+                    elif vn=='tau_veg': ymax=10
+                    else: ymax=np.max(all_data_all)
+                    all_data_cropped=all_data.copy()
+                    for i in range(len(all_data_cropped)):
+                        all_data_cropped[i]=all_data_cropped[i][all_data_cropped[i]>ymin]
+                        all_data_cropped[i]=all_data_cropped[i][all_data_cropped[i]<ymax]
+                    # violin plots
+                    fig, ax = plt.subplots(figsize =(10, 5))
+                    parts=ax.violinplot(all_data_cropped,
+                        showmeans=True,
+                        showmedians=False,
+                        showextrema=False,
+                        #points=1000
+                        )
+                    m=0
+                    for pc in parts['bodies']:
+                        if m < len(m_names):
+                            color=model_cols[m_names[m]]
+                        else: color=('lightgrey')
+                        pc.set_facecolor('#63B8FF')#(color) #('#D43F3A')
+                        pc.set_edgecolor('black')
+                        pc.set_alpha(1)
+                        m=m+1
+                    ax.set_title('Spatial variability - '+var_name)
+                    ax.grid(linestyle='dashed')
+                    
+                    if np.max(all_data_all)>1000:
+                        ax.set_ylim([ymin,ymax])                       
+                    plt.xticks(range(1,len(m_names)+3),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
+                    plt.show()
+                   
+                    # box plot
+                    fig4, ax4 = plt.subplots(figsize =(10, 5))
+                    ax4.boxplot(all_data, flierprops={'marker': '*', 'markersize': 1, 'markerfacecolor': 'fuchsia'})
+                    ax4.set_title('Spatial variability - '+var_name)
+                    ax4.grid()
+                    # compute ylim from interquartile range
+                    # Q1 = np.quantile(all_data_all, 0.25) 
+                    # Q3 = np.quantile(all_data_all, 0.75)
+                    # IQR = Q3 - Q1
+                    # if subset=="last_5_years": ymin=0
+                    # else: ymin = Q1 - 10 * IQR
+                    # ymax = Q3 + 10 * IQR
+                    # ax.set_ylim([ymin,ymax])                     
+                    plt.xticks(range(1,len(m_names)+3),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
+                    plt.show()
+                    
+
+    print('\033[1m'+'Done!')         

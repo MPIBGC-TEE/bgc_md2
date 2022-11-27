@@ -87,7 +87,7 @@ all_comp_dict_S2=moh.get_components_from_output(model_names=model_names,
              #averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
              #overlap=True,
-             #start_shift=115,
+             start_shift=109,
              #end_shift=4
              )
 all_comp_dict_S3=moh.get_components_from_output(model_names=model_names,
@@ -98,7 +98,7 @@ all_comp_dict_S3=moh.get_components_from_output(model_names=model_names,
              #averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
              #overlap=True,
-             #start_shift=115,
+             start_shift=109,
              #end_shift=4
              )
 
@@ -175,15 +175,15 @@ all_comp_dict_S2_1st_half=moh.get_components_from_output(model_names=model_names
              vars_all_list=vars_all_list_S2,
              delta_t_val=delta_t_val, 
              part=1,
-             end_shift=59,
-             #start_shift=115                                   
+             end_shift=52,
+             start_shift=109                                   
              )
 all_comp_dict_S3_1st_half=moh.get_components_from_output(model_names=model_names,
              vars_all_list=vars_all_list_S3,
              delta_t_val=delta_t_val, 
              part=1,
-             end_shift=59,
-             #start_shift=115                                   
+             end_shift=52,
+             start_shift=109                                   
              )
 
 x1,sigma_x1=moh.plot_traceable_component(
@@ -203,15 +203,15 @@ all_comp_dict_S2_2nd_half=moh.get_components_from_output(model_names=model_names
              vars_all_list=vars_all_list_S2,
              delta_t_val=delta_t_val, 
              part=1,
-             #end_shift=54,
-             start_shift=65                                   
+             end_shift=2,
+             start_shift=57                                   
              )
 all_comp_dict_S3_2nd_half=moh.get_components_from_output(model_names=model_names,
              vars_all_list=vars_all_list_S3,
              delta_t_val=delta_t_val, 
              part=1,
-             #end_shift=54,
-             start_shift=65                                   
+             end_shift=2,
+             start_shift=57                                   
              )
 
 x1,sigma_x1=moh.plot_traceable_component(
