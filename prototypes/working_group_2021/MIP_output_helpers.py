@@ -5139,10 +5139,9 @@ def ensamble_uncertainty_2 (
     print('\033[1m'+'Done!'+'\033[0m')
     return (high_outlier_npp, high_outlier_veg, high_outlier_soil)
     
-    
-    
-    
-def plot_attribution_global_mean (
+  
+        
+def plot_attribution_C_storage_global_mean (
     all_comp_dict,
     percent=False,
     part=1,
@@ -5161,122 +5160,71 @@ def plot_attribution_global_mean (
     
     times=all_comp_dict["Times"][start:stop]   
     
-    sum_pos_diff_x=0
-    sum_pos_cont_rt=0
-    sum_pos_cont_u=0
-    sum_pos_cont_rt_u_inter=0
-    sum_pos_cont_x_p=0
-    
-    sum_neg_diff_x=0
-    sum_neg_cont_rt=0
-    sum_neg_cont_u=0
-    sum_neg_cont_rt_u_inter=0
-    sum_neg_cont_x_p=0  
-    
+    sum_delta_x=0
+    sum_delta_rt=0    
+    sum_delta_rt_soil=0
+    sum_delta_rt_veg=0    
+    sum_delta_u=0
+
     print ('\033[1m'+'Attribution of summed deviations from the mean for all models ' +
         'to the differences in traceable components')     
     for m in models: 
            
         x=all_comp_dict[m]["x"][start:stop]
-        x_c=all_comp_dict[m]["x_c"][start:stop]
-        x_p=all_comp_dict[m]["x_p"][start:stop]
-        if "npp" in all_comp_dict[m].keys():
-            u=all_comp_dict[m]["npp"][start:stop]
-        else:     
-            u=all_comp_dict[m]["u"][start:stop]
+        u=all_comp_dict[m]["npp"][start:stop]
         rt=all_comp_dict[m]["rt"][start:stop]
+        rt_veg=all_comp_dict[m]["rt_veg"][start:stop]
+        rt_soil=all_comp_dict[m]["rt_soil"][start:stop]
+        
         x_mean=all_comp_dict["Mean"]["x"][start:stop]
-        x_c_mean=all_comp_dict["Mean"]["x_c"][start:stop]
-        x_p_mean=all_comp_dict["Mean"]["x_p"][start:stop]
-        if "npp" in all_comp_dict["Mean"].keys():
-            u_mean=all_comp_dict["Mean"]["npp"][start:stop]
-        else:    
-            u_mean=all_comp_dict["Mean"]["u"][start:stop]
-        rt_mean=all_comp_dict["Mean"]["rt"][start:stop]           
-            
-        delta_x=x-x_mean
-        delta_x_c=x_c-x_c_mean
-        delta_x_p=x_p-x_p_mean
-        delta_u=u-u_mean
-        delta_rt=rt-rt_mean
+        u_mean=all_comp_dict["Mean"]["npp"][start:stop]
+        rt_mean=all_comp_dict["Mean"]["rt"][start:stop]
+        rt_veg_mean=all_comp_dict["Mean"]["rt_veg"][start:stop] 
+        rt_soil_mean=all_comp_dict["Mean"]["rt_soil"][start:stop] 
         
-        # attribution of delta X to delta X_c and delta X_p
-        x_c_contrib=delta_x_c
-        x_p_contrib=-delta_x_p
-         
-        # attribution of delta X_c to delta u and delta RT
-        rt_contrib=delta_rt*(u-delta_u/2)
-        u_contrib=delta_u*(rt-delta_rt/2) 
-        rt_u_inter=delta_x_c-rt_contrib-u_contrib 
+        delta_x=abs(x-x_mean)
+        delta_u=abs(u-u_mean)
+        delta_rt=abs(rt-rt_mean)
+        delta_rt_veg=abs(rt_veg-rt_veg_mean)
+        delta_rt_soil=abs(rt_soil-rt_soil_mean)
+              
+        sum_delta_x+=delta_x
+        sum_u+=delta_u
+        sum_rt+=delta_rt
+        sum_rt_veg+=delta_rt_veg
+        sum_rt_soil+=delta_rt_soil
+               
+    x_uncert=sum_delta_x/len(models)
+    u_uncert=sum_delta_u/len(models)
+    rt_uncert=sum_delta_rt/len(models)
+    rt_veg_uncert=sum_delta_rt_veg/len(models)
+    rt_soil_uncert=sum_delta_rt_soil/len(models)    
+    
+    # attribution of delta X_c to delta u and delta RT
+    u_contrib=u_uncert*rt_mean#(rt-delta_rt/2)
+    rt_veg_contrib=rt_veg_uncert*u_mean#(u-delta_u/2) 
+    rt_soil_contrib=rt_soil_uncert*u_mean#(u-delta_u/2) 
+    
+    x_uncert_propagated=u_contrib+rt_veg_contrib+rt_soil_contrib
+    
+    u_contrib_percent=u_contrib/x_uncert_propagated*100
+    rt_veg_contrib_percent=rt_veg_contrib/x_uncert_propagated*100
+    rt_soil_contrib_percent=rt_soil_contrib/x_uncert_propagated*100
 
-        # summation of positive and negative contributions separately         
-        
-        pos_delta_x=delta_x.copy(); pos_delta_x[pos_delta_x<0]=0
-        neg_delta_x=delta_x.copy(); neg_delta_x[neg_delta_x>0]=0
-        sum_pos_diff_x+=pos_delta_x
-        sum_neg_diff_x+=neg_delta_x       
-
-        pos_cont_rt=rt_contrib.copy(); pos_cont_rt[pos_cont_rt<0]=0
-        neg_cont_rt=rt_contrib.copy(); neg_cont_rt[neg_cont_rt>0]=0
-        sum_pos_cont_rt+=pos_cont_rt
-        sum_neg_cont_rt+=neg_cont_rt
-
-        pos_cont_u=u_contrib.copy(); pos_cont_u[pos_cont_u<0]=0
-        neg_cont_u=u_contrib.copy(); neg_cont_u[neg_cont_u>0]=0
-        sum_pos_cont_u+=pos_cont_u
-        sum_neg_cont_u+=neg_cont_u
-
-        pos_cont_rt_u_inter=rt_u_inter.copy(); pos_cont_rt_u_inter[pos_cont_rt_u_inter<0]=0
-        neg_cont_rt_u_inter=rt_u_inter.copy(); neg_cont_rt_u_inter[neg_cont_rt_u_inter>0]=0
-        sum_pos_cont_rt_u_inter+=pos_cont_rt_u_inter
-        sum_neg_cont_rt_u_inter+=neg_cont_rt_u_inter
-
-        pos_cont_x_p=x_p_contrib.copy(); pos_cont_x_p[pos_cont_x_p<0]=0
-        neg_cont_x_p=x_p_contrib.copy(); neg_cont_x_p[neg_cont_x_p>0]=0
-        sum_pos_cont_x_p+=pos_cont_x_p
-        sum_neg_cont_x_p+=neg_cont_x_p 
-        
-    plot_attribution (
-        times=times,
-        delta_x_pos=sum_pos_diff_x,
-        delta_x_neg=sum_neg_diff_x,
-        rt_contrib_pos=sum_pos_cont_rt,
-        rt_contrib_neg=sum_neg_cont_rt,
-        u_contrib_pos=sum_pos_cont_u,
-        u_contrib_neg=sum_neg_cont_u,
-        rt_u_inter_pos=sum_pos_cont_rt_u_inter,
-        rt_u_inter_neg=sum_neg_cont_rt_u_inter,
-        x_p_contrib_pos=sum_pos_cont_x_p,
-        x_p_contrib_neg=sum_neg_cont_x_p,
-        percent=percent,
-    ) 
-    # plot_attribution_global_mean (
-        # delta_x=,
-        # npp_contrib,
-        # tau_veg_contrib,
-        # tau_soil_contrib    
+    plot_attribution_C_storage_global (
+        delta_x=np.mean(x_uncert),
+        npp_contrib_percent=np.mean(u_contrib_percent),
+        tau_veg_contrib_percent=np.mean(rt_veg_contrib_percent),
+        tau_soil_contrib_percent=np.mean(rt_soil_contrib_percent)   
+    )
 
 
-def plot_attribution_global_mean (
-    #times,
-    delta_x,
-    npp_contrib,
-    tau_veg_contrib,
-    tau_soil_contrib
-):
-        #x_p_contrib=x_p_contrib_pos-x_p_contrib_neg
-        #rt_contrib=rt_contrib_pos-rt_contrib_neg
-        #u_contrib=u_contrib_pos-u_contrib_neg
-        #rt_u_inter=rt_u_inter_pos-rt_u_inter_neg
-        
-      
-        abs_total=npp_contrib+tau_veg_contrib+tau_soil_contrib
-        npp_0_contrib_1_percent_global=npp_contrib/abs_total*100
-        tau_veg_0_contrib_1_percent_global=tau_veg_contrib/abs_total*100
-        tau_soil_0_contrib_1_percent_global=tau_soil_contrib/abs_total*100
-        #percent_inter=rt_u_inter/abs_total*100
-        
-        ######### Percents
+def plot_attribution_C_storage_global (
+    sum_delta_x,
+    npp_contrib_percent,
+    tau_veg_contrib_percent,
+    tau_soil_contrib_percent
+    ):
 
         plt.rcParams.update({'font.size': 12})
         fig=plt.figure(figsize=(15,7))
@@ -5290,39 +5238,16 @@ def plot_attribution_global_mean (
         
         # first 5 years              
         ax0=axs[0]; title='1911-1915'
-        sizes = [npp_0_contrib_1_percent_global,
-                 tau_veg_0_contrib_1_percent_global, 
-                 tau_soil_0_contrib_1_percent_global]
-        sizes_2 = [npp_0_contrib_1_percent_global, 
-                  tau_veg_0_contrib_1_percent_global+tau_soil_0_contrib_1_percent_global]    
+        sizes = [npp_contrib_percent,
+                 tau_veg_contrib_percent, 
+                 tau_soil_contrib_percent]
+        sizes_2 = [npp_contrib_percent, 
+                  tau_veg_contrib_percent+tau_soil_contrib_percent]    
         pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
         
         plt.show() 
         plt.rcParams.update(plt.rcParamsDefault)  
-        
-        # # pie charts
-        # ax1=axs[1]
-        # ax1.set_title('Temporal average % contributions')
-          
-        # if np.mean(percent_inter) > 0.001:
-            # labels = '$\Delta$ RT', '$\Delta$ NPP', '$\Delta$NPP*$\Delta$RT', '$\Delta$ X_p'
-            # sizes = [np.mean(percent_rt), np.mean(percent_u), 
-                # np.mean(percent_inter), np.mean(percent_x_p)]
-            # ax1.pie(sizes, autopct='%1.1f%%', 
-                # startangle=90, counterclock=False, colors=("darkorange", "green", "lightgrey", "blue"))
-        # else:
-            # labels = '$\Delta$ RT','$\Delta$ NPP', '$\Delta$ X_p'
-            # sizes = [np.mean(percent_rt), np.mean(percent_u), np.mean(percent_x_p)]
-            # ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
-                # startangle=90, counterclock=False, colors=("darkorange", "green", "blue"))        
-        # ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
-        # ax1.legend(labels, bbox_to_anchor =(1,1))
-    
-        plt.show()
 
-
-
-    
 def get_global_components_from_output(
     model_names,  # dictionary (folder name : model name)
     vars_all_list,  # a list of test_args from all models involved
@@ -5341,11 +5266,7 @@ def get_global_components_from_output(
         start_date,
     ):
         n_months = len(vars_all.gpp)*12
-        #n_days = month_2_day_index([n_months], start_date)[0]
         n_iter = n_months #int(n_days / delta_t_val)
-        #print("n_months: "+ str(n_months))
-        #print("n_days: "+ str(n_days))
-        #print("n_iter: "+ str(n_iter))
         return np.array(
             tuple(
                 (
@@ -5452,11 +5373,6 @@ def get_global_components_from_output(
         # harmonising model outputs
         start_flux=start
         stop_flux=stop
-        #print(len(vars_all_list[k].cVeg)>1000)
-        # if len(vars_all_list[k].cVeg)>1000:
-            # start_pool=start//12
-            # stop_pool=stop//12+1
-        # else:
         start_pool=start
         stop_pool=stop       
            
@@ -5471,20 +5387,10 @@ def get_global_components_from_output(
         rh=vars_all_list[k].rh[start_flux:stop_flux]
         if rh.shape[0]>500: rh=gh.avg_timeline(rh, averaging)
         ra=vars_all_list[k].ra[start_flux:stop_flux]
-        if ra.shape[0]>500: ra=gh.avg_timeline(ra, averaging)        
-        # print(times.shape)
-        # print(cVeg.shape)
-        # print(cSoil.shape)
-        # print(npp.shape)
-        # print(rh.shape)
-        # print(start_pool, stop_pool)
-        # print(start_flux, stop_flux)        
+        if ra.shape[0]>500: ra=gh.avg_timeline(ra, averaging)             
         
         # correction for ISAM data issue
         if mf=="cj_isam": 
-            # print (cVeg[-9])
-            # print(cVeg[-8])
-            # print(cVeg[-10])
             cVeg[-9]=np.mean((cVeg[-8], cVeg[-10]))
             cVeg[40]=np.mean((cVeg[39], cVeg[41]))
         # traditional traceable components 
@@ -5494,8 +5400,10 @@ def get_global_components_from_output(
         nep=annual_5_delta(x)
         delta_cVeg=annual_5_delta(cVeg)
         delta_cSoil=annual_5_delta(cSoil)
-        rt=x/(rh+ra)
-        x_c=rt*gpp
+        #rt=x/(rh+ra)
+        rt=x/rh
+        #x_c=rt*gpp
+        x_c=rt*npp
         x_p=x_c-x
         # flux-based                
         dist=gpp-nep-ra-rh
