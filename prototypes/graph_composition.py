@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -31,21 +31,19 @@ import networkx as nx
 # This time we are only interested in Vegetation models and Carbon input partitioning. Therefore we look for models for which the variable
 # `VegetationCarbonInputPartitioningTuple` is defined or computable.
 
-# +
-#li = h.list_target_models(
-#    target_classes=frozenset(
-#        {
-#            CompartmentalMatrix,
-#            StateVariableTuple,
-#            VegetationCarbonInputPartitioningTuple,
-#            VegetationCarbonInputTuple
-#            
-#        }
-#    ),
-#    # explicit_exclude_models=frozenset({'CARDAMOM'})
-#)
+li = h.list_target_models(
+    target_classes=frozenset(
+        {
+            CompartmentalMatrix,
+            StateVariableTuple,
+            VegetationCarbonInputPartitioningTuple,
+            VegetationCarbonInputTuple
+            
+        }
+    ),
+    # explicit_exclude_models=frozenset({'CARDAMOM'})
+)
 #li    
-# -
 
 
 # From these we chose two models to investigate more thoroughly.
@@ -133,6 +131,7 @@ g_soil=subgraph_with_virtual_nodes(mvs_mm,sv_set_soil)
 [str(n) for n in g_soil.nodes]
 
 # +
+import matplotlib.pyplot as plt
 # %matplotlib notebook
 ax1=plt.subplot(2,1,1)
 ax2=plt.subplot(2,1,2)

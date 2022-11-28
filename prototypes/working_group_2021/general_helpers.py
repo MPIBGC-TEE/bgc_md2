@@ -9,6 +9,7 @@ from itertools import islice
 from time import time
 from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from sympy.core.expr import Expr
+from scipy.interpolate import interp1d
 from collections import namedtuple
 from frozendict import frozendict
 from importlib import import_module
@@ -1508,6 +1509,23 @@ def download_TRENDY_output(
                     print(zipped_path)
     print("finished!")
 
+# toextend the interpolating functions beyond the last month
+# we have to extend the data fields from which they are derived
+def extend_by_one(field):
+    return np.concatenate([field, field[-2:-1]])
+
+def make_interpol_of_t_in_days(
+        field  # field of values one per month
+    ):
+    y = extend_by_one(field)
+    #print(y.shape)
+    #from IPython import embed; embed()
+    f_of_month = interp1d(x=np.arange(0.0, len(y)), y=y, kind='cubic')
+
+    def f_of_day(day):
+        return f_of_month(day / 30.0)
+
+    return f_of_day
 
 def monthly_to_yearly(monthly):
     # TRENDY specific - months weighted like all months are 30 days

@@ -24,7 +24,8 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 
 from pathlib import Path
 import json 
-from sympy import  Symbol, Function, simplify
+from sympy import  Symbol, Function, simplify, Function, Symbol, diff, simplify, exp
+from sympy.core.function import UndefinedFunction
 import numpy as np
 import matplotlib.pyplot as plt
 from ComputabilityGraphs.CMTVS import CMTVS
@@ -50,6 +51,8 @@ import model_specific_helpers_2 as msh
 from general_helpers import day_2_month_index, make_B_u_funcs_2 
 import general_helpers as gh
 
+import bgc_md2.resolve.computers as bgc_c
+from subs_1 import subs_dict
 # +
 #mvs.computable_mvar_types(),mvs.provided_mvar_types
 
@@ -65,12 +68,11 @@ simplify(mvs.get_AggregatedVegetationCarbonInFlux())
 
 simplify(s1.mvs.get_AggregatedVegetationCarbonOutFlux())
 
-import bgc_md2.resolve.computers as bgc_c
 C__Veg,C__Soil=map(Symbol,["C__Veg","C__Soil"])
 mvs_vs=CMTVS(
     {
         mvs.get_TimeSymbol(),
-        StateVariableTuple(),
+        StateVariableTuple([C__Veg,C__Soil]),
         InFluxesBySymbol({C__Veg: mvs.get_AggregatedVegetationCarbonInFlux()}),
         OutFluxesBySymbol(
             {
@@ -86,14 +88,14 @@ mvs_vs=CMTVS(
     computers=h.module_computers(bgc_c)
 )
 
+h.compartmental_graph(mvs_vs)
+
 #luo_tau=mvs.get_LuoTau()
 beta=s1.mvs.get_CarbonInputPartitioningTuple()
 simplify(beta)
 
 luo_rt=s1.mvs.get_LuoRT()
 luo_rt.free_symbols
-from sympy import Function, Symbol, diff,simplify,exp 
-from sympy.core.function import UndefinedFunction
               
 
 # +
@@ -112,7 +114,6 @@ temp
 T=temp.args[0]
 d=simplify(diff(luo_rt,T))
 # -
-from subs_1 import subs_dict
 xi=subs_dict[s1.xi]
 xi
 dss=d.subs(subs_dict)
@@ -196,16 +197,16 @@ par_dict = gh.make_param_dict(mvs, cpa, epa)
 B_func, I_func = make_B_u_funcs_2(mvs, par_dict, func_dict, delta_t_val)
 
 # we produce functions of f(it,x_a,...,x_z) to compute the tracable expressions
-traced_funcs = {
-    key: gh.numfunc(
-        expr_cont=val,
-        mvs=mvs,
-        delta_t_val=delta_t_val,
-        par_dict=par_dict,
-        func_dict=func_dict
-    )
-    for key,val in traced_expressions.items()
-}
+#traced_funcs = {
+#    key: gh.numfunc(
+#        expr_cont=val,
+#        mvs=mvs,
+#        delta_t_val=delta_t_val,
+#        par_dict=par_dict,
+#        func_dict=func_dict
+#    )
+#    for key,val in traced_expressions.items()
+#}
 
 # -
 
@@ -239,22 +240,9 @@ for i in range(len(svt)):
     axs[0].plot(
         vals.dss[:,i],
         #label=Template('$$ \partial X_c,{$sv} / \partial TAS  $$').substitute
-        label=Template('$$ \partial X_c,{$sv} / \partial TAS  $$').substitute(sv=svt[i])
+        label=Template('$$ \partial RT,{$sv} / \partial TAS  $$').substitute(sv=svt[i])
     )
 axs[0].legend()    
-axs[0].set_title("Temperature sensitivity of X_c components")
+axs[0].set_title("Temperature sensitivity of RT components")
 axs[1].plot(vals.AggregatedVegetation2SoilCarbonFlux)
 axs[1].set_title("Aggregated fluxes from Vegetation to Soil pools")
-
-M=mvs.get_CompartmentalMatrix()
-t=mvs.get_TimeSymbol()
-from sympy import integrate
-integrate(M,t)
-
-# +
-from string import Template
-lt=Template('$$ \partial X_c,{$sv} / \partial TAS  $$')
-lt.substitute(sv=svt[0])
-
-t=mvs.get_TimeSymbol()
-

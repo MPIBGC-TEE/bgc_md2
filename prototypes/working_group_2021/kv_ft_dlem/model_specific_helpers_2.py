@@ -177,7 +177,7 @@ def download_my_TRENDY_output(conf_dict):
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['DLEM'],
-        variables = Observables._fields + Drivers._fields,
+        variables = Observables._fields + Drivers._fields+("gpp",), #(gpp is used for the mask in case of dlme)
         experiments=["S2", "S3"]
     )
 
@@ -351,7 +351,8 @@ def make_StartVector(mvs):
         ["rh"]
     ) 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+# deprecated
+def make_func_dict_old(mvs,dvs,cpa,epa):
     
     def make_npp_func(dvs):
         def npp_func(day):
@@ -382,6 +383,12 @@ def make_func_dict(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
+    }
+
+def make_func_dict(mvs,dvs,cpa,epa):
+    return {
+        "xi":  lambda t: 1,
+        "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
     }
 
 def make_param2res_sym(

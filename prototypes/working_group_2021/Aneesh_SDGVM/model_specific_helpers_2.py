@@ -250,7 +250,7 @@ def get_global_mean_vars(dataPath):
         Drivers(*(arr_dict[k] for k in Drivers._fields))
     )
 
-
+# deprecated
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
@@ -260,16 +260,25 @@ def make_npp_func(dvs):
     return func
 
 
+# deprecated
 def make_xi_func(dvs):
     def func(day):
         return 1.0 # preliminary fake for lack of better data... 
     return func
 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+# deprecated
+def make_func_dict_old(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
+    }
+
+
+def make_func_dict(mvs,dvs,cpa,epa):
+    return {
+        "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
+        "xi": lambda t: 1
     }
 
 def make_StartVector(mvs):

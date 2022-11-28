@@ -344,6 +344,7 @@ def make_StartVector(mvs):
     )
 
 
+# deprecated
 def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
     def xi_func(day):
         mi = gh.day_2_month_index(day)
@@ -370,7 +371,7 @@ def make_xi_func(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
 
     return xi_func
 
-
+# deprecated
 def make_npp_func(dvs):
     def func(day):
         month = gh.day_2_month_index(day)
@@ -379,13 +380,55 @@ def make_npp_func(dvs):
 
     return func
 
-
-def make_func_dict(mvs, dvs, cpa, epa):
+# deprecated
+def make_func_dict_old(mvs, dvs, cpa, epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs.tsl, epa.Mw, epa.Ms, epa.Topt, epa.Tcons, dvs.mrsos, dvs.landCoverFrac)
     }
 
+
+def xi(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
+    # alternative FT
+        # Q10 function (this is not what Clark et al 2011 Fig. 2 presented, the equation must be wrong)
+    #FT = 2.0 ** ((tsl[mi] - 298.15) / 10)  # temperature rate modifier
+        # RothC temperature function (Jenkinson 1990)
+    FT = Tcons / (1 + np.exp(106/(tsl - 273.1 + Topt)))
+    FV = 0.6 + 0.4 * (1 - landCoverFrac / 100)  # effect of vegetation cover
+    # Mw is soil moisture at wilting point as a fraction of saturation
+    # Ms is soil moisture content at saturation
+    S0 = 0.5 * (1 + Mw)  # optimum soil moisture
+    Smin = 1.7 * Mw  # lower threshold soil moisture for soil respiration
+    if S0 < mrsos/Ms:
+        FS = 1 - 0.8 * (mrsos/Ms - S0)  # effect of soil moisture
+    if (Smin < mrsos/Ms) and (mrsos/Ms <= S0):
+        FS = 0.2 + 0.8 * (mrsos/Ms - Smin) / (S0 - Smin)
+    if mrsos/Ms <= Smin:
+        FS = 0.2
+    # print("FT,FV,FS", FT, FV, FS)
+    rh_factor = FT * FV * FS
+    return rh_factor # 1.0     # Set to 1 if no scaler implemented
+    # return 1.0
+
+
+def make_func_dict(mvs, dvs, cpa, epa):
+        tsl_f, mrso_f, landCoverFrac_f, npp_f = map(
+            gh.make_interpol_of_t_in_days,
+            (dvs.tsl, dvs.mrsos, dvs.landCoverFrac, dvs.npp)
+        )
+
+        return {
+            "NPP": npp_f,
+            "xi": lambda t: xi(
+                tsl_f(t),
+                epa.Mw,
+                epa.Ms,
+                epa.Topt,
+                epa.Tcons,
+                mrso_f(t),
+                landCoverFrac_f(t)
+             )
+        }
 
 def make_iterator_sym(
         mvs,

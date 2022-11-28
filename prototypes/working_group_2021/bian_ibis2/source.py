@@ -8,6 +8,8 @@ from bgc_md2.resolve.mvars import (
     InternalFluxesBySymbol,
     TimeSymbol,
     StateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
 
@@ -15,8 +17,8 @@ import bgc_md2.resolve.computers as bgc_c
 sym_dict={    
     # Carbon Pools
     "C_leaf": "vegetation leaf pool",
-    "C_wood": "",
-    "C_root": "",
+    "C_wood": "wood pool",
+    "C_root": "root pool",
     "C_mll": "Metabolic Leaf Litter pool",
     "C_mwl": "Metabolic Wood Litter pool",
     "C_mrl": "Metabolic Root Litter pool",
@@ -112,6 +114,26 @@ mvs = CMTVS(
             C_leaf,
             C_wood,
             C_root,
+            C_mll,
+            C_mwl,
+            C_mrl,
+            C_sll,
+            C_swl,
+            C_srl,
+            C_lll,
+            C_lwl,
+            C_lrl,
+            C_mic,
+            C_prot,
+            C_nonprot,
+            C_pass,  
+        )),
+        VegetationCarbonStateVariableTuple((
+            C_leaf,
+	        C_wood,
+	        C_root,
+        )),
+        SoilCarbonStateVariableTuple((
             C_mll,
             C_mwl,
             C_mrl,

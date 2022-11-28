@@ -23,6 +23,8 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
     VegetationCarbonStateVariableTuple,
     SoilCarbonStateVariableTuple,
+    VegetationCarbonStateVariableTuple,
+    SoilCarbonStateVariableTuple,
 )
 import bgc_md2.resolve.computers as bgc_c
 

@@ -473,7 +473,8 @@ def make_StartVector(mvs):
         ["rh"] #,"ra"]
     ) 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+# deprecated
+def make_func_dict_old(mvs,dvs,cpa,epa):
     
     def make_temp_func(dvs):
         def temp_func(day):
@@ -527,6 +528,38 @@ def make_func_dict(mvs,dvs,cpa,epa):
         "temp": make_temp_func(dvs)
     }
 
+
+def make_func_dict(mvs,dvs,cpa,epa):
+
+    def xi_leaf(tas):
+        t_ref = 273.15 + 24
+        t_half = 273.15 + 33
+        t_exp = 1.8
+        tf_frac = 0.2
+        s_t = t_exp ** ((tas - t_ref)/10)
+        s_f = (1 + np.exp(tf_frac * (tas-t_half)))
+        return s_t / s_f 
+
+    def xi_soil(tas):
+        t_ref = 273.15 + 28
+        t_half = 273.15 + 0
+        t_exp = 1.9
+        s_t = t_exp ** ((tas - t_ref)/10)
+        s_f = 1 / (1 + np.exp(t_half - tas))
+        return s_t * s_f 
+
+    gpp_func, npp_func, tas_func = map(
+        gh.make_interpol_of_t_in_days,
+        (dvs.gpp, dvs.npp, dvs.tas)
+    )
+
+    return {
+        "temp": tas_func,
+        "GPP": gpp_func,
+        "NPP": npp_func,
+        "xi_leaf": lambda t: xi_leaf(tas_func(t)),
+        "xi_soil": lambda t: xi_soil(tas_func(t))
+    }    
 
 def make_param2res_sym(
         mvs,

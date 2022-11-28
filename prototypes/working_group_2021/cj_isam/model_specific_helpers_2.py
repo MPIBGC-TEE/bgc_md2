@@ -1,5 +1,6 @@
 import sys
 import json 
+import math
 from pathlib import Path
 from collections import namedtuple 
 import netCDF4 as nc
@@ -298,7 +299,7 @@ def make_npp_func(dvs):
 #    return func
 # -
 
-import math
+# deprecated
 def make_xi_func(dvs):
     def xi_func(day):
         mi = gh.day_2_month_index(day)
@@ -313,11 +314,31 @@ def make_xi_func(dvs):
     return xi_func
 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+# deprecated
+def make_func_dict_old(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
     }
+
+def xi(tas,mrso):
+    # alternative FT
+    FT = 0.08 * math.exp(0.095 * (tas-273.15)) # temperature rate modifier
+    FW = 1 #/ (1 + 30 * math.exp(-8.5 * mrso)) # water rate modifier
+    rh_factor = FT * FW
+    return rh_factor # 1.0     # Set to 1 if no scaler implemented
+    # return 1.0
+
+def make_func_dict(mvs,dvs,cpa,epa):
+    npp_f = gh.make_interpol_of_t_in_days(dvs.npp)
+    tas_f = gh.make_interpol_of_t_in_days(dvs.tas)
+    mrso_f = gh.make_interpol_of_t_in_days(dvs.mrso)
+    #from IPython import embed;embed()
+    return {
+        "NPP": lambda t: npp_f(t),# * 86400,
+        "xi": lambda t: xi(tas_f(t),mrso_f(t))
+    }
+
 
 # this function is deprecated - see general helpers traceability_iterator
 # def make_traceability_iterator(mvs,dvs,cpa,epa):

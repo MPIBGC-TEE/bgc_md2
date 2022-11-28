@@ -1,6 +1,7 @@
 from cmath import pi, sin
 import sys
 import json 
+import math
 from pathlib import Path
 from collections import namedtuple 
 import netCDF4 as nc
@@ -224,7 +225,8 @@ def download_my_TRENDY_output(conf_dict):
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['IBIS'],
-        variables = Observables._fields + Drivers._fields
+        variables = Observables._fields + Drivers._fields + ("ra", "gpp"), #ra and gpp used for mask creation
+        experiments=["S2"]
     )
 
 def nc_file_name(nc_var_name,experiment_name="IBIS_S2_"):
@@ -417,6 +419,7 @@ def get_global_mean_vars(dataPath):
             Drivers(*map(compute_and_cache_global_mean, d_names))
         )
 
+# deprecated
 def make_npp_func(dvs):
     def func(day):
         month=gh.day_2_month_index(day)
@@ -426,7 +429,7 @@ def make_npp_func(dvs):
     return func
 
 
-import math
+# deprecated
 def make_xi_func(dvs):
     def func(day):
         
@@ -458,12 +461,46 @@ def make_xi_func(dvs):
     return func
 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+# deprecated
+def make_func_dict_old(mvs,dvs,cpa,epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)
     }
 
+
+def xi(tas):
+    tconst = 344.0 # constant for Lloyd and Taylor (1994) function
+    bconst = 10.0  # base temperrature used for carbon decompositon
+    btemp = 288.16 # maximum value of decomposition factor
+    
+    T = tas # do not have soil temp so we use air temp to replace
+    
+    # temp regulates factor
+    if (T > 237.13):
+        factor = min(math.exp(tconst * ((1.0 /(btemp-227.13)) - (1.0 /(T-227.13)) )), bconst)
+    else:
+        factor = math.exp(tconst * ((1.0 /(btemp-227.13)) - (1.0 /(237.13-227.13)) ))
+    
+    wfps = 55.0 #
+    moist = math.exp((wfps - 60.0)**2 /-(800.0))   # moisture regulates factor
+    
+    factor = max(0.001, min(bconst, factor * moist))
+    
+    if (factor > 1.0):
+        factor = 1
+                    
+    #print(factor)
+    
+    return factor # preliminary fake for lack of better data... 
+
+def make_func_dict(mvs,dvs,cpa,epa):
+    tas_f = gh.make_interpol_of_t_in_days(dvs.tas)
+    return {
+        "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
+        "xi": lambda t: xi(tas_f(t))
+    }
+ 
 # We now build the essential object to run the model forward. We have a 
 # - startvector $V_0$ and 
 # - a function $f$ to compute the next value: $V_{it+1} =f(it,V_{it})$
