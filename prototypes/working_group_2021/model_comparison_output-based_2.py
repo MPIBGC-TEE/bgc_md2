@@ -73,13 +73,13 @@ for name in m_names:
 vars_all_list_S2=moh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=moh.get_vars_all_list(model_folders, experiment_names_S3)
 
-np.mean(vars_all_list_S2[2].cSoil)
+np.mean(vars_all_list_S2[2].npp)
 #vars_all_list_S3[2].ra
 
 # define same step size for all models (in days)
 delta_t_val=30
 
-all_comp_dict_S2=moh.get_components_from_output(model_names=model_names,
+all_comp_dict_S2=moh.get_global_components_from_output(model_names=model_names,
              vars_all_list=vars_all_list_S2,
              delta_t_val=delta_t_val, 
              #model_cols=model_cols,
@@ -90,7 +90,7 @@ all_comp_dict_S2=moh.get_components_from_output(model_names=model_names,
              start_shift=109,
              #end_shift=4
              )
-all_comp_dict_S3=moh.get_components_from_output(model_names=model_names,
+all_comp_dict_S3=moh.get_global_components_from_output(model_names=model_names,
              vars_all_list=vars_all_list_S3,
              delta_t_val=delta_t_val, 
              #model_cols=model_cols,
@@ -103,7 +103,7 @@ all_comp_dict_S3=moh.get_components_from_output(model_names=model_names,
              )
 
 # +
-#all_comp_dict_S2["DLEM"]["cSoil"]
+#all_comp_dict_S2["DLEM"]["nep"]
 # -
 
 # ### Plots of traceable components and their uncertainty
@@ -144,6 +144,8 @@ model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
 #     #delta=True,
 # )
 # -
+
+all_comp_dict_S3["ISAM"]["cVeg"][38:43]
 
 x1,sigma_x1=moh.plot_traceable_component(
     all_comp_dict_S2,
@@ -294,13 +296,13 @@ x2,sigma_x2=moh.plot_traceable_component(
 
 u1, sigma_u1=moh.plot_traceable_component(
     all_comp_dict_S2,
-    "gpp",
+    "npp",
     model_cols,
     delta=True,
 )
 u2, sigma_u2=moh.plot_traceable_component(
     all_comp_dict_S3,
-    "gpp",
+    "npp",
     model_cols,
     delta=True,
 )
@@ -430,6 +432,8 @@ moh.plot_attribution_sum (
     percent=True,
     part=1,
 )
+
+
 
 # +
 from collections import namedtuple
