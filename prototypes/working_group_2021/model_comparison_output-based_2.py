@@ -465,4 +465,26 @@ mean
 
 mean.gpp*mean.RT/120
 
+moh.plot_attribution_C_storage_global (
+    all_comp_dict=all_comp_dict_S2,
+    #percent=True,
+    #part=1,
+)
+moh.plot_attribution_C_storage_global (
+    all_comp_dict=all_comp_dict_S3,
+    #percent=True,
+    #part=1,
+)
+
+moh.plot_attribution_C_sink_global (
+    all_comp_dict=all_comp_dict_S2,
+    #percent=True,
+    #part=1,
+)
+moh.plot_attribution_C_sink_global (
+    all_comp_dict=all_comp_dict_S3,
+    #percent=True,
+    #part=1,
+)
+
 

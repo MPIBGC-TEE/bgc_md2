@@ -111,47 +111,6 @@ moh.ensamble_uncertainty (
         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_only",
         )
 
-# ### Computing uncertainty
-
-# +
-# moh.ensamble_uncertainty (
-#         model_names=model_names,
-#         experiment_names=["S2","S3"],
-#         global_mask=final_mask,
-#         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
-#         )
-
-# +
-# moh.ensamble_uncertainty (
-#         model_names=model_names,
-#         experiment_names=["S2","S3"],
-#         global_mask=new_global_mask,
-#         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_included",
-#         )
-
-# +
-#outlier_veg_mask=gh.globalMask(file_name="Outlier_veg_mask.nc") 
-
-# +
-# moh.ensamble_uncertainty (
-#         model_names=model_names,
-#         experiment_names=["S2","S3"],
-#         global_mask=outlier_veg_mask,
-#         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_veg",
-#         )
-
-# +
-#outlier_soil_mask=gh.globalMask(file_name="Outlier_soil_mask.nc") 
-
-# +
-# moh.ensamble_uncertainty (
-#         model_names=model_names,
-#         experiment_names=["S2","S3"],
-#         global_mask=outlier_soil_mask,
-#         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble\\Outliers_soil",
-#         )
-# -
-
 # ### Uncertainty attribution
 
 moh.C_sink_uncertainty_attribution(
@@ -571,5 +530,65 @@ bb=np.array([1111,2222])
 aa=np.array(a)
 
 np.append(aa,bb)
+
+moh.difference_computation(
+    model_names=model_names,
+    global_mask=global_mask
+)
+
+moh.difference_uncertainty (
+        model_names=model_names,
+        global_mask=combined_global_mask,
+        inverse_mask_sum=inverse_mask_sum,
+        output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+        )
+
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=combined_global_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Global"
+    )
+
+biome_mask=gh.globalMask(file_name="mask_tundra.nc")
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Tundra"
+    )
+
+biome_mask=gh.globalMask(file_name="mask_boreal.nc")
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Boreal"
+    )
+
+biome_mask=gh.globalMask(file_name="mask_temperate.nc")
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Temperate"
+    )
+
+biome_mask=gh.globalMask(file_name="mask_mediterranean.nc")
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Mediterranean"
+    )
+
+biome_mask=gh.globalMask(file_name="mask_tropical.nc")
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Tropical"
+    )
+
+biome_mask=gh.globalMask(file_name="mask_desert.nc")
+moh.C_sink_difference_uncertainty_attribution(
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Desert"
+    )
 
 
