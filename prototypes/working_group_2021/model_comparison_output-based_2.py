@@ -73,32 +73,38 @@ for name in m_names:
 vars_all_list_S2=moh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=moh.get_vars_all_list(model_folders, experiment_names_S3)
 
-np.mean(vars_all_list_S2[2].cSoil)
+np.mean(vars_all_list_S2[2].npp)
 #vars_all_list_S3[2].ra
 
 # define same step size for all models (in days)
 delta_t_val=30
 
-all_comp_dict_S2=moh.get_components_from_output(model_names=model_names,
+all_comp_dict_S2=moh.get_global_components_from_output(model_names=model_names,
              vars_all_list=vars_all_list_S2,
              delta_t_val=delta_t_val, 
              #model_cols=model_cols,
              part=1,
              #averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
-             #overlap=True
+             #overlap=True,
+             start_shift=109,
+             #end_shift=4
              )
-all_comp_dict_S3=moh.get_components_from_output(model_names=model_names,
+all_comp_dict_S3=moh.get_global_components_from_output(model_names=model_names,
              vars_all_list=vars_all_list_S3,
              delta_t_val=delta_t_val, 
              #model_cols=model_cols,
              part=1,
              #averaging=12*30//delta_t_val, # yearly averaging
              #averaging=30//delta_t_val, # monthly averaging
-             #overlap=True
+             #overlap=True,
+             start_shift=109,
+             #end_shift=4
              )
 
-all_comp_dict_S2["DLEM"]["cSoil"]
+# +
+#all_comp_dict_S2["DLEM"]["nep"]
+# -
 
 # ### Plots of traceable components and their uncertainty
 
@@ -110,36 +116,41 @@ model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
 #cols = sns.color_palette("tab20", len(m_names))
 # cols = sns.color_palette("cubehelix", len(m_names))
 
-x_x_c1,sigma_x_x_c1=moh.plot_traceable_component(
-    all_comp_dict_S2,
-    "x_x_c",
-    model_cols,
-    #delta=True,
-)
-x_x_c2,sigma_x_x_c2=moh.plot_traceable_component(
-    all_comp_dict_S3,
-    "x_x_c",
-    model_cols,
-    #delta=True,
-)
+# +
+# x_x_c1,sigma_x_x_c1=moh.plot_traceable_component(
+#     all_comp_dict_S2,
+#     "x_x_c",
+#     model_cols,
+#     #delta=True,
+# )
+# x_x_c2,sigma_x_x_c2=moh.plot_traceable_component(
+#     all_comp_dict_S3,
+#     "x_x_c",
+#     model_cols,
+#     #delta=True,
+# )
+
+# +
+# x1,sigma_x1=moh.plot_traceable_component(
+#     all_comp_dict_S2,
+#     "x",
+#     model_cols,
+#     #delta=True,
+# )
+# x2,sigma_x2=moh.plot_traceable_component(
+#     all_comp_dict_S3,
+#     "x",
+#     model_cols,
+#     #delta=True,
+# )
+# -
+
+all_comp_dict_S3["ISAM"]["cVeg"][38:43]
 
 x1,sigma_x1=moh.plot_traceable_component(
     all_comp_dict_S2,
     "x",
     model_cols,
-    #delta=True,
-)
-x2,sigma_x2=moh.plot_traceable_component(
-    all_comp_dict_S3,
-    "x",
-    model_cols,
-    #delta=True,
-)
-
-x1,sigma_x1=moh.plot_traceable_component(
-    all_comp_dict_S2,
-    "x",
-    model_cols,
     delta=True,
 )
 x2,sigma_x2=moh.plot_traceable_component(
@@ -148,121 +159,6 @@ x2,sigma_x2=moh.plot_traceable_component(
     model_cols,
     delta=True,
 )
-
-# +
-times=all_comp_dict_S2["Times"]
-var=sigma_x1#/x1*100
-moh.plot_single_trend(var,times,3,"Standard deviation of X over time - S2")
-
-times=all_comp_dict_S3["Times"]
-var=sigma_x2#/x2*100
-moh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3")
-
-times=all_comp_dict_S3["Times"]
-var=sigma_x2/x2*100-sigma_x1/x1*100
-moh.plot_single_trend(var,times,3, "Standard deviation in % of X over time - S3-S2")
-# -
-
-x_c1,sigma_x_c1=moh.plot_traceable_component(
-    all_comp_dict_S2,
-    "x_c",
-    model_cols,
-    delta=True,
-)
-x_c2,sigma_x_c2=moh.plot_traceable_component(
-    all_comp_dict_S3,
-    "x_c",
-    model_cols,
-    delta=True,
-)
-
-# +
-times=all_comp_dict_S2["Times"]
-var=sigma_x_c1
-moh.plot_single_trend(var,times,3,"Standard deviation of X_c over time - S2")
-
-times=all_comp_dict_S3["Times"]
-var=sigma_x_c2
-moh.plot_single_trend(var,times,3, "Standard deviation of X_c over time - S3")
-
-times=all_comp_dict_S3["Times"]
-var=sigma_x_c2-sigma_x_c1
-moh.plot_single_trend(var,times,3, "Standard deviation of X_c over time - S3-S2")
-# -
-
-x_p1,sigma_x_p1=moh.plot_traceable_component(
-    all_comp_dict_S2,
-    "x_p",
-    model_cols,
-    #delta=True,
-)
-x_p2,sigma_x_p2=moh.plot_traceable_component(
-    all_comp_dict_S3,
-    "x_p",
-    model_cols,
-    #delta=True,
-)
-
-times=all_comp_dict_S2["Times"]
-var=x_p1/x1*100
-moh.plot_single_trend(var,times,3,"Mean X_p in % of X over time")
-times=all_comp_dict_S3["Times"]
-var=x_p2/x2*100
-moh.plot_single_trend(var,times,3,"Mean X_p in % of X over time")
-
-u1, sigma_u1=moh.plot_traceable_component(
-    all_comp_dict_S2,
-    "gpp",
-    model_cols,
-    #delta=True,
-)
-u2, sigma_u2=moh.plot_traceable_component(
-    all_comp_dict_S3,
-    "gpp",
-    model_cols,
-    #delta=True,
-)
-
-# +
-times=all_comp_dict_S2["Times"]
-var=sigma_u1/u1*100
-moh.plot_single_trend(var,times,3,"Standard deviation in % of u over time - S2")
-
-times=all_comp_dict_S3["Times"]
-var=sigma_u2/u2*100
-moh.plot_single_trend(var,times,3, "Standard deviation in % of u over time - S3")
-
-times=all_comp_dict_S3["Times"]
-var=(sigma_u2/u2*100-sigma_u1/u1*100)
-moh.plot_single_trend(var,times,3, "Uncertainty of u increase S3-S2 in % of S2")
-# -
-
-rt1,sigma_rt1=moh.plot_traceable_component(
-    all_comp_dict_S2,
-    "rt",
-    model_cols,
-    #delta=True,
-)
-rt2,sigma_rt2=moh.plot_traceable_component(
-    all_comp_dict_S3,
-    "rt",
-    model_cols,
-    #delta=True,
-)
-
-# +
-times=all_comp_dict_S2["Times"]
-var=sigma_rt1/rt1*100
-moh.plot_single_trend(var,times,3,"Standard deviation in % of rt over time - S2")
-
-times=all_comp_dict_S3["Times"]
-var=sigma_rt2/rt2*100
-moh.plot_single_trend(var,times,3, "Standard deviation in % of rt over time - S3")
-
-times=all_comp_dict_S3["Times"]
-var=(sigma_rt2/rt2*100-sigma_rt1/rt1*100)
-moh.plot_single_trend(var,times,3, "Uncertainty of rt increase S3-S2 in % of S2")
-# -
 
 nep1,sigma_nep1=moh.plot_traceable_component(
     all_comp_dict_S2,
@@ -277,18 +173,195 @@ nep2,sigma_nep2=moh.plot_traceable_component(
     #delta=True,
 )
 
+all_comp_dict_S2_1st_half=moh.get_components_from_output(model_names=model_names,
+             vars_all_list=vars_all_list_S2,
+             delta_t_val=delta_t_val, 
+             part=1,
+             end_shift=52,
+             start_shift=109                                   
+             )
+all_comp_dict_S3_1st_half=moh.get_components_from_output(model_names=model_names,
+             vars_all_list=vars_all_list_S3,
+             delta_t_val=delta_t_val, 
+             part=1,
+             end_shift=52,
+             start_shift=109                                   
+             )
+
+x1,sigma_x1=moh.plot_traceable_component(
+    all_comp_dict_S2_1st_half,
+    "x",
+    model_cols,
+    delta=True,
+)
+x2,sigma_x2=moh.plot_traceable_component(
+    all_comp_dict_S3_1st_half,
+    "x",
+    model_cols,
+    delta=True,
+)
+
+all_comp_dict_S2_2nd_half=moh.get_components_from_output(model_names=model_names,
+             vars_all_list=vars_all_list_S2,
+             delta_t_val=delta_t_val, 
+             part=1,
+             end_shift=2,
+             start_shift=57                                   
+             )
+all_comp_dict_S3_2nd_half=moh.get_components_from_output(model_names=model_names,
+             vars_all_list=vars_all_list_S3,
+             delta_t_val=delta_t_val, 
+             part=1,
+             end_shift=2,
+             start_shift=57                                   
+             )
+
+x1,sigma_x1=moh.plot_traceable_component(
+    all_comp_dict_S2_2nd_half,
+    "x",
+    model_cols,
+    delta=True,
+)
+x2,sigma_x2=moh.plot_traceable_component(
+    all_comp_dict_S3_2nd_half,
+    "x",
+    model_cols,
+    delta=True,
+)
+
+
+
 # +
-times=all_comp_dict_S2["Times"]
-var=sigma_nep1
-moh.plot_single_trend(var,times,3,"Standard deviation of nep over time - S2")
+# times=all_comp_dict_S2["Times"]
+# var=sigma_x1#/x1*100
+# moh.plot_single_trend(var,times,3,"Standard deviation of X over time - S2")
 
-times=all_comp_dict_S3["Times"]
-var=sigma_nep2
-moh.plot_single_trend(var,times,3, "Standard deviation of nep over time - S3")
+# times=all_comp_dict_S3["Times"]
+# var=sigma_x2#/x2*100
+# moh.plot_single_trend(var,times,3, "Standard deviation of X over time - S3")
 
-times=all_comp_dict_S3["Times"]
-var=(sigma_nep2-sigma_nep1)/sigma_u1*100
-moh.plot_single_trend(var,times,3, "Uncertainty of nep increase S3-S2 in % of S2")
+# times=all_comp_dict_S3["Times"]
+# var=sigma_x2/x2*100-sigma_x1/x1*100
+# moh.plot_single_trend(var,times,3, "Standard deviation in % of X over time - S3-S2")
+
+# +
+# x_c1,sigma_x_c1=moh.plot_traceable_component(
+#     all_comp_dict_S2,
+#     "x_c",
+#     model_cols,
+#     delta=True,
+# )
+# x_c2,sigma_x_c2=moh.plot_traceable_component(
+#     all_comp_dict_S3,
+#     "x_c",
+#     model_cols,
+#     delta=True,
+# )
+
+# +
+# times=all_comp_dict_S2["Times"]
+# var=sigma_x_c1
+# moh.plot_single_trend(var,times,3,"Standard deviation of X_c over time - S2")
+
+# times=all_comp_dict_S3["Times"]
+# var=sigma_x_c2
+# moh.plot_single_trend(var,times,3, "Standard deviation of X_c over time - S3")
+
+# times=all_comp_dict_S3["Times"]
+# var=sigma_x_c2-sigma_x_c1
+# moh.plot_single_trend(var,times,3, "Standard deviation of X_c over time - S3-S2")
+
+# +
+# x_p1,sigma_x_p1=moh.plot_traceable_component(
+#     all_comp_dict_S2,
+#     "x_p",
+#     model_cols,
+#     #delta=True,
+# )
+# x_p2,sigma_x_p2=moh.plot_traceable_component(
+#     all_comp_dict_S3,
+#     "x_p",
+#     model_cols,
+#     #delta=True,
+# )
+
+# +
+# times=all_comp_dict_S2["Times"]
+# var=x_p1/x1*100
+# moh.plot_single_trend(var,times,3,"Mean X_p in % of X over time")
+# times=all_comp_dict_S3["Times"]
+# var=x_p2/x2*100
+# moh.plot_single_trend(var,times,3,"Mean X_p in % of X over time")
+# -
+
+u1, sigma_u1=moh.plot_traceable_component(
+    all_comp_dict_S2,
+    "npp",
+    model_cols,
+    delta=True,
+)
+u2, sigma_u2=moh.plot_traceable_component(
+    all_comp_dict_S3,
+    "npp",
+    model_cols,
+    delta=True,
+)
+
+# +
+# times=all_comp_dict_S2["Times"]
+# var=sigma_u1/u1*100
+# moh.plot_single_trend(var,times,3,"Standard deviation in % of u over time - S2")
+
+# times=all_comp_dict_S3["Times"]
+# var=sigma_u2/u2*100
+# moh.plot_single_trend(var,times,3, "Standard deviation in % of u over time - S3")
+
+# times=all_comp_dict_S3["Times"]
+# var=(sigma_u2/u2*100-sigma_u1/u1*100)
+# moh.plot_single_trend(var,times,3, "Uncertainty of u increase S3-S2 in % of S2")
+# -
+
+rt1,sigma_rt1=moh.plot_traceable_component(
+    all_comp_dict_S2,
+    "rt",
+    model_cols,
+    delta=True,
+)
+rt2,sigma_rt2=moh.plot_traceable_component(
+    all_comp_dict_S3,
+    "rt",
+    model_cols,
+    delta=True,
+)
+
+# +
+# times=all_comp_dict_S2["Times"]
+# var=sigma_rt1/rt1*100
+# moh.plot_single_trend(var,times,3,"Standard deviation in % of rt over time - S2")
+
+# times=all_comp_dict_S3["Times"]
+# var=sigma_rt2/rt2*100
+# moh.plot_single_trend(var,times,3, "Standard deviation in % of rt over time - S3")
+
+# times=all_comp_dict_S3["Times"]
+# var=(sigma_rt2/rt2*100-sigma_rt1/rt1*100)
+# moh.plot_single_trend(var,times,3, "Uncertainty of rt increase S3-S2 in % of S2")
+# -
+
+
+
+# +
+# times=all_comp_dict_S2["Times"]
+# var=sigma_nep1
+# moh.plot_single_trend(var,times,3,"Standard deviation of nep over time - S2")
+
+# times=all_comp_dict_S3["Times"]
+# var=sigma_nep2
+# moh.plot_single_trend(var,times,3, "Standard deviation of nep over time - S3")
+
+# times=all_comp_dict_S3["Times"]
+# var=(sigma_nep2-sigma_nep1)/sigma_u1*100
+# moh.plot_single_trend(var,times,3, "Uncertainty of nep increase S3-S2 in % of S2")
 # -
 
 cSoil1,sigma_cSoil1=moh.plot_traceable_component(
@@ -360,6 +433,8 @@ moh.plot_attribution_sum (
     part=1,
 )
 
+
+
 # +
 from collections import namedtuple
 
@@ -389,5 +464,27 @@ avd
 mean
 
 mean.gpp*mean.RT/120
+
+moh.plot_attribution_C_storage_global (
+    all_comp_dict=all_comp_dict_S2,
+    #percent=True,
+    #part=1,
+)
+moh.plot_attribution_C_storage_global (
+    all_comp_dict=all_comp_dict_S3,
+    #percent=True,
+    #part=1,
+)
+
+moh.plot_attribution_C_sink_global (
+    all_comp_dict=all_comp_dict_S2,
+    #percent=True,
+    #part=1,
+)
+moh.plot_attribution_C_sink_global (
+    all_comp_dict=all_comp_dict_S3,
+    #percent=True,
+    #part=1,
+)
 
 

@@ -67,8 +67,8 @@ model_names={
     "kv_ft_dlem": "DLEM",
     #"Aneesh_SDGVM":"SDGVM",
     "cj_isam": "ISAM",
-    "bian_ibis2":"IBIS",
-    "ORCHIDEE-V2":"OCN",
+    #"bian_ibis2":"IBIS",
+    #"ORCHIDEE-V2":"OCN",
 }
 
 # ### Exploring model structures

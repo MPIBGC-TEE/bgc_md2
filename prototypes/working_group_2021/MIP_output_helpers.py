@@ -275,13 +275,13 @@ def plot_traceable_component(
         else:
             vals_mean = all_comp_dict["Mean"][comp_name]
                 
-        ax.plot(
-                all_comp_dict["Times"],
-                vals_mean,
-                label="Ensemble mean",
-                color="black",
-                linewidth=3, 
-                )                
+        # ax.plot(
+                # all_comp_dict["Times"],
+                # vals_mean,
+                # label="Ensemble mean",
+                # color="black",
+                # linewidth=3, 
+                # )                
         
         diff_sqr = np.zeros_like(all_comp_dict[models[0]][comp_name])             
         
@@ -311,14 +311,33 @@ def plot_traceable_component(
                 label="\u00B12$\sigma$ interval",
                 color="grey",
                 alpha=0.2                
-                )                          
-    ax.grid()
+                )  
+        ax.plot(
+                all_comp_dict["Times"],
+                vals_mean,
+                label="Ensemble mean",
+                color="black",
+                linewidth=3, 
+                )                     
+    ax.grid(axis='y')
     if delta:
         ax.set_title("$\Delta$ "+str(comp_name))
     else:
         ax.set_title(comp_name)
     #ax.set_ylabel("Gt C")
     ax.legend(bbox_to_anchor =(1.2, 1))   
+    if all_comp_dict["Times"][0]<=1911:
+        plt.axvline(x = 1911, color = 'k', linestyle='--', alpha=0.5) 
+        plt.axvline(x = 1913, color = 'k', linestyle='-', alpha=1 )         
+        plt.axvline(x = 1915, color = 'k', linestyle='--' , alpha=0.5)  
+    plt.axvline(x = 1963, color = 'k', linestyle='--', alpha=0.5) 
+    plt.axvline(x = 1965, color = 'k', linestyle='-', alpha=1 )    
+    plt.axvline(x = 1967, color = 'k', linestyle='--', alpha=0.5 )
+    if all_comp_dict["Times"][-1]>=2015:
+        plt.axvline(x = 2015, color = 'k', linestyle='--', alpha=0.5) 
+        plt.axvline(x = 2017, color = 'k', linestyle='-', alpha=1 )         
+        plt.axvline(x = 2019, color = 'k', linestyle='--' , alpha=0.5)   
+    plt.axhline(y = 0, color = 'k', linestyle='--', linewidth=2)    
     plt.show()
     return(vals_mean, st_dev)
          
@@ -906,6 +925,8 @@ def get_components_from_output(
     part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
     averaging=12,  # number of iterator steps over which to average results. 12 - avarage monthly to yearly 
     overlap=True,  # compute overlapping timeframe or plot whole duration for all models
+    end_shift=0,
+    start_shift=0
 ):
 
     def times_in_days_aD(
@@ -996,23 +1017,45 @@ def get_components_from_output(
     sum_dist = np.array(0)
     all_components = list ()
     
-    def annual_delta (data_stream):
+    def annual_5_delta (data_stream):
         delta=np.zeros_like(data_stream)
-        for i in range(len(data_stream)-1):
-            delta[i]=data_stream[i+1]-data_stream[i]  
+        # five_year_intervals=list()
+        # i_0=data_stream[0]
+        # for i in range(len(data_stream)):
+            # #sum=sum+data_stream[i]
+            # if ((i+1) % 5 == 0) or (i+1==len(data_stream)):
+                # five_year_intervals.append(data_stream[i]-i_0)
+                # if i+1 < len(data_stream): i_0=data_stream[i+1]
+        # k=0        
+        # for i in range(len(data_stream)):
+            # delta[i]=five_year_intervals[k]
+            # if (i+1) % 5 == 0: k=k+1            
+        for i in range(len(data_stream)-2):
+            if i>1: delta[i]=data_stream[i+2]-data_stream[i-2]
+        delta[0]=delta[2]  
+        delta[1]=delta[2]
+        delta[-1]=delta[-3]
+        delta[-2]=delta[-3]        
+        #for i in range(len(data_stream)-1):
+        #    delta[i]=data_stream[i+1]-data_stream[i]  
+        #print("five_year_intervals: ")
+        #print(five_year_intervals)        
+        #print("delta: ")
+        #print(delta)
         return delta
-
-    min_len=1000
-    for i in range (len(model_folders)):
-        if len(vars_all_list[i].cVeg)<min_len: min_len=len(vars_all_list[i].cVeg)
-    print(min_len)
-    
+    if start_shift==0:
+        min_len=1000
+        for i in range (len(model_folders)):
+            if len(vars_all_list[i].cVeg)<min_len: min_len=len(vars_all_list[i].cVeg)
+        start_shift=min_len
+        #print(min_len)
+    print ("Getting traceable components for all models...")
     for mf in model_folders:
-        print ("Getting traceable components for "+mf+"...")
+        #print ("Getting traceable components for "+mf+"...")
         start_date=gh.msh(mf).start_date()       
         
-        stop=len(vars_all_list[k].cVeg)#-20
-        start=len(vars_all_list[k].cVeg)-min_len
+        stop=len(vars_all_list[k].cVeg)-end_shift
+        start=len(vars_all_list[k].cVeg)-start_shift
         
         times=np.array(range(start,stop))+1700
         
@@ -1053,14 +1096,14 @@ def get_components_from_output(
             # print(cVeg[-8])
             # print(cVeg[-10])
             cVeg[-9]=np.mean((cVeg[-8], cVeg[-10]))
-        
+            cVeg[31]=np.mean((cVeg[30], cVeg[32]))
         # traditional traceable components 
         n_years=len(cSoil)
         #print(n_years)
         x=cVeg+cSoil
-        nep=annual_delta(x)
-        delta_cVeg=annual_delta(cVeg)
-        delta_cSoil=annual_delta(cSoil)
+        nep=annual_5_delta(x)
+        delta_cVeg=annual_5_delta(cVeg)
+        delta_cSoil=annual_5_delta(cSoil)
         rt=x/(rh+ra)
         x_c=rt*gpp
         x_p=x_c-x
@@ -1122,7 +1165,7 @@ def get_components_from_output(
             sum_rt = np.append(sum_rt,rt)[1:]
             sum_x_c = np.append(sum_x_c,x_c)[1:]
             sum_x_p = np.append(sum_x_p,x_p)[1:]
-            #sum_nep = np.append(sum_nep,nep)[1:]  
+            sum_nep = np.append(sum_nep,nep)[1:]  
             sum_f_v2s = np.append(sum_f_v2s,f_v2s)[1:]
             sum_f_v2s_2 = np.append(sum_f_v2s_2,f_v2s_2)[1:]            
             sum_rt_soil = np.append(sum_rt_soil,rt_soil)[1:]
@@ -1171,17 +1214,17 @@ def get_components_from_output(
             "cSoil": sum_cSoil / len(model_folders), 
             "delta_cVeg": sum_delta_cVeg / len(model_folders),
             "delta_cSoil": sum_delta_cSoil / len(model_folders),
-            "nep": sum_nep / len(model_folders),
+            "npp": sum_npp / len(model_folders),
             "f_v2s": sum_f_v2s / len(model_folders),  
             "f_v2s_2": sum_f_v2s_2 / len(model_folders),            
-            "gpp": sum_gpp / len(model_folders), 
+            "gpp": sum_gpp / len(model_folders),  
             "rh": sum_rh / len(model_folders),
             "ra": sum_ra / len(model_folders),
             "x": sum_x / len(model_folders), 
             "rt": sum_rt / len(model_folders),
             "x_c": sum_x_c / len(model_folders),
             "x_p": sum_x_p / len(model_folders), 
-            #"nep": sum_nep,# / len(model_folders), 
+            "nep": sum_nep / len(model_folders), 
             "dist": sum_dist / len(model_folders),
             "rt_veg": sum_rt_veg / len(model_folders),
             "rt_veg_2": sum_rt_veg_2 / len(model_folders),              
@@ -1203,6 +1246,7 @@ def get_components_from_output(
     mods.append("Mean")
     mods.append("Times")
     all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}             
+    print("Done!")
     return all_comp_dict       
 
 def add_gridded_vars (
@@ -3046,7 +3090,41 @@ def subset_and_resample_nc(
         lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
         # closing NetCDF files     
         ds_new.close() 
-            
+        
+    def averaged_3d_array(array, averaging):  # 3d array  # number of steps over which to average
+        if averaging < 1:
+            raise Exception("Invalid averaging in gh.avg_timeline: should be >=1")
+        output = array
+        if averaging > 1:
+            n = array.shape[0] // averaging
+            if array.shape[0] % averaging > 0:
+                n += 1
+            output = np.zeros((n,array.shape[1], array.shape[2]))
+            counter = 0
+            i = 0
+            while i < (array.shape[0]):
+                x = 0
+                sum = np.zeros((array.shape[1], array.shape[2]))
+                while x < (averaging):
+                    if i + x > (array.shape[0] - 1):
+                        break
+                    sum += array[i + x, :, :]
+                    x += 1
+                output[counter] = sum / (x)
+                counter += 1
+                i += x
+        return output   
+
+    # function for computing turnover times
+    def tau(cVeg, delta_cVeg, cSoil, npp, rh):
+        X = cVeg + cSoil  # total ecosystem carbon
+        f_veg_out = npp*5 - delta_cVeg # outflux of vegetation (litterfall + disturbance)
+        tau = X / rh # ecosystem turnover time
+        tau_veg = cVeg / f_veg_out # vegetation turnover time (not considering ra)
+        tau_soil = cSoil / rh # soil turnover time
+        mask=cVeg.mask
+        return np.ma.array(tau, mask=mask), np.ma.array(tau_veg, mask=mask), np.ma.array(tau_soil, mask=mask)        
+        
     #### processing model output data ####    
     for experiment in experiment_names:
         print('\033[1m'+'Resampling data for '+experiment+' experiment...')
@@ -3095,31 +3173,7 @@ def subset_and_resample_nc(
                 # changing npp_nlim to npp (for JULES model) 
                 if vn=="npp_nlim": vn = 'npp'
                     
-                #### converting all data to yearly averages ####               
-                def averaged_3d_array(array, averaging):  # 3d array  # number of steps over which to average
-                    if averaging < 1:
-                        raise Exception("Invalid averaging in gh.avg_timeline: should be >=1")
-                    output = array
-                    if averaging > 1:
-                        n = array.shape[0] // averaging
-                        if array.shape[0] % averaging > 0:
-                            n += 1
-                        output = np.zeros((n,array.shape[1], array.shape[2]))
-                        counter = 0
-                        i = 0
-                        while i < (array.shape[0]):
-                            x = 0
-                            sum = np.zeros((array.shape[1], array.shape[2]))
-                            while x < (averaging):
-                                if i + x > (array.shape[0] - 1):
-                                    break
-                                sum += array[i + x, :, :]
-                                x += 1
-                            output[counter] = sum / (x)
-                            counter += 1
-                            i += x
-                    return output
-                                               
+                #### converting all data to yearly averages ####                                                             
                 if var.shape[0]>1000: # monthly data                
                     var_yearly = averaged_3d_array(var,12)
                 else:
@@ -3128,12 +3182,13 @@ def subset_and_resample_nc(
                 #### computing selected timeframes ####
                 
                 # cropping to last 100 years of simulation
-                var_cropped = var_yearly[var_yearly.shape[0]-105:,:,:]                                               
+                var_cropped = var_yearly[var_yearly.shape[0]-109:,:,:]                                               
+                #print("N years: "+str(len(var_cropped)))
                 # 1st 5 years 
                 var_1st = np.mean(var_cropped[0:5,:,:], axis=0)
                 # middle 5 years 
-                mid=(var_cropped.shape[0]-6)//2
-                var_mid =  np.mean(var_cropped[mid:mid+5,:,:], axis=0)
+                mid=(var_cropped.shape[0]-5)//2
+                var_mid = np.mean(var_cropped[mid:mid+5,:,:], axis=0)
                 # last 5 years
                 last5 = var_cropped.shape[0]-5
                 var_last =  np.mean(var_cropped[last5:last5+5,:,:], axis=0)
@@ -3165,22 +3220,7 @@ def subset_and_resample_nc(
                     model_mask, target_mask, var_diff_2_masked, method, radius_of_influence)
                 var_diff_total_resampled=gh.resample_grid (
                     model_mask, target_mask, var_diff_total_masked, method, radius_of_influence)                    
-                                                                                              
-                # updating mask
-                # if vn in ("npp", "rh", "cVeg", "cSoil"):
-                    # target_mask=mask_add_non_positive(target_mask,var_1st_resampled.index_mask)
-                    # target_mask=mask_add_non_positive(target_mask,var_mid_resampled.index_mask)
-                    # target_mask=mask_add_non_positive(target_mask,var_last_resampled.index_mask)                                       
-                    
-                #var_1st=var_1st_resampled.index_mask
-                #var_mid=var_mid_resampled.index_mask
-                #var_last=var_last_resampled.index_mask
-                
-                # # correcting negative and 0 values                
-                # var_1st[np.where(var_1st<0.00001)]=0.00001
-                # var_mid[np.where(var_mid<0.00001)]=0.00001
-                # var_last[np.where(var_last<0.00001)]=0.00001
-                    
+                                                                                                                 
                 # writing NetCDF
                 write_new_NetCDF (
                     mask=target_mask, 
@@ -3194,12 +3234,12 @@ def subset_and_resample_nc(
                     )
                 #### saving necessary data for computing turnover time ####
                 if vn=="cVeg": 
-                    cVeg_1st=var_1st_resampled.index_mask
-                    cVeg_mid=var_mid_resampled.index_mask
-                    cVeg_last=var_last_resampled.index_mask
-                    cVeg_diff_1=var_diff_1_resampled.index_mask
-                    cVeg_diff_2=var_diff_2_resampled.index_mask
-                    cVeg_diff_total=var_diff_total_resampled.index_mask  
+                    cVeg_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_total=np.ma.array(var_diff_total_resampled.index_mask, mask=target_mask.index_mask)
                     # additional computation of delta_cVeg
                     delta_cVeg_1st=var_cropped[4,:,:] - var_cropped[0,:,:]
                     delta_cVeg_mid=var_cropped[mid+4,:,:] - var_cropped[mid,:,:]
@@ -3217,28 +3257,28 @@ def subset_and_resample_nc(
                         model_mask, target_mask, delta_cVeg_last_masked, method, radius_of_influence).index_mask                                        
                     
                 if vn=="npp": 
-                    npp_1st=var_1st_resampled.index_mask
-                    npp_mid=var_mid_resampled.index_mask
-                    npp_last=var_last_resampled.index_mask
-                    npp_diff_1=var_diff_1_resampled.index_mask
-                    npp_diff_2=var_diff_2_resampled.index_mask
-                    npp_diff_total=var_diff_total_resampled.index_mask
+                    npp_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_total=np.ma.array(var_diff_total_resampled.index_mask, mask=target_mask.index_mask)
                                                     
                 if vn=="cSoil": 
-                    cSoil_1st=var_1st_resampled.index_mask
-                    cSoil_mid=var_mid_resampled.index_mask
-                    cSoil_last=var_last_resampled.index_mask
-                    cSoil_diff_1=var_diff_1_resampled.index_mask
-                    cSoil_diff_2=var_diff_2_resampled.index_mask
-                    cSoil_diff_total=var_diff_total_resampled.index_mask  
+                    cSoil_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_total=np.ma.array(var_diff_total_resampled.index_mask  , mask=target_mask.index_mask)
 
                 if vn=="rh": 
-                    rh_1st=var_1st_resampled.index_mask
-                    rh_mid=var_mid_resampled.index_mask
-                    rh_last=var_last_resampled.index_mask
-                    rh_diff_1=var_diff_1_resampled.index_mask
-                    rh_diff_2=var_diff_2_resampled.index_mask
-                    rh_diff_total=var_diff_total_resampled.index_mask                                        
+                    rh_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_total=np.ma.array(var_diff_total_resampled.index_mask  , mask=target_mask.index_mask)                                      
             
             # adding C_ecosystem
             write_new_NetCDF (
@@ -3253,13 +3293,6 @@ def subset_and_resample_nc(
                 )            
             
             #### computing turnover times ####
-            def tau(cVeg, delta_cVeg, cSoil, npp, rh):
-                X = cVeg + cSoil  # total ecosystem carbon
-                f_veg_out = npp*5 - delta_cVeg # outflux of vegetation (litterfall + disturbance)
-                tau = X / rh # ecosystem turnover time
-                tau_veg = cVeg / f_veg_out # vegetation turnover time (not considering ra)
-                tau_soil = cSoil / rh # soil turnover time
-                return tau, tau_veg, tau_soil
             tau_1st, tau_veg_1st, tau_soil_1st=tau(cVeg_1st, delta_cVeg_1st, cSoil_1st, npp_1st, rh_1st)
             tau_mid, tau_veg_mid, tau_soil_mid=tau(cVeg_mid, delta_cVeg_mid, cSoil_mid, npp_mid, rh_mid)            
             tau_last, tau_veg_last, tau_soil_last=tau(cVeg_last, delta_cVeg_last, cSoil_last, npp_last, rh_last)
@@ -3271,36 +3304,37 @@ def subset_and_resample_nc(
             tau_veg_diff_total = tau_veg_last - tau_veg_1st
             tau_soil_diff_1 = tau_soil_mid - tau_soil_1st
             tau_soil_diff_2 = tau_soil_last - tau_soil_mid
-            tau_soil_diff_total = tau_soil_last - tau_soil_1st 
-
-            # updating mask to remove extreme outliers
-            print("#########################################tau_veg")
-            #target_mask=mask_add_non_positive(target_mask, tau_veg_1st)
-            #target_mask=mask_add_non_positive(target_mask, tau_veg_mid)
-            #target_mask=mask_add_non_positive(target_mask, tau_veg_last)          
+            tau_soil_diff_total = tau_soil_last - tau_soil_1st            
             
-            if (np.min(tau_veg_1st) < 0 or np.max(tau_veg_1st) > 1000) and mf!='bian_ibis2':
-                target_mask=mask_add_outliers(target_mask, tau_veg_1st, log=True, plot_hist=True)
-                target_mask=mask_add_outliers(target_mask, tau_veg_mid, log=True, plot_hist=True)
-                target_mask=mask_add_outliers(target_mask, tau_veg_last, log=True, plot_hist=True)
-                #print("#########################################tau_veg_diff_1") 
-                #target_mask=mask_add_outliers(target_mask, tau_veg_diff_1, plot_hist=True)
-                #print("#########################################tau_veg_diff_2") 
-                #target_mask=mask_add_outliers(target_mask, tau_veg_diff_2, plot_hist=True)
+            # cleaning non-positive and erroneous npp and tau values
+            #npp_masked=npp_1st.data[np.where(npp_1st.mask==0)]
+            #print ('npp non-positive count: ' + str(len(npp_masked[np.where(npp_masked<=0)])))
+            target_mask=mask_add_wrong_values(target_mask,npp_1st)
+            target_mask=mask_add_wrong_values(target_mask,npp_mid)
+            target_mask=mask_add_wrong_values(target_mask,npp_last)         
             
-            print("#########################################tau_soil")
-            #target_mask=mask_add_non_positive(target_mask, tau_soil_1st)
-            #target_mask=mask_add_non_positive(target_mask, tau_soil_mid)
-            #target_mask=mask_add_non_positive(target_mask, tau_soil_last)               
-            if (np.min(tau_soil_1st < 0) or np.max(tau_soil_1st) > 1000) and mf!='bian_ibis2':
-                target_mask=mask_add_outliers(target_mask, tau_soil_1st, log=True, plot_hist=True)
-                target_mask=mask_add_outliers(target_mask, tau_soil_mid, log=True, plot_hist=True)
-                target_mask=mask_add_outliers(target_mask, tau_soil_last, log=True, plot_hist=True)
-                #print("#########################################tau_soil_diff_1") 
-                #target_mask=mask_add_outliers(target_mask, tau_soil_diff_1, plot_hist=True)
-                #print("#########################################tau_soil_diff_2")
-                #target_mask=mask_add_outliers(target_mask, tau_soil_diff_2, plot_hist=True)
-
+            #tau_veg_masked=tau_veg_1st.data[np.where(tau_veg_1st.mask==0)]
+            #print ('tau_veg non-positive count: ' + str(len(tau_veg_masked[np.where(tau_veg_masked<=0)])))
+            target_mask=mask_add_wrong_values(target_mask,tau_veg_1st)
+            target_mask=mask_add_wrong_values(target_mask,tau_veg_mid)
+            target_mask=mask_add_wrong_values(target_mask,tau_veg_last)
+            
+            #tau_soil_masked=tau_soil_1st.data[np.where(tau_soil_1st.mask==0)]
+            #print ('tau_soil non-positive count: ' + str(len(tau_soil_masked[np.where(tau_soil_masked<=0)])))           
+            target_mask=mask_add_wrong_values(target_mask,tau_soil_1st[:,:])
+            target_mask=mask_add_wrong_values(target_mask,tau_soil_mid[:,:])
+            target_mask=mask_add_wrong_values(target_mask,tau_soil_last[:,:])
+            
+            # print("TEST VALUES")
+            # print(type(tau_soil_1st))
+            # print(np.max(tau_soil_1st[:,:]))           
+            # print(np.max(tau_soil_mid[:,:]))
+            # print(np.max(tau_soil_last[:,:]))     
+            # tau_soil_1st_masked = tau_soil_1st.data
+            # tau_soil_1st_masked=np.max(tau_soil_1st_masked[np.where(target_mask.index_mask==0)])
+            # print(tau_soil_1st_masked)
+            # tau_soil_last_masked=np.ma.array(tau_soil_last[:,:], mask=target_mask.index_mask)
+            # print(np.ma.max(tau_soil_last_masked))
             # writing NetCDFs            
             write_new_NetCDF (
                 mask=target_mask, 
@@ -3336,8 +3370,147 @@ def subset_and_resample_nc(
         print('\033[1m'+'Done!')        
     # write updated mask
     target_mask.write_netCDF4(Path("common_mask_expanded.nc"))
-    return (target_mask)
-            
+    #return (target_mask)
+        
+def find_global_outliers (
+        model_names,
+        experiment_names,
+        global_mask,
+        output_path,
+        high_outlier_npp,
+        high_outlier_veg,
+        high_outlier_soil
+        ):
+    model_folders=[(m) for m in model_names]
+    m_names=list(model_names.values())
+    g_mask=global_mask.index_mask    
+    updated_mask=g_mask.copy()
+    outlier_npp_mask=g_mask.copy()
+    outlier_npp_mask[:,:]=1      
+    outlier_veg_mask=g_mask.copy()
+    outlier_veg_mask[:,:]=1  
+    outlier_soil_mask=g_mask.copy()
+    outlier_soil_mask[:,:]=1     
+    print("looking for extreme outliers") 
+    for experiment in experiment_names:
+        print('\033[1m'+experiment+'\033[0m')
+        for vn in ['npp','tau_veg', 'tau_soil']:#['npp', 'tau', 'tau_veg', 'tau_soil']: #, 'cVeg', 'cSoil', 'C_ecosystem']:            
+            print('\033[1m'+vn+'\033[0m')
+            var_all=np.array([0])            
+            if vn=='tau_soil': max_threshold = high_outlier_soil
+            elif vn=='tau_veg': max_threshold = high_outlier_veg
+            elif vn=='npp': max_threshold = high_outlier_npp
+            for subset in ['first_5_years','middle_5_years','last_5_years']:
+                            #'diff_1st_half', 'diff_2nd_half', 'diff_total']:  
+                # look for outliers among all models                
+                print('\033[1m'+subset+'\033[0m')
+                k=0
+                for mf in model_folders:
+                    #print(mf)
+                    experiment_name=m_names[k]+"_"+experiment+"_"
+                    conf_dict = gh.confDict(mf)                                       
+                    dataPath=Path(conf_dict["dataPath"]) 
+                                                      
+                    mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+                    ds = nc.Dataset(str(mask_path))
+                    inv_mask=ds.variables['mask'][:, :]  
+                    ds.close()
+                    
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
+                    #print(file_path)
+                    ds = nc.Dataset(str(file_path))
+                    var_name=vn+"_"+subset
+                    #print(var_name)
+                    var=ds.variables[var_name][:, :]*inv_mask
+                    #print(var_all,var[g_mask==0].flatten())
+                    masked_values=var[np.where(var.mask==0)]                     
+                    #print(len(masked_values))
+                    huge_values=masked_values[np.where(abs(masked_values)>max_threshold)]
+                    new_mask=g_mask.copy() 
+                    #print("at the start: "+str(len(new_mask[np.where(new_mask==0)])))
+                    if len(huge_values)>0:                        
+                        #print(mf+" has "+ str(len(huge_values))+" huge values")
+                        #print("before: "+str(len(new_mask[np.where(new_mask==0)])))
+                        new_mask[np.where(var>max_threshold)]=1
+                        #print("after: "+str(len(new_mask[np.where(new_mask==0)])))
+                        updated_mask[np.where(var>max_threshold)]=1
+                        #outlier_mask=g_mask.copy()
+                        if vn=='tau_veg':
+                            outlier_veg_mask[np.where(var>max_threshold)]=0
+                            outlier_veg_mask[np.where(g_mask==1)]=1
+                        elif vn=='tau_soil':   
+                            outlier_soil_mask[np.where(var>max_threshold)]=0
+                            outlier_soil_mask[np.where(g_mask==1)]=1   
+                        elif vn=='npp': 
+                            outlier_npp_mask[np.where(var>max_threshold)]=0
+                            outlier_npp_mask[np.where(g_mask==1)]=1                         
+                        #out_mask=gh.CoordMask(outlier_mask, global_mask.tr)
+                        #out_mask.write_netCDF4(dataPath.joinpath(experiment_name+vn+"_outliers.nc"))
+                    # if len(huge_values)>0:
+                        # print(mf+" has "+ str(len(huge_values))+" huge values, and "+str(len(negative_values))+' negative values')
+                        # outlier_mask=mask_outliers(var, global_mask, tolerance = 3, keep_outliers=True)
+                        # outlier_mask.write_netCDF4(dataPath.joinpath(experiment_name+vn+"_outliers.nc"))
+                        # new_mask=mask_outliers(var, global_mask, tolerance = 3, keep_outliers=False) 
+                        # new_mask.write_netCDF4(dataPath.joinpath(experiment_name+vn+"_outlier_free.nc"))
+                        # updated_mask=mask_outliers(var, updated_mask, tolerance = 3, keep_outliers=False)
+                        # #remove_outliers(masked_values, 3)
+                    var_all=np.concatenate((var_all,var[np.where(var.mask==0)].flatten())) 
+                    ds.close()
+                    k+=1                    
+            var_all=var_all[1:]    
+            # removing impossible values
+            #var_all=var_all[np.where(var_all<10000)] 
+            #var_all=var_all[np.where(var_all>-10000)] 
+            #Q1 = np.quantile(var_all, 0.25)
+            #Q3 = np.quantile(var_all, 0.75)
+            #IQR = Q3 - Q1    #IQR is interquartile range. 
+            # x = x[np.where(x >= Q1 - tolerance * IQR)]
+            # x = x[np.where(x <= Q3 + tolerance * IQR)]    
+            #low_outlier = Q1 - 3 * IQR
+            #high_outlier = Q3 + 3 * IQR
+            print("min: "+str(np.min(var_all)))
+            print("max: "+str(np.max(var_all)))
+            #print("low_outlier: "+str(low_outlier))
+            #print("high_outlier: "+str(high_outlier)) 
+            print("mean: " + str(np.mean(var_all)))
+            #print("mean (no outliers): " + str(np.mean(remove_outliers(var_all, 3))))
+            fig,ax=plt.subplots()
+            ax.boxplot(var_all, showmeans=True, flierprops={'marker': '*', 'markersize': 1, 'markerfacecolor': 'fuchsia'})
+            ax.grid()
+            plt.show()
+            # outlier_mask=mask_outliers (var_all, global_mask, tolerance = 3, keep_outliers=True)
+            # outlier_free_mask=mask_outliers (var_all, global_mask, tolerance = 3, keep_outliers=False)
+            # new_path=dataPath.joinpath(dataPath,experiment_name+vn+"_outliers.nc")                    
+            # ds_new = nc.Dataset(str(new_path), "w", persist=True)
+            # # creating dimensions
+            # lat = ds_new.createDimension("lat", size=n_lats)
+            # lon = ds_new.createDimension("lon", size=n_lons)
+            # # creating variables
+            # var_outlier_mask = ds_new.createVariable("outlier_mask", "float32", ["lat", "lon"]) 
+            # var_outlier_mask[:, :] = outlier_mask  
+            # var_outlier_free_mask = ds_new.createVariable("outlier_free_mask", "float32", ["lat", "lon"]) 
+            # var_outlier_free_mask[:, :] = outlier_free_mask              
+            # lats = ds_new.createVariable("lat", "float32", ["lat"])
+            # lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+            # lons = ds_new.createVariable("lon", "float32", ["lon"])
+            # lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))        
+            # # closing NetCDF files     
+            # ds_new.close() 
+    final_mask=gh.CoordMask(updated_mask, global_mask.tr)
+    final_mask.write_netCDF4("No_outliers_mask.nc")
+    out_npp_mask=gh.CoordMask(outlier_npp_mask, global_mask.tr)
+    out_npp_mask.write_netCDF4("Outlier_npp_mask.nc")     
+    out_veg_mask=gh.CoordMask(outlier_veg_mask, global_mask.tr)
+    out_veg_mask.write_netCDF4("Outlier_veg_mask.nc")   
+    out_soil_mask=gh.CoordMask(outlier_soil_mask, global_mask.tr)
+    out_soil_mask.write_netCDF4("Outlier_soil_mask.nc")  
+    outlier_mask=np.logical_and(outlier_npp_mask, outlier_veg_mask)
+    outlier_mask=np.logical_and(outlier_mask, outlier_soil_mask)
+    out_mask=gh.CoordMask(outlier_mask, global_mask.tr)
+    out_mask.write_netCDF4("Outlier_mask.nc")      
+    print('Done!')
+    #return(final_mask)
+    
 def ensamble_uncertainty (
         model_names,
         experiment_names,
@@ -3349,13 +3522,14 @@ def ensamble_uncertainty (
     g_mask=global_mask.index_mask
     cols = px.colors.qualitative.Light24
     model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}    
+    
     for experiment in experiment_names:
-        print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .')
-        print('\033[0m')                  
-        print('computing uncertainties...')
-        for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil', 'C_ecosystem']:
+        print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .'+'\033[0m')               
+        print('computing uncertainties...')  
+        for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil', 'C_ecosystem']:            
+            print(vn)
             for subset in ['first_5_years','middle_5_years','last_5_years',
-                            'diff_1st_half', 'diff_2nd_half', 'diff_total']:                            
+                            'diff_1st_half', 'diff_2nd_half', 'diff_total']:          
                 # fig, ax = plt.subplots(figsize =(10, 7))                
                 var_sum_zero=np.zeros_like(g_mask)
                 var_sum=np.ma.array(var_sum_zero,mask = g_mask)
@@ -3367,24 +3541,26 @@ def ensamble_uncertainty (
                 k=0 # model counter        
                 
                 # set limits for plotting
-                if subset in ['first_5_years','middle_5_years','last_5_years']: 
-                    lower_lim=0
-                    if vn=="npp":upper_lim=3.5
-                    elif vn=="cVeg":upper_lim=50
-                    elif vn=="cSoil":upper_lim=100
-                    elif vn=="tau_veg":upper_lim=8
-                    else: upper_lim=250
-                else: 
-                    if vn in ["npp", "tau_veg"]:
-                        lower_lim=-0.7
-                        upper_lim=1
-                    elif vn in ["cVeg", "cSoil"]:
-                        lower_lim=-4
-                        upper_lim=5    
-                    else: 
-                        lower_lim=-40
-                        upper_lim=20                
-                all_data=list()                
+                # if subset in ['first_5_years','middle_5_years','last_5_years']: 
+                    # lower_lim=0
+                    # if vn=="npp":upper_lim=3.5
+                    # elif vn=="cVeg":upper_lim=50
+                    # elif vn=="cSoil":upper_lim=100
+                    # elif vn=="tau_veg":upper_lim=8
+                    # else: upper_lim=250
+                # else: 
+                    # if vn in ["npp", "tau_veg"]:
+                        # lower_lim=-0.7
+                        # upper_lim=1
+                    # elif vn in ["cVeg", "cSoil"]:
+                        # lower_lim=-4
+                        # upper_lim=5    
+                    # else: 
+                        # lower_lim=-40
+                        # upper_lim=20                
+                all_data=list()
+                #all_data=np.ma.array([0],mask=[0])  
+                #print("all data initial: " + str(np.max(all_data)))
                 for mf in model_folders:
                     experiment_name=m_names[k]+"_"+experiment+"_"
                     conf_dict = gh.confDict(mf)
@@ -3392,30 +3568,36 @@ def ensamble_uncertainty (
                     file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
                     ds = nc.Dataset(str(file_path))
                     var_name=vn+"_"+subset
-                    var=ds.variables[var_name][:, :].data
+                    var=ds.variables[var_name][:, :]#.data                    
+                    #print(type(var))
+                    #print("var.data: " + str(np.ma.max(var.data)))
                     var_sum=var_sum+var
                     ds.close() 
                     
+                    #g_mask=np.logical_or(g_mask,var.mask)
                     # add model density function to the plot 
-                    data_masked=var[np.where(g_mask==0)].flatten()
+                    data_masked=var.data[np.where(g_mask==0)].flatten()
                     data_masked_mean=np.mean(data_masked)
                     data_masked_sd=np.std(data_masked)
-                    
+                    #print("data masked: " + str(np.max(data_masked)))
+                    #print(type(data_masked))
+                    #print("data_masked max: "+str(np.max(data_masked)))
                     #all_data.append(data_masked)
                     #lower_lim=data_masked_mean-3*data_masked_sd
                     #upper_lim=data_masked_mean+3*data_masked_sd 
                     
-                    data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
-                    data_masked=data_masked[np.where(data_masked<=upper_lim)]    
+                    #data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
+                    #data_masked=data_masked[np.where(data_masked<=upper_lim)]    
                     # density = gaussian_kde(data_masked)                     
                     # #xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
                     # xs = np.linspace(lower_lim,upper_lim,100)
                     # m=m_names[k]
                     # ax.plot(xs,density(xs),color=model_cols[m],label=m,linewidth=1) 
                     k+=1 # model counter
-                    
+                    #all_data=np.append(all_data,data_masked)
                     all_data.append(data_masked)
-                    
+                    #print("all data: " + str(np.max(all_data)))
+                    #print(type(all_data))
                 mean=var_sum/len(model_folders)             
                 # computing uncertainty measures: standard deviation and average deviation                   
                 k=0 # model counter        
@@ -3464,19 +3646,20 @@ def ensamble_uncertainty (
                 # closing NetCDF file      
                 ds_new.close() 
                                               
-                print(var_name+' mean: '+str(np.ma.mean(var_mean_final)))
+                #print(var_name+' mean: '+str(np.ma.mean(var_mean_final)))
                 # add mean density function to the plot 
                 data_masked=mean[np.where(g_mask==0)].flatten() 
                 data_masked_mean=np.mean(data_masked)
                 data_masked_sd=np.std(data_masked)
-                
+                #print("data masked mean: " + str(np.max(data_masked)))
                 #all_data.append(data_masked)
                 #lower_lim=data_masked_mean-4*data_masked_sd
                 #upper_lim=data_masked_mean+4*data_masked_sd
               
-                data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
-                data_masked=data_masked[np.where(data_masked<=upper_lim)] 
+                #data_masked=data_masked[np.where(data_masked>=lower_lim)]                    
+                #data_masked=data_masked[np.where(data_masked<=upper_lim)] 
                 all_data.append(data_masked)
+                #all_data=np.append(all_data,data_masked)
                 # #print("data_masked_mean: "+ str(data_masked_mean))
                 # #print("data_masked_sd: "+ str(data_masked_sd))
                 # density = gaussian_kde(data_masked)
@@ -3492,41 +3675,80 @@ def ensamble_uncertainty (
                 
                 #adding uncertainty               
                 data_masked2=var_avd_final.data[np.where(g_mask==0)].flatten() 
-                lower_lim2 = np.min(data_masked2)
-                upper_lim2 = np.max(data_masked2)
-                if vn in ["tau", "tau_soil"]:
-                    if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 200
-                    else: upper_lim2 = 100  
-                elif vn=="tau_veg":
-                    if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 5
-                    else: upper_lim2 = 5
-                data_masked2=data_masked2[np.where(data_masked2>=lower_lim2)]                    
-                data_masked2=data_masked2[np.where(data_masked2<=upper_lim2)]                        
+                #print("data masked2: " + str(np.max(data_masked2)))
+                # lower_lim2 = np.min(data_masked2)
+                # upper_lim2 = np.max(data_masked2)
+                # if vn in ["tau", "tau_soil"]:
+                    # if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 200
+                    # else: upper_lim2 = 100  
+                # elif vn=="tau_veg":
+                    # if subset in ["first_5_years", "middle_5_years", "last_5_years"]: upper_lim2 = 5
+                    # else: upper_lim2 = 5
+                #data_masked2=data_masked2[np.where(data_masked2>=lower_lim2)]                    
+                #data_masked2=data_masked2[np.where(data_masked2<=upper_lim2)]                        
                 all_data.append(data_masked2)
-                # violin plots
-                fig3, ax3 = plt.subplots(figsize =(10, 5))
-                #all_data
-                ax3.violinplot(all_data,
-                    showmeans=True,
-                    showmedians=False,
-                    #color=model_cols[m]
-                    )
-                #ax3.scatter(k,data_masked_mean,s=70,color=model_cols[m])
-                #ax3.errorbar(k, data_masked_mean, yerr=data_masked_sd)
-                ax3.set_title('Spatial variability - '+var_name)
-                ax3.grid()
-                plt.xticks(range(1,21),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
-                # plt.setp(ax3, xticks=[y+1 for y in range(len(all_data))],
-                    # xticklabels=m_names+["Ensamble mean"])
-                plt.show()
+                #all_data=np.append(all_data,data_masked2)
+                #all_data=all_data[1:]
                 
-                # box plot
-                fig4, ax4 = plt.subplots(figsize =(10, 5))
-                ax4.boxplot(all_data, flierprops={'marker': '*', 'markersize': 1, 'markerfacecolor': 'fuchsia'})
-                ax4.set_title('Spatial variability - '+var_name)
-                ax4.grid()
-                plt.xticks(range(1,21),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
-                plt.show()
+                if subset in ["last_5_years", "diff_total"]:
+                    # violin plots
+                    fig, ax = plt.subplots(figsize =(10, 5))
+                    parts=ax.violinplot(all_data,
+                        showmeans=True,
+                        showmedians=False,
+                        #showextrema=False,
+                        #points=1000
+                        )
+                    # Q1 = np.quantile(all_data, 0.25) 
+                    # Q3 = np.quantile(all_data, 0.75)
+                    # IQR = Q3 - Q1
+                    # ymin = Q1 - 1.5 * IQR
+                    # ymax = Q3 + 1.5 * IQR
+                    # quartile1, medians, quartile3 = np.percentile(all_data, [25, 50, 75], axis=1)
+                    # whiskers = np.array([
+                        # (ymin, ymax)
+                        # for sorted_array, q1, q3 in zip(all_data, quartile1, quartile3)])
+                    #whiskers_min, whiskers_max = whiskers[:, 0], whiskers[:, 1]    
+                    #inds = np.arange(1, len(medians) + 1)
+                    #ax.vlines(inds, quartile1, quartile3, color='k', linestyle='-', lw=5)
+                    #ax.vlines(inds, whiskers_min, whiskers_max, color='k', linestyle='-', lw=1)
+                    m=0
+                    for pc in parts['bodies']:
+                        if m < len(m_names):
+                            color=model_cols[m_names[m]]
+                        else: color=('lightgrey')
+                        pc.set_facecolor(color) #('#D43F3A')
+                        pc.set_edgecolor('black')
+                        pc.set_alpha(1)
+                        m=m+1
+                    ax.set_title('Spatial variability - '+var_name)
+                    ax.grid(linestyle='dashed')
+                    # compute ylim from interquartile range
+                    Q1 = np.quantile(all_data, 0.25) 
+                    Q3 = np.quantile(all_data, 0.75)
+                    IQR = Q3 - Q1
+                    if subset=="last_5_years": ymin=0
+                    else: ymin = Q1 - 15 * IQR
+                    ymax = Q3 + 15 * IQR
+                    ax.set_ylim([ymin,ymax])                       
+                    plt.xticks(range(1,len(m_names)+3),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
+                    plt.show()
+                   
+                    # box plot
+                    fig4, ax4 = plt.subplots(figsize =(10, 5))
+                    ax4.boxplot(all_data, flierprops={'marker': '*', 'markersize': 1, 'markerfacecolor': 'fuchsia'})
+                    ax4.set_title('Spatial variability - '+var_name)
+                    ax4.grid()
+                    # compute ylim from interquartile range
+                    Q1 = np.quantile(all_data, 0.25) 
+                    Q3 = np.quantile(all_data, 0.75)
+                    IQR = Q3 - Q1
+                    if subset=="last_5_years": ymin=0
+                    else: ymin = Q1 - 10 * IQR
+                    ymax = Q3 + 10 * IQR
+                    ax.set_ylim([ymin,ymax])                     
+                    plt.xticks(range(1,len(m_names)+3),m_names+["Ensamble mean"]+["Uncertainty"],rotation=90)
+                    plt.show()
                 
                 # # uncertainty distributions                
                 # fig2=plt.figure(figsize=(15,5))
@@ -3599,101 +3821,186 @@ def ensamble_uncertainty (
         # data=data[np.where(data<=upper_lim)] 
         # return data
                 
-# def mask_add_non_positive(mask, data):
-    # new_mask_index=mask.index_mask
-    # data_masked=np.ma.array(data, mask=new_mask_index)     
-    # # adding non-positive values to the mask
-    # new_mask_index[np.where(data <= 0)]=1    
-    # return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)    
-
-def mask_add_outliers(mask, data, outlier_tolerance=4, log=False, plot_hist=False):
+def mask_add_wrong_values(mask, data):
     new_mask_index=mask.index_mask
-    data_masked=data[np.where(new_mask_index==0)].flatten()
+    new_mask_index=np.logical_or(new_mask_index,data.mask)
+    data_masked=np.ma.array(data, mask=new_mask_index)     
+    # adding non-positive values to the mask
+    new_mask_index[np.where(data <= 0)] = 1    
+    new_mask_index[np.where(data >= 1e5)] = 1 
+    return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)    
 
-    if plot_hist:
-        print("mean: " + str(np.mean(data_masked)))
-        print("max: " + str(np.max(data_masked)))
-        print("min: " + str(np.min(data_masked))) 
+# def mask_add_outliers(mask, data, outlier_tolerance=4, log=False, plot_hist=False):
+    # new_mask_index=mask.index_mask
+    # data_masked=data[np.where(new_mask_index==0)].flatten()
+
+    # if plot_hist:
+        # print("mean: " + str(np.mean(data_masked)))
+        # print("max: " + str(np.max(data_masked)))
+        # print("min: " + str(np.min(data_masked))) 
             
-    # adding outliers based on standard deviation        
-    if log: data_masked=np.log(data_masked)
-    #else: data_masked=np.ma.array(data, mask=new_mask_index)
-    data_mean=np.mean(data_masked)
-    data_sd=np.std(data_masked)
-    upper_limit = data_mean + outlier_tolerance * data_sd
-    lower_limit = data_mean - outlier_tolerance * data_sd
-    if log: 
-        upper_limit=np.exp(upper_limit)
-        lower_limit=np.exp(lower_limit)
-        data_masked=np.exp(data_masked)     
-    dat=data.data
-    new_mask_index[np.where(dat > upper_limit)]=1
-    new_mask_index[np.where(dat < lower_limit)]=1  
-    if plot_hist:
-        print("upper limit: " + str(upper_limit)) 
-        print("lower limit: " + str(lower_limit))          
-        # histogram of the data
-        n, bins, patches = plt.hist(data_masked, density=True, bins=50, facecolor='green', edgecolor='black', alpha=0.7)
-        if upper_limit<np.max(data_masked):
-            plt.axvline(x=upper_limit, color="red", linewidth=1)
-        if lower_limit>np.min(data_masked):
-            plt.axvline(x=lower_limit, color="red", linewidth=1)               
-        # density curve    
-        density = gaussian_kde(data_masked)
-        xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
-        #density.covariance_factor = lambda : .25
-        #density._compute_covariance()
-        plt.plot(xs,density(xs),'b--')                       
-        plt.show()  
+    # # adding outliers based on standard deviation        
+    # if log: data_masked=np.log(data_masked)
+    # #else: data_masked=np.ma.array(data, mask=new_mask_index)
+    # data_mean=np.mean(data_masked)
+    # data_sd=np.std(data_masked)
+    # upper_limit = data_mean + outlier_tolerance * data_sd
+    # lower_limit = data_mean - outlier_tolerance * data_sd
+    # if log: 
+        # upper_limit=np.exp(upper_limit)
+        # lower_limit=np.exp(lower_limit)
+        # data_masked=np.exp(data_masked)     
+    # dat=data.data
+    # new_mask_index[np.where(dat > upper_limit)]=1
+    # new_mask_index[np.where(dat < lower_limit)]=1  
+    # if plot_hist:
+        # print("upper limit: " + str(upper_limit)) 
+        # print("lower limit: " + str(lower_limit))          
+        # # histogram of the data
+        # n, bins, patches = plt.hist(data_masked, density=True, bins=50, facecolor='green', edgecolor='black', alpha=0.7)
+        # if upper_limit<np.max(data_masked):
+            # plt.axvline(x=upper_limit, color="red", linewidth=1)
+        # if lower_limit>np.min(data_masked):
+            # plt.axvline(x=lower_limit, color="red", linewidth=1)               
+        # # density curve    
+        # density = gaussian_kde(data_masked)
+        # xs = np.linspace(np.min(data_masked),np.max(data_masked),100)
+        # #density.covariance_factor = lambda : .25
+        # #density._compute_covariance()
+        # plt.plot(xs,density(xs),'b--')                       
+        # plt.show()  
         
-    return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)                 
+    # #return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)                 
+    # return mask
     
-# def global_mean_var_2d(
-        # #lats: np.ma.core.MaskedArray,
-        # #lons: np.ma.core.MaskedArray,
-        # gcm: gh.CoordMask,
-        # var: nc._netCDF4.Variable,
-        # ) -> np.array:
-    # lats=np.array(gcm.lats),
-    # lons=np.array(gcm.lons),
-    # mask=gcm.index_mask,
-    # weight_mat = np.ma.array(gh.get_weight_mat(lats, lons), mask=mask)
-    # wms = weight_mat.sum()
-    # res = (weight_mat * var[:, :]).sum() / wms #np.zeros(n_t)
-    # return res   
- 
+def global_mean_var_2d(
+    gcm,
+    var: nc._netCDF4.Variable,
+    weight_mask,
+) -> np.array:
+    mask=np.array(gcm.index_mask)
+    lats=gcm.lats
+    lons=gcm.lons
+    weight_mat = np.ma.array(gh.get_weight_mat(lats, lons), mask=mask)
+    wms = weight_mat.sum()
+    #res = (weight_mat * var[:, :]).sum() / wms
+    res = (weight_mat * var[:, :]) / wms
+    wms2=np.ma.sum(weight_mask)
+    res2 = (weight_mask * var[:, :]).sum() / wms2
+    
+    return res2  
+    
+# removing outliers
+# def remove_outliers (x, tolerance = 3): # default 1.5
+    # Q1 = np.quantile(x, 0.25)
+    # Q3 = np.quantile(x, 0.75)
+    # IQR = Q3 - Q1    #IQR is interquartile range. 
+    # x = x[np.where(x >= Q1 - tolerance * IQR)]
+    # x = x[np.where(x <= Q3 + tolerance * IQR)]
+    # return(x) 
+    
+# def mask_outliers (var, global_mask, tolerance = 3, keep_outliers=False): # default 1.5
+    # mask=np.array(global_mask.index_mask)
+    # x = var[np.where(mask==0)].flatten()
+    # Q1 = np.quantile(x, 0.25)
+    # Q3 = np.quantile(x, 0.75)
+    # IQR = Q3 - Q1    #IQR is interquartile range. 
+    # if keep_outliers:
+        # mask[:,:]=1
+        # mask[np.where(var <= Q1 - tolerance * IQR)]=0
+        # mask[np.where(var >= Q3 + tolerance * IQR)]=0
+        # mask[np.where(global_mask.index_mask==1)]=1        
+    # else:    
+        # mask[np.where(var <= Q1 - tolerance * IQR)]=1
+        # mask[np.where(var >= Q3 + tolerance * IQR)]=1     
+    # #print('min: '+str(np.min(x)))
+    # #print('max: '+str(np.max(x)))
+    # #print('low outlier: '+str(Q1 - tolerance * IQR))
+    # #print('high outlier: '+str(Q3 + tolerance * IQR))
+    # return(gh.CoordMask(index_mask=mask, tr=global_mask.tr))     
+
+def pie_chart_nested (ax, title, sizes, sizes_2, labels, labels_2, colors, colors_2, 
+                        text_displacement=[[0,0]], 
+                        pct_displacement=[[0,0]],
+                        font_size_change=0
+                        ):
+    ax.set_title(title)                          
+    patches, texts, pcts = ax.pie(sizes, autopct='%1.1f%%', pctdistance=0.7, 
+        labels=labels, labeldistance=1.1, 
+        startangle=90, counterclock=False, colors=colors, 
+        wedgeprops=dict(width=0.6, edgecolor='w')) 
+    for i in text_displacement: texts[i[0]]._y = texts[i[0]]._y + i[1]
+    for i in pct_displacement: pcts[i[0]]._y = pcts[i[0]]._y + i[1]
+    if font_size_change!=0:
+        for i in font_size_change: plt.setp(texts[i[0]], fontsize=i[1])              
+    ax.pie(sizes_2, labels=labels_2, labeldistance=0.3,
+        startangle=90, counterclock=False, radius=0.4, colors=colors_2, 
+        wedgeprops=dict(width=0.4, edgecolor='w'))   
+    ax.axis('equal')   
+
+def box_plot_uncertainty (uncert_var_name, uncert_var, cont_var_names, cont_vars, title,
+                        flierprops={'marker': '*', 'markersize': 1, 'markerfacecolor': 'black'}):        
+    fig=plt.figure(figsize=(15,7))            
+    axs=fig.subplots(1,2, gridspec_kw={'width_ratios': [1, len(cont_var_names)]})         
+    ax0=axs[0]        
+    ax0.boxplot(uncert_var, showmeans=True, flierprops=flierprops)
+    ax0.set_title(uncert_var_name)
+    ax0.grid()
+    ax1=axs[1]
+    ax1.boxplot(cont_vars, showmeans=True, flierprops=flierprops)
+    ax1.set_title(title)
+    ax1.grid()
+    plt.xticks(range(1,len(cont_var_names)+1),cont_var_names)
+    plt.show()       
+
+def read_uncert_file(data_path, experiment, var, mask):
+    file_path = Path(data_path).joinpath(experiment+"_"+var+"_uncertainty.nc")
+    ds = nc.Dataset(str(file_path)) 
+    var_mean=ds.variables[var+"_mean"][:, :]
+    var_mean=np.ma.array(var_mean, mask=mask)
+    var_avd=ds.variables[var+"_avd"][:, :]
+    var_avd=np.ma.array(var_avd, mask=mask)
+    ds.close()
+    return (var_mean, var_avd)     
+    
+def biome_masks_aggregated (mask_file, output_path, var_name, classes, global_mask):
+    g_mask=global_mask.index_mask
+    ds = nc.Dataset(mask_file)    
+    var=ds.variables[var_name][:]    
+    ds.close() 
+    mask_list=list()    
+    for nclass in classes:    
+        var_0=var.copy()
+        var_0[var_0!=nclass]=-9999      
+        var_0[var_0==nclass]=0
+        var_0[var_0==-9999]=1
+        var_0_corrected=var_0.copy()
+        for i in range(var_0.shape[0]):
+            var_0_corrected[i,:]=var_0[var_0.shape[0]-1-i,:]
+        var_0_masked=np.logical_or(var_0_corrected,g_mask)
+        mask_list.append(var_0_masked)
+    mask_tundra=gh.CoordMask(np.logical_and(mask_list[1],mask_list[2]), global_mask.tr) 
+    mask_tundra.write_netCDF4(Path(output_path).joinpath("mask_tundra.nc"))
+    mask_boreal=gh.CoordMask(np.logical_and(mask_list[3],mask_list[4]), global_mask.tr) 
+    mask_boreal.write_netCDF4(Path(output_path).joinpath("mask_boreal.nc"))   
+    mask_temperate=gh.CoordMask(np.logical_and(mask_list[5],mask_list[6]), global_mask.tr) 
+    mask_temperate.write_netCDF4(Path(output_path).joinpath("mask_temperate.nc"))      
+    mask_mediterranean=gh.CoordMask(np.logical_and(mask_list[7],mask_list[8]), global_mask.tr) 
+    mask_mediterranean.write_netCDF4(Path(output_path).joinpath("mask_mediterranean.nc"))  
+    mask_des=np.logical_and(mask_list[9],mask_list[10])
+    mask_desert=gh.CoordMask(np.logical_and(mask_des,mask_list[11]), global_mask.tr)     
+    mask_desert.write_netCDF4(Path(output_path).joinpath("mask_desert.nc"))  
+    mask_tropical=gh.CoordMask(np.logical_and(mask_list[12],mask_list[13]), global_mask.tr) 
+    mask_tropical.write_netCDF4(Path(output_path).joinpath("mask_tropical.nc"))      
+    print("Done!")
+    
 def C_sink_uncertainty_attribution (
         experiment_names,
         global_mask,    
         data_path, 
         biome = "Global"
-        ):
-    g_mask=global_mask.index_mask
-    
-    def read_values(data_path, experiment, var, mask):
-        file_path = Path(data_path).joinpath(experiment+"_"+var+"_uncertainty.nc")
-        ds = nc.Dataset(str(file_path)) 
-        var_mean=ds.variables[var+"_mean"][:, :].data
-        var_mean=np.ma.array(var_mean, mask=mask)
-        var_avd=ds.variables[var+"_avd"][:, :].data
-        var_avd=np.ma.array(var_avd, mask=mask)
-        ds.close()
-        return (var_mean, var_avd)     
-        
-    def global_mean_var_2d(
-        lats: np.ma.core.MaskedArray,
-        lons: np.ma.core.MaskedArray,
-        #mask: np.array,
-        var: nc._netCDF4.Variable,
-    ) -> np.array:
-        #lats=np.ma.array(gcm.lats),
-        #lons=np.ma.array(gcm.lons),
-        mask=global_mask.index_mask,
-        weight_mat = np.ma.array(gh.get_weight_mat(lats, lons), mask=mask)
-        wms = weight_mat.sum()
-        res = (weight_mat * var[:, :]).sum() / wms #np.zeros(n_t)
-        return res     
-
+        ):    
+    # function to write output    
     def write_new_NetCDF (experiment_name, mask, subset_name, var0, var1, var2, var3, var4, var5, var6):
         s = mask.index_mask.shape
         n_lats, n_lons = s
@@ -3733,43 +4040,45 @@ def C_sink_uncertainty_attribution (
         lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
         # closing NetCDF files     
         ds_new.close()         
-       
+    
+    print('\033[1m'+'*******Carbon Sink Uncertainty Attribution*******'+'\033[0m') 
+    g_mask=global_mask.index_mask       
     for experiment in experiment_names:
         print('\033[1m'+experiment+'\033[0m')  
         
         ### reading necesssary grids ###
-        tau_0, tau_0_avd = read_values(data_path, experiment, "tau_first_5_years", g_mask)
-        tau_1, tau_1_avd = read_values(data_path, experiment, "tau_middle_5_years", g_mask)
-        tau_2, tau_2_avd = read_values(data_path, experiment, "tau_last_5_years", g_mask)
-        tau_diff_1, tau_diff_1_avd = read_values(data_path, experiment, "tau_diff_1st_half", g_mask)
-        tau_diff_2, tau_diff_2_avd = read_values(data_path, experiment, "tau_diff_2nd_half", g_mask)
-        tau_diff_total, tau_diff_total_avd = read_values(data_path, experiment, "tau_diff_total", g_mask)
+        tau_0, tau_0_avd = read_uncert_file(data_path, experiment, "tau_first_5_years", g_mask)
+        tau_1, tau_1_avd = read_uncert_file(data_path, experiment, "tau_middle_5_years", g_mask)
+        tau_2, tau_2_avd = read_uncert_file(data_path, experiment, "tau_last_5_years", g_mask)
+        tau_diff_1, tau_diff_1_avd = read_uncert_file(data_path, experiment, "tau_diff_1st_half", g_mask)
+        tau_diff_2, tau_diff_2_avd = read_uncert_file(data_path, experiment, "tau_diff_2nd_half", g_mask)
+        tau_diff_total, tau_diff_total_avd = read_uncert_file(data_path, experiment, "tau_diff_total", g_mask)
 
-        tau_veg_0, tau_veg_0_avd = read_values(data_path, experiment, "tau_veg_first_5_years", g_mask)
-        tau_veg_1, tau_veg_1_avd = read_values(data_path, experiment, "tau_veg_middle_5_years", g_mask)
-        tau_veg_2, tau_veg_2_avd = read_values(data_path, experiment, "tau_veg_last_5_years", g_mask)
-        tau_veg_diff_1, tau_veg_diff_1_avd = read_values(data_path, experiment, "tau_veg_diff_1st_half", g_mask)
-        tau_veg_diff_2, tau_veg_diff_2_avd = read_values(data_path, experiment, "tau_veg_diff_2nd_half", g_mask)
-        tau_veg_diff_total, tau_veg_diff_total_avd = read_values(data_path, experiment, "tau_veg_diff_total", g_mask)
+        tau_veg_0, tau_veg_0_avd = read_uncert_file(data_path, experiment, "tau_veg_first_5_years", g_mask)
+        tau_veg_1, tau_veg_1_avd = read_uncert_file(data_path, experiment, "tau_veg_middle_5_years", g_mask)
+        tau_veg_2, tau_veg_2_avd = read_uncert_file(data_path, experiment, "tau_veg_last_5_years", g_mask)
+        tau_veg_diff_1, tau_veg_diff_1_avd = read_uncert_file(data_path, experiment, "tau_veg_diff_1st_half", g_mask)
+        tau_veg_diff_2, tau_veg_diff_2_avd = read_uncert_file(data_path, experiment, "tau_veg_diff_2nd_half", g_mask)
+        tau_veg_diff_total, tau_veg_diff_total_avd = read_uncert_file(data_path, experiment, "tau_veg_diff_total", g_mask)
 
-        tau_soil_0, tau_soil_0_avd = read_values(data_path, experiment, "tau_soil_first_5_years", g_mask)
-        tau_soil_1, tau_soil_1_avd = read_values(data_path, experiment, "tau_soil_middle_5_years", g_mask)
-        tau_soil_2, tau_soil_2_avd = read_values(data_path, experiment, "tau_soil_last_5_years", g_mask)
-        tau_soil_diff_1, tau_soil_diff_1_avd = read_values(data_path, experiment, "tau_soil_diff_1st_half", g_mask)
-        tau_soil_diff_2, tau_soil_diff_2_avd = read_values(data_path, experiment, "tau_soil_diff_2nd_half", g_mask)
-        tau_soil_diff_total, tau_soil_diff_total_avd = read_values(data_path, experiment, "tau_soil_diff_total", g_mask)
+        tau_soil_0, tau_soil_0_avd = read_uncert_file(data_path, experiment, "tau_soil_first_5_years", g_mask)
+        tau_soil_1, tau_soil_1_avd = read_uncert_file(data_path, experiment, "tau_soil_middle_5_years", g_mask)
+        tau_soil_2, tau_soil_2_avd = read_uncert_file(data_path, experiment, "tau_soil_last_5_years", g_mask)
+        tau_soil_diff_1, tau_soil_diff_1_avd = read_uncert_file(data_path, experiment, "tau_soil_diff_1st_half", g_mask)
+        tau_soil_diff_2, tau_soil_diff_2_avd = read_uncert_file(data_path, experiment, "tau_soil_diff_2nd_half", g_mask)
+        tau_soil_diff_total, tau_soil_diff_total_avd = read_uncert_file(data_path, experiment, "tau_soil_diff_total", g_mask)
 
-        npp_0, npp_0_avd = read_values(data_path, experiment, "npp_first_5_years", g_mask)
-        npp_1, npp_1_avd = read_values(data_path, experiment, "npp_middle_5_years", g_mask)
-        npp_2, npp_2_avd = read_values(data_path, experiment, "npp_last_5_years", g_mask)
-        npp_diff_1, npp_diff_1_avd = read_values(data_path, experiment, "npp_diff_1st_half", g_mask)
-        npp_diff_2, npp_diff_2_avd = read_values(data_path, experiment, "npp_diff_2nd_half", g_mask)
-        npp_diff_total, npp_diff_total_avd = read_values(data_path, experiment, "npp_diff_total", g_mask)
+        npp_0, npp_0_avd = read_uncert_file(data_path, experiment, "npp_first_5_years", g_mask)
+        npp_1, npp_1_avd = read_uncert_file(data_path, experiment, "npp_middle_5_years", g_mask)
+        npp_2, npp_2_avd = read_uncert_file(data_path, experiment, "npp_last_5_years", g_mask)
+        npp_diff_1, npp_diff_1_avd = read_uncert_file(data_path, experiment, "npp_diff_1st_half", g_mask)
+        npp_diff_2, npp_diff_2_avd = read_uncert_file(data_path, experiment, "npp_diff_2nd_half", g_mask)
+        npp_diff_total, npp_diff_total_avd = read_uncert_file(data_path, experiment, "npp_diff_total", g_mask)
 
-        X_diff_1, X_diff_1_avd = read_values(data_path, experiment, "C_ecosystem_diff_1st_half", g_mask)
-        X_diff_2, X_diff_2_avd = read_values(data_path, experiment, "C_ecosystem_diff_2nd_half", g_mask)
-        X_diff_total, X_diff_total_avd = read_values(data_path, experiment, "C_ecosystem_diff_total", g_mask)
-        
+        X_diff_1, X_diff_1_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_1st_half", g_mask)
+        X_diff_2, X_diff_2_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_2nd_half", g_mask)
+        X_diff_total, X_diff_total_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_total", g_mask)
+       
         ### attribution of uncertainty in delta_X to npp, tau_veg and tau_soil ###
         
         # 1st half
@@ -3787,14 +4096,11 @@ def C_sink_uncertainty_attribution (
                                tau_diff_1_avd * npp_0_avd +
                                npp_0_avd * tau_diff_1_avd)
         delta_X_1_propagated = (delta_npp_contrib_1 + 
-                                #tau_0_contrib_1 +                       
-                                #delta_tau_contrib_1 +
                                 npp_0_contrib_1 +
                                 tau_veg_0_contrib_1 +                       
                                 delta_tau_veg_contrib_1 +
                                 tau_soil_0_contrib_1 +                       
-                                delta_tau_soil_contrib_1 #+ 
-                                #interaction_terms_1
+                                delta_tau_soil_contrib_1 
                                 )
         # 2nd half
         delta_X_2 = X_diff_2_avd         
@@ -3811,14 +4117,11 @@ def C_sink_uncertainty_attribution (
                                tau_diff_2_avd * npp_1_avd +
                                npp_1_avd * tau_diff_2_avd)
         delta_X_2_propagated = (delta_npp_contrib_2 + 
-                                #tau_1_contrib_2 +                       
-                                #delta_tau_contrib_2 +
                                 npp_1_contrib_2 +
                                 tau_veg_1_contrib_2 +                       
                                 delta_tau_veg_contrib_2 +
                                 tau_soil_1_contrib_2 +                       
-                                delta_tau_soil_contrib_2 #+ 
-                                #interaction_terms_2
+                                delta_tau_soil_contrib_2  
                                 )       
         # total period
         delta_X_total = X_diff_total_avd         
@@ -3835,14 +4138,11 @@ def C_sink_uncertainty_attribution (
                                tau_diff_total_avd * npp_0_avd +
                                npp_0_avd * tau_diff_total_avd)
         delta_X_total_propagated = (delta_npp_contrib_total + 
-                                #tau_0_contrib_total +                       
-                                #delta_tau_contrib_total +
                                 npp_0_contrib_total +
                                 tau_veg_0_contrib_total +                       
                                 delta_tau_veg_contrib_total +
                                 tau_soil_0_contrib_total +                       
-                                delta_tau_soil_contrib_total #+ 
-                                #interaction_terms_total
+                                delta_tau_soil_contrib_total  
                                 )
 
         # saving NetCDFs with grid attribution
@@ -3881,8 +4181,8 @@ def C_sink_uncertainty_attribution (
             var4 = delta_tau_veg_contrib_total,
             var5 = tau_soil_0_contrib_total,
             var6 = delta_tau_soil_contrib_total,                   
-            )            
-        
+            )   
+         
         # computing and saving percent contributions
         # 1st half
         npp_0_contrib_1_percent = npp_0_contrib_1 / delta_X_1_propagated * 100
@@ -3942,434 +4242,2124 @@ def C_sink_uncertainty_attribution (
             var5 = tau_soil_0_contrib_total_percent,
             var6 = delta_tau_soil_contrib_total_percent,                   
             )
-
-        # # RGB map of attribution to GPP, RT and X_p
-        # rgba_map (
-            # mask = g_mask,
-            # grid_red = tau_soil_0_contrib_total_percent+delta_tau_soil_contrib_total_percent, 
-            # grid_green = npp_0_contrib_total_percent+delta_npp_contrib_total_percent, 
-            # grid_blue = tau_veg_0_contrib_total_percent+delta_tau_veg_contrib_total_percent, 
-            # grid_alpha = np.zeros_like(X_p_2d),# delta_X_total / np.ma.max(delta_X_total)*10, 
-            # labels = ["NPP 80% - tau 20%",
-                    # #"NPP 75% - tau 25%",
-                    # "NPP 70% - tau 30%",
-                    # #"NPP 65% - tau 35%",
-                    # "NPP 60% - tau 40%",
-                    # #"NPP 55% - tau 45%",
-                    # "NPP 50% - tau 50%",
-                    # #"NPP 45% - tau 55%",
-                    # "NPP 40% - tau 60%",
-                    # #"NPP 35% - tau 65%",
-                    # "NPP 30% - tau 70%",
-                    # #"NPP 35% - tau 75%",
-                    # "NPP 20% - tau 80%"],
-            # title = "Spatial attribution of uncetainty in X to uncertainty in NPP (green) and tau (red)",         
-        # )            
+          
+        # box plots
+        uncert_var_name = "$Δ X$ uncertainty"  
+        uncert_var=delta_X_total[delta_X_total.mask==0].flatten()      
+        cont_var_names = [
+            "$NPP_{0}$", "Δ $NPP$",
+            "$τ_{veg_0}$", "Δ $τ_{veg}$",
+            "$τ_{soil_0}$", "Δ $τ_{soil}$"
+            ]  
+        # absolute contributions
+        cont_vars = list((
+            npp_0_contrib_total[npp_0_contrib_total.mask==0].flatten(), 
+            delta_npp_contrib_total[delta_npp_contrib_total.mask==0].flatten(), 
+            tau_veg_0_contrib_total[tau_veg_0_contrib_total.mask==0].flatten(),
+            delta_tau_veg_contrib_total[delta_tau_veg_contrib_total.mask==0].flatten(),
+            tau_soil_0_contrib_total[tau_soil_0_contrib_total.mask==0].flatten(), 
+            delta_tau_soil_contrib_total[delta_tau_soil_contrib_total.mask==0].flatten()
+            ))  
+        box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars,
+                           title = 'Spatial variability of uncertainty contributions')        
+        # percent ontributions
+        cont_vars = list((
+            npp_0_contrib_total_percent[npp_0_contrib_total_percent.mask==0].flatten(), 
+            delta_npp_contrib_total_percent[delta_npp_contrib_total_percent.mask==0].flatten(), 
+            tau_veg_0_contrib_total_percent[tau_veg_0_contrib_total_percent.mask==0].flatten(),
+            delta_tau_veg_contrib_total_percent[delta_tau_veg_contrib_total_percent.mask==0].flatten(),
+            tau_soil_0_contrib_total_percent[tau_soil_0_contrib_total_percent.mask==0].flatten(), 
+            delta_tau_soil_contrib_total_percent[delta_tau_soil_contrib_total_percent.mask==0].flatten()
+            ))  
+        box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars, 
+                            title = 'Spatial variability of uncertainty contributions (%)')
         
-        
-        # # computing global (spatial) averages
-        # print("computing spatial means ...")        
-        # # 1st half
-        # npp_0_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_0_contrib_1)         
-        # delta_npp_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_npp_contrib_1)
-        # tau_0_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_0_contrib_1)
-        # delta_tau_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_contrib_1) 
-        # tau_veg_0_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_0_contrib_1)
-        # delta_tau_veg_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_veg_contrib_1)
-        # tau_soil_0_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_0_contrib_1)
-        # delta_tau_soil_contrib_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_soil_contrib_1)        
-        # interaction_terms_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, interaction_terms_1)
-        # delta_X_1_propagated_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_X_1_propagated)
-        # delta_X_1_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_X_1)
-        # # 2nd half
-        # npp_1_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_1_contrib_2)        
-        # delta_npp_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_npp_contrib_2)
-        # tau_1_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_1_contrib_2)
-        # delta_tau_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_contrib_2)
-        # tau_veg_1_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_1_contrib_2)
-        # delta_tau_veg_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_veg_contrib_2) 
-        # tau_soil_1_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_1_contrib_2)
-        # delta_tau_soil_contrib_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_soil_contrib_2)         
-        # interaction_terms_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, interaction_terms_2)
-        # delta_X_2_propagated_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_X_2_propagated)
-        # delta_X_2_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_X_2)
-        # # total period
-        # npp_0_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_0_contrib_total)         
-        # delta_npp_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_npp_contrib_total)
-        # tau_0_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_0_contrib_total)
-        # delta_tau_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_contrib_total)  
-        # tau_veg_0_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_0_contrib_total)
-        # delta_tau_veg_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_veg_contrib_total) 
-        # tau_soil_0_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_0_contrib_total)
-        # delta_tau_soil_contrib_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_tau_soil_contrib_total)         
-        # interaction_terms_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, interaction_terms_total)
-        # delta_X_total_propagated_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_X_total_propagated)
-        # delta_X_total_global=global_mean_var_2d(global_mask.lats, global_mask.lons, delta_X_total)        
-        
-        # # bar charts
-        # def bar_chart (delta_X_total_global, 
-                       # delta_X_total_propagated_global,
-                       # npp_0_contrib_total_global,
-                       # delta_npp_contrib_total_global,
-                       # tau_0_contrib_total_global,
-                       # delta_tau_contrib_total_global,
-                       # ):                      
-            # fig=plt.figure(figsize=(7,7))
-            # ax0=fig.subplots()#axs[1]
-            # ax0.bar ('Δ X', delta_X_total_global, color="darkblue", label='Δ X')
-            # ax0.bar ('Δ X prop', delta_X_total_propagated_global, color="blue", label='Δ X prop')        
-            # ax0.bar ('NPP_0', npp_0_contrib_total_global, color="green", label='NPP_0')  
-            # ax0.bar ('Δ NPP', delta_npp_contrib_total_global, color="lightgreen", label='Δ NPP')
-            # ax0.bar ('τ_0', tau_0_contrib_total_global, color="brown", label='τ_0')  
-            # ax0.bar ('Δ τ', delta_tau_contrib_total_global, color="orange", label='Δ τ')
-            # #ax0.bar ('inter', interaction_terms_total_global, color="grey", label='inter')
-            # ax0.legend(bbox_to_anchor =(1,1))  
-            # ax0.grid() 
-            # plt.show() 
-        # print("1st half")
-        # bar_chart (delta_X_1_global, 
-                   # delta_X_1_propagated_global,
-                   # npp_0_contrib_1_global,
-                   # delta_npp_contrib_1_global,
-                   # tau_0_contrib_1_global,
-                   # delta_tau_contrib_1_global,
-                   # )    
-        # print("2nd half")
-        # bar_chart (delta_X_2_global, 
-                   # delta_X_2_propagated_global,
-                   # npp_1_contrib_2_global,
-                   # delta_npp_contrib_2_global,
-                   # tau_1_contrib_2_global,
-                   # delta_tau_contrib_2_global,
-                   # )   
-        # print("total")
-        # bar_chart (delta_X_total_global, 
-                   # delta_X_total_propagated_global,
-                   # npp_0_contrib_total_global,
-                   # delta_npp_contrib_total_global,
-                   # tau_0_contrib_total_global,
-                   # delta_tau_contrib_total_global,
-                   # )                      
-        # pie charts
-        
-        # fig=plt.figure(figsize=(15,7))
-        # axs=fig.subplots(1,3)
-        
-        # ax0=axs[0]
-        # ax0.set_title('1st half')
-                        
-        # labels = 'NPP_0', 'Δ NPP', 'τ_veg_0', 'Δ τ_veg', 'τ_soil_0', 'Δ τ_soil'#, 'inter'
-        # colors=("green", "lightgreen", "blue", "cyan", "brown", "orange")    
-        # sizes = [abs(npp_0_contrib_1_global),
-                 # delta_npp_contrib_1_global, 
-                 # #delta_tau_contrib_1_global,
-                 # #tau_0_contrib_1_global,
-                 # tau_veg_0_contrib_1_global,
-                 # delta_tau_veg_contrib_1_global,
-                 # tau_soil_0_contrib_1_global,                                
-                 # delta_tau_soil_contrib_1_global,                 
-                 # ]
-        # ax0.pie(sizes, autopct='%1.1f%%', 
-            # startangle=90, counterclock=False, shadow=True, labels=labels, rotatelabels=True, colors=colors)#, "purple"))
-
-        # ax0.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
-        # ax0.legend(labels)#, bbox_to_anchor =(1,1))
-        
-        # ax1=axs[1]
-        # ax1.set_title('2nd half')
-        # sizes = [abs(npp_1_contrib_2_global),
-                 # delta_npp_contrib_2_global, 
-                 # #delta_tau_contrib_2_global,
-                 # #tau_1_contrib_2_global,
-                 # tau_veg_1_contrib_2_global,
-                 # delta_tau_veg_contrib_2_global,
-                 # tau_soil_1_contrib_2_global,                                
-                 # delta_tau_soil_contrib_2_global,                 
-                 # ]
-        # ax1.pie(sizes, autopct='%1.1f%%', 
-            # startangle=90, counterclock=False, shadow=True, labels=labels, rotatelabels=True, colors=colors)#, "purple"))
-   
-        # ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
-        # ax1.legend(labels)#, bbox_to_anchor =(1,1))        
-
-        
-        # ax2=axs[2]
-        # ax2.set_title('Total')                           
-        # sizes = [abs(npp_0_contrib_total_global),
-                 # delta_npp_contrib_total_global, 
-                 # #delta_tau_contrib_total_global,
-                 # #tau_0_contrib_total_global,
-                 # tau_veg_0_contrib_total_global,
-                 # delta_tau_veg_contrib_total_global,
-                 # tau_soil_0_contrib_total_global,                                
-                 # delta_tau_soil_contrib_total_global,                 
-                 # ]
-        # ax2.pie(sizes, autopct='%1.1f%%', 
-            # startangle=90, counterclock=False, shadow=True, labels=labels, rotatelabels=True, colors=colors)#, "purple"))
-   
-        # ax2.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
-        # ax2.legend(labels)#, bbox_to_anchor =(1,1))
-    
-        # plt.show() 
-        
-        #print("Alternative spatial averaging")
+        # computing global (spatial) averages
         print("computing spatial means ...")        
+  
+        delta_X_1_masked=np.ma.array(delta_X_1, mask=g_mask)
+        delta_X_2_masked=np.ma.array(delta_X_2, mask=g_mask)
+        delta_X_total_masked=np.ma.array(delta_X_total, mask=g_mask)
         # 1st half
-        npp_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_0)
-        npp_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_0_avd)           
-        npp_diff_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_diff_1)         
-        npp_diff_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_diff_1_avd)         
-        tau_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_0)
-        tau_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_0_avd)
-        tau_diff_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_diff_1)  
-        tau_diff_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_diff_1_avd)         
-        tau_veg_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_0)
-        tau_veg_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_0_avd)
-        tau_veg_diff_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_diff_1)  
-        tau_veg_diff_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_diff_1_avd)  
-        tau_soil_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_0)
-        tau_soil_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_0_avd)
-        tau_soil_diff_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_diff_1)  
-        tau_soil_diff_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_diff_1_avd)          
+        npp_0_contrib_1_percent_global=global_mean_var_2d(global_mask, npp_0_contrib_1_percent, weight_mask=delta_X_1_masked)         
+        delta_npp_contrib_1_percent_global=global_mean_var_2d(global_mask, delta_npp_contrib_1_percent, weight_mask=delta_X_1_masked) 
+        tau_veg_0_contrib_1_percent_global=global_mean_var_2d(global_mask, tau_veg_0_contrib_1_percent, weight_mask=delta_X_1_masked) 
+        delta_tau_veg_contrib_1_percent_global=global_mean_var_2d(global_mask, delta_tau_veg_contrib_1_percent, weight_mask=delta_X_1_masked) 
+        tau_soil_0_contrib_1_percent_global=global_mean_var_2d(global_mask, tau_soil_0_contrib_1_percent, weight_mask=delta_X_1_masked) 
+        delta_tau_soil_contrib_1_percent_global=global_mean_var_2d(global_mask, delta_tau_soil_contrib_1_percent, weight_mask=delta_X_1_masked)         
+        delta_X_1_propagated_global=global_mean_var_2d(global_mask, delta_X_1_propagated, weight_mask=delta_X_1_masked) 
+        delta_X_1_global=global_mean_var_2d(global_mask, delta_X_1, weight_mask=delta_X_1_masked) 
         # 2nd half
-        npp_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_1)
-        npp_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_1_avd)           
-        npp_diff_2_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_diff_2)         
-        npp_diff_2_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_diff_2_avd)         
-        tau_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_1)
-        tau_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_1_avd)
-        tau_diff_2_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_diff_2)  
-        tau_diff_2_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_diff_2_avd)         
-        tau_veg_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_1)
-        tau_veg_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_1_avd)
-        tau_veg_diff_2_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_diff_2)  
-        tau_veg_diff_2_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_diff_2_avd)  
-        tau_soil_1_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_1)
-        tau_soil_1_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_1_avd)
-        tau_soil_diff_2_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_diff_2)  
-        tau_soil_diff_2_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_diff_2_avd) 
+        npp_1_contrib_2_percent_global=global_mean_var_2d(global_mask, npp_1_contrib_2_percent, weight_mask=delta_X_2_masked)         
+        delta_npp_contrib_2_percent_global=global_mean_var_2d(global_mask, delta_npp_contrib_2_percent, weight_mask=delta_X_2_masked) 
+        tau_veg_1_contrib_2_percent_global=global_mean_var_2d(global_mask, tau_veg_1_contrib_2_percent, weight_mask=delta_X_2_masked) 
+        delta_tau_veg_contrib_2_percent_global=global_mean_var_2d(global_mask, delta_tau_veg_contrib_2_percent, weight_mask=delta_X_2_masked)  
+        tau_soil_1_contrib_2_percent_global=global_mean_var_2d(global_mask, tau_soil_1_contrib_2_percent, weight_mask=delta_X_2_masked) 
+        delta_tau_soil_contrib_2_percent_global=global_mean_var_2d(global_mask, delta_tau_soil_contrib_2_percent, weight_mask=delta_X_2_masked)          
+        delta_X_2_propagated_global=global_mean_var_2d(global_mask, delta_X_2_propagated, weight_mask=delta_X_2_masked) 
+        delta_X_2_global=global_mean_var_2d(global_mask, delta_X_2, weight_mask=delta_X_2_masked) 
         # total period
-        npp_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_0)
-        npp_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_0_avd)           
-        npp_diff_total_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_diff_total)         
-        npp_diff_total_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, npp_diff_total_avd)         
-        tau_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_0)
-        tau_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_0_avd)
-        tau_diff_total_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_diff_total)  
-        tau_diff_total_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_diff_total_avd)         
-        tau_veg_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_0)
-        tau_veg_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_0_avd)
-        tau_veg_diff_total_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_diff_total)  
-        tau_veg_diff_total_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_veg_diff_total_avd)  
-        tau_soil_0_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_0)
-        tau_soil_0_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_0_avd)
-        tau_soil_diff_total_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_diff_total)  
-        tau_soil_diff_total_avd_gl=global_mean_var_2d(global_mask.lats, global_mask.lons, tau_soil_diff_total_avd)         
-
-        # 1st half
-        delta_npp_contrib_1 = abs(npp_diff_1_avd_gl * tau_0_gl)
-        tau_0_contrib_1 = abs(tau_0_avd_gl * npp_diff_1_gl)
-        tau_veg_0_contrib_1 = abs(tau_veg_0_avd_gl * npp_diff_1_gl)
-        tau_soil_0_contrib_1 = abs(tau_soil_0_avd_gl * npp_diff_1_gl)
-        delta_tau_contrib_1 = abs(tau_diff_1_avd_gl * npp_0_gl)
-        delta_tau_veg_contrib_1 = abs(tau_veg_diff_1_avd_gl * npp_0_gl)
-        delta_tau_soil_contrib_1 = abs(tau_soil_diff_1_avd_gl * npp_0_gl)        
-        npp_0_contrib_1 = abs(npp_0_avd_gl * tau_diff_1_gl)
-
-        # interaction_terms_1 = (npp_diff_1_avd_gl * tau_0_avd_gl + 
-                               # tau_0_avd_gl * npp_diff_1_avd_gl + 
-                               # tau_diff_1_avd_gl * npp_0_avd_gl +
-                               # npp_0_avd_gl * tau_diff_1_avd_gl)
-        delta_X_1_propagated = (delta_npp_contrib_1 + 
-                                #tau_0_contrib_1 +                       
-                                #delta_tau_contrib_1 +
-                                npp_0_contrib_1 +
-                                tau_veg_0_contrib_1 +                       
-                                delta_tau_veg_contrib_1 +
-                                tau_soil_0_contrib_1 +                       
-                                delta_tau_soil_contrib_1 #+ 
-                                #interaction_terms_1
-                                )
-        delta_X_1 = global_mean_var_2d(global_mask.lats, global_mask.lons, X_diff_1_avd)         
+        npp_0_contrib_total_percent_global=global_mean_var_2d(global_mask, npp_0_contrib_total_percent, weight_mask=delta_X_total_masked)          
+        delta_npp_contrib_total_percent_global=global_mean_var_2d(global_mask, delta_npp_contrib_total_percent, weight_mask=delta_X_total_masked)  
+        tau_veg_0_contrib_total_percent_global=global_mean_var_2d(global_mask, tau_veg_0_contrib_total_percent, weight_mask=delta_X_total_masked) 
+        delta_tau_veg_contrib_total_percent_global=global_mean_var_2d(global_mask, delta_tau_veg_contrib_total_percent, weight_mask=delta_X_total_masked)  
+        tau_soil_0_contrib_total_percent_global=global_mean_var_2d(global_mask, tau_soil_0_contrib_total_percent, weight_mask=delta_X_total_masked) 
+        delta_tau_soil_contrib_total_percent_global=global_mean_var_2d(global_mask, delta_tau_soil_contrib_total_percent, weight_mask=delta_X_total_masked)          
+        delta_X_total_propagated_global=global_mean_var_2d(global_mask, delta_X_total_propagated, weight_mask=delta_X_total_masked) 
+        delta_X_total_global=global_mean_var_2d(global_mask, delta_X_total, weight_mask=delta_X_total_masked)             
         
-        # 2nd half
-        delta_npp_contrib_2 = abs(npp_diff_2_avd_gl * tau_1_gl)
-        tau_1_contrib_2 = abs(tau_1_avd_gl * npp_diff_2_gl)
-        tau_veg_1_contrib_2 = abs(tau_veg_1_avd_gl * npp_diff_2_gl)
-        tau_soil_1_contrib_2 = abs(tau_soil_1_avd_gl * npp_diff_2_gl)
-        delta_tau_contrib_2 = abs(tau_diff_2_avd_gl * npp_1_gl)
-        delta_tau_veg_contrib_2 = abs(tau_veg_diff_2_avd_gl * npp_1_gl)
-        delta_tau_soil_contrib_2 = abs(tau_soil_diff_2_avd_gl * npp_1_gl)        
-        npp_1_contrib_2 = abs(npp_1_avd_gl * tau_diff_2_gl)
-        # interaction_terms_2 = (npp_diff_2_avd_gl * tau_1_avd_gl + 
-                               # tau_1_avd_gl * npp_diff_2_avd_gl + 
-                               # tau_diff_2_avd_gl * npp_1_avd_gl +
-                               # npp_1_avd_gl * tau_diff_2_avd_gl)
-        delta_X_2_propagated = (delta_npp_contrib_2 + 
-                                #tau_1_contrib_2 +                       
-                                #delta_tau_contrib_2 +
-                                npp_1_contrib_2 +
-                                tau_veg_1_contrib_2 +                       
-                                delta_tau_veg_contrib_2 +
-                                tau_soil_1_contrib_2 +                       
-                                delta_tau_soil_contrib_2 #+ 
-                                #interaction_terms_2
-                                )
-        delta_X_2 = global_mean_var_2d(global_mask.lats, global_mask.lons, X_diff_2_avd)                        
+        delta_X_1 = global_mean_var_2d(global_mask, X_diff_1_avd, weight_mask=delta_X_1_masked) 
+        delta_X_2 = global_mean_var_2d(global_mask, X_diff_2_avd, weight_mask=delta_X_2_masked) 
+        delta_X_total = global_mean_var_2d(global_mask, X_diff_total_avd, weight_mask=delta_X_total_masked) 
         
-        # total period
-        delta_npp_contrib_total = abs(npp_diff_total_avd_gl * tau_0_gl)
-        tau_0_contrib_total = abs(tau_0_avd_gl * npp_diff_total_gl)
-        tau_veg_0_contrib_total = abs(tau_veg_0_avd_gl * npp_diff_total_gl)
-        tau_soil_0_contrib_total = abs(tau_soil_0_avd_gl * npp_diff_total_gl)
-        delta_tau_contrib_total = abs(tau_diff_total_avd_gl * npp_0_gl)
-        delta_tau_veg_contrib_total = abs(tau_veg_diff_total_avd_gl * npp_0_gl)
-        delta_tau_soil_contrib_total = abs(tau_soil_diff_total_avd_gl * npp_0_gl)        
-        npp_0_contrib_total = abs(npp_0_avd_gl * tau_diff_total_gl)
-        # interaction_terms_total = (npp_diff_total_avd_gl * tau_0_avd_gl + 
-                               # tau_0_avd_gl * npp_diff_total_avd_gl + 
-                               # tau_diff_total_avd_gl * npp_0_avd_gl +
-                               # npp_0_avd_gl * tau_diff_total_avd_gl)
-        delta_X_total_propagated = (delta_npp_contrib_total + 
-                                #tau_0_contrib_total +                       
-                                #delta_tau_contrib_total +
-                                npp_0_contrib_total +
-                                tau_veg_0_contrib_total +                       
-                                delta_tau_veg_contrib_total +
-                                tau_soil_0_contrib_total +                       
-                                delta_tau_soil_contrib_total #+ 
-                                #interaction_terms_total
-                                )
-        delta_X_total = global_mean_var_2d(global_mask.lats, global_mask.lons, X_diff_total_avd)  
-
-        # print(npp_0_contrib_1)
-        # print(delta_npp_contrib_1)
-        # print(tau_veg_0_contrib_1)
-        # print(delta_tau_veg_contrib_1)
-        # print(tau_soil_0_contrib_1)
-        # print(delta_tau_soil_contrib_1)
         # pie charts
-        
+        plt.rcParams.update({'font.size': 11})
         fig=plt.figure(figsize=(15,7))
         axs=fig.subplots(1,3)
-                               
-        labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'#, 'inter'
-        colors = ("#5CACEE",  "#63B8FF", "#00CD00",      "#90EE90",     "#EE9A00",       "#FFD39B")
+        fig.suptitle('Average uncertainty contributions')                       
+        labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+        colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' )   #"#EE9A00",       "#FFD39B")
+        labels_2 = ['NPP', 'τ']        
         colors_2 = ("#4F94CD", "#FF8000") 
         
-        ax0=axs[0]
-        ax0.set_title('1920-1970')        
-        sizes = [npp_0_contrib_1,
-                 delta_npp_contrib_1, 
-                 tau_veg_0_contrib_1,
-                 delta_tau_veg_contrib_1,
-                 tau_soil_0_contrib_1,                                
-                 delta_tau_soil_contrib_1,                 
-                 ]
-        sizes_2 = [npp_0_contrib_1+delta_npp_contrib_1, 
-                 tau_veg_0_contrib_1+delta_tau_veg_contrib_1+tau_soil_0_contrib_1+delta_tau_soil_contrib_1,                 
-                 ]                      
-        patches, texts, pcts = ax0.pie(sizes, autopct='%1.1f%%', pctdistance=0.7, 
-            labels=labels, labeldistance=1.1, 
-            startangle=90, counterclock=False, colors=colors, 
-            wedgeprops=dict(width=0.6, edgecolor='w'))
-        texts[2]._y = texts[2]._y + 0.05
-        texts[3]._y = texts[3]._y - 0.05                 
-        pcts[2]._y = pcts[2]._y + 0.05 
-        pcts[3]._y = pcts[2]._y - 0.08   
-        plt.setp(texts[0:2], fontsize=12)
-        plt.setp(texts[2:6], fontsize=14)        
-        ax0.pie(sizes_2, labels=['NPP', 'τ'], labeldistance=0.3,
-            startangle=90, counterclock=False, radius=0.4, colors=colors_2, 
-            wedgeprops=dict(width=0.4, edgecolor='w'))   
-        ax0.axis('equal')       
+        # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+        # colors = ("#43CD80",  "#90EE90",   "#5CACEE",     "#63B8FF",     "#FFA07A",       "#FFD39B")
+        # labels_2 = ['NPP', 'τ']        
+        # colors_2 = ("#3CB371", "#FF8247") 
         
-        ax1=axs[1]
-        ax1.set_title('1970-2020')
-        sizes = [npp_1_contrib_2,
-                 delta_npp_contrib_2, 
-                 tau_veg_1_contrib_2,
-                 delta_tau_veg_contrib_2,
-                 tau_soil_1_contrib_2,                                
-                 delta_tau_soil_contrib_2,                 
-                 ]
-        sizes_2 = [npp_1_contrib_2+delta_npp_contrib_2, 
-                 tau_veg_1_contrib_2+delta_tau_veg_contrib_2+tau_soil_1_contrib_2+delta_tau_soil_contrib_2,                 
-                 ]                  
-        patches, texts, pcts = ax1.pie(sizes, autopct='%1.1f%%', pctdistance=0.7, 
-            labels=labels, labeldistance=1.1, 
-            startangle=90, counterclock=False, colors=colors, 
-            wedgeprops=dict(width=0.6, edgecolor='w'))
-        texts[2]._y = texts[2]._y + 0.05
-        texts[3]._y = texts[3]._y - 0.05                 
-        pcts[2]._y = pcts[2]._y + 0.05 
-        pcts[3]._y = pcts[2]._y - 0.08 
-        plt.setp(texts[0:2], fontsize=12)
-        plt.setp(texts[2:6], fontsize=14)         
-        ax1.pie(sizes_2, labels=['NPP', 'τ'], labeldistance=0.3,
-            startangle=90, counterclock=False, radius=0.4, colors=colors_2, 
-            wedgeprops=dict(width=0.4, edgecolor='w'))   
-        ax1.axis('equal')         
+        # 1st half        
+        ax0=axs[0]; title='1913-1965'   
+        sizes = [npp_0_contrib_1_percent_global,
+                 delta_npp_contrib_1_percent_global, 
+                 tau_veg_0_contrib_1_percent_global,
+                 delta_tau_veg_contrib_1_percent_global,
+                 tau_soil_0_contrib_1_percent_global,                                
+                 delta_tau_soil_contrib_1_percent_global]
+        sizes_2 = [npp_0_contrib_1_percent_global+delta_npp_contrib_1_percent_global, 
+                 tau_veg_0_contrib_1_percent_global+delta_tau_veg_contrib_1_percent_global+
+                 tau_soil_0_contrib_1_percent_global+delta_tau_soil_contrib_1_percent_global]                  
+        pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        text_displacement=[[2,-0.02],[3,0.05]], 
+                        pct_displacement=[[2,-0.02],[3,0.08]],
+                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
+        ax1=axs[1]; title='1965-2017'
+        sizes = [npp_1_contrib_2_percent_global,
+                 delta_npp_contrib_2_percent_global, 
+                 tau_veg_1_contrib_2_percent_global,
+                 delta_tau_veg_contrib_2_percent_global,
+                 tau_soil_1_contrib_2_percent_global,                                
+                 delta_tau_soil_contrib_2_percent_global]
+        sizes_2 = [npp_1_contrib_2_percent_global+delta_npp_contrib_2_percent_global, 
+                 tau_veg_1_contrib_2_percent_global+delta_tau_veg_contrib_2_percent_global+
+                 tau_soil_1_contrib_2_percent_global+delta_tau_soil_contrib_2_percent_global]                        
+        pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        text_displacement=[[2,-0.02],[3,0.05]], 
+                        pct_displacement=[[2,-0.02],[3,0.08]],
+                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])        
+        # total period
+        ax2=axs[2]; title='1913-2017'
+        sizes = [npp_0_contrib_total_percent_global,
+                 delta_npp_contrib_total_percent_global, 
+                 tau_veg_0_contrib_total_percent_global,
+                 delta_tau_veg_contrib_total_percent_global,
+                 tau_soil_0_contrib_total_percent_global,                                
+                 delta_tau_soil_contrib_total_percent_global]
+        sizes_2 = [npp_0_contrib_total_percent_global+delta_npp_contrib_total_percent_global, 
+                 tau_veg_0_contrib_total_percent_global+delta_tau_veg_contrib_total_percent_global+
+                 tau_soil_0_contrib_total_percent_global+delta_tau_soil_contrib_total_percent_global]                                    
+        pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        text_displacement=[[2,-0.02],[3,0.05]], 
+                        pct_displacement=[[2,-0.02],[3,0.08]],
+                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])    
+        plt.show() 
+        plt.rcParams.update(plt.rcParamsDefault)
+                        
+def C_storage_uncertainty_attribution (
+        experiment_names,
+        global_mask,    
+        data_path, 
+        biome = "Global"
+        ):
        
-        ax2=axs[2]
-        ax2.set_title('1920-2020')                           
-        sizes = [npp_0_contrib_total,
-                 delta_npp_contrib_total, 
-                 tau_veg_0_contrib_total,
-                 delta_tau_veg_contrib_total,
-                 tau_soil_0_contrib_total,                                
-                 delta_tau_soil_contrib_total,                 
-                 ]
-        sizes_2 = [npp_0_contrib_total+delta_npp_contrib_total, 
-                 tau_veg_0_contrib_total+delta_tau_veg_contrib_total+tau_soil_0_contrib_total+delta_tau_soil_contrib_total,                 
-                 ]                   
-        patches, texts, pcts = ax2.pie(sizes, autopct='%1.1f%%', pctdistance=0.7, 
-            labels=labels, labeldistance=1.1, 
-            startangle=90, counterclock=False, colors=colors, 
-            wedgeprops=dict(width=0.6, edgecolor='w'))
-        texts[2]._y = texts[2]._y + 0.05
-        texts[3]._y = texts[3]._y - 0.05                 
-        pcts[2]._y = pcts[2]._y + 0.05 
-        pcts[3]._y = pcts[2]._y - 0.08 
-        plt.setp(texts[0:2], fontsize=12)
-        plt.setp(texts[2:6], fontsize=14)         
-        ax2.pie(sizes_2, labels=['NPP', 'τ'], labeldistance=0.3,
-            startangle=90, counterclock=False, radius=0.4, colors=colors_2, 
-            wedgeprops=dict(width=0.4, edgecolor='w'))   
-        ax2.axis('equal')    
-    
-        plt.show() 
-
-        # bar charts
-                  
-        fig=plt.figure(figsize=(15,7))
-        axs=fig.subplots(2,1)
-        ax0=axs[0]
-        ax0.bar ('$Δ X{_1}$', delta_X_1, color="grey")
-        ax0.bar ('$Δ X{_2}$', delta_X_2, color="grey")      
-        ax0.bar ('$NPP{_0}$', npp_0_contrib_1, color="#5CACEE")
-        ax0.bar ('$NPP{_1}$', npp_1_contrib_2, color="#5CACEE")
-        ax0.bar ('$Δ NPP{_1}$', delta_npp_contrib_1, color="#63B8FF")
-        ax0.bar ('$Δ NPP{_2}$', delta_npp_contrib_2, color="#63B8FF")       
-        ax0.bar ('$τ_{veg_0}$', tau_veg_0_contrib_1, color="#00CD00") 
-        ax0.bar ('$τ_{veg_1}$', tau_veg_1_contrib_2, color="#00CD00")
-        ax0.bar ('$Δ τ_{veg_1}$', delta_tau_veg_contrib_1, color="#90EE90")
-        ax0.bar ('$Δ τ_{veg_2}$', delta_tau_veg_contrib_2, color="#90EE90")
-        ax0.bar ('$τ_{soil_0}$', tau_soil_0_contrib_1, color="#EE9A00") 
-        ax0.bar ('$τ_{soil_1}$', tau_soil_1_contrib_2, color="#EE9A00")
-        ax0.bar ('$Δ τ_{soil_1}$', delta_tau_soil_contrib_1, color="#FFD39B")
-        ax0.bar ('$Δ τ_{soil_2}$', delta_tau_soil_contrib_2, color="#FFD39B")       
-        ax0.set_title("Contributions of uncertainty 1st half and 2nd half")
-        ax0.grid() 
+    # function to write output    
+    def write_new_NetCDF (experiment_name, mask, subset_name, var0, var1, var2, var3):
+        s = mask.index_mask.shape
+        n_lats, n_lons = s
+        dataPath = Path(data_path)
+        new_path=dataPath.joinpath(dataPath,biome+"_"+experiment_name+"_"+subset_name+"_uncertainty_attribution_C_storage.nc")                    
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimensions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)
+        # creating variables
+        var_0 = ds_new.createVariable(subset_name+"X", "float32", ["lat", "lon"]) 
+        var_0[:, :] = np.ma.array(var0, mask = mask.index_mask) 
+        var_1 = ds_new.createVariable(subset_name+"_NPP", "float32", ["lat", "lon"]) 
+        var_1[:, :] = np.ma.array(var1, mask = mask.index_mask)                
+        var_2 = ds_new.createVariable(subset_name+"_tau_veg", "float32", ["lat", "lon"]) 
+        var_2[:, :] = np.ma.array(var2, mask = mask.index_mask) 
+        var_3 = ds_new.createVariable(subset_name+"_tau_soil", "float32", ["lat", "lon"])                 
+        var_3[:, :] = np.ma.array(var3, mask = mask.index_mask) 
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(mask.tr.i2lat, range(n_lats)))
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
+        # closing NetCDF files     
+        ds_new.close()         
+    print('\033[1m'+'*******Carbon Storage Uncertainty Attribution*******'+'\033[0m') 
+    g_mask=global_mask.index_mask       
+    for experiment in experiment_names:
+        print('\033[1m'+experiment+'\033[0m')  
         
-        ax1=axs[1]
-        ax1.bar ('$Δ X$', delta_X_2-delta_X_1, color="grey", label='$Δ X{_2-1}$')    
-        ax1.bar ('$NPP$', npp_1_contrib_2-npp_0_contrib_1, color="#5CACEE")   
-        ax1.bar ('$Δ NPP$', delta_npp_contrib_2-delta_npp_contrib_1, color="#63B8FF")     
-        ax1.bar ('$τ_{veg}}$', tau_veg_1_contrib_2-tau_veg_0_contrib_1, color="#00CD00")  
-        ax1.bar ('$Δ τ_{veg}$', delta_tau_veg_contrib_2-delta_tau_veg_contrib_1, color="#90EE90")
-        ax1.bar ('$τ_{soil}$', tau_soil_1_contrib_2-tau_soil_0_contrib_1, color="#EE9A00")
-        ax1.bar ('$Δ τ_{soil}$', delta_tau_soil_contrib_2-delta_tau_soil_contrib_1, color="#FFD39B")  
-        ax1.set_title("Change between 1st half and 2nd half")
-        ax1.grid()                       
+        ### reading necesssary grids ###
+        tau_0, tau_0_avd = read_uncert_file(data_path, experiment, "tau_first_5_years", g_mask)
+        tau_1, tau_1_avd = read_uncert_file(data_path, experiment, "tau_middle_5_years", g_mask)
+        tau_2, tau_2_avd = read_uncert_file(data_path, experiment, "tau_last_5_years", g_mask)
+
+        tau_veg_0, tau_veg_0_avd = read_uncert_file(data_path, experiment, "tau_veg_first_5_years", g_mask)
+        tau_veg_1, tau_veg_1_avd = read_uncert_file(data_path, experiment, "tau_veg_middle_5_years", g_mask)
+        tau_veg_2, tau_veg_2_avd = read_uncert_file(data_path, experiment, "tau_veg_last_5_years", g_mask)
+
+        tau_soil_0, tau_soil_0_avd = read_uncert_file(data_path, experiment, "tau_soil_first_5_years", g_mask)
+        tau_soil_1, tau_soil_1_avd = read_uncert_file(data_path, experiment, "tau_soil_middle_5_years", g_mask)
+        tau_soil_2, tau_soil_2_avd = read_uncert_file(data_path, experiment, "tau_soil_last_5_years", g_mask)
+
+        npp_0, npp_0_avd = read_uncert_file(data_path, experiment, "npp_first_5_years", g_mask)
+        npp_1, npp_1_avd = read_uncert_file(data_path, experiment, "npp_middle_5_years", g_mask)
+        npp_2, npp_2_avd = read_uncert_file(data_path, experiment, "npp_last_5_years", g_mask)
+
+        X_0_st, X_0_avd = read_uncert_file(data_path, experiment, "C_ecosystem_first_5_years", g_mask)
+        X_1_st, X_1_avd = read_uncert_file(data_path, experiment, "C_ecosystem_middle_5_years", g_mask)
+        X_2_st, X_2_avd = read_uncert_file(data_path, experiment, "C_ecosystem_last_5_years", g_mask)
+        
+        ### attribution of uncertainty in X to npp, tau_veg and tau_soil ###
+        
+        # 1st 5 years
+        X_0 = X_0_avd
+        npp_0_contrib_1 = abs(npp_0_avd * tau_0)
+        tau_veg_0_contrib_1 = abs(tau_veg_0_avd * npp_0)
+        tau_soil_0_contrib_1 = abs(tau_soil_0_avd * npp_0)
+        X_0_propagated = (npp_0_contrib_1 + 
+                                tau_veg_0_contrib_1 +
+                                tau_soil_0_contrib_1                      
+                                )
+        # mid 5 years
+        X_1 = X_1_avd
+        npp_1_contrib_2 = abs(npp_1_avd * tau_1)
+        tau_veg_1_contrib_2 = abs(tau_veg_1_avd * npp_1)
+        tau_soil_1_contrib_2 = abs(tau_soil_1_avd * npp_1)
+        X_1_propagated = (npp_1_contrib_2 + 
+                                tau_veg_1_contrib_2 +
+                                tau_soil_1_contrib_2                      
+                                )  
+        # total period
+        X_2 = X_2_avd
+        npp_2_contrib_3 = abs(npp_2_avd * tau_2)
+        tau_veg_2_contrib_3 = abs(tau_veg_2_avd * npp_2)
+        tau_soil_2_contrib_3 = abs(tau_soil_2_avd * npp_2)
+        X_2_propagated = (npp_2_contrib_3 + 
+                                tau_veg_2_contrib_3 +
+                                tau_soil_2_contrib_3                      
+                                )                                 
+
+        # saving NetCDFs with grid attribution
+        write_new_NetCDF (
+            experiment_name = experiment,
+            mask = global_mask, 
+            subset_name = "first_5_years", 
+            var0 = X_0,
+            var1 = npp_0_contrib_1,
+            var2 = tau_veg_0_contrib_1,
+            var3 = tau_soil_0_contrib_1,                
+            )
+        write_new_NetCDF (
+            experiment_name = experiment,
+            mask = global_mask, 
+            subset_name = "middle_5_years", 
+            var0 = X_1,
+            var1 = npp_1_contrib_2,
+            var2 = tau_veg_1_contrib_2,
+            var3 = tau_soil_1_contrib_2,                   
+            ) 
+        write_new_NetCDF (
+            experiment_name = experiment,
+            mask = global_mask, 
+            subset_name = "last_5_years", 
+            var0 = X_2,
+            var1 = npp_2_contrib_3,
+            var2 = tau_veg_2_contrib_3,
+            var3 = tau_soil_2_contrib_3,                  
+            )   
+
+        # computing and saving percent contributions       
+        # 1st 5 years
+        npp_0_contrib_1_percent = npp_0_contrib_1 / X_0_propagated * 100
+        tau_veg_0_contrib_1_percent = tau_veg_0_contrib_1 / X_0_propagated * 100
+        tau_soil_0_contrib_1_percent = tau_soil_0_contrib_1 / X_0_propagated * 100
+        # middle 5 years
+        npp_1_contrib_2_percent = npp_1_contrib_2 / X_1_propagated * 100
+        tau_veg_1_contrib_2_percent = tau_veg_1_contrib_2 / X_1_propagated * 100
+        tau_soil_1_contrib_2_percent = tau_soil_1_contrib_2 / X_1_propagated * 100
+        # last 5 years
+        npp_2_contrib_3_percent = npp_2_contrib_3 / X_2_propagated * 100
+        tau_veg_2_contrib_3_percent = tau_veg_2_contrib_3 / X_2_propagated * 100
+        tau_soil_2_contrib_3_percent = tau_soil_2_contrib_3 / X_2_propagated * 100
+       
+        write_new_NetCDF (
+            experiment_name = experiment,
+            mask = global_mask, 
+            subset_name = "first_5_years_percent", 
+            var0 = X_0,
+            var1 = npp_0_contrib_1_percent,
+            var2 = tau_veg_0_contrib_1_percent,
+            var3 = tau_soil_0_contrib_1_percent,                
+            )
+        write_new_NetCDF (
+            experiment_name = experiment,
+            mask = global_mask, 
+            subset_name = "middle_5_years_percent", 
+            var0 = X_1,
+            var1 = npp_1_contrib_2_percent,
+            var2 = tau_veg_1_contrib_2_percent,
+            var3 = tau_soil_1_contrib_2_percent,                   
+            )
+        write_new_NetCDF (
+            experiment_name = experiment,
+            mask = global_mask, 
+            subset_name = "last_5_years_percent", 
+            var0 = X_2,
+            var1 = npp_2_contrib_3_percent,
+            var2 = tau_veg_2_contrib_3_percent,
+            var3 = tau_soil_2_contrib_3_percent,                  
+            )
+ 
+        # box plots
+        uncert_var_name = "$X$ uncertainty"  
+        uncert_var=X_2[X_2.mask==0].flatten()      
+        cont_var_names = ["$NPP$", "$τ_{veg}$", "$τ_{soil}$"]  
+        # absolute contributions
+        cont_vars = list((
+            npp_2_contrib_3[npp_2_contrib_3.mask==0].flatten(), 
+            tau_veg_2_contrib_3[tau_veg_2_contrib_3.mask==0].flatten(),
+            tau_soil_2_contrib_3[tau_soil_2_contrib_3.mask==0].flatten() 
+            ))  
+        box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars,
+                           title = 'Spatial variability of uncertainty contributions')        
+        # percent ontributions
+        cont_vars = list((
+            npp_2_contrib_3_percent[npp_2_contrib_3_percent.mask==0].flatten(), 
+            tau_veg_2_contrib_3_percent[tau_veg_2_contrib_3_percent.mask==0].flatten(),
+            tau_soil_2_contrib_3_percent[tau_soil_2_contrib_3_percent.mask==0].flatten() 
+            ))  
+        box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars, 
+                            title = 'Spatial variability of uncertainty contributions (%)')
+         
+        # computing global (spatial) averages
+        print("computing spatial means ...")        
+ 
+        # first 5 years
+        X_0_masked=np.ma.array(X_0, mask=g_mask)       
+        npp_0_contrib_1_percent_global=global_mean_var_2d(global_mask, npp_0_contrib_1_percent, weight_mask=X_0_masked)     
+        tau_veg_0_contrib_1_percent_global=global_mean_var_2d(global_mask, tau_veg_0_contrib_1_percent, weight_mask=X_0_masked) 
+        tau_soil_0_contrib_1_percent_global=global_mean_var_2d(global_mask, tau_soil_0_contrib_1_percent, weight_mask=X_0_masked)         
+        # middle 5 years
+        X_1_masked=np.ma.array(X_1, mask=g_mask)       
+        npp_1_contrib_2_percent_global=global_mean_var_2d(global_mask, npp_1_contrib_2_percent, weight_mask=X_1_masked)     
+        tau_veg_1_contrib_2_percent_global=global_mean_var_2d(global_mask, tau_veg_1_contrib_2_percent, weight_mask=X_1_masked) 
+        tau_soil_1_contrib_2_percent_global=global_mean_var_2d(global_mask, tau_soil_1_contrib_2_percent, weight_mask=X_1_masked)                
+        # last 5 years
+        X_2_masked=np.ma.array(X_2, mask=g_mask)       
+        npp_2_contrib_3_percent_global=global_mean_var_2d(global_mask, npp_2_contrib_3_percent, weight_mask=X_2_masked)     
+        tau_veg_2_contrib_3_percent_global=global_mean_var_2d(global_mask, tau_veg_2_contrib_3_percent, weight_mask=X_2_masked) 
+        tau_soil_2_contrib_3_percent_global=global_mean_var_2d(global_mask, tau_soil_2_contrib_3_percent, weight_mask=X_2_masked)         
+
+        X_0_global = global_mean_var_2d(global_mask, X_0_masked, weight_mask=X_0_masked) 
+        X_1_global = global_mean_var_2d(global_mask, X_1_masked, weight_mask=X_1_masked)  
+        X_2_global = global_mean_var_2d(global_mask, X_2_masked, weight_mask=X_2_masked) 
+
+        # pie charts
+        plt.rcParams.update({'font.size': 12})
+        fig=plt.figure(figsize=(15,7))
+        axs=fig.subplots(1,3)
+        fig.suptitle('Average uncertainty contributions')                       
+        
+        labels = '$NPP$', '$τ_{veg}$', '$τ_{soil}$'     
+        colors = ("#5CACEE", "#02c14d", '#ffb16d') #("#63B8FF",  "#90EE90",   "#FFD39B")
+        labels_2 = ['NPP', 'τ']           
+        colors_2 = ("#4F94CD", "#FF8000") 
+
+        # labels = '$NPP$', '$τ_{veg}$', '$τ_{soil}$'     
+        # colors = ("#43CD80",  "#5CACEE",   "#FFA07A")
+        # labels_2 = ['NPP', 'τ']           
+        # colors_2 = ("#3CB371", "#FF8247")          
+                
+        # first 5 years              
+        ax0=axs[0]; title='1911-1915'
+        sizes = [npp_0_contrib_1_percent_global,
+                 tau_veg_0_contrib_1_percent_global, 
+                 tau_soil_0_contrib_1_percent_global]
+        sizes_2 = [npp_0_contrib_1_percent_global, 
+                  tau_veg_0_contrib_1_percent_global+tau_soil_0_contrib_1_percent_global]    
+        pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+                                      
+        # middle 5 years
+        ax1=axs[1]; title='1963-1967'  
+        sizes = [npp_1_contrib_2_percent_global,
+                 tau_veg_1_contrib_2_percent_global, 
+                 tau_soil_1_contrib_2_percent_global]
+        sizes_2 = [npp_1_contrib_2_percent_global, 
+                  tau_veg_1_contrib_2_percent_global+tau_soil_1_contrib_2_percent_global]                    
+        pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+        # last 5 years
+        ax2=axs[2]; title='2015-2019'        
+        sizes = [npp_2_contrib_3_percent_global,
+                 tau_veg_2_contrib_3_percent_global, 
+                 tau_soil_2_contrib_3_percent_global]
+        sizes_2 = [npp_2_contrib_3_percent_global, 
+                  tau_veg_2_contrib_3_percent_global+tau_soil_2_contrib_3_percent_global]                      
+        pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+                 
         plt.show() 
+        plt.rcParams.update(plt.rcParamsDefault)
+     
+     
+def subset_and_resample_nc_2(
+            model_names, # dictionary e.g. "ab_classic":"CLASSIC"
+            experiment_names, # e.g. ['S2', 'S3']
+            target_mask,
+            method="nearest",
+            radius_of_influence=500000,
+            ):
+ 
+    def write_new_NetCDF (mask, vn, var1, var2, var3, var4, var5, var6):
+        s = mask.index_mask.shape
+        n_lats, n_lons = s
+        
+        new_path=dataPath.joinpath(dataPath,experiment_name+vn+"_subset.nc")                    
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimensions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)
+        # creating variables
+        var_1st = ds_new.createVariable(vn+"_first_5_years", "float32", ["lat", "lon"]) 
+        var_1st[:, :] = np.ma.array(var1, mask = mask.index_mask)                
+        var_mid = ds_new.createVariable(vn+"_middle_5_years", "float32", ["lat", "lon"]) 
+        var_mid[:, :] = np.ma.array(var2, mask = mask.index_mask) 
+        var_last = ds_new.createVariable(vn+"_last_5_years", "float32", ["lat", "lon"])                 
+        var_last[:, :] = np.ma.array(var3, mask = mask.index_mask) 
+        var_diff_1 = ds_new.createVariable(vn+"_diff_1st_half", "float32", ["lat", "lon"]) 
+        var_diff_1[:, :] = np.ma.array(var4, mask = mask.index_mask)    
+        var_diff_2 = ds_new.createVariable(vn+"_diff_2nd_half", "float32", ["lat", "lon"]) 
+        var_diff_2[:, :] = np.ma.array(var5, mask = mask.index_mask)    
+        var_diff_total = ds_new.createVariable(vn+"_diff_total", "float32", ["lat", "lon"])                
+        var_diff_total[:, :] = np.ma.array(var6, mask = mask.index_mask)
+
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(mask.tr.i2lat, range(n_lats)))
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
+        # closing NetCDF files     
+        ds_new.close() 
+        
+    def averaged_3d_array(array, averaging):  # 3d array  # number of steps over which to average
+        if averaging < 1:
+            raise Exception("Invalid averaging in gh.avg_timeline: should be >=1")
+        output = array
+        if averaging > 1:
+            n = array.shape[0] // averaging
+            if array.shape[0] % averaging > 0:
+                n += 1
+            output = np.zeros((n,array.shape[1], array.shape[2]))
+            counter = 0
+            i = 0
+            while i < (array.shape[0]):
+                x = 0
+                sum = np.zeros((array.shape[1], array.shape[2]))
+                while x < (averaging):
+                    if i + x > (array.shape[0] - 1):
+                        break
+                    sum += array[i + x, :, :]
+                    x += 1
+                output[counter] = sum / (x)
+                counter += 1
+                i += x
+        return output   
+
+    # function for computing turnover times
+    def tau(cVeg, delta_cVeg, cSoil, npp, rh):
+        X = cVeg + cSoil  # total ecosystem carbon
+        f_veg_out = npp*5 - delta_cVeg # outflux of vegetation (litterfall + disturbance)
+        tau = X / rh # ecosystem turnover time
+        tau_veg = cVeg / f_veg_out # vegetation turnover time (not considering ra)
+        tau_soil = cSoil / rh # soil turnover time
+        mask=cVeg.mask
+        return np.ma.array(tau, mask=mask), np.ma.array(tau_veg, mask=mask), np.ma.array(tau_soil, mask=mask)        
+        
+    #### processing model output data ####    
+    for experiment in experiment_names:
+        print('\033[1m'+'Resampling data for '+experiment+' experiment...')
+        k=0 # model counter
+        model_folders=[(m) for m in model_names] 
+        m_names=list(model_names.values())  
+        for mf in model_folders:
+            print('\033[1m'+m_names[k])
+            print('\033[0m')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            conf_dict = gh.confDict(mf)
+            dataPath=Path(conf_dict["dataPath"])
+            model_mask=gh.msh(mf).spatial_mask(dataPath=dataPath)      
+            for var_name in gh.msh(mf).data_str._fields:      
+                
+                #### loading files, adding and correcting variables ####
+                vn=var_name
+                if vn=="npp_nlim": file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("npp", experiment_name=experiment_name))
+                else: file_path = dataPath.joinpath(gh.msh(mf).nc_file_name(vn, experiment_name=experiment_name))
+                print(file_path)
+                ds = nc.Dataset(str(file_path))
+                var = ds.variables[vn][:, :, :].data
+                ds.close()
+                
+                # converting flux units from 'per sec' to 'per year'
+                if vn in ['gpp', 'npp', 'ra', 'rh', 'npp_nlim']:
+                            var=var*86400*365  
+                
+                # adding litter to soil for models where it is separate
+                if (vn=="cSoil") and ("cLitter" in gh.msh(mf).data_str._fields):  
+                    file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("cLitter", experiment_name=experiment_name))
+                    ds = nc.Dataset(str(file_path))
+                    cLitter = ds.variables["cLitter"][:, :, :].data
+                    var=var+cLitter
+                    ds.close()
+                              
+                # computing npp for models that don't have it                                  
+                if (vn=='gpp') and (not "npp" in gh.msh(mf).data_str._fields) and (not "npp_nlim" in gh.msh(mf).data_str._fields):  
+                    file_path = dataPath.joinpath(gh.msh(mf).nc_file_name("ra", experiment_name=experiment_name))
+                    ds = nc.Dataset(str(file_path))
+                    ra = ds.variables["ra"][:, :, :].data
+                    var=var-ra
+                    ds.close()
+                    vn = 'npp'
+                    
+                # changing npp_nlim to npp (for JULES model) 
+                if vn=="npp_nlim": vn = 'npp'
+                    
+                #### converting all data to yearly averages ####                                                             
+                if var.shape[0]>1000: # monthly data                
+                    var_yearly = averaged_3d_array(var,12)
+                else:
+                    var_yearly = var
+                
+                #### computing selected timeframes ####
+                
+                # cropping to last 100 years of simulation
+                var_cropped = var_yearly[var_yearly.shape[0]-109:,:,:]                                               
+                # 1st 5 years 
+                var_1st = np.mean(var_cropped[0:5,:,:], axis=0)
+                # middle 5 years 
+                mid=(var_cropped.shape[0]-5)//2
+                var_mid = np.mean(var_cropped[mid:mid+5,:,:], axis=0)
+                # last 5 years
+                last5 = var_cropped.shape[0]-5
+                var_last =  np.mean(var_cropped[last5:last5+5,:,:], axis=0)
+                # 1st half difference
+                var_diff_1 = var_mid-var_1st              
+                # 2nd half difference
+                var_diff_2 = var_last-var_mid
+                # total difference
+                var_diff_total = var_last - var_1st
+                                
+                # masking
+                var_1st_masked = np.ma.array(var_1st, mask = model_mask.index_mask)
+                var_mid_masked = np.ma.array(var_mid, mask = model_mask.index_mask)
+                var_last_masked = np.ma.array(var_last, mask = model_mask.index_mask)
+                var_diff_1_masked = np.ma.array(var_diff_1, mask = model_mask.index_mask)
+                var_diff_2_masked = np.ma.array(var_diff_2, mask = model_mask.index_mask)
+                var_diff_total_masked = np.ma.array(var_diff_total, mask = model_mask.index_mask)                
+
+                # resampling to target grid
+                var_1st_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_1st_masked, method, radius_of_influence)
+                var_mid_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_mid_masked, method, radius_of_influence)                    
+                var_last_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_last_masked, method, radius_of_influence)
+                var_diff_1_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_diff_1_masked, method, radius_of_influence)
+                var_diff_2_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_diff_2_masked, method, radius_of_influence)
+                var_diff_total_resampled=gh.resample_grid (
+                    model_mask, target_mask, var_diff_total_masked, method, radius_of_influence)                    
+                
+                # writing NetCDF
+                write_new_NetCDF (
+                    mask=target_mask, 
+                    vn=vn, 
+                    var1=var_1st_resampled.index_mask,
+                    var2=var_mid_resampled.index_mask ,
+                    var3=var_last_resampled.index_mask,
+                    var4=var_diff_1_resampled.index_mask,
+                    var5=var_diff_2_resampled.index_mask,
+                    var6=var_diff_total_resampled.index_mask,                   
+                    )
+                #### saving necessary data for computing turnover time ####
+                if vn=="cVeg": 
+                    cVeg_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    cVeg_diff_total=np.ma.array(var_diff_total_resampled.index_mask, mask=target_mask.index_mask)
+                    # additional computation of delta_cVeg
+                    delta_cVeg_1st=var_cropped[4,:,:] - var_cropped[0,:,:]
+                    delta_cVeg_mid=var_cropped[mid+4,:,:] - var_cropped[mid,:,:]
+                    delta_cVeg_last=var_cropped[last5+4,:,:] - var_cropped[last5,:,:]  
+                    # masking
+                    delta_cVeg_1st_masked = np.ma.array(delta_cVeg_1st, mask = model_mask.index_mask)
+                    delta_cVeg_mid_masked = np.ma.array(delta_cVeg_mid, mask = model_mask.index_mask)
+                    delta_cVeg_last_masked = np.ma.array(delta_cVeg_last, mask = model_mask.index_mask)            
+                    # resampling to target grid
+                    delta_cVeg_1st=gh.resample_grid (
+                        model_mask, target_mask, delta_cVeg_1st_masked, method, radius_of_influence).index_mask
+                    delta_cVeg_mid=gh.resample_grid (
+                        model_mask, target_mask, delta_cVeg_mid_masked, method, radius_of_influence).index_mask                    
+                    delta_cVeg_last=gh.resample_grid (
+                        model_mask, target_mask, delta_cVeg_last_masked, method, radius_of_influence).index_mask                                        
+                    
+                if vn=="npp": 
+                    npp_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    npp_diff_total=np.ma.array(var_diff_total_resampled.index_mask, mask=target_mask.index_mask)
+                                                    
+                if vn=="cSoil": 
+                    cSoil_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    cSoil_diff_total=np.ma.array(var_diff_total_resampled.index_mask  , mask=target_mask.index_mask)
+
+                if vn=="rh": 
+                    rh_1st=np.ma.array(var_1st_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_mid=np.ma.array(var_mid_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_last=np.ma.array(var_last_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_1=np.ma.array(var_diff_1_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_2=np.ma.array(var_diff_2_resampled.index_mask, mask=target_mask.index_mask)
+                    rh_diff_total=np.ma.array(var_diff_total_resampled.index_mask  , mask=target_mask.index_mask)                                      
+            
+            # adding C_ecosystem
+            write_new_NetCDF (
+                mask = target_mask, 
+                vn = "C_ecosystem", 
+                var1 = cVeg_1st + cSoil_1st,
+                var2 = cVeg_mid + cSoil_mid,
+                var3 = cVeg_last + cSoil_last,
+                var4 = cVeg_diff_1 + cSoil_diff_1,
+                var5 = cVeg_diff_2 + cSoil_diff_2,
+                var6 = cVeg_diff_total + cSoil_diff_total,                   
+                )            
+            
+            #### computing turnover times ####
+            tau_1st, tau_veg_1st, tau_soil_1st=tau(cVeg_1st, delta_cVeg_1st, cSoil_1st, npp_1st, rh_1st)
+            tau_mid, tau_veg_mid, tau_soil_mid=tau(cVeg_mid, delta_cVeg_mid, cSoil_mid, npp_mid, rh_mid)            
+            tau_last, tau_veg_last, tau_soil_last=tau(cVeg_last, delta_cVeg_last, cSoil_last, npp_last, rh_last)
+            tau_diff_1 = tau_mid - tau_1st
+            tau_diff_2 = tau_last - tau_mid
+            tau_diff_total = tau_last - tau_1st
+            tau_veg_diff_1 = tau_veg_mid - tau_veg_1st
+            tau_veg_diff_2 = tau_veg_last - tau_veg_mid
+            tau_veg_diff_total = tau_veg_last - tau_veg_1st
+            tau_soil_diff_1 = tau_soil_mid - tau_soil_1st
+            tau_soil_diff_2 = tau_soil_last - tau_soil_mid
+            tau_soil_diff_total = tau_soil_last - tau_soil_1st            
+            
+            # cleaning non-positive and erroneous npp and tau values
+            model_mask_resampled=gh.resample_grid (
+                model_mask, target_mask, model_mask.index_mask, method, radius_of_influence)            
+            
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,npp_1st)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,npp_mid)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,npp_last)         
+            
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_veg_1st)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_veg_mid)
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_veg_last)
+                      
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_soil_1st[:,:])
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_soil_mid[:,:])
+            model_mask_resampled=mask_add_wrong_values(model_mask_resampled,tau_soil_last[:,:])
+            
+            model_mask_inverse=-(model_mask_resampled.index_mask-1)
+
+            # writing NetCDFs            
+            write_new_NetCDF (
+                mask=target_mask, 
+                vn="tau", 
+                var1=tau_1st,
+                var2=tau_mid,
+                var3=tau_last,
+                var4=tau_diff_1,
+                var5=tau_diff_2,
+                var6=tau_diff_total,                   
+                )    
+            write_new_NetCDF (
+                mask=target_mask, 
+                vn="tau_veg", 
+                var1=tau_veg_1st,
+                var2=tau_veg_mid,
+                var3=tau_veg_last,
+                var4=tau_veg_diff_1,
+                var5=tau_veg_diff_2,
+                var6=tau_veg_diff_total,                   
+                )    
+            write_new_NetCDF (
+                mask=target_mask, 
+                vn="tau_soil", 
+                var1=tau_soil_1st,
+                var2=tau_soil_mid,
+                var3=tau_soil_last,
+                var4=tau_soil_diff_1,
+                var5=tau_soil_diff_2,
+                var6=tau_soil_diff_total,                   
+                )                             
+            model_mask_inv=gh.CoordMask(model_mask_inverse,model_mask_resampled.tr)
+            mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+            model_mask_inv.write_netCDF4(mask_path)    
+            print("Inverse mask written to: "+str(mask_path))
+            k+=1 # model counter            
+        print('\033[1m'+'Done!')        
+
+def mask_inverse_sum (model_names, experiment_names, global_mask, output_path, threshold):
+    
+    def read_mask(mf, experiment):
+        conf_dict = gh.confDict(mf)
+        dataPath=Path(conf_dict["dataPath"])
+        file_path = dataPath.joinpath(experiment+"_mask_inverse.nc")
+        ds = nc.Dataset(str(file_path))
+        model_inv_mask = ds.variables["mask"][:, :]   
+        ds.close() 
+        return(model_inv_mask)
+    
+    k=0 # model counter
+    model_folders=[(m) for m in model_names] 
+    m_names=list(model_names.values())      
+    
+    template_inv_mask=read_mask(model_folders[0], experiment_names[0])
+    inv_mask_sum=np.zeros_like(template_inv_mask)
+    
+    for mf in model_folders:
+        model_inv_mask=read_mask(mf, experiment_names[0])
+        for experiment in experiment_names:
+            #print('\033[1m'+m_names[k])
+            #print('\033[0m')
+            experiment_name=m_names[k]+"_"+experiment+"_"
+            model_inv_mask_current=read_mask(mf, experiment)
+            model_inv_mask=np.logical_and(model_inv_mask, model_inv_mask_current)
+        k=k+1
+        inv_mask_sum=inv_mask_sum+model_inv_mask
+    
+    inverse_mask_sum=gh.CoordMask(inv_mask_sum, tr=global_mask.tr)
+    inverse_mask_sum.write_netCDF4(Path(output_path).joinpath("inv_mask_sum.nc"))
+    combined_mask=inv_mask_sum.copy()
+    combined_mask[combined_mask<threshold]=1
+    combined_mask[combined_mask>=threshold]=0
+    combined_global_mask=gh.CoordMask(combined_mask, tr=global_mask.tr)
+    combined_global_mask.write_netCDF4(Path(output_path).joinpath("combined_global_mask.nc"))    
+    print('\033[1m'+"Done!"+'\033[0m')
+    
+def ensamble_uncertainty_2 (
+        model_names,
+        experiment_names,
+        global_mask,
+        inverse_mask_sum,
+        output_path,
+        ):
+    model_folders=[(m) for m in model_names]
+    m_names=list(model_names.values())
+    g_mask=global_mask.index_mask
+    cols = px.colors.qualitative.Light24
+    model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}    
+    inv_mask_sum = inverse_mask_sum.index_mask
+    for experiment in experiment_names:
+        print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .'+'\033[0m')               
+        print('computing uncertainties...')  
+        for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil', 'C_ecosystem']:            
+            print(vn)
+            for subset in ['first_5_years','middle_5_years','last_5_years',
+                            'diff_1st_half', 'diff_2nd_half', 'diff_total']:                       
+                var_sum_zero=np.zeros_like(g_mask)
+                var_sum=np.ma.array(var_sum_zero,mask = g_mask)
+                var_diff_sqr_zero=np.zeros_like(g_mask)
+                var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
+                var_abs_diff_zero=np.zeros_like(g_mask)
+                var_abs_diff=np.ma.array(var_abs_diff_zero,mask = g_mask)                       
+                
+                # computing ensemble mean       
+                k=0 # model counter                                   
+                all_data=list()
+                for mf in model_folders:
+                    experiment_name=m_names[k]+"_"+experiment+"_"
+                    conf_dict = gh.confDict(mf)                                        
+                    dataPath=Path(conf_dict["dataPath"])  
+                    mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+                    ds = nc.Dataset(str(mask_path))
+                    inv_mask=ds.variables['mask'][:, :]  
+                    ds.close() 
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
+                    ds = nc.Dataset(str(file_path))
+                    var_name=vn+"_"+subset
+                    var=ds.variables[var_name][:, :]*inv_mask
+                    ds.close()                     
+                    var_sum=var_sum+var                  
+                    # add data to the plot 
+                    data_masked=var.data[np.where(var.mask==0)].flatten() # for plotting
+                    all_data.append(data_masked) # for plotting
+                    k+=1 # model counter                
+                mean=var_sum/inv_mask_sum
+                
+                # computing uncertainty measures: standard deviation and average deviation                   
+                k=0 # model counter        
+                for mf in model_folders:
+                    experiment_name=m_names[k]+"_"+experiment+"_"
+                    conf_dict = gh.confDict(mf)
+                    dataPath=Path(conf_dict["dataPath"])    
+                    mask_path=dataPath.joinpath(experiment+"_mask_inverse.nc")
+                    ds = nc.Dataset(str(mask_path))
+                    inv_mask=ds.variables['mask'][:, :]  
+                    ds.close()                     
+                    file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc")    
+                    ds = nc.Dataset(str(file_path))
+                    var_name=vn+"_"+subset
+                    var=ds.variables[var_name][:, :].data*inv_mask       
+                    var_diff_sqr = var_diff_sqr + ((var-mean)**2)*inv_mask
+                    var_abs_diff = var_abs_diff + (np.abs(var-mean))*inv_mask
+                    k+=1 # model counter 
+                    ds.close()             
+                variance = var_diff_sqr / (inv_mask_sum-1)
+                st_dev=np.sqrt(variance) 
+                ave_dev=var_abs_diff / inv_mask_sum
+                # final masking
+                var_mean_final = np.ma.array(mean,mask = g_mask)
+                var_sd_final = np.ma.array(st_dev,mask = g_mask)
+                var_avd_final = np.ma.array(ave_dev,mask = g_mask)
+                # creating and writing a new NetCDF file 
+                s = g_mask.shape
+                n_lats, n_lons = s
+                new_path=Path(output_path).joinpath(experiment+"_"+var_name+"_uncertainty.nc")
+                ds_new = nc.Dataset(str(new_path), "w", persist=True)
+                # creating dimensions
+                lat = ds_new.createDimension("lat", size=n_lats)
+                lon = ds_new.createDimension("lon", size=n_lons)         
+                # creating variables                         
+                var_mean = ds_new.createVariable(var_name+'_mean', "float32", ["lat", "lon"])
+                var_mean[:, :] = var_mean_final
+                var_sd = ds_new.createVariable(var_name+'_sd', "float32", ["lat", "lon"])
+                var_sd[:, :] = var_sd_final            
+                var_avd = ds_new.createVariable(var_name+'_avd', "float32", ["lat", "lon"])
+                var_avd[:, :] = var_avd_final
+                var_avd_relative = ds_new.createVariable(var_name+'_avd_relative', "float32", ["lat", "lon"])
+                relative_uncertainty = var_avd_final / abs(var_mean_final)
+                var_avd_relative[:, :] = relative_uncertainty              
+                lats = ds_new.createVariable("lat", "float32", ["lat"])
+                lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+                lons = ds_new.createVariable("lon", "float32", ["lon"])
+                lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+                # closing NetCDF file      
+                ds_new.close() 
+                                              
+                # add mean to the plot 
+                data_masked=mean[np.where(mean.mask==0)].flatten()
+                all_data.append(data_masked) 
+               
+                # plot spatial distributions
+                if subset in ["first_5_years", "diff_total"]:
+                    # compute ylim from interquartile range
+                    all_data_all=np.array([0])
+                    for i in range(len(all_data)):all_data_all=np.append(all_data_all, all_data[i])
+                    Q1 = np.quantile(all_data_all, 0.25) 
+                    Q3 = np.quantile(all_data_all, 0.75)
+                    IQR = Q3 - Q1
+                    if subset=="first_5_years": ymin=0
+                    else: ymin = Q1 - 10 * IQR
+                    ymax = Q3 + 10 * IQR
+                    #print(ymax)
+                    if (subset=="first_5_years") and (vn=='tau_veg'):
+                        high_outlier_veg=ymax
+                        #print("high_outlier_veg: "+str(high_outlier_veg))
+                    if (subset=="first_5_years") and (vn=='tau_soil'):
+                        high_outlier_soil=ymax
+                    if (subset=="first_5_years") and (vn=='npp'):
+                        high_outlier_npp=ymax                    
+                        #print("high_outlier_soil: "+str(high_outlier_soil))                        
+                    # make a subset without outliers
+                    all_data_cropped=all_data.copy()
+                    for i in range(len(all_data_cropped)):
+                        all_data_cropped[i]=all_data_cropped[i][all_data_cropped[i]>ymin]
+                        all_data_cropped[i]=all_data_cropped[i][all_data_cropped[i]<ymax]
+                    
+                    # violin plots
+                    fig, ax = plt.subplots(figsize =(10, 5))
+                    parts=ax.violinplot(all_data_cropped,
+                        #showmeans=True,
+                        showmedians=False,
+                        showextrema=False, 
+                        )
+                    m=0
+                    for pc in parts['bodies']:
+                        if m < len(m_names):
+                            color=model_cols[m_names[m]]
+                        else: color=('lightgrey')
+                        pc.set_facecolor('#7EC0EE')#(color) #('#D43F3A')
+                        pc.set_edgecolor('black')
+                        pc.set_alpha(1)
+                        m=m+1
+                    all_data_all=np.array([0])
+                    ax.set_title('Spatial variability - '+var_name)
+                    ax.grid(axis='y', linestyle='dashed')
+                    
+                    if np.max(all_data_all)>1000:
+                        ax.set_ylim([ymin,ymax+ymax//10])                       
+                    plt.xticks(range(1,len(m_names)+2),m_names+["Ensamble mean"],rotation=90)
+                    plt.show()
+                   
+                    # box plot
+                    fig4, ax4 = plt.subplots(figsize =(10, 5))
+                    ax4.boxplot(all_data, flierprops={'marker': 'o', 'markersize': 2, 'markerfacecolor': 'orange', 'markeredgecolor':'#5B5B5B'})
+                    ax4.set_title('Spatial variability - '+var_name)
+                    ax4.grid(axis='y', linestyle='dashed')                
+                    plt.xticks(range(1,len(m_names)+2),m_names+["Ensamble mean"],rotation=90)
+                    plt.show()                    
+
+    print('\033[1m'+'Done!'+'\033[0m')
+    return (high_outlier_npp, high_outlier_veg, high_outlier_soil)
+    
+  
+        
+def plot_attribution_C_storage_global_mean (
+    all_comp_dict,
+    start,
+    stop
+    ):
+    
+    models=list(all_comp_dict.keys())[:-2]    
+    sum_delta_x=0
+    sum_delta_rt=0    
+    sum_delta_rt_soil=0
+    sum_delta_rt_veg=0    
+    sum_delta_u=0
+
+    for m in models:           
+        x=np.mean(all_comp_dict[m]["x"][start:stop])
+        u=np.mean(all_comp_dict[m]["npp"][start:stop])
+        rt=np.mean(all_comp_dict[m]["rt"][start:stop])
+        rt_veg=np.mean(all_comp_dict[m]["rt_veg"][start:stop])
+        rt_soil=np.mean(all_comp_dict[m]["rt_soil"][start:stop])
+        
+        x_mean=np.mean(all_comp_dict["Mean"]["x"][start:stop])
+        u_mean=np.mean(all_comp_dict["Mean"]["npp"][start:stop])
+        rt_mean=np.mean(all_comp_dict["Mean"]["rt"][start:stop])
+        rt_veg_mean=np.mean(all_comp_dict["Mean"]["rt_veg"][start:stop]) 
+        rt_soil_mean=np.mean(all_comp_dict["Mean"]["rt_soil"][start:stop]) 
+        
+        delta_x=abs(x-x_mean)
+        delta_u=abs(u-u_mean)
+        delta_rt=abs(rt-rt_mean)
+        delta_rt_veg=abs(rt_veg-rt_veg_mean)
+        delta_rt_soil=abs(rt_soil-rt_soil_mean)
+              
+        sum_delta_x+=delta_x
+        sum_delta_u+=delta_u
+        sum_delta_rt+=delta_rt
+        sum_delta_rt_veg+=delta_rt_veg
+        sum_delta_rt_soil+=delta_rt_soil
+               
+    x_uncert=sum_delta_x/len(models)
+    u_uncert=sum_delta_u/len(models)
+    rt_uncert=sum_delta_rt/len(models)
+    rt_veg_uncert=sum_delta_rt_veg/len(models)
+    rt_soil_uncert=sum_delta_rt_soil/len(models)    
+    
+    # attribution of delta X_c to delta u and delta RT
+    u_contrib=u_uncert*rt_mean#(rt-delta_rt/2)
+    rt_veg_contrib=rt_veg_uncert*u_mean#(u-delta_u/2) 
+    rt_soil_contrib=rt_soil_uncert*u_mean#(u-delta_u/2) 
+    
+    x_uncert_propagated=u_contrib+rt_veg_contrib+rt_soil_contrib
+    
+    u_contrib_percent=u_contrib/x_uncert_propagated*100
+    rt_veg_contrib_percent=rt_veg_contrib/x_uncert_propagated*100
+    rt_soil_contrib_percent=rt_soil_contrib/x_uncert_propagated*100
+
+    return (u_contrib_percent, rt_veg_contrib_percent, rt_soil_contrib_percent)
+    
+
+def plot_attribution_C_storage_global (all_comp_dict):
+    npp_contrib_percent1,tau_veg_contrib_percent1,tau_soil_contrib_percent1=plot_attribution_C_storage_global_mean(
+        all_comp_dict=all_comp_dict,
+        start=0,
+        stop=5,
+        )
+    total_length=len(all_comp_dict['VISIT']['x'])
+      
+    npp_contrib_percent2,tau_veg_contrib_percent2,tau_soil_contrib_percent2=plot_attribution_C_storage_global_mean(
+        all_comp_dict=all_comp_dict,
+        start=(total_length-5)//2,
+        stop=(total_length-5)//2+5,
+        )
+        
+    npp_contrib_percent3,tau_veg_contrib_percent3,tau_soil_contrib_percent3=plot_attribution_C_storage_global_mean(
+        all_comp_dict=all_comp_dict,
+        start=total_length-5,
+        stop=total_length,
+        )
+        
+    plt.rcParams.update({'font.size': 12})
+    fig=plt.figure(figsize=(15,7))
+    axs=fig.subplots(1,3)
+    fig.suptitle('Average uncertainty contributions')                       
+    
+    labels = '$NPP$', '$τ_{veg}$', '$τ_{soil}$'     
+    colors =  ("#5CACEE", "#02c14d", '#ffb16d')       # '#00CD00'   #("#63B8FF",  "#90EE90",  '#FFD39B')
+    labels_2 = ['NPP', 'τ']           
+    colors_2 = ("#4F94CD", "#FF8000") 
+ 
+    # first 5 years              
+    ax0=axs[0]; title='1911-1915'
+    sizes = [npp_contrib_percent1,
+             tau_veg_contrib_percent1, 
+             tau_soil_contrib_percent1]
+    sizes_2 = [npp_contrib_percent1, 
+              tau_veg_contrib_percent1+tau_soil_contrib_percent1]    
+    pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+    # middle 5 years  
+    ax1=axs[1]; title='1963-1967'
+    sizes = [npp_contrib_percent2,
+             tau_veg_contrib_percent2, 
+             tau_soil_contrib_percent2]
+    sizes_2 = [npp_contrib_percent2, 
+              tau_veg_contrib_percent2+tau_soil_contrib_percent2]    
+    pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+    # last 5 years  
+    ax2=axs[2]; title='2015-2019'
+    sizes = [npp_contrib_percent3,
+             tau_veg_contrib_percent3, 
+             tau_soil_contrib_percent3]
+    sizes_2 = [npp_contrib_percent3, 
+              tau_veg_contrib_percent3+tau_soil_contrib_percent3]    
+    pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+    
+    plt.show() 
+    plt.rcParams.update(plt.rcParamsDefault)  
+    
+def plot_attribution_C_sink_global_mean (
+    all_comp_dict,
+    start,
+    stop
+    ):
+    
+    models=list(all_comp_dict.keys())[:-2]    
+    #sum_delta_x_0=0
+    sum_delta_rt_0=0    
+    sum_delta_rt_soil_0=0
+    sum_delta_rt_veg_0=0    
+    sum_delta_u_0=0
+    
+    #sum_delta_x_diff=0
+    sum_delta_rt_diff=0    
+    sum_delta_rt_soil_diff=0
+    sum_delta_rt_veg_diff=0    
+    sum_delta_u_diff=0    
+
+    for m in models:           
+        total_length=len(all_comp_dict[m]['x'])
+        #x=np.mean(all_comp_dict[m]["x"][start:stop])
+        u_0=np.mean(all_comp_dict[m]["npp"][start:stop])
+        u_end=np.mean(all_comp_dict[m]["npp"][total_length-5:total_length])
+        u_diff=u_end-u_0
+        rt_0=np.mean(all_comp_dict[m]["rt"][start:stop])
+        rt_end=np.mean(all_comp_dict[m]["rt"][total_length-5:total_length])
+        rt_diff=rt_end-rt_0        
+        rt_veg_0=np.mean(all_comp_dict[m]["rt_veg"][start:stop])
+        rt_veg_end=np.mean(all_comp_dict[m]["rt_veg"][total_length-5:total_length])
+        rt_veg_diff=rt_veg_end-rt_veg_0        
+        rt_soil_0=np.mean(all_comp_dict[m]["rt_soil"][start:stop])
+        rt_soil_end=np.mean(all_comp_dict[m]["rt_soil"][total_length-5:total_length])
+        rt_soil_diff=rt_soil_end-rt_soil_0     
+
+        #x_mean=np.mean(all_comp_dict["Mean"]["x"][start:stop])
+        u_0_mean=np.mean(all_comp_dict["Mean"]["npp"][start:stop])
+        u_end_mean=np.mean(all_comp_dict["Mean"]["npp"][total_length-5:total_length])
+        u_diff_mean=u_end_mean-u_0_mean
+        rt_0_mean=np.mean(all_comp_dict["Mean"]["rt"][start:stop])
+        rt_end_mean=np.mean(all_comp_dict["Mean"]["rt"][total_length-5:total_length])
+        rt_diff_mean=rt_end_mean-rt_0_mean        
+        rt_veg_0_mean=np.mean(all_comp_dict["Mean"]["rt_veg"][start:stop])
+        rt_veg_end_mean=np.mean(all_comp_dict["Mean"]["rt_veg"][total_length-5:total_length])
+        rt_veg_diff_mean=rt_veg_end_mean-rt_veg_0_mean       
+        rt_soil_0_mean=np.mean(all_comp_dict["Mean"]["rt_soil"][start:stop])
+        rt_soil_end_mean=np.mean(all_comp_dict["Mean"]["rt_soil"][total_length-5:total_length])
+        rt_soil_diff_mean=rt_soil_end_mean-rt_soil_0_mean     
+
+        #delta_x=abs(x-x_mean)
+        delta_u_0=abs(u_0-u_0_mean)
+        delta_rt_0=abs(rt_0-rt_0_mean)
+        delta_rt_veg_0=abs(rt_veg_0-rt_veg_0_mean)
+        delta_rt_soil_0=abs(rt_soil_0-rt_soil_0_mean)
+        delta_u_diff=abs(u_diff-u_diff_mean)
+        delta_rt_diff=abs(rt_diff-rt_diff_mean)
+        delta_rt_veg_diff=abs(rt_veg_diff-rt_veg_diff_mean)
+        delta_rt_soil_diff=abs(rt_soil_diff-rt_soil_diff_mean)        
+
+        #sum_delta_x+=delta_x
+        sum_delta_u_0+=delta_u_0
+        sum_delta_rt_0+=delta_rt_0
+        sum_delta_rt_veg_0+=delta_rt_veg_0
+        sum_delta_rt_soil_0+=delta_rt_soil_0
+        sum_delta_u_diff+=delta_u_diff
+        sum_delta_rt_diff+=delta_rt_diff
+        sum_delta_rt_veg_diff+=delta_rt_veg_diff
+        sum_delta_rt_soil_diff+=delta_rt_soil_diff        
+
+    #x_uncert=sum_delta_x/len(models)
+    u_0_uncert=sum_delta_u_0/len(models)
+    rt_0_uncert=sum_delta_rt_0/len(models)
+    rt_veg_0_uncert=sum_delta_rt_veg_0/len(models)
+    rt_soil_0_uncert=sum_delta_rt_soil_0/len(models)    
+    u_diff_uncert=sum_delta_u_diff/len(models)
+    rt_diff_uncert=sum_delta_rt_diff/len(models)
+    rt_veg_diff_uncert=sum_delta_rt_veg_diff/len(models)
+    rt_soil_diff_uncert=sum_delta_rt_soil_diff/len(models)        
+    
+    # attribution of delta X_diff to delta u and delta RT
+    
+    u_contrib = abs(u_0_uncert * rt_diff_mean)     
+    delta_u_contrib = abs(u_diff_uncert * rt_0_mean)
+    rt_contrib = abs(rt_0_uncert * u_diff_mean)
+    delta_rt_contrib = abs(rt_diff_uncert * u_0_mean)    
+    rt_veg_contrib = abs(rt_veg_0_uncert * u_diff_mean)
+    delta_rt_veg_contrib = abs(rt_veg_diff_uncert * u_0_mean)    
+    rt_soil_contrib = abs(rt_soil_0_uncert * u_diff_mean)
+    delta_rt_soil_contrib = abs(rt_soil_diff_uncert * u_0_mean)           
+    
+    
+    # u_contrib=u_uncert*rt_mean
+    # rt_veg_contrib=rt_veg_uncert*u_mean
+    # rt_soil_contrib=rt_soil_uncert*u_mean 
+    
+    x_diff_uncert_propagated=(u_contrib+delta_u_contrib+rt_contrib+delta_rt_contrib+
+            rt_veg_contrib+delta_rt_veg_contrib+rt_soil_contrib+delta_rt_soil_contrib)
+    
+    u_contrib_percent = u_contrib / x_diff_uncert_propagated * 100
+    delta_u_contrib_percent = delta_u_contrib / x_diff_uncert_propagated * 100
+    # rt_contrib_percent = rt_contrib/ x_diff_uncert_propagated * 100
+    # delta_rt_contrib_percent = delta_rt_contrib/ x_diff_uncert_propagated * 100
+    rt_veg_contrib_percent = rt_veg_contrib / x_diff_uncert_propagated * 100
+    delta_rt_veg_contrib_percent = delta_rt_veg_contrib / x_diff_uncert_propagated * 100
+    rt_soil_contrib_percent = rt_soil_contrib / x_diff_uncert_propagated * 100
+    delta_rt_soil_contrib_percent = delta_rt_soil_contrib / x_diff_uncert_propagated * 100
+
+    return (u_contrib_percent, 
+            delta_u_contrib_percent, 
+            rt_veg_contrib_percent,
+            delta_rt_veg_contrib_percent,
+            rt_soil_contrib_percent,
+            delta_rt_soil_contrib_percent
+            )
+    
+
+def plot_attribution_C_sink_global (all_comp_dict):
+    npp_0, delta_npp, tau_veg_0, delta_tau_veg, tau_soil_0, delta_tau_soil=plot_attribution_C_sink_global_mean(
+        all_comp_dict=all_comp_dict,
+        start=0,
+        stop=5,
+        )
+    #total_length=len(all_comp_dict['VISIT']['x'])
+      
+    # npp_contrib_percent2,tau_veg_contrib_percent2,tau_soil_contrib_percent2=plot_attribution_C_sink_global_mean(
+        # all_comp_dict=all_comp_dict,
+        # start=(total_length-5)//2,
+        # stop=(total_length-5)//2+5,
+        # )
+        
+    # npp_contrib_percent3,tau_veg_contrib_percent3,tau_soil_contrib_percent3=plot_attribution_C_sink_global_mean(
+        # all_comp_dict=all_comp_dict,
+        # start=total_length-5,
+        # stop=total_length,
+        # )
+        
+    plt.rcParams.update({'font.size': 12})
+    fig=plt.figure(figsize=(15,7))
+    axs=fig.subplots(1,3)
+    fig.suptitle('Average uncertainty contributions')                       
+    
+    labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+    colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' )   #"#EE9A00",       "#FFD39B")
+    labels_2 = ['NPP', 'τ']        
+    colors_2 = ("#4F94CD", "#FF8000") 
+ 
+    # total period              
+    ax0=axs[0]; title='total period'
+    sizes = [npp_0,
+             delta_npp, 
+             tau_veg_0,
+             delta_tau_veg,
+             tau_soil_0,                                
+             delta_tau_soil]
+    sizes_2 = [npp_0+delta_npp, 
+             tau_veg_0+delta_tau_veg+
+             tau_soil_0+delta_tau_soil]                  
+    pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                    text_displacement=[[2,-0.02],[3,0.05]], 
+                    pct_displacement=[[2,-0.02],[3,0.08]],
+                    font_size_change=[[2,14],[3,14],[4,14],[5,14]])     
+    # # middle 5 years  
+    # ax1=axs[1]; title='1963-1967'
+    # sizes = [npp_contrib_percent2,
+             # tau_veg_contrib_percent2, 
+             # tau_soil_contrib_percent2]
+    # sizes_2 = [npp_contrib_percent2, 
+              # tau_veg_contrib_percent2+tau_soil_contrib_percent2]    
+    # pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+    # # last 5 years  
+    # ax2=axs[2]; title='2015-2019'
+    # sizes = [npp_contrib_percent3,
+             # tau_veg_contrib_percent3, 
+             # tau_soil_contrib_percent3]
+    # sizes_2 = [npp_contrib_percent3, 
+              # tau_veg_contrib_percent3+tau_soil_contrib_percent3]    
+    # pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2)
+    
+    plt.show() 
+    plt.rcParams.update(plt.rcParamsDefault)      
+
+def get_global_components_from_output(
+    model_names,  # dictionary (folder name : model name)
+    vars_all_list,  # a list of test_args from all models involved
+    delta_t_val,  # model time step
+    part,  # 0<part<1 to plot only a part of the whole timeling, e.g. 1 (whole timeline) or 0.1 (10%)
+    averaging=12,  # number of iterator steps over which to average results. 12 - avarage monthly to yearly 
+    overlap=True,  # compute overlapping timeframe or plot whole duration for all models
+    end_shift=0,
+    start_shift=0
+):
+
+    def times_in_days_aD(
+        vars_all,  # a tuple defined in model-specific test_helpers.py
+        delta_t_val,  # iterator time step
+        start_date,
+    ):
+        n_months = len(vars_all.gpp)*12
+        n_iter = n_months #int(n_days / delta_t_val)
+        return np.array(
+            tuple(
+                (
+                    days_since_AD(i, delta_t_val, start_date)
+                    for i in np.arange(n_iter)  # days_after_sim_start
+                )
+            )
+        )
+    # function to determine overlapping time frames for models simulations
+    def t_min_tmax_overlap(
+        vars_all_list,  # a list of test_args from all models involved
+        delta_t_val,  # iterator time step
+        start_date,
+    ):
+        delta_t_val=1
+        td = {
+            i: times_in_days_aD(vars_all_list[i], delta_t_val, start_date)
+            for i in range(len(vars_all_list))
+        }
+        t_min = max([t.min() for t in td.values()])
+        t_max = min([t.max() for t in td.values()])
+        return (t_min, t_max)
+    
+    def min_max_index(
+    vars_all,  # a tuple defined in model-specific test_helpers.py
+    delta_t_val,  # iterator time step
+    t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
+    t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
+    start_date,
+    ):
+        ts = times_in_days_aD(vars_all, delta_t_val, start_date)
+
+        def count(acc, i):
+            min_i, max_i = acc
+            t = ts[i]
+            min_i = min_i + 1 if t < t_min else min_i
+            max_i = max_i + 1 if t < t_max else max_i
+            return (min_i, max_i)
+
+        return reduce(count, range(len(ts)), (0, 0))
+
+    if (part < -1) | (part > 1) | (part == 0):
+        raise Exception(
+            "Invalid partitioning in plot_components_combined: use part between -1 and 1 excluding 0"
+        )
+    model_folders = [(k) for k in model_names]
+    k = 0
+    sum_cVeg = np.array(0)
+    sum_cSoil = np.array(0)
+    sum_gpp = np.array(0)    
+    sum_npp = np.array(0)
+    sum_ra = np.array(0)
+    sum_rh = np.array(0)
+    sum_x = np.array(0)
+    sum_rt = np.array(0)
+    sum_x_c = np.array(0)
+    sum_x_p = np.array(0)
+    sum_nep = np.array(0)    
+    sum_rt_soil = np.array(0)
+    sum_f_v2s = np.array(0)
+    sum_f_v2s_2 = np.array(0)    
+    sum_rt_soil = np.array(0)
+    sum_rt_soil_2 = np.array(0)    
+    sum_rt_veg = np.array(0)
+    sum_rt_veg_2 = np.array(0)    
+    sum_x_c_soil = np.array(0)
+    sum_x_c_veg = np.array(0)
+    sum_x_p_veg = np.array(0)
+    sum_x_p_soil = np.array(0)
+    sum_ra_rate = np.array(0)
+    sum_rh_rate = np.array(0)
+    sum_delta_cVeg = np.array(0)
+    sum_delta_cSoil = np.array(0)
+    sum_delta_dist = np.array(0)
+    sum_dist = np.array(0)
+    all_components = list ()
+    
+    def annual_5_delta (data_stream):
+        delta=np.zeros_like(data_stream)        
+        for i in range(len(data_stream)-2):
+            if i>1: delta[i]=data_stream[i+2]-data_stream[i-2]
+        delta[0]=delta[2]  
+        delta[1]=delta[2]
+        delta[-1]=delta[-3]
+        delta[-2]=delta[-3]        
+        return delta
+        
+    if start_shift==0:
+        min_len=1000
+        for i in range (len(model_folders)):
+            if len(vars_all_list[i].cVeg)<min_len: min_len=len(vars_all_list[i].cVeg)
+        start_shift=min_len
+        #print(min_len)
+    print ("Getting traceable components for all models...")
+    for mf in model_folders:
+        #print ("Getting traceable components for "+mf+"...")
+        start_date=gh.msh(mf).start_date()       
+        
+        stop=len(vars_all_list[k].cVeg)-end_shift
+        start=len(vars_all_list[k].cVeg)-start_shift
+        
+        times=np.array(range(start,stop))+1700
+        
+        # harmonising model outputs
+        start_flux=start
+        stop_flux=stop
+        start_pool=start
+        stop_pool=stop       
+           
+        cVeg=vars_all_list[k].cVeg[start_pool:stop_pool]
+        if cVeg.shape[0]>500: cVeg=gh.avg_timeline(cVeg, averaging)
+        cSoil=vars_all_list[k].cSoil[start_pool:stop_pool]
+        if cSoil.shape[0]>500: cSoil=gh.avg_timeline(cSoil, averaging)
+        gpp=vars_all_list[k].gpp[start_flux:stop_flux]
+        if gpp.shape[0]>500: gpp=gh.avg_timeline(gpp, averaging)        
+        npp=vars_all_list[k].npp[start_flux:stop_flux]
+        if npp.shape[0]>500: npp=gh.avg_timeline(npp, averaging)
+        rh=vars_all_list[k].rh[start_flux:stop_flux]
+        if rh.shape[0]>500: rh=gh.avg_timeline(rh, averaging)
+        ra=vars_all_list[k].ra[start_flux:stop_flux]
+        if ra.shape[0]>500: ra=gh.avg_timeline(ra, averaging)             
+        
+        # correction for ISAM data issue
+        if mf=="cj_isam": 
+            cVeg[-9]=np.mean((cVeg[-8], cVeg[-10]))
+            cVeg[40]=np.mean((cVeg[39], cVeg[41]))
+        # traditional traceable components 
+        n_years=len(cSoil)
+        #print(n_years)
+        x=cVeg+cSoil
+        nep=annual_5_delta(x)
+        delta_cVeg=annual_5_delta(cVeg)
+        delta_cSoil=annual_5_delta(cSoil)
+        #rt=x/(rh+ra)
+        rt=x/rh
+        #x_c=rt*gpp
+        x_c=rt*npp
+        x_p=x_c-x
+        # flux-based                
+        dist=gpp-nep-ra-rh
+        f_v2s=delta_cSoil+rh
+        f_v2s_2=gpp-delta_cVeg-ra-dist
+        rt_soil=cSoil/rh
+        rt_soil_2=cSoil/(f_v2s-delta_cSoil)
+        #rt_veg=cVeg/(ra+dist+f_v2s)
+        f_veg_out=npp-delta_cVeg
+        rt_veg=cVeg/f_veg_out
+        rt_veg_2=cVeg/(gpp-delta_cVeg)
+        x_c_soil=f_v2s*rt_soil
+        x_c_veg=gpp*rt_veg
+        x_p_soil=x_c_soil-cSoil
+        x_p_veg=x_c_veg-cVeg
+        ra_rate=ra/cVeg
+        rh_rate=rh/cSoil
+        
+        comp_dict = {
+            "cVeg": cVeg,
+            "cSoil": cSoil,
+            "delta_cVeg": delta_cVeg,
+            "delta_cSoil": delta_cSoil,
+            "gpp":gpp,
+            "npp":npp,
+            "nep":nep,            
+            "rh":rh,
+            "ra":ra,
+            "f_v2s":f_v2s,
+            "f_v2s_2":f_v2s_2,
+            "dist":dist,
+            "x":x,
+            "rt":rt,
+            "x_c":x_c,
+            "x_p":x_p,
+            "rt_veg":rt_veg,
+            "rt_veg_2":rt_veg_2,            
+            "rt_soil":rt_soil,
+            "rt_soil_2":rt_soil_2,
+            "x_c_soil":x_c_soil,
+            "x_c_veg":x_c_veg,
+            #"x_c_veg2":x_c_veg2,
+            "x_p_veg":x_p_veg,
+            "x_p_soil":x_p_soil,
+            #"x_p_veg2":x_p_veg2,
+            "ra_rate":ra_rate,
+            "rh_rate":rh_rate,
+            }  
+                                           
+        all_components.append(comp_dict)
+        if sum_cVeg.all()==0:
+            sum_cVeg = np.append(sum_cVeg,cVeg)[1:]
+            sum_cSoil = np.append(sum_cSoil,cSoil)[1:]
+            sum_gpp = np.append(sum_gpp,gpp)[1:]
+            sum_npp = np.append(sum_npp,npp)[1:]
+            sum_rh = np.append(sum_rh,rh)[1:]
+            sum_ra = np.append(sum_ra,ra)[1:]            
+            sum_x = np.append(sum_x,x)[1:]
+            sum_rt = np.append(sum_rt,rt)[1:]
+            sum_x_c = np.append(sum_x_c,x_c)[1:]
+            sum_x_p = np.append(sum_x_p,x_p)[1:]
+            sum_nep = np.append(sum_nep,nep)[1:]  
+            sum_f_v2s = np.append(sum_f_v2s,f_v2s)[1:]
+            sum_f_v2s_2 = np.append(sum_f_v2s_2,f_v2s_2)[1:]            
+            sum_rt_soil = np.append(sum_rt_soil,rt_soil)[1:]
+            sum_rt_soil_2 = np.append(sum_rt_soil_2,rt_soil_2)[1:]            
+            sum_rt_veg = np.append(sum_rt_veg,rt_veg)[1:]
+            sum_rt_veg_2 = np.append(sum_rt_veg_2,rt_veg_2)[1:]            
+            sum_x_c_soil = np.append(sum_x_c_soil,x_c_soil)[1:]
+            sum_x_c_veg = np.append(sum_x_c_veg,x_c_veg)[1:]
+            sum_x_p_veg = np.append(sum_x_p_veg,x_p_veg)[1:]
+            sum_x_p_soil = np.append(sum_x_p_soil,x_p_soil)[1:]            
+            sum_ra_rate = np.append(sum_ra_rate,ra_rate)[1:]
+            sum_rh_rate = np.append(sum_rh_rate,rh_rate)[1:] 
+            sum_dist = np.append(sum_dist,dist)[1:] 
+            sum_delta_cVeg = np.append(sum_delta_cVeg,delta_cVeg)[1:] 
+            sum_delta_cSoil = np.append(sum_delta_cSoil,delta_cSoil)[1:]             
+        else:
+            sum_cVeg = sum_cVeg + cVeg
+            sum_cSoil = sum_cSoil + cSoil
+            sum_gpp = sum_gpp + gpp
+            sum_npp = sum_npp + npp
+            sum_rh = sum_rh + rh
+            sum_ra = sum_ra + ra            
+            sum_x = sum_x + x
+            sum_rt = sum_rt + rt
+            sum_x_c = sum_x_c + x_c
+            sum_x_p = sum_x_p + x_p
+            sum_nep = sum_nep + nep  
+            sum_f_v2s = sum_f_v2s + f_v2s
+            sum_f_v2s_2 = sum_f_v2s_2 + f_v2s_2            
+            sum_rt_soil = sum_rt_soil + rt_soil
+            sum_rt_soil_2 = sum_rt_soil_2 + rt_soil_2            
+            sum_rt_veg = sum_rt_veg + rt_veg
+            sum_rt_veg_2 = sum_rt_veg_2 + rt_veg_2            
+            sum_x_c_soil = sum_x_c_soil + x_c_soil
+            sum_x_c_veg = sum_x_c_veg + x_c_veg
+            sum_x_p_veg = sum_x_p_veg + x_p_veg
+            sum_x_p_soil = sum_x_p_soil + x_p_soil
+            sum_ra_rate = sum_ra_rate + ra_rate
+            sum_rh_rate = sum_rh_rate + rh_rate 
+            sum_dist = sum_dist + dist
+            sum_delta_cVeg = sum_delta_cVeg + delta_cVeg
+            sum_delta_cSoil = sum_delta_cSoil + delta_cSoil
+        k += 1
+    ave_dict = {
+            "cVeg": sum_cVeg / len(model_folders),
+            "cSoil": sum_cSoil / len(model_folders), 
+            "delta_cVeg": sum_delta_cVeg / len(model_folders),
+            "delta_cSoil": sum_delta_cSoil / len(model_folders),
+            "npp": sum_npp / len(model_folders),
+            "f_v2s": sum_f_v2s / len(model_folders),  
+            "f_v2s_2": sum_f_v2s_2 / len(model_folders),            
+            "gpp": sum_gpp / len(model_folders),  
+            "rh": sum_rh / len(model_folders),
+            "ra": sum_ra / len(model_folders),
+            "x": sum_x / len(model_folders), 
+            "rt": sum_rt / len(model_folders),
+            "x_c": sum_x_c / len(model_folders),
+            "x_p": sum_x_p / len(model_folders), 
+            "nep": sum_nep / len(model_folders), 
+            "dist": sum_dist / len(model_folders),
+            "rt_veg": sum_rt_veg / len(model_folders),
+            "rt_veg_2": sum_rt_veg_2 / len(model_folders),              
+            "rt_soil": sum_rt_soil / len(model_folders), 
+            "rt_soil_2": sum_rt_soil_2 / len(model_folders),
+            "x_c_veg": sum_x_c_veg / len(model_folders),            
+            "x_c_soil": sum_x_c_soil / len(model_folders),
+            "x_p_veg": sum_x_p_veg / len(model_folders),
+            "x_p_soil": sum_x_p_soil / len(model_folders),
+            "ra_rate": sum_ra_rate / len(model_folders),
+            "rh_rate": sum_rh_rate / len(model_folders),
+            }    
+    all_components.append(ave_dict) 
+    
+    times_avg = times
+    #times_avg = gh.avg_timeline(times, averaging)
+    all_components.append(times_avg)  
+    mods=list(model_names.values())
+    mods.append("Mean")
+    mods.append("Times")
+    all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}             
+    print("Done!")
+    return all_comp_dict           
+    
+    
+def difference_computation(
+            model_names, # dictionary e.g. "ab_classic":"CLASSIC"
+            global_mask,
+            ):
+        
+    model_folders=[(m) for m in model_names]
+    m_names=list(model_names.values())            
+    print('computing differences...')  
+    for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil', 'C_ecosystem']:            
+        print(vn)
+                                   
+        k=0 # model counter                                   
+        all_data=list()
+        for mf in model_folders:
+            conf_dict = gh.confDict(mf)                                        
+            dataPath=Path(conf_dict["dataPath"])  
+            # S2 files
+            experiment_name=m_names[k]+"_S2_"            
+            mask_path=dataPath.joinpath("S2_mask_inverse.nc")
+            ds = nc.Dataset(str(mask_path))
+            inv_mask1=ds.variables['mask'][:, :]  
+            ds.close() 
+            file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
+            ds = nc.Dataset(str(file_path))
+            var_name1=vn+"_first_5_years"
+            var_S2_0=ds.variables[var_name1][:, :]*inv_mask1
+            var_name2=vn+"_diff_total"
+            var_S2_diff_total=ds.variables[var_name2][:, :]*inv_mask1            
+            ds.close()    
+            # S3 files
+            experiment_name=m_names[k]+"_S3_"            
+            mask_path=dataPath.joinpath("S3_mask_inverse.nc")
+            ds = nc.Dataset(str(mask_path))
+            inv_mask2=ds.variables['mask'][:, :]  
+            ds.close() 
+            file_path = dataPath.joinpath(experiment_name+vn+"_subset.nc") 
+            ds = nc.Dataset(str(file_path))
+            var_name1=vn+"_first_5_years"
+            var_S3_0=ds.variables[var_name1][:, :]*inv_mask2
+            var_name2=vn+"_diff_total"
+            var_S3_diff_total=ds.variables[var_name2][:, :]*inv_mask2
+            var_name3=vn+"_middle_5_years"
+            var_S3_1=ds.variables[var_name3][:, :]*inv_mask2
+            var_name4=vn+"_diff_1st_half"
+            var_S3_diff_1=ds.variables[var_name4][:, :]*inv_mask2
+            var_name5=vn+"_diff_2nd_half"
+            var_S3_diff_2=ds.variables[var_name5][:, :]*inv_mask2
+            # closing netCDF
+            ds.close()    
+            
+            # computing differences
+            var_S3_S2_0=var_S3_0-var_S2_0
+            var_S3_S2_diff=var_S3_diff_total-var_S2_diff_total
+            var_clim2_clim1_0=var_S3_1-var_S3_0
+            var_clim2_clim1_diff=var_S3_diff_2-var_S3_diff_1
+            
+            # writing result to netCDF           
+            s = global_mask.index_mask.shape
+            n_lats, n_lons = s
+            mask=np.logical_or(var_S2_0.mask,var_S3_0.mask)
+            new_path=dataPath.joinpath(dataPath,"S3_S2_Clim2_Clim1_"+vn+"_effect.nc")                    
+            ds_new = nc.Dataset(str(new_path), "w", persist=True)
+            # creating dimensions
+            lat = ds_new.createDimension("lat", size=n_lats)
+            lon = ds_new.createDimension("lon", size=n_lons)
+            # creating variables
+            var_1st = ds_new.createVariable(vn+"_0_S3_S2", "float32", ["lat", "lon"]) 
+            var_1st[:, :] = np.ma.array(var_S3_S2_0, mask = mask)                
+            var_mid = ds_new.createVariable(vn+"_diff_S3_S2", "float32", ["lat", "lon"]) 
+            var_mid[:, :] = np.ma.array(var_S3_S2_diff, mask = mask) 
+            var_last = ds_new.createVariable(vn+"_0_Clim2_Clim1", "float32", ["lat", "lon"])                 
+            var_last[:, :] = np.ma.array(var_clim2_clim1_0, mask = mask) 
+            var_diff_1 = ds_new.createVariable(vn+"_diff_Clim2_Clim1", "float32", ["lat", "lon"]) 
+            var_diff_1[:, :] = np.ma.array(var_clim2_clim1_diff, mask = mask)    
+            lats = ds_new.createVariable("lat", "float32", ["lat"])
+            lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+            lons = ds_new.createVariable("lon", "float32", ["lon"])
+            lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))        
+            # closing NetCDF files     
+            ds_new.close() 
+            
+            # writing inverse mask
+            inv_mask_combined=np.logical_and(inv_mask1, inv_mask2)
+            inv_mask=gh.CoordMask(inv_mask_combined,global_mask.tr)
+            inv_mask.write_netCDF4(dataPath.joinpath("S3_S2_Clim2_Clim1_mask_inverse.nc"))
+            k+=1 # model counter            
+    print('Done!')            
+
+def difference_uncertainty (
+        model_names,
+        global_mask,
+        inverse_mask_sum,
+        output_path,
+        ):
+    model_folders=[(m) for m in model_names]
+    m_names=list(model_names.values())
+    g_mask=global_mask.index_mask
+    #cols = px.colors.qualitative.Light24
+    #model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}    
+    inv_mask_sum = inverse_mask_sum.index_mask
+    # for experiment in experiment_names:
+        # print('\033[1m'+'. . . Computing uncertainty for '+experiment+' experiment . . .'+'\033[0m')               
+        # print('computing uncertainties...')  
+    for vn in ['npp', 'tau', 'tau_veg', 'tau_soil', 'cVeg', 'cSoil', 'C_ecosystem']:            
+        print(vn)
+        for subset in ['0_Clim2_Clim1','0_S3_S2','diff_Clim2_Clim1','diff_S3_S2']:                       
+            var_sum_zero=np.zeros_like(g_mask)
+            var_sum=np.ma.array(var_sum_zero,mask = g_mask)
+            var_diff_sqr_zero=np.zeros_like(g_mask)
+            var_diff_sqr=np.ma.array(var_diff_sqr_zero,mask = g_mask)
+            var_abs_diff_zero=np.zeros_like(g_mask)
+            var_abs_diff=np.ma.array(var_abs_diff_zero,mask = g_mask)                       
+            
+            # computing ensemble mean       
+            k=0 # model counter                                   
+            all_data=list()
+            for mf in model_folders:
+                #experiment_name=m_names[k]+"_"+experiment+"_"
+                experiment_name="S3_S2_Clim2_Clim1_"
+                conf_dict = gh.confDict(mf)                                        
+                dataPath=Path(conf_dict["dataPath"])  
+                mask_path=dataPath.joinpath(experiment_name+"mask_inverse.nc")
+                ds = nc.Dataset(str(mask_path))
+                inv_mask=ds.variables['mask'][:, :]  
+                ds.close() 
+                file_path = dataPath.joinpath(experiment_name+vn+"_effect.nc") 
+                ds = nc.Dataset(str(file_path))
+                var_name=vn+"_"+subset
+                var=ds.variables[var_name][:, :]*inv_mask
+                ds.close()                     
+                var_sum=var_sum+var                  
+                # add data to the plot 
+                data_masked=var.data[np.where(var.mask==0)].flatten() # for plotting
+                all_data.append(data_masked) # for plotting
+                k+=1 # model counter                
+            mean=var_sum/inv_mask_sum
+            
+            # computing uncertainty measures: standard deviation and average deviation                   
+            k=0 # model counter        
+            for mf in model_folders:
+                experiment_name="S3_S2_Clim2_Clim1_"
+                conf_dict = gh.confDict(mf)
+                dataPath=Path(conf_dict["dataPath"])    
+                mask_path=dataPath.joinpath(experiment_name+"mask_inverse.nc")
+                ds = nc.Dataset(str(mask_path))
+                inv_mask=ds.variables['mask'][:, :]  
+                ds.close()                     
+                file_path = dataPath.joinpath(experiment_name+vn+"_effect.nc")    
+                ds = nc.Dataset(str(file_path))
+                var_name=vn+"_"+subset
+                var=ds.variables[var_name][:, :].data*inv_mask       
+                var_diff_sqr = var_diff_sqr + ((var-mean)**2)*inv_mask
+                var_abs_diff = var_abs_diff + (np.abs(var-mean))*inv_mask
+                k+=1 # model counter 
+                ds.close()             
+            variance = var_diff_sqr / (inv_mask_sum-1)
+            st_dev=np.sqrt(variance) 
+            ave_dev=var_abs_diff / inv_mask_sum
+            # final masking
+            var_mean_final = np.ma.array(mean,mask = g_mask)
+            var_sd_final = np.ma.array(st_dev,mask = g_mask)
+            var_avd_final = np.ma.array(ave_dev,mask = g_mask)
+            # creating and writing a new NetCDF file 
+            s = g_mask.shape
+            n_lats, n_lons = s
+            new_path=Path(output_path).joinpath(experiment_name+"_"+var_name+"_uncertainty.nc")
+            ds_new = nc.Dataset(str(new_path), "w", persist=True)
+            # creating dimensions
+            lat = ds_new.createDimension("lat", size=n_lats)
+            lon = ds_new.createDimension("lon", size=n_lons)         
+            # creating variables                         
+            var_mean = ds_new.createVariable(var_name+'_mean', "float32", ["lat", "lon"])
+            var_mean[:, :] = var_mean_final
+            var_sd = ds_new.createVariable(var_name+'_sd', "float32", ["lat", "lon"])
+            var_sd[:, :] = var_sd_final            
+            var_avd = ds_new.createVariable(var_name+'_avd', "float32", ["lat", "lon"])
+            var_avd[:, :] = var_avd_final
+            var_avd_relative = ds_new.createVariable(var_name+'_avd_relative', "float32", ["lat", "lon"])
+            relative_uncertainty = var_avd_final / abs(var_mean_final)
+            var_avd_relative[:, :] = relative_uncertainty              
+            lats = ds_new.createVariable("lat", "float32", ["lat"])
+            lats[:] = list(map(global_mask.tr.i2lat, range(n_lats)))
+            lons = ds_new.createVariable("lon", "float32", ["lon"])
+            lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
+            # closing NetCDF file      
+            ds_new.close() 
+    print('Done!')
+    
+    
+def C_sink_difference_uncertainty_attribution (
+        #experiment_names,
+        global_mask,    
+        data_path, 
+        biome = "Global"
+        ):    
+    # function to write output    
+    def write_new_NetCDF (experiment_name, mask, subset_name, 
+                var0, var1, var2, var3, var4, var5, var6, var7, var8, var9, var10, var11, var12):
+        s = mask.index_mask.shape
+        n_lats, n_lons = s
+        dataPath = Path(data_path)
+        new_path=dataPath.joinpath(dataPath,biome+"_"+experiment_name+"_"+subset_name+"_uncertainty_attribution.nc")                    
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimensions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)
+        # creating variables
+        var_0 = ds_new.createVariable(subset_name+"_delta_X", "float32", ["lat", "lon"]) 
+        var_0[:, :] = np.ma.array(var0, mask = mask.index_mask) 
+        var_1 = ds_new.createVariable(subset_name+"_tau_soil_diff", "float32", ["lat", "lon"]) 
+        var_1[:, :] = np.ma.array(var1, mask = mask.index_mask)                
+        var_2 = ds_new.createVariable(subset_name+"_tau_soil_0", "float32", ["lat", "lon"]) 
+        var_2[:, :] = np.ma.array(var2, mask = mask.index_mask) 
+        var_3 = ds_new.createVariable(subset_name+"_tau_veg_diff", "float32", ["lat", "lon"])                 
+        var_3[:, :] = np.ma.array(var3, mask = mask.index_mask) 
+        var_4 = ds_new.createVariable(subset_name+"_tau_veg_0", "float32", ["lat", "lon"]) 
+        var_4[:, :] = np.ma.array(var4, mask = mask.index_mask)    
+        var_5 = ds_new.createVariable(subset_name+"_npp_diff", "float32", ["lat", "lon"]) 
+        var_5[:, :] = np.ma.array(var5, mask = mask.index_mask)    
+        var_6 = ds_new.createVariable(subset_name+"_npp_0", "float32", ["lat", "lon"])                
+        var_6[:, :] = np.ma.array(var6, mask = mask.index_mask) 
+        var_7 = ds_new.createVariable(subset_name+"_tau_soil_diff_init", "float32", ["lat", "lon"]) 
+        var_7[:, :] = np.ma.array(var7, mask = mask.index_mask)                
+        var_8 = ds_new.createVariable(subset_name+"_tau_soil_0_init", "float32", ["lat", "lon"]) 
+        var_8[:, :] = np.ma.array(var8, mask = mask.index_mask) 
+        var_9 = ds_new.createVariable(subset_name+"_tau_veg_diff_init", "float32", ["lat", "lon"])                 
+        var_9[:, :] = np.ma.array(var9, mask = mask.index_mask) 
+        var_10 = ds_new.createVariable(subset_name+"_tau_veg_0_init", "float32", ["lat", "lon"]) 
+        var_10[:, :] = np.ma.array(var10, mask = mask.index_mask)    
+        var_11 = ds_new.createVariable(subset_name+"_npp_diff_init", "float32", ["lat", "lon"]) 
+        var_11[:, :] = np.ma.array(var11, mask = mask.index_mask)    
+        var_12 = ds_new.createVariable(subset_name+"_npp_0_init", "float32", ["lat", "lon"])                
+        var_12[:, :] = np.ma.array(var12, mask = mask.index_mask)         
+
+        var_13 = ds_new.createVariable(subset_name+"_tau_soil_change_effect", "float32", ["lat", "lon"])                
+        var_13[:, :] = np.ma.array(var1+var2, mask = mask.index_mask) 
+        var_14 = ds_new.createVariable(subset_name+"_tau_veg_change_effect", "float32", ["lat", "lon"])                
+        var_14[:, :] = np.ma.array(var3+var4, mask = mask.index_mask) 
+        var_15 = ds_new.createVariable(subset_name+"_npp_change_effect", "float32", ["lat", "lon"])                
+        var_15[:, :] = np.ma.array(var5+var6, mask = mask.index_mask)   
+
+        var_init = ds_new.createVariable(subset_name+"_initial_value_effect", "float32", ["lat", "lon"])                
+        var_init[:, :] = np.ma.array(var7+var8+var9+var10+var11+var12, mask = mask.index_mask) 
+        var_change_NPP = ds_new.createVariable(subset_name+"_NPP_change_effect", "float32", ["lat", "lon"])                
+        var_change_NPP[:, :] = np.ma.array(var5+var6, mask = mask.index_mask) 
+        var_change_tau = ds_new.createVariable(subset_name+"_tau_change_effect", "float32", ["lat", "lon"])                
+        var_change_tau[:, :] = np.ma.array(var1+var2+var3+var4, mask = mask.index_mask)            
+
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(mask.tr.i2lat, range(n_lats)))
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
+        # closing NetCDF files     
+        ds_new.close()         
+    
+    print('\033[1m'+'*******Carbon Sink Difference Uncertainty Attribution*******'+'\033[0m') 
+    g_mask=global_mask.index_mask       
+    #for experiment in experiment_names:
+    experiment='S3_S2_Clim2_Clim1_'
+    print('\033[1m'+experiment+'\033[0m')  
+    
+    ### reading necesssary grids ### 
+    tau_0_S3_S2, tau_0_S3_S2_avd = read_uncert_file(data_path, experiment, "tau_0_S3_S2", g_mask)
+    tau_diff_S3_S2, tau_diff_S3_S2_avd = read_uncert_file(data_path, experiment, "tau_diff_S3_S2", g_mask)
+    tau_0_Clim2_Clim1, tau_0_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "tau_0_Clim2_Clim1", g_mask)
+    tau_diff_Clim2_Clim1, tau_diff_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "tau_diff_Clim2_Clim1", g_mask)
+    tau_0_init_S3_S2, tau_0_init_S3_S2_avd = read_uncert_file(data_path, "S2", "tau_first_5_years", g_mask)
+    tau_diff_init_S3_S2, tau_diff_init_S3_S2_avd = read_uncert_file(data_path, "S2", "tau_diff_total", g_mask)
+    tau_0_init_Clim2_Clim1, tau_0_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "tau_first_5_years", g_mask)
+    tau_diff_init_Clim2_Clim1, tau_diff_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "tau_diff_1st_half", g_mask)    
+
+    tau_veg_0_S3_S2, tau_veg_0_S3_S2_avd = read_uncert_file(data_path, experiment, "tau_veg_0_S3_S2", g_mask)
+    tau_veg_diff_S3_S2, tau_veg_diff_S3_S2_avd = read_uncert_file(data_path, experiment, "tau_veg_diff_S3_S2", g_mask)
+    tau_veg_0_Clim2_Clim1, tau_veg_0_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "tau_veg_0_Clim2_Clim1", g_mask)
+    tau_veg_diff_Clim2_Clim1, tau_veg_diff_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "tau_veg_diff_Clim2_Clim1", g_mask)
+    tau_veg_0_init_S3_S2, tau_veg_0_init_S3_S2_avd = read_uncert_file(data_path, "S2", "tau_veg_first_5_years", g_mask)
+    tau_veg_diff_init_S3_S2, tau_veg_diff_init_S3_S2_avd = read_uncert_file(data_path, "S2", "tau_veg_diff_total", g_mask)
+    tau_veg_0_init_Clim2_Clim1, tau_veg_0_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "tau_veg_first_5_years", g_mask)
+    tau_veg_diff_init_Clim2_Clim1, tau_veg_diff_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "tau_veg_diff_1st_half", g_mask)  
+
+    tau_soil_0_S3_S2, tau_soil_0_S3_S2_avd = read_uncert_file(data_path, experiment, "tau_soil_0_S3_S2", g_mask)
+    tau_soil_diff_S3_S2, tau_soil_diff_S3_S2_avd = read_uncert_file(data_path, experiment, "tau_soil_diff_S3_S2", g_mask)
+    tau_soil_0_Clim2_Clim1, tau_soil_0_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "tau_soil_0_Clim2_Clim1", g_mask)
+    tau_soil_diff_Clim2_Clim1, tau_soil_diff_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "tau_soil_diff_Clim2_Clim1", g_mask)
+    tau_soil_0_init_S3_S2, tau_soil_0_init_S3_S2_avd = read_uncert_file(data_path, "S2", "tau_soil_first_5_years", g_mask)
+    tau_soil_diff_init_S3_S2, tau_soil_diff_init_S3_S2_avd = read_uncert_file(data_path, "S2", "tau_soil_diff_total", g_mask)
+    tau_soil_0_init_Clim2_Clim1, tau_soil_0_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "tau_soil_first_5_years", g_mask)
+    tau_soil_diff_init_Clim2_Clim1, tau_soil_diff_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "tau_soil_diff_1st_half", g_mask)  
+
+    npp_0_S3_S2, npp_0_S3_S2_avd = read_uncert_file(data_path, experiment, "npp_0_S3_S2", g_mask)
+    npp_diff_S3_S2, npp_diff_S3_S2_avd = read_uncert_file(data_path, experiment, "npp_diff_S3_S2", g_mask)
+    npp_0_Clim2_Clim1, npp_0_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "npp_0_Clim2_Clim1", g_mask)
+    npp_diff_Clim2_Clim1, npp_diff_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "npp_diff_Clim2_Clim1", g_mask)
+    npp_0_init_S3_S2, npp_0_init_S3_S2_avd = read_uncert_file(data_path, "S2", "npp_first_5_years", g_mask)
+    npp_diff_init_S3_S2, npp_diff_init_S3_S2_avd = read_uncert_file(data_path, "S2", "npp_diff_total", g_mask)
+    npp_0_init_Clim2_Clim1, npp_0_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "npp_first_5_years", g_mask)
+    npp_diff_init_Clim2_Clim1, npp_diff_init_Clim2_Clim1_avd = read_uncert_file(data_path, "S3", "npp_diff_1st_half", g_mask)  
+
+    X_diff_S3_S2, X_diff_S3_S2_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_S3_S2", g_mask)
+    X_diff_Clim2_Clim1, X_diff_Clim2_Clim1_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_Clim2_Clim1", g_mask)
+  
+   
+    ### attribution of uncertainty in delta_X to npp, tau_veg and tau_soil ###
+    
+    # S3_S2
+    delta_X_S3_S2 = X_diff_S3_S2_avd
+    tau_soil_diff_contrib_S3_S2=abs(tau_soil_diff_S3_S2_avd * npp_0_init_S3_S2)    
+    tau_soil_0_contrib_S3_S2=abs(tau_soil_0_S3_S2_avd * npp_diff_init_S3_S2)
+    tau_veg_diff_contrib_S3_S2=abs(tau_veg_diff_S3_S2_avd * npp_0_init_S3_S2)    
+    tau_veg_0_contrib_S3_S2=abs(tau_veg_0_S3_S2_avd * npp_diff_init_S3_S2)
+    npp_diff_contrib_S3_S2=abs(npp_diff_S3_S2_avd * tau_0_init_S3_S2)    
+    npp_0_contrib_S3_S2=abs(npp_0_S3_S2_avd * tau_diff_init_S3_S2)
+    
+    tau_soil_diff_init_contrib_S3_S2=abs(tau_soil_diff_init_S3_S2_avd*npp_0_S3_S2)
+    tau_soil_0_init_contrib_S3_S2=abs(tau_soil_0_init_S3_S2_avd*npp_diff_S3_S2) 
+    tau_veg_diff_init_contrib_S3_S2=abs(tau_veg_diff_init_S3_S2_avd * npp_0_S3_S2)
+    tau_veg_0_init_contrib_S3_S2=abs(tau_veg_0_init_S3_S2_avd * npp_diff_S3_S2)
+    npp_diff_init_contrib_S3_S2=abs(npp_diff_init_S3_S2_avd * tau_0_S3_S2)
+    npp_0_init_contrib_S3_S2=abs(npp_0_init_S3_S2_avd * tau_diff_S3_S2)       
+    
+    delta_X_S3_S2_propagated = (tau_soil_diff_contrib_S3_S2+tau_soil_0_contrib_S3_S2+
+                                tau_veg_diff_contrib_S3_S2+tau_veg_0_contrib_S3_S2+
+                                npp_diff_contrib_S3_S2+npp_0_contrib_S3_S2+
+                                tau_soil_diff_init_contrib_S3_S2+tau_soil_0_init_contrib_S3_S2+
+                                tau_veg_diff_init_contrib_S3_S2+tau_veg_0_init_contrib_S3_S2+
+                                npp_diff_init_contrib_S3_S2+npp_0_init_contrib_S3_S2
+                                )
+   
+    # Clim2_Clim1
+    delta_X_Clim2_Clim1 = X_diff_Clim2_Clim1_avd         
+    tau_soil_diff_contrib_Clim2_Clim1=abs(tau_soil_diff_Clim2_Clim1_avd * npp_0_init_Clim2_Clim1)    
+    tau_soil_0_contrib_Clim2_Clim1=abs(tau_soil_0_Clim2_Clim1_avd * npp_diff_init_Clim2_Clim1)
+    tau_veg_diff_contrib_Clim2_Clim1=abs(tau_veg_diff_Clim2_Clim1_avd * npp_0_init_Clim2_Clim1)    
+    tau_veg_0_contrib_Clim2_Clim1=abs(tau_veg_0_Clim2_Clim1_avd * npp_diff_init_Clim2_Clim1)
+    npp_diff_contrib_Clim2_Clim1=abs(npp_diff_Clim2_Clim1_avd * tau_0_init_Clim2_Clim1)    
+    npp_0_contrib_Clim2_Clim1=abs(npp_0_Clim2_Clim1_avd * tau_diff_init_Clim2_Clim1)
+    
+    tau_soil_diff_init_contrib_Clim2_Clim1=abs(tau_soil_diff_init_Clim2_Clim1_avd*npp_0_Clim2_Clim1)
+    tau_soil_0_init_contrib_Clim2_Clim1=abs(tau_soil_0_init_Clim2_Clim1_avd*npp_diff_Clim2_Clim1) 
+    tau_veg_diff_init_contrib_Clim2_Clim1=abs(tau_veg_diff_init_Clim2_Clim1_avd * npp_0_Clim2_Clim1)
+    tau_veg_0_init_contrib_Clim2_Clim1=abs(tau_veg_0_init_Clim2_Clim1_avd * npp_diff_Clim2_Clim1)
+    npp_diff_init_contrib_Clim2_Clim1=abs(npp_diff_init_Clim2_Clim1_avd * tau_0_Clim2_Clim1)
+    npp_0_init_contrib_Clim2_Clim1=abs(npp_0_init_Clim2_Clim1_avd * tau_diff_Clim2_Clim1)       
+    
+    delta_X_Clim2_Clim1_propagated = (tau_soil_diff_contrib_Clim2_Clim1+tau_soil_0_contrib_Clim2_Clim1+
+                                tau_veg_diff_contrib_Clim2_Clim1+tau_veg_0_contrib_Clim2_Clim1+
+                                npp_diff_contrib_Clim2_Clim1+npp_0_contrib_Clim2_Clim1+
+                                tau_soil_diff_init_contrib_Clim2_Clim1+tau_soil_0_init_contrib_Clim2_Clim1+
+                                tau_veg_diff_init_contrib_Clim2_Clim1+tau_veg_0_init_contrib_Clim2_Clim1+
+                                npp_diff_init_contrib_Clim2_Clim1+npp_0_init_contrib_Clim2_Clim1
+                                )     
+
+    # saving NetCDFs with grid attribution
+    write_new_NetCDF (
+        experiment_name = experiment,
+        mask = global_mask, 
+        subset_name = "S3_S2", 
+        var0 = delta_X_S3_S2,
+        var1 = tau_soil_diff_contrib_S3_S2,
+        var2 = tau_soil_0_contrib_S3_S2,
+        var3 = tau_veg_diff_contrib_S3_S2,
+        var4 = tau_veg_0_contrib_S3_S2,
+        var5 = npp_diff_contrib_S3_S2,
+        var6 = npp_0_contrib_S3_S2,
+        var7 = tau_soil_diff_init_contrib_S3_S2,
+        var8 = tau_soil_0_init_contrib_S3_S2,
+        var9 = tau_veg_diff_init_contrib_S3_S2,
+        var10 = tau_veg_0_init_contrib_S3_S2,
+        var11 = npp_diff_init_contrib_S3_S2,
+        var12 = npp_0_init_contrib_S3_S2,        
+        )
+    write_new_NetCDF (
+        experiment_name = experiment,
+        mask = global_mask, 
+        subset_name = "Clim2_Clim1", 
+        var0 = delta_X_Clim2_Clim1,
+        var1 = tau_soil_diff_contrib_Clim2_Clim1,
+        var2 = tau_soil_0_contrib_Clim2_Clim1,
+        var3 = tau_veg_diff_contrib_Clim2_Clim1,
+        var4 = tau_veg_0_contrib_Clim2_Clim1,
+        var5 = npp_diff_contrib_Clim2_Clim1,
+        var6 = npp_0_contrib_Clim2_Clim1,
+        var7 = tau_soil_diff_init_contrib_Clim2_Clim1,
+        var8 = tau_soil_0_init_contrib_Clim2_Clim1,
+        var9 = tau_veg_diff_init_contrib_Clim2_Clim1,
+        var10 = tau_veg_0_init_contrib_Clim2_Clim1,
+        var11 = npp_diff_init_contrib_Clim2_Clim1,
+        var12 = npp_0_init_contrib_Clim2_Clim1,                   
+        ) 
+     
+    # computing and saving percent contributions
+    # S3_S2
+    tau_soil_diff_contrib_S3_S2_percent = tau_soil_diff_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    tau_soil_0_contrib_S3_S2_percent = tau_soil_0_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    tau_veg_diff_contrib_S3_S2_percent = tau_veg_diff_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    tau_veg_0_contrib_S3_S2_percent = tau_veg_0_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    npp_diff_contrib_S3_S2_percent = npp_diff_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    npp_0_contrib_S3_S2_percent = npp_0_contrib_S3_S2 / delta_X_S3_S2_propagated * 100 
+    tau_soil_diff_init_contrib_S3_S2_percent = tau_soil_diff_init_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    tau_soil_0_init_contrib_S3_S2_percent = tau_soil_0_init_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    tau_veg_diff_init_contrib_S3_S2_percent = tau_veg_diff_init_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    tau_veg_0_init_contrib_S3_S2_percent = tau_veg_0_init_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    npp_diff_init_contrib_S3_S2_percent = npp_diff_init_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+    npp_0_init_contrib_S3_S2_percent = npp_0_init_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
+   
+    # Clim2_Clim1
+    tau_soil_diff_contrib_Clim2_Clim1_percent = tau_soil_diff_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    tau_soil_0_contrib_Clim2_Clim1_percent = tau_soil_0_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    tau_veg_diff_contrib_Clim2_Clim1_percent = tau_veg_diff_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    tau_veg_0_contrib_Clim2_Clim1_percent = tau_veg_0_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    npp_diff_contrib_Clim2_Clim1_percent = npp_diff_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    npp_0_contrib_Clim2_Clim1_percent = npp_0_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100 
+    tau_soil_diff_init_contrib_Clim2_Clim1_percent = tau_soil_diff_init_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    tau_soil_0_init_contrib_Clim2_Clim1_percent = tau_soil_0_init_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    tau_veg_diff_init_contrib_Clim2_Clim1_percent = tau_veg_diff_init_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    tau_veg_0_init_contrib_Clim2_Clim1_percent = tau_veg_0_init_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    npp_diff_init_contrib_Clim2_Clim1_percent = npp_diff_init_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100
+    npp_0_init_contrib_Clim2_Clim1_percent = npp_0_init_contrib_Clim2_Clim1 / delta_X_Clim2_Clim1_propagated * 100              
+
+
+    write_new_NetCDF (
+        experiment_name = experiment,
+        mask = global_mask, 
+        subset_name = "S3_S2_percent", 
+        var0 = delta_X_S3_S2,
+        var1 = tau_soil_diff_contrib_S3_S2_percent,
+        var2 = tau_soil_0_contrib_S3_S2_percent,
+        var3 = tau_veg_diff_contrib_S3_S2_percent,
+        var4 = tau_veg_0_contrib_S3_S2_percent,
+        var5 = npp_diff_contrib_S3_S2_percent,
+        var6 = npp_0_contrib_S3_S2_percent,
+        var7 = tau_soil_diff_init_contrib_S3_S2_percent,
+        var8 = tau_soil_0_init_contrib_S3_S2_percent,
+        var9 = tau_veg_diff_init_contrib_S3_S2_percent,
+        var10 = tau_veg_0_init_contrib_S3_S2_percent,
+        var11 = npp_diff_init_contrib_S3_S2_percent,
+        var12 = npp_0_init_contrib_S3_S2_percent,                    
+        )
+    write_new_NetCDF (
+        experiment_name = experiment,
+        mask = global_mask, 
+        subset_name = "Clim2_Clim1_percent", 
+        var0 = delta_X_Clim2_Clim1,
+        var1 = tau_soil_diff_contrib_Clim2_Clim1_percent,
+        var2 = tau_soil_0_contrib_Clim2_Clim1_percent,
+        var3 = tau_veg_diff_contrib_Clim2_Clim1_percent,
+        var4 = tau_veg_0_contrib_Clim2_Clim1_percent,
+        var5 = npp_diff_contrib_Clim2_Clim1_percent,
+        var6 = npp_0_contrib_Clim2_Clim1_percent,
+        var7 = tau_soil_diff_init_contrib_Clim2_Clim1_percent,
+        var8 = tau_soil_0_init_contrib_Clim2_Clim1_percent,
+        var9 = tau_veg_diff_init_contrib_Clim2_Clim1_percent,
+        var10 = tau_veg_0_init_contrib_Clim2_Clim1_percent,
+        var11 = npp_diff_init_contrib_Clim2_Clim1_percent,
+        var12 = npp_0_init_contrib_Clim2_Clim1_percent,                  
+        )
+      
+    # box plots
+    # uncert_var_name = "$Δ X$ uncertainty"  
+    # uncert_var=delta_X_total[delta_X_total.mask==0].flatten()      
+    # cont_var_names = [
+        # "$NPP_{0}$", "Δ $NPP$",
+        # "$τ_{veg_0}$", "Δ $τ_{veg}$",
+        # "$τ_{soil_0}$", "Δ $τ_{soil}$"
+        # ]  
+    # # absolute contributions
+    # cont_vars = list((
+        # npp_0_contrib_total[npp_0_contrib_total.mask==0].flatten(), 
+        # delta_npp_contrib_total[delta_npp_contrib_total.mask==0].flatten(), 
+        # tau_veg_0_contrib_total[tau_veg_0_contrib_total.mask==0].flatten(),
+        # delta_tau_veg_contrib_total[delta_tau_veg_contrib_total.mask==0].flatten(),
+        # tau_soil_0_contrib_total[tau_soil_0_contrib_total.mask==0].flatten(), 
+        # delta_tau_soil_contrib_total[delta_tau_soil_contrib_total.mask==0].flatten()
+        # ))  
+    # box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars,
+                       # title = 'Spatial variability of uncertainty contributions')        
+    # # percent ontributions
+    # cont_vars = list((
+        # npp_0_contrib_total_percent[npp_0_contrib_total_percent.mask==0].flatten(), 
+        # delta_npp_contrib_total_percent[delta_npp_contrib_total_percent.mask==0].flatten(), 
+        # tau_veg_0_contrib_total_percent[tau_veg_0_contrib_total_percent.mask==0].flatten(),
+        # delta_tau_veg_contrib_total_percent[delta_tau_veg_contrib_total_percent.mask==0].flatten(),
+        # tau_soil_0_contrib_total_percent[tau_soil_0_contrib_total_percent.mask==0].flatten(), 
+        # delta_tau_soil_contrib_total_percent[delta_tau_soil_contrib_total_percent.mask==0].flatten()
+        # ))  
+    # box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars, 
+                        # title = 'Spatial variability of uncertainty contributions (%)')
+    
+    # computing global (spatial) averages
+    print("computing spatial means ...")        
+
+    delta_X_S3_S2_masked=np.ma.array(delta_X_S3_S2, mask=g_mask)
+    delta_X_Clim2_Clim1_masked=np.ma.array(delta_X_Clim2_Clim1, mask=g_mask)
+    
+    # S3_S2
+    tau_soil_diff_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_soil_diff_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_soil_0_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_soil_0_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_veg_diff_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_veg_diff_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_veg_0_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_veg_0_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    npp_diff_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, npp_diff_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    npp_0_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, npp_0_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_soil_diff_init_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_soil_diff_init_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_soil_0_init_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_soil_0_init_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_veg_diff_init_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_veg_diff_init_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    tau_veg_0_init_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, tau_veg_0_init_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    npp_diff_init_contrib_S3_S2_percent_global = global_mean_var_2d(global_mask, npp_diff_init_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    npp_0_init_contrib_S3_S2_percent_global =  global_mean_var_2d(global_mask, npp_0_init_contrib_S3_S2_percent, weight_mask=delta_X_S3_S2_masked)
+    
+    
+    # Clim2_Clim1
+    tau_soil_diff_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_soil_diff_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_soil_0_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_soil_0_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_veg_diff_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_veg_diff_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_veg_0_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_veg_0_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    npp_diff_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, npp_diff_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    npp_0_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, npp_0_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_soil_diff_init_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_soil_diff_init_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_soil_0_init_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_soil_0_init_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_veg_diff_init_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_veg_diff_init_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    tau_veg_0_init_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, tau_veg_0_init_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    npp_diff_init_contrib_Clim2_Clim1_percent_global = global_mean_var_2d(global_mask, npp_diff_init_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+    npp_0_init_contrib_Clim2_Clim1_percent_global =  global_mean_var_2d(global_mask, npp_0_init_contrib_Clim2_Clim1_percent, weight_mask=delta_X_Clim2_Clim1_masked)
+               
+    # delta_X_1 = global_mean_var_2d(global_mask, X_diff_1_avd, weight_mask=delta_X_1_masked) 
+    # delta_X_2 = global_mean_var_2d(global_mask, X_diff_2_avd, weight_mask=delta_X_2_masked) 
+    # delta_X_total = global_mean_var_2d(global_mask, X_diff_total_avd, weight_mask=delta_X_total_masked) 
+    
+    # pie charts
+    plt.rcParams.update({'font.size': 11})
+    fig=plt.figure(figsize=(15,7))
+    axs=fig.subplots(1,2)
+    fig.suptitle('Average uncertainty contributions')                       
+    #labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+    #colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' )   #"#EE9A00",       "#FFD39B")
+    labels = ('$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$',
+              'initial contitions')
+              #'$NPP_{0}-init$', '$Δ NPP-init$', '$τ_{veg_0}-init$', '$Δ τ_{veg}-init$', '$τ_{soil_0}-init$', '$Δ τ_{soil}-init$'  )
+    colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' ,
+               # "#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1')   
+              "#836FFF")
+    labels_2 = ['$NPP$', "τ", '$initial$']        
+    colors_2 = ("#4F94CD", "#FF8000","#836FFF") 
+    
+    # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+    # colors = ("#43CD80",  "#90EE90",   "#5CACEE",     "#63B8FF",     "#FFA07A",       "#FFD39B")
+    # labels_2 = ['NPP', 'τ']        
+    # colors_2 = ("#3CB371", "#FF8247") 
+    
+    # S3_S2        
+    ax0=axs[0]; title='Effect of Land Use Change'   
+    sizes = [
+            npp_0_contrib_S3_S2_percent_global,
+            npp_diff_contrib_S3_S2_percent_global, 
+            tau_veg_0_contrib_S3_S2_percent_global,
+            tau_veg_diff_contrib_S3_S2_percent_global,             
+            tau_soil_0_contrib_S3_S2_percent_global,
+            tau_soil_diff_contrib_S3_S2_percent_global,         
+            (npp_0_init_contrib_S3_S2_percent_global+
+            npp_diff_init_contrib_S3_S2_percent_global+  
+            tau_veg_0_init_contrib_S3_S2_percent_global+
+            tau_veg_diff_init_contrib_S3_S2_percent_global+             
+            tau_soil_0_init_contrib_S3_S2_percent_global+
+            tau_soil_diff_init_contrib_S3_S2_percent_global)
+           
+            ]
+    sizes_2 = [
+             npp_diff_contrib_S3_S2_percent_global+npp_0_contrib_S3_S2_percent_global,
+             tau_soil_diff_contrib_S3_S2_percent_global+tau_soil_0_contrib_S3_S2_percent_global+ 
+             tau_veg_diff_contrib_S3_S2_percent_global+tau_veg_0_contrib_S3_S2_percent_global,             
+             tau_soil_diff_init_contrib_S3_S2_percent_global+tau_soil_0_init_contrib_S3_S2_percent_global+
+             tau_veg_diff_init_contrib_S3_S2_percent_global+tau_veg_0_init_contrib_S3_S2_percent_global+
+             npp_diff_init_contrib_S3_S2_percent_global+npp_0_init_contrib_S3_S2_percent_global             
+             ]                  
+    pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                    text_displacement=[[2,-0.02],[3,0.05]], 
+                    pct_displacement=[[2,-0.02],[3,0.08]],
+                    font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
+    
+      # Clim2_Clim1
+    ax2=axs[1]; title='Effect of Climate Regime Change'
+    sizes = [
+            npp_0_contrib_Clim2_Clim1_percent_global,
+            npp_diff_contrib_Clim2_Clim1_percent_global, 
+            tau_veg_0_contrib_Clim2_Clim1_percent_global,
+            tau_veg_diff_contrib_Clim2_Clim1_percent_global,             
+            tau_soil_0_contrib_Clim2_Clim1_percent_global,
+            tau_soil_diff_contrib_Clim2_Clim1_percent_global,         
+            (npp_0_init_contrib_Clim2_Clim1_percent_global+
+            npp_diff_init_contrib_Clim2_Clim1_percent_global+  
+            tau_veg_0_init_contrib_Clim2_Clim1_percent_global+
+            tau_veg_diff_init_contrib_Clim2_Clim1_percent_global+             
+            tau_soil_0_init_contrib_Clim2_Clim1_percent_global+
+            tau_soil_diff_init_contrib_Clim2_Clim1_percent_global)
+           
+            ]
+    sizes_2 = [
+             npp_diff_contrib_Clim2_Clim1_percent_global+npp_0_contrib_Clim2_Clim1_percent_global,
+             tau_soil_diff_contrib_Clim2_Clim1_percent_global+tau_soil_0_contrib_Clim2_Clim1_percent_global+ 
+             tau_veg_diff_contrib_Clim2_Clim1_percent_global+tau_veg_0_contrib_Clim2_Clim1_percent_global,             
+             tau_soil_diff_init_contrib_Clim2_Clim1_percent_global+tau_soil_0_init_contrib_Clim2_Clim1_percent_global+
+             tau_veg_diff_init_contrib_Clim2_Clim1_percent_global+tau_veg_0_init_contrib_Clim2_Clim1_percent_global+
+             npp_diff_init_contrib_Clim2_Clim1_percent_global+npp_0_init_contrib_Clim2_Clim1_percent_global             
+             ]                                             
+    pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                    text_displacement=[[2,-0.02],[3,0.05]], 
+                    pct_displacement=[[2,-0.02],[3,0.08]],
+                    font_size_change=[[2,14],[3,14],[4,14],[5,14]])    
+    plt.show() 
+    plt.rcParams.update(plt.rcParamsDefault)
+    
+# def pie_chart_nested_2 (ax, title, sizes, sizes_2, labels, labels_2, colors, colors_2, 
+                        # text_displacement=[[0,0]], 
+                        # pct_displacement=[[0,0]],
+                        # font_size_change=0
+                        # ):
+    # ax.set_title(title)                          
+    # patches, texts, pcts = ax.pie(sizes, autopct='%1.1f%%', pctdistance=0.7, 
+        # labels=labels, labeldistance=1.1, 
+        # startangle=90, counterclock=False, colors=colors, 
+        # wedgeprops=dict(width=0.6, edgecolor='w')) 
+    # for i in text_displacement: texts[i[0]]._y = texts[i[0]]._y + i[1]
+    # for i in pct_displacement: pcts[i[0]]._y = pcts[i[0]]._y + i[1]
+    # if font_size_change!=0:
+        # for i in font_size_change: plt.setp(texts[i[0]], fontsize=i[1])              
+    # ax.pie(sizes_2, labels=labels_2, labeldistance=0.3,
+        # startangle=90, counterclock=False, radius=0.4, colors=colors_2, 
+        # wedgeprops=dict(width=0.4, edgecolor='w'))   
+    # ax.axis('equal')      
