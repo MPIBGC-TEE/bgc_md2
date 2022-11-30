@@ -2785,6 +2785,18 @@ def times_in_days_aD(
         )
     )
 
+# function to determine overlapping time frames for models simulations
+def t_min_tmax_overlap_2(
+    test_arg_dict,  # a dictionary of test_args from all models involved
+    delta_t_val,  # iterator time step
+):
+    td = {
+        mf: times_in_days_aD(ta, delta_t_val)
+        for mf,ta  in test_arg_dict.items()
+    }
+    t_min = max([t.min() for t in td.values()])
+    t_max = min([t.max() for t in td.values()])
+    return (t_min, t_max)
 
 # function to determine overlapping time frames for models simulations
 def t_min_tmax_overlap(
@@ -2800,17 +2812,17 @@ def t_min_tmax_overlap(
     return (t_min, t_max)
 
 
-def t_min_tmax_full(
-    test_arg_list,  # a list of test_args from all models involved
-    delta_t_val,  # iterator time step
-):
-    td = {
-        i: times_in_days_aD(test_arg_list[i], delta_t_val)
-        for i in range(len(test_arg_list))
-    }
-    t_min = min([t.min() for t in td.values()])
-    t_max = max([t.max() for t in td.values()])
-    return (t_min, t_max)
+#def t_min_tmax_full(
+#    test_arg_list,  # a list of test_args from all models involved
+#    delta_t_val,  # iterator time step
+#):
+#    td = {
+#        i: times_in_days_aD(test_arg_list[i], delta_t_val)
+#        for i in range(len(test_arg_list))
+#    }
+#    t_min = min([t.min() for t in td.values()])
+#    t_max = max([t.max() for t in td.values()])
+#    return (t_min, t_max)
 
 
 # function find the timesteps corresponding to shared times

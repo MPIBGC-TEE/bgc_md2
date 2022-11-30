@@ -80,20 +80,178 @@ class TestSymbolic(TestCase):
         return [
             "kv_visit2",
             "jon_yib",
-            "Aneesh_SDGVM",
-            #"cable-pop",
-            #"cj_isam", # has problems with ODE solution probably due to wrong parameters
-            # msh.numericX0 also yields a negative pool value for the last pool
+            #"Aneesh_SDGVM",
+            #"cable-pop", # has not EstimatedParameters
+            "cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
             "yz_jules",
             "kv_ft_dlem",
             "bian_ibis2",
         ]
 
-    def test_all_timelines_starting_at_steady_state_comparison(self):
-        pass
-        #for mf in set(self.model_folders):
+    #@skip
+    def test_comparison_presentation(self):
+        model_names={
+            "yz_jules": "JULES",
+            "kv_visit2": "VISIT",
+            "jon_yib": "YIBs",
+            "kv_ft_dlem": "DLEM",
+            #"Aneesh_SDGVM":"SDGVM",
+            "cj_isam": "ISAM",
+            #"bian_ibis2":"IBIS",
+            #"ORCHIDEE-V2":"OCN",
+        }
+        model_cols={
+            "JULES": "blue",
+            "VISIT": "orange",
+            "YIBs": "green",
+            "DLEM": "red",
+            "SDGVM":"yellow",
+            "ISAM": "purple",
+            "IBIS":"magenta",
+            "OCN":"teal",
+        }
+        # ### Loading TRENDY data and model parameters
+        
+        # define same step size for each model (in days)
+        delta_t_val=30
+        model_folders=[(k) for k in model_names]
+         
+        # we use the model folders  property of the test (which is used
+        # to run the other tests in this class
+        #model_folders = self.model_folders
+        
+
+        # the next call caches all the variables (several GB into RAM)
+        # if you have less than 6GB Ram don't do it like this..or reduce
+        # the number of models.
+        test_arg_list=gh.get_test_arg_list(model_folders)
+        all_comp_dict= moh.get_traceable_components(
+            # fixme mm 11-29 2022 
+            # the function expects 
+            # the test_arg_list in the same order as modelnames (  
+            model_names=model_names,
+            test_arg_list=test_arg_list,
+            delta_t_val=delta_t_val, 
+            model_cols=model_cols,
+            part=1,
+            averaging=12*30//delta_t_val, # yearly averaging
+            #averaging=30//delta_t_val, # monthly averaging
+            overlap=True
+            )
+            #for mf in set(self.model_folders):
 
 
+    def test_comparison(self):
+        model_folders = self.model_folders
+        delta_t_val = 15
+        #test_arg_dict = gh.get_test_arg_dict(model_folders)
+        #t_min, t_max=gh.t_min_tmax_overlap_2(test_arg_dict, delta_t_val)
+        #here we assume that all models started from equilibrium at 
+        # t_min (which is not correct) 
+        # according to the S2 experiment they started from equilibrium
+        # but at different times
+        model_names={
+            "yz_jules": "JULES",
+            "kv_visit2": "VISIT",
+            "jon_yib": "YIBs",
+            "kv_ft_dlem": "DLEM",
+            "Aneesh_SDGVM":"SDGVM",
+            "cj_isam": "ISAM",
+            "bian_ibis2":"IBIS",
+            "ORCHIDEE-V2":"OCN",
+        }
+        model_cols={
+            "JULES": "blue",
+            "VISIT": "orange",
+            "YIBs": "green",
+            "DLEM": "red",
+            "SDGVM":"yellow",
+            "ISAM": "purple",
+            "IBIS":"magenta",
+            "OCN":"teal",
+        }
+        color_dict = {mf: model_cols[model_names[mf]] for mf in model_folders}
+        marker_dict = {"veg": '*', "soil": "+", "system": "o"}
+        def timelines_from_model_folder(mf,axs):
+            test_args = gh.test_args(mf)
+            msh = gh.msh(mf)
+            mvs = gh.mvs(mf)
+            state_vector = mvs.get_StateVariableTuple()
+            cpa = test_args.cpa
+            epa = test_args.epa_opt
+            dvs = test_args.dvs
+            testDir = self.output_path(mf)
+            self.__class__.clean_dir(testDir)
+            stride = 1   # this does not affect the precision of the iterator but of the averages
+            # but makes it more effiecient (the values in between the strides
+            func_dict = msh.make_func_dict(mvs, dvs, cpa, epa)
+            #for every model we have to find the iterator indices that we want to plot
+            start=0 #gh.days_since_AD(0, delta_t_val, test_args.start_date)
+            vals = gh.all_timelines_starting_at_steady_state(
+                    mvs,
+                    func_dict,
+                    dvs,
+                    cpa,
+                    epa,
+                    t_min=start,
+                    t_max= start + (len(dvs[0])-1)/2,# * 30,
+                    delta_t_val=delta_t_val,
+                    stride=stride,
+            )
+            ax=axs[0]
+            key = "complete_continuous_mean_btt"
+            ax.set_title("System backward transit time")
+            ax.plot(
+                vals.t,
+                vals[key],
+                color=color_dict[mf],
+                label=model_names[mf],
+                #marker=marker_dict["system"],
+            )
+            ax.legend()
+            
+            ax=axs[1]
+            ax.set_title("Vegetation subsystem backward transit time")
+            key = "veg_continuous_mean_btt"
+            ax.plot(
+                vals.t,
+                vals[key],
+                color=color_dict[mf],
+                label=model_names[mf],
+                #marker=marker_dict["veg"],
+            )
+            ax.legend()
+            
+            ax=axs[2]
+            ax.set_title("Soil subsystem backward transit time")
+            key = "soil_continuous_mean_btt"
+            ax.plot(
+                vals.t,
+                vals[key],
+                color=color_dict[mf],
+                label=model_names[mf],
+                #marker=marker_dict["soil"],
+            )
+            ax.legend()
+
+            ax=axs[3]
+            ax.set_title( "$\sum_i (RT)_i$")
+            key = "RT"
+            ax.plot(
+                vals.t,
+                vals[key].sum(axis=1),
+                color=color_dict[mf],
+                label=model_names[mf],
+                #marker=marker_dict["system"],
+            )
+            ax.legend()
+
+        fig=plt.figure(figsize=(35,15))
+        axs = fig.subplots(4,1)
+        for mf in model_folders:
+            timelines_from_model_folder(mf,axs)
+        fig.savefig('test.pdf')    
+    
     def test_all_timelines_starting_at_steady_state(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
@@ -108,8 +266,8 @@ class TestSymbolic(TestCase):
                 dvs = test_args.dvs
                 testDir = self.output_path(mf)
                 self.__class__.clean_dir(testDir)
-                delta_t_val = 5  # this affects the precision of the iterator
-                stride = 1  # this does not affect the precision of the iterator but of the averages
+                delta_t_val = 15  # this affects the precision of the iterator
+                stride = 2  # this does not affect the precision of the iterator but of the averages
                 # but makes it more effiecient (the values in between the strides
                 func_dict = msh.make_func_dict(mvs, dvs, cpa, epa)
                 vals_winter = gh.all_timelines_starting_at_steady_state(
@@ -119,7 +277,7 @@ class TestSymbolic(TestCase):
                         cpa,
                         epa,
                         t_min=0,
-                        t_max=700,
+                        t_max=7000,
                         delta_t_val=delta_t_val,
                         stride=stride,
                 )
@@ -130,11 +288,10 @@ class TestSymbolic(TestCase):
                         cpa,
                         epa,
                         t_min=120,
-                        t_max=700,
+                        t_max=7000,
                         delta_t_val=delta_t_val,
                         stride=stride,
                 )
-                #from IPython import embed; embed()
                 gh.plot_disc_vs_cont(
                     mvs,
                     vals_winter,

@@ -731,7 +731,7 @@ def make_tuple_traceability_iterator(mvs,dvs,cpa,epa):
 
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict=gh.make_param_dict(mvs,cpa,epa)
-    X_0 = numeric_X0(mvs, dvs, cpa, epa)
+    X_0 = numeric_X_0(mvs, dvs, cpa, epa)
     fd = make_func_dict(mvs, dvs, cpa, epa)
     V_init = gh.make_InitialTraceTuple(
             X_0,
