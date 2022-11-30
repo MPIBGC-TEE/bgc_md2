@@ -1870,7 +1870,8 @@ def traceability_iterator(
         epa,  #: EstimatedParameters
         delta_t_val: int = 1,  # defaults to 1day timestep
         traced_expressions: Dict[str, Expr] = dict(),
-        extra_functions: Dict[str, Callable] = dict()
+        extra_functions: Dict[str, Callable] = dict(),
+        t_0=0
     ):
 
     apa = {**cpa._asdict(), **epa._asdict()}
@@ -1936,7 +1937,7 @@ def traceability_iterator(
 
     bit = BlockArrayIterator(
         iteration_str = "it", # access the inner counter
-        start_seed_dict=ArrayDict({"X": X_0, "t": 0}),
+        start_seed_dict=ArrayDict({"X": X_0, "t": t_0}),
         present_step_funcs=OrderedDict({
             # these are functions that are  applied in order
             # on the start_seed_dict
@@ -2858,3 +2859,90 @@ data_streams = namedtuple(
     'data_streams',
     ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
     ) 
+
+def plot_turnover_vs_rt_vs_btt(mvs,vals,fn):
+    color_dict = {"veg": "green", "soil": "brown", "system": "black"}
+    marker_dict = {"RT": "*", "btt": "+", "tot": "o"}
+    n_pools = vals.X.shape[1]
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.subplots(1,1)
+    ax.set_title("turnover times vs $\sum_i (RT)_i$")
+    ax.plot(
+        vals.t,
+        vals.RT.sum(axis=1),
+        label="$\sum_i (RT)_i$",
+        color=color_dict["system"],
+        marker=marker_dict["RT"],
+    )
+    key = "complete_continuous_mean_btt"
+    ax.plot(
+        vals.t,
+        vals[key],
+        color=color_dict["system"],
+        marker=marker_dict["btt"],
+        label=key
+    )
+    key = "veg_continuous_mean_btt"
+    ax.plot(
+        vals.t,
+        vals[key],
+        color=color_dict["veg"],
+        marker=marker_dict["btt"],
+        label=key,
+    )
+    key = "soil_continuous_mean_btt"
+    ax.plot(
+        vals.t,
+        vals[key],
+        label=key,
+        color=color_dict["soil"],
+        marker=marker_dict["btt"],
+    )
+    key = "tot_veg"
+    ax.plot(
+        vals.t,
+        vals[key],
+        label=key,
+        color=color_dict["veg"],
+        marker=marker_dict["tot"],
+    )
+    key = "tot_soil"
+    ax.plot(
+        vals.t,
+        vals[key],
+        label=key,
+        color=color_dict["soil"],
+        marker=marker_dict["tot"],
+    )
+    ax.legend()
+    fig.savefig((f"{fn}.pdf"))
+
+def plot_disc_vs_cont(mvs,vals,fn):
+    # example plotting function
+    # plot continous solution against iterator solution (to check for timeshiftis)
+    n_pools = vals.X.shape[1]
+    fig = plt.figure(figsize=(2 * 10, n_pools * 10))
+    axs = fig.subplots(n_pools, 2)
+    color_dict = {"continuous": "blue", "discrete": "orange"}
+    for i,sym in enumerate(mvs.get_StateVariableTuple()):
+        print(sym)
+        ax = axs[i, 0]
+        ax.set_title(
+            'solutions {0}'.format(sym)
+        )
+        k = 'discrete'
+        ax.plot(
+            vals.t,
+            vals.X[:,i],
+            color=color_dict[k],
+            label=k
+        )
+        k = 'continuous'
+        ax.plot(
+            vals.continuous_times,
+            vals.complete_continuous_solution[:,i],
+            color=color_dict[k],
+            label=k
+        )
+        ax.legend()
+    fig.savefig((f"{fn}.pdf"))
