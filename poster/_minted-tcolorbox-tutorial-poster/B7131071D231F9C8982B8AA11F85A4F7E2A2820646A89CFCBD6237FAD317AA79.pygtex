@@ -1,0 +1,15 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{\PYGZbs{}documentclass}\PYG{n+na}{[12pt]}\PYG{n+nb}{\PYGZob{}}article\PYG{n+nb}{\PYGZcb{}}
+\PYG{k}{\PYGZbs{}usepackage}\PYG{n+na}{[a3paper,landscape]}\PYG{n+nb}{\PYGZob{}}geometry\PYG{n+nb}{\PYGZcb{}}
+\PYG{k}{\PYGZbs{}usepackage}\PYG{n+na}{[poster]}\PYG{n+nb}{\PYGZob{}}tcolorbox\PYG{n+nb}{\PYGZcb{}}
+\PYG{k}{\PYGZbs{}pagestyle}\PYG{n+nb}{\PYGZob{}}empty\PYG{n+nb}{\PYGZcb{}}
+
+\PYG{k}{\PYGZbs{}begin}\PYG{n+nb}{\PYGZob{}}document\PYG{n+nb}{\PYGZcb{}}
+\PYG{k}{\PYGZbs{}begin}\PYG{n+nb}{\PYGZob{}}tcbposter\PYG{n+nb}{\PYGZcb{}}[
+  coverage = \PYG{n+nb}{\PYGZob{}}spread\PYG{n+nb}{\PYGZcb{}},
+  poster   = \PYG{n+nb}{\PYGZob{}}showframe,columns=4,rows=5\PYG{n+nb}{\PYGZcb{}},
+]
+\PYG{c}{\PYGZpc{} Here, we insert the poster content later}
+\PYG{k}{\PYGZbs{}end}\PYG{n+nb}{\PYGZob{}}tcbposter\PYG{n+nb}{\PYGZcb{}}
+\PYG{k}{\PYGZbs{}end}\PYG{n+nb}{\PYGZob{}}document\PYG{n+nb}{\PYGZcb{}}
+\end{Verbatim}
