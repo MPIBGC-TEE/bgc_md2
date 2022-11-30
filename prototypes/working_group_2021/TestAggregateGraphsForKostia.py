@@ -79,17 +79,22 @@ class TestSymbolic(TestCase):
     def model_folders(self):
         return [
             "kv_visit2",
-            # "jon_yib",
-            # "Aneesh_SDGVM",
-            ##"cable-pop",
-            ##"cj_isam", # has problems with ODE solution probably due to wrong parameters
-            ## msh.numericX0 also yields a negative pool value for the last pool
-            # "yz_jules",
-            # "kv_ft_dlem",
-            # "bian_ibis2",
+            "jon_yib",
+            "Aneesh_SDGVM",
+            #"cable-pop",
+            #"cj_isam", # has problems with ODE solution probably due to wrong parameters
+            # msh.numericX0 also yields a negative pool value for the last pool
+            "yz_jules",
+            "kv_ft_dlem",
+            "bian_ibis2",
         ]
 
-    def test_different_starting_point_for_iterator(self):
+    def test_all_timelines_starting_at_steady_state_comparison(self):
+        pass
+        #for mf in set(self.model_folders):
+
+
+    def test_all_timelines_starting_at_steady_state(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
                 test_args = gh.test_args(mf)
@@ -98,218 +103,59 @@ class TestSymbolic(TestCase):
                 msh = gh.msh(mf)
                 mvs = gh.mvs(mf)
                 state_vector = mvs.get_StateVariableTuple()
-                n_pools = len(state_vector)
                 cpa = test_args.cpa
                 epa = test_args.epa_opt
                 dvs = test_args.dvs
                 testDir = self.output_path(mf)
                 self.__class__.clean_dir(testDir)
-                conf_dict = gh.confDict(mf)
-                t_winter = 0
                 delta_t_val = 5  # this affects the precision of the iterator
-                stride = 6  # this does not affects the precision of the iterator
+                stride = 1  # this does not affect the precision of the iterator but of the averages
                 # but makes it more effiecient (the values in between the strides
-                # are computed but not stored)
-                # the precision of the continuous solution is not affected by either
-                # number since the solver decides where to compute the next value
-                # the times argument just tells it where WE want to know the values...
-                
-                # We want to compute a steady state from driver values in the
-                # spring and start our computation from there
-                t_spring = 120 # days 
-
-                par_dict = gh.make_param_dict(mvs, test_args.cpa, epa)
-                func_dict = msh.make_func_dict(mvs, test_args.dvs, test_args.cpa, epa)
-                #X0 = msh.numeric_X_0(mvs, test_args.dvs, test_args.cpa, epa).reshape(-1)
-                # in our case we want to compute a steady state start value
-                def sols(t_min, mvs):
-                    t_max = 700
-                    n_steps = int((t_max - t_min) / delta_t_val)
-                    times = np.arange(t_min, t_max, delta_t_val * stride)
-                    a_dens_function, X_fix = start_age_distributions_from_steady_state(
-                        t0=t_min, # determines B_0=B(t_0) and u_0=B(t_0) from which the equilibrium is
-                        # computed  (via the functions in func_dict which are called at the appropriate
-                        # time)
-                        srm=mvs.get_SmoothReservoirModel(),
-                        parameter_dict=par_dict,
-                        func_set=func_dict,
-                    )
-                    mvs = mvs.update(
-                        {
-                            NumericParameterization(par_dict=par_dict, func_dict=func_dict),
-                            NumericStartValueArray(X_fix),
-                            NumericSimulationTimes(times),
-                        }
-                    )
-                    sv = mvs.get_StateVariableTuple()
-                    n_pools = len(sv)
-                    smr = mvs.get_SmoothModelRun()
-                    # from IPython import embed; embed()
-                    # now create two submodels
-                    start_mean_age_vec = start_age_moments_from_steady_state(
-                        smr.model,
-                        t0=t_min,
-                        parameter_dict=par_dict,
-                        func_set=func_dict,
-                        max_order=1,
-                    ).reshape(-1)
-                    # compute solutions for the mean age system starting at X_fix and star
-                    order = 1
-                    s_arr, s_func = smr._solve_age_moment_system(
-                        order,
-                        start_mean_age_vec.reshape(1, n_pools),
-                    )
-                    # the first n colums are the solution
-                    # solutions = smr.solve()
-                    solutions = s_arr
-                    t = mvs.get_TimeSymbol()
-                    mean_btts = smr.backward_transit_time_moment(
-                        order=1, start_age_moments=start_mean_age_vec.reshape(1, n_pools)
-                    )
-
-                    def sub_mr_smav(mvs, svt):
-                        sv = mvs.get_StateVariableTuple()
-                        svl = list(sv)
-                        svs = set(sv)
-                        combined = (
-                            set(sv),
-                            mvs.get_InFluxesBySymbol(),
-                            mvs.get_OutFluxesBySymbol(),
-                            mvs.get_InternalFluxesBySymbol(),
-                        )
-
-                        (
-                            sub_sv_set,
-                            sub_in_fluxes,
-                            sub_out_fluxes,
-                            sub_internal_fluxes,
-                        ) = hr.extract(combined, set(svt))
-
-                        # we have to provide solutions (functions of time)  for the
-                        # state variables of the outer system ( In our case soil
-                        # influxes depend on the poolvalues of the veg system. In
-                        # general every subsystem could depend on pools of every other
-                        # subsystem
-                        outer_pools = svs.difference(sub_sv_set)
-                        # first replace the symbols by functions
-                        subs_dict = {sym: Function(str(sym))(t) for sym in outer_pools}
-                        sub_in_fluxes_f, sub_internal_fluxes_f, sub_out_fluxes_f = map(
-                            lambda d: {
-                                k: sympify(flux_ex).subs(subs_dict)
-                                for k, flux_ex in d.items()
-                            },
-                            (sub_in_fluxes, sub_internal_fluxes, sub_out_fluxes),
-                        )
-
-                        # now prepare the extension of the func_dict by the solutions
-                        # for the variables
-                        def s_func_maker(sym):
-                            return lambda t: s_func(t)[svl.index(sym)]
-
-                        outer_pool_funcs = {
-                            # note that we create the function in another
-                            # function since the normal dictionary comprehension
-                            # fails due to pythons lazy evaluation not
-                            # protecting the function specific variable 
-                            # (in this case sym)
-                            Function(str(sym)): s_func_maker(sym)
-                            for sym in outer_pools
-                        }
-                        sub_func_dict = {**func_dict, **outer_pool_funcs}
-                        sub_X_fix = X_fix[[svl.index(w) for w in svt]]
-                        sub_mvs = CMTVS(
-                            {
-                                t,
-                                StateVariableTuple(svt),
-                                InFluxesBySymbol(sub_in_fluxes_f),
-                                InternalFluxesBySymbol(sub_internal_fluxes_f),
-                                OutFluxesBySymbol(sub_out_fluxes_f),
-                                NumericParameterization(
-                                    par_dict=par_dict,
-                                    func_dict=sub_func_dict,
-                                ),
-                                NumericStartValueArray(sub_X_fix),
-                                NumericSimulationTimes(times),
-                            },
-                            mvs.computers,
-                        )
-                        sub_smr = sub_mvs.get_SmoothModelRun()
-                        # for the start mean ages we can not just take the respective parts of the system mean ages
-                        # since they refer to the times stuff has spent in the SYSTEM and not in the SUB system.
-                        # Although the pools in the subsystem are pools in the
-                        sub_start_mean_age_vec = start_age_moments_from_steady_state(
-                            sub_smr.model,
-                            t0=t_min,
-                            parameter_dict=par_dict,
-                            func_set=sub_func_dict,
-                            max_order=1,
-                        )
-                        #from IPython import embed; embed()
-                        return sub_mvs, sub_smr, sub_start_mean_age_vec
-
-                    veg_sv = mvs.get_VegetationCarbonStateVariableTuple()
-                    veg_mvs, veg_smr, veg_smav = sub_mr_smav(mvs, veg_sv) 
-                    veg_btt = veg_smr.backward_transit_time_moment(
-                        order=1,
-                        start_age_moments=veg_smav
-                    )
-                    veg_arr, veg_func = veg_smr._solve_age_moment_system(
-                        order,
-                        start_age_moments=veg_smav
-                    )
-                    soil_sv = mvs.get_SoilCarbonStateVariableTuple()
-                    soil_mvs, soil_smr, soil_smav = sub_mr_smav(mvs, soil_sv) 
-                    #soil_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-                    soil_arr, soil_func = soil_smr._solve_age_moment_system(
-                        order,
-                        start_age_moments=soil_smav
-                    )
-                    soil_btt = soil_smr.backward_transit_time_moment(
-                        order=1, start_age_moments=soil_smav
-                    )
-                    bit = gh.traceability_iterator(
-                        X_fix,
-                        func_dict,
+                func_dict = msh.make_func_dict(mvs, dvs, cpa, epa)
+                vals_winter = gh.all_timelines_starting_at_steady_state(
                         mvs,
+                        func_dict,
                         dvs,
-                        test_args.cpa,
+                        cpa,
                         epa,
+                        t_min=0,
+                        t_max=700,
                         delta_t_val=delta_t_val,
-                        t_0=t_min
-                    )
-                    vals = bit[0 : (n_steps + 1) : stride]
-                    vnp = veg_smr.nr_pools
-                    snp = soil_smr.nr_pools
-                    vals.update(
-                        {
-                            'complete_continuous_solution': s_arr[:, 0: n_pools],
-                            'complete_continuous_mean_age': s_arr[:, n_pools: 2 * n_pools],
-                            'complete_continuous_mean_btt' : mean_btts,
-                            'veg_continuous_solution':  veg_arr[:, 0: vnp], 
-                            'veg_continuous_mean_age':  veg_arr[:, vnp: 2 * vnp], 
-                            'veg_continuous_mean_btt': veg_smr.backward_transit_time_moment(
-                                                order=1,
-                                                start_age_moments=veg_smav
-                                            ),
-                            'soil_continuous_solution': soil_arr[:, 0: snp], 
-                            'soil_continuous_mean_age': soil_arr[:, snp: 2 * snp], 
-                            'soil_continuous_mean_btt': soil_smr.backward_transit_time_moment(
-                                                order=1,
-                                                start_age_moments=soil_smav
-                                            ),
-                            'continuous_times': times                
-                        }
-                    )
-                    return vals
+                        stride=stride,
+                )
+                vals_spring = gh.all_timelines_starting_at_steady_state(
+                        mvs,
+                        func_dict,
+                        dvs,
+                        cpa,
+                        epa,
+                        t_min=120,
+                        t_max=700,
+                        delta_t_val=delta_t_val,
+                        stride=stride,
+                )
+                #from IPython import embed; embed()
+                gh.plot_disc_vs_cont(
+                    mvs,
+                    vals_winter,
+                    testDir.joinpath("poolwise_winter")
+                )
+                gh.plot_turnover_vs_rt_vs_btt(
+                    mvs,
+                    vals_winter,
+                    testDir.joinpath("system_winter")
+                )
 
-
-                # gh.plot_disc_vs_cont(mvs, sols(t_winter, mvs), testDir.joinpath("poolwise_winter"))
-                # gh.plot_disc_vs_cont(mvs, sols(t_spring, mvs), testDir.joinpath("poolwise_spring"))
-                gh.plot_turnover_vs_rt_vs_btt(mvs, sols(t_winter, mvs), testDir.joinpath("system_winter"))
-                gh.plot_turnover_vs_rt_vs_btt(mvs, sols(t_spring, mvs), testDir.joinpath("system_spring"))
-                
-
-
+                gh.plot_disc_vs_cont(
+                    mvs,
+                    vals_spring,
+                    testDir.joinpath("poolwise_spring")
+                )
+                gh.plot_turnover_vs_rt_vs_btt(
+                    mvs,
+                    vals_spring,
+                    testDir.joinpath("system_spring")
+                )
 
         
     def test_aggregate_surrogate_systems(self):
@@ -364,7 +210,6 @@ class TestSymbolic(TestCase):
                 sv = mvs.get_StateVariableTuple()
                 n_pools = len(sv)
                 smr = mvs.get_SmoothModelRun()
-                # from IPython import embed; embed()
                 # now create two submodels
                 start_mean_age_vec = start_age_moments_from_steady_state(
                     smr.model,
