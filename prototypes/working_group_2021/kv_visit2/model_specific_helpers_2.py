@@ -16,7 +16,6 @@ from collections import OrderedDict
 from scipy.interpolate import interp1d
 
 import CompartmentalSystems.helpers_reservoir as hr
-from CompartmentalSystems.BlockArrayIterator import BlockArrayIterator
 from CompartmentalSystems.ArrayDict import ArrayDict
 
 sys.path.insert(0, "..")  # necessary to import general_helpers

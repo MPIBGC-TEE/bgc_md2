@@ -6,6 +6,74 @@ import netCDF4 as nc
 import json 
 from functools import lru_cache
 
+def make_test_args2(conf_dict,msh,mvs):
+
+    class TestArts():
+
+        @property
+        def V_init():
+            pass
+
+        @property
+        def par_dict():
+            pass
+
+        @property
+        def func_dict():
+            pass
+
+        @property
+        def mvs():
+            pass
+
+        @property
+        def dvs():
+            pass
+
+        @property
+        def svs():
+            pass
+
+        @property
+        def dvs_short():
+            pass
+
+        @property
+        def svs_short():
+            pass
+
+        @property
+        def epa_0():
+            pass
+
+        @property
+        def epa_min():
+            pass
+
+        @property
+        def epa_max():
+            pass
+
+        @property
+        def epa_opt():
+            pass
+
+        @property
+        def cpa():
+            pass
+
+        @property
+        def lats():
+            pass
+
+        @property
+        def lons():
+            pass
+
+        @property
+        def start_date():
+            pass
+    
 @lru_cache
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(

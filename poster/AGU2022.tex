@@ -73,19 +73,20 @@ name=title,
 column=1,
 span=4,
 below=top}{
-\resizebox{72cm}{!}{\bfseries\Huge My Important Project}\\[3mm]
+\resizebox{72cm}{!}
+{ \bfseries\Huge Reproducible Transparent Carboncycle Models }\\[3mm]
+{ \bfseries\Large An Open Source Biogeochemical Model Database}\\[2mm]
 Hans.Mustermann@deepthought.university
 }
 
 
-\posterbox[adjusted title=Overview]{
+\posterbox[adjusted title=Easy Model Creation And Inspection]{
   name=overview,
   column=1,
   below=title,
   %rowspan=2,
   %below=title,
   }{
-	\includegraphics[width=\columnwidth]{ModelTable.png}
 	\begin{enumerate}
 	\item
 	bgc\_md2 is an open source python package availabe on GitHub, developed at the Max-Planck-Institut for BioGeoChemistry in Jena and more recently  in Yiqi Luo's Ecolab at NAU in Flagstaff and Cornell in Ithaca
@@ -101,15 +102,9 @@ Hans.Mustermann@deepthought.university
 	\item 
 	A userinterface that uses a graph library to compute what is computable and can be used for comparisons.
 	\end{enumerate}
-}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\posterbox[adjusted title=Single Model Inspection]{
-  name=singleModelInspection,
-  column=1,
-  below=overview,
-  %rowspan=2,
-  %sequence=1 between overview and bottom then 2 between title and bottom
-  }{{\bfseries\large Analysis with symbolic tools \dots}\\
+
+\section*{Inspection from different angels}
+\subsection*{Analysis with symbolic tools}
 	\includegraphics[width=\columnwidth]{mvsTabScreen.png}
 	\begin{enumerate}
 	\item 
@@ -126,7 +121,7 @@ Hans.Mustermann@deepthought.university
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\posterbox[adjusted title=Intercomparison]{
+\posterbox[adjusted title=Comparability w.r.t. Common Diagnostics]{
   name=ModelIntercomparison,
   column=2,
   span=2,
@@ -136,14 +131,20 @@ Hans.Mustermann@deepthought.university
   }{
 	%\includegraphics[width=\columnwidth]{system.pdf}
 
-	\includegraphics[width=\columnwidth]{test.pdf}
+\begin{center}
+	\includegraphics[width=.245\columnwidth]{test.pdf}
+	\includegraphics[width=.245\columnwidth]{test_yearly.pdf}
+	\includegraphics[width=.245\columnwidth]{test2_fine.pdf}
+	\includegraphics[width=.245\columnwidth]{test2_yearly.pdf}
+	\includegraphics[width=.245\columnwidth]{ModelTable.png}
+\end{center}
 }
 
 %----
 %----
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\posterbox[adjusted title=Internal Structure]{
+\posterbox[adjusted title=Open Source Code and Data]{
   name=internalStructure,
   %column*=4,
   column=4,
@@ -156,6 +157,8 @@ Hans.Mustermann@deepthought.university
   
 %\frametitle{Internal Structure of \texttt{bgc\_md2}}
 %\begin{tikzpicture}[sibling distance=12em,
+\section*{Internal Structure} 
+
 \begin{tikzpicture}[sibling distance=28em,
   every node/.style = {shape=rectangle, rounded corners,
     draw, align=center,
@@ -200,14 +203,6 @@ Hans.Mustermann@deepthought.university
     annotations of a set of functions.
     The set of properties (defined by the types) is growing as well as the functions connecting them.
   \end{enumerate}
-}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\begin{posterboxenv}[adjusted title=Python Packages]
-  {
-  name=packages,
-  column=4,
-  below=internalStructure
-}
 \begin{tikzpicture}[sibling distance=15em,
   every node/.style = {shape=rectangle, rounded corners,
     draw, align=center,
@@ -229,16 +224,7 @@ Hans.Mustermann@deepthought.university
     \item
 	    Many of the advanced diagnostic variables (age and transittime distributions) are computed using our other packages \texttt{LAPM} and \texttt{CompartmentalSystems} for which \texttt{bgc\_md2} acts as interface.
   \end{enumerate}
-\end{posterboxenv}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\begin{posterboxenv}[adjusted title=A record]
-  {
-  name=record,
-  column=4,
-  below=packages
-}
-%\frametitle{Database records are python modules}
+  \subsection*{Database records are python modules}
   \includegraphics[width=\columnwidth]{source.py.png}
   \begin{enumerate}
     \item
@@ -247,16 +233,16 @@ Hans.Mustermann@deepthought.university
     The entries of the database dont even have to be complete models. They are implemented in normal python and 
     have in common that they define a set of model properties and a set of functions to connect them.
     There is no special format necessary. 
-    The creation of the symbolic formulation can be automated bye all means available in python.
+    The creation of the symbolic formulation can be automated by all means available in python.
     Extra information can but does not have to be provided.
   \end{enumerate}
-\end{posterboxenv}
+}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
 \posterbox[adjusted title=References]{
   name=references,
   %column*=4,
   column=4,
-  below=record,
+  below=internalStructure,
   %column=2,
   %span=1.5,
   %above=bottom

@@ -7,7 +7,6 @@ from functools import reduce, lru_cache
 from copy import copy, deepcopy
 from itertools import islice
 from time import time
-from sympy import var, Symbol, sin, Min, Max, pi, integrate, lambdify
 from sympy.core.expr import Expr
 from scipy.interpolate import interp1d
 from collections import namedtuple
@@ -28,10 +27,14 @@ from sympy import (
     sympify,
     simplify,
     lambdify,
-    Function,
-    Symbol,
     diff,
     exp,
+    var,
+    sin,
+    Min,
+    Max,
+    pi,
+    integrate,
     diag,
 )
 from ComputabilityGraphs.CMTVS import CMTVS
@@ -45,8 +48,10 @@ from CompartmentalSystems.start_distributions import (
     # start_age_distributions_from_empty_spinup,
     # start_age_distributions_from_zero_initial_content,
 )
-from CompartmentalSystems.BlockArrayIterator import BlockArrayIterator 
-from CompartmentalSystems.ArrayDict import ArrayDict 
+# from CompartmentalSystems.BlockArrayIterator import BlockArrayIterator
+from CompartmentalSystems.BlockDictIterator import BlockDictIterator
+from CompartmentalSystems.ArrayDict import ArrayDict
+from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 from bgc_md2.resolve.mvars import (
     TimeSymbol,
     CompartmentalMatrix,
@@ -190,12 +195,12 @@ class TraceTuple():
     def __init__(
         self,
         fd: dict
-        ):    
+        ):
         for k,v in fd.items():
             self.fd=fd
             self.__setattr__(k,v)
 
-    @property     
+    @property
     def _fields(self):
         return self.fd.keys()
 
@@ -211,7 +216,7 @@ class TraceTuple():
     def __add__(self, other):
         """overload + which is useful for averaging"""
         return self.__class__(
-            {   
+            {
                 name:
                 self.__getattribute__(name) + other.__getattribute__(name)
                 for name in self._fields
@@ -976,61 +981,65 @@ def days_per_year():
     return sum(days_per_month())
 
 
-def day_2_month_index(day):
-    months_by_day_arr = np.concatenate(
-        tuple(
-            map(lambda m: m * np.ones(days_per_month()[m], dtype=np.int64), range(12))
-        )
-    )
-    #  for variable months
-    dpy = days_per_year()
-    return months_by_day_arr[(day % dpy)] + int(day / dpy) * 12
+#def day_2_month_index(day):
+#    months_by_day_arr = np.concatenate(
+#        tuple(
+#            map(lambda m: m * np.ones(days_per_month()[m], dtype=np.int64), range(12))
+#        )
+#    )
+#    #  for variable months
+#    dpy = days_per_year()
+#    return months_by_day_arr[(day % dpy)] + int(day / dpy) * 12
 
 
-def days_since_AD(iteration, delta_t_val, start_date):
-    # To get the startdate we used the model specific function start_date()
-    # where it can be derivde using the original calendar (365 day or 360 day)
-    # from then on we might use a different counting (see days_per_month())
+def days_since_AD(
+    iteration, 
+    delta_t_val, 
+    start_date,
+    start_shift=0 # time between the start.date and the iterator's first step  
+):
+    return td_AD(start_date) + start_shift + iteration * delta_t_val
+
+def td_AD(start_date):
+    # computes the startdate in days time AD 
     start_year, start_month, start_day = start_date 
-    td_AD = (
+    return  (
         start_year * days_per_year()
         + sum(days_per_month()[0 : (start_month - 1)])
         + (start_day - 1)
     )
-    return td_AD + iteration * delta_t_val
 
-
-def month_2_day_index(ns, start_date):
-    start_month = start_date.month
-    """ computes the index of the day at the end of the month n in ns
-    this works on vectors and is faster than a recursive version working
-    on a single index (since the smaller indices are handled anyway)
-    """
-
-    # We first compute the sequence of day indices up to the highest month in ns
-    # and then select from this sequence the day indices for the months in ns
-    d = days_per_month()
-    dpm = (d[i % len(d)] for i in range(max(ns)))
-
-    # compute indices for which we want to store the results which is the
-    # list of partial sums of the above list  (repeated)
-
-    def f(acc, el):
-        if len(acc) < 1:
-            res = (el,)
-        else:
-            last = acc[-1]
-            res = acc + (el + last,)
-        return res
-
-    day_indices_for_continuous_moths = reduce(f, dpm, (0,))
-    day_indices = reduce(
-        lambda acc, n: acc + [day_indices_for_continuous_moths[n]],  # for n=0 we want 0
-        ns,
-        [],
-    )
-    return day_indices
-
+#def month_2_day_index(ns, start_date):
+#    start_month = start_date.month
+#    """ computes the index of the day at the end of the month n in ns
+#    this works on vectors and is faster than a recursive version working
+#    on a single index (since the smaller indices are handled anyway)
+#    """
+#
+#    # We first compute the sequence of day indices up to the highest month in ns
+#    # and then select from this sequence the day indices for the months in ns
+#    d = days_per_month()
+#    dpm = (d[i % len(d)] for i in range(max(ns)))
+#
+#    # compute indices for which we want to store the results which is the
+#    # list of partial sums of the above list  (repeated)
+#
+#    def f(acc, el):
+#        if len(acc) < 1:
+#            res = (el,)
+#        else:
+#            last = acc[-1]
+#            res = acc + (el + last,)
+#        return res
+#
+#    day_indices_for_continuous_moths = reduce(f, dpm, (0,))
+#    day_indices = reduce(
+#        lambda acc, n: acc + [day_indices_for_continuous_moths[n]],  # for n=0 we want 0
+#        ns,
+#        [],
+#    )
+#    return day_indices
+#
 
 # +
 # def year_2_day_index(ns):
@@ -1881,8 +1890,7 @@ def make_trace_tuple_func(
 #         AggregatedVegetation2SoilCarbonFlux=0
 #     )
 #
- 
-def traceability_iterator(
+def minimal_iterator(
         X_0,
         func_dict,
         mvs,  #: CMTVS,
@@ -1901,14 +1909,6 @@ def traceability_iterator(
     state_vector = mvs.get_StateVariableTuple()
     delta_t = Symbol("delta_t")
     
-    mvs=mvs.update({
-        NumericParameterization(
-            par_dict=par_dict,
-            func_dict=func_dict
-        ),
-        NumericStartValueArray(X_0),
-        #NumericSimulationTimes(times)
-    })
 
     disc_par_dict = {**par_dict, delta_t: delta_t_val}
     B_func = hr.numerical_array_func(
@@ -1925,14 +1925,75 @@ def traceability_iterator(
         parameter_dict=par_dict,
         func_dict=func_dict,
     )
-    # produce functions of t,X for our expressions
+    # make sure that the startvector X_0 is a ONE dimensional  vector
+    # since it is important that  X_0 and the result of I(t,X) have 
+    # the same dimension
+    X_0 = X_0.reshape(-1)
+    assert(I_func(0, X_0).ndim == 1)
+
+    bit = BlockDictIterator(
+        iteration_str = "it", # access the inner counter
+        start_seed_dict=ArrayDict({"X": X_0, "t": t_0}),
+        present_step_funcs=OrderedDict({
+            # these are functions that are  applied in order
+            # on the start_seed_dict
+            # they might compute variables that are purely  
+            # diagnostic or those that are necessary for the
+            # next step
+            # 
+            # The first 2 are essential for any compartmental system
+            "B": lambda t, X: - B_func(t, X), 
+            "I": lambda t, X: I_func(t, X), 
+            # 
+            #**extra_functions
+        }),
+        next_step_funcs=OrderedDict({
+            # these functions have to compute the seed for the next timestep
+            "X": lambda X,B,I : X + (I - B@X) * delta_t_val , 
+            "t": lambda t: t + delta_t_val,
+        })
+    )
+    return bit
+
+# fixme mm 12-2 2022 
+# should be better called tracebility Iterator result
+def traceability_iterator(
+        X_0,
+        func_dict,
+        mvs,  #: CMTVS,
+        dvs,  #: Drivers,
+        cpa,  #: Constants,
+        epa,  #: EstimatedParameters
+        delta_t_val: int = 1,  # defaults to 1day timestep
+        #traced_expressions: Dict[str, Expr] = dict(),
+        #extra_functions: Dict[str, Callable] = dict(),
+        t_0=0,
+    ):
+    mit = minimal_iterator(
+        X_0,
+        func_dict,
+        mvs,  #: CMTVS,
+        dvs,  #: Drivers,
+        cpa,  #: Constants,
+        epa,  #: EstimatedParameters
+        delta_t_val = 1,  # defaults to 1day timestep
+        t_0=0,
+    )
+
+    apa = {**cpa._asdict(), **epa._asdict()}
+    par_dict = make_param_dict(mvs, cpa, epa)
+    t = mvs.get_TimeSymbol()
+    state_vector = mvs.get_StateVariableTuple()
+    delta_t = Symbol("delta_t")
+    
+
     (
-        x_veg_func,
-        x_soil_func,
+        veg_x_func,
+        soil_x_func,
         out_2_veg_func,
         veg_2_soil_func,
-        veg_2_out_func, 
-        soil_2_out_func, 
+        veg_2_out_func,
+        soil_2_out_func,
     ) = map(
         lambda expr: hr.numerical_func_of_t_and_Xvec(
            state_vector=mvs.get_StateVariableTuple(),
@@ -1950,60 +2011,37 @@ def traceability_iterator(
             mvs.get_AggregatedSoilCarbonOutFlux(),
         ]    
     )
-    # make sure that the startvector X_0 is a ONE dimensional  vector
-    # since it is important that  X_0 and the result of I(t,X) have 
-    # the same dimension
-    X_0 = X_0.reshape(-1)
-    assert(I_func(0, X_0).ndim == 1)
-
-    bit = BlockArrayIterator(
-        iteration_str = "it", # access the inner counter
-        start_seed_dict=ArrayDict({"X": X_0, "t": t_0}),
-        present_step_funcs=OrderedDict({
-            # these are functions that are  applied in order
-            # on the start_seed_dict
-            # they might compute variables that are purely  
-            # diagnostic or those that are necessary for the
-            # next step
-            # 
-            # The first 2 are essential for any compartmental system
-            "B": lambda t, X: - B_func(t, X), 
-            "I": lambda t, X: I_func(t, X), 
-            # 
-            "u": lambda I: I.sum(),
-            "b": lambda I, u: I / u,
-            "B_inv": lambda B: np.linalg.inv(B),
-            "X_c": lambda B_inv, I: B_inv @ I,
-            "X_p": lambda X_c, X: X_c - X,
-            "X_dot": lambda I, B, X: I - B @ X,
-            "RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
-            "x": lambda X: X.sum(),
-            "x_dot": lambda X_dot: X_dot.sum(),
-            "m_s": lambda B, X, x: (B @ X).sum() / x, #rate of the surrogate system
-            "tot_s": lambda m_s: 1 / m_s, 
-            "x_c": lambda m_s, u: 1 / m_s * u, # x_c of the surrogate system
-            "x_p": lambda x_c, x: x_c - x,
-            "rt": lambda x_c, u: x_c / u,
-            'x_veg': lambda t, X: x_veg_func(t,X), 
-            'x_soil': lambda t, X: x_soil_func(t,X),
-            'out_2_veg': lambda t, X: out_2_veg_func(t,X),
-            'veg_2_soil': lambda t, X: veg_2_soil_func(t,X),
-            'veg_2_out': lambda t, X: veg_2_out_func(t,X),
-            'soil_2_out': lambda t, X: soil_2_out_func(t,X),
-            'm_veg': lambda veg_2_out, veg_2_soil, x_veg:\
-                (veg_2_out + veg_2_soil)/ x_veg, # veg rate
-            'tot_veg': lambda m_veg: 1 / m_veg ,   
-            'm_soil': lambda soil_2_out, x_soil: soil_2_out / x_soil, # soil rate 
-            'tot_soil': lambda m_soil: 1 / m_soil,    
-            #**extra_functions
-        }),
-        next_step_funcs=OrderedDict({
-            # these functions have to compute the seed for the next timestep
-            "X": lambda X,B,I : X + (I - B@X) * delta_t_val , 
-            "t": lambda t: t + delta_t_val,
-        })
-    )
-    return bit
+    present_step_funcs=OrderedDict({
+        "u": lambda I: I.sum(),
+        "b": lambda I, u: I / u,
+        "B_inv": lambda B: np.linalg.inv(B),
+        "X_c": lambda B_inv, I: B_inv @ I,
+        "X_p": lambda X_c, X: X_c - X,
+        "X_dot": lambda I, B, X: I - B @ X,
+        "system_RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
+        "system_RT_sum": lambda system_RT: system_RT.sum(),
+        "x": lambda X: X.sum(),
+        "x_dot": lambda X_dot: X_dot.sum(),
+        "system_m": lambda B, X, x: (B @ X).sum() / x, #rate of the surrogate system
+        "system_tot": lambda system_m: 1 / system_m, 
+        "x_c": lambda system_m, u: 1 / system_m * u, # x_c of the surrogate system
+        "x_p": lambda x_c, x: x_c - x,
+        "rt": lambda x_c, u: x_c / u,
+        'veg_x': lambda t, X: veg_x_func(t,X), 
+        'soil_x': lambda t, X: soil_x_func(t,X),
+        'out_2_veg': lambda t, X: out_2_veg_func(t,X),
+        'veg_2_soil': lambda t, X: veg_2_soil_func(t,X),
+        'veg_2_out': lambda t, X: veg_2_out_func(t,X),
+        'soil_2_out': lambda t, X: soil_2_out_func(t,X),
+        'veg_m': lambda veg_2_out, veg_2_soil, veg_x:\
+            (veg_2_out + veg_2_soil)/ veg_x, # veg rate
+        'veg_tot': lambda veg_m: 1 / veg_m ,   
+        'soil_m': lambda soil_2_out, soil_x: soil_2_out / soil_x, # soil rate 
+        'soil_tot': lambda soil_m: 1 / soil_m,    
+        #**extra_functions
+    })
+    mit.add_present_step_funcs(present_step_funcs)
+    return ArrayDictResult(mit)
 
 
 def all_timelines_starting_at_steady_state(
@@ -2013,36 +2051,36 @@ def all_timelines_starting_at_steady_state(
         dvs,  #: Drivers,
         cpa,  #: Constants,
         epa,  #: EstimatedParameters
-        t_min,
-        t_max,
+        t_min,  # time of equilibrium computation in days after the start of the simulation
+        index_slice: slice,  # making up the iterator slice to be output start_ind =0 refers to the 
         delta_t_val: int = 1,  # defaults to 1day timestep
-        stride = 1,  # this does not affects the precision of the iterator
-        # but makes it more effiecient (the values in between the strides
-        # are computed but not stored)
-        # the precision of the continuous solution is not affected by either
-        # number since the solver decides where to compute the next value
-        # the times argument just tells it where WE want to know the values...
-        #traced_expressions: Dict[str, Expr] = dict(),
-        #extra_functions: Dict[str, Callable] = dict(),
     ):
     
     # We want to compute a steady state from driver values in the
     # spring and start our computation from there
 
     par_dict = make_param_dict(mvs, cpa, epa)
-    #X0 = msh.numeric_X_0(mvs, test_args.dvs, test_args.cpa, epa).reshape(-1)
-    # in our case we want to compute a steady state start value
-    
-    n_steps = int((t_max - t_min) / delta_t_val)
-    times = [t_min + delta_t_val*i for i in range(0,(n_steps + 1), stride)]
     a_dens_function, X_fix = start_age_distributions_from_steady_state(
-        t0=t_min, # determines B_0=B(t_0) and u_0=B(t_0) from which the equilibrium is
+        t0=t_min,  # determines B_0=B(t_0) and u_0=B(t_0) from which the equilibrium is
         # computed  (via the functions in func_dict which are called at the appropriate
         # time)
         srm=mvs.get_SmoothReservoirModel(),
         parameter_dict=par_dict,
         func_set=func_dict,
     )
+    bit = traceability_iterator(
+        X_fix,
+        func_dict,
+        mvs,
+        dvs,
+        cpa,
+        epa,
+        delta_t_val=delta_t_val,
+        t_0=t_min
+    )
+    vals = bit[index_slice]
+
+    times = vals.t
     mvs = mvs.update(
         {
             NumericParameterization(par_dict=par_dict, func_dict=func_dict),
@@ -2053,7 +2091,6 @@ def all_timelines_starting_at_steady_state(
     sv = mvs.get_StateVariableTuple()
     n_pools = len(sv)
     smr = mvs.get_SmoothModelRun()
-    # from IPython import embed; embed()
     # now create two submodels
     start_mean_age_vec = start_age_moments_from_steady_state(
         smr.model,
@@ -2176,24 +2213,13 @@ def all_timelines_starting_at_steady_state(
     soil_btt = soil_smr.backward_transit_time_moment(
         order=1, start_age_moments=soil_smav
     )
-    bit = traceability_iterator(
-        X_fix,
-        func_dict,
-        mvs,
-        dvs,
-        cpa,
-        epa,
-        delta_t_val=delta_t_val,
-        t_0=t_min
-    )
-    vals = bit[0 : (n_steps + 1) : stride]
     vnp = veg_smr.nr_pools
     snp = soil_smr.nr_pools
     vals.update(
         {
-            'complete_continuous_solution': s_arr[:, 0: n_pools],
-            'complete_continuous_mean_age': s_arr[:, n_pools: 2 * n_pools],
-            'complete_continuous_mean_btt' : mean_btts,
+            'system_continuous_solution': s_arr[:, 0: n_pools],
+            'system_continuous_mean_age': s_arr[:, n_pools: 2 * n_pools],
+            'system_continuous_mean_btt' : mean_btts,
             'veg_continuous_solution':  veg_arr[:, 0: vnp], 
             'veg_continuous_mean_age':  veg_arr[:, vnp: 2 * vnp], 
             'veg_continuous_mean_btt': veg_smr.backward_transit_time_moment(
@@ -2206,7 +2232,7 @@ def all_timelines_starting_at_steady_state(
                                 order=1,
                                 start_age_moments=soil_smav
                             ),
-            'continuous_times': times                
+            #'continuous_times': np.array(times)                
         }
     )
     return vals
@@ -2772,9 +2798,10 @@ def get_test_arg_dict(model_folders):
 def times_in_days_aD(
     test_args,  # a tuple defined in model-specific test_helpers.py
     delta_t_val,  # iterator time step
+    start_shift=0 # time between the start.date and the iterator's first step  
 ):
     n_months = len(test_args.dvs[0])
-    n_days = month_2_day_index([n_months], test_args.start_date)[0]
+    n_days = 30 * n_months - start_shift 
     n_iter = int(n_days / delta_t_val)
     return np.array(
         tuple(
@@ -2789,9 +2816,10 @@ def times_in_days_aD(
 def t_min_tmax_overlap_2(
     test_arg_dict,  # a dictionary of test_args from all models involved
     delta_t_val,  # iterator time step
+    start_shift=0 # time between the start.date and the iterator's first step  
 ):
     td = {
-        mf: times_in_days_aD(ta, delta_t_val)
+        mf: times_in_days_aD(ta, delta_t_val,start_shift)
         for mf,ta  in test_arg_dict.items()
     }
     t_min = max([t.min() for t in td.values()])
@@ -2799,10 +2827,16 @@ def t_min_tmax_overlap_2(
     return (t_min, t_max)
 
 # function to determine overlapping time frames for models simulations
+# fixme mm 11-19-2022 deprecated
 def t_min_tmax_overlap(
     test_arg_list,  # a list of test_args from all models involved
     delta_t_val,  # iterator time step
 ):
+    print("""
+        deprecated: This function does not use the start shift
+        argument which is important if the iterator does not start at t_0=0
+        use t_min_tmax_overlap_2 instead (with a dictionary argument)
+        """)
     td = {
         i: times_in_days_aD(test_arg_list[i], delta_t_val)
         for i in range(len(test_arg_list))
@@ -2831,8 +2865,9 @@ def min_max_index(
     delta_t_val,  # iterator time step
     t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
     t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
+    start_shift=0
 ):
-    ts = times_in_days_aD(test_args, delta_t_val)
+    ts = times_in_days_aD(test_args, delta_t_val,start_shift)
 
     def count(acc, i):
         min_i, max_i = acc
@@ -3098,97 +3133,3 @@ data_streams = namedtuple(
     ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
     ) 
 
-def plot_turnover_vs_rt_vs_btt(mvs,vals,fn):
-    color_dict = {"veg": "green", "soil": "brown", "system": "black"}
-    marker_dict = {"RT": "*", "btt": "+", "tot": "o"}
-    n_pools = vals.X.shape[1]
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.subplots(1,1)
-    ax.set_title("turnover times vs $\sum_i (RT)_i$")
-    ax.plot(
-        vals.t,
-        vals.RT.sum(axis=1),
-        label="$\sum_i (RT)_i$",
-        color=color_dict["system"],
-        marker=marker_dict["RT"],
-    )
-    key = "complete_continuous_mean_btt"
-    ax.plot(
-        vals.t,
-        vals[key],
-        color=color_dict["system"],
-        marker=marker_dict["btt"],
-        label=key
-    )
-    key = "veg_continuous_mean_btt"
-    ax.plot(
-        vals.t,
-        vals[key],
-        color=color_dict["veg"],
-        marker=marker_dict["btt"],
-        label=key,
-    )
-    key = "soil_continuous_mean_btt"
-    ax.plot(
-        vals.t,
-        vals[key],
-        label=key,
-        color=color_dict["soil"],
-        marker=marker_dict["btt"],
-    )
-    key = "rt"
-    ax.plot(
-        vals.t,
-        vals[key],
-        label=key,
-        color=color_dict["system"],
-        marker=marker_dict["tot"],
-    )
-    key = "tot_veg"
-    ax.plot(
-        vals.t,
-        vals[key],
-        label=key,
-        color=color_dict["veg"],
-        marker=marker_dict["tot"],
-    )
-    key = "tot_soil"
-    ax.plot(
-        vals.t,
-        vals[key],
-        label=key,
-        color=color_dict["soil"],
-        marker=marker_dict["tot"],
-    )
-    ax.legend()
-    fig.savefig((f"{fn}.pdf"))
-
-def plot_disc_vs_cont(mvs,vals,fn):
-    # example plotting function
-    # plot continous solution against iterator solution (to check for timeshiftis)
-    n_pools = vals.X.shape[1]
-    fig = plt.figure(figsize=(2 * 10, n_pools * 10))
-    axs = fig.subplots(n_pools, 2)
-    color_dict = {"continuous": "blue", "discrete": "orange"}
-    for i,sym in enumerate(mvs.get_StateVariableTuple()):
-        print(sym)
-        ax = axs[i, 0]
-        ax.set_title(
-            'solutions {0}'.format(sym)
-        )
-        k = 'discrete'
-        ax.plot(
-            vals.t,
-            vals.X[:,i],
-            color=color_dict[k],
-            label=k
-        )
-        k = 'continuous'
-        ax.plot(
-            vals.continuous_times,
-            vals.complete_continuous_solution[:,i],
-            color=color_dict[k],
-            label=k
-        )
-        ax.legend()
-    fig.savefig((f"{fn}.pdf"))

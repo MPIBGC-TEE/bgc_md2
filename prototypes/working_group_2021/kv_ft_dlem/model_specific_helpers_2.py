@@ -177,7 +177,7 @@ def download_my_TRENDY_output(conf_dict):
         password=conf_dict["password"],
         dataPath=Path(conf_dict["dataPath"]),#platform independent path desc. (Windows vs. linux)
         models=['DLEM'],
-        variables = Observables._fields + Drivers._fields+("gpp",), #(gpp is used for the mask in case of dlme)
+        variables = Observables._fields + Drivers._fields+("gpp","ra"), #(gpp is used for the mask in case of dlme)
         experiments=["S2", "S3"]
     )
 

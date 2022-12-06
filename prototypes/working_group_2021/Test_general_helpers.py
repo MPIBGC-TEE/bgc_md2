@@ -11,26 +11,22 @@ import matplotlib.pyplot as plt
 
 class Test_general_helpers(InDirTest):
 
-    # def test_make_fluxrates_from_kf(,xi_d):
-
-    @skip
     # the test is now obsolete since we 
     # decided to work with a continuous function
     # and a constant factor of 30 between days and months.
+    #def test_month_2_day_index(self):
+    #    self.assertEqual(month_2_day_index([0]), [0])
+    #    self.assertEqual(month_2_day_index([1]), [31])
+    #    self.assertEqual(month_2_day_index([2]), [59])
+    #    self.assertEqual(month_2_day_index([3]), [90])
+    #    self.assertEqual(month_2_day_index([1, 3]), [31, 90])
 
-    def test_month_2_day_index(self):
-        self.assertEqual(month_2_day_index([0]), [0])
-        self.assertEqual(month_2_day_index([1]), [31])
-        self.assertEqual(month_2_day_index([2]), [59])
-        self.assertEqual(month_2_day_index([3]), [90])
-        self.assertEqual(month_2_day_index([1, 3]), [31, 90])
-
-    def test_day_2_month_index(self):
-        # note that days are counted from zero so day 29 is January 30.
-        self.assertEqual(gh.day_2_month_index(0), 0)
-        self.assertEqual(gh.day_2_month_index(30), 1)
-        self.assertEqual(gh.day_2_month_index(31), 1)
-        self.assertEqual(gh.day_2_month_index(60), 2)
+    #def test_day_2_month_index(self):
+    #    # note that days are counted from zero so day 29 is January 30.
+    #    self.assertEqual(gh.day_2_month_index(0), 0)
+    #    self.assertEqual(gh.day_2_month_index(30), 1)
+    #    self.assertEqual(gh.day_2_month_index(31), 1)
+    #    self.assertEqual(gh.day_2_month_index(60), 2)
 
     # def test_month_2_day_index_vm(self):
     #    self.assertEqual(
