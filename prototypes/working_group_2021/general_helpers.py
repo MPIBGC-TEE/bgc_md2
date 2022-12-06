@@ -1976,16 +1976,13 @@ def traceability_iterator(
         dvs,  #: Drivers,
         cpa,  #: Constants,
         epa,  #: EstimatedParameters
-        delta_t_val = 1,  # defaults to 1day timestep
-        t_0=0,
+        delta_t_val = delta_t_val ,
+        t_0=t_0,
     )
 
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
-    t = mvs.get_TimeSymbol()
-    state_vector = mvs.get_StateVariableTuple()
-    delta_t = Symbol("delta_t")
-    
+
 
     (
         veg_x_func,
