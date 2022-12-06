@@ -218,6 +218,7 @@ def plot_traceable_component(
     model_cols,
     delta=False,
 ):
+    plt.rcParams.update({'font.size': 26})
     models=list(all_comp_dict.keys())[:-2]
     fig = plt.figure(figsize=(20, 10))
     ax = fig.subplots(1, 1)
@@ -285,13 +286,25 @@ def plot_traceable_component(
         
         diff_sqr = np.zeros_like(all_comp_dict[models[0]][comp_name])             
         
+        if comp_name in ['x', 'npp']:
+            vals_mean = vals_mean * 148.94 #148940000 * 1000000 * 0.000000000001 # convert to global C in Pg 
+        if comp_name in ['nep']:
+            vals_mean = vals_mean * 148.94 / 5            
+        if comp_name in ['rt']:
+            vals_mean = vals_mean / 360   # convert to yr         
         for m in models:
             if delta:
                 vals_array = all_comp_dict[m][comp_name]
                 vals=(vals_array-vals_array[0])#/vals_array[0] * 100
             else:
                 vals = all_comp_dict[m][comp_name]  
-                      
+            
+            if comp_name in ['x', 'npp']:
+                vals = vals * 148.94 #148940000 * 1000000 * 0.000000000001 # convert to global C in Pg
+            if comp_name in ['nep']:
+                vals = vals * 148.94 / 5                
+            if comp_name in ['rt']:
+                vals = vals / 360 # convert to yr 
             diff_sqr=diff_sqr + (vals-vals_mean)**2
             
             ax.plot(
@@ -318,28 +331,36 @@ def plot_traceable_component(
                 label="Ensemble mean",
                 color="black",
                 linewidth=3, 
-                )                     
+                )  
+    #ax.set_xlabel('year')
+    if comp_name=='x' and delta: ax.set_ylabel('$Δ$ $C_{ecosystem}$ $(Pg$ $C)$', size=30)      
+    if comp_name=='npp' and delta: ax.set_ylabel('$Δ$ $NPP$ $(Pg$ $C$ $yr^{-1})$', size=30) 
+    if comp_name=='rt' and delta: ax.set_ylabel('$Δ$ $τ_{ecosystem}$ $(yr)$', size=30)  
+    if comp_name=='nep': ax.set_ylabel('$NEP$ $(Pg$ $C$ $yr^{-1})$', size=30)     
     ax.grid(axis='y')
-    if delta:
-        ax.set_title("$\Delta$ "+str(comp_name))
-    else:
-        ax.set_title(comp_name)
+    #if comp_name=='x' and delta: ax.set_title('Cumulative Global C Sink')  
+    # if delta:
+        # ax.set_title("$\Delta$ "+str(comp_name))
+    # else:
+        # ax.set_title(comp_name)
     #ax.set_ylabel("Gt C")
-    ax.legend(bbox_to_anchor =(1.2, 1))   
-    if all_comp_dict["Times"][0]<=1911:
-        plt.axvline(x = 1911, color = 'k', linestyle='--', alpha=0.5) 
-        plt.axvline(x = 1913, color = 'k', linestyle='-', alpha=1 )         
-        plt.axvline(x = 1915, color = 'k', linestyle='--' , alpha=0.5)  
-    plt.axvline(x = 1963, color = 'k', linestyle='--', alpha=0.5) 
-    plt.axvline(x = 1965, color = 'k', linestyle='-', alpha=1 )    
-    plt.axvline(x = 1967, color = 'k', linestyle='--', alpha=0.5 )
-    if all_comp_dict["Times"][-1]>=2015:
-        plt.axvline(x = 2015, color = 'k', linestyle='--', alpha=0.5) 
-        plt.axvline(x = 2017, color = 'k', linestyle='-', alpha=1 )         
-        plt.axvline(x = 2019, color = 'k', linestyle='--' , alpha=0.5)   
+    ax.legend(bbox_to_anchor =(1, 1), fontsize =18)   
+    # if all_comp_dict["Times"][0]<=1911:
+        # plt.axvline(x = 1911, color = 'k', linestyle='--', alpha=0.5) 
+        # plt.axvline(x = 1913, color = 'k', linestyle='-', alpha=1 )         
+        # plt.axvline(x = 1915, color = 'k', linestyle='--' , alpha=0.5)  
+    # plt.axvline(x = 1963, color = 'k', linestyle='--', alpha=0.5) 
+    # plt.axvline(x = 1965, color = 'k', linestyle='-', alpha=1 )    
+    # plt.axvline(x = 1967, color = 'k', linestyle='--', alpha=0.5 )
+    # if all_comp_dict["Times"][-1]>=2015:
+        # plt.axvline(x = 2015, color = 'k', linestyle='--', alpha=0.5) 
+        # plt.axvline(x = 2017, color = 'k', linestyle='-', alpha=1 )         
+        # plt.axvline(x = 2019, color = 'k', linestyle='--' , alpha=0.5)   
     plt.axhline(y = 0, color = 'k', linestyle='--', linewidth=2)    
     plt.show()
+    plt.rcParams.update(plt.rcParamsDefault)
     return(vals_mean, st_dev)
+    
          
 def plot_attribution (
     times,
@@ -2282,27 +2303,27 @@ def grid_attribution (
         plt.show()
         
         # RGB map of attribution to GPP, RT and X_p
-        rgba_map (
-            mask = gcm.index_mask,
-            grid_red = percent_rt_grid, 
-            grid_green = percent_gpp_eco_grid, 
-            grid_blue = percent_X_p_grid, 
-            grid_alpha = X_avd / np.ma.max(X_avd)*10, 
-            labels = ["GPP 80% - RT 20%",
-                    #"GPP 75% - RT 25%",
-                    "GPP 70% - RT 30%",
-                    #"GPP 65% - RT 35%",
-                    "GPP 60% - RT 40%",
-                    #"GPP 55% - RT 45%",
-                    "GPP 50% - RT 50%",
-                    #"GPP 45% - RT 55%",
-                    "GPP 40% - RT 60%",
-                    #"GPP 35% - RT 65%",
-                    "GPP 30% - RT 70%",
-                    #"GPP 35% - RT 75%",
-                    "GPP 20% - RT 80%"],
-            title = "Spatial attribution of uncetainty in X to uncertainty in GPP (green) and RT (red)",         
-        )
+        # rgba_map (
+            # mask = gcm.index_mask,
+            # grid_red = percent_rt_grid, 
+            # grid_green = percent_gpp_eco_grid, 
+            # grid_blue = percent_X_p_grid, 
+            # grid_alpha = X_avd / np.ma.max(X_avd)*10, 
+            # labels = ["GPP 80% - RT 20%",
+                    # #"GPP 75% - RT 25%",
+                    # "GPP 70% - RT 30%",
+                    # #"GPP 65% - RT 35%",
+                    # "GPP 60% - RT 40%",
+                    # #"GPP 55% - RT 45%",
+                    # "GPP 50% - RT 50%",
+                    # #"GPP 45% - RT 55%",
+                    # "GPP 40% - RT 60%",
+                    # #"GPP 35% - RT 65%",
+                    # "GPP 30% - RT 70%",
+                    # #"GPP 35% - RT 75%",
+                    # "GPP 20% - RT 80%"],
+            # title = "Spatial attribution of uncetainty in X to uncertainty in GPP (green) and RT (red)",         
+        # )
         
         # creating and writing a new NetCDF file 
         s = g_mask.shape
@@ -2338,7 +2359,7 @@ def grid_attribution (
         rh_avd=ds.variables["rh_avd"][:, :].data
         ds.close() 
 
-def rgba_map (mask, grid_red, grid_green, grid_blue, grid_alpha, labels, title = "RGB map"):
+def rgba_map (mask, grid_red, grid_green, grid_blue, grid_alpha, labels, title, out_file):
 
         #height = len(gcm.lats) # can be any value
         #width = len(gcm.lons) # can be any value
@@ -2347,20 +2368,20 @@ def rgba_map (mask, grid_red, grid_green, grid_blue, grid_alpha, labels, title =
         width = grid_red.shape[1]
 
         array = np.zeros((height, width, 4))
-        array[:,:,0] = grid_red # red
-        array[:,:,1] = grid_green # green
-        array[:,:,2] = grid_blue # blue
+        array[:,:,0] = grid_red/0.65 # red
+        array[:,:,1] = grid_green/0.65 # green
+        array[:,:,2] = grid_blue/0.65 # blue
         array[:,:,3] = grid_alpha # alpha
         #array[:,:,3] = np.zeros_like(X_p_2d) # blue
         
         rgb_map = array.copy()
         #rgb_map[rgb_map>1]=0
-        
+        layer_mask=grid_red.mask
         for i in range(height): 
             rgb_map[i,:,:] = array[height-i-1,:,:]
-        mask_map = mask.copy()
+        mask_map = layer_mask.copy()
         for i in range(height): 
-            mask_map[i,:] = mask[height-i-1,:]   
+            mask_map[i,:] = layer_mask[height-i-1,:]   
         
         mask_map=(mask_map-1)*(-1)
         mask_4d_map=np.zeros_like(array)
@@ -2370,36 +2391,121 @@ def rgba_map (mask, grid_red, grid_green, grid_blue, grid_alpha, labels, title =
         mask_4d_map[:,:,3] = mask_map # alpha
         fig=plt.figure(figsize=(200,100))
         #plt.rcParams.update({'font.size': 150})
-        axs=fig.subplots(1,2, gridspec_kw={'width_ratios': [15, 1]})        
-        ax=axs[0]
+        ax=fig.subplots()#1,2, gridspec_kw={'width_ratios': [1, 1]})        
+        #ax=axs[0]
         ax.axis("off")
         ax.imshow(rgb_map*mask_4d_map)
         
         ax.set_title(title, fontsize=160)
-        ax_legend=axs[1]
-        green=np.arange(0.8,0.2,-0.05)
-        red=np.arange(0.2,0.8,0.05)        
-        blue=np.zeros(13)
-        #alpha=np.arange(0.2,0.8,0.05)
-        legend = np.zeros((13, 1, 3))
-        legend [:,:,0]=red.reshape(13,1)
-        legend [:,:,1]=green.reshape(13,1)
-        legend [:,:,2]=blue.reshape(13,1)
-        #plt.rcParams.update({'font.size': 8})
-        ax_legend.set_title(" ", fontsize=140)
-        #ax3.axis("off")
-        ax_legend.get_xaxis().set_visible(False)
-        ticks=np.array(range(0,13,round(13/len(labels))))
-        ax_legend.set_yticks (ticks)
-        ax_legend.set_yticklabels(labels,fontsize=120)
+        # ax_legend=axs[1]
+        # green=np.arange(0.8,0.2,-0.05)
+        # red=np.arange(0.2,0.8,0.05)        
+        # blue=np.zeros(13)
+        # #alpha=np.arange(0.2,0.8,0.05)
+        # legend = np.zeros((13, 1, 3))
+        # legend [:,:,0]=red.reshape(13,1)
+        # legend [:,:,1]=green.reshape(13,1)
+        # legend [:,:,2]=blue.reshape(13,1)
+        # #plt.rcParams.update({'font.size': 8})
+        # ax_legend.set_title(" ", fontsize=140)
+        # #ax3.axis("off")
+        # ax_legend.get_xaxis().set_visible(False)
+        # ticks=np.array(range(0,13,round(13/len(labels))))
+        # ax_legend.set_yticks (ticks)
+        # ax_legend.set_yticklabels(labels,fontsize=120)
 
-        ax_legend.imshow(legend)
+        # ax_legend.imshow(legend)
+        
+        # legend triangle
+        
+        # Basis vectors for triangle
+        # basis = np.array([[0.0, 1.0], [-1.5/np.sqrt(3), -0.5],[1.5/np.sqrt(3), -0.5]])
+        # # Plot points
+        # a, b, c = np.mgrid[0.0:1.0:50j, 0.0:1.0:50j, 0.0:1.0:50j]
+        # a, b, c = a.flatten(), b.flatten(), c.flatten()        
+        # abc = np.dstack((a,b,c))[0]
+        # abc = list(map(lambda x: x/sum(x), abc)) # make sure points lie inside triangle
+        # data = np.dot(abc, basis)
+        # colours = [abc_to_rgb(A=point[0],B=point[1],C=point[2]) for point in abc]
+        # #ax = fig.add_subplot(111,aspect='equal')
+        # ax2=axs[1]
+        # ax2.scatter(data[:,0], data[:,1],marker=',',edgecolors='none',facecolors=colours)
+        # # Plot triangle
+        # #ax2.plot([basis[_,0] for _ in range(3)],[basis[_,1] for _ in range(3)],**{'color':'black','linewidth':3})
+        # #ax2.plot([1.5/np.sqrt(3),0],[-0.5,1],**{'color':'black','linewidth':3})
+        # # Plot labels at vertices
+        # offset = 0.25
+        # fontsize = 32
+        # ax2.text(basis[0,0]*(1+offset), basis[0,1]*(1+offset), '$A$', horizontalalignment='center',
+                # verticalalignment='center', fontsize=fontsize)
+        # ax2.text(basis[1,0]*(1+offset), basis[1,1]*(1+offset), '$B$', horizontalalignment='center',
+                # verticalalignment='center', fontsize=fontsize)
+        # ax2.text(basis[2,0]*(1+offset), basis[2,1]*(1+offset), '$C$', horizontalalignment='center',
+                # verticalalignment='center', fontsize=fontsize)    
+        # ax2.set_frame_on(False)
+        # ax2.set_xticks(())
+        # ax2.set_yticks(())
+        
         plt.show()
         # save RGB pdf
-        fig.savefig("rgb_map.pdf")       
-        #plt.rcParams.update({'font.size': 15})
-        return ()
+        #fig.savefig("rgb_map.pdf")
+        # Basis vectors for triangle
+        basis = np.array([[0.0, 1.0], [-1.5/np.sqrt(3), -0.5],[1.5/np.sqrt(3), -0.5]])
+        # Plot points
+        a, b, c = np.mgrid[0.0:1.0:50j, 0.0:1.0:50j, 0.0:1.0:50j]
+        a, b, c = a.flatten(), b.flatten(), c.flatten()        
+        abc = np.dstack((a,b,c))[0]
+        abc = list(map(lambda x: x/sum(x), abc)) # make sure points lie inside triangle
+        data = np.dot(abc, basis)
+        colours = [abc_to_rgb(A=point[0],B=point[1],C=point[2], enhance=0.65) for point in abc]
+        fig = plt.figure()
+        ax = fig.add_subplot(111,aspect='equal')
+        ax.scatter(data[:,0], data[:,1],marker=',',edgecolors='none',facecolors=colours)
+        # Plot triangle
+        ax.plot([basis[_,0] for _ in range(3)],[basis[_,1] for _ in range(3)],**{'color':'black','linewidth':3})
+        ax.plot([1.5/np.sqrt(3),0],[-0.5,1],**{'color':'black','linewidth':3})
+        # Plot labels at vertices
+        offset = 0.25
+        fontsize = 32
+        ax.text(basis[0,0]*(1+offset), basis[0,1]*(1+offset), labels[0], horizontalalignment='center',
+                verticalalignment='center', fontsize=fontsize)
+        ax.text(basis[1,0]*(1+offset), basis[1,1]*(1+offset), labels[1], horizontalalignment='center',
+                verticalalignment='center', fontsize=fontsize)
+        ax.text(basis[2,0]*(1+offset), basis[2,1]*(1+offset), labels[2], horizontalalignment='center',
+                verticalalignment='center', fontsize=fontsize)    
+
+        ax.set_frame_on(False)
+        ax.set_xticks(())
+        ax.set_yticks(())
+        plt.show()
+        
+        # creating and writing a new NetCDF file 
+        s = mask.index_mask.shape
+        n_lats, n_lons = s
+        new_path=out_file
+        ds_new = nc.Dataset(str(new_path), "w", persist=True)
+        # creating dimensions
+        lat = ds_new.createDimension("lat", size=n_lats)
+        lon = ds_new.createDimension("lon", size=n_lons)         
+        # creating variables                         
+        var = ds_new.createVariable('red', "float32", ["lat", "lon"])
+        var[:, :] = grid_red 
+        var2 = ds_new.createVariable('green', "float32", ["lat", "lon"])
+        var2[:, :] = grid_green 
+        var3 = ds_new.createVariable('blue', "float32", ["lat", "lon"])
+        var3[:, :] = grid_blue
+        var4 = ds_new.createVariable('alpha', "float32", ["lat", "lon"])
+        var4[:, :] = grid_alpha                
+        lats = ds_new.createVariable("lat", "float32", ["lat"])
+        lats[:] = list(map(mask.tr.i2lat, range(n_lats)))      
+        lons = ds_new.createVariable("lon", "float32", ["lon"])
+        lons[:] = list(map(mask.tr.i2lon, range(n_lons)))
        
+        # closing NetCDF file      
+        ds_new.close()    
+       
+        #plt.rcParams.update({'font.size': 15})
+        return ()  
       
 def get_global_mean_uncertainty(dataPath,  
                             experiment_name, # string, e.g. "S2"
@@ -3927,15 +4033,17 @@ def pie_chart_nested (ax, title, sizes, sizes_2, labels, labels_2, colors, color
     ax.set_title(title)                          
     patches, texts, pcts = ax.pie(sizes, autopct='%1.1f%%', pctdistance=0.7, 
         labels=labels, labeldistance=1.1, 
-        startangle=90, counterclock=False, colors=colors, 
+        startangle=90, counterclock=True, colors=colors, 
         wedgeprops=dict(width=0.6, edgecolor='w')) 
     for i in text_displacement: texts[i[0]]._y = texts[i[0]]._y + i[1]
     for i in pct_displacement: pcts[i[0]]._y = pcts[i[0]]._y + i[1]
     if font_size_change!=0:
         for i in font_size_change: plt.setp(texts[i[0]], fontsize=i[1])              
-    ax.pie(sizes_2, labels=labels_2, labeldistance=0.3,
-        startangle=90, counterclock=False, radius=0.4, colors=colors_2, 
+    n=ax.pie(sizes_2, labels=labels_2, labeldistance=0.3,
+        startangle=90, counterclock=True, radius=0.4, colors=colors_2, 
         wedgeprops=dict(width=0.4, edgecolor='w'))   
+    for i in range(len(n[0])):
+        n[0][i].set_alpha(0.7)  
     ax.axis('equal')   
 
 def box_plot_uncertainty (uncert_var_name, uncert_var, cont_var_names, cont_vars, title,
@@ -4242,6 +4350,30 @@ def C_sink_uncertainty_attribution (
             var5 = tau_soil_0_contrib_total_percent,
             var6 = delta_tau_soil_contrib_total_percent,                   
             )
+            
+        # Red, Green, Blue = abc_to_rgb(
+                        # (tau_soil_0_contrib_total_percent+delta_tau_soil_contrib_total_percent)/100,
+                        # (npp_0_contrib_total_percent+delta_npp_contrib_total_percent)/100,     
+                        # (tau_veg_0_contrib_total_percent+delta_tau_veg_contrib_total_percent)/100,                         
+                        # )
+        Red, Green, Blue = abc_to_rgb(
+                        (tau_veg_0_contrib_total_percent+npp_0_contrib_total_percent+tau_soil_0_contrib_total_percent)/100,         
+                        (delta_npp_contrib_total_percent)/100,    
+                        (delta_tau_soil_contrib_total_percent+delta_tau_veg_contrib_total_percent)/100,                        
+                                               
+                        )                        
+        rgba_map (mask=global_mask,#tau_soil_0_contrib_1_percent.mask, 
+            grid_red=Red, 
+            grid_green=Green,  
+            grid_blue=Blue,  
+            #grid_alpha=np.zeros_like(delta_X_total)+1,
+            #grid_alpha=delta_X_total*100/np.ma.max(delta_X_total*100), 
+            grid_alpha=np.ma.log(delta_X_total*100)/np.ma.max(np.ma.log(delta_X_total*100)),   
+            #labels = ("$τ_{soil}$", "$NPP$", "$τ_{veg}$"),
+            labels = ("initial τ & NPP", "$ΔNPP$","$Δτ$"),
+            title = "RGB map of "+biome+" uncertainty attribution",
+            out_file = Path(data_path).joinpath(experiment+"_C_sink_attribution_RGB_"+biome+".nc")
+            )
           
         # box plots
         uncert_var_name = "$Δ X$ uncertainty"  
@@ -4251,18 +4383,18 @@ def C_sink_uncertainty_attribution (
             "$τ_{veg_0}$", "Δ $τ_{veg}$",
             "$τ_{soil_0}$", "Δ $τ_{soil}$"
             ]  
-        # absolute contributions
-        cont_vars = list((
-            npp_0_contrib_total[npp_0_contrib_total.mask==0].flatten(), 
-            delta_npp_contrib_total[delta_npp_contrib_total.mask==0].flatten(), 
-            tau_veg_0_contrib_total[tau_veg_0_contrib_total.mask==0].flatten(),
-            delta_tau_veg_contrib_total[delta_tau_veg_contrib_total.mask==0].flatten(),
-            tau_soil_0_contrib_total[tau_soil_0_contrib_total.mask==0].flatten(), 
-            delta_tau_soil_contrib_total[delta_tau_soil_contrib_total.mask==0].flatten()
-            ))  
-        box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars,
-                           title = 'Spatial variability of uncertainty contributions')        
-        # percent ontributions
+        # # absolute contributions
+        # cont_vars = list((
+            # npp_0_contrib_total[npp_0_contrib_total.mask==0].flatten(), 
+            # delta_npp_contrib_total[delta_npp_contrib_total.mask==0].flatten(), 
+            # tau_veg_0_contrib_total[tau_veg_0_contrib_total.mask==0].flatten(),
+            # delta_tau_veg_contrib_total[delta_tau_veg_contrib_total.mask==0].flatten(),
+            # tau_soil_0_contrib_total[tau_soil_0_contrib_total.mask==0].flatten(), 
+            # delta_tau_soil_contrib_total[delta_tau_soil_contrib_total.mask==0].flatten()
+            # ))  
+        # box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars,
+                           # title = 'Spatial variability of uncertainty contributions')        
+        # percent contributions
         cont_vars = list((
             npp_0_contrib_total_percent[npp_0_contrib_total_percent.mask==0].flatten(), 
             delta_npp_contrib_total_percent[delta_npp_contrib_total_percent.mask==0].flatten(), 
@@ -4317,56 +4449,73 @@ def C_sink_uncertainty_attribution (
         fig=plt.figure(figsize=(15,7))
         axs=fig.subplots(1,3)
         fig.suptitle('Average uncertainty contributions')                       
-        labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
-        colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' )   #"#EE9A00",       "#FFD39B")
-        labels_2 = ['NPP', 'τ']        
-        colors_2 = ("#4F94CD", "#FF8000") 
+        # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
+        # colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' )   #"#EE9A00",       "#FFD39B")
+        # labels_2 = ['NPP', 'τ']        
+        # colors_2 = ("#4F94CD", "#FF8000") 
+        labels = '$Δ NPP$', '$Δ τ_{veg}$', '$Δ τ_{soil}$', '$τ_{soil_0}$', '$τ_{veg_0}$', '$NPP_{0}$',
+        colors = ("#90EE90",   "#5CACEE",     "#63B8FF",     '#ffd8b1',       '#ffb16d', "#FFA07A",  )   #"#EE9A00",       "#FFD39B")
+        labels_2 = ['$ΔNPP$', '$Δτ$', 'init']        
+        # colors_2 = ("#02c14d", "#4F94CD","#FF8000")         
+        colors_2 = ("#308014", "#4682B4","red")   
         
         # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
         # colors = ("#43CD80",  "#90EE90",   "#5CACEE",     "#63B8FF",     "#FFA07A",       "#FFD39B")
         # labels_2 = ['NPP', 'τ']        
         # colors_2 = ("#3CB371", "#FF8247") 
         
-        # 1st half        
-        ax0=axs[0]; title='1913-1965'   
-        sizes = [npp_0_contrib_1_percent_global,
-                 delta_npp_contrib_1_percent_global, 
-                 tau_veg_0_contrib_1_percent_global,
-                 delta_tau_veg_contrib_1_percent_global,
-                 tau_soil_0_contrib_1_percent_global,                                
-                 delta_tau_soil_contrib_1_percent_global]
-        sizes_2 = [npp_0_contrib_1_percent_global+delta_npp_contrib_1_percent_global, 
-                 tau_veg_0_contrib_1_percent_global+delta_tau_veg_contrib_1_percent_global+
-                 tau_soil_0_contrib_1_percent_global+delta_tau_soil_contrib_1_percent_global]                  
-        pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
-                        text_displacement=[[2,-0.02],[3,0.05]], 
-                        pct_displacement=[[2,-0.02],[3,0.08]],
-                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
-        ax1=axs[1]; title='1965-2017'
-        sizes = [npp_1_contrib_2_percent_global,
-                 delta_npp_contrib_2_percent_global, 
-                 tau_veg_1_contrib_2_percent_global,
-                 delta_tau_veg_contrib_2_percent_global,
-                 tau_soil_1_contrib_2_percent_global,                                
-                 delta_tau_soil_contrib_2_percent_global]
-        sizes_2 = [npp_1_contrib_2_percent_global+delta_npp_contrib_2_percent_global, 
-                 tau_veg_1_contrib_2_percent_global+delta_tau_veg_contrib_2_percent_global+
-                 tau_soil_1_contrib_2_percent_global+delta_tau_soil_contrib_2_percent_global]                        
-        pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
-                        text_displacement=[[2,-0.02],[3,0.05]], 
-                        pct_displacement=[[2,-0.02],[3,0.08]],
-                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])        
+        # # 1st half        
+        # ax0=axs[0]; title='1913-1965'   
+        # sizes = [npp_0_contrib_1_percent_global,
+                 # delta_npp_contrib_1_percent_global, 
+                 # tau_veg_0_contrib_1_percent_global,
+                 # delta_tau_veg_contrib_1_percent_global,
+                 # tau_soil_0_contrib_1_percent_global,                                
+                 # delta_tau_soil_contrib_1_percent_global]
+        # sizes_2 = [npp_0_contrib_1_percent_global+delta_npp_contrib_1_percent_global, 
+                 # tau_veg_0_contrib_1_percent_global+delta_tau_veg_contrib_1_percent_global+
+                 # tau_soil_0_contrib_1_percent_global+delta_tau_soil_contrib_1_percent_global]                  
+        # pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        # text_displacement=[[2,-0.02],[3,0.05]], 
+                        # pct_displacement=[[2,-0.02],[3,0.08]],
+                        # font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
+        # # 2nd half
+        # ax1=axs[1]; title='1965-2017'
+        # sizes = [npp_1_contrib_2_percent_global,
+                 # delta_npp_contrib_2_percent_global, 
+                 # tau_veg_1_contrib_2_percent_global,
+                 # delta_tau_veg_contrib_2_percent_global,
+                 # tau_soil_1_contrib_2_percent_global,                                
+                 # delta_tau_soil_contrib_2_percent_global]
+        # sizes_2 = [npp_1_contrib_2_percent_global+delta_npp_contrib_2_percent_global, 
+                 # tau_veg_1_contrib_2_percent_global+delta_tau_veg_contrib_2_percent_global+
+                 # tau_soil_1_contrib_2_percent_global+delta_tau_soil_contrib_2_percent_global]                        
+        # pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        # text_displacement=[[2,-0.02],[3,0.05]], 
+                        # pct_displacement=[[2,-0.02],[3,0.08]],
+                        # font_size_change=[[2,14],[3,14],[4,14],[5,14]])        
         # total period
         ax2=axs[2]; title='1913-2017'
-        sizes = [npp_0_contrib_total_percent_global,
-                 delta_npp_contrib_total_percent_global, 
-                 tau_veg_0_contrib_total_percent_global,
-                 delta_tau_veg_contrib_total_percent_global,
-                 tau_soil_0_contrib_total_percent_global,                                
-                 delta_tau_soil_contrib_total_percent_global]
-        sizes_2 = [npp_0_contrib_total_percent_global+delta_npp_contrib_total_percent_global, 
-                 tau_veg_0_contrib_total_percent_global+delta_tau_veg_contrib_total_percent_global+
-                 tau_soil_0_contrib_total_percent_global+delta_tau_soil_contrib_total_percent_global]                                    
+        # sizes = [npp_0_contrib_total_percent_global,
+                 # delta_npp_contrib_total_percent_global, 
+                 # tau_veg_0_contrib_total_percent_global,
+                 # delta_tau_veg_contrib_total_percent_global,
+                 # tau_soil_0_contrib_total_percent_global,                                
+                 # delta_tau_soil_contrib_total_percent_global]
+        sizes = [delta_npp_contrib_total_percent_global,
+                 delta_tau_veg_contrib_total_percent_global,                 
+                 delta_tau_soil_contrib_total_percent_global,           
+                 tau_soil_0_contrib_total_percent_global,                    
+                 tau_veg_0_contrib_total_percent_global,                 
+                 npp_0_contrib_total_percent_global, 
+                ]
+        # sizes_2 = [npp_0_contrib_total_percent_global+delta_npp_contrib_total_percent_global, 
+                 # tau_veg_0_contrib_total_percent_global+delta_tau_veg_contrib_total_percent_global+
+                 # tau_soil_0_contrib_total_percent_global+delta_tau_soil_contrib_total_percent_global]  
+        sizes_2 = [delta_npp_contrib_total_percent_global, 
+                 delta_tau_veg_contrib_total_percent_global+delta_tau_soil_contrib_total_percent_global,
+                 npp_0_contrib_total_percent_global+tau_veg_0_contrib_total_percent_global+
+                 tau_soil_0_contrib_total_percent_global]                  
         pie_chart_nested (ax2, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
                         text_displacement=[[2,-0.02],[3,0.05]], 
                         pct_displacement=[[2,-0.02],[3,0.08]],
@@ -4533,6 +4682,15 @@ def C_storage_uncertainty_attribution (
             var3 = tau_soil_2_contrib_3_percent,                  
             )
  
+        rgba_map (mask=tau_soil_0_contrib_1_percent.mask, 
+            grid_red=tau_soil_0_contrib_1_percent/100, 
+            grid_green=npp_0_contrib_1_percent/100,  
+            grid_blue=tau_veg_0_contrib_1_percent/100,  
+            grid_alpha=np.zeros_like(X_0)+0.77,
+            #grid_alpha=np.ma.log(X_0)/np.ma.max(np.ma.log(X_0)),   
+            labels = ("$τ_{soil}$", "$NPP$", "$τ_{veg}$"),
+            title = "RGB map of "+biome+" uncertainty attribution")
+        
         # box plots
         uncert_var_name = "$X$ uncertainty"  
         uncert_var=X_2[X_2.mask==0].flatten()      
@@ -4622,7 +4780,37 @@ def C_storage_uncertainty_attribution (
         plt.show() 
         plt.rcParams.update(plt.rcParamsDefault)
      
-     
+def abc_to_rgb(A=0.0,B=0.0,C=0.0, enhance=1):
+    ''' Map values A, B, C (all in domain [0,1]) to
+    suitable red, green, blue values.'''
+    A=A/enhance; B=B/enhance; C=C/enhance    
+    if str(type(A))=="<class 'numpy.float64'>":    
+        A=np.min((A,1));B=np.min((B,1)); C=np.min((C,1))
+    else:
+        A[A>1]=1; B[B>1]=1; C[C>1]=1
+  
+    # rescale
+    # if str(type(A))=="<class 'numpy.float64'>":  
+        # color_max=np.max((A,B,C))
+    # else:    
+        # color_max=np.maximum(A,B,C)
+    # Red=A/color_max; Green=B/color_max; Blue=C/color_max
+    
+    # brighten
+    # Red=A*2; Green=B*2; Blue=C*2
+    # if str(type(A))=="<class 'numpy.float64'>":
+        # Red=min(Red,1.0); Green=min(Green,1.0); Blue=min(Blue,1.0)
+    # else:
+        # Red[Red>1]=1; Green[Green>1]=1; Blue[Blue>1]=1
+        
+    #Red=B+C; Green=A+C; Blue=A+B
+    #Red[Red>1]=1; Green[Green>1]=1; Blue[Blue>1]=1
+    
+    #return(Red, Green, Blue)
+    return(A,B,C)
+    #return (min(B+C,1.0),min(A+C,1.0),min(A+B,1.0))
+    #return min(A*3,1), min(B*3,1), min(C*3,1)
+            
 def subset_and_resample_nc_2(
             model_names, # dictionary e.g. "ab_classic":"CLASSIC"
             experiment_names, # e.g. ['S2', 'S3']
@@ -4979,6 +5167,7 @@ def ensamble_uncertainty_2 (
     model_folders=[(m) for m in model_names]
     m_names=list(model_names.values())
     g_mask=global_mask.index_mask
+    mask_corrected=global_mask.index_mask
     cols = px.colors.qualitative.Light24
     model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}    
     inv_mask_sum = inverse_mask_sum.index_mask
@@ -5068,7 +5257,7 @@ def ensamble_uncertainty_2 (
                 lons[:] = list(map(global_mask.tr.i2lon, range(n_lons)))               
                 # closing NetCDF file      
                 ds_new.close() 
-                                              
+                               
                 # add mean to the plot 
                 data_masked=mean[np.where(mean.mask==0)].flatten()
                 all_data.append(data_masked) 
@@ -5134,8 +5323,15 @@ def ensamble_uncertainty_2 (
 
     print('\033[1m'+'Done!'+'\033[0m')
     return (high_outlier_npp, high_outlier_veg, high_outlier_soil)
-    
-  
+
+def get_uncertainty_mask(path, output_path, global_mask):
+    ds = nc.Dataset(Path(path).joinpath("S3_cSoil_first_5_years_uncertainty.nc"))
+    var=ds.variables['cSoil_first_5_years_avd'][:, :]
+    ds.close()
+    mask=var.mask
+    corr_mask=gh.CoordMask(mask, global_mask.tr)
+    corr_mask.write_netCDF4(Path(output_path).joinpath("mask_corrected.nc"))
+    print("Mask written to: " + output_path)
         
 def plot_attribution_C_storage_global_mean (
     all_comp_dict,
