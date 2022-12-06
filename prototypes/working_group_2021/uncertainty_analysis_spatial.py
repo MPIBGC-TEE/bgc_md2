@@ -63,6 +63,8 @@ high_outlier_npp, high_outlier_veg, high_outlier_soil=moh.ensamble_uncertainty_2
         output_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
         )
 
+combined_global_mask=gh.globalMask(file_name="mask_corrected.nc") 
+
 print(high_outlier_npp)
 print(high_outlier_veg)
 print(high_outlier_soil)
@@ -469,67 +471,7 @@ moh.C_storage_uncertainty_attribution(
 #     )
 # -
 
-text_displacement=[[2,0.05],[3,-0.05]]
-text_displacement
-
-pct_displacement=[[2,0.05],[3,-0.08]]
-pct_displacement
-
-for i in text_displacement:
-    print(i[1])
-
-cont_var_names = [
-            "$NPP_{0}$", "Δ $NPP$",
-            "$τ_{veg_0}$", "Δ $τ_{veg}$",
-            "$τ_{soil_0}$", "Δ $τ_{soil}$"
-            ]   
-cont_var_names
-
-uncert_var_name = "$Δ X$" 
-uncert_var_name
-
-[uncert_var_name]+cont_var_names
-
-3.7e9
-
-subset="last_5_years"
-
-if subset in ["last_5_years", "diff_total"]:
-    print('yo')
-else: 
-    print('ne')
-
-a=np.array([1,2,3])
-b=np.array([7,8])
-a
-
-a=np.append(a,b)
-a
-
-(109-5)//2
-
-a=[1911, 1912, 1913,1914,1915,1916,1917,1918,1919,1920,1921, 1922, 1923,1924,1925,1926,1927]
-
-b=12
-b
-
-a[b]
-
-a[b:b+5]
-
-c=len(a)-5
-c
-
-a[c:c+5]
-
-a[0:5]
-
-1e5
-
-bb=np.array([1111,2222])
-aa=np.array(a)
-
-np.append(aa,bb)
+# ### Difference between scenarios / time periods
 
 moh.difference_computation(
     model_names=model_names,
@@ -590,5 +532,89 @@ moh.C_sink_difference_uncertainty_attribution(
     data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
     biome="Desert"
     )
+
+
+
+moh.get_uncertainty_mask(
+    path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    output_path='.',
+    global_mask=global_mask
+)
+
+# +
+import matplotlib.pyplot as plt
+import numpy as np
+import math
+
+def abc_to_rgb(A=0.0,B=0.0,C=0.0):
+    ''' Map values A, B, C (all in domain [0,1]) to
+    suitable red, green, blue values.'''
+    #return min(A*3,1), min(B*3,1), min(C*3,1)
+    return min(A/0.65,1), min(B/0.65,1), min(C/0.65,1)
+    #return 1 / max(A,B,C) * A , 1 / max(A,B,C) * B, 1 / max(A,B,C) * C    
+    #return (A,B,C)
+    #return (min(B+C,1.0),min(A+C,1.0),min(A+B,1.0))
+    ''' Plots a legend for the colour scheme
+    given by abc_to_rgb. Includes some code adapted
+    from http://stackoverflow.com/a/6076050/637562'''
+
+    # Basis vectors for triangle
+basis = np.array([[0.0, 1.0], [-1.5/np.sqrt(3), -0.5],[1.5/np.sqrt(3), -0.5]])
+
+
+    # Plot points
+a, b, c = np.mgrid[0.0:1.0:50j, 0.0:1.0:50j, 0.0:1.0:50j]
+a, b, c = a.flatten(), b.flatten(), c.flatten()
+abc = np.dstack((a,b,c))[0]
+#abc = list(filter(lambda x: x[0]+x[1]+x[2]==1, abc)) # remove points outside triangle
+abc = list(map(lambda x: x/sum(x), abc)) # or just make sure points lie inside triangle ...
+data = np.dot(abc, basis)
+colours = [abc_to_rgb(A=point[0],B=point[1],C=point[2]) for point in abc]
+fig = plt.figure()
+ax = fig.add_subplot(111,aspect='equal')
+
+ax.scatter(data[:,0], data[:,1],marker=',',edgecolors='none',facecolors=colours)
+
+    # Plot triangle
+ax.plot([basis[_,0] for _ in range(3)],[basis[_,1] for _ in range(3)],**{'color':'black','linewidth':3})
+ax.plot([1.5/np.sqrt(3),0],[-0.5,1],**{'color':'black','linewidth':3})
+    # Plot labels at vertices
+offset = 0.25
+fontsize = 32
+ax.text(basis[0,0]*(1+offset), basis[0,1]*(1+offset), '$A$', horizontalalignment='center',
+        verticalalignment='center', fontsize=fontsize)
+ax.text(basis[1,0]*(1+offset), basis[1,1]*(1+offset), '$B$', horizontalalignment='center',
+        verticalalignment='center', fontsize=fontsize)
+ax.text(basis[2,0]*(1+offset), basis[2,1]*(1+offset), '$C$', horizontalalignment='center',
+        verticalalignment='center', fontsize=fontsize)    
+
+ax.set_frame_on(False)
+ax.set_xticks(())
+ax.set_yticks(())
+plt.show()
+# -
+
+
+
+a=np.log(0.5)
+
+type(a)
+
+a=np.array([1,3,5,7,9])
+b=np.array([8,6,4,2,0])
+a,b
+
+c=np.maximum(a,b)
+c
+
+0.8/0.65
+
+
+0.8*1.25
+
+np.max((1,2,3))
+
+A=0.8
+np.min((A,1))
 
 
