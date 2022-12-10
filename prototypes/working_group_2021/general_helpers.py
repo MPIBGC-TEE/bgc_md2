@@ -2910,7 +2910,7 @@ def averaged_1d_array(arr, partitions):
 # fixme: possible obsolete = gh.averaged_1d_array
 def avg_timeline(timeline, averaging):  # array  # number of steps over which to average
     if averaging < 1:
-        raise Exception("Invalid averaging in gh.avg_timeline: should be >=1")
+        raise Exception("Invalid averaging in avg_timeline: should be >=1")
     output = timeline
     if averaging > 1:
         n = len(timeline) // averaging
@@ -3014,7 +3014,7 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
         )
 
     else:
-        gm=gh.globalMask(file_name="common_mask_all_models.nc")
+        gm=globalMask(file_name="common_mask_expanded.nc")
         # load an example file with mask
         # special case for YIBS that doesn't have a mask in all files ecept tas
         if model_folder=="jon_yib":
@@ -3028,18 +3028,18 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
                 # target=CoordMask(
                     # index_mask=np.zeros_like(template),
                     # tr=SymTransformers(
-                        # ctr=gh.msh(model_folder).make_model_coord_transforms(),
-                        # itr=gh.msh(model_folder).make_model_index_transforms()
+                        # ctr=msh(model_folder).make_model_coord_transforms(),
+                        # itr=msh(model_folder).make_model_index_transforms()
                     # )
                 # )
         # )
-        gcm=gh.resample_grid(
+        gcm=resample_grid(
             source_coord_mask=gm, 
-            target_coord_mask=gh.CoordMask(
+            target_coord_mask=CoordMask(
                     index_mask=np.zeros_like(template),
-                    tr=gh.SymTransformers(
-                        ctr=gh.msh(model_folder).make_model_coord_transforms(),
-                        itr=gh.msh(model_folder).make_model_index_transforms(), 
+                    tr=SymTransformers(
+                        ctr=msh(model_folder).make_model_coord_transforms(),
+                        itr=msh(model_folder).make_model_index_transforms(), 
                         ),
                     ),    
             var=gm.index_mask, 
@@ -3056,13 +3056,14 @@ def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
             vs=ds.variables
             lats= vs[lat_var].__array__()
             lons= vs[lon_var].__array__()
+            print(vn)
             var=ds.variables[vn]
             # check if we have a cached version (which is much faster)
             gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
             
             #model_mask = gh.msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
             #combined_mask = combine_masks ([model_mask,gcm])
-            gm=gh.global_mean_var(
+            gm=global_mean_var(
                     lats,
                     lons,
                     #combined_mask.index_mask,

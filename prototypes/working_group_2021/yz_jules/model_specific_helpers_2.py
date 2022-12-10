@@ -777,3 +777,19 @@ def start_date():
         month=1,
         day=16
     )
+
+def get_global_mean_vars_all(experiment_name):
+    return gh.get_global_mean_vars_all(
+        model_folder="yz_jules",
+        experiment_name=experiment_name,
+        lat_var="latitude",
+        lon_var="longitude",
+    )
+    
+data_str = namedtuple("data_str", ["npp_nlim","cVeg", "cSoil", "gpp", "rh"])    
+
+def nc_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
+    return experiment_name + "{}.nc".format(nc_var_name)
+    
+def nc_global_mean_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
+    return experiment_name + "{}_gm.nc".format(nc_var_name)

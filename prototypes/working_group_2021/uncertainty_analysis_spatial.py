@@ -261,6 +261,20 @@ moh.C_storage_uncertainty_attribution(
     biome="Temperate_Coniferous"
     )
 
+biome_mask=gh.globalMask(file_name="wwf_biomes_rasterized2.nc_mask_6.nc")
+moh.C_sink_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Boreal_Forest"
+    )
+moh.C_storage_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Boreal_Forest"
+    )
+
 biome_mask=gh.globalMask(file_name="wwf_biomes_rasterized2.nc_mask_7.nc")
 moh.C_sink_uncertainty_attribution(
     experiment_names=['S2','S3'],
@@ -329,6 +343,20 @@ moh.C_storage_uncertainty_attribution(
     global_mask=biome_mask,
     data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
     biome="Tundra"
+    )
+
+biome_mask=gh.globalMask(file_name="wwf_biomes_rasterized2.nc_mask_12.nc")
+moh.C_sink_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Mediterranean "
+    )
+moh.C_storage_uncertainty_attribution(
+    experiment_names=['S2','S3'],
+    global_mask=biome_mask,
+    data_path="C:\\Users\\kv248\\OneDrive - Cornell University\\Data\\Matrix MIP data\\TRENDY\\Ensemble",
+    biome="Mediterranean "
     )
 
 biome_mask=gh.globalMask(file_name="wwf_biomes_rasterized2.nc_mask_13.nc")
