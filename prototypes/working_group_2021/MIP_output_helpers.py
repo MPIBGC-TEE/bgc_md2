@@ -2368,9 +2368,9 @@ def rgba_map (mask, grid_red, grid_green, grid_blue, grid_alpha, labels, title, 
         width = grid_red.shape[1]
 
         array = np.zeros((height, width, 4))
-        array[:,:,0] = grid_red/0.65 # red
-        array[:,:,1] = grid_green/0.65 # green
-        array[:,:,2] = grid_blue/0.65 # blue
+        array[:,:,0] = grid_red#/0.65 # red
+        array[:,:,1] = grid_green#/0.65 # green
+        array[:,:,2] = grid_blue#/0.65 # blue
         array[:,:,3] = grid_alpha # alpha
         #array[:,:,3] = np.zeros_like(X_p_2d) # blue
         
@@ -2511,10 +2511,11 @@ def get_global_mean_uncertainty(dataPath,
                             experiment_name, # string, e.g. "S2"
                             data_str, # named tuple
                             avd,
+                            global_mask,
                             #lat_var,
                             #lon_var,
                             ):
-    gcm=gh.globalMask(file_name="common_mask_all_models.nc")
+    gcm=global_mask
     print("computing means, this may take some minutes...")
 
     def global_mean_var(
@@ -4042,8 +4043,8 @@ def pie_chart_nested (ax, title, sizes, sizes_2, labels, labels_2, colors, color
     n=ax.pie(sizes_2, labels=labels_2, labeldistance=0.3,
         startangle=90, counterclock=True, radius=0.4, colors=colors_2, 
         wedgeprops=dict(width=0.4, edgecolor='w'))   
-    for i in range(len(n[0])):
-        n[0][i].set_alpha(0.7)  
+    # for i in range(len(n[0])):
+        # n[0][i].set_alpha(0.7)  
     ax.axis('equal')   
 
 def box_plot_uncertainty (uncert_var_name, uncert_var, cont_var_names, cont_vars, title,
@@ -4140,7 +4141,7 @@ def C_sink_uncertainty_attribution (
         var_8[:, :] = np.ma.array(var3+var4, mask = mask.index_mask) 
         var_9 = ds_new.createVariable(subset_name+"_tau_soil", "float32", ["lat", "lon"])                
         var_9[:, :] = np.ma.array(var5+var6, mask = mask.index_mask)         
-        
+
 
         lats = ds_new.createVariable("lat", "float32", ["lat"])
         lats[:] = list(map(mask.tr.i2lat, range(n_lats)))
@@ -4148,12 +4149,12 @@ def C_sink_uncertainty_attribution (
         lons[:] = list(map(mask.tr.i2lon, range(n_lons)))        
         # closing NetCDF files     
         ds_new.close()         
-    
+
     print('\033[1m'+'*******Carbon Sink Uncertainty Attribution*******'+'\033[0m') 
     g_mask=global_mask.index_mask       
     for experiment in experiment_names:
         print('\033[1m'+experiment+'\033[0m')  
-        
+
         ### reading necesssary grids ###
         tau_0, tau_0_avd = read_uncert_file(data_path, experiment, "tau_first_5_years", g_mask)
         tau_1, tau_1_avd = read_uncert_file(data_path, experiment, "tau_middle_5_years", g_mask)
@@ -4186,9 +4187,9 @@ def C_sink_uncertainty_attribution (
         X_diff_1, X_diff_1_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_1st_half", g_mask)
         X_diff_2, X_diff_2_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_2nd_half", g_mask)
         X_diff_total, X_diff_total_avd = read_uncert_file(data_path, experiment, "C_ecosystem_diff_total", g_mask)
-       
+
         ### attribution of uncertainty in delta_X to npp, tau_veg and tau_soil ###
-        
+
         # 1st half
         delta_X_1 = X_diff_1_avd
         delta_npp_contrib_1 = abs(npp_diff_1_avd * tau_0)
@@ -4257,14 +4258,14 @@ def C_sink_uncertainty_attribution (
         write_new_NetCDF (
             experiment_name = experiment,
             mask = global_mask, 
-            subset_name = "first_half", 
+            subset_name = "first_half",
             var0 = delta_X_1,
             var1 = npp_0_contrib_1,
             var2 = delta_npp_contrib_1,
             var3 = tau_veg_0_contrib_1,
             var4 = delta_tau_veg_contrib_1,
             var5 = tau_soil_0_contrib_1,
-            var6 = delta_tau_soil_contrib_1,                   
+            var6 = delta_tau_soil_contrib_1,
             )
         write_new_NetCDF (
             experiment_name = experiment,
@@ -4290,7 +4291,7 @@ def C_sink_uncertainty_attribution (
             var5 = tau_soil_0_contrib_total,
             var6 = delta_tau_soil_contrib_total,                   
             )   
-         
+
         # computing and saving percent contributions
         # 1st half
         npp_0_contrib_1_percent = npp_0_contrib_1 / delta_X_1_propagated * 100
@@ -4350,31 +4351,30 @@ def C_sink_uncertainty_attribution (
             var5 = tau_soil_0_contrib_total_percent,
             var6 = delta_tau_soil_contrib_total_percent,                   
             )
-            
+
         # Red, Green, Blue = abc_to_rgb(
                         # (tau_soil_0_contrib_total_percent+delta_tau_soil_contrib_total_percent)/100,
                         # (npp_0_contrib_total_percent+delta_npp_contrib_total_percent)/100,     
                         # (tau_veg_0_contrib_total_percent+delta_tau_veg_contrib_total_percent)/100,                         
                         # )
         Red, Green, Blue = abc_to_rgb(
-                        (tau_veg_0_contrib_total_percent+npp_0_contrib_total_percent+tau_soil_0_contrib_total_percent)/100,         
-                        (delta_npp_contrib_total_percent)/100,    
-                        (delta_tau_soil_contrib_total_percent+delta_tau_veg_contrib_total_percent)/100,                        
-                                               
-                        )                        
+                        (tau_veg_0_contrib_total_percent+npp_0_contrib_total_percent+tau_soil_0_contrib_total_percent)/100,    
+                        (delta_npp_contrib_total_percent)/100,                             
+                        (delta_tau_soil_contrib_total_percent+delta_tau_veg_contrib_total_percent)/100,                                               
+                        )
         rgba_map (mask=global_mask,#tau_soil_0_contrib_1_percent.mask, 
             grid_red=Red, 
             grid_green=Green,  
             grid_blue=Blue,  
-            #grid_alpha=np.zeros_like(delta_X_total)+1,
+            grid_alpha=np.zeros_like(delta_X_total)+1,
             #grid_alpha=delta_X_total*100/np.ma.max(delta_X_total*100), 
-            grid_alpha=np.ma.log(delta_X_total*100)/np.ma.max(np.ma.log(delta_X_total*100)),   
+            #grid_alpha=np.ma.log(delta_X_total*100)/np.ma.max(np.ma.log(delta_X_total*100)),   
             #labels = ("$τ_{soil}$", "$NPP$", "$τ_{veg}$"),
             labels = ("initial τ & NPP", "$ΔNPP$","$Δτ$"),
             title = "RGB map of "+biome+" uncertainty attribution",
             out_file = Path(data_path).joinpath(experiment+"_C_sink_attribution_RGB_"+biome+".nc")
             )
-          
+
         # box plots
         uncert_var_name = "$Δ X$ uncertainty"  
         uncert_var=delta_X_total[delta_X_total.mask==0].flatten()      
@@ -4405,7 +4405,8 @@ def C_sink_uncertainty_attribution (
             ))  
         box_plot_uncertainty(uncert_var_name, uncert_var, cont_var_names, cont_vars, 
                             title = 'Spatial variability of uncertainty contributions (%)')
-        
+        print('Uncertainty mean: '+str(np.mean(uncert_var)))
+        print('Uncertainty sd: '+str(np.std(uncert_var)))
         # computing global (spatial) averages
         print("computing spatial means ...")        
   
@@ -4454,10 +4455,10 @@ def C_sink_uncertainty_attribution (
         # labels_2 = ['NPP', 'τ']        
         # colors_2 = ("#4F94CD", "#FF8000") 
         labels = '$Δ NPP$', '$Δ τ_{veg}$', '$Δ τ_{soil}$', '$τ_{soil_0}$', '$τ_{veg_0}$', '$NPP_{0}$',
-        colors = ("#90EE90",   "#5CACEE",     "#63B8FF",     '#ffd8b1',       '#ffb16d', "#FFA07A",  )   #"#EE9A00",       "#FFD39B")
+        colors = ("#90EE90",   "#6495ED",     "#63B8FF",     '#ffd8b1',       "#FFA07A", '#ffb16d',  )   #"#EE9A00",       "#FFD39B")
         labels_2 = ['$ΔNPP$', '$Δτ$', 'init']        
         # colors_2 = ("#02c14d", "#4F94CD","#FF8000")         
-        colors_2 = ("#308014", "#4682B4","red")   
+        colors_2 = ("#43CD80", "#4F94CD","#FF8247")   
         
         # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
         # colors = ("#43CD80",  "#90EE90",   "#5CACEE",     "#63B8FF",     "#FFA07A",       "#FFD39B")
@@ -4465,35 +4466,57 @@ def C_sink_uncertainty_attribution (
         # colors_2 = ("#3CB371", "#FF8247") 
         
         # # 1st half        
-        # ax0=axs[0]; title='1913-1965'   
+        ax0=axs[0]; title='1913-1965'   
         # sizes = [npp_0_contrib_1_percent_global,
                  # delta_npp_contrib_1_percent_global, 
                  # tau_veg_0_contrib_1_percent_global,
                  # delta_tau_veg_contrib_1_percent_global,
                  # tau_soil_0_contrib_1_percent_global,                                
                  # delta_tau_soil_contrib_1_percent_global]
+        sizes = [delta_npp_contrib_1_percent_global,
+                 delta_tau_veg_contrib_1_percent_global,
+                 delta_tau_soil_contrib_1_percent_global,
+                 tau_soil_0_contrib_1_percent_global,
+                 tau_veg_0_contrib_1_percent_global,
+                 npp_0_contrib_1_percent_global, 
+                ]
         # sizes_2 = [npp_0_contrib_1_percent_global+delta_npp_contrib_1_percent_global, 
                  # tau_veg_0_contrib_1_percent_global+delta_tau_veg_contrib_1_percent_global+
-                 # tau_soil_0_contrib_1_percent_global+delta_tau_soil_contrib_1_percent_global]                  
-        # pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
-                        # text_displacement=[[2,-0.02],[3,0.05]], 
-                        # pct_displacement=[[2,-0.02],[3,0.08]],
-                        # font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
-        # # 2nd half
-        # ax1=axs[1]; title='1965-2017'
+                 # tau_soil_0_contrib_1_percent_global+delta_tau_soil_contrib_1_percent_global]  
+        sizes_2 = [delta_npp_contrib_1_percent_global, 
+                 delta_tau_veg_contrib_1_percent_global+delta_tau_soil_contrib_1_percent_global,
+                 npp_0_contrib_1_percent_global+tau_veg_0_contrib_1_percent_global+
+                 tau_soil_0_contrib_1_percent_global]
+        pie_chart_nested (ax0, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        text_displacement=[[2,-0.02],[3,0.05]], 
+                        pct_displacement=[[2,-0.02],[3,0.08]],
+                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])             
+        # 2nd half
+        ax1=axs[1]; title='1965-2017'
         # sizes = [npp_1_contrib_2_percent_global,
                  # delta_npp_contrib_2_percent_global, 
                  # tau_veg_1_contrib_2_percent_global,
                  # delta_tau_veg_contrib_2_percent_global,
                  # tau_soil_1_contrib_2_percent_global,                                
                  # delta_tau_soil_contrib_2_percent_global]
+        sizes = [delta_npp_contrib_2_percent_global,
+                 delta_tau_veg_contrib_2_percent_global,
+                 delta_tau_soil_contrib_2_percent_global,
+                 tau_soil_1_contrib_2_percent_global,
+                 tau_veg_1_contrib_2_percent_global,
+                 npp_1_contrib_2_percent_global, 
+                ]                 
         # sizes_2 = [npp_1_contrib_2_percent_global+delta_npp_contrib_2_percent_global, 
                  # tau_veg_1_contrib_2_percent_global+delta_tau_veg_contrib_2_percent_global+
-                 # tau_soil_1_contrib_2_percent_global+delta_tau_soil_contrib_2_percent_global]                        
-        # pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
-                        # text_displacement=[[2,-0.02],[3,0.05]], 
-                        # pct_displacement=[[2,-0.02],[3,0.08]],
-                        # font_size_change=[[2,14],[3,14],[4,14],[5,14]])        
+                 # tau_soil_1_contrib_2_percent_global+delta_tau_soil_contrib_2_percent_global] 
+        sizes_2 = [delta_npp_contrib_2_percent_global, 
+                 delta_tau_veg_contrib_2_percent_global+delta_tau_soil_contrib_2_percent_global,
+                 npp_1_contrib_2_percent_global+tau_veg_1_contrib_2_percent_global+
+                 tau_soil_1_contrib_2_percent_global]                    
+        pie_chart_nested (ax1, title, sizes, sizes_2, labels, labels_2, colors, colors_2,
+                        text_displacement=[[2,-0.02],[3,0.05]], 
+                        pct_displacement=[[2,-0.02],[3,0.08]],
+                        font_size_change=[[2,14],[3,14],[4,14],[5,14]])        
         # total period
         ax2=axs[2]; title='1913-2017'
         # sizes = [npp_0_contrib_total_percent_global,
@@ -4681,16 +4704,17 @@ def C_storage_uncertainty_attribution (
             var2 = tau_veg_2_contrib_3_percent,
             var3 = tau_soil_2_contrib_3_percent,                  
             )
- 
-        rgba_map (mask=tau_soil_0_contrib_1_percent.mask, 
+        # RGB map of % contributions
+        rgba_map (mask=global_mask, 
             grid_red=tau_soil_0_contrib_1_percent/100, 
             grid_green=npp_0_contrib_1_percent/100,  
             grid_blue=tau_veg_0_contrib_1_percent/100,  
             grid_alpha=np.zeros_like(X_0)+0.77,
             #grid_alpha=np.ma.log(X_0)/np.ma.max(np.ma.log(X_0)),   
             labels = ("$τ_{soil}$", "$NPP$", "$τ_{veg}$"),
-            title = "RGB map of "+biome+" uncertainty attribution")
-        
+            title = "RGB map of "+biome+" uncertainty attribution",
+            out_file = Path(data_path).joinpath(experiment+"_C_storage_attribution_RGB_"+biome+".nc")
+            )
         # box plots
         uncert_var_name = "$X$ uncertainty"  
         uncert_var=X_2[X_2.mask==0].flatten()      
@@ -4783,11 +4807,11 @@ def C_storage_uncertainty_attribution (
 def abc_to_rgb(A=0.0,B=0.0,C=0.0, enhance=1):
     ''' Map values A, B, C (all in domain [0,1]) to
     suitable red, green, blue values.'''
-    A=A/enhance; B=B/enhance; C=C/enhance    
-    if str(type(A))=="<class 'numpy.float64'>":    
-        A=np.min((A,1));B=np.min((B,1)); C=np.min((C,1))
-    else:
-        A[A>1]=1; B[B>1]=1; C[C>1]=1
+    # A=A/enhance; B=B/enhance; C=C/enhance    
+    # if str(type(A))=="<class 'numpy.float64'>":    
+        # A=np.min((A,1));B=np.min((B,1)); C=np.min((C,1))
+    # else:
+        # A[A>1]=1; B[B>1]=1; C[C>1]=1
   
     # rescale
     # if str(type(A))=="<class 'numpy.float64'>":  
@@ -4797,17 +4821,17 @@ def abc_to_rgb(A=0.0,B=0.0,C=0.0, enhance=1):
     # Red=A/color_max; Green=B/color_max; Blue=C/color_max
     
     # brighten
-    # Red=A*2; Green=B*2; Blue=C*2
-    # if str(type(A))=="<class 'numpy.float64'>":
-        # Red=min(Red,1.0); Green=min(Green,1.0); Blue=min(Blue,1.0)
-    # else:
-        # Red[Red>1]=1; Green[Green>1]=1; Blue[Blue>1]=1
+    Red=A*2.5; Green=B*2.5; Blue=C*2.5
+    if str(type(A))=="<class 'numpy.float64'>":
+        Red=min(Red,1.0); Green=min(Green,1.0); Blue=min(Blue,1.0)
+    else:
+        Red[Red>1]=1; Green[Green>1]=1; Blue[Blue>1]=1
         
     #Red=B+C; Green=A+C; Blue=A+B
     #Red[Red>1]=1; Green[Green>1]=1; Blue[Blue>1]=1
     
-    #return(Red, Green, Blue)
-    return(A,B,C)
+    return(Red, Green, Blue)
+    #return(A,B,C)
     #return (min(B+C,1.0),min(A+C,1.0),min(A+B,1.0))
     #return min(A*3,1), min(B*3,1), min(C*3,1)
             
@@ -5260,10 +5284,11 @@ def ensamble_uncertainty_2 (
                                
                 # add mean to the plot 
                 data_masked=mean[np.where(mean.mask==0)].flatten()
-                all_data.append(data_masked) 
+                #all_data.append(data_masked) 
                
                 # plot spatial distributions
                 if subset in ["first_5_years", "diff_total"]:
+                    plt.rcParams.update({'font.size': 16})
                     # compute ylim from interquartile range
                     all_data_all=np.array([0])
                     for i in range(len(all_data)):all_data_all=np.append(all_data_all, all_data[i])
@@ -5295,6 +5320,12 @@ def ensamble_uncertainty_2 (
                         showmedians=False,
                         showextrema=False, 
                         )
+                    ax.set_xlabel('Individual model distributions')
+                    if vn in ['npp']:
+                        ax.set_ylabel('$NPP,$ $kg$ $yr^{-1}$')
+                    elif vn in ['tau','tau_veg','tau_soil']:
+                        ax.set_ylabel('$τ,$ $yr$')                        
+                    plt.tick_params(bottom = False, labelbottom = False)
                     m=0
                     for pc in parts['bodies']:
                         if m < len(m_names):
@@ -5310,7 +5341,7 @@ def ensamble_uncertainty_2 (
                     
                     if np.max(all_data_all)>1000:
                         ax.set_ylim([ymin,ymax+ymax//10])                       
-                    plt.xticks(range(1,len(m_names)+2),m_names+["Ensamble mean"],rotation=90)
+                    #plt.xticks(range(1,len(m_names)+2),m_names+["Ensamble mean"],rotation=90)
                     plt.show()
                    
                     # box plot
@@ -5318,8 +5349,15 @@ def ensamble_uncertainty_2 (
                     ax4.boxplot(all_data, flierprops={'marker': 'o', 'markersize': 2, 'markerfacecolor': 'orange', 'markeredgecolor':'#5B5B5B'})
                     ax4.set_title('Spatial variability - '+var_name)
                     ax4.grid(axis='y', linestyle='dashed')                
-                    plt.xticks(range(1,len(m_names)+2),m_names+["Ensamble mean"],rotation=90)
-                    plt.show()                    
+                    #plt.xticks(range(1,len(m_names)+2),m_names+["Ensamble mean"],rotation=90)
+                    ax4.set_xlabel('Individual model distributions')
+                    if vn in ['npp']:
+                        ax4.set_ylabel('$NPP,$ $kg$ $yr^{-1}$')
+                    elif vn in ['tau','tau_veg','tau_soil']:
+                        ax4.set_ylabel('$τ,$ $yr$')                        
+                    plt.tick_params(bottom = False, labelbottom = False)                    
+                    plt.show()  
+                    plt.rcParams.update(plt.rcParamsDefault)                      
 
     print('\033[1m'+'Done!'+'\033[0m')
     return (high_outlier_npp, high_outlier_veg, high_outlier_soil)
@@ -6320,7 +6358,7 @@ def C_sink_difference_uncertainty_attribution (
         var11 = npp_diff_init_contrib_Clim2_Clim1,
         var12 = npp_0_init_contrib_Clim2_Clim1,                   
         ) 
-     
+             
     # computing and saving percent contributions
     # S3_S2
     tau_soil_diff_contrib_S3_S2_percent = tau_soil_diff_contrib_S3_S2 / delta_X_S3_S2_propagated * 100
@@ -6387,6 +6425,33 @@ def C_sink_difference_uncertainty_attribution (
         var11 = npp_diff_init_contrib_Clim2_Clim1_percent,
         var12 = npp_0_init_contrib_Clim2_Clim1_percent,                  
         )
+      
+      
+    Red, Green, Blue = abc_to_rgb(
+                    (tau_soil_diff_init_contrib_S3_S2_percent+
+                     tau_soil_0_init_contrib_S3_S2_percent+
+                     tau_veg_diff_init_contrib_S3_S2_percent+
+                     tau_veg_0_init_contrib_S3_S2_percent+
+                     npp_diff_init_contrib_S3_S2_percent+
+                     npp_0_init_contrib_S3_S2_percent)/100,    
+                    (npp_diff_contrib_S3_S2_percent+npp_0_contrib_S3_S2_percent)/100,                             
+                    (tau_soil_diff_contrib_S3_S2_percent+tau_soil_0_contrib_S3_S2_percent+
+                     tau_veg_diff_contrib_S3_S2_percent+tau_veg_0_contrib_S3_S2_percent)/100,                                             
+                                           
+                    )                        
+    rgba_map (mask=global_mask,#tau_soil_0_contrib_1_percent.mask, 
+        grid_red=Red, 
+        grid_green=Green,  
+        grid_blue=Blue,  
+        grid_alpha=np.zeros_like(delta_X_S3_S2)+1,
+        #grid_alpha=delta_X_total*100/np.ma.max(delta_X_total*100), 
+        #grid_alpha=np.ma.log(delta_X_total*100)/np.ma.max(np.ma.log(delta_X_total*100)),   
+        #labels = ("$τ_{soil}$", "$NPP$", "$τ_{veg}$"),
+        labels = ("$τ$ $&$ $NPP$ $(no$ $LULCC)$", "$NPP$ $change$","$τ$ $change$"),
+        title = "RGB map of "+biome+" uncertainty attribution",
+        out_file = Path(data_path).joinpath(experiment+"_C_sink_S3_S2_attribution_RGB_"+biome+".nc")
+        )        
+      
       
     # box plots
     # uncert_var_name = "$Δ X$ uncertainty"  
@@ -6457,37 +6522,44 @@ def C_sink_difference_uncertainty_attribution (
     # delta_X_1 = global_mean_var_2d(global_mask, X_diff_1_avd, weight_mask=delta_X_1_masked) 
     # delta_X_2 = global_mean_var_2d(global_mask, X_diff_2_avd, weight_mask=delta_X_2_masked) 
     # delta_X_total = global_mean_var_2d(global_mask, X_diff_total_avd, weight_mask=delta_X_total_masked) 
-    
+
     # pie charts
-    plt.rcParams.update({'font.size': 11})
+    plt.rcParams.update({'font.size': 12})
     fig=plt.figure(figsize=(15,7))
     axs=fig.subplots(1,2)
     fig.suptitle('Average uncertainty contributions')                       
     #labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
     #colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' )   #"#EE9A00",       "#FFD39B")
     labels = ('$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$',
-              'initial contitions')
+              '$τ$ $&$ $NPP$ $(no$ $LULC)$')
               #'$NPP_{0}-init$', '$Δ NPP-init$', '$τ_{veg_0}-init$', '$Δ τ_{veg}-init$', '$τ_{soil_0}-init$', '$Δ τ_{soil}-init$'  )
-    colors = ("#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1' ,
+    colors = ("#66CD00",  "#90EE90",   "#6495ED",     "#6495ED",     '#836FFF',       '#63B8FF' ,
                # "#5CACEE",  "#63B8FF",   "#02c14d",     "#90EE90",     '#ffb16d',       '#ffd8b1')   
-              "#836FFF")
-    labels_2 = ['$NPP$', "τ", '$initial$']        
-    colors_2 = ("#4F94CD", "#FF8000","#836FFF") 
+              "#ffb16d")
+    labels_2 = ['$NPP$', "τ", '$S2$']        
+    colors_2 = ("#43CD80", "#4F94CD","#FF8247") 
     
     # labels = '$NPP_{0}$', '$Δ NPP$', '$τ_{veg_0}$', '$Δ τ_{veg}$', '$τ_{soil_0}$', '$Δ τ_{soil}$'
     # colors = ("#43CD80",  "#90EE90",   "#5CACEE",     "#63B8FF",     "#FFA07A",       "#FFD39B")
     # labels_2 = ['NPP', 'τ']        
     # colors_2 = ("#3CB371", "#FF8247") 
     
+    # labels = '$Δ NPP$', '$Δ τ_{veg}$', '$Δ τ_{soil}$', '$τ_{soil_0}$', '$τ_{veg_0}$', '$NPP_{0}$', '$τ$ $&$ $NPP$ $no$ $LULC$'
+    # colors = ("#90EE90",   "#6495ED",     "#63B8FF",     '#ffd8b1',       "#FFA07A", '#ffb16d',  )   #"#EE9A00",       "#FFD39B")
+    # labels_2 = ['$ΔNPP$', '$Δτ$', 'baseline']        
+    # # colors_2 = ("#02c14d", "#4F94CD","#FF8000")         
+    # colors_2 = ("#43CD80", "#4F94CD","#FF8247")   
+    
+    
     # S3_S2        
     ax0=axs[0]; title='Effect of Land Use Change'   
     sizes = [
-            npp_0_contrib_S3_S2_percent_global,
-            npp_diff_contrib_S3_S2_percent_global, 
-            tau_veg_0_contrib_S3_S2_percent_global,
-            tau_veg_diff_contrib_S3_S2_percent_global,             
-            tau_soil_0_contrib_S3_S2_percent_global,
-            tau_soil_diff_contrib_S3_S2_percent_global,         
+            npp_0_contrib_S3_S2_percent_global,   
+            npp_diff_contrib_S3_S2_percent_global,
+            tau_veg_0_contrib_S3_S2_percent_global,             
+            tau_veg_diff_contrib_S3_S2_percent_global,
+            tau_soil_0_contrib_S3_S2_percent_global,               
+            tau_soil_diff_contrib_S3_S2_percent_global,  
             (npp_0_init_contrib_S3_S2_percent_global+
             npp_diff_init_contrib_S3_S2_percent_global+  
             tau_veg_0_init_contrib_S3_S2_percent_global+
@@ -6498,8 +6570,8 @@ def C_sink_difference_uncertainty_attribution (
             ]
     sizes_2 = [
              npp_diff_contrib_S3_S2_percent_global+npp_0_contrib_S3_S2_percent_global,
-             tau_soil_diff_contrib_S3_S2_percent_global+tau_soil_0_contrib_S3_S2_percent_global+ 
-             tau_veg_diff_contrib_S3_S2_percent_global+tau_veg_0_contrib_S3_S2_percent_global,             
+             (tau_soil_diff_contrib_S3_S2_percent_global+tau_soil_0_contrib_S3_S2_percent_global+ 
+             tau_veg_diff_contrib_S3_S2_percent_global+tau_veg_0_contrib_S3_S2_percent_global),             
              tau_soil_diff_init_contrib_S3_S2_percent_global+tau_soil_0_init_contrib_S3_S2_percent_global+
              tau_veg_diff_init_contrib_S3_S2_percent_global+tau_veg_0_init_contrib_S3_S2_percent_global+
              npp_diff_init_contrib_S3_S2_percent_global+npp_0_init_contrib_S3_S2_percent_global             
