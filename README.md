@@ -1,4 +1,7 @@
+
 ![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/tree/test/HEAD?labpath=notebooks%2FillustrativeExamples%2FcreateModel.py)
 ## Installation
 
 Please read carefully before you  "Copy and paste", since some instructions only make sense for certain platforms.
