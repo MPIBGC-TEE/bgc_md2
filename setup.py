@@ -51,7 +51,10 @@ setup(
         "sympy",
         "xarray",
         "networkx",
-        "pygraphviz",
+        "IPython",
+        #"pygraphviz",
         "cf-units",
+        "frozendict",
+        #"nbformat" # for testing notebooks
     ]
 )
