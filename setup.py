@@ -55,6 +55,6 @@ setup(
         #"pygraphviz",
         "cf-units",
         "frozendict",
-        #"nbformat" # for testing notebooks
+        "nbformat", # for testing notebooks
     ]
 )
