@@ -13,11 +13,11 @@ jobs:
         #python-version: [3.6,3.7, 3.8]
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repository with submodules
       uses: actions/checkout@v2
+      with:
+      	submodules: recursive
 
-    - name: Checkout submodules
-      uses: textbook/git-checkout-submodule-action@master
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
