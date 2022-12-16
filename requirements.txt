@@ -5,7 +5,13 @@
 #bibtexparser>=1.0.1
 networkx 
 netCDF4
--e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
--e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
--e git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
+frozendict
+#-e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
+#-e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
+#-e git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
+#-e .
+-e src/testinfrastructure/
+-e src/LAPM/
+-e src/CompartmentalSystems/
+-e src/ComputabilityGraphs/
 -e .
