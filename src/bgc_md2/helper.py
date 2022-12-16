@@ -71,22 +71,18 @@ def bgc_md2_computers():
         ]
     )
 
-def computer_aliases():
-    comp_abbreviations = list_mult([ascii_lowercase for i in range(2)])
-    return frozendict({
-        v.__name__: comp_abbreviations[i]
-        for i, v in enumerate(bgc_md2_computers())
+def numbered_aliases(prefix, things):
+    comp_abbreviations = [f"{prefix}{i}" for i in range(100)] 
+    d = frozendict({
+        v: comp_abbreviations[i]
+        for i, v in enumerate(things)
     })
+    # provide an ordering function for the aliases
+    # to be used with sorted 
+    key = lambda alias: int(alias[len(prefix):])
+    return (d,key)
 
 
-def type_aliases():
-    var_abbreviations = list_mult([ascii_uppercase for i in range(2)])
-    allVars = cgh.all_mvars(bgc_md2_computers())
-    return frozendict({
-        name: var_abbreviations[i]
-        for i, name in enumerate(sorted(map(lambda v: v.__name__, allVars)))
-    })
-    # fixme mm:
 
 # @Thomas
 # If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense)

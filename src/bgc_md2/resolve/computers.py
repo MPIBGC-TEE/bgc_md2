@@ -100,27 +100,30 @@ def luo_Tau(
 #    rt:LuoRT
 #    T: Temperature
 #) -> TemperatureDerivativeOfRT:    
-    
+
+
 def aggregated_vegetation_carbon_influx(
         in_fluxes: InFluxesBySymbol,
         vcsvt: VegetationCarbonStateVariableTuple,
-    ) -> AggregatedVegetationCarbonInFlux:
+) -> AggregatedVegetationCarbonInFlux:
     return sum(
             [v for k, v in in_fluxes.items() if k in vcsvt] 
     )
 
+
 def aggregated_vegetation_carbon_outflux(
         out_fluxes: OutFluxesBySymbol,
         vcsvt: VegetationCarbonStateVariableTuple,
-    ) -> AggregatedVegetationCarbonOutFlux:
+) -> AggregatedVegetationCarbonOutFlux:
     return sum(
             [v for k, v in out_fluxes.items() if k in vcsvt] 
     )
 
+
 def aggregated_soil_carbon_outflux(
         out_fluxes: OutFluxesBySymbol,
         vcsvt: SoilCarbonStateVariableTuple,
-    ) -> AggregatedSoilCarbonOutFlux:
+) -> AggregatedSoilCarbonOutFlux:
     return sum(
             [v for k, v in out_fluxes.items() if k in vcsvt] 
     )

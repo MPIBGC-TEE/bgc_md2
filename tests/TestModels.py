@@ -11,8 +11,10 @@ class TestModels(TestCase):
     #@skip
     def test_all_computable_mvars_for_all_models(self):
         model_names = h.list_models(
-                #explicit_exclude_models=frozenset({'Hilbert1991AnnBot', 'Thomas2014GeosciModelDev'})
-                explicit_exclude_models=frozenset()
+                # The Thomas Model has a matrix that does not have full rank
+                # which consequently makes it not invertible
+                explicit_exclude_models=frozenset({'Thomas2014GeosciModelDev'})
+                #explicit_exclude_models=frozenset()
         )
         #print(model_names)
         for mn in model_names:

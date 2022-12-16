@@ -88,6 +88,12 @@ for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
     exec(code)
 
+# Note:
+# The use of exec to execute python code strings seems a bit funny 
+# The normal way woud be 
+# leaf = Symbol("leaf")...
+# ...
+# I_leaf
 t=TimeSymbol("t")
 
 mvs = CMTVS(
@@ -117,6 +123,7 @@ mvs = CMTVS(
 # I wanted to see the compartmental the pools, the matrix and the inputs.
 
 mvs.get_CompartmentalMatrix()
+
 
 mvs.get_CompartmentalMatrix()
 
@@ -277,3 +284,15 @@ og.jupyter_widget(
     type_aliases_tup=ta,
     given=mvs.provided_mvar_types
 )
+
+a=Symbol("a")
+
+from sympy import diff, lambdify
+diff(a**2,a)
+
+
+a_squared=lambdify(a,a**2)
+
+[ a_squared(i) for i in range(3)]
+
+

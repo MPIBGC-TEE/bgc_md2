@@ -93,7 +93,7 @@ span=4,
 below=top}{
 \resizebox*{!}{2cm}
 %\resizebox{90cm}{!}
-{ \bfseries Reproducible Carbon Cycle Models bgc\_md2 }\\[6mm]
+{ \bfseries Reproducible Carbon Cycle Models: \Large{bgc\_md2} }\\[6mm]
 { \bfseries Open Source Biogeochemical Model Database}\\[6mm]
 \begin{minipage}{150cm}
 \begin{center}
@@ -151,7 +151,7 @@ Jena, Germany
 }
 
 
-\posterbox[adjusted title=Model Creation Inspection and Querying]{
+\posterbox[adjusted title=Model Creation\, Inspection\, and Querying]{
   name=overview,
   column=1,
   below=title,
@@ -159,48 +159,77 @@ Jena, Germany
   %rowspan=2,
   %below=title,
   }{
+  \subsubsection*{Purpose}
+  The main purpose of the package is to make models
+  {\bf transparent}. One of the best ways to achieve this is to facilitate comparisons
+  to other models. It is also the most difficult to implement.
+  While it does not take much effort to make a model available on github, finding the right
+  generalizations to express {\bf many} models in a {\bf comparable} way faces two main difficulties.
+  \begin{itemize}
+  \item
+  To make common diagnostics available, generalizations that include all models have to be found.
+  \item
+  Since models are formulated in different ways, the language to describe them should 
+  not be restrictive but be as flexible as possible.
+  \end{itemize}
+  
+  Our approach is to compare not was is formulated in the model description but what is 
+  {\bf automatically computable} from its building blocks. 
+  E.g. models can be described using matrices
+  or fluxes, whichever way is closer to the original publication.
+  For equivalent formulations the same diagnostics are available.
+  The set of computable properties can be computed and used to query the database 
+  for candidates for a comparison even though property to be compared was never explicitly defined.
+  Some of our diagnostics, like transit times and mean ages would be difficult to implement 
+  on a per model basis, but become available to many models. 
+  Model formulation is not micromanaged, encouraging {\bf incomplete models} which can be inspected while 
+  they are developed, greatly simplifying the {\bf creation of new models}.
+  
   \subsubsection*{Development}
-	{ \bf bgc\_md2 } is an open source python package availabe on { \bf GitHub} , developed at the { \bf Max-Planck-Institut for BioGeoChemistry} in Jena and more recently  in Yiqi Luo's {\bf Ecolab} at NAU in Flagstaff and {\bf Cornell} in Ithaca.
-	It contains collection $>$ 30 published vegetation, soil or ecosystems models as {\bf python modules}
-  in a format suitable  for symbolic (\texttt{SymPy}) and numeric computations.
-	It provides as set of special datatypes that describe components of the models and functions that operate on these datatypes
-	and a computability graph library to {\bf compute what is computable} that can be used for queries and inspection,
-  enhancing the jupyter UI to assist the creation of new models. 
+	{ \bf bgc\_md2 } is an open source \texttt{python} package availabe on { \bf GitHub}.
+  Development started at the { \bf Max-Planck-Institut for BioGeoChemistry} in Jena in 2017 and more recently  continued in Yiqi Luo's {\bf ECO}LAB at NAU and {\bf Cornell}.
+	It contains more than 30 published vegetation, soil or ecosystems models as {\bf modules}
+  in a format suitable for symbolic (\texttt{SymPy}) and numeric computations.
+  It is a more powerful {\bf successor to  SoilR}. 
 
 \subsubsection*{Transparent Symbolic Analysis/ Numeric Computations/ Data Assimilation}
-	  \begin{itemize}
-	    \item 
-      interactive jupiter widget with a table of models (orange buttons can be clicked to 
-	    expand or collape a more detailed view of the particular model),
-	    \item 
-	    model inspection with pool connection graph, which can be derived from the symbolic description
-	    along other symbolic properties as flux equations and the compartmental matrix,
-	    \item 
-      Zoom into IPython/Jupyter UI showing methods automatically added by the computability graph library. 
-	    \end{itemize}
 	  
     \includegraphics[width=\columnwidth]{TabScreenCombined.pdf}
 	  \begin{itemize}
-	    \item 
-      Dataassimilation with automatically created numeric model (from symbolic description), 
-	    \item 
-      Computability graph for a desired diagnostic (aggregated Flux from the vegetation to soil part, showing 
-      that the user has to provide more information to compute the desired result)
+      \item Figure description, top row, left to right: 
+	    \begin{itemize}
+	      \item 
+        Interactive jupiter widget with a table of models (orange buttons can be clicked to 
+	      expand or collape a more detailed view of the particular model),
+	      \item 
+	      Model inspection with pool connection graph, which can be derived from the symbolic description
+	      along other symbolic properties as flux equations and the compartmental matrix,
+	      \item 
+        Zoom into IPython/Jupyter UI, showing methods automatically added by the computability graph library. 
+	    \end{itemize}
+    \item Bottom row:  
+	    \begin{itemize}
+	      \item 
+        Data assimilation with an automatically created numeric model (from symbolic description), 
+	      \item 
+        Computability graph for a desired diagnostic (aggregated Flux from the vegetation to soil part, showing 
+        that the additionally needed information to compute the desired result)
+	    \end{itemize}
 	  \end{itemize}
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\posterbox[adjusted title=Training Course]
-    {
-    name=course,
-    %column*=4,
-    column=1,
-    below=overview,
-    }{
-\begin{center}
-	  \includegraphics[width=.9\textwidth]{Slide_for_training_course.pdf}
-\end{center}
-}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
+%\posterbox[adjusted title=Training Course]
+%    {
+%    name=course,
+%    %column*=4,
+%    column=1,
+%    below=overview,
+%    }{
+%\begin{center}
+%	  \includegraphics[width=.9\textwidth]{Slide_for_training_course.pdf}
+%\end{center}
+%}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
 \posterbox[adjusted title=Model Inter Comparison]{
@@ -214,15 +243,47 @@ Jena, Germany
 \begin{multicols}{2}
 \begin{center}
   \includegraphics[width=\columnwidth]{atmosphere_nonlinear.pdf}
+Figure above: System age distribution for a pool in a compartmental carbon cycle model
 \end{center}
 \begin{center}
 	\includegraphics[width=\columnwidth]{test.pdf}
+  Figure above: Comparing three different measures of transit time for five different models, using
+  model reconstructions from trendy data.
 \end{center}
+
+\begin{minipage}[b]{\linewidth}
+\begin{center}
+	\includegraphics[width=\columnwidth]{test_veg_soil.pdf}
+  Figure above: Comparing the (real = transient) backward transit time through 
+  subsystems, accross different models. 
+\end{center}
+\end{minipage}
+
 \begin{center}
 	\includegraphics[width=\columnwidth]{test2_fine.pdf}
+  Figure above: Another possible diagnostic plot: All tranist time measures together for every model.
+  One model (DLEM) shows a very different behaviour.
 \end{center}
-	%\includegraphics[width=.32\columnwidth]{test_yearly.pdf}
-	%\includegraphics[width=.32\columnwidth]{test2_yearly.pdf}
+\begin{center}
+	\includegraphics[width=\columnwidth]{test_stock_mean.pdf}
+  Figure above: Total Carbon stock and subsystem stock development for different models.
+  \texttt{bgc\_md} only needs to be told which pools belong to which subsystem.
+\end{center}
+
+\subsubsection*{Many diagnostics for many models}
+\begin{itemize}
+\item
+  Many diagnostics (including those that are difficult to implement) available to all models 
+\item
+  Focus on model properties by exclusion of algorithmic differences
+  (diagnostics for all models are computed by the same function )
+\item
+  Higher reliability (>100 unittests for many parts of the library, newly discovered errors have to be fixed
+  only once)
+
+   
+\end{itemize}
+  
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \subsubsection*{References}
   \nocite{Luo2017Biogeosciences}
@@ -258,13 +319,21 @@ Jena, Germany
   
 %\section*{Structure} 
 \subsubsection*{Integration with python tools }
-  %\begin{itemize}
-  %\item
-   \texttt{bgc\_md2} can be used with all the normal python tools, \texttt{DASK, Jupyter, NumPy, SciPy, SymPy,\dots}
-  %\end{itemize}
-
-  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \subsubsection*{Sibling \texttt{python} packages}
+  \begin{itemize}
+  \item
+   Build around and usable with other \texttt{python} tools,( \texttt{DASK, Jupyter, NumPy, SciPy, SymPy,NetworkX\dots}). 
+  \item 
+  Only open source dependencies inside the python universe.
+  \item 
+  Thin frontend for other packages developed at the Max-Planck-Institute in Jena.
+    \begin{itemize}
+    \item
+        Computability graph computation outsourced into \texttt{ComputabilityGraphs} 
+    \item
+	    Advanced diagnostic variables (age and transittime distributions) 
+      provided by \texttt{LAPM} and \texttt{CompartmentalSystems} 
+    \end{itemize}
+  \end{itemize}
   \begin{center}
   \begin{tikzpicture}[sibling distance=27em,
     every node/.style = {shape=rectangle, rounded corners,
@@ -289,12 +358,11 @@ Jena, Germany
   \end{tikzpicture}
   \end{center}
 
-      \texttt{bgc\_md2} is a thin frontend to other \texttt{python} packages. 
-      The computability graph computation is outsourced into our package \texttt{ComputabilityGraphs} 
-	    Many of the advanced diagnostic variables (age and transittime distributions) are computed using our other packages \texttt{LAPM} and \texttt{CompartmentalSystems} for which \texttt{bgc\_md2} acts as interface.
-
-  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \subsubsection*{Internal Structure}
+  \begin{itemize}
+    \item
+      A collection of models, organized as subpackages
   \begin{center}
   \begin{tikzpicture}[%sibling distance=38em,
     every node/.style = {shape=rectangle, rounded corners,
@@ -332,30 +400,39 @@ Jena, Germany
       };
   \end{tikzpicture}
   \end{center}
-
-    \texttt{bgc\_md2} is not just a collection of models, described as sets of varible of special type like fluxes or matrice, but also 
-    a collection of functions whose arguments and return values have these types.
-    These functions are here called \texttt{computers} and use python type annotations.
-    The computability graph used in the user interface and queries is derived from the 
-    annotations of a set of functions.
-    The set of properties (defined by the types) can be easily expanded, as well as the functions connecting them.
+    \item 
+      Formulated as (arbitrarily small) sets of varibles of specific type, using 
+    \item 
+      A collection of special domain specific datatypes (like influxes or compartmental matrix), connected by
+    \item
+      A set of type annotated functions (computers), forming a network of computability.
+    \item
+      A central class \texttt{CMTVS} (ConnectedMultytypeVariableSet) facilitating the recursive derevation
+      of computable properties.
+    \item
+      Some helpers to interface with other packages e.g. enhancing the jupyter UI
+  \end{itemize}
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \subsubsection*{Database Records are \texttt{python} modules too}
+  %\subsubsection*{Database Records are \texttt{python} modules too}
   \includegraphics[width=\columnwidth]{source.py.png}
-    The picture shows the screen shot of the source code of the above model using sympy and some datatypes provided by \texttt{bgc\_md2}.
-    The entries of the database do not have to be complete models. They are implemented in normal python and 
-    have in common that they define a set of model properties and a set of functions to connect them.
-    wicht are summarized in a \texttt{CMTVS} object (ConnectedMultytypeVariableSet). 
-    The creation of all the variables including the the symbolic formulation can be automated by all means available in python.
-    Information can but does not have to be provided, and is used to dynamically determine what is computable.
+    Screenshot of the source code of the visit model using sympy and some datatypes provided by \texttt{bgc\_md2}
+    to create a \texttt{CMTVS}  instance representing the model for comparisons.
+     
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \subsubsection*{Expandability}
-  \texttt{bgc\_md2} and it's sibling packages can acquire new functionality in several ways.
-  Ranging from a project defining new models, to full integration by providing new Datatypes and functions
-  for the computability graphs.
-  
+  \subsubsection*{To Do / Development/ Levels of contribution}
+  \begin{itemize}
+    \item Easy:
+      Applcation of the existing functionality to more scientific questions and data,
+      formulation of new models (including {\bf yours}), 
+      improvement of the documentation (example notebooks, tests, and python docstrings)
+    \item Medium:
+      Implementation of new diagnostic variables and algorithms to compute them 
+    \item Final:
+      Integration of new building blocks and fucntions into the computability framework
+      to make them much more easily accessible
+  \end{itemize}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
 %\posterbox[adjusted title=References]{
@@ -383,7 +460,7 @@ Jena, Germany
 %  }
 %}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----
-\posterbox[adjusted title=Contact]
+\posterbox[adjusted title=Connect]
     {
     name=contact,
     %column*=4,
@@ -392,11 +469,15 @@ Jena, Germany
     %below=references,
     below=code,
     }{
-	  \includegraphics[height=5em]{qr_github.pdf}
-    \url{https://github.com/MPIBGC-TEE/bgc\_md2\#readme}
+	  \includegraphics[height=3.2em]{qr_github.pdf}
+    
+    \href{https://github.com/MPIBGC-TEE/bgc\_md2\#readme}{Readme on github}
     \\
-	  \includegraphics[height=5em]{qr_mm.pdf}
-    \url{mailto:markus.mueller.1.g@googlemail.com}
+	  \includegraphics[height=3.2em]{qr_tutorial.pdf}
+    \href{https://github.com/MPIBGC-TEE/bgc_md2/blob/test/notebooks/illustrativeExamples/createModel.ipynb}{A preliminary mini tutorial preview on github (in progress)}
+    \\
+	  \includegraphics[height=3.2em]{qr_mm.pdf}
+    \href{mailto:markus.mueller.1.g@googlemail.com}{Main developer email address}
 }
 \end{tcbposter}
 \end{document}

@@ -132,11 +132,12 @@ def yearly_averages(vals):
     n_days = vals.t.shape[0]
     step = int(360 / delta_t_val)
     parts = hr.partitions(0, n_days, step)
+    print(parts)
     return vals.averaged_values(parts)
 
 
 all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
-all_averaged_values2 = {mf : yearly_averages(vals) for mf,vals in all_values.items()}
+all_averaged_values2 = {mf : yearly_averages(vals) for mf,vals in all_values2.items()}
 
 def plot_time_lines_one_plot_per_model(
     value_dict,
@@ -209,7 +210,7 @@ desired_keys = [
 ]
 fontsize=16
 fsx=15
-fsy=25
+fsy=15
 fig = plt.figure(figsize=(fsx,fsy))
 fig.suptitle("Daily timelines of Transit Times and Approximations", fontsize=fontsize)
 plot_time_lines_one_plot_per_model(

@@ -48,6 +48,7 @@ from testinfrastructure.helpers import pp, pe
 # which requires that the model authors provide dimensions
 # for there variables
 
+
 class DictLike(frozendict):
     def subs(self,subsdict):
         res = {
@@ -55,6 +56,7 @@ class DictLike(frozendict):
                 for k,v in self.items()
         }
         return self.__class__(res)
+
 
 class InFluxesBySymbol(DictLike):
     pass
@@ -67,12 +69,14 @@ class OutFluxesBySymbol(DictLike):
 class InternalFluxesBySymbol(DictLike):
     pass
 
+
 class ConstOutFluxRatesBySymbol(DictLike):
     pass
 
 
 class ConstInternalFluxRateesBySymbol(DictLike):
     pass
+
 
 class CarbonInFluxesBySymbol(DictLike):
     pass
@@ -95,6 +99,9 @@ class VegetationCarbonInternalFluxesBySymbol(DictLike):
 
 
 class AggregatedVegetation2SoilCarbonFlux(Expr):
+    """The expression for the sum of all the fluxes 
+    starting in one of the vegetaion pools and targeting 
+    one of the soil pool."""
     pass
 
 

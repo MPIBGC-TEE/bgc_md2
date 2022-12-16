@@ -150,20 +150,25 @@ def yearly_averages(vals):
     parts = hr.partitions(0, n_days, step)
     return vals.averaged_values(parts)
 
+# for caching all values (dont do this if you have  RAM shortage}
+# take some minutes to compute
 all_values = {mf : syncronized_timelines_from_model_folder(mf) for mf in model_folders}
 all_averaged_values = {mf : yearly_averages(vals) for mf,vals in all_values.items()}
 value_dicts = [all_values, all_averaged_values]
 
+
 ###########################################################################################
 def plot_time_lines_one_plot_per_property(
     value_dict,
-	 title_dict,
-	 y_label_dict,
-	 desired_keys,
-	 style_dict,
-	 fig,
-     limit=None
-    ):
+    title_dict,
+    y_label_dict,
+    desired_keys,
+    style_dict,
+    fig,
+    limit=None,
+    ensemble_mean=False # only works for arrays that have the same dimensions
+    # for all models NOT for vectors or matrices
+):
     title_keys = title_dict.keys()
     axs = fig.subplots(len(desired_keys), 1)#, sharex=True)
     for mf, vals in value_dict.items():
@@ -171,7 +176,7 @@ def plot_time_lines_one_plot_per_property(
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
         td_AD = gh.td_AD(gh.test_args(mf).start_date)
-        c_times = [(td_AD + mt) / 360 for mt in vals.t]
+        c_times = [(td_AD + mt) / 360 for mt in vals['t']]
         for i,key in enumerate(desired_keys):
             ax = axs[i]
             ax.set_title(title_dict[key] if key in title_keys else key)
@@ -186,9 +191,59 @@ def plot_time_lines_one_plot_per_property(
                 label=model_names[mf],
                 # marker=marker_dict["system"],
             )
+            if key in y_label_dict.keys():
+                ax.set_ylabel(y_label_dict[key])
             #ax.legend()
 
+    if ensemble_mean:
+        style_dict.update({"ensemble_mean": {'color': "gray"}} )
+        def array_maen(array_list):
+            return sum(array_list)/len(array_list) 
+        ensemble_means = {
+            key: array_maen([ value_dict[mf][key]  for mf in model_folders]) 
+            for key in desired_keys
+        }
+        def array_variance(array_list,mean_arr):
+            return sum(
+                [(arr-mean_arr)**2 for arr in array_list]
+            )/(len(array_list)-1) 
 
+        ensemble_sigma = {
+            key: np.sqrt(array_variance(
+                [ value_dict[mf][key]  for mf in model_folders],
+                ensemble_means[key]
+            )) 
+            for key in desired_keys
+        }
+        for i, key in enumerate(desired_keys):
+            ax = axs[i]
+            y =ensemble_means[key]
+            if limit is not None:
+                y = y[0:limit]
+                c_times = c_times[0:limit]
+            ax.plot(
+                c_times,
+                y,
+                **style_dict["ensemble_mean"],
+                label="ensemble mean"
+                # marker=marker_dict["system"],
+            )
+            y1 =ensemble_means[key]-ensemble_sigma[key]
+            y2 =ensemble_means[key]+ensemble_sigma[key]
+            if limit is not None:
+                y1 = y1[0:limit]
+                y2 = y2[0:limit]
+                c_times = c_times[0:limit]
+            ax.fill_between(
+                c_times,
+                y1,
+                y2,
+                **style_dict["ensemble_mean"],
+                alpha=0.2,
+                label="$\sigma$ "
+
+                # marker=marker_dict["system"],
+            )
 
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(
@@ -199,8 +254,6 @@ def plot_time_lines_one_plot_per_property(
     )
 
 
-# for caching all values (dont do this if you have  RAM shortage}
-# take some minutes to compute
 
 model_cols = {
     "JULES": "blue",
@@ -217,7 +270,8 @@ title_dict={
     "system_continuous_mean_btt": "System backward transit time",
     "veg_continuous_mean_btt": "Vegetation subsystem backward transit time",
     "soil_continuous_mean_btt": "Soil subsystem backward transit time",
-    "system RT_sum": "System $\sum_i (RT)_i$",
+    "system_RT_sum": "System $\sum_i (RT)_i$, (Luo Equilibrium) Residence Time",
+    "system_tot":"System turn over time", 
 }
 
 y_label_dict={
@@ -232,7 +286,7 @@ desired_keys=[
     "x_dot",
     "veg_x",
     "soil_x",
-    "veg_continuous_mean_btt",
+    "system_continuous_mean_btt",
     "veg_continuous_mean_btt",
     "soil_continuous_mean_btt",
     'out_2_veg',
@@ -241,54 +295,132 @@ desired_keys=[
     'soil_2_out',
     "system_RT_sum",
     "system_tot", 
-    "veg_tot",   
+    "veg_tot",
     "soil_tot",
-
 ]
 fontsize=16
 fsx=15
 fsy=25
-style_dict = {mf: {'color': model_cols[model_names[mf]]} for mf in model_folders} 
-fig = plt.figure(figsize=(fsx,fsy))
+style_dict = {mf: {'color': model_cols[model_names[mf]]} for mf in model_folders}
+#############################################################################
+#fig = plt.figure(figsize=(fsx,10))
+#plot_time_lines_one_plot_per_property(
+#    value_dict=all_values, 
+#    title_dict=title_dict,
+#    y_label_dict=y_label_dict,
+#    desired_keys=[
+#        "system_continuous_mean_btt",
+#        "system_RT_sum",
+#        "system_tot", 
+#        # "veg_continuous_mean_btt",
+#        # "veg_tot",   
+#        # "soil_continuous_mean_btt",
+#        # "soil_tot",
+#    ],
+#    style_dict=style_dict,
+#    fig=fig,
+#    limit=int(5*360/delta_t_val), # 5 years
+#    #ensemble_mean=True
+#)
+#fig.suptitle("""Daily timelines of different measures of carbon transit""", fontsize=fontsize)
+##fig.tight_layout()
+#fig.subplots_adjust(
+#    left=0.1,
+#    bottom=0.1,
+#    right=0.9,
+#    top=0.90,
+#    wspace=0.4,
+#    hspace=0.7
+#)
+#fig.savefig("test.pdf")
+#
+############################################################################
+fig = plt.figure(figsize=(fsx,7))
 plot_time_lines_one_plot_per_property(
     value_dict=all_values, 
+    title_dict=title_dict,
+    y_label_dict=y_label_dict,
+    desired_keys=[
+         "veg_continuous_mean_btt",
+         #"veg_tot",   
+         "soil_continuous_mean_btt",
+         #"soil_tot",
+    ],
+    style_dict=style_dict,
+    fig=fig,
+    limit=int(5*360/delta_t_val), # 5 years
+    #ensemble_mean=True
+)
+fig.suptitle("""Daily timelines carbon transit times for vegetation and soil sub systems""", fontsize=fontsize)
+#fig.tight_layout()
+fig.subplots_adjust(
+    left=0.1,
+    bottom=0.1,
+    right=0.9,
+    top=0.90,
+    wspace=0.4,
+    hspace=0.7
+)
+fig.savefig("test_veg_soil.pdf")
+
+############################################################################
+############################################################################
+desired_keys=[
+    "x",
+    "veg_x",
+    "soil_x",
+]
+
+def array_diff0(arr):
+    return arr-arr[0]
+
+all_averaged_values_zero = {
+    mf:{key: array_diff0(vals[key]) if key !="t" else vals[key]
+    for key in vals.keys() } 
+    for mf,vals in all_averaged_values.items()
+}
+fig = plt.figure(figsize=(fsx,9))
+plot_time_lines_one_plot_per_property(
+    value_dict=all_averaged_values_zero, 
     title_dict=title_dict,
     y_label_dict=y_label_dict,
     desired_keys=desired_keys,
     style_dict=style_dict,
     fig=fig,
-    limit=int(5*360/delta_t_val) # 5 years
+    #limit=int(5*360/delta_t_val), # 5 years
+    ensemble_mean=True
 )
-fig.suptitle("Daily timelines of diagnostic model properties", fontsize=fontsize)
+fig.suptitle("Yearly averaged timelines of stocks spread ", fontsize=fontsize)
 #fig.tight_layout()
 fig.subplots_adjust(
     left=0.1,
     bottom=0.1,
     right=0.9,
-    top=0.95,
+    top=0.9,
     wspace=0.4,
     hspace=0.7
 )
-fig.savefig("test.pdf")
+fig.savefig("test_stock_mean.pdf")
 
-fig = plt.figure(figsize=(fsx,fsy))
-plot_time_lines_one_plot_per_property(
-    value_dict=all_averaged_values, 
-    title_dict=title_dict,
-    y_label_dict=y_label_dict,
-    desired_keys=desired_keys,
-    style_dict=style_dict,
-    fig=fig
-)
-fig.subplots_adjust(
-    left=0.1,
-    bottom=0.1,
-    right=0.9,
-    top=0.95,
-    wspace=0.4,
-    hspace=0.7
-)
-fig.suptitle("Yearly averaged timelines of diagnostic model properties", fontsize=fontsize)
-#fig.tight_layout()
-fig.savefig("test_yearly.pdf")
-###########################################################################################
+############################################################################
+#fig = plt.figure(figsize=(fsx,fsy))
+#plot_time_lines_one_plot_per_property(
+#    value_dict=all_averaged_values, 
+#    title_dict=title_dict,
+#    y_label_dict=y_label_dict,
+#    desired_keys=desired_keys,
+#    style_dict=style_dict,
+#    fig=fig
+#)
+#fig.subplots_adjust(
+#    left=0.1,
+#    bottom=0.1,
+#    right=0.9,
+#    top=0.95,
+#    wspace=0.4,
+#    hspace=0.7
+#)
+#fig.suptitle("Yearly averaged timelines of diagnostic model properties", fontsize=fontsize)
+##fig.tight_layout()
+#fig.savefig("test_yearly.pdf")
+############################################################################################
