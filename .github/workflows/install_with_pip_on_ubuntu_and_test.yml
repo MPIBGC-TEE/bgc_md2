@@ -14,13 +14,16 @@ jobs:
 
     steps:
     - name: Checkout repository
-    - uses: actions/checkout@v2
+      uses: actions/checkout@v2
+
     - name: Checkout submodules
-    - uses: textbook/git-checkout-submodule-action@master
+      uses: textbook/git-checkout-submodule-action@master
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev
@@ -29,6 +32,7 @@ jobs:
         #pip install  -r requirements.conda
         #pip install --use-feature=2020-resolver -r requirements.conda
         #pip install --use-feature=2020-resolver -r requirements.travis
+
     - name: Lint with flake8
       run: |
         pip install flake8
@@ -37,6 +41,7 @@ jobs:
         
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     - name: Test with unittest
       run: |
         cd tests
