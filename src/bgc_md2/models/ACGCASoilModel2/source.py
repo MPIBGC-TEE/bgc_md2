@@ -3,8 +3,8 @@ from sympy import Matrix, symbols
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 from ComputabilityGraphs.CMTVS import CMTVS
-
 from bgc_md2.helper import bgc_md2_computers
+
 from bgc_md2.resolve.mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
@@ -13,23 +13,43 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 
-# one wood product pool
-WP_S, WP_L = symbols("WP_S WP_L")
+# two litter pools (maybe fast and slow)
+Litter, CWD = symbols("Litter CWD")
 
-state_vector = Matrix([WP_S, WP_L])
+# one SOM pool
+SOM = symbols("SOM")
 
-WP_S_input, WP_L_input = symbols("WP_S_input WP_L_input")
+state_vector = Matrix([Litter, CWD, SOM])
+
+L1, L2 = symbols("L1 L2")
 input_fluxes = {
-    WP_S: WP_S_input,
-    WP_L: WP_L_input
+    Litter: L1,
+    CWD: L2
 }
 
-internal_fluxes = dict()
+# total turnover rate
+k_Litter, k_CWD, k_SOM = symbols("k_Litter k_CWD k_SOM")
 
-k_S, k_L = symbols("k_S k_L")
+# respiration fractions
+f_Litter, f_CWD = symbols("f_Litter f_CWD")
+
+# transition rates
+b_Litter = (1-f_Litter) * k_Litter
+b_CWD = (1-f_CWD) * k_CWD
+
+internal_fluxes = {
+    (Litter, SOM): b_Litter * Litter,
+    (CWD, SOM): b_CWD * CWD
+}
+
+r_Litter = f_Litter * k_Litter
+r_CWD = f_CWD * k_CWD
+r_SOM = 1.0 * k_SOM
+
 output_fluxes = {
-    WP_S: k_S * WP_S,
-    WP_L: k_L * WP_L
+    Litter: r_Litter * Litter,
+    CWD: r_CWD * CWD,
+    SOM: r_SOM * SOM
 }
 
 t = symbols("t")
@@ -51,4 +71,5 @@ mvs = CMTVS(
     },
     bgc_md2_computers()
 )
+
 

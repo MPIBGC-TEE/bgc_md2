@@ -33,6 +33,7 @@ f_L = symbols("f_L")
 f_R = symbols("f_R")
 f_O = symbols("f_O")
 f_T = symbols("f_T")
+f_CS = symbols("f_CS")
 
 # CUEs in production of leaves, roots, wood
 eta_L = zeta_dw / (zeta_gluc * C_gL)
@@ -48,14 +49,15 @@ MS = zeta_gluc/zeta_dw * R_mS * B_S_star
 # maintenance respiration correction term
 MR_C = symbols("MR_C")
 
+# growth respiration fluxes sapwood, separated
+G_OS_from_E = f_O * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+G_OS_from_CS = f_CS * (1-eta_W) * C_S
+G_TS = f_T * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+    
 # growth respiration fluxes for leaves, roots, sapwood
 GL = f_L * C_gL/(C_gL+delta_L) * (1-eta_L) * E
 GR = f_R * C_gR/(C_gR+delta_R) * (1-eta_R) * E
-GS = (f_O+f_T) * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+GS = G_OS_from_E + G_OS_from_CS + G_TS 
 
-# growth respiration fluxes sapwood, separated
-G_OS = f_O * C_gW/(C_gW+delta_W) * (1-eta_W) * E
-G_TS = f_T * C_gW/(C_gW+delta_W) * (1-eta_W) * E
-    
 # heartwood production rates from sapwood
 v_O, v_T = symbols("v_O v_T")

@@ -1,7 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.13.6
+# ---
 
-# In[1]:
+# %%
+
+# %%
 
 
 from dask.distributed import Client
@@ -22,7 +35,7 @@ from time import sleep
 
 #importlib.reload(bgc_md2.models.CARDAMOM.CARDAMOMlib)
 
-# In[2]:
+# %%
 
 def run_code():
     

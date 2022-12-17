@@ -1,7 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.13.6
+# ---
 
-# In[1]:
+# %%
+
+# %%
 
 
 import sys
@@ -17,7 +30,7 @@ from getpass import getuser
 import time
 
 
-# In[2]:
+# %%
 
 
 
@@ -47,7 +60,7 @@ import time
 # 
 # and in browser open `localhost:8081/status/`.
 
-# In[3]:
+# %%
 
 
 def compute_pwc_mr_fd_for_one_prob(prob_nr):
@@ -63,7 +76,7 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
     #ds
 
 
-# In[4]:
+# %%
 
 
     ms = CARDAMOMlib.load_model_structure_greg()
@@ -206,7 +219,7 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
         return fake_ds
 
 
-# In[5]:
+# %%
 
 
     chunk_dict = {"lat": 1, "lon": 1, 'prob': 1}
@@ -230,7 +243,7 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
     #ds_sub
 
 
-# In[6]:
+# %%
 
 
     def write_to_logfile(*args):
@@ -302,14 +315,14 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
         return res_ds
 
 
-# In[7]:
+# %%
 
 
     fake_ds = make_fake_ds(ds_sub).chunk(chunk_dict)
     ds_pwc_mr_fd = xr.map_blocks(func_chunk, ds_sub, template=fake_ds)
 
 
-# In[ ]:
+# %%
 
 
     c = ds_sub.chunks
@@ -329,7 +342,7 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
     write_to_logfile('done')
 
 
-# In[ ]:
+# %%
 
 
     ds.close()
@@ -340,7 +353,7 @@ def compute_pwc_mr_fd_for_one_prob(prob_nr):
     del ds_pwc_mr_fd
 
 
-# In[ ]:
+# %%
 
 
 if __name__ == "__main__":

@@ -17,25 +17,29 @@ from bgc_md2.models.ACGCA.__init__ import (
     t,
     GPP,
     E, C_S, B_OH, B_OS, B_TS,
-    MS, G_OS,
+    MS,
+    G_OS_from_E, G_OS_from_CS,
     S_O, f_O, C_gW, delta_W, eta_W, v_O,
     C_gHW,
-    zeta_dw, zeta_gluc
+    zeta_dw, zeta_gluc,
+    f_CS
 )
 
 # "other" means branches + coarse roots
 other_sv_set = set([
     E,
     C_S,
-    B_OS, B_OH
+    B_OS, B_OH,
+    G_OS_from_CS
 ])
 
 other_in_fluxes = {E: GPP}
 
 other_out_fluxes = {
-    E: MS + G_OS,
+    E: MS + G_OS_from_E,
     B_OS: S_O * B_OS,
-    B_OH: S_O * B_OH
+    B_OH: S_O * B_OH,
+    C_S: G_OS_from_CS
 }
 
 other_internal_fluxes = {
@@ -43,6 +47,9 @@ other_internal_fluxes = {
     (E, C_S): f_O * delta_W/(C_gW+delta_W) * E,
     (C_S, E): S_O * B_OS/(B_OS+B_TS) * C_S,
     (E, B_OS): f_O * C_gW/(C_gW+delta_W) * eta_W * E,
+
+    # use of reserves if necessary
+    (C_S, B_OS): f_CS * eta_W * C_S,
 
     # coarse roots and branches heartwood production
     (B_OS, B_OH): v_O * B_OS,

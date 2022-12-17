@@ -6,9 +6,13 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.6.0
+<<<<<<< HEAD
+#       jupytext_version: 1.13.6
+=======
+#       jupytext_version: 1.11.1
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -93,7 +97,7 @@ nr_pools = 6
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, None, 1), # done: (0, 50, 1)
+    "prob": slice(30, None, 1), # done: slice(0, 30, 1)
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -110,7 +114,8 @@ else:
 Bs_da = da.from_zarr(str(project_path.joinpath("Bs")))
 
 xs_da = da.from_zarr(str(project_path.joinpath("xs")))
-data_da = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_2")))
+#data_da = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_2")))
+data_da = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_4")))
 solution_da = data_da[:, :, :, :, 0, :]
 
 GPPs_da = da.from_zarr(str(project_path.joinpath("GPPs")))
@@ -122,12 +127,21 @@ xs_rel_err_da = xs_abs_err_da/xs_da * 100
 # age moment vectors
 mean_pool_age_vector_da = data_da[:, :, :, :, 1, :]
 pool_age_moment_vector_2_da = data_da[:, :, :, :, 2, :]
-pool_age_sd_vector_da = da.sqrt(pool_age_moment_vector_2_da)
+<<<<<<< HEAD
+pool_age_moment_vector_3_da = data_da[:, :, :, :, 3, :]
+pool_age_moment_vector_4_da = data_da[:, :, :, :, 4, :]
+=======
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
+pool_age_sd_vector_da = da.sqrt(pool_age_moment_vector_2_da - mean_pool_age_vector_da**2)
 
 # system age moments
 mean_system_age_da = (solution_da * mean_pool_age_vector_da).sum(-1) / solution_da.sum(-1)
 system_age_moment_2_da = (solution_da * pool_age_moment_vector_2_da).sum(-1) / solution_da.sum(-1)
-system_age_sd_da = da.sqrt(system_age_moment_2_da)
+<<<<<<< HEAD
+system_age_sd_da = da.sqrt(system_age_moment_2_da - mean_system_age_da)
+=======
+system_age_sd_da = da.sqrt(system_age_moment_2_da - mean_system_age_da**2)
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 
 ## pool age median and quantiles
 #pool_age_median_da = da.from_zarr(str(project_path.joinpath("pool_age_median")))
@@ -139,18 +153,32 @@ system_age_sd_da = da.sqrt(system_age_moment_2_da)
 #system_age_quantile_05_da = da.from_zarr(str(project_path.joinpath("system_age_quantile_05")))
 #system_age_quantile_95_da = da.from_zarr(str(project_path.joinpath("system_age_quantile_95")))
 
-# compute backward transit time moments
+# backward transit time moments
 if model_type == "continuous":
     external_output_vector_da = da.from_zarr(str(project_path.joinpath("external_output_vector")))
     mean_btt_da = (external_output_vector_da * mean_pool_age_vector_da).sum(-1) / external_output_vector_da.sum(-1)
     btt_moment_2_da = (external_output_vector_da * pool_age_moment_vector_2_da).sum(-1) / external_output_vector_da.sum(-1)
+    btt_moment_3_da = (external_output_vector_da * pool_age_moment_vector_3_da).sum(-1) / external_output_vector_da.sum(-1)
+    btt_moment_4_da = (external_output_vector_da * pool_age_moment_vector_4_da).sum(-1) / external_output_vector_da.sum(-1)
 elif model_type == "discrete":
     acc_net_external_output_vector_da = da.from_zarr(str(project_path.joinpath("acc_net_external_output_vector")))
     mean_btt_da = (acc_net_external_output_vector_da * mean_pool_age_vector_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
     btt_moment_2_da = (acc_net_external_output_vector_da * pool_age_moment_vector_2_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
+    btt_moment_3_da = (acc_net_external_output_vector_da * pool_age_moment_vector_3_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
+    btt_moment_4_da = (acc_net_external_output_vector_da * pool_age_moment_vector_4_da).sum(-1) / acc_net_external_output_vector_da.sum(-1)
 else:
     raise(TypeError("unknown model type '%s'" % model_type))
-btt_sd_da = np.sqrt(btt_moment_2_da)
+<<<<<<< HEAD
+
+# backward transtit time standard deviation
+btt_sd_da = np.sqrt(btt_moment_2_da - mean_btt_da**2)
+
+# backward transit time skewness and kurtosis
+btt_skewness_da = (btt_moment_3_da - 3*mean_btt_da*btt_sd_da - mean_btt_da**3) / btt_sd_da**3
+btt_kurtosis_da = (btt_moment_4_da - 4*mean_btt_da*btt_moment_3_da + 6*mean_btt_da**2*btt_moment_2_da - 3*mean_btt_da**4) / btt_sd_da**4
+=======
+btt_sd_da = np.sqrt(btt_moment_2_da - mean_btt_da**2)
+>>>>>>> 51abdd5b441c32b15468a441b9a452922d48e5e7
 
 # backward transit time median and quantiles
 btt_median_da = da.from_zarr(str(project_path.joinpath("btt_median")))
@@ -240,6 +268,10 @@ variables = [
     {"name": "mean_btt", "da": mean_btt_da/(31*12), "unit": "yr"},
     {"name": "btt_moment_2", "da": btt_moment_2_da/(31*12)**2, "unit": "yr^2"},
     {"name": "btt_sd", "da": btt_sd_da/(31*12), "unit": "yr"},
+    {"name": "btt_moment_3", "da": btt_moment_3_da/(31*12)**3, "unit": "yr^3"},
+    {"name": "btt_moment_4", "da": btt_moment_4_da/(31*12)**4, "unit": "yr^4"},
+    {"name": "btt_skewness", "da": btt_skewness_da, "unit": ""},
+    {"name": "btt_kurtosis", "da": btt_kurtosis_da, "unit": ""},
     
     {"name": "btt_median", "da": btt_median_da/(31*12), "unit": "yr"},
     {"name": "btt_quantile_05", "da": btt_quantile_05_da/(31*12), "unit": "yr"},
@@ -247,6 +279,7 @@ variables = [
     
     {"name": "GPP", "da": GPPs_da, "unit": "g/m^2"},
 ]
+   
 for d in variables:
     data_vars[d["name"]] = xr.DataArray(
         data=d["da"][slices["lat"], slices["lon"], slices["prob"]],
@@ -321,5 +354,17 @@ for prob in tqdm(arr):
     print("written", new_netCDF_filename)
 
 # **Then move the files from tmp one folder up by hand.**
+
+
+
+# ## Stub of a kurtosis and skewness computation of the backward transit time
+
+ds = xr.open_dataset("/home/data/CARDAMOM/Greg_2020_10_26/monthly_output/discrete/sol_acc_age_btt_00011.nc")
+ds
+
+import matplotlib.pyplot as plt
+plt.plot(ds.btt_kurtosis.isel(prob=0).mean(dim=["lat", "lon"]))
+
+plt.plot(ds.btt_skewness.isel(prob=0).mean(dim=["lat", "lon"]))
 
 

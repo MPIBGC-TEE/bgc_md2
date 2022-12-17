@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -61,15 +61,17 @@ Client(my_cluster)
 #
 # and open link given above.
 
-#time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
+time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 #time_resolution, delay_in_months, model_type = "monthly", None, "continuous"
 #time_resolution, delay_in_months, model_type = "yearly", 0, "continuous"
-time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
+#time_resolution, delay_in_months, model_type = "yearly", 6, "continuous"
 
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+
 output_path = data_path.joinpath(params["output_folder"])
 
 project_path = output_path.joinpath(model_type)
@@ -83,7 +85,13 @@ times_da = da.from_zarr(str(project_path.joinpath("time")))
 
 # +
 start_values_zarr = zarr.open(str(project_path.joinpath("start_values")))
-us_zarr = zarr.open(str(project_path.joinpath("us")))
+if model_type == "continuous":
+    us_zarr = zarr.open(str(project_path.joinpath("us")))
+elif model_type == "discrete":
+    Us_zarr = zarr.open(str(project_path.joinpath("Us")))
+else:
+    raise ValueError(f"Unknown model_type '{model_type}'")
+                     
 Bs_zarr = zarr.open(str(project_path.joinpath("Bs")))
 
 #xs_da = da.from_zarr(str(project_path.joinpath("xs")))
@@ -102,7 +110,7 @@ nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, 1, 1), # done (yearly_00) (0, 1, 1)
+    "prob": slice(40, None, 1), # done (monthly): (0, 50, 1)
 #    "lat": slice(28, 32, 1),
 #    "lon": slice(48, 52, 1),
 #    "prob": slice(0, 2, 1),
@@ -120,6 +128,10 @@ nr_lats, nr_lons, nr_probs, nr_times
 # use the first 120 months of the time series to average over us and Bs
 # take these averages and compute a fake equilibrium model to derive
 # the start age ditributions/moments from
+
+# order until which pool-age moments are being computed.
+# to be able to compute skweness and kurtosis of btt, the order needs to be at least 4
+up_to_order = 4
 
 # also compute the external outputs
 # with age_moments and external outputs we can then compute backward transit time moments
@@ -153,16 +165,16 @@ task_list = [
 #        "new_axis": [2, 3] # add one moment axis and one pool axis
 #    },
     {#0:
-        "computation": "age_moment_vectors_up_to_2",
+        "computation": f"age_moment_vectors_up_to_{up_to_order}",
         "overwrite": False,
         "func": CARDAMOMlib.compute_age_moment_vector_up_to,
-        "func_args": {"nr_time_steps": params["nr_time_steps"], "up_to_order": 2}, # nr_months for fake eq_model, up_to_order
+        "func_args": {"nr_time_steps": params["nr_time_steps"], "up_to_order": up_to_order}, # nr_months for fake eq_model, up_to_order
         "timeouts": [np.inf],
         "batch_size": 500,
-        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 3, nr_pools), # solution + 2 moments
-        "result_chunks": (1, 1, 1, nr_times_total, 3, nr_pools),
-        "return_shape": (1, nr_times, 3, nr_pools),
-        "meta_shape": (1, nr_times, 3, nr_pools),
+        "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, 1+up_to_order, nr_pools), # solution + up_to_order moments
+        "result_chunks": (1, 1, 1, nr_times_total, 1+up_to_order, nr_pools),
+        "return_shape": (1, nr_times, 1+up_to_order, nr_pools),
+        "meta_shape": (1, nr_times, 1+up_to_order, nr_pools),
         "drop_axis": [2, 3], # drop two pool axes of B
         "new_axis": [2, 3] # add one moment axis and one pool axis
     },
@@ -332,7 +344,7 @@ for task in task_list:
 # +
 # %%time
 
-for task in task_list:
+for task in task_list[:1]:
     CARDAMOMlib.run_task_with_mr(
         project_path,
         task,
@@ -340,27 +352,12 @@ for task in task_list:
         params["time_step_in_days"],
         times_da,
         start_values_zarr,
-        us_zarr,
+        us_zarr if model_type == "continuous" else Us_zarr,
         Bs_zarr,
         slices
     )
+# +
+# done
 # -
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -24,7 +24,7 @@ from bgc_md2.models.ACGCA.__init__ import (
     GPP,
     E, B_L, C_L, B_OS, B_OH, C_S, B_TH, B_TS, C_R, B_R,
     ML, GL, MR, GR,
-    MS, G_OS, G_TS,
+    MS, G_OS_from_E, G_OS_from_CS, G_TS,
     MR_C # watch out! maintenance resp correction term
 )
 
@@ -38,7 +38,7 @@ LR = hr.combine(leaves, roots, {}, {}, intersect)
 # other + trunk
 intersect = (
     {E: GPP, C_S: 0},
-    {E: MS + G_OS + G_TS, C_S: 0}
+    {E: MS + G_OS_from_E + G_TS, C_S: G_OS_from_CS}
 )
 
 OT = hr.combine(other, trunk, {}, {}, intersect)
@@ -46,7 +46,7 @@ OT = hr.combine(other, trunk, {}, {}, intersect)
 # complete model
 intersect = (
     {E: GPP, C_S: 0},
-    {E: ML + GL + MR + GR + MS + G_OS + G_TS + MR_C, C_S: 0} # MR_C = maintenance correction term
+    {E: ML + GL + MR + GR + MS + G_OS_from_E + G_TS + MR_C, C_S: G_OS_from_CS} # MR_C = maintenance correction term
 )
 
 LROT = hr.combine(LR, OT, {}, {}, intersect)
