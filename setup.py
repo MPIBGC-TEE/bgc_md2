@@ -57,5 +57,6 @@ setup(
         "frozendict",
         "nbformat", # for testing notebooks
         "dask",
+        "zarr",
     ]
 )
