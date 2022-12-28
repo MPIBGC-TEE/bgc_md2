@@ -1,18 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: ipynb,py:light
-#     text_representation:
-#       extension: .py
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.14.0
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
-
 # +
 # adjust the output to full width
 from IPython.display import HTML
@@ -262,37 +247,30 @@ types=cgh.all_mvars(computers)
 
 ca=h.numbered_aliases("f",computers)
 ta=h.numbered_aliases("T",types)
+# -
 
-# +
 import ComputabilityGraphs.or_graph_helpers as ogh
 from bgc_md2.resolve.mvars import AggregatedVegetation2SoilCarbonFlux
 
-og=ogh.t_tree(
+mvs.jupyter_widget(
     root_type=AggregatedVegetation2SoilCarbonFlux,
-    available_computers=computers,
-    avoid_types=frozenset({}),
-    #given_types=mvs.provided_mvar_types
-)
-#import matplotlib.pyplot as plt
-#ax=plt.subplot()
-#og.to_networkx_graph(avoid_types=ogh.TypeSet({})).draw_matplotlib(ax)
-og.psts
-# -
-
-og.jupyter_widget(
     computer_aliases_tup=ca,
-    type_aliases_tup=ta,
-    given=mvs.provided_mvar_types
+    type_aliases_tup=ta 
 )
 
-a=Symbol("a")
+# We look up the two "light red" = "not provided" Types in the legend 
+# and see that the only missing variables are SoilCarbonStateVariableTuple and 
+# VegetationCarbonStateVariableTuple
 
-from sympy import diff, lambdify
-diff(a**2,a)
+from bgc_md2.resolve.mvars import VegetationCarbonStateVariableTuple, SoilCarbonStateVariableTuple
+mvs=mvs.update([
+    VegetationCarbonStateVariableTuple((leaf,wood)),
+    SoilCarbonStateVariableTuple((leaf,wood)),
+])
 
 
-a_squared=lambdify(a,a**2)
+mvs.provided_mvar_types
 
-[ a_squared(i) for i in range(3)]
+mvs.get_AggregatedVegetation2SoilCarbonFlux()
 
 
