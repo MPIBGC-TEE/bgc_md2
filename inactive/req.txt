@@ -11,5 +11,5 @@ frozendict
 src/testinfrastructure
 src/ComputabilityGraphs
 src/LAPM
-#src/CompartmentalSystems
-#.
+src/CompartmentalSystems
+.
