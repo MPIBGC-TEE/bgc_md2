@@ -8,8 +8,8 @@ frozendict
 #-e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 #-e git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
 #-e .
-src/testinfrastructure
-src/ComputabilityGraphs
-src/LAPM
-src/CompartmentalSystems
-.
+-e src/testinfrastructure
+-e src/ComputabilityGraphs
+-e src/LAPM
+-e src/CompartmentalSystems
+-e .
