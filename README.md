@@ -1,6 +1,3 @@
-
-![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
-
 ![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation.yml/badge.svg)
 
 ![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install.yml/badge.svg)
