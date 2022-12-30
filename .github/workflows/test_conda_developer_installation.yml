@@ -1,4 +1,4 @@
-name: test_conda_developer_installation
+# name: test_conda_developer_installation
 
 on: [push]
 
