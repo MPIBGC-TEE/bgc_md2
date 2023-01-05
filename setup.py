@@ -56,7 +56,7 @@ setup(
         "cf-units",
         "frozendict",
         "nbformat", # for testing notebooks
-        "dask",
+        "dask[distributed]",
         "zarr",
     ]
 )
