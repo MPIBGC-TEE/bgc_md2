@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.3
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,63 +24,13 @@ import bgc_md2.helper as h
 model_inspection = h.MvarSetInspectionBox()
 
 from bgc_md2.resolve.mvars import CompartmentalMatrix, StateVariableTuple, VegetationCarbonInputPartitioningTuple,VegetationCarbonInputTuple
-from bgc_md2.resolve.MVarSet import MVarSet
-
-# This time we are only interested in Vegetation models and Carbon input partitioning. Therefore we look for models for which the variable
-# `VegetationCarbonInputPartitioningTuple` is defined or computable.
+from ComputabilityGraphs import CMTVS
 
 # +
-#li = h.list_target_models(
-#    target_classes=frozenset(
-#        {
-#            CompartmentalMatrix,
-#            StateVariableTuple,
-#            VegetationCarbonInputPartitioningTuple,
-#            VegetationCarbonInputTuple
-#            
-#        }
-#    ),
-#    # explicit_exclude_models=frozenset({'CARDAMOM'})
-#)
-#li    
+from bgc_md2.models.TECOmm.source  import mvs as mvs_mm
+
+h.compartmental_graph(mvs_mm)
 # -
-
-
-# From these we chose two models to investigate more thoroughly.
-#
-
-# +
-
-mvs_TECO =  MVarSet.from_model_name('TECOmm')
-# -
-
-mvs_TECO.get_InputTuple()
-
-B_TECO = mvs_TECO.get_CompartmentalMatrix();B_TECO
-
-
-# The matrices look structurally similar. Lets check if this is really the case.
-
-mvs_TECO.get_StateVariableTuple()
-
-# Ok, not very informative. Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
-
-bib_TECO=mvs_TECO.get_BibInfo();bib_TECO.sym_dict
-
-
-# We can see that although the matrix structures are identical the meaning of the state variables differs between the two models!
-
-[bib_TECO.sym_dict[str(sym)] for sym in mvs_TECO.get_StateVariableTuple()]
-
-# +
-
-mvs_TECO.provided_mvar_types
-
-
-# -
-
-
-mvs_mm =  MVarSet.from_model_name('TECOmm')
 
 for key,fl in mvs_mm.get_InternalFluxesBySymbol().items():
     print(key);display(fl) 
@@ -134,7 +84,8 @@ combined = (
 )
 sv_set_veg = frozenset(mvs_mm.get_VegetationCarbonStateVariableTuple())
 
-state_vector_soil = Matrix([C_fastsom,C_slowsom,C_passsom])
+from sympy import Matrix,Symbol
+state_vector_soil = Matrix([Symbol(s) for s in ["C_fastsom" ,"C_slowsom" ,"C_passsom"]])
 # Probably the litter pools would be also  considered to be part of the soil subsystem.
 # I just wanted to show that the division does not have tp be complete
 # state_vector_soil = Matrix([C_metlit,C_stlit,C_fastsom,C_slowsom,C_passsom])
@@ -150,13 +101,27 @@ part_dict =  {
     sv_set_veg:'green',
     sv_set_soil:'brown',
 }
+
+
+import igraph as ig
+import matplotlib.pyplot as plt
+#g = ig.Graph(n=10, edges=[[0, 1], [0, 5]])
+Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(), in_fluxes, internal_fluxes, out_fluxes)
+g=ig.Graph.from_networkx(Gnx)
+type(Gnx)
+l=g.layout_sugiyama()
+#ig.plot(g,layout=g.layout_sugiyama())
+
 hr.igraph_part_plot(
     mvs_mm.get_StateVariableTuple(),
     in_fluxes,
     internal_fluxes,
     out_fluxes,
-    part_dict
+    part_dict,
 )
+
+mvs_mm.provided_mvar_types
+
 
 #Now we can compute the vegetation cycling matrix
 hr.compartmental_matrix_2(
