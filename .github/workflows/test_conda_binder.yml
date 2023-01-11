@@ -32,5 +32,5 @@ jobs:
         conda env create -f environment.yml 
   
     - name: run test suites
-        run: ./github/workflows/run_test_suites.sh
-        shell: bash
+      run: ./github/workflows/run_test_suites.sh
+      shell: bash
