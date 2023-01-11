@@ -1,4 +1,4 @@
-name: conda_binder
+name: test_conda_binder
 
 on: [push]
 
@@ -33,4 +33,4 @@ jobs:
   
   # run tests same for all build workflows
   call-workflow:
-    uses: MPIBGC-TEE/bgc_md2/.github/workflows/tests.yml@binder
+    uses: MPIBGC-TEE/bgc_md2/.github/workflows/tests.yml
