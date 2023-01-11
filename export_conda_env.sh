@@ -1,7 +1,2 @@
-suffix="_$(whoami)_$(date -Iminutes)_$(hostname)"
-path=conda_environment_files/environment${suffix}.yml
-
-conda env export > $path
-echo "env saved in $path."
-echo "To create an exact copy type:"
-echo "conda env create -f $path"
+conda env remove -n binder
+conda env create -f environment.yml && conda activate binder && ./postBuild && conda env export > environment.yml
