@@ -1,6 +1,9 @@
 on:
   workflow_call:
 
+jobs:
+  tests:
+    steps:
     - name: Test with unittest
       run: |
         cd tests
