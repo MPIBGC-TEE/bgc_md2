@@ -1,0 +1,53 @@
+# runs the tests in a binder env without version pinning 
+# this checks that the upgrade path is clear
+name: test_conda_binder_free
+
+on: 
+  push:
+    branches:      
+      - binder # only executed when something is pushed to the binder branch 
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7.12]
+        #python-version: [3.6]
+        #python-version: [3.6,3.7, 3.8]
+
+    steps:
+    - name: Checkout repo and submodules
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+        #remote: # optional
+        repository: MPIBGC-TEE/bgc_md2
+        token: ${{ secrets.ACCESS_TOKEN }}
+
+    
+    - name: Set up conda 
+      uses: s-weigand/setup-conda@v1
+      with:
+        update-conda: true
+        python-version: ${{ matrix.python-version }}
+        conda-channels: anaconda, conda-forge
+    - run: conda --version
+
+    - run: |
+        which python
+        python --version
+
+    - name: create prerequisite environment
+      run: |
+        conda env create -f environment_free.yml 
+
+    - name: run setup.py scripts
+      run: ./postBild
+      shell: bash
+	
+  
+    - name: run test suites
+      run: ./.github/workflows/run_test_suites.sh
+      shell: bash
