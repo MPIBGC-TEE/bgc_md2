@@ -36,7 +36,6 @@ jobs:
         sudo chmod -R 777 . 
         ./install_developer_conda.sh
 
-  # run tests same for all build workflows
-  call-workflow:
-    uses: MPIBGC-TEE/bgc_md2/.github/workflows/tests.yml
+    - name: run test suites
+        run ./.github/workflows/run_test_suites.sh
         
