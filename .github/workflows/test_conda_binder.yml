@@ -1,6 +1,9 @@
 name: test_conda_binder
 
-on: [push, binder] # only executed when something is pushed to the binder branch 
+on: 
+  push:
+    branches:      
+      - binder # only executed when something is pushed to the binder branch 
 
 jobs:
   build:
