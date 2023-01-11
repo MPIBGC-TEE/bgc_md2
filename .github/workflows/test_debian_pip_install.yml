@@ -1,4 +1,4 @@
-# name: test_debian_pip_install
+name: test_debian_pip_install
 
 on: [push]
 
