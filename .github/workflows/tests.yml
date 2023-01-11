@@ -1,0 +1,37 @@
+on:
+  workflow_call:
+
+    - name: Test with unittest
+      run: |
+        cd tests
+        python -m unittest discover -t . -p 'Test*'
+        
+        
+    - name: test working_group_2021 
+      run: |
+        cd prototypes/working_group_2021
+        python -m unittest Test_general_helpers.py
+    
+
+    - name: test notebooks
+      run: |
+        cd notebooks
+        pytest --nbmake "./"
+        
+    - name: Test with unittest
+      run: |
+        cd tests
+        python -m unittest discover -t . -p 'Test*'
+        
+        
+    - name: test working_group_2021 
+      run: |
+        cd prototypes/working_group_2021
+        python -m unittest Test_general_helpers.py
+    
+
+    - name: test notebooks
+      run: |
+        cd notebooks
+        pytest --nbmake "./"
+        
