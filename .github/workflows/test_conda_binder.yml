@@ -33,4 +33,4 @@ jobs:
   
     - name: run test suites
         run: ./github/workflows/run_test_suites.sh
-        shell bash
+        shell: bash
