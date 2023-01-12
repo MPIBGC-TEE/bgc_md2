@@ -24,24 +24,23 @@ jobs:
           repository: MPIBGC-TEE/bgc_md2
           token: ${{ secrets.ACCESS_TOKEN }}
 
-      
-      - name: Set up conda 
+      - name: Set up conda
         # uses: s-weigand/setup-conda@v1
         # with:
         #   update-conda: true
         #   environment-file: environment_free.yml
         #   #python-version: ${{ matrix.python-version }}
         #   conda-channels: anaconda, conda-forge
-          uses: conda-incubator/setup-miniconda@v2
-          with:
-            miniconda-version: "latest"
-            channels: anaconda, conda-forge
-            activate-environment: binder
-            auto-activate-base: false
-            auto-update-conda: true
-            environment-file: environment_free.yml
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          channels: anaconda, conda-forge
+          activate-environment: binder
+          auto-activate-base: false
+          auto-update-conda: true
+          environment-file: environment_free.yml
 
-      - run: conda --version
+      - n: conda --version
       - run: |
           which python
           python --version
@@ -49,9 +48,10 @@ jobs:
         run: |
           #conda env create -f environment.yml
           conda activate binder || true
-        	./postBild
-        	shell: bash -1 {0}
-  
+            ./postBuild
+            shell: bash -1 {0}
+
       - name: run test suites
-        run: ./.github/workflows/run_test_suites.sh
-        	shell: bash -1 {0}
+        run: |
+          ./.github/workflows/run_test_suites.sh
+          shell: bash -1 {0}

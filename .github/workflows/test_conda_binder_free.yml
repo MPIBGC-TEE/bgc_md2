@@ -48,7 +48,7 @@ jobs:
 
       - name: run setup.py scripts
         run: |
-          ./postBild
+          ./postBuild
           shell: bash -1 {0}
 
       - name: run test suites
