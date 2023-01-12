@@ -1,4 +1,5 @@
 #global variable for sum of return values
+conda activate binder
 fail=0 
 in_dir_command(){
 	cd $1

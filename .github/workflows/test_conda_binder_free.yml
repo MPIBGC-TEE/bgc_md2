@@ -11,11 +11,11 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7.12]
-        #python-version: [3.6]
-        #python-version: [3.6,3.7, 3.8]
+    #strategy:
+    #  matrix:
+    #    python-version: [3.7.12]
+    #    #python-version: [3.6]
+    #    #python-version: [3.6,3.7, 3.8]
 
     steps:
     - name: Checkout repo and submodules
@@ -31,7 +31,7 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
-        python-version: ${{ matrix.python-version }}
+        #python-version: ${{ matrix.python-version }}
         conda-channels: anaconda, conda-forge
     - run: conda --version
 
@@ -41,7 +41,7 @@ jobs:
 
     - name: create prerequisite environment
       run: |
-        conda env create -f environment_free.yml; conda activate binder 
+        conda env create -f environment_free.yml
 
     - name: run setup.py scripts
       run: ./postBild
