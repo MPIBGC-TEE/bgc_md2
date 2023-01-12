@@ -31,13 +31,13 @@ jobs:
       #uses: s-weigand/setup-conda@v1
       uses: conda-incubator/setup-miniconda@v2
       with:
-        #python-version: ${{ matrix.python-version }}
-	miniconda-version: "latest"
-      	channels: anaconda, conda-forge
-	activate-environment: binder
-	auto-activate-base: false
+        miniconda-version: "latest"
+        channels: anaconda, conda-forge
+        activate-environment: binder
+        auto-activate-base: false
         auto-update-conda: true
         environment-file: environment_free.yml
+        #python-version: ${{ matrix.python-version }}
 
     - name: check python version
       run: |
