@@ -40,8 +40,8 @@ jobs:
           auto-update-conda: true
           environment-file: environment_free.yml
 
-      - n: conda --version
-      - run: |
+      - name: check python version
+        run: |
           which python
           python --version
       - name: Install dependencies
