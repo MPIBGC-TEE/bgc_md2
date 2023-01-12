@@ -9,13 +9,11 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    #strategy:
-    #  matrix:
-    #    python-version: [3.7.12]
-    #    #python-version: [3.6]
-    #    #python-version: [3.6,3.7, 3.8]
 
     steps:
+      defaults:
+        run:
+	  shell: bash -l {0}
       - name: Checkout repo and submodules
         uses: actions/checkout@v2
         with:
@@ -43,9 +41,7 @@ jobs:
           #conda env create -f environment.yml
           conda activate binder || true
             ./postBuild
-            shell: bash -1 {0}
 
       - name: run test suites
         run: |
           ./.github/workflows/run_test_suites.sh
-          shell: bash -1 {0}

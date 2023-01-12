@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      defaults:
+        run:
+	  shell: bash -l {0}
       - name: Checkout repo and submodules
         uses: actions/checkout@v2
         with:
@@ -42,9 +45,7 @@ jobs:
       - name: run setup.py scripts
         run: |
           ./postBuild
-        shell: bash -1 {0}
 
       - name: run test suites
         run: |
           ./.github/workflows/run_test_suites.sh
-        shell: bash -1 {0}
