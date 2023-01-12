@@ -31,6 +31,7 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
+	environment-file: environment_free.yml
         #python-version: ${{ matrix.python-version }}
         conda-channels: anaconda, conda-forge
     - run: conda --version
@@ -39,15 +40,13 @@ jobs:
         which python
         python --version
 
-    - name: create prerequisite environment
-      run: |
-        conda env create -f environment_free.yml
-
     - name: run setup.py scripts
-      run: ./postBild
-      shell: bash
-	
+      run: |
+        #conda env create -f environment_free.yml
+        conda activate binder || true
+        ./postBild
+        shell: bash -1 {0}
   
     - name: run test suites
       run: ./.github/workflows/run_test_suites.sh
-      shell: bash
+      	shell: bash -1 {0}

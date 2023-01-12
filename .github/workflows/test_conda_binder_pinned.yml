@@ -40,9 +40,9 @@ jobs:
       run: |
         #conda env create -f environment.yml
 	conda activate binder || true
-      	run: ./postBild
+      	./postBild
       	shell: bash -1 {0}
   
     - name: run test suites
       run: ./.github/workflows/run_test_suites.sh
-      shell: bash -1 {0}
+      	shell: bash -1 {0}
