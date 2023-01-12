@@ -50,11 +50,11 @@ jobs:
 
     - name: run setup.py scripts
       run: |
-      	./postBild
-      	shell: bash -1 {0}
+        ./postBild
+        shell: bash -1 {0}
 	
   
     - name: run test suites
       run: |
-      	./.github/workflows/run_test_suites.sh
-      	shell: bash -1 {0}
+        ./.github/workflows/run_test_suites.sh
+        shell: bash -1 {0}
