@@ -1,9 +1,6 @@
 # This file is used for version pinning only 
 # The required libraries are  listed in setup.py which will be consulted by
 # pip to resolve dependencies
-networkx 
-netCDF4
-frozendict
 #-e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
 #-e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 #-e git+https://git@github.com/MPIBGC-TEE/CompartmentalSystems.git#egg=CompartmentalSystems
