@@ -41,7 +41,7 @@ jobs:
 
     - name: create prerequisite environment
       run: |
-        conda env create -f environment_free.yml 
+        conda env create -f environment_free.yml; conda activate binder 
 
     - name: run setup.py scripts
       run: ./postBild
