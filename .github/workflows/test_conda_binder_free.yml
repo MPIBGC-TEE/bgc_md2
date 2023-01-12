@@ -31,7 +31,7 @@ jobs:
       #uses: s-weigand/setup-conda@v1
       uses: conda-incubator/setup-miniconda@v2
       with:
-        update-conda: true
+        auto-update-conda: true
         #python-version: ${{ matrix.python-version }}
       	channels: anaconda, conda-forge
 	activate-environment: binder
