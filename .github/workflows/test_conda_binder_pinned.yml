@@ -25,12 +25,6 @@ jobs:
           token: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Set up conda
-        # uses: s-weigand/setup-conda@v1
-        # with:
-        #   update-conda: true
-        #   environment-file: environment_free.yml
-        #   #python-version: ${{ matrix.python-version }}
-        #   conda-channels: anaconda, conda-forge
         uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"

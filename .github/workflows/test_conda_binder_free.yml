@@ -10,11 +10,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    #strategy:
-    #  matrix:
-    #    python-version: [3.7.12]
-    #    #python-version: [3.6]
-    #    #python-version: [3.6,3.7, 3.8]
 
     steps:
       - name: Checkout repo and submodules
@@ -26,7 +21,6 @@ jobs:
           token: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Set up conda
-        # uses: s-weigand/setup-conda@v1
         uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
@@ -35,7 +29,6 @@ jobs:
           auto-activate-base: false
           auto-update-conda: true
           environment-file: environment_free.yml
-          # python-version: ${{ matrix.python-version }}
 
       - name: check python version
         run: |
@@ -49,9 +42,9 @@ jobs:
       - name: run setup.py scripts
         run: |
           ./postBuild
-          shell: bash -1 {0}
+        shell: bash -1 {0}
 
       - name: run test suites
         run: |
           ./.github/workflows/run_test_suites.sh
-          shell: bash -1 {0}
+        shell: bash -1 {0}
