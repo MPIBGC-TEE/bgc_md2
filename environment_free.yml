@@ -12,4 +12,5 @@ dependencies:
   - netCDF4
   - jupyterlab
   - notebook
-  - IPython
+  - IPython<=8.7.0
+  - jupytext
