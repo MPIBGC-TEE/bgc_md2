@@ -7,8 +7,8 @@ dependencies:
   - cf-units
   - pycairo
   - pytest
-  - nbmake  
-  - networkx 
+  - nbmake
+  - networkx
   - netCDF4
   - frozendict
-    
+  - jupytext
