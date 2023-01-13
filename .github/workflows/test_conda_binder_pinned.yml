@@ -39,9 +39,11 @@ jobs:
       - name: Install dependencies
         run: |
           #conda env create -f environment.yml
-          conda install nbmake
-          conda activate binder || true
-            ./postBuild
+          #conda activate binder || true
+          # ./postBuild
+          # pip install requirements.binder_test
+          cat requirements.binder requirements.test_binder > requirements.txt
+          pip install -r requirements.txt
 
       - name: run test suites
         run: |
