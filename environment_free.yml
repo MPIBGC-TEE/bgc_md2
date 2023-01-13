@@ -10,7 +10,3 @@ dependencies:
   - nbmake
   - networkx
   - netCDF4
-  - frozendict
-  - jupytext
-  - ipython
-  - jupyterlab
