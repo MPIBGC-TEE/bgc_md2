@@ -12,3 +12,5 @@ dependencies:
   - netCDF4
   - frozendict
   - jupytext
+  - ipython
+  - jupyter
