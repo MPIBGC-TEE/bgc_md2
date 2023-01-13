@@ -6,6 +6,3 @@
 -e src/ComputabilityGraphs/
 -e .
 
-# for testing
-nbmake
-

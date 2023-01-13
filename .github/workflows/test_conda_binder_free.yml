@@ -38,9 +38,9 @@ jobs:
           which python
           python --version
 
-      # - name: create prerequisite environment
-      #   run: |
-      #     conda env create -f environment_free.yml
+      - name: install nbmake
+        run: |
+           conda install nbmake
 
       - name: run setup.py scripts
         run: |

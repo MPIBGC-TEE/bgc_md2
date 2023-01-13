@@ -1,9 +1,10 @@
 ![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation.yml/badge.svg)
+![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
+![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
 
 ![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install.yml/badge.svg)
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder)
-
 ## Installation
 
 Please read carefully before you  "Copy and paste", since some instructions only make sense for certain platforms.
