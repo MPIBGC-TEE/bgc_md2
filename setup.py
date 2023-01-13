@@ -51,14 +51,8 @@ setup(
         "sympy",
         "xarray",
         "networkx",
-        "IPython",
-        #"pygraphviz",
         "cf-units",
         "frozendict",
-        #"nbformat", # for testing notebooks
-        "jupytext",
-        "jupyterlab",
-        "notebook",
         "dask[distributed]",
         "zarr",
     ]
