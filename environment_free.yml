@@ -11,7 +11,5 @@ dependencies:
   - nbmake
   - networkx
   - netCDF4
-  - jupyterlab
-  - notebook
   - IPython<=8.7.0
   - jupytext
