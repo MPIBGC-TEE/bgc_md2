@@ -237,4 +237,4 @@ dependencies:
       - xyzservices==2022.9.0
       - zarr==2.13.3
       - zict==2.2.0
-prefix: /home/mm/miniconda3/envs/binder
+prefix: /home/mm/mambaforge/envs/binder
