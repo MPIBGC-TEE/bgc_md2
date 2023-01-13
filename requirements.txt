@@ -5,3 +5,7 @@
 -e src/CompartmentalSystems/
 -e src/ComputabilityGraphs/
 -e .
+
+# for testing
+nbmake
+
