@@ -1,15 +1,10 @@
-matplotlib
 esgf-pyclient
 paramiko
-sympy
 nodejs
 voila
-networkx
 netCDF4
 cf-units
-numpy
 scikit-image
-scipy
 pandas
 bqplot
 notebook
@@ -31,11 +26,10 @@ pythreejs
 frozendict
 dask
 xarray
-graphviz
-pygraphviz
 sphinx
 pip
 zarr
+pycairo
 # recommended but not essential
 py2cytoscape
 ipycytoscape

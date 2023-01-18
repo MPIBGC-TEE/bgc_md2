@@ -6,51 +6,36 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
+# # Luo2021 vs. Teco
+# After finishing this notebook you will know:
+# - how to compare models that look similar .. 
+# - why you should avoid variable names like x1, x2.... 
+#
+#
+
 from IPython.display import HTML
 
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
-# %load_ext autoreload
-# %autoreload 2
 import bgc_md2.helper as h
 
 model_inspection = h.MvarSetInspectionBox()
 
 from bgc_md2.resolve.mvars import CompartmentalMatrix, StateVariableTuple, VegetationCarbonInputPartitioningTuple,VegetationCarbonInputTuple
-from bgc_md2.resolve.MVarSet import MVarSet
+from ComputabilityGraphs.CMTVS import CMTVS 
+from ComputabilityGraphs.helpers import module_computers
 
-# This time we are only interested in Vegetation models and Carbon input partitioning. Therefore we look for models for which the variable
-# `VegetationCarbonInputPartitioningTuple` is defined or computable.
+# We look at two files that once were both part of the database but basically described the same model. 
 
-# +
-#li = h.list_target_models(
-#    target_classes=frozenset(
-#        {
-#            CompartmentalMatrix,
-#            StateVariableTuple,
-#            VegetationCarbonInputPartitioningTuple,
-#            VegetationCarbonInputTuple
-#            
-#        }
-#    ),
-#    # explicit_exclude_models=frozenset({'CARDAMOM'})
-#)
-#li    
-# -
-
-
-# From these we chose two models to investigate more thoroughly.
-#
-
-mvs_Luo =  MVarSet.from_model_name('Luo2012TE')
-mvs_TECO =  MVarSet.from_model_name('TECO')
+from Luo2012TE.source import mvs as mvs_Luo #=  MVarSet.from_model_name('Luo2012TE')
+from TECO.source import mvs as mvs_TECO  #MVarSet.from_model_name('TECO')
 
 mvs_Luo.get_InputTuple()
 
@@ -75,7 +60,7 @@ for x in (S_Luo,S_TECO,S_Luo == S_TECO):
 
 # -
 
-# So the two matrices look very similar.
+# So the two matrices have identical structure.
 # However this could still be  misleading since  the state variables behind this description could be different.  
 # Lets look at the state variables and their order as represented by the `StatevariableTuple`
 
@@ -85,7 +70,7 @@ mvs_TECO.get_StateVariableTuple()
 
 # Ok, not very informative. Lets investigate the additional information that the translator of the model provided about the meaning of these symbols
 
-# this could be displayed much nicer...
+# this could be displayed much nicer... room for a pullrequest 
 bib_Luo=mvs_Luo.get_BibInfo();bib_Luo.sym_dict
 
 
@@ -148,23 +133,41 @@ subs_dict = {
 }
 # We want to compute the fluxes with renamed symbols.
 # We first check what we have to substitute.
-# +
-
 mvs_TECO.provided_mvar_types
-
-
-# -
 
 
 mvs_TECO.get_StateVariableTuple().subs(subs_dict)
 
-mvs_subs=MVarSet({var.subs(subs_dict) for var in {mvs_TECO.get_CompartmentalMatrix(),mvs_TECO.get_StateVariableTuple(),mvs_TECO.get_InputTuple()} })
+import bgc_md2.resolve.computers
+computers=module_computers(bgc_md2.resolve.computers)
+type(computers)
+
+mvs_subs = CMTVS(
+    {
+        var.subs(subs_dict) 
+        for var in {
+            mvs_TECO.get_CompartmentalMatrix(),
+            mvs_TECO.get_StateVariableTuple(),
+            mvs_TECO.get_InputTuple(),
+            mvs_TECO.get_TimeSymbol()
+        }
+    },
+    computers=module_computers(bgc_md2.resolve.computers)
+)
+# alternatively we could have created an update
+#mvs_subs=mvs_TECO.update(
+#    {
+#        var.subs(subs_dict) 
+#        for var in {mvs_TECO.get_CompartmentalMatrix(),mvs_TECO.get_StateVariableTuple(),mvs_TECO.get_InputTuple()}
+#    }
+#)
+#mvs_subs
 
 for v in mvs_subs.computable_mvar_types():
-    display(mvs_subs._get_single_mvar_value(v))
+    display(mvs_subs._get_single_value_by_TypeTree(v))
 
 
-# This description already that the CompartmentalMatrix and Statevector are probably not consistent.
+# This description already shows that the CompartmentalMatrix and Statevector are probably not consistent.
 # We can make this even more obvious by computing the outflux from the `C_root` pool.
 
  mvs_subs.get_OutFluxesBySymbol()[C_roots]
@@ -173,21 +176,18 @@ for v in mvs_subs.computable_mvar_types():
 
 mvs_subs.get_InternalFluxesBySymbol()[(C_roots,C_stlit)]
 
-# We can probably repair this by exchanging the positions of `C_roots` and `C_woods` as has been done in the following version of the model
+# We have repaired this by exchanging the positions of `C_roots` and `C_woods` in the following version of the model which is part of the package (as you can see from the way it is imported).
 
 
-mvs_mm =  MVarSet.from_model_name('TECOmm')
+from bgc_md2.models.TECOmm.source import mvs as mvs_mm
 
+# Looking at the fluxes we can clearly see that they all co
 for key,fl in mvs_mm.get_InternalFluxesBySymbol().items():
-    print(key);display(fl) 
+    display(key);display(fl) 
 
-# +
 in_fluxes, internal_fluxes, out_fluxes = mvs_mm.get_InFluxesBySymbol(),mvs_mm.get_InternalFluxesBySymbol(),mvs_mm.get_OutFluxesBySymbol()
-
 in_flux_targets, out_flux_sources = [[str(k) for k in d.keys()] for d in (in_fluxes, out_fluxes)] 
-
 internal_connections = [(str(s),str(t)) for s,t in internal_fluxes.keys()]                                                                
-# -
 
 
 internal_connections
@@ -204,54 +204,6 @@ Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_
 
 hr.igraph_plot(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
 
-# # Let's inspect the vegetation part 
-
-mvs_mm.get_VegetationCarbonStateVariableTuple()
-
-mvs_mm.get_VegetationCarbonCompartmentalMatrix()
-
-# what was formerly send to a soil pool is considered an output of the vegetation subsystem...
-for k,v in mvs_mm.get_VegetationCarbonOutFluxesBySymbol().items():
-    display(k,v)
-
-for k,v in mvs_mm.get_VegetationCarbonInFluxesBySymbol().items():
-    display(k,v)
-
-for k,v in mvs_mm.get_VegetationCarbonInternalFluxesBySymbol().items():
-    display(k,v)
-
-combined = (
-    set(mvs_mm.get_StateVariableTuple()),
-    mvs_mm.get_InFluxesBySymbol(),
-    mvs_mm.get_OutFluxesBySymbol(),
-    mvs_mm.get_InternalFluxesBySymbol()
-)
-sv_set_veg = frozenset(mvs_mm.get_VegetationCarbonStateVariableTuple())
-
-state_vector_soil = Matrix([C_fastsom,C_slowsom,C_passsom])
-# Probably the litter pools would be also  considered to be part of the soil subsystem.
-# I just wanted to show that the division does not have tp be complete
-# state_vector_soil = Matrix([C_metlit,C_stlit,C_fastsom,C_slowsom,C_passsom])
-sv_set_soil = frozenset({sv for sv in state_vector_soil})
-
-
-_,in_fluxes_veg,out_fluxes_veg,internal_fluxes_veg=hr.extract(combined,sv_set_veg) #obviously we do not need to return sv_set_veg, since it is an argument
-_,in_fluxes_soil,out_fluxes_soil,internal_fluxes_soil=hr.extract(combined,sv_set_soil)
-
-internal_fluxes_veg, in_fluxes_soil
-
-part_dict =  {
-    sv_set_veg:'green',
-    sv_set_soil:'brown',
-}
-hr.igraph_part_plot(
-    mvs_mm.get_StateVariableTuple(),
-    in_fluxes,
-    internal_fluxes,
-    out_fluxes,
-    part_dict
-)
-
 #Now we can compute the vegetation cycling matrix
 hr.compartmental_matrix_2(
     out_fluxes_veg,
@@ -259,9 +211,6 @@ hr.compartmental_matrix_2(
     mvs_mm.get_VegetationCarbonStateVariableTuple()
 )
 
-#Now we can compute the soil cycling matrix
-hr.compartmental_matrix_2(
-    out_fluxes_soil,
-    internal_fluxes_soil,
-    state_vector_soil
-)
+mvs_mm.get_VegetationCarbonStateVariableTuple()
+
+

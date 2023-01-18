@@ -17,5 +17,6 @@ in_dir_command(){
 
 in_dir_command tests "python -m unittest discover -t . -p 'Test*'"
 in_dir_command prototypes/working_group_2021 "python -m unittest Test_general_helpers.py"
-in_dir_command notebooks "pytest --nbmake './'"
+# in_dir_command notebooks "pytest --nbmake './'"
+in_dir_command notebooks "python test_notebooks.py"
 exit ${fail}

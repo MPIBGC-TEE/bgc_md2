@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -43,21 +43,26 @@ li = h.list_target_models(
 li    
 
 
-from bgc_md2.resolve.MVarSet import MVarSet
-for mn in li:
-    mvs = MVarSet.from_model_name(mn)
-    print('######################')
-    print(mn)
-    display(mvs._get_single_mvar_value(VegetationCarbonInputTuple))
-    display(mvs._get_single_mvar_value(VegetationCarbonInputPartitioningTuple))
+li[0]
 
+
+# +
+#import importlib
+#from ComputabilityGraphs.CMTVS import CMTVS 
+#for mn in li:
+#    mvs = importlib.import_module(f"bgc_md2.models.{mn}.source").mvs
+#    print('######################')
+#    print(mn)
+#    display(mvs._get_single_value(VegetationCarbonInputTuple))
+#    display(mvs._get_single_value(VegetationCarbonInputPartitioningTuple))
+# -
+
+# this may take some time since everything is computed
 model_list = h.GeneralMvarSetListGridBox(
     inspection_box=model_inspection,
     target_classes=(CompartmentalMatrix,StateVariableTuple,VegetationCarbonInputPartitioningTuple),
     #explicit_exclude_models=frozenset({'CARDAMOM'})
 )
 model_list
-
-model_inspection
 
 

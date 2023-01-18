@@ -13,7 +13,7 @@ from bgc_md2.resolve.mvars import (
     NumericStartValueDict,
     NumericSimulationTimes,
    )
-from ..BibInfo import BibInfo 
+from bgc_md2.models.BibInfo import BibInfo 
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import bgc_md2_computers
 

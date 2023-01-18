@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.6.0
+#       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -23,7 +23,7 @@ import dask.array as da
 from pathlib import Path
 
 from bgc_md2.models.CARDAMOM import CARDAMOMlib
-from bgc_md2.notebookHelpers import write_to_logfile, custom_timeout
+#from bgc_md2.notebookHelpers import write_to_logfile, custom_timeout
 
 from dask.distributed import Client
 # -
