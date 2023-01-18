@@ -47,4 +47,4 @@ jobs:
 
       - name: run test suites
         run: |
-          ./.github/workflows/run_test_suites.sh
+          ./scripts/run_test_suites.sh

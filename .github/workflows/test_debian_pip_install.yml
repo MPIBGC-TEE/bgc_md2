@@ -40,5 +40,5 @@ jobs:
           # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: run test suites
-        run: ./.github/workflows/run_test_suites.sh
+        run: ./scripts/run_test_suites.sh
         shell: bash
