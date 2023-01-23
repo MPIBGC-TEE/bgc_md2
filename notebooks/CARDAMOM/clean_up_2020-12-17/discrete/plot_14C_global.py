@@ -38,7 +38,8 @@ data_combinations = [
     ("yearly", 6, "continuous")
 ]
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
 netCDF_filestem = "global_14C_"
 
 CARDAMOM_path = Path("/home/data/CARDAMOM/")

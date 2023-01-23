@@ -73,7 +73,8 @@ params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 CARDAMOM_path = Path("/home/data/CARDAMOM/")
 #intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
 output_path = data_path.joinpath(params["output_folder"])
 
 project_path = output_path.joinpath(model_type)
