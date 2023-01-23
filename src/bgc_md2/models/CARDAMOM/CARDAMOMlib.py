@@ -533,7 +533,7 @@ def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
 #        DECAY_RATE_14C_DAILY
 #    )
 
-    dmr_14C = _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path):
+    dmr_14C = _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path)
     soln_dmr_14C = dmr_14C.solve()
     return soln_dmr_14C
 
