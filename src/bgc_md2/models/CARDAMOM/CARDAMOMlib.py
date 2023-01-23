@@ -450,7 +450,7 @@ def compute_start_values_14C(
     return start_values_14C
 
 
-def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
+def _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path):
     if not isinstance(dmr, DMR):
         raise(TypeError("wrong type of model run"))
 
@@ -490,8 +490,63 @@ def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
         DECAY_RATE_14C_DAILY
     )
 
+    return dmr_14C
+
+
+def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
+    if not isinstance(dmr, DMR):
+        raise(TypeError("wrong type of model run"))
+
+#    t0 = 1920
+#    Delta_14C = np.loadtxt(Delta14C_atm_path, delimiter=",", skiprows=1).transpose()
+#
+#    F_atm = interp1d(
+#        Delta_14C[0],
+#        Delta_14C[1],
+##        kind="cubic",
+#        bounds_error=False,
+##       fill_value=(left_val, -1000.0) # no 14C oustide of dataset
+#        fill_value="extrapolate"
+#    )
+#
+#    F_frac = lambda t: (F_atm(t)/1000+1)*ALPHA_14C
+#    F_frac_model = lambda t: F_frac(t0 + t/(31*12))
+#
+#    # construct a 14C model run from the 12C model run
+#
+#    net_Us_14C = np.array(
+#        [
+#            F_frac_model(dmr.times[ti]) * dmr.net_Us[ti] * np.exp(-DECAY_RATE_14C_DAILY * dmr.dt)
+#            for ti in range(len(dmr.times[:-1]))
+#        ]
+#    )
+#
+#    start_values_14C = compute_start_values_14C(
+#        dmr,
+#        nr_time_steps
+#    )
+#
+#    dmr_14C = DMR_14C(
+#        dmr,
+#        start_values_14C,
+#        net_Us_14C,
+#        DECAY_RATE_14C_DAILY
+#    )
+
+    dmr_14C = _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path):
     soln_dmr_14C = dmr_14C.solve()
     return soln_dmr_14C
+
+
+def compute_acc_net_external_output_vector_14C(dmr, nr_time_steps, Delta14C_atm_path):
+    if not isinstance(dmr, DMR):
+        raise(TypeError("wrong type of model run"))
+
+    dmr_14C =  _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path)
+
+    data = np.nan * np.ones((len(dmr.times), dmr.nr_pools))
+    data[:-1] = dmr_14C.acc_net_external_output_vector()
+    return data
 
 
 def compute_us(single_site_dict, time_step_in_days):
