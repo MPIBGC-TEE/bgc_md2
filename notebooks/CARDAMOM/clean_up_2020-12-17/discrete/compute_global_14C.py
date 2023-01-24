@@ -7,9 +7,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.11.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -73,7 +73,8 @@ params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
 CARDAMOM_path = Path("/home/data/CARDAMOM/")
 #intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
 output_path = data_path.joinpath(params["output_folder"])
 
 project_path = output_path.joinpath(model_type)
@@ -156,7 +157,25 @@ CARDAMOMlib.run_task_with_mr(
 
 # ## Compute 14C solution for Southern Hemisphere (lat < -30), Tropics (-30 <= lat <= 30), and Northern Hemisphere (30 < lat)
 #
-# Results wille be stored in zarr archives.
+# Results will be stored in zarr archives.
+
+hemispheres = [
+    {
+        "name": "Southern Hemisphere",
+        "Delta14C_atm_path": CARDAMOM_path.joinpath("Delta_14C_SH.csv"),
+        "slices_lat": slice(0, 6, 1)
+    },
+    {
+        "name": "Tropics",
+        "Delta14C_atm_path": CARDAMOM_path.joinpath("Delta_14C_Tropics.csv"),
+        "slices_lat": slice(6, 22, 1)
+    },
+    {
+        "name": "Northern Hemisphere",
+        "Delta14C_atm_path": CARDAMOM_path.joinpath("Delta_14C_NH.csv"),
+        "slices_lat": slice(22, None, 1)
+    },
+]
 
 task = {
     "computation": "solution_14C",
@@ -177,23 +196,60 @@ task = {
 }
 
 
-hemispheres = [
-    {
-        "name": "Southern Hemisphere",
-        "Delta14C_atm_path": CARDAMOM_path.joinpath("Delta_14C_SH.csv"),
-        "slices_lat": slice(0, 6, 1)
+# +
+# %%time
+
+for nr, d in enumerate(hemispheres):
+    # prevent overwriting of results from previous hemispheres
+    if nr > 0:
+        task["overwrite"] = False
+        
+    slices_sub = slices.copy()
+    slices_sub["lat"] = d["slices_lat"]
+
+    print("Computing", d["name"])
+    print("lat:", lats_da[slices_sub["lat"]].compute())
+    
+    Delta14C_atm_path = d["Delta14C_atm_path"]
+    print(Delta14C_atm_path)
+    task["func_args"]["Delta14C_atm_path"] = Delta14C_atm_path
+
+    CARDAMOMlib.run_task_with_mr(
+        project_path,
+        task,
+        nr_pools,
+        params["time_step_in_days"],
+        times_da,
+        start_values_zarr,
+        Us_zarr, # note capital U
+        Bs_zarr,
+        slices_sub
+    )
+# -
+
+
+# ## Compute 14C external output vector for Southern Hemisphere (lat < -30), Tropics (-30 <= lat <= 30), and Northern Hemisphere (30 < lat)
+#
+# Results will be stored in zarr archives.
+
+task = {
+    "computation": "acc_net_external_output_vector_14C",
+    "model_type": model_type,
+    "overwrite": True,
+    "func": CARDAMOMlib.compute_acc_net_external_output_vector_14C,
+    "func_args": {
+        "nr_time_steps": params["nr_time_steps"], # nr_months for fake eq_model
     },
-    {
-        "name": "Tropics",
-        "Delta14C_atm_path": CARDAMOM_path.joinpath("Delta_14C_Tropics.csv"),
-        "slices_lat": slice(6, 22, 1)
-    },
-    {
-        "name": "Northern Hemisphere",
-        "Delta14C_atm_path": CARDAMOM_path.joinpath("Delta_14C_NH.csv"),
-        "slices_lat": slice(22, None, 1)
-    },
-]
+    "timeouts": [np.inf],
+    "batch_size": 500,
+    "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total, nr_pools),
+    "result_chunks": (1, 1, 1, nr_times_total, nr_pools),
+    "return_shape": (1, nr_times, nr_pools),
+    "meta_shape": (1, nr_times, nr_pools),
+    "drop_axis": [2, 3], # drop two pool axes of B
+    "new_axis": [2] # add one pool axis
+}
+
 
 # +
 # %%time
@@ -252,6 +308,14 @@ system_start_values_Delta_14C_da = F_Delta_14C(start_values_da.sum(-1), start_va
 solution_Delta_14C_da = F_Delta_14C(solution_da, solution_14C_da)
 system_solution_Delta_14C_da = F_Delta_14C(solution_da.sum(-1), solution_14C_da.sum(-1))
 
+acc_net_external_output_vector_da = da.from_zarr(str(project_path.joinpath("acc_net_external_output_vector")))
+acc_net_external_output_vector_14C_da = da.from_zarr(str(project_path.joinpath("acc_net_external_output_vector_14C")))
+
+system_external_output_Delta_14C_da = F_Delta_14C(
+    acc_net_external_output_vector_da.sum(-1),
+    acc_net_external_output_vector_14C_da.sum(-1)
+)
+
 # +
 coords = {
     "lat": lats_da.reshape(-1)[slices["lat"]],
@@ -277,7 +341,8 @@ for d in variables:
     
 # variables with one time dimension and no pool dimension
 variables = [
-    {"name": "system_solution_Delta_14C", "da": system_solution_Delta_14C_da, "unit": "‰"}
+    {"name": "system_solution_Delta_14C", "da": system_solution_Delta_14C_da, "unit": "‰"},
+    {"name": "system_external_output_Delta_14C", "da": system_external_output_Delta_14C_da, "unit": "‰"},
 ]
 
 for d in variables:
@@ -341,9 +406,24 @@ def delayed_to_netcdf(prob, netCDF_filename, compute=False):
 
 arr = ds.prob
 print(arr)
+# -
+
+# For whatever reason we create two netCDF files, which will be read in at the same time later.
 
 # +
 # %%time
+
+# first half of computation
+
+for prob in tqdm(arr[:25]):
+    netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
+    print(netCDF_filename)
+    delayed_to_netcdf(prob, netCDF_filename, compute=True)
+    
+# +
+# %%time
+
+# second half of computation
 
 for prob in tqdm(arr[25:]):
     netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
