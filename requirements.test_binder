@@ -1,0 +1,7 @@
+notebook
+jupyterlab
+jupytext
+nbmake
+nbformat 
+pytest
+

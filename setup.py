@@ -51,12 +51,10 @@ setup(
         "sympy",
         "xarray",
         "networkx",
-        "IPython",
-        #"pygraphviz",
         "cf-units",
         "frozendict",
-        "nbformat", # for testing notebooks
         "dask[distributed]",
         "zarr",
+        "nbformat" # for notebook creation
     ]
 )

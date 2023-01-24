@@ -1,0 +1,8 @@
+# The required libraries are  listed in setup.py which will be consulted by
+# pip to resolve dependencies
+-e src/testinfrastructure/
+-e src/LAPM/
+-e src/CompartmentalSystems/
+-e src/ComputabilityGraphs/
+-e .
+

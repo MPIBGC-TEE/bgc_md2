@@ -1,16 +1,10 @@
-matplotlib
 esgf-pyclient
 paramiko
-sympy
 nodejs
 voila
-jupytext
-networkx
 netCDF4
 cf-units
-numpy
 scikit-image
-scipy
 pandas
 bqplot
 notebook
@@ -23,7 +17,6 @@ ipysheet
 ipytree
 ipyvuetify
 ipympl
-nbformat
 voila-vuetify
 ipywidgets
 requests
@@ -33,12 +26,13 @@ pythreejs
 frozendict
 dask
 xarray
-graphviz
-pygraphviz
 sphinx
 pip
 zarr
+pycairo
 # recommended but not essential
 py2cytoscape
 ipycytoscape
 pyresample
+jupytext
+nbmake

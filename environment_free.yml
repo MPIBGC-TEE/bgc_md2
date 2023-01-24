@@ -1,0 +1,15 @@
+name: binder
+channels:
+  - conda-forge
+dependencies:
+#  - python <3.11.0 does not work yet on binder
+  - python <3.10.0
+  - pip
+  - cf-units
+  - pycairo
+  - pytest
+  - nbmake
+  - networkx
+  - netCDF4
+  - IPython<=8.7.0
+  - jupytext
