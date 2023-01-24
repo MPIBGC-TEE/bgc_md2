@@ -100,7 +100,16 @@ In the second case the same assistance is required for queries, which are best d
 We try to keep the master green and develop new features or bug fixes in short lived branches that are then 
 merged back into the master https://nvie.com/posts/a-successful-git-branching-model/
 See also https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell
-https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependencies.
+Before you try to merge into the master:
+* run the testsuites 
+* merge into the branch ```test```.
+The workflows run the testsuites. This is an additional protection against forgotten files or other idiosycracies of your setup, that let the testsuites succeeed locally but brake for other users.
+Another important branch is ```binder```. It contains a smaller version of the repository to meet the binder requirements of total size<2GB which is deployed by mybinder.org to allow exploration without installation (the binder button on top).
+It relies on the smaller binder branch of ```CompartmentalSystems```   
+(see https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependencies)
+and therefore has a different ```.gitmodules``` file that is permanently different from `test` and `master` branches.
+This is reflected in a different merge strategy https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes#_merge_strategies expressed by `.gitattributes` and .git/config
+ 
 
 * Example workflow to work on a feature branch `iss26-non-importable-models` you are asked to review 
   * `git branch -a` (shows all branches including remotes)
