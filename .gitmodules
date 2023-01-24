@@ -10,5 +10,3 @@
 [submodule "src/ComputabilityGraphs"]
 	path = src/ComputabilityGraphs
 	url = https://github.com/MPIBGC-TEE/ComputabilityGraphs.git
-[submodule "CompartmentalSystems"]
-	branch = binder
