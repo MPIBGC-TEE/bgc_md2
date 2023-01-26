@@ -4,4 +4,6 @@ jupytext
 nbmake
 nbformat 
 pytest
+dask[distributed]
+zarr
 

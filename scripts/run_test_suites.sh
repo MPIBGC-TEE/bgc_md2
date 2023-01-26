@@ -1,12 +1,15 @@
 #global variable for sum of return values
 fail=0 
-in_dir_command(){
-	cd $1
+com(){
 	echo "################################################################################"
 	echo $(pwd)
-	echo ${2}
-	eval $2
+	echo ${1}
+	eval ${1}
 	fail=$((fail + $?))
+}
+in_dir_command(){
+	cd "$1"
+	com "${2}"
 	cd -
 }
 
@@ -15,10 +18,10 @@ in_dir_command(){
 # in_dir_command "." "python -m unittest PseudoTestError.py"
 # in_dir_command "." "python -m unittest PseudoTestFail.py"
 
+com "python scripts/test_notebooks.py tests/notebooks/"
+com "python scripts/test_notebooks.py binder_notebooks/"
+#
 in_dir_command tests "python -m unittest discover -t . -p 'Test*'"
-in_dir_command tests/notebooks "python scripts/test_notebooks.py"
-
 in_dir_command prototypes/working_group_2021 "python -m unittest Test_general_helpers.py"
-# in_dir_command notebooks "pytest --nbmake './'"
-in_dir_command binder_notebooks "python scripts/test_notebooks.py"
+## in_dir_command notebooks "pytest --nbmake './'"
 exit ${fail}

@@ -1,6 +1,7 @@
 # notebook_runner.py
 import re
 import sys
+import os
 
 from glob import glob
 from pathlib import Path
@@ -9,13 +10,13 @@ from nbconvert.preprocessors import ExecutePreprocessor
 from jupytext import jupytext
 
 
-def run_nbnode(nb):
+def run_nbnode(nb, run_path):
     # from
     # https://www.blog.pythonlibrary.org/2018/10/16/testing-jupyter-notebooks/
     proc = ExecutePreprocessor(timeout=600, kernel_name='python3')
     proc.allow_errors = True
 
-    proc.preprocess(nb, {'metadata': {'path': '/'}})
+    proc.preprocess(nb, {'metadata': {'path': run_path}})
 
     errors = []
     for cell in nb.cells:
@@ -33,7 +34,7 @@ def test_py_notebook(py_p):
 
     print("#########################################################")
     print(str(py_p))
-    nb, errors = run_nbnode(nb)
+    nb, errors = run_nbnode(nb, run_path=py_p.parent)
     return str(py_p), errors
 
 
@@ -50,7 +51,6 @@ if __name__ == '__main__':
 
     notebook_paths = [Path(s) for s in glob(f"{target_dir}**/*.py", recursive=True) if is_notebook(Path(s))]
     print([str(p) for p in notebook_paths])
-    # from IPython import embed; embed()
 
     def add_errors(acc, p):
         tup = test_py_notebook(p)

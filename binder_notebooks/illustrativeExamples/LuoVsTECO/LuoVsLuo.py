@@ -203,14 +203,3 @@ Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_
 #[Gnx.get_edge_data(s,t) for s,t in Gnx.edges]
 
 hr.igraph_plot(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
-
-#Now we can compute the vegetation cycling matrix
-hr.compartmental_matrix_2(
-    out_fluxes_veg,
-    internal_fluxes_veg,
-    mvs_mm.get_VegetationCarbonStateVariableTuple()
-)
-
-mvs_mm.get_VegetationCarbonStateVariableTuple()
-
-
