@@ -1,11 +1,12 @@
 name: test_conda_developer_installation
-on: [push]
+on:
+  push:
+    branches:
+      - master
+      - test
 
 jobs:
   build:
-    branches:
-      - master 
-      - test
 
     runs-on: ubuntu-latest
     #strategy:
@@ -14,31 +15,30 @@ jobs:
     #    #python-version: [3.6,3.7, 3.8]
 
     steps:
-    - name: Checkout repo and submodules
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-        #remote: # optional
-        repository: MPIBGC-TEE/bgc_md2
-        token: ${{ secrets.ACCESS_TOKEN }}
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          #remote: # optional
+          repository: MPIBGC-TEE/bgc_md2
+          token: ${{ secrets.ACCESS_TOKEN }}
 
-    
-    - name: Set up conda 
-      uses: s-weigand/setup-conda@v1
-      with:
-        update-conda: true
-        #python-version: ${{ matrix.python-version }}
-        #conda-channels: anaconda, conda-forge
-        conda-channels: conda-forge
-    - run: conda --version
-    - run: |
-        which python
-        python --version
-    - name: Install dependencies
-      run: |
-        sudo chmod -R 777 . 
-        ./install_developer_conda.sh
+      - name: Set up conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          # python-version: ${{ matrix.python-version }}
+          # conda-channels: anaconda, conda-forge
+          conda-channels: conda-forge
+      - run: conda --version
+      - run: |
+          which python
+          python --version
+      - name: Install dependencies
+        run: |
+          sudo chmod -R 777 .
+          ./install_developer_conda.sh
 
-    - name: run test suites
-      run: |
-        ./scripts/run_test_suites.sh
+      - name: run test suites
+        run: |
+          ./scripts/run_test_suites.sh
