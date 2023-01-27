@@ -13,7 +13,7 @@ set -e
 # To make that easy we assume that there repositories have been checked
 # out under src/ComartmentalSystems src/LAPM and src/testinfrastructure 
 
-conda install -y -c conda-forge python=3.9 #should install the tested version of python3
+conda install -y -c conda-forge python=3.11 #should install the tested version of python3
 for dir in testinfrastructure ComputabilityGraphs CompartmentalSystems LAPM 
 do 
   echo '#################'
