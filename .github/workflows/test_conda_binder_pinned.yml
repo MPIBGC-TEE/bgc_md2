@@ -3,7 +3,8 @@ name: test_conda_binder
 on:
   push:
     branches:
-      - binder # only executed when something is pushed to the binder branch
+      - binder # only executed when something is pushed to these branches 
+      - test 
 
 jobs:
   build:
