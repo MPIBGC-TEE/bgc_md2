@@ -1,6 +1,6 @@
 ![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation.yml/badge.svg)
-![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
-![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
+![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned.yml/badge.svg)
+![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free.yml/badge.svg)
 
 ![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install.yml/badge.svg)
 

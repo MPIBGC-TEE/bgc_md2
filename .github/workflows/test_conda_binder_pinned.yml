@@ -1,10 +1,10 @@
-name: test_conda_binder
+name: test_conda_binder_pinned
 
 on:
   push:
     branches:
       - binder # only executed when something is pushed to these branches 
-      - test 
+      - test
 
 jobs:
   build:
