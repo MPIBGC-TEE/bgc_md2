@@ -30,12 +30,16 @@ jobs:
           activate-environment: binder
           auto-activate-base: false
           auto-update-conda: true
-          environment-file: environment_free.yml
+          environment-file: environment.yml
 
       - name: check python version
         run: |
           which python
           python --version
+      
+      - name: install nbmake
+        run: |
+           conda install nbmake
 
       - name: Install dependencies
         run: |

@@ -34,6 +34,11 @@ jobs:
       - run: |
           which python
           python --version
+      
+      - name: install nbmake
+        run: |
+           conda install nbmake
+
       - name: Install dependencies
         run: |
           sudo chmod -R 777 .
