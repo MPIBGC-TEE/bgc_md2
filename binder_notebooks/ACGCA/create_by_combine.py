@@ -40,6 +40,8 @@ leaves_srm.plot_pools_and_fluxes(axes[0], legend=False)
 roots_srm.plot_pools_and_fluxes(axes[1], legend=False)
 
 # +
+# combine leaves and roots
+
 from bgc_md2.models.ACGCA.__init__ import GPP, E, B_L, C_L, C_R, B_R, ML, GL, MR, GR
 
 t = leaves_mvs.get_TimeSymbol()
@@ -95,58 +97,63 @@ trunk_srm.plot_pools_and_fluxes(axes[1], legend=False)
 # this cell does not work because of a problem with the __init__.py 
 # probably only some variable names changed
 
-#from bgc_md2.models.ACGCA.__init__ import C_S, MS, GS_O, GS_T, B_OS, B_OH, B_TH, B_TS
-#
-#other = (
-#    set(other_mvs.get_StateVariableTuple()),
-#    other_mvs.get_InFluxesBySymbol(),
-#    other_mvs.get_OutFluxesBySymbol(),
-#    other_mvs.get_InternalFluxesBySymbol()
-#)
-#
-#trunk = (
-#    set(trunk_mvs.get_StateVariableTuple()),
-#    trunk_mvs.get_InFluxesBySymbol(),
-#    trunk_mvs.get_OutFluxesBySymbol(),
-#    trunk_mvs.get_InternalFluxesBySymbol()
-#)
-#
-#intersect = (
-#    {E: GPP, C_S: 0},
-#    {E: MS + GS_O + GS_T, C_S: 0}
-#)
-#
-#OT = hr.combine(other, trunk, {}, {}, intersect)
-#
-#OT_srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
-#    Matrix([E, B_OS, B_OH, C_S, B_TH, B_TS]),
-#    t,
-#    OT[1],
-#    OT[2],
-#    OT[3]
-#)
-#fig, ax = plt.subplots(figsize=(12, 12))
-#ax.set_title("Other and trunk", fontsize=24)
-#OT_srm.plot_pools_and_fluxes(ax, legend=False)
+from bgc_md2.models.ACGCA.__init__ import (
+    C_S, MS, B_OS, B_OH, B_TH, B_TS, G_OS_from_E, G_OS_from_CS, G_TS
+)
+
+other = (
+    set(other_mvs.get_StateVariableTuple()),
+    other_mvs.get_InFluxesBySymbol(),
+    other_mvs.get_OutFluxesBySymbol(),
+    other_mvs.get_InternalFluxesBySymbol()
+)
+
+trunk = (
+    set(trunk_mvs.get_StateVariableTuple()),
+    trunk_mvs.get_InFluxesBySymbol(),
+    trunk_mvs.get_OutFluxesBySymbol(),
+    trunk_mvs.get_InternalFluxesBySymbol()
+)
+
+# pools that are part of both submodels
+intersect = (
+    {E: GPP, C_S: 0}, # all external influxes to such pools
+    {E: MS + G_OS_from_E + G_TS, C_S: G_OS_from_CS} # all external outfluxes from such pools
+)
+
+OT = hr.combine(other, trunk, {}, {}, intersect)
+
+OT_srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
+    Matrix([E, B_OS, B_OH, C_S, B_TH, B_TS]),
+    t,
+    OT[1],
+    OT[2],
+    OT[3]
+)
+fig, ax = plt.subplots(figsize=(12, 12))
+ax.set_title("Other and trunk", fontsize=24)
+OT_srm.plot_pools_and_fluxes(ax, legend=False)
 
 # +
-#intersect = (
-#    {E: GPP, C_S: 0},
-#    {E: ML + GL + MR + GR + MS + GS_O + GS_T, C_S: 0}
-#)
-#
-#LROT = hr.combine(LR, OT, {}, {}, intersect)
-#
-#LROT_srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
-#    Matrix([E, B_L, C_L, B_OS, B_OH, C_S, B_TH, B_TS, C_R, B_R]),
-#    t,
-#    LROT[1],
-#    LROT[2],
-#    LROT[3]
-#)
-#fig, ax = plt.subplots(figsize=(18, 18))
-#ax.set_title("Complete C model (constructed)", fontsize=24)
-#LROT_srm.plot_pools_and_fluxes(ax, legend=False)
+# combine (leaves and roots) with ("other" and trunk)
+
+intersect = (
+    {E: GPP, C_S: 0},
+    {E: ML + GL + MR + GR + MS + G_OS_from_E + G_TS, C_S: G_OS_from_CS}
+)
+
+LROT = hr.combine(LR, OT, {}, {}, intersect)
+
+LROT_srm = SmoothReservoirModel.from_state_variable_indexed_fluxes(
+    Matrix([E, B_L, C_L, B_OS, B_OH, C_S, B_TH, B_TS, C_R, B_R]),
+    t,
+    LROT[1],
+    LROT[2],
+    LROT[3]
+)
+fig, ax = plt.subplots(figsize=(18, 18))
+ax.set_title("Complete C model (constructed)", fontsize=24)
+LROT_srm.plot_pools_and_fluxes(ax, legend=False)
 # -
 
 # Or we load it directly from the database.
