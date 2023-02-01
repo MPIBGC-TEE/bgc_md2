@@ -40,9 +40,9 @@ jobs:
           which python
           python --version
 
-      - name: install nbmake
+      - name: install test requirements 
         run: |
-           conda install nbmake
+           conda install -y -c conda-forge  --file requirements.test_binder 
 
       - name: run setup.py scripts
         run: |
