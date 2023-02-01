@@ -135,14 +135,3 @@ If you merge something to the binder branch the workflow is similar to merges to
 
 
 
-## various notes on implementation
-
-* The 'Computers' and 'MVars' represent a set of types and strictly typed
-  functions (including the return values).
-  This has been implemented with the new python type annotations.  
-  An advantage is that we can express our
-  idea in a well defined and well documented way and avoid extra effort for the
-  user..  
-* The computibility graph is expensive to create and only changes if new
-  `Computers` and `MVars` are created.  It should be cached, which encurages
-  the use of immutable data structures. (since we can use functools )
