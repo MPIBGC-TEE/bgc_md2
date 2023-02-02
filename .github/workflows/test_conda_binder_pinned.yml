@@ -1,9 +1,10 @@
-name: test_conda_binder
+name: test_conda_binder_pinned
 
 on:
   push:
     branches:
-      - binder # only executed when something is pushed to the binder branch
+      - binder # only executed when something is pushed to these branches 
+      - test
 
 jobs:
   build:
@@ -29,12 +30,16 @@ jobs:
           activate-environment: binder
           auto-activate-base: false
           auto-update-conda: true
-          environment-file: environment_free.yml
+          environment-file: environment.yml
 
       - name: check python version
         run: |
           which python
           python --version
+      
+      - name: install nbmake
+        run: |
+           conda install nbmake
 
       - name: Install dependencies
         run: |

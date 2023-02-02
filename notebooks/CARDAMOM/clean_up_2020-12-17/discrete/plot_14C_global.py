@@ -7,9 +7,9 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.11.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -38,7 +38,8 @@ data_combinations = [
     ("yearly", 6, "continuous")
 ]
 
-data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
+data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
 netCDF_filestem = "global_14C_"
 
 CARDAMOM_path = Path("/home/data/CARDAMOM/")
@@ -93,6 +94,9 @@ for var_name, var in ds_area_lf_adapted.data_vars.items():
     ds_area_lf_adapted[var_name].coords["lon"] = np.float64(var.coords["lon"])
     
 ds_area_lf_adapted
+# -
+
+# ## Plot radiocarbon of the stocks
 
 # +
 fig, ax = plt.subplots(figsize=(8, 8))
@@ -130,7 +134,7 @@ ax.set_title(r"Global avergage $\Delta^{14}$C (mean over total ensemble)")
 
 # Now we aggregate the pools and show all ensemble members.
 
-# +
+# + tags=[]
 fig, ax = plt.subplots(figsize=(18, 12))
 
 prob_slices = [slice(0, 6, 1), slice(6, 22, 1), slice(22, 50, 1)]
@@ -151,6 +155,51 @@ for prob_slice, color in zip(prob_slices, colors):
 ax.set_xlim([ds.time[0].values, ds.time[-1].values])
 ax.set_ylabel(r"$\Delta^{14}$C (‰)")
 ax.set_title(r"Global average $\Delta^{14}$C")
+               
+from matplotlib.lines import Line2D
+lines = [Line2D([0], [0], color=c, linewidth=4, linestyle='-') for c in colors]
+_ = ax.legend(lines, labels)
+# -
+# ## Plot radiocarbon of the external outputs
+
+# +
+fig, ax = plt.subplots(figsize=(8, 8))
+
+var = ds["acc_net_external_output_vector"].sum(dim="pool")
+var = var * ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac
+var = var.mean(dim=["prob", "time"])
+    
+(var/1e15).plot(
+    ax=ax,
+    cbar_kwargs={"label": "PgC"},
+    robust=True
+)
+ax.set_title("Total C external outputs")
+
+plt.tight_layout()
+plt.draw()
+
+# + tags=[]
+fig, ax = plt.subplots(figsize=(18, 12))
+
+prob_slices = [slice(0, 6, 1), slice(6, 22, 1), slice(22, 50, 1)]
+colors = ["blue", "green", "red"]
+labels = ["Southern Hemisphere", "Tropics", "Northern Hemisphere"]
+               
+for prob_slice, color in zip(prob_slices, colors):
+    C14_weight = ds.solution_14C.isel(prob=prob_slice).sum(dim="pool").fillna(0)
+    ds["system_solution_Delta_14C"].isel(prob=prob_slice).weighted(C14_weight * ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"]).plot.line(
+        ax=ax,
+        x="time",
+        add_legend=False,
+        alpha=0.1,
+        lw=4,
+        c=color
+)
+              
+ax.set_xlim([ds.time[0].values, ds.time[-1].values])
+ax.set_ylabel(r"$\Delta^{14}$C (‰)")
+ax.set_title(r"Global respiration average $\Delta^{14}$C")
                
 from matplotlib.lines import Line2D
 lines = [Line2D([0], [0], color=c, linewidth=4, linestyle='-') for c in colors]

@@ -6,3 +6,12 @@
 -e src/ComputabilityGraphs/
 -e .
 
+notebook
+jupyterlab
+jupytext
+nbmake
+nbformat 
+pytest
+dask[distributed]
+zarr
+
