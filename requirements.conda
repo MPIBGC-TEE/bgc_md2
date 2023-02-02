@@ -12,7 +12,7 @@
 #voila
 #voila-vuetify
 cf-units
-dask
+dask[distributed]
 frozendict
 ipycanvas
 ipyevents
