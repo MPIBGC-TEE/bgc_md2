@@ -47,8 +47,7 @@ jobs:
           #conda activate binder || true
           # ./postBuild
           # pip install requirements.binder_test
-          cat requirements.binder requirements.test_binder > requirements.txt
-          pip install -r requirements.txt
+          pip install -r requirements.test -r requirements.src
 
       - name: run test suites
         run: |

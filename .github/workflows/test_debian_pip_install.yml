@@ -27,8 +27,7 @@ jobs:
         run: |
           sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev
           python -m pip install --upgrade pip
-          cat requirements.binder requirements.test_binder > requirements.txt
-          pip install -r requirements.txt
+          pip install -r requirements.test -r requirements.doc -r requirements.src
 
       - name: Lint with flake8
         run: |

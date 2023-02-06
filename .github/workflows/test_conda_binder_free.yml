@@ -42,7 +42,7 @@ jobs:
 
       - name: install test requirements 
         run: |
-           conda install -y -c conda-forge  --file requirements.test_binder 
+           conda install -y -c conda-forge  --file requirements.test
 
       - name: run setup.py scripts
         run: |

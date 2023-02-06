@@ -1,8 +1,13 @@
 dask[distributed]
 jupyterlab
 jupytext
+nbconvert
 nbformat 
 nbmake
 notebook
+py2cytoscape
 pytest
+python-igraph
+sphinx
+sphinx-autodoc-typehints
 zarr
