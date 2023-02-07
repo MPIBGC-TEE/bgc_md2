@@ -10,8 +10,8 @@ jobs:
     # name: test (${{ matrix.os }} ${{ script }})
     strategy:
       matrix:
-        os: [ubuntu]
-        # , "macos", "windows"]
+        os: [ubuntu, windows]
+        # , "macos"]
         script: [install_developer_conda.sh ]
         include:
           - os: ubuntu
