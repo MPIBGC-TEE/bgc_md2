@@ -10,7 +10,7 @@ jobs:
     # name: test (${{ matrix.os }} ${{ script }})
     strategy:
       matrix:
-        os: []
+        os: [ubuntu]
         # , "macos", "windows"]
         script: []
         include:
