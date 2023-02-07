@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo chmod -R 777 .
-          $${{ matrix.script }}
+          ./$${{ matrix.script }}
           #./install_developer_conda.sh
 
       - name: run test suites
