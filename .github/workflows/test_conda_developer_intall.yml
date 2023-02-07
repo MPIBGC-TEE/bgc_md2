@@ -12,12 +12,14 @@ jobs:
       matrix:
         os: [ubuntu, windows]
         # , "macos"]
-        script: [install_developer_conda.sh ]
+        script: [install_developer_conda.sh]
         include:
           - os: ubuntu
             script: install_developer_conda.sh
           - os: ubuntu
             script: install_developer_mamba.sh
+          - os: windows
+            script: install_developer_mamba.bat
     runs-on: ${{ matrix.os }}-latest
 
     steps:
@@ -43,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo chmod -R 777 .
-          ./$${{ matrix.script }}
+          ./${{ matrix.script }}
           #./install_developer_conda.sh
 
       - name: run test suites
