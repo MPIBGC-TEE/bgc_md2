@@ -1,7 +1,10 @@
 name: test_debian_pip_install
 
-on: [push]
-
+on: 
+  push:
+    branches:
+      - binder
+      - master
 jobs:
   build:
 

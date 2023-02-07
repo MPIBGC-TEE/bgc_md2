@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - binder # only executed when something is pushed to these branches
-      - test
+      #- test
 
 jobs:
   build:
