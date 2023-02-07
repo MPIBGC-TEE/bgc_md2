@@ -8,17 +8,17 @@ on:
 jobs:
   build:
     name: test (${{ matrix.os }} ${{ script }})
-    runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
         os: []
         #, "macos", "windows"] 
         script: []
         include: 
-          - os: ubuntu:
+          - os: ubuntu
             script: install_developer_conda.sh
-          - os: ubuntu:
+          - os: ubuntu
             script: install_developer_mamba.sh
+    runs-on: ${{ matrix.os }}-latest
 
     steps:
       - name: Checkout repo and submodules
