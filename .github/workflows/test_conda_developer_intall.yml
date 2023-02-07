@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [ubuntu]
         # , "macos", "windows"]
-        script: []
+        script: [install_developer_conda.sh ]
         include:
           - os: ubuntu
             script: install_developer_conda.sh
