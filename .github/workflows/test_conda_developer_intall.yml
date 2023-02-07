@@ -7,13 +7,13 @@ on:
 
 jobs:
   build:
-    name: test (${{ matrix.os }} ${{ script }})
+    # name: test (${{ matrix.os }} ${{ script }})
     strategy:
       matrix:
         os: []
-        #, "macos", "windows"] 
+        # , "macos", "windows"]
         script: []
-        include: 
+        include:
           - os: ubuntu
             script: install_developer_conda.sh
           - os: ubuntu
