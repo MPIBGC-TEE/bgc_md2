@@ -11,11 +11,14 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
-        os: ["ubuntu"]
+        os: []
         #, "macos", "windows"] 
-    strategy:
-      matrix:
-        script: ["conda","mamba"]
+        script: []
+        include: 
+          - os: ubuntu:
+            script: install_developer_conda.sh
+          - os: ubuntu:
+            script: install_developer_mamba.sh
 
     steps:
       - name: Checkout repo and submodules
@@ -40,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo chmod -R 777 .
-          ./install_developer_$${{ matrix.script }}.sh
+          ./$${{ matrix.script }}
           #./install_developer_conda.sh
 
       - name: run test suites
