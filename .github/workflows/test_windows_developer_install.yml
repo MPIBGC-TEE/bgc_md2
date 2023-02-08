@@ -34,7 +34,7 @@ jobs:
         run: |
           conda --version
           python --version
-          ${{ matrix.script }}
+          .\${{ matrix.script }}
 
       #- name: run test suites
       #  run: |
