@@ -37,7 +37,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          batch ${{ matrix.script }}
+           ${{ matrix.script }}
 
       #- name: run test suites
       #  run: |
