@@ -13,6 +13,11 @@ jobs:
       matrix:
         os: [windows]
         script: [install_developer_conda.bat, install_developer_mamba.bat]
+        include:
+          - os: windows
+            script: install_developer_mamba.bat
+            miniforge-variant: Mambaforge
+
     runs-on: ${{ matrix.os }}-latest
 
     steps:
