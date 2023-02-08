@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     name: test-${{ matrix.os }}-${{ matrix.script }}
+    timeout-minutes: 720
     strategy:
       matrix:
         os: [windows]
