@@ -34,6 +34,7 @@ jobs:
         with:
           activate-environment: bgc_md2
           miniforge-version: latest
+          miniforge-variant: ${{matrix.miniforge-variant}}
       
       - name: Install dependencies
         run: |
