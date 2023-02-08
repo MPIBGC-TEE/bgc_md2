@@ -7,10 +7,10 @@ on:
 
 jobs:
   build:
-    name: test-${{ matrix.os }}-${{ script }}
+    name: test-${{ matrix.os }}-${{ matrix.script }}
     strategy:
       matrix:
-        os: [ubuntu ]
+        os: [ubuntu]
         # , "macos"]
         script: [install_developer_conda.sh, install_developer_mamba.sh]
     runs-on: ${{ matrix.os }}-latest

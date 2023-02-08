@@ -7,12 +7,11 @@ on:
 
 jobs:
   build:
-    name: test-${{ matrix.os }}-${{ script }}
+    name: test-${{ matrix.os }}-${{ matrix.script }}
     strategy:
       matrix:
-        os: [ubuntu ]
-        # , "macos"]
-        script: [install_developer_conda.sh, install_developer_mamba.sh]
+        os: [windows]
+        script: [install_developer_conda.bat, install_developer_mamba.bat]
     runs-on: ${{ matrix.os }}-latest
 
     steps:
@@ -37,10 +36,8 @@ jobs:
       
       - name: Install dependencies
         run: |
-          #sudo chmod -R 777 .
-          ./${{ matrix.script }}
-          #./install_developer_conda.sh
+          batch ${{ matrix.script }}
 
-      - name: run test suites
-        run: |
-          ./scripts/run_test_suites.sh
+      #- name: run test suites
+      #  run: |
+      #    ./scripts/run_test_suites.sh
