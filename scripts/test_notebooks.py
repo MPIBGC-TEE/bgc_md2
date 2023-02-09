@@ -47,9 +47,8 @@ def is_notebook(py_p):
 
 
 if __name__ == '__main__':
-    target_dir=sys.argv[1]
-
-    notebook_paths = [Path(s) for s in glob(f"{target_dir}**/*.py", recursive=True) if is_notebook(Path(s))]
+    target_dir=str(Path(sys.argv[1]))
+    notebook_paths = [Path(s) for s in glob(f"{target_dir}/**/*.py", recursive=True) if is_notebook(Path(s))]
     print([str(p) for p in notebook_paths])
 
     def add_errors(acc, p):

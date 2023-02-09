@@ -43,6 +43,6 @@ jobs:
           python --version
           .\${{ matrix.script }}
 
-      #- name: run test suites
-      #  run: |
-      #    ./scripts/run_test_suites.sh
+      - name: run test suites
+        run: |
+          python scripts/run_test_suites.py
