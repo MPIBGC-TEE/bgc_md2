@@ -14,6 +14,11 @@ jobs:
         os: [ubuntu]
         # , "macos"]
         script: [install_developer_conda.sh, install_developer_mamba.sh]
+        include:
+          - os: ubuntu
+            script: install_developer_mamba.sh
+            miniforge-variant: Mambaforge
+
     runs-on: ${{ matrix.os }}-latest
 
     steps:
@@ -30,6 +35,7 @@ jobs:
         with:
           activate-environment: bgc_md2
           miniforge-version: latest
+          miniforge-variant: ${{matrix.miniforge-variant}}
       - shell: bash -el {0}
         run: |
           conda --version
@@ -44,4 +50,4 @@ jobs:
 
       - name: run test suites
         run: |
-          ./scripts/run_test_suites.sh
+          python ./scripts/run_test_suites.py
