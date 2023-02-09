@@ -1,2 +1,2 @@
-pip install -r requirements.binder
+pip install -r requirements.src
 jupyter nbextension enable --py jupytext

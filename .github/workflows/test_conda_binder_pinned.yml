@@ -44,10 +44,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          #conda env create -f environment.yml
-          #conda activate binder || true
-          # ./postBuild
-          # pip install requirements.binder_test
           pip install -r requirements.test -r requirements.src
 
       - name: run test suites
