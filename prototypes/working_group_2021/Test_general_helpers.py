@@ -925,22 +925,22 @@ class Test_general_helpers(InDirTest):
         self.assertTrue(res == ref)
 
     def test_read_or_create(self):
-        cachePath = Path("cache.nc")
         var_name = "test"
 
         def caw(path):
-            sleep(2)
+            sleep(5)
             n = 5
-            ds = nc.Dataset(path, "w", persist=True)
+            ds = nc.Dataset(str(path), "w", persist=True)
             lat = ds.createDimension("lat", size=n)
             lon = ds.createDimension("lon", size=n)
             test = ds.createVariable(var_name, np.float64, ["lat", "lon"])
             var = np.diag(np.arange(0, n))
             test[:, :] = var
+            ds.close()
             return var
 
         def r(path):
-            ds = nc.Dataset(path)
+            ds = nc.Dataset(str(path))
             return ds.variables[var_name][:, :].data
 
         path = Path("cache", "test.nc")
