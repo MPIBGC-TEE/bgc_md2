@@ -20,6 +20,9 @@ jobs:
             miniforge-variant: Mambaforge
 
     runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
       - name: Checkout repo and submodules
@@ -36,18 +39,11 @@ jobs:
           activate-environment: bgc_md2
           miniforge-version: latest
           miniforge-variant: ${{matrix.miniforge-variant}}
-      - shell: bash -el {0}
         run: |
           conda --version
           which python
           python --version
-      
-      - name: Install dependencies
-        shell: bash -l {0}
-        run: |
-          #sudo chmod -R 777 .
           ./${{ matrix.script }}
-          #./install_developer_conda.sh
 
       - name: run test suites
         run: |
