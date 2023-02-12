@@ -39,11 +39,15 @@ jobs:
           activate-environment: bgc_md2
           miniforge-version: latest
           miniforge-variant: ${{matrix.miniforge-variant}}
+      
+      - name: Install dependencies
         run: |
           conda --version
           which python
           python --version
           ./${{ matrix.script }}
+          #sudo chmod -R 777 .
+          #./install_developer_conda.sh
 
       - name: run test suites
         run: |
