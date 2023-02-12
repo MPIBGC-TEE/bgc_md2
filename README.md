@@ -1,7 +1,8 @@
-![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
-![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
-![test_conda_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
-![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install/badge.svg)
+![test_conda/mamba_ubuntu](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
+![test_conda/mamba_windows](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_windows_developer_installation/badge.svg)
+![test_binder_pinned](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
+![test_binder_free](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
+![test_ubuntu_pip_only](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install/badge.svg)
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder)
 ## Installation
