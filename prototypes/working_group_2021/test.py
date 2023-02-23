@@ -1,5 +1,5 @@
-%load_ext autoreload
-%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 import netCDF4 as nc
 import numpy as np
 import dask.array as da
@@ -157,7 +157,7 @@ all_averaged_values = {mf : yearly_averages(vals) for mf,vals in all_values.item
 value_dicts = [all_values, all_averaged_values]
 
 
-###########################################################################################
+""
 def plot_time_lines_one_plot_per_property(
     value_dict,
     title_dict,
@@ -303,8 +303,8 @@ fsx=15
 fsy=25
 style_dict = {mf: {'color': model_cols[model_names[mf]]} for mf in model_folders}
 #############################################################################
-#fig = plt.figure(figsize=(fsx,10))
-#plot_time_lines_one_plot_per_property(
+# fig = plt.figure(figsize=(fsx,10))
+# plot_time_lines_one_plot_per_property(
 #    value_dict=all_values, 
 #    title_dict=title_dict,
 #    y_label_dict=y_label_dict,
@@ -321,20 +321,20 @@ style_dict = {mf: {'color': model_cols[model_names[mf]]} for mf in model_folders
 #    fig=fig,
 #    limit=int(5*360/delta_t_val), # 5 years
 #    #ensemble_mean=True
-#)
-#fig.suptitle("""Daily timelines of different measures of carbon transit""", fontsize=fontsize)
-##fig.tight_layout()
-#fig.subplots_adjust(
+# )
+# fig.suptitle("""Daily timelines of different measures of carbon transit""", fontsize=fontsize)
+# #fig.tight_layout()
+# fig.subplots_adjust(
 #    left=0.1,
 #    bottom=0.1,
 #    right=0.9,
 #    top=0.90,
 #    wspace=0.4,
 #    hspace=0.7
-#)
-#fig.savefig("test.pdf")
+# )
+# fig.savefig("test.pdf")
 #
-############################################################################
+# ###########################################################################
 fig = plt.figure(figsize=(fsx,7))
 plot_time_lines_one_plot_per_property(
     value_dict=all_values, 
@@ -364,7 +364,7 @@ fig.subplots_adjust(
 fig.savefig("test_veg_soil.pdf")
 
 ############################################################################
-############################################################################
+# ###########################################################################
 desired_keys=[
     "x",
     "veg_x",
@@ -403,24 +403,24 @@ fig.subplots_adjust(
 fig.savefig("test_stock_mean.pdf")
 
 ############################################################################
-#fig = plt.figure(figsize=(fsx,fsy))
-#plot_time_lines_one_plot_per_property(
+# fig = plt.figure(figsize=(fsx,fsy))
+# plot_time_lines_one_plot_per_property(
 #    value_dict=all_averaged_values, 
 #    title_dict=title_dict,
 #    y_label_dict=y_label_dict,
 #    desired_keys=desired_keys,
 #    style_dict=style_dict,
 #    fig=fig
-#)
-#fig.subplots_adjust(
+# )
+# fig.subplots_adjust(
 #    left=0.1,
 #    bottom=0.1,
 #    right=0.9,
 #    top=0.95,
 #    wspace=0.4,
 #    hspace=0.7
-#)
-#fig.suptitle("Yearly averaged timelines of diagnostic model properties", fontsize=fontsize)
-##fig.tight_layout()
-#fig.savefig("test_yearly.pdf")
-############################################################################################
+# )
+# fig.suptitle("Yearly averaged timelines of diagnostic model properties", fontsize=fontsize)
+# #fig.tight_layout()
+# fig.savefig("test_yearly.pdf")
+# ###########################################################################################

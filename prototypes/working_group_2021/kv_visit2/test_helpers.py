@@ -6,74 +6,6 @@ import netCDF4 as nc
 import json 
 from functools import lru_cache
 
-def make_test_args2(conf_dict,msh,mvs):
-
-    class TestArts():
-
-        @property
-        def V_init():
-            pass
-
-        @property
-        def par_dict():
-            pass
-
-        @property
-        def func_dict():
-            pass
-
-        @property
-        def mvs():
-            pass
-
-        @property
-        def dvs():
-            pass
-
-        @property
-        def svs():
-            pass
-
-        @property
-        def dvs_short():
-            pass
-
-        @property
-        def svs_short():
-            pass
-
-        @property
-        def epa_0():
-            pass
-
-        @property
-        def epa_min():
-            pass
-
-        @property
-        def epa_max():
-            pass
-
-        @property
-        def epa_opt():
-            pass
-
-        @property
-        def cpa():
-            pass
-
-        @property
-        def lats():
-            pass
-
-        @property
-        def lons():
-            pass
-
-        @property
-        def start_date():
-            pass
-    
 @lru_cache
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
@@ -122,7 +54,7 @@ def make_test_args(conf_dict,msh,mvs):
             'r_C_root_litter_2_C_soil_passive': 1.74346201743462e-5
         }.items()
     }
-    svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
+    svs,dvs=msh.get_global_mean_vars_2(conf_dict)
     svs_0=msh.Observables(*map(lambda v: v[0],svs))
     # create a start parameter tuple for the mcmc.
     epa_0=msh.EstimatedParameters(
@@ -290,7 +222,7 @@ def make_test_args(conf_dict,msh,mvs):
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
-        func_dict=msh.make_func_dict(mvs,dvs,cpa,epa_opt),
+        func_dict=msh.make_func_dict(dvs,cpa,epa_opt),
         dvs=dvs,
         svs=svs,
         mvs=mvs,

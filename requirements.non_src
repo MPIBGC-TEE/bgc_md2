@@ -17,6 +17,7 @@ nbformat
 netCDF4
 networkx
 notebook
+paramiko
 plotly >=3.3.0
 pycairo
 pyresample

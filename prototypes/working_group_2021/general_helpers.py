@@ -3131,3 +3131,21 @@ data_streams = namedtuple(
     ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
     ) 
 
+def dump_named_tuple_to_json_path(
+        nt,
+        path: Path
+    ):
+    d = nt._asdict()
+    with path.open("w") as f:
+            json.dump(d,f)
+
+def named_tuple_from_dict(t:type, d: Dict):
+     return t._make(d[f] for f in t._fields)
+
+def load_named_tuple_from_json_path(
+        t: type,
+        path: Path
+    ):
+    with path.open("r") as f:
+         d = json.load(f)
+    return named_tuple_from_dict(t, d)

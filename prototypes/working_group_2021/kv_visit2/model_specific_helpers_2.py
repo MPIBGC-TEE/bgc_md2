@@ -9,6 +9,8 @@ from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.TimeStepIterator import (
     TimeStepIterator2,
 )
+from typing import Dict
+from functools import lru_cache
 from copy import copy
 from typing import Callable
 from functools import reduce
@@ -179,83 +181,145 @@ def nc_global_mean_file_name(nc_var_name, experiment_name="VISIT_S2_"):
     return experiment_name + "{}_gm.nc".format(nc_var_name)
 
 
-def get_global_mean_vars(dataPath):
+
+
+def compute_and_write_global_mean_var(dataPath, targetPath, index_mask, vn):
+    path = dataPath.joinpath(nc_file_name(vn))
+    ds = nc.Dataset(str(path))
+    vs = ds.variables
+    lats = vs["lat"].__array__()
+    lons = vs["lon"].__array__()
+    print(vn)
+    var = ds.variables[vn]
+    # check if we have a cached version (which is much faster)
+    gm_path = targetPath.joinpath(nc_global_mean_file_name(vn))
+
+    gm = gh.global_mean_var(
+        lats,
+        lons,
+        index_mask,
+        # combined_mask,
+        var,
+    )
+    gh.write_global_mean_cache(gm_path, gm, vn)
+    return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
+
+def compute_and_write_global_mean_vars(dataPath,targetPath):
     o_names = Observables._fields
     d_names = OrgDrivers._fields
-    names = o_names + d_names
+    
+    # load an example file with mask
+    gm = gh.globalMask()
+    template = (
+        nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc"))
+        .variables["cSoil"][0, :, :]
+        .mask
+    )
+    gcm = gh.project_2(
+        source=gm,
+        target=gh.CoordMask(
+            index_mask=np.zeros_like(template),
+            tr=gh.SymTransformers(
+                ctr=make_model_coord_transforms(), itr=make_model_index_transforms()
+            ),
+        ),
+    )
 
-    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
+    print("computing means, this may take some minutes...")
+    def f(name):
+        return compute_and_write_global_mean_var(
+            dataPath, 
+            targetPath, 
+            gcm.index_mask, 
+            name
+        )
+
+    odvs = OrgDrivers(*map(f, d_names))
+    obss = Observables(*map(f, o_names))
+    dvs = Drivers(npp=odvs.gpp - odvs.ra, mrso=odvs.mrso, tas=odvs.tas)
+
+    return (obss, dvs)
+
+
+
+def get_cached_global_mean_drivers(targetPath):
+    o_names = Observables._fields
+    d_names = OrgDrivers._fields
+    def f(vn):
+        gm = gh.get_cached_global_mean(
+            targetPath.joinpath(nc_global_mean_file_name(vn)), vn
+        )
+        return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
+
+    # map variables to data
+    odvs = OrgDrivers(*map(f, d_names))
+    dvs = Drivers(npp=odvs.gpp - odvs.ra, mrso=odvs.mrso, tas=odvs.tas)
+    return dvs
+
+def get_cached_global_mean_observables(targetPath):
+    o_names = Observables._fields
+    def f(vn):
+        gm = gh.get_cached_global_mean(
+            targetPath.joinpath(nc_global_mean_file_name(vn)), vn
+        )
+        return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
+
+    # map variables to data
+    obss = Observables(*map(f, o_names))
+    return obss
+
+def get_cached_global_mean_vars(targetPath):
+    return (
+        get_cached_global_mean_observables(targetPath), 
+        get_cached_global_mean_drivers(targetPath)
+    )    
+
+def get_global_mean_vars(dataPath,targetPath=None):
+    if targetPath is None:
+        targetPath = dataPath 
+    
+    #o_names = Observables._fields
+    #d_names = OrgDrivers._fields
+    #names = o_names + d_names
+        
+
+    if all([targetPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
         print(
             """ Found cached global mean files. If you want to recompute the global means
             remove the following files: """
         )
         for vn in names:
-            print(dataPath.joinpath(nc_global_mean_file_name(vn)))
+            print(targetPath.joinpath(nc_global_mean_file_name(vn)))
 
-        def get_cached_global_mean(vn):
-            gm = gh.get_cached_global_mean(
-                dataPath.joinpath(nc_global_mean_file_name(vn)), vn
-            )
-            return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
+        return get_cached_global_mean_vars(targetPath)
+        #def get_cached_global_mean(vn):
+        #    gm = gh.get_cached_global_mean(
+        #        targetPath.joinpath(nc_global_mean_file_name(vn)), vn
+        #    )
+        #    return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
 
-        # map variables to data
-        odvs = OrgDrivers(*map(get_cached_global_mean, d_names))
-        obss = Observables(*map(get_cached_global_mean, o_names))
-        dvs = Drivers(npp=odvs.gpp - odvs.ra, mrso=odvs.mrso, tas=odvs.tas)
+        ## map variables to data
+        #odvs = OrgDrivers(*map(get_cached_global_mean, d_names))
+        #obss = Observables(*map(get_cached_global_mean, o_names))
+        #dvs = Drivers(npp=odvs.gpp - odvs.ra, mrso=odvs.mrso, tas=odvs.tas)
 
-        return (obss, dvs)
+        #return (obss, dvs)
 
     else:
-        gm = gh.globalMask()
-        # load an example file with mask
-        template = (
-            nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc"))
-            .variables["cSoil"][0, :, :]
-            .mask
-        )
-        gcm = gh.project_2(
-            source=gm,
-            target=gh.CoordMask(
-                index_mask=np.zeros_like(template),
-                tr=gh.SymTransformers(
-                    ctr=make_model_coord_transforms(), itr=make_model_index_transforms()
-                ),
-            ),
-        )
+        dataPath = Path(conf_dict["dataPath"])
+        return msh.compute_and_write_global_mean_vars(dataPath, targetPath)
+        
 
-        print("computing means, this may take some minutes...")
+def get_global_mean_vars_2(conf_dict,targetPath=None):
+    o_names = Observables._fields
+    d_names = OrgDrivers._fields
+    names = o_names + d_names
+    dataPath = Path(conf_dict["dataPath"])
+    if not(all([dataPath.joinpath(nc_file_name(vn)).exists() for vn in names])):
+        download_my_TRENDY_output(conf_dict)
+    return get_global_mean_vars(dataPath,targetPath)    
 
-        def compute_and_cache_global_mean(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
-            vs = ds.variables
-            lats = vs["lat"].__array__()
-            lons = vs["lon"].__array__()
-            print(vn)
-            var = ds.variables[vn]
-            # check if we have a cached version (which is much faster)
-            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
-
-            gm = gh.global_mean_var(
-                lats,
-                lons,
-                gcm.index_mask,
-                # combined_mask,
-                var,
-            )
-            gh.write_global_mean_cache(gm_path, gm, vn)
-            return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
-
-        # map variables to data
-        odvs = OrgDrivers(*map(compute_and_cache_global_mean, d_names))
-        obss = Observables(*map(compute_and_cache_global_mean, o_names))
-        dvs = Drivers(npp=odvs.gpp - odvs.ra, mrso=odvs.mrso, tas=odvs.tas)
-
-        return (obss, dvs)
-
-
-def make_func_dict(mvs, dvs, cpa, epa):
-
+def make_func_dict(dvs, cpa, epa):
     f_d = {
         "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
         "mrso": gh.make_interpol_of_t_in_days(dvs.mrso),
@@ -331,7 +395,7 @@ def make_func_dict_old(mvs, dvs, cpa, epa):
 #            X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
 #        ]
 #    ).reshape(9,1)
-#    fd = make_func_dict(mvs, dvs, cpa, epa)
+#    fd = make_func_dict(dvs, cpa, epa)
 #    V_init = gh.make_InitialStartVectorTrace(
 #            X_0,mvs,
 #            par_dict=par_dict,
@@ -547,7 +611,7 @@ def make_param2res_sym(
         #    'NPP':npp_func,
         #     'xi':xi_func
         # }
-        func_dict = make_func_dict(mvs, dvs, cpa, epa)
+        func_dict = make_func_dict(dvs, cpa, epa)
 
         # size of the timestep in days
         # We could set it to 30 o
@@ -707,7 +771,7 @@ def make_param2res_full_output(
         #             'NPP':npp_func,
         #              'xi':xi_func
         #         }
-        func_dict = make_func_dict(mvs, dvs, cpa, epa)
+        func_dict = make_func_dict(dvs, cpa, epa)
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2)
@@ -972,3 +1036,92 @@ def get_global_mean_vars_all(experiment_name):
 # return (
 # output_final
 # )
+
+class ConsistentTestArgs():
+    def __init__(
+            self,
+            confDict: Dict[str,str],
+        ):
+        """A model (and data) dependent class that expresses
+        dependencies between certain parts of the parameterization as
+        dictated by a particular choice of estimated and constant
+        paramters for parameter estimation """
+        self.confDict = confDict
+    
+    @property
+    def dataPath(self):
+        return Path(self.confDict["dataPath"])
+
+    @property
+    @lru_cache(maxsize=None)
+    def timelines(self):
+        svs, dvs = get_cached_global_mean_vars(self.dataPath)
+        return svs, dvs
+
+    @property
+    def cpa(self):
+        svs, dvs = self.timelines
+        svs_0 = Observables(*map(lambda v: v[0],svs))
+        cpa = Constants(
+            cVeg_0=svs_0.cVeg,
+            cLitter_0=svs_0.cLitter,
+            cSoil_0=svs_0.cSoil,
+            rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
+            npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
+            #ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
+            #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
+            #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
+            number_of_months=len(svs.rh)
+            #number_of_months=24 # for testing and tuning mcmc
+        )
+        return cpa
+    @property
+    def epa_opt(self):
+        # this function should compute epa_opt by dataassimilation
+        # this is a fake until this is implemented
+        return EstimatedParameters(
+            beta_leaf=0.6102169482865195, 
+            beta_wood=0.26331553815787545, 
+            T_0=1.9560345980471245, 
+            E=6.951145421284498, 
+            KM=12.73895376887386, 
+            r_C_leaf_litter_rh=0.0012830039575098323, 
+            r_C_wood_litter_rh=0.0010536416454437036, 
+            r_C_root_litter_rh=0.00022271755326847413, 
+            r_C_soil_fast_rh=0.00013707839288781872, 
+            r_C_soil_slow_rh=3.228645064482276e-05, 
+            r_C_soil_passive_rh=3.8079656062059605e-06, 
+            r_C_leaf_2_C_leaf_litter=0.011755309034589333, 
+            r_C_wood_2_C_wood_litter=0.00012990716959685548, 
+            r_C_root_2_C_root_litter=8.243205281709114e-05, 
+            r_C_leaf_litter_2_C_soil_fast=0.0014521759026031634, 
+            r_C_leaf_litter_2_C_soil_slow=0.000200225210999593, 
+            r_C_leaf_litter_2_C_soil_passive=8.380707345301035e-05, 
+            r_C_wood_litter_2_C_soil_fast=3.19128931685429e-05, 
+            r_C_wood_litter_2_C_soil_slow=7.278721749448471e-05, 
+            r_C_wood_litter_2_C_soil_passive=3.275165103336979e-06, 
+            r_C_root_litter_2_C_soil_fast=0.00044055481426693227, 
+            r_C_root_litter_2_C_soil_slow=3.1019188662910444e-05, 
+            r_C_root_litter_2_C_soil_passive=0.00012243099600679218, 
+            C_leaf_0=0.042596582017273114, 
+            C_wood_0=2.4493874052342517, 
+            C_leaf_litter_0=0.16251047110808622, 
+            C_wood_litter_0=0.17601405444541945, 
+            C_soil_fast_0=1.8746682268250323, 
+            C_soil_slow_0=1.9807766341505468
+        )
+        
+
+    def write_data(self, targetPath):
+        # write global mean var *.nc files in 
+        # the local directory
+        #compute_and_write_global_mean_vars(self.dataPath, targetPath)
+        gh.dump_named_tuple_to_json_path(
+            self.cpa,
+            targetPath.joinpath('cpa.json')
+        )
+        gh.dump_named_tuple_to_json_path(
+            self.epa_opt,
+            targetPath.joinpath('epa_opt.json')
+        )
+        

@@ -140,7 +140,7 @@ class TestSymbolic(TestCase):
                 conf_dict = gh.confDict(mf)
                 test_args = gh.test_args(mf)
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict["dataPath"]))
-                msh.make_func_dict(mvs, dvs, test_args.cpa, test_args.epa_0)
+                msh.make_func_dict( dvs, test_args.cpa, test_args.epa_0)
 
     def test_make_iterator_sym(self):
         for mf in self.model_folders:
@@ -488,7 +488,7 @@ class TestSymbolic(TestCase):
                 mvs = gh.mvs(mf)
                 conf_dict = gh.confDict(mf)
 
-                fd = msh.make_func_dict(mvs,test_args.dvs, test_args.cpa, test_args.epa_0)
+                fd = msh.make_func_dict(test_args.dvs, test_args.cpa, test_args.epa_0)
                 fd_old=msh.make_func_dict_old(mvs,test_args.dvs, test_args.cpa, test_args.epa_0)
                 months=range(0,len(test_args.dvs.npp))
                 days=[m*30 for m in months]
@@ -545,7 +545,7 @@ class TestSymbolic(TestCase):
                 testDir = self.output_path(mf)
                 self.__class__.clean_dir(testDir)
                 sv = mvs.get_StateVariableTuple()
-                func_dict = msh.make_func_dict(mvs,dvs , cpa, epa)
+                func_dict = msh.make_func_dict(dvs , cpa, epa)
                 X0 = msh.numeric_X_0(mvs,test_args.dvs,test_args.cpa,test_args.epa_0)
                 delta_t_val=5
                 par_dict = gh.make_param_dict(mvs, cpa, epa)
@@ -577,6 +577,166 @@ class TestSymbolic(TestCase):
                 #from IPython import embed; embed() 
                 self.assertTrue(np.allclose(res1.X,res2.X))
 
+    def test_age_distributions_and_btt_start_in_ss_3(self):
+        # mf = "kv_visit2"
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                th = gh.th(mf)
+                msh = gh.msh(mf)
+                # we will later remove the code for updating later 
+                cta = msh.ConsistentTestArgs(
+                    confDict=gh.confDict(mf),
+                )
+                cta.write_data(Path(mf))
+                #test_args = gh.test_args(mf)
+
+                mvs = gh.mvs(mf)
+                smr = mvs.get_SmoothModelRun()
+                smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+                # We cant compute the mean by integration since for this example the numeric integration does not
+                # converge) It usually has no problem with an age distribution
+                # given as an explicit function but we can compute the mean age
+                # directly as (1,..,1)B^{-1} 
+                from IPython import embed; embed()
+                M0 = mvs.get_NumericCompartmentalMatrixFunc()(t0,X_fix)
+                M0_inv = np.linalg.inv(M0)
+                start_mean_age_vec = -1*(np.ones_like(X_fix) @ M0_inv)
+                print(start_mean_age_vec)
+                
+                #compute solutions for the mean age system starting at X_fix and star
+                order = 1
+                s_arr, s_func = smr._solve_age_moment_system(
+                    order, 
+                    start_mean_age_vec.reshape(1,n_pools)
+                    # method='rk45' does not support kwargs yet
+                )
+                
+                # the first n colums are the solution
+                #solutions = smr.solve()
+                solutions = s_arr
+                m_a_arr = s_arr[:, n_pools:2 * n_pools]
+
+                ## alternatively we can compute the symbolic inverse
+                ##tau = s1.mvs.get_LuoTau()
+                ##tau_num=gh.numfunc(tau,mvs,delta_t_val,par_dict,func_dict)
+                ##start_mean_age_vec = np.ones_like(X_fix)@tau_num(0,*X_fix)
+                ##system_rt = LuoRT.dot(np.ones_like(X_fix))
+                ## plot the continuous solution (by ODE) solver against the  iterator 
+                ## generated one.
+                #bit = gh.traceability_iterator(
+                #    X_fix,
+                #    func_dict, 
+                #    mvs,
+                #    dvs,
+                #    cpa,
+                #    epa,
+                #    delta_t_val=delta_t_val,
+                #)
+                #fig1 = plt.figure(figsize=(2*10, n_pools*10))
+                #axs = fig1.subplots(n_pools, 2)
+                #vals=bit[0:n_steps]
+                #for i in range(n_pools):
+                #    ax = axs[i,0]
+                #    ax.plot(times,vals.X[:,i],label="bit")
+
+                #    ax.plot(times,solutions[:,i],label="sol")
+                #    ax.legend()
+                #    ax = axs[i,1]
+                #    ax.plot(times,m_a_arr[:,i])
+
+                #fig1.savefig(
+                #    testDir.joinpath(
+                #        "poolwise.pdf"
+                #    )
+                #)
+
+                #fig2 = plt.figure(figsize=(10, 10))
+                #axs2 = fig2.subplots(2, 2)
+                #mean_btts= smr.backward_transit_time_moment(
+                #    order=1,
+                #    start_age_moments=start_mean_age_vec.reshape(1,n_pools)
+                #)
+                #ax = axs2[0,0]
+                #ax.plot(times, mean_btts,label="mean backward transit time")
+                #ax.plot(times, vals.system_RT_sum,label="$\sum_i (RT)_i$") #steady state transit times
+                #ax.plot(times, vals.rt,label="rt of surrogate one pool system") #steady state transit times
+                #ax.legend()
+                #fig2.savefig(
+                #            testDir.joinpath(
+                #                "system.pdf"
+                #            )
+                #)
+                ## construct a function p that takes an age array "ages" as argument
+                ## and gives back a three-dimensional ndarray (ages x times x pools)
+                ## from the a array-valued function of a single age a_dens_function
+                #p = smr.pool_age_densities_func(a_dens_function)
+                #ages = np.linspace(0, np.max(start_mean_age_vec)*2,2)# 21)
+                #age_densities = p(ages)
+
+                #for n in range(srm.nr_pools):
+                #    max_ind = np.argmin(ages < start_mean_age_vec[n] * 2)
+                #    fig = smr.plot_3d_density_plotly(
+                #        "age distribution pool {0}".format(sv[n]), 
+                #        age_densities[0:max_ind, :, n], 
+                #        ages[0:max_ind],
+                #    )
+                #    # plot the computed start age density for t0 on top
+                #    fig.add_scatter3d(
+                #        x=np.array([-t0 for a in ages]),
+                #        y=np.array([a for a in ages]),
+                #        z=np.array([a_dens_function(a)[n] for a in ages]),
+                #        mode='lines',
+                #        line=dict(
+                #            color='#FF0000',
+                #            width=15
+                #            )
+                #    )
+                #    smr.add_line_to_density_plot_plotly(
+                #        fig,
+                #        data=m_a_arr[:, n],
+                #        color='#FF0000',
+                #        name="mean age",
+                #        time_stride       = 1,
+                #        on_surface        = True,
+                #        bottom            = True,
+                #        legend_on_surface = True,
+                #        legend_bottom     = False,
+                #    )
+                #    plot(
+                #        fig, 
+                #        filename=str(
+                #            testDir.joinpath(
+                #                "age_distribution_{0}.html".format(sv[n])
+                #            )
+                #        ),
+                #        auto_open=False
+                #    )
+                #
+                #btt_dens = smr.backward_transit_time_density(age_densities)
+                #fig_btt = smr.plot_3d_density_plotly(
+                #    "backward_transit_time_density_steady_state",
+                #    btt_dens,
+                #    ages,
+                #    y_label="transit time"
+                #)
+                #smr.add_line_to_density_plot_plotly(
+                #    fig_btt,
+                #    data=mean_btts,
+                #    color='#FF0000',
+                #    name="mean age",
+                #    time_stride       = 1,
+                #    on_surface        = True,
+                #    bottom            = True,
+                #    legend_on_surface = True,
+                #    legend_bottom     = False
+                #)
+                #plot(
+                #    fig_btt, 
+                #    filename=str(testDir.joinpath("btt_distribution.html")), 
+                #    auto_open=False
+                #)
+                ##svs, dvs = msh.get_example_site_vars(Path(conf_dict["dataPath"]))
+                ##from IPython import embed; embed()
     def test_age_distributions_and_btt_start_in_ss_2(self):
         # mf = "kv_visit2"
         for mf in set(self.model_folders):
@@ -593,7 +753,7 @@ class TestSymbolic(TestCase):
                 self.__class__.clean_dir(testDir)
                 sv = mvs.get_StateVariableTuple()
                 n_pools = len(sv)
-                func_dict = msh.make_func_dict(mvs,dvs , cpa, epa)
+                func_dict = msh.make_func_dict(dvs , cpa, epa)
                 # X0 = msh.numeric_X_0(mvs,test_args.dvs,test_args.cpa,test_args.epa)
                 par_dict = gh.make_param_dict(mvs, cpa, epa)
                 # compute the start age distribution
@@ -803,7 +963,7 @@ class TestSymbolic(TestCase):
                 delta_t_val = 15  # this affects the precision of the iterator
                 stride = 2  # this does not affect the precision of the iterator but of the averages
                 # but makes it more effiecient (the values in between the strides
-                func_dict = msh.make_func_dict(mvs, dvs, cpa, epa)
+                func_dict = msh.make_func_dict( dvs, cpa, epa)
                 ###############################################################
                 # plotting function
                 def plot_disc_vs_cont(mvs,times,X_disc,X_cont,fn):
@@ -947,7 +1107,7 @@ class TestSymbolic(TestCase):
                 # times = np.linspace(t_min, t_max, n_steps)
                 times = np.arange(t_min, t_max, delta_t_val * stride)
                 par_dict = gh.make_param_dict(mvs, test_args.cpa, epa)
-                func_dict = msh.make_func_dict(mvs, test_args.dvs, test_args.cpa, epa)
+                func_dict = msh.make_func_dict( test_args.dvs, test_args.cpa, epa)
                 #X0 = msh.numeric_X_0(mvs, test_args.dvs, test_args.cpa, epa).reshape(-1)
                 # in our case we want to compute a steady state start value
                 a_dens_function, X_fix = start_age_distributions_from_steady_state(
@@ -1165,7 +1325,8 @@ class TestSymbolic(TestCase):
                 ax.set_title("turnover times vs $\sum_i (RT)_i$")
                 ax.plot(
                     disc_times,
-                    vals.RT.sum(axis=1),
+                    #vals.RT.sum(axis=1),
+                    vals.system_RT_sum,
                     label="$\sum_i (RT)_i$",
                     color=color_dict["system"],
                     marker=marker_dict["RT"],
@@ -1179,12 +1340,12 @@ class TestSymbolic(TestCase):
                 )
                 ax.plot(
                     disc_times,
-                    vals.tot_veg,
+                    vals.veg_tot,
                     label="tot of veg pool",
                     color=color_dict["veg"],
                     marker=marker_dict["tot"],
                 )
-                key = "tot_soil"
+                key = "soil_tot"
                 ax.plot(
                     disc_times,
                     vals[key],
@@ -1224,7 +1385,7 @@ class TestSymbolic(TestCase):
                     )
                 ax.plot(
                     times,
-                    vals.RT.sum(axis=1),
+                    vals.system_RT_sum,
                     color=color_dict["system"],
                     marker=marker_dict["RT"],
                     label="$\sum_i (RT)_i$",
@@ -1242,8 +1403,8 @@ class TestSymbolic(TestCase):
                 ax = axs2[3]
                 ax.set_title("Stocks")
                 ax.plot(times, vals.x, color=color_dict["system"], label="$x$")
-                ax.plot(times, vals.x_veg, color=color_dict["veg"], label="$x_veg$")
-                ax.plot(times, vals.x_soil, color=color_dict["soil"], label="$x_soil$")
+                ax.plot(times, vals.veg_x, color=color_dict["veg"], label="$x_veg$")
+                ax.plot(times, vals.soil_x, color=color_dict["soil"], label="$x_soil$")
                 ax.legend()
                 fig2.savefig(testDir.joinpath("system.pdf"))
 
