@@ -411,7 +411,7 @@ def xi(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
     # return 1.0
 
 
-def make_func_dict(mvs, dvs, cpa, epa):
+def make_func_dict( dvs, cpa, epa):
         tsl_f, mrso_f, landCoverFrac_f, npp_f = map(
             gh.make_interpol_of_t_in_days,
             (dvs.tsl, dvs.mrsos, dvs.landCoverFrac, dvs.npp)
@@ -537,7 +537,7 @@ def make_param2res_sym(
         # Parameter vector
         epa = EstimatedParameters(*pa)
 
-        func_dict = make_func_dict(mvs, dvs, cpa, epa)
+        func_dict = make_func_dict( dvs, cpa, epa)
         # Create a startvector for the iterator
         V_init = StartVector(
             c_leaf=epa.c_leaf_0,
@@ -691,7 +691,7 @@ def make_traceability_iterator(mvs,dvs,cpa,epa):
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
     ).reshape(len(X_0_dict),1)
-    fd = make_func_dict(mvs, dvs, cpa, epa)
+    fd = make_func_dict( dvs, cpa, epa)
     V_init = gh.make_InitialStartVectorTrace(
             X_0,mvs,
             par_dict=par_dict,
@@ -732,7 +732,7 @@ def make_tuple_traceability_iterator(mvs,dvs,cpa,epa):
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict=gh.make_param_dict(mvs,cpa,epa)
     X_0 = numeric_X_0(mvs, dvs, cpa, epa)
-    fd = make_func_dict(mvs, dvs, cpa, epa)
+    fd = make_func_dict( dvs, cpa, epa)
     V_init = gh.make_InitialTraceTuple(
             X_0,
             mvs,

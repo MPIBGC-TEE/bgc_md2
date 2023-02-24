@@ -46,7 +46,7 @@ def tracebility_iterator(mf,delta_t_val):
     cpa_t=ta.cpa
     epa_t=ta.epa_opt
     X_0=gh.msh(mf).numeric_X_0(mvs_t,dvs_t,cpa_t,epa_t)
-    func_dict=gh.msh(mf).make_func_dict(mvs_t,dvs_t,cpa_t,epa_t)
+    func_dict=gh.msh(mf).make_func_dict(dvs_t,cpa_t,epa_t)
     
     return gh.traceability_iterator(
         X_0,

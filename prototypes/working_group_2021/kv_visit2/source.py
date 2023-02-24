@@ -9,6 +9,7 @@ from bgc_md2.resolve.mvars import (
     NumericParameterization,
     NumericSimulationTimes,
     NumericStartValueArray,
+    NumericStartMeanAgeVector,
     NumericParameterizedSmoothReservoirModel
 )
 from . import source_1 as s1
@@ -56,7 +57,7 @@ epa_opt = gh.load_named_tuple_from_json_path(
 func_dict = msh.make_func_dict(dvs,cpa,epa_opt)
 par_dict = gh.make_param_dict(mvs, cpa, epa_opt)
 srm = mvs.get_SmoothReservoirModel()
-# we assume that the system was in steady state 
+# For this example we assume that the system was in steady state 
 # at t_0 with X_fix given by X_fix = M^{-1} 
 # since we know that the system is linear we can easily compute the steady state
 # (in general (nonlinear fluxes) it is not clear that a steady state even exists
@@ -67,13 +68,12 @@ start_mean_age_vec, X_fix = sd.start_mean_age_vector_from_steady_state_linear(
     parameter_dict=par_dict,
     func_set=func_dict
 )
-X_fix=X_fix.reshape(-1)
-
 mvs = mvs.update({
     NumericParameterization(
         par_dict=par_dict,
         func_dict=func_dict
     ),
-    NumericStartValueArray(X_fix),
-    NumericSimulationTimes(times)
+    NumericStartValueArray(X_fix.reshape(-1)),
+    NumericSimulationTimes(times),
+    NumericStartMeanAgeVector(start_mean_age_vec)
 })

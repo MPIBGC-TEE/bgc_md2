@@ -186,7 +186,7 @@ X0=msh.numeric_X_0(mvs,dvs,cpa,epa_0)
 # +
 epa=epa_0
 delta_t_val=15
-func_dict=msh.make_func_dict(mvs,dvs,cpa,epa_0)
+func_dict=msh.make_func_dict(dvs,cpa,epa_0)
 traced_expressions={
     'AggregatedVegetation2SoilCarbonFlux': mvs.get_AggregatedVegetation2SoilCarbonFlux(),
     'dss': dss,

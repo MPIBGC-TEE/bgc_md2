@@ -329,7 +329,7 @@ def xi(tas,mrso):
     return rh_factor # 1.0     # Set to 1 if no scaler implemented
     # return 1.0
 
-def make_func_dict(mvs,dvs,cpa,epa):
+def make_func_dict(dvs,cpa,epa):
     npp_f = gh.make_interpol_of_t_in_days(dvs.npp)
     tas_f = gh.make_interpol_of_t_in_days(dvs.tas)
     mrso_f = gh.make_interpol_of_t_in_days(dvs.mrso)
@@ -508,7 +508,7 @@ def make_param2res_sym(
 #             'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
 #         }
         
-        func_dict=make_func_dict(mvs,dvs,cpa,epa)
+        func_dict=make_func_dict(dvs,cpa,epa)
 
         # size of the timestep in days
         # We could set it to 30 o

@@ -529,7 +529,7 @@ def make_func_dict_old(mvs,dvs,cpa,epa):
     }
 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+def make_func_dict(dvs,cpa,epa):
 
     def xi_leaf(tas):
         t_ref = 273.15 + 24
@@ -584,7 +584,7 @@ def make_param2res_sym(
         epa=EstimatedParameters(*pa)
         
         # Build input and environmental scaler functions
-        func_dict = make_func_dict(mvs,dvs,cpa,epa)
+        func_dict = make_func_dict(dvs,cpa,epa)
         
         # Parameter dictionary for the iterator
         apa = {**cpa._asdict(),**epa._asdict()}

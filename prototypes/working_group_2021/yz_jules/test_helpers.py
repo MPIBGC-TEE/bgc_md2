@@ -209,7 +209,7 @@ def make_test_args(conf_dict,msh,mvs):
     return TestArgs(
         V_init=V_init,
         par_dict=par_dict,
-        func_dict=msh.make_func_dict(mvs,dvs,cpa,epa_0),
+        func_dict=msh.make_func_dict(dvs,cpa,epa_0),
         dvs=dvs,
         svs=svs,
         mvs=mvs,

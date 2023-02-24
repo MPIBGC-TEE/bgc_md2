@@ -275,7 +275,7 @@ def make_func_dict_old(mvs,dvs,cpa,epa):
     }
 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+def make_func_dict(dvs,cpa,epa):
     return {
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
         "xi": lambda t: 1
@@ -348,7 +348,7 @@ def make_param2res_sym(
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
-        func_dict=make_func_dict(mvs,dvs,cpa,epa)
+        func_dict=make_func_dict(dvs,cpa,epa)
         
         delta_t_val=1
         it_sym = make_iterator_sym(

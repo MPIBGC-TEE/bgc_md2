@@ -379,7 +379,7 @@ def make_xi_func(Ts):
     return xi_func
 
 
-def make_func_dict(mvs, dvs, cpa, epa):
+def make_func_dict( dvs, cpa, epa):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs.Ts)
@@ -580,7 +580,7 @@ def make_param2res_sym(
         #              'xi':xi_func
         #         }
 
-        func_dict = make_func_dict(mvs, dvs, cpa, epa)
+        func_dict = make_func_dict( dvs, cpa, epa)
 
         # size of the timestep in days
         # We could set it to 30 o

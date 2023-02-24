@@ -119,7 +119,7 @@ def make_xi_func(dvs):
     return func
 
 
-def make_func_dict(mvs,dvs):
+def make_func_dict(dvs):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs)

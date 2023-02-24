@@ -592,17 +592,10 @@ class TestSymbolic(TestCase):
 
                 mvs = gh.mvs(mf)
                 smr = mvs.get_SmoothModelRun()
+                start_mean_age_vec=mvs.get_NumericStartMeanAgeVector()
                 smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+                n_pools=len(mvs.get_StateVariableTuple())
                 # We cant compute the mean by integration since for this example the numeric integration does not
-                # converge) It usually has no problem with an age distribution
-                # given as an explicit function but we can compute the mean age
-                # directly as (1,..,1)B^{-1} 
-                from IPython import embed; embed()
-                M0 = mvs.get_NumericCompartmentalMatrixFunc()(t0,X_fix)
-                M0_inv = np.linalg.inv(M0)
-                start_mean_age_vec = -1*(np.ones_like(X_fix) @ M0_inv)
-                print(start_mean_age_vec)
-                
                 #compute solutions for the mean age system starting at X_fix and star
                 order = 1
                 s_arr, s_func = smr._solve_age_moment_system(

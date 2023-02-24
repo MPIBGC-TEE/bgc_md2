@@ -215,7 +215,6 @@ class FunctionLike:
     def __call__(self,*args,**kwargs):
         return self.f(*args,**kwargs)
 
-
 class NumericCompartmentalMatrixFunc(FunctionLike):
     # fixme mm: We could add a check for the right arguments and return values here
     pass
@@ -228,6 +227,9 @@ class NumericStartAgeDensityFunc(FunctionLike):
 
 class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...
+    pass
+
+class NumericStartMeanAgeVector(ColumnVectorLike):
     pass
 
 
@@ -591,7 +593,7 @@ class QuantitySimulationTimes(np.ndarray):
 class NumericCompartmentalMatrixSolutionTuple(tuple):
     pass
 
-class NumericSolutionArray(np.ndarray):
+class ArrayLike(np.ndarray):
     # just a wrapper class to distinguish the array as a solution
     def __new__(cls, input_array):
         # Input array is an already formed ndarray instance
@@ -603,17 +605,14 @@ class NumericSolutionArray(np.ndarray):
     def __hash__(self):
         return hash(tuple(self))
 
-class QuantitySolutionArray(np.ndarray):
-    # just a wrapper class to distinguish the array as a solution (with units) via the type
-    def __new__(cls, input_array):
-        # Input array is an already formed ndarray instance
-        # We cast to be our class type
-        obj = np.asarray(input_array).view(cls)
-        obj.flags.writeable = False
-        return obj
+class NumericSolutionArray(ArrayLike):
+    pass
 
-    def __hash__(self):
-        return hash(tuple(self))
+class NumericMeanAgeSolutionArray(ArrayLike):
+    pass
+
+class QuantitySolutionArray(ArrayLike):
+    pass
 
 
 

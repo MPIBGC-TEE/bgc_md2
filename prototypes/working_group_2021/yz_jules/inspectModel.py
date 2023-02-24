@@ -253,7 +253,7 @@ epa_0 = msh.EstimatedParameters(
 # #### Create forward model function:
 
 # + codehighlighter=[[37, 51], [67, 69], [64, 65], [137, 139], [133, 135], [32, 45], [112, 113], [117, 118], [120, 123]]
-func_dict = msh.make_func_dict(mvs, dvs, cpa, epa_0)
+func_dict = msh.make_func_dict(dvs, cpa, epa_0)
 
 # +
 import matplotlib.lines as mlines

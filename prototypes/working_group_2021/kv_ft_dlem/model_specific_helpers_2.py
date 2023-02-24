@@ -385,7 +385,7 @@ def make_func_dict_old(mvs,dvs,cpa,epa):
         "xi": make_xi_func(dvs)
     }
 
-def make_func_dict(mvs,dvs,cpa,epa):
+def make_func_dict(dvs,cpa,epa):
     return {
         "xi":  lambda t: 1,
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
@@ -420,7 +420,7 @@ def make_param2res_sym(
         epa=EstimatedParameters(*pa)
         
         # Build input and environmental scaler functions
-        func_dict = make_func_dict(mvs,dvs,cpa,epa)
+        func_dict = make_func_dict(dvs,cpa,epa)
         
         # create a startvector for the iterator from both estimated and fixed parameters 
         # The order is important and corresponds to the order of the statevariables

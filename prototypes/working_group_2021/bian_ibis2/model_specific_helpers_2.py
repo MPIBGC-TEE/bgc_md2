@@ -494,7 +494,7 @@ def xi(tas):
     
     return factor # preliminary fake for lack of better data... 
 
-def make_func_dict(mvs,dvs,cpa,epa):
+def make_func_dict(dvs,cpa,epa):
     tas_f = gh.make_interpol_of_t_in_days(dvs.tas)
     return {
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
@@ -765,7 +765,7 @@ def make_param2res_sym(
 #              'xi':xi_func
 #         }
 
-        func_dict=make_func_dict(mvs,dvs,cpa,epa)
+        func_dict=make_func_dict(dvs,cpa,epa)
         
         # size of the timestep in days
         # We could set it to 30 o
