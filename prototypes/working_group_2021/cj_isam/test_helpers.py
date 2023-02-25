@@ -56,13 +56,7 @@ def make_test_args(conf_dict,msh,mvs):
     }
     svs,dvs=msh.get_global_mean_vars(dataPath=Path(conf_dict["dataPath"]))
     obs_arr= np.column_stack((np.repeat(svs.cVeg, 12),np.repeat(svs.cLitter, 12),np.repeat(svs.cSoil, 12),svs.rh,svs.ra))
-    func_dict={
-        Function(k):v
-        for k,v in {
-            'NPP':msh.make_npp_func(dvs),
-            'xi':msh.make_xi_func(dvs)
-        }.items()
-    }
+    func_dict = msh.make_func_dict(dvs)
     svs_0=msh.Observables(*map(lambda v: v[0],svs))
     # create a start parameter tuple for the mcmc.
     epa_0=msh.EstimatedParameters(

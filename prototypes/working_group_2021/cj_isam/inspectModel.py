@@ -241,7 +241,7 @@ def make_steady_state_iterator_sym(
         initial_values=V_init,
         f=f)
 # calculate steady state
-func_dict=msh.make_func_dict(svs,dvs,cpa,epa_0)
+func_dict=msh.make_func_dict(dvs)
 B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict)  
 
 

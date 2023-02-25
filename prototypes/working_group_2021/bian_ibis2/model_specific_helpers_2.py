@@ -494,7 +494,7 @@ def xi(tas):
     
     return factor # preliminary fake for lack of better data... 
 
-def make_func_dict(dvs,cpa,epa):
+def make_func_dict(dvs, **kwargs):
     tas_f = gh.make_interpol_of_t_in_days(dvs.tas)
     return {
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),

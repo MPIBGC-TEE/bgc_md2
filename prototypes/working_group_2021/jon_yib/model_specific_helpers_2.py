@@ -474,59 +474,59 @@ def make_StartVector(mvs):
     ) 
 
 # deprecated
-def make_func_dict_old(mvs,dvs,cpa,epa):
-    
-    def make_temp_func(dvs):
-        def temp_func(day):
-            month=gh.day_2_month_index(day)
-            # kg/m2/s kg/m2/day;
-            return (dvs.tas[month])
-        return temp_func
-
-    def make_npp_func(dvs):
-        def npp_func(day):
-            month=gh.day_2_month_index(day)
-            # kg/m2/s kg/m2/day;
-            return (dvs.npp[month])
-        return npp_func
-
-    def make_gpp_func(dvs):
-        def gpp_func(day):
-            month=gh.day_2_month_index(day)
-            # kg/m2/s kg/m2/day;
-            return (dvs.gpp[month])
-        return gpp_func
-
-    def make_xi_func_leaf(dvs):
-        t_ref = 273.15 + 24
-        t_half = 273.15 + 33
-        t_exp = 1.8
-        tf_frac = 0.2
-        def xi_func_leaf(day):
-            month = gh.day_2_month_index(day)
-            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
-            s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
-            return s_t / s_f 
-        return xi_func_leaf
-    
-    def make_xi_func_soil(dvs):
-        t_ref = 273.15 + 28
-        t_half = 273.15 + 0
-        t_exp = 1.9
-        def xi_func_soil(day):
-            month = gh.day_2_month_index(day)
-            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
-            s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
-            return s_t * s_f 
-        return xi_func_soil
-    
-    return {
-        "GPP": make_gpp_func(dvs),
-        "NPP": make_npp_func(dvs),
-        "xi_leaf": make_xi_func_leaf(dvs),
-        "xi_soil": make_xi_func_soil(dvs),
-        "temp": make_temp_func(dvs)
-    }
+#def make_func_dict_old(mvs,dvs,cpa,epa):
+#    
+#    def make_temp_func(dvs):
+#        def temp_func(day):
+#            month=gh.day_2_month_index(day)
+#            # kg/m2/s kg/m2/day;
+#            return (dvs.tas[month])
+#        return temp_func
+#
+#    def make_npp_func(dvs):
+#        def npp_func(day):
+#            month=gh.day_2_month_index(day)
+#            # kg/m2/s kg/m2/day;
+#            return (dvs.npp[month])
+#        return npp_func
+#
+#    def make_gpp_func(dvs):
+#        def gpp_func(day):
+#            month=gh.day_2_month_index(day)
+#            # kg/m2/s kg/m2/day;
+#            return (dvs.gpp[month])
+#        return gpp_func
+#
+#    def make_xi_func_leaf(dvs):
+#        t_ref = 273.15 + 24
+#        t_half = 273.15 + 33
+#        t_exp = 1.8
+#        tf_frac = 0.2
+#        def xi_func_leaf(day):
+#            month = gh.day_2_month_index(day)
+#            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+#            s_f = (1 + np.exp(tf_frac * (dvs.tas[month]-t_half)))
+#            return s_t / s_f 
+#        return xi_func_leaf
+#    
+#    def make_xi_func_soil(dvs):
+#        t_ref = 273.15 + 28
+#        t_half = 273.15 + 0
+#        t_exp = 1.9
+#        def xi_func_soil(day):
+#            month = gh.day_2_month_index(day)
+#            s_t = t_exp ** ((dvs.tas[month] - t_ref)/10)
+#            s_f = 1 / (1 + np.exp(t_half - dvs.tas[month]))
+#            return s_t * s_f 
+#        return xi_func_soil
+#    
+#    return {
+#        "GPP": make_gpp_func(dvs),
+#        "NPP": make_npp_func(dvs),
+#        "xi_leaf": make_xi_func_leaf(dvs),
+#        "xi_soil": make_xi_func_soil(dvs),
+#        "temp": make_temp_func(dvs)
+#    }
 
 
 def make_func_dict(dvs, **kwargs):

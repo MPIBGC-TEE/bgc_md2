@@ -352,38 +352,38 @@ def make_StartVector(mvs):
     ) 
 
 # deprecated
-def make_func_dict_old(mvs,dvs,cpa,epa):
-    
-    def make_npp_func(dvs):
-        def npp_func(day):
-            month=gh.day_2_month_index(day)
-            # kg/m2/s kg/m2/day;
-            return (dvs.npp[month])
-        return npp_func
-    
-    def make_gpp_func(dvs):
-        def gpp_func(day):
-            month=gh.day_2_month_index(day)
-            # kg/m2/s kg/m2/day;
-            return (dvs.gpp[month])
-        return gpp_func
-    
-    def make_temp_func(dvs):
-        def temp_func(day):
-            month=gh.day_2_month_index(day)
-            # kg/m2/s kg/m2/day;
-            return (dvs.tas[month])
-        return temp_func
-    
-    def make_xi_func(dvs):
-        def xi_func(day):
-            return 1
-        return xi_func
-    
-    return {
-        "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs)
-    }
+#def make_func_dict_old(mvs,dvs,cpa,epa):
+#    
+#    def make_npp_func(dvs):
+#        def npp_func(day):
+#            month=gh.day_2_month_index(day)
+#            # kg/m2/s kg/m2/day;
+#            return (dvs.npp[month])
+#        return npp_func
+#    
+#    def make_gpp_func(dvs):
+#        def gpp_func(day):
+#            month=gh.day_2_month_index(day)
+#            # kg/m2/s kg/m2/day;
+#            return (dvs.gpp[month])
+#        return gpp_func
+#    
+#    def make_temp_func(dvs):
+#        def temp_func(day):
+#            month=gh.day_2_month_index(day)
+#            # kg/m2/s kg/m2/day;
+#            return (dvs.tas[month])
+#        return temp_func
+#    
+#    def make_xi_func(dvs):
+#        def xi_func(day):
+#            return 1
+#        return xi_func
+#    
+#    return {
+#        "NPP": make_npp_func(dvs),
+#        "xi": make_xi_func(dvs)
+#    }
 
 def make_func_dict(dvs, **kwargs):
     return {

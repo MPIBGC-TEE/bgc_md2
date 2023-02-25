@@ -307,7 +307,6 @@ def get_global_mean_vars_2(conf_dict,targetPath=None):
         download_my_TRENDY_output(conf_dict)
     return get_global_mean_vars(dataPath,targetPath)    
 
-#def make_func_dict(dvs, cpa, epa):
 def make_func_dict(dvs,**kwargs):
     f_d = {
         "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
@@ -600,7 +599,7 @@ def make_param2res_sym(
         #    'NPP':npp_func,
         #     'xi':xi_func
         # }
-        func_dict = make_func_dict(dvs, cpa, epa)
+        func_dict = make_func_dict(dvs)
 
         # size of the timestep in days
         # We could set it to 30 o
@@ -760,7 +759,7 @@ def make_param2res_full_output(
         #             'NPP':npp_func,
         #              'xi':xi_func
         #         }
-        func_dict = make_func_dict(dvs, cpa, epa)
+        func_dict = make_func_dict(dvs)
         # size of the timestep in days
         # We could set it to 30 o
         # it makes sense to have a integral divisor of 30 (15,10,6,5,3,2)

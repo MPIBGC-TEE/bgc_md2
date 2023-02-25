@@ -580,7 +580,7 @@ def make_param2res_sym(
         #              'xi':xi_func
         #         }
 
-        func_dict = make_func_dict( dvs, cpa, epa)
+        func_dict = make_func_dict(dvs)
 
         # size of the timestep in days
         # We could set it to 30 o

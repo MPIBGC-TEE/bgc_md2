@@ -250,30 +250,30 @@ def get_global_mean_vars(dataPath):
         Drivers(*(arr_dict[k] for k in Drivers._fields))
     )
 
-# deprecated
-def make_npp_func(dvs):
-    def func(day):
-        month=gh.day_2_month_index(day)
-        # kg/m2/s kg/m2/day;
-        return (dvs.npp[month])
-
-    return func
-
-
-# deprecated
-def make_xi_func(dvs):
-    def func(day):
-        return 1.0 # preliminary fake for lack of better data... 
-    return func
-
-
-# deprecated
-def make_func_dict_old(mvs,dvs,cpa,epa):
-    return {
-        "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs)
-    }
-
+## deprecated
+#def make_npp_func(dvs):
+#    def func(day):
+#        month=gh.day_2_month_index(day)
+#        # kg/m2/s kg/m2/day;
+#        return (dvs.npp[month])
+#
+#    return func
+#
+#
+## deprecated
+#def make_xi_func(dvs):
+#    def func(day):
+#        return 1.0 # preliminary fake for lack of better data... 
+#    return func
+#
+#
+## deprecated
+#def make_func_dict_old(mvs,dvs,cpa,epa):
+#    return {
+#        "NPP": make_npp_func(dvs),
+#        "xi": make_xi_func(dvs)
+#    }
+#
 
 def make_func_dict(dvs, **kwargs):
     return {

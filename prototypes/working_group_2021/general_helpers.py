@@ -2475,8 +2475,8 @@ def project_2(source: CoordMask, target: CoordMask):
     # and interpolate the source mask on them
     lats = np.array(list(map(s_tr.i2lat, range(s_n_lat))))
     lons = np.array(list(map(s_tr.i2lon, range(s_n_lon))))
-    f_old = interpolate.interp2d(x=lons, y=lats, z=s_mask) # deprecated by scipy
-    f = interpolate.RectBivariateSpline(x=lons, y=lats, z=s_mask.T)
+    kind="cubic"
+    #f_old = interpolate.interp2d(x=lons, y=lats, z=s_mask,kind=kind) # deprecated by scipy
     # now we apply this interpolating function to the target grid
     # points
     target_lats = np.array(list(map(t_tr.i2lat, range(t_n_lat))))
@@ -2484,9 +2484,19 @@ def project_2(source: CoordMask, target: CoordMask):
     # order lats and lons since f returns an array that assumes this anyway
     otlats, p_lat, p_lat_inv = target.ordered_lats()
     otlons, p_lon, p_lon_inv = target.ordered_lons()
-    float_grid_old = p_lat_inv @ f_old(otlons, otlats) @ p_lon_inv
-    float_grid = p_lat_inv @ f(otlons, otlats).T @ p_lon_inv
-    assert(float_grid_old == float_grid)
+    #val_old = f_old(otlons, otlats)
+    #float_grid_old = p_lat_inv @ f_old(otlons, otlats) @ p_lon_inv
+    from scipy.interpolate import  RegularGridInterpolator as RGI
+    f = RGI ((lons, lats), s_mask.T, method=kind, bounds_error=False)
+    ootlons, ootlats= np.meshgrid(otlons, otlats, indexing='ij', sparse=True)
+    val_new = f((ootlons, ootlats)).T
+    float_grid = p_lat_inv @ val_new  @ p_lon_inv
+#    try:
+#        assert(np.allclose(float_grid_old, float_grid))
+#    except AssertionError:
+#        print(float_grid_old, float_grid)
+#        from IPython import embed; embed()
+#
     # print(float_grid.mean())
     projected_mask = float_grid > 0.5
     # from IPython import embed; embed()

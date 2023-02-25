@@ -619,10 +619,10 @@ class Test_general_helpers(InDirTest):
     def test_project_2_self_b(self):
         # step_lat = 90
         # lat_0 = -90+45
-        step_lat = -90
-        lat_0 = 90 - 45
+        step_lat = -45
+        lat_0 = 90 - step_lat/2
         step_lon = 90
-        lon_0 = -180 + 45
+        lon_0 = -180 + step_lat/2
         itr = gh.transform_maker(
             lat_0,
             lon_0,
@@ -632,8 +632,19 @@ class Test_general_helpers(InDirTest):
         # here we use the identical transformation
         ctr = gh.identicalTransformers()
         sym_tr = gh.SymTransformers(itr=itr, ctr=ctr)
+        n_lat = int(180 / step_lat)
+        n_lon = int(360 / step_lon)
         cm_1 = gh.CoordMask(
-            np.array([[0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.bool_).reshape(2, 4), sym_tr
+            np.array(
+                [
+                    [0, 1, 0, 0], 
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                dtype=np.bool_
+            ).reshape(n_lat, n_lon),
+            sym_tr
         )
 
         # self projection
@@ -650,11 +661,11 @@ class Test_general_helpers(InDirTest):
         # step_lat = 60
         # lat_0 = -90+30
 
-        step_lat = -60
-        lat_0 = 90 - 30
+        step_lat = -45
+        lat_0 = 90 - step_lat/2
 
         step_lon = 90
-        lon_0 = -180 + 45
+        lon_0 = -180 + step_lat/2
         itr = gh.transform_maker(
             lat_0,
             lon_0,
@@ -668,7 +679,13 @@ class Test_general_helpers(InDirTest):
         n_lon = int(360 / step_lon)
         cm_1 = gh.CoordMask(
             np.array(
-                [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.bool_
+                [
+                    [1, 0, 0, 0], 
+                    [0, 1, 0, 0], 
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                dtype=np.bool_
             ).reshape(n_lat, n_lon),
             sym_tr,
         )
@@ -686,11 +703,11 @@ class Test_general_helpers(InDirTest):
     def test_project_2_higher_res_target(self):
         # here we use the identical transformation
         ctr = gh.identicalTransformers()
-        step_lat = 60
+        step_lat = 45
         step_lon = 90
         # lat_0 = 0
-        lat_0 = -90 + 30
-        lon_0 = -180 + 45
+        lat_0 = 90 - step_lat/2
+        lon_0 = -180 + step_lat/2
         itr_1 = gh.transform_maker(
             lat_0,
             lon_0,
@@ -705,6 +722,7 @@ class Test_general_helpers(InDirTest):
                 [
                     [0, 0, 0, 0],
                     [0, 1, 0, 0],
+                    [0, 0, 0, 0],
                     [0, 0, 0, 0],
                 ],
                 dtype=np.bool_,

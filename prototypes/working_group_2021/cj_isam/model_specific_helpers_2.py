@@ -300,26 +300,26 @@ def make_npp_func(dvs):
 # -
 
 # deprecated
-def make_xi_func(dvs):
-    def xi_func(day):
-        mi = gh.day_2_month_index(day)
-        # alternative FT
-        FT = 0.08 * math.exp(0.095 * (dvs.tas[mi]-273.15)) # temperature rate modifier
-        FW = 1 #/ (1 + 30 * math.exp(-8.5 * dvs.mrso[mi])) # water rate modifier
-        #print("FT,FW", FT, FW)
-        rh_factor = FT * FW
-        return rh_factor # 1.0     # Set to 1 if no scaler implemented
-        # return 1.0
-
-    return xi_func
-
-
-# deprecated
-def make_func_dict_old(mvs,dvs,cpa,epa):
-    return {
-        "NPP": make_npp_func(dvs),
-        "xi": make_xi_func(dvs)
-    }
+#def make_xi_func(dvs):
+#    def xi_func(day):
+#        mi = gh.day_2_month_index(day)
+#        # alternative FT
+#        FT = 0.08 * math.exp(0.095 * (dvs.tas[mi]-273.15)) # temperature rate modifier
+#        FW = 1 #/ (1 + 30 * math.exp(-8.5 * dvs.mrso[mi])) # water rate modifier
+#        #print("FT,FW", FT, FW)
+#        rh_factor = FT * FW
+#        return rh_factor # 1.0     # Set to 1 if no scaler implemented
+#        # return 1.0
+#
+#    return xi_func
+#
+#
+## deprecated
+#def make_func_dict_old(mvs,dvs,cpa,epa):
+#    return {
+#        "NPP": make_npp_func(dvs),
+#        "xi": make_xi_func(dvs)
+#    }
 
 def xi(tas,mrso):
     # alternative FT

@@ -172,7 +172,7 @@ mvs = CMTVS(
 #diff(xi,t)
 
 # +
-#def make_func_dict(dvs, cpa, epa):
+#def make_func_dict(dvs)
 #    def tas_num(day):
 #        month=gh.day_2_month_index(day)
 #        return dvs.tas[month]
