@@ -275,7 +275,7 @@ def make_func_dict_old(mvs,dvs,cpa,epa):
     }
 
 
-def make_func_dict(dvs,cpa,epa):
+def make_func_dict(dvs, **kwargs):
     return {
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
         "xi": lambda t: 1
@@ -348,7 +348,7 @@ def make_param2res_sym(
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
         # could be build from estimated parameters and would have to live here...
-        func_dict=make_func_dict(dvs,cpa,epa)
+        func_dict = make_func_dict(dvs)
         
         delta_t_val=1
         it_sym = make_iterator_sym(
@@ -670,7 +670,7 @@ def nc_global_mean_file_name(nc_var_name):
 #             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
 #         def get_cached_global_mean(vn):
-#             return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+#             return gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
     
 #         return (
 #             Observables(*map(get_cached_global_mean, o_names)),
@@ -737,7 +737,7 @@ def nc_global_mean_file_name(nc_var_name):
 #             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
 #         def get_cached_global_mean(vn):
-#             gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+#             gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
 #             return gm * 86400 if vn in ["npp", "rh"] else gm
 
 #         #map variables to data
@@ -908,7 +908,7 @@ def get_global_mean_vars_all(experiment_name):
             # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
 
         # def get_cached_global_mean(vn):
-            # gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
+            # gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
             # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
 
         # #map variables to data

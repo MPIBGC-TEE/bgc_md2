@@ -48,6 +48,7 @@ from CompartmentalSystems.start_distributions import (
     # start_age_distributions_from_empty_spinup,
     # start_age_distributions_from_zero_initial_content,
 )
+
 # from CompartmentalSystems.BlockArrayIterator import BlockArrayIterator
 from CompartmentalSystems.BlockDictIterator import BlockDictIterator
 from CompartmentalSystems.ArrayDict import ArrayDict
@@ -172,7 +173,7 @@ class SymTransformers:
 #        max_lon=lon+step_lon/2
 #    )
 
-#_TraceTuple = namedtuple(
+# _TraceTuple = namedtuple(
 #    "_TraceTuple",
 #    [
 #        "x",
@@ -189,16 +190,14 @@ class SymTransformers:
 #        "u",
 #        "AggregatedVegetation2SoilCarbonFlux",
 #    ],
-#)
+# )
 
-class TraceTuple():
-    def __init__(
-        self,
-        fd: dict
-        ):
-        for k,v in fd.items():
-            self.fd=fd
-            self.__setattr__(k,v)
+
+class TraceTuple:
+    def __init__(self, fd: dict):
+        for k, v in fd.items():
+            self.fd = fd
+            self.__setattr__(k, v)
 
     @property
     def _fields(self):
@@ -207,8 +206,7 @@ class TraceTuple():
     def averages(self, partitions):
         return self.__class__(
             {
-                name:
-                averaged_1d_array(self.__getattribute__(name), partitions)
+                name: averaged_1d_array(self.__getattribute__(name), partitions)
                 for name in self._fields
             }
         )
@@ -217,8 +215,7 @@ class TraceTuple():
         """overload + which is useful for averaging"""
         return self.__class__(
             {
-                name:
-                self.__getattribute__(name) + other.__getattribute__(name)
+                name: self.__getattribute__(name) + other.__getattribute__(name)
                 for name in self._fields
             }
         )
@@ -227,11 +224,7 @@ class TraceTuple():
         """overload / for scalars  which is useful for averaging"""
 
         return self.__class__(
-            { 
-                name: 
-                self.__getattribute__(name) / number 
-                for name in self._fields
-            }
+            {name: self.__getattribute__(name) / number for name in self._fields}
         )
 
     def __eq__(self, other):
@@ -282,7 +275,7 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
     parameter_dict = {**model_params, delta_t: delta_t_val}
     state_vector = mvs.get_StateVariableTuple()
 
-    sym_B = hr.discrete_time_sym( #hr.euler_forward_B_sym(
+    sym_B = hr.discrete_time_sym(  # hr.euler_forward_B_sym(
         mvs.get_CompartmentalMatrix(), cont_time=t, delta_t=delta_t, iteration=it
     )
     # from IPython import embed;embed()
@@ -295,7 +288,7 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
         parameter_dict=parameter_dict,
         func_dict=func_dict,
     )
-    #u_func = hr.numerical_1d_vector_func(
+    # u_func = hr.numerical_1d_vector_func(
     u_func = hr.numerical_array_func(
         state_vector=state_vector,
         time_symbol=it,
@@ -304,6 +297,7 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
         func_dict=func_dict,
     )
     return (B_func, u_func)
+
 
 # fixme mm 11-15-2022
 # should be obsolete with the new iterator
@@ -942,7 +936,7 @@ def make_feng_cost_func(
     # now we compute a scaling factor per observable stream
     # fixme mm 10-28-2021
     #   The denominators in this case are actually the TEMPORAL variances of the data streams
-    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+    denominators = np.sum(mean_centered_obs**2, axis=0)
 
     #   The desired effect of automatically adjusting weight could be achieved
     #   by the mean itself.
@@ -962,7 +956,7 @@ def make_jon_cost_func(
     # and dimension 1 the pool index
     n = obs.shape[0]
     means = obs.mean(axis=0)
-    denominators = means ** 2
+    denominators = means**2
 
     def costfunction(mod: np.ndarray) -> np.float64:
         cost = (100 / n) * np.sum(100 * np.sum((obs - mod) ** 2, axis=0) / denominators)
@@ -981,7 +975,7 @@ def days_per_year():
     return sum(days_per_month())
 
 
-#def day_2_month_index(day):
+# def day_2_month_index(day):
 #    months_by_day_arr = np.concatenate(
 #        tuple(
 #            map(lambda m: m * np.ones(days_per_month()[m], dtype=np.int64), range(12))
@@ -993,23 +987,25 @@ def days_per_year():
 
 
 def days_since_AD(
-    iteration, 
-    delta_t_val, 
+    iteration,
+    delta_t_val,
     start_date,
-    start_shift=0 # time between the start.date and the iterator's first step  
+    start_shift=0,  # time between the start.date and the iterator's first step
 ):
     return td_AD(start_date) + start_shift + iteration * delta_t_val
 
+
 def td_AD(start_date):
-    # computes the startdate in days time AD 
-    start_year, start_month, start_day = start_date 
-    return  (
+    # computes the startdate in days time AD
+    start_year, start_month, start_day = start_date
+    return (
         start_year * days_per_year()
         + sum(days_per_month()[0 : (start_month - 1)])
         + (start_day - 1)
     )
 
-#def month_2_day_index(ns, start_date):
+
+# def month_2_day_index(ns, start_date):
 #    start_month = start_date.month
 #    """ computes the index of the day at the end of the month n in ns
 #    this works on vectors and is faster than a recursive version working
@@ -1161,25 +1157,21 @@ def plot_observations_vs_simulations(fig, svs_cut, obs_simu):
 
 
 def is_infinite_rec(chunk):
-    return reduce_or_rec(
-        np.logical_not(
-            np.isfinite(chunk)
-        )
-    )
+    return reduce_or_rec(np.logical_not(np.isfinite(chunk)))
 
 
 def reduce_or_rec(bool_arr: np.ma.core.MaskedArray) -> np.ma.core.MaskedArray:
     # works recursively for any dimension (some variables are 4, most are 3 dimensional)
     # 2d array (lat,lon are always the last dimensions in our datasets)
     if bool_arr.ndim == 2:
-        return bool_arr 
+        return bool_arr
     else:
         return reduce_or_rec(
             reduce(
                 np.logical_or,
                 map(lambda i: bool_arr[i], range(bool_arr.shape[0])),
             )
-        )    
+        )
 
 
 def get_nan_pixel_mask(
@@ -1424,7 +1416,7 @@ def download_TRENDY_output(
     dataPath: Path,
     models: List[str],
     variables: List[str],
-    experiments = ["S2"] # We are using s2 data, can add more
+    experiments=["S2"],  # We are using s2 data, can add more
 ):
     import paramiko
     import tarfile
@@ -1459,7 +1451,6 @@ def download_TRENDY_output(
         print("downloading data for", model, "model")
         for experiment in experiments:
             for variable in variables:
-
                 modelname = model
                 modelname_file = model
                 ext = "nc"
@@ -1471,7 +1462,7 @@ def download_TRENDY_output(
                     modelname_file = "ORCHIDEEv3"
                 elif model == "ISBA_CTRIP":
                     modelname_file = "ISBA-CTRIP"
-                elif model == "JULES-ES"or model == "JULES-ES-1.0":
+                elif model == "JULES-ES" or model == "JULES-ES-1.0":
                     modelname = "JULES-ES-1.0"
                     modelname_file = "JULES-ES-1p0"
                 elif model == "SDGVM" or model == "VISIT":
@@ -1539,23 +1530,24 @@ def download_TRENDY_output(
                     print(zipped_path)
     print("finished!")
 
+
 # toextend the interpolating functions beyond the last month
 # we have to extend the data fields from which they are derived
 def extend_by_one(field):
     return np.concatenate([field, field[-2:-1]])
 
-def make_interpol_of_t_in_days(
-        field  # field of values one per month
-    ):
+
+def make_interpol_of_t_in_days(field):  # field of values one per month
     y = extend_by_one(field)
-    #print(y.shape)
-    #from IPython import embed; embed()
-    f_of_month = interp1d(x=np.arange(0.0, len(y)), y=y, kind='cubic')
+    # print(y.shape)
+    # from IPython import embed; embed()
+    f_of_month = interp1d(x=np.arange(0.0, len(y)), y=y, kind="cubic")
 
     def f_of_day(day):
         return f_of_month(day / 30.0)
 
     return f_of_day
+
 
 def monthly_to_yearly(monthly):
     # TRENDY specific - months weighted like all months are 30 days
@@ -1566,10 +1558,7 @@ def monthly_to_yearly(monthly):
         ]
     else:
         sub_arrays = [
-            monthly[
-                i * 12 : (i + 1) * 12,
-            ]
-            for i in range(int(monthly.shape[0] / 12))
+            monthly[i * 12 : (i + 1) * 12,] for i in range(int(monthly.shape[0] / 12))
         ]
     return np.stack(list(map(lambda sa: sa.mean(axis=0), sub_arrays)), axis=0)
 
@@ -1592,7 +1581,7 @@ def make_feng_cost_func_2(svs):  #: Observables
     obs_arr = np.stack([arr for arr in svs], axis=1)
     means = obs_arr.mean(axis=0)
     mean_centered_obs = obs_arr - means
-    denominators = np.sum(mean_centered_obs ** 2, axis=0)
+    denominators = np.sum(mean_centered_obs**2, axis=0)
 
     def feng_cost_func_2(simu):  #: Observables
         def f(i):
@@ -1609,7 +1598,6 @@ def make_feng_cost_func_2(svs):  #: Observables
 def make_param_filter_func(
     c_max, c_min, betas: List[str] = []
 ) -> Callable[[np.ndarray], bool]:
-
     positions = [c_max.__class__._fields.index(beta) for beta in betas]
 
     def isQualified(c):
@@ -1762,8 +1750,7 @@ def values_2_TraceTuple(tups):
     # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
     return TraceTuple(
         {
-            name:
-            np.stack(tuple((tup.__getattribute__(name) for tup in tups)))
+            name: np.stack(tuple((tup.__getattribute__(name) for tup in tups)))
             for name in tups[0]._fields
         }
     )
@@ -1802,11 +1789,8 @@ class TraceTupleIterator(InfiniteIterator):
         return values_2_TraceTuple(tts)
 
 
-def make_trace_tuple_func(
-        traced_functions: Dict[str, Callable]
-    ):
-
-    # create a function that produces all the values we want to track for every timestep 
+def make_trace_tuple_func(traced_functions: Dict[str, Callable]):
+    # create a function that produces all the values we want to track for every timestep
     def f(X, B, I, it):
         # These are values that are computable from the momentary values of X and B
         u = I.sum()
@@ -1825,8 +1809,8 @@ def make_trace_tuple_func(
         x_c = 1 / m_s * u
         x_p = x_c - x
         rt = x_c / u
-        #tt=    
-        static={ 
+        # tt=
+        static = {
             "X": X,
             "X_p": X_p,
             "X_c": X_c,
@@ -1840,20 +1824,17 @@ def make_trace_tuple_func(
             "rt": rt,
             "u": u,
         }
-        dynamic={
-            k: f(it,*X)
-            for k,f in traced_functions.items()
-        }
-        def dict_merge(d1,d2):
-            d=deepcopy(d1)
+        dynamic = {k: f(it, *X) for k, f in traced_functions.items()}
+
+        def dict_merge(d1, d2):
+            d = deepcopy(d1)
             d.update(d2)
             return d
 
-        return TraceTuple(
-            dict_merge(static,dynamic)
-        )
+        return TraceTuple(dict_merge(static, dynamic))
 
-    return f 
+    return f
+
 
 # def trace_tuple_instance(X, B, I):
 #     # These are values that are computable from the momentary values of X and B
@@ -1891,24 +1872,22 @@ def make_trace_tuple_func(
 #     )
 #
 def minimal_iterator(
-        X_0,
-        func_dict,
-        mvs,  #: CMTVS,
-        dvs,  #: Drivers,
-        cpa,  #: Constants,
-        epa,  #: EstimatedParameters
-        delta_t_val: int = 1,  # defaults to 1day timestep
-        #traced_expressions: Dict[str, Expr] = dict(),
-        #extra_functions: Dict[str, Callable] = dict(),
-        t_0=0
-    ):
-
+    X_0,
+    func_dict,
+    mvs,  #: CMTVS,
+    dvs,  #: Drivers,
+    cpa,  #: Constants,
+    epa,  #: EstimatedParameters
+    delta_t_val: int = 1,  # defaults to 1day timestep
+    # traced_expressions: Dict[str, Expr] = dict(),
+    # extra_functions: Dict[str, Callable] = dict(),
+    t_0=0,
+):
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
     t = mvs.get_TimeSymbol()
     state_vector = mvs.get_StateVariableTuple()
     delta_t = Symbol("delta_t")
-    
 
     disc_par_dict = {**par_dict, delta_t: delta_t_val}
     B_func = hr.numerical_array_func(
@@ -1926,49 +1905,54 @@ def minimal_iterator(
         func_dict=func_dict,
     )
     # make sure that the startvector X_0 is a ONE dimensional  vector
-    # since it is important that  X_0 and the result of I(t,X) have 
+    # since it is important that  X_0 and the result of I(t,X) have
     # the same dimension
     X_0 = X_0.reshape(-1)
-    assert(I_func(0, X_0).ndim == 1)
+    assert I_func(0, X_0).ndim == 1
 
     bit = BlockDictIterator(
-        iteration_str = "it", # access the inner counter
+        iteration_str="it",  # access the inner counter
         start_seed_dict=ArrayDict({"X": X_0, "t": t_0}),
-        present_step_funcs=OrderedDict({
-            # these are functions that are  applied in order
-            # on the start_seed_dict
-            # they might compute variables that are purely  
-            # diagnostic or those that are necessary for the
-            # next step
-            # 
-            # The first 2 are essential for any compartmental system
-            "B": lambda t, X: - B_func(t, X), 
-            "I": lambda t, X: I_func(t, X), 
-            # 
-            #**extra_functions
-        }),
-        next_step_funcs=OrderedDict({
-            # these functions have to compute the seed for the next timestep
-            "X": lambda X,B,I : X + (I - B@X) * delta_t_val , 
-            "t": lambda t: t + delta_t_val,
-        })
+        present_step_funcs=OrderedDict(
+            {
+                # these are functions that are  applied in order
+                # on the start_seed_dict
+                # they might compute variables that are purely
+                # diagnostic or those that are necessary for the
+                # next step
+                #
+                # The first 2 are essential for any compartmental system
+                "B": lambda t, X: -B_func(t, X),
+                "I": lambda t, X: I_func(t, X),
+                #
+                # **extra_functions
+            }
+        ),
+        next_step_funcs=OrderedDict(
+            {
+                # these functions have to compute the seed for the next timestep
+                "X": lambda X, B, I: X + (I - B @ X) * delta_t_val,
+                "t": lambda t: t + delta_t_val,
+            }
+        ),
     )
     return bit
 
-# fixme mm 12-2 2022 
+
+# fixme mm 12-2 2022
 # should be better called tracebility Iterator result
 def traceability_iterator(
-        X_0,
-        func_dict,
-        mvs,  #: CMTVS,
-        dvs,  #: Drivers,
-        cpa,  #: Constants,
-        epa,  #: EstimatedParameters
-        delta_t_val: int = 1,  # defaults to 1day timestep
-        #traced_expressions: Dict[str, Expr] = dict(),
-        #extra_functions: Dict[str, Callable] = dict(),
-        t_0=0,
-    ):
+    X_0,
+    func_dict,
+    mvs,  #: CMTVS,
+    dvs,  #: Drivers,
+    cpa,  #: Constants,
+    epa,  #: EstimatedParameters
+    delta_t_val: int = 1,  # defaults to 1day timestep
+    # traced_expressions: Dict[str, Expr] = dict(),
+    # extra_functions: Dict[str, Callable] = dict(),
+    t_0=0,
+):
     mit = minimal_iterator(
         X_0,
         func_dict,
@@ -1976,13 +1960,12 @@ def traceability_iterator(
         dvs,  #: Drivers,
         cpa,  #: Constants,
         epa,  #: EstimatedParameters
-        delta_t_val = delta_t_val ,
+        delta_t_val=delta_t_val,
         t_0=t_0,
     )
 
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
-
 
     (
         veg_x_func,
@@ -1993,11 +1976,11 @@ def traceability_iterator(
         soil_2_out_func,
     ) = map(
         lambda expr: hr.numerical_func_of_t_and_Xvec(
-           state_vector=mvs.get_StateVariableTuple(),
-           time_symbol=mvs.get_TimeSymbol(),
-           expr=expr,
-           parameter_dict=par_dict,
-           func_dict=func_dict
+            state_vector=mvs.get_StateVariableTuple(),
+            time_symbol=mvs.get_TimeSymbol(),
+            expr=expr,
+            parameter_dict=par_dict,
+            func_dict=func_dict,
         ),
         [
             mvs.get_AggregatedVegetationCarbon(),
@@ -2006,53 +1989,55 @@ def traceability_iterator(
             mvs.get_AggregatedVegetation2SoilCarbonFlux(),
             mvs.get_AggregatedVegetationCarbonOutFlux(),
             mvs.get_AggregatedSoilCarbonOutFlux(),
-        ]    
+        ],
     )
-    present_step_funcs=OrderedDict({
-        "u": lambda I: I.sum(),
-        "b": lambda I, u: I / u,
-        "B_inv": lambda B: np.linalg.inv(B),
-        "X_c": lambda B_inv, I: B_inv @ I,
-        "X_p": lambda X_c, X: X_c - X,
-        "X_dot": lambda I, B, X: I - B @ X,
-        "system_RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
-        "system_RT_sum": lambda system_RT: system_RT.sum(),
-        "x": lambda X: X.sum(),
-        "x_dot": lambda X_dot: X_dot.sum(),
-        "system_m": lambda B, X, x: (B @ X).sum() / x, #rate of the surrogate system
-        "system_tot": lambda system_m: 1 / system_m, 
-        "x_c": lambda system_m, u: 1 / system_m * u, # x_c of the surrogate system
-        "x_p": lambda x_c, x: x_c - x,
-        "rt": lambda x_c, u: x_c / u,
-        'veg_x': lambda t, X: veg_x_func(t,X), 
-        'soil_x': lambda t, X: soil_x_func(t,X),
-        'out_2_veg': lambda t, X: out_2_veg_func(t,X),
-        'veg_2_soil': lambda t, X: veg_2_soil_func(t,X),
-        'veg_2_out': lambda t, X: veg_2_out_func(t,X),
-        'soil_2_out': lambda t, X: soil_2_out_func(t,X),
-        'veg_m': lambda veg_2_out, veg_2_soil, veg_x:\
-            (veg_2_out + veg_2_soil)/ veg_x, # veg rate
-        'veg_tot': lambda veg_m: 1 / veg_m ,   
-        'soil_m': lambda soil_2_out, soil_x: soil_2_out / soil_x, # soil rate 
-        'soil_tot': lambda soil_m: 1 / soil_m,    
-        #**extra_functions
-    })
+    present_step_funcs = OrderedDict(
+        {
+            "u": lambda I: I.sum(),
+            "b": lambda I, u: I / u,
+            "B_inv": lambda B: np.linalg.inv(B),
+            "X_c": lambda B_inv, I: B_inv @ I,
+            "X_p": lambda X_c, X: X_c - X,
+            "X_dot": lambda I, B, X: I - B @ X,
+            "system_RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
+            "system_RT_sum": lambda system_RT: system_RT.sum(),
+            "x": lambda X: X.sum(),
+            "x_dot": lambda X_dot: X_dot.sum(),
+            "system_m": lambda B, X, x: (B @ X).sum()
+            / x,  # rate of the surrogate system
+            "system_tot": lambda system_m: 1 / system_m,
+            "x_c": lambda system_m, u: 1 / system_m * u,  # x_c of the surrogate system
+            "x_p": lambda x_c, x: x_c - x,
+            "rt": lambda x_c, u: x_c / u,
+            "veg_x": lambda t, X: veg_x_func(t, X),
+            "soil_x": lambda t, X: soil_x_func(t, X),
+            "out_2_veg": lambda t, X: out_2_veg_func(t, X),
+            "veg_2_soil": lambda t, X: veg_2_soil_func(t, X),
+            "veg_2_out": lambda t, X: veg_2_out_func(t, X),
+            "soil_2_out": lambda t, X: soil_2_out_func(t, X),
+            "veg_m": lambda veg_2_out, veg_2_soil, veg_x: (veg_2_out + veg_2_soil)
+            / veg_x,  # veg rate
+            "veg_tot": lambda veg_m: 1 / veg_m,
+            "soil_m": lambda soil_2_out, soil_x: soil_2_out / soil_x,  # soil rate
+            "soil_tot": lambda soil_m: 1 / soil_m,
+            # **extra_functions
+        }
+    )
     mit.add_present_step_funcs(present_step_funcs)
     return ArrayDictResult(mit)
 
 
 def all_timelines_starting_at_steady_state(
-        #X_0, is computed at time tmin
-        mvs,  #: CMTVS,
-        func_dict,
-        dvs,  #: Drivers,
-        cpa,  #: Constants,
-        epa,  #: EstimatedParameters
-        t_min,  # time of equilibrium computation in days after the start of the simulation
-        index_slice: slice,  # making up the iterator slice to be output start_ind =0 refers to the 
-        delta_t_val: int = 1,  # defaults to 1day timestep
-    ):
-    
+    # X_0, is computed at time tmin
+    mvs,  #: CMTVS,
+    func_dict,
+    dvs,  #: Drivers,
+    cpa,  #: Constants,
+    epa,  #: EstimatedParameters
+    t_min,  # time of equilibrium computation in days after the start of the simulation
+    index_slice: slice,  # making up the iterator slice to be output start_ind =0 refers to the
+    delta_t_val: int = 1,  # defaults to 1day timestep
+):
     # We want to compute a steady state from driver values in the
     # spring and start our computation from there
 
@@ -2066,14 +2051,7 @@ def all_timelines_starting_at_steady_state(
         func_set=func_dict,
     )
     bit = traceability_iterator(
-        X_fix,
-        func_dict,
-        mvs,
-        dvs,
-        cpa,
-        epa,
-        delta_t_val=delta_t_val,
-        t_0=t_min
+        X_fix, func_dict, mvs, dvs, cpa, epa, delta_t_val=delta_t_val, t_0=t_min
     )
     vals = bit[index_slice]
 
@@ -2137,10 +2115,7 @@ def all_timelines_starting_at_steady_state(
         # first replace the symbols by functions
         subs_dict = {sym: Function(str(sym))(t) for sym in outer_pools}
         sub_in_fluxes_f, sub_internal_fluxes_f, sub_out_fluxes_f = map(
-            lambda d: {
-                k: sympify(flux_ex).subs(subs_dict)
-                for k, flux_ex in d.items()
-            },
+            lambda d: {k: sympify(flux_ex).subs(subs_dict) for k, flux_ex in d.items()},
             (sub_in_fluxes, sub_internal_fluxes, sub_out_fluxes),
         )
 
@@ -2153,7 +2128,7 @@ def all_timelines_starting_at_steady_state(
             # note that we create the function in another
             # function since the normal dictionary comprehension
             # fails due to pythons lazy evaluation not
-            # protecting the function specific variable 
+            # protecting the function specific variable
             # (in this case sym)
             Function(str(sym)): s_func_maker(sym)
             for sym in outer_pools
@@ -2187,25 +2162,20 @@ def all_timelines_starting_at_steady_state(
             func_set=sub_func_dict,
             max_order=1,
         )
-        #from IPython import embed; embed()
+        # from IPython import embed; embed()
         return sub_mvs, sub_smr, sub_start_mean_age_vec
 
     veg_sv = mvs.get_VegetationCarbonStateVariableTuple()
-    veg_mvs, veg_smr, veg_smav = sub_mr_smav(mvs, veg_sv) 
-    veg_btt = veg_smr.backward_transit_time_moment(
-        order=1,
-        start_age_moments=veg_smav
-    )
+    veg_mvs, veg_smr, veg_smav = sub_mr_smav(mvs, veg_sv)
+    veg_btt = veg_smr.backward_transit_time_moment(order=1, start_age_moments=veg_smav)
     veg_arr, veg_func = veg_smr._solve_age_moment_system(
-        order,
-        start_age_moments=veg_smav
+        order, start_age_moments=veg_smav
     )
     soil_sv = mvs.get_SoilCarbonStateVariableTuple()
-    soil_mvs, soil_smr, soil_smav = sub_mr_smav(mvs, soil_sv) 
-    #soil_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+    soil_mvs, soil_smr, soil_smav = sub_mr_smav(mvs, soil_sv)
+    # soil_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
     soil_arr, soil_func = soil_smr._solve_age_moment_system(
-        order,
-        start_age_moments=soil_smav
+        order, start_age_moments=soil_smav
     )
     soil_btt = soil_smr.backward_transit_time_moment(
         order=1, start_age_moments=soil_smav
@@ -2214,28 +2184,32 @@ def all_timelines_starting_at_steady_state(
     snp = soil_smr.nr_pools
     vals.update(
         {
-            'system_continuous_solution': s_arr[:, 0: n_pools],
-            'system_continuous_mean_age': s_arr[:, n_pools: 2 * n_pools],
-            'system_continuous_mean_btt' : mean_btts,
-            'veg_continuous_solution':  veg_arr[:, 0: vnp], 
-            'veg_continuous_mean_age':  veg_arr[:, vnp: 2 * vnp], 
-            'veg_continuous_mean_btt': veg_smr.backward_transit_time_moment(
-                                order=1,
-                                start_age_moments=veg_smav
-                            ),
-            'soil_continuous_solution': soil_arr[:, 0: snp], 
-            'soil_continuous_mean_age': soil_arr[:, snp: 2 * snp], 
-            'soil_continuous_mean_btt': soil_smr.backward_transit_time_moment(
-                                order=1,
-                                start_age_moments=soil_smav
-                            ),
-            #'continuous_times': np.array(times)                
+            "system_continuous_solution": s_arr[:, 0:n_pools],
+            "system_continuous_mean_age": s_arr[:, n_pools : 2 * n_pools],
+            "system_continuous_mean_btt": mean_btts,
+            "veg_continuous_solution": veg_arr[:, 0:vnp],
+            "veg_continuous_mean_age": veg_arr[:, vnp : 2 * vnp],
+            "veg_continuous_mean_btt": veg_smr.backward_transit_time_moment(
+                order=1, start_age_moments=veg_smav
+            ),
+            "soil_continuous_solution": soil_arr[:, 0:snp],
+            "soil_continuous_mean_age": soil_arr[:, snp : 2 * snp],
+            "soil_continuous_mean_btt": soil_smr.backward_transit_time_moment(
+                order=1, start_age_moments=soil_smav
+            ),
+            #'continuous_times': np.array(times)
         }
     )
     return vals
 
 
 def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
+    # fixme deprecated
+    # just a safety wrapper until every reference to this function
+    # is replaced
+    write_timeline_to_nc_file(gm_path, gm, var_name)
+
+def write_timeline_to_nc_file(gm_path, gm: np.array, var_name: str):
     # var=ds.variables[var_name]
     if gm_path.exists():
         print("removing old cache file{}")
@@ -2250,11 +2224,15 @@ def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
     var_gm[:] = gm_ma
     ds_gm.close()
 
-
+# deprecated
+# just for savety
 def get_cached_global_mean(gm_path, vn):
+    return get_nc_array(gm_path, vn)
+
+def get_nc_array(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-#fixme: possibly obsolete - see combined_masks_2 using nearest neighbor resampling
+# fixme: possibly obsolete - see combined_masks_2 using nearest neighbor resampling
 def combine_masks(coord_masks: List["CoordMask"]):
     def k(cm):
         arr = cm.index_mask
@@ -2482,10 +2460,10 @@ class CoordMask:
         lons[:] = list(map(self.tr.i2lon, range(n_lons)))
         ds.close()
 
-def project_2(source: CoordMask, target: CoordMask):
 
+def project_2(source: CoordMask, target: CoordMask):
     s_mask = source.index_mask  # .astype(np.float64,casting='safe')
-    #print(s_mask.mean())
+    # print(s_mask.mean())
     s_n_lat, s_n_lon = s_mask.shape
 
     t_mask = target.index_mask
@@ -2497,7 +2475,8 @@ def project_2(source: CoordMask, target: CoordMask):
     # and interpolate the source mask on them
     lats = np.array(list(map(s_tr.i2lat, range(s_n_lat))))
     lons = np.array(list(map(s_tr.i2lon, range(s_n_lon))))
-    f = interpolate.interp2d(x=lons, y=lats, z=s_mask)
+    f_old = interpolate.interp2d(x=lons, y=lats, z=s_mask) # deprecated by scipy
+    f = interpolate.RectBivariateSpline(x=lons, y=lats, z=s_mask.T)
     # now we apply this interpolating function to the target grid
     # points
     target_lats = np.array(list(map(t_tr.i2lat, range(t_n_lat))))
@@ -2505,148 +2484,181 @@ def project_2(source: CoordMask, target: CoordMask):
     # order lats and lons since f returns an array that assumes this anyway
     otlats, p_lat, p_lat_inv = target.ordered_lats()
     otlons, p_lon, p_lon_inv = target.ordered_lons()
-    float_grid = p_lat_inv @ f(otlons, otlats) @ p_lon_inv
-    #print(float_grid.mean())
+    float_grid_old = p_lat_inv @ f_old(otlons, otlats) @ p_lon_inv
+    float_grid = p_lat_inv @ f(otlons, otlats).T @ p_lon_inv
+    assert(float_grid_old == float_grid)
+    # print(float_grid.mean())
     projected_mask = float_grid > 0.5
     # from IPython import embed; embed()
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
 
-def resample_grid (source_coord_mask, target_coord_mask, var, 
-            method="nearest", radius_of_influence=500000, neighbours=10):
-    import pyresample  # new package: to update bgc_md2 run install_developer_conda script  
-    from pyresample.bilinear import NumpyBilinearResampler    
-    lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)  
-    lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)     
-    
-    lats_source=source_coord_mask.lats
-    lons_source=source_coord_mask.lons
-    
-    lats=target_coord_mask.lats
-    lons=target_coord_mask.lons
-    orig_def = pyresample.geometry.SwathDefinition(lons=lon2d, lats=lat2d)
-    
-    targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
-                  
-    if method=="nearest":
-      target_var = pyresample.kd_tree.resample_nearest(orig_def, var, 
-          targ_def, radius_of_influence=radius_of_influence, fill_value=None) 
-          
-    elif method=="idw":
-        wf = lambda r: 1/r**2
-        target_var = pyresample.kd_tree.resample_custom(orig_def, var, 
-                              targ_def, radius_of_influence=radius_of_influence, 
-                              neighbours=neighbours,
-                              weight_funcs=wf, fill_value=None)
-    elif method=="gauss":
-        target_var = pyresample.kd_tree.resample_gauss(orig_def, var, 
-                               targ_def, radius_of_influence=radius_of_influence, 
-                               neighbours=neighbours,
-                               sigmas=250000, fill_value=None)                               
-    else:
-              raise Exception(
-           "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
-       )
 
-    return(
-        CoordMask (
-          index_mask=target_var,
-          tr=target_coord_mask.tr
+def resample_grid(
+    source_coord_mask,
+    target_coord_mask,
+    var,
+    method="nearest",
+    radius_of_influence=500000,
+    neighbours=10,
+):
+    import pyresample  # new package: to update bgc_md2 run install_developer_conda script
+    from pyresample.bilinear import NumpyBilinearResampler
+
+    lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)
+    lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)
+
+    lats_source = source_coord_mask.lats
+    lons_source = source_coord_mask.lons
+
+    lats = target_coord_mask.lats
+    lons = target_coord_mask.lons
+    orig_def = pyresample.geometry.SwathDefinition(lons=lon2d, lats=lat2d)
+
+    targ_def = pyresample.geometry.SwathDefinition(lons=lon2d_t, lats=lat2d_t)
+
+    if method == "nearest":
+        target_var = pyresample.kd_tree.resample_nearest(
+            orig_def,
+            var,
+            targ_def,
+            radius_of_influence=radius_of_influence,
+            fill_value=None,
         )
-    ) 
-    
+
+    elif method == "idw":
+        wf = lambda r: 1 / r**2
+        target_var = pyresample.kd_tree.resample_custom(
+            orig_def,
+            var,
+            targ_def,
+            radius_of_influence=radius_of_influence,
+            neighbours=neighbours,
+            weight_funcs=wf,
+            fill_value=None,
+        )
+    elif method == "gauss":
+        target_var = pyresample.kd_tree.resample_gauss(
+            orig_def,
+            var,
+            targ_def,
+            radius_of_influence=radius_of_influence,
+            neighbours=neighbours,
+            sigmas=250000,
+            fill_value=None,
+        )
+    else:
+        raise Exception(
+            "Invalid resample method. Valid options are: 'nearest', 'idw' and 'gauss'"
+        )
+
+    return CoordMask(index_mask=target_var, tr=target_coord_mask.tr)
+
+
 def resample_nc(
-            model_names, # dictionary e.g. "ab_classic":"CLASSIC"
-            experiment_names, # e.g. ['S2', 'S3']
-            target_mask,
-            method="nearest",
-            radius_of_influence=500000,
-            ):
+    model_names,  # dictionary e.g. "ab_classic":"CLASSIC"
+    experiment_names,  # e.g. ['S2', 'S3']
+    target_mask,
+    method="nearest",
+    radius_of_influence=500000,
+):
     for experiment in experiment_names:
-        print('\033[1m'+'. . . Resampling data for '+experiment+' experiment . . .')
-        model_folders=[(m) for m in model_names] 
-        m_names=list(model_names.values())  
+        print(
+            "\033[1m" + ". . . Resampling data for " + experiment + " experiment . . ."
+        )
+        model_folders = [(m) for m in model_names]
+        m_names = list(model_names.values())
         g_mask = target_mask.index_mask
-        k=0 # model counter
+        k = 0  # model counter
         for mf in model_folders:
-            print('\033[1m'+m_names[k])
-            print('\033[0m')
-            experiment_name=m_names[k]+"_"+experiment+"_"
+            print("\033[1m" + m_names[k])
+            print("\033[0m")
+            experiment_name = m_names[k] + "_" + experiment + "_"
             conf_dict = confDict(mf)
-            dataPath=Path(conf_dict["dataPath"])
-            model_mask=msh(mf).spatial_mask(dataPath=Path(conf_dict["dataPath"]))    
+            dataPath = Path(conf_dict["dataPath"])
+            model_mask = msh(mf).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
             for vn in msh(mf).data_str._fields:
-                print("Resampling "+vn)        
-                file_path = dataPath.joinpath(msh(mf).nc_file_name(vn, experiment_name=experiment_name))
+                print("Resampling " + vn)
+                file_path = dataPath.joinpath(
+                    msh(mf).nc_file_name(vn, experiment_name=experiment_name)
+                )
                 ds = nc.Dataset(str(file_path))
-                var=ds.variables[vn][:, :, :].data             
+                var = ds.variables[vn][:, :, :].data
                 # preparing a narray to store results
-                zero_array=np.zeros((var.shape[0],g_mask.shape[0],g_mask.shape[1]))
-                gm=zero_array.copy()
+                zero_array = np.zeros((var.shape[0], g_mask.shape[0], g_mask.shape[1]))
+                gm = zero_array.copy()
                 for i in range(gm.shape[0]):
-                    gm[i,:,:]=g_mask
-                var_array=zero_array
+                    gm[i, :, :] = g_mask
+                var_array = zero_array
                 # procesing all time steps
                 for i in range(var.shape[0]):
-                    var_current=var[i,:,:]
+                    var_current = var[i, :, :]
                     # initial masking
-                    var_masked = np.ma.array(var_current, mask = model_mask.index_mask)    
+                    var_masked = np.ma.array(var_current, mask=model_mask.index_mask)
                     # resampling
-                    var_resampled=resample_grid (
-                        source_coord_mask=model_mask, 
-                        target_coord_mask=target_mask, 
-                        var=var_masked, 
+                    var_resampled = resample_grid(
+                        source_coord_mask=model_mask,
+                        target_coord_mask=target_mask,
+                        var=var_masked,
                         method=method,
-                        radius_of_influence=radius_of_influence,               
+                        radius_of_influence=radius_of_influence,
                     )
-                    var_array[i,:,:]=var_resampled.index_mask
-                    if i//100 == i/100:
-                        print(str(i+1)+" out of "+str(var.shape[0])+" time steps completed")
+                    var_array[i, :, :] = var_resampled.index_mask
+                    if i // 100 == i / 100:
+                        print(
+                            str(i + 1)
+                            + " out of "
+                            + str(var.shape[0])
+                            + " time steps completed"
+                        )
                 # final masking
-                var_final = np.ma.array(var_array,mask = gm)
-                # creating and writing a new NetCDF file 
+                var_final = np.ma.array(var_array, mask=gm)
+                # creating and writing a new NetCDF file
                 s = g_mask.shape
                 n_lats, n_lons = s
-                new_path=dataPath.joinpath(dataPath,experiment_name+vn+"_res.nc")
+                new_path = dataPath.joinpath(dataPath, experiment_name + vn + "_res.nc")
                 ds_new = nc.Dataset(str(new_path), "w", persist=True)
                 # creating dimensions
                 lat = ds_new.createDimension("lat", size=n_lats)
                 lon = ds_new.createDimension("lon", size=n_lons)
-                source_times=ds.variables["time"][:].data        
-                time = ds_new.createDimension("time", size=len(source_times))               
-                # creating variables                         
+                source_times = ds.variables["time"][:].data
+                time = ds_new.createDimension("time", size=len(source_times))
+                # creating variables
                 nc_var = ds_new.createVariable(vn, "float32", ["time", "lat", "lon"])
                 nc_var[:, :, :] = var_final
                 lats = ds_new.createVariable("lat", "float32", ["lat"])
                 lats[:] = list(map(target_mask.tr.i2lat, range(n_lats)))
                 lons = ds_new.createVariable("lon", "float32", ["lon"])
-                lons[:] = list(map(target_mask.tr.i2lon, range(n_lons)))               
-                times = ds_new.createVariable ("time", "float32", ["time"])
+                lons[:] = list(map(target_mask.tr.i2lon, range(n_lons)))
+                times = ds_new.createVariable("time", "float32", ["time"])
                 times[:] = source_times
                 # closing NetCDF files
-                ds.close()        
-                ds_new.close() 
-            k+=1 # model counter
+                ds.close()
+                ds_new.close()
+            k += 1  # model counter
         print("Done!")
-        
+
+
 def combine_masks_2(coord_masks: List["CoordMask"]):
-   
-    def combine (source, target):
-        resampled_mask=resample_grid(
+    def combine(source, target):
+        resampled_mask = resample_grid(
             source_coord_mask=source,
             target_coord_mask=target,
             var=source.index_mask,
             method="nearest",
-            radius_of_influence=500000, 
-            neighbours=10
-            )
-        combined_mask=CoordMask(
-            index_mask=np.logical_or(resampled_mask.index_mask, target.index_mask), 
-            tr=target.tr)
+            radius_of_influence=500000,
+            neighbours=10,
+        )
+        combined_mask = CoordMask(
+            index_mask=np.logical_or(resampled_mask.index_mask, target.index_mask),
+            tr=target.tr,
+        )
         return combined_mask
-    target_mask = coord_masks[-1] # we use last mask in the list as template grid
-    for i in range(len(coord_masks)-1):
-        target_mask = combine (coord_masks[i], target_mask)
-    return target_mask    
+
+    target_mask = coord_masks[-1]  # we use last mask in the list as template grid
+    for i in range(len(coord_masks) - 1):
+        target_mask = combine(coord_masks[i], target_mask)
+    return target_mask
+
 
 # outputs a table with flow diagrams, compartmental matrices and allocation vectors
 def model_table(
@@ -2774,6 +2786,7 @@ def read_or_create(
 # For harmonizing timelines and plotting
 # -
 
+
 # a function to get a list of test_args from all models involved in the comparison
 def get_test_arg_list(model_folders):
     test_arg_list = []
@@ -2782,23 +2795,24 @@ def get_test_arg_list(model_folders):
         test_arg_list.append(current_ta)
     print("Done!")
     return test_arg_list
-# fixme mm 8-12: 
-# it would make sense to create a dictionary indexed by the model name 
+
+
+# fixme mm 8-12:
+# it would make sense to create a dictionary indexed by the model name
 # so it can be used for model comparisons by name like this one
 
+
 def get_test_arg_dict(model_folders):
-    return { mf:  test_args(mf)
-        for mf in model_folders
-    }    
+    return {mf: test_args(mf) for mf in model_folders}
 
 
 def times_in_days_aD(
     test_args,  # a tuple defined in model-specific test_helpers.py
     delta_t_val,  # iterator time step
-    start_shift=0 # time between the start.date and the iterator's first step  
+    start_shift=0,  # time between the start.date and the iterator's first step
 ):
     n_months = len(test_args.dvs[0])
-    n_days = 30 * n_months - start_shift 
+    n_days = 30 * n_months - start_shift
     n_iter = int(n_days / delta_t_val)
     return np.array(
         tuple(
@@ -2809,19 +2823,21 @@ def times_in_days_aD(
         )
     )
 
+
 # function to determine overlapping time frames for models simulations
 def t_min_tmax_overlap_2(
     test_arg_dict,  # a dictionary of test_args from all models involved
     delta_t_val,  # iterator time step
-    start_shift=0 # time between the start.date and the iterator's first step  
+    start_shift=0,  # time between the start.date and the iterator's first step
 ):
     td = {
-        mf: times_in_days_aD(ta, delta_t_val,start_shift)
-        for mf,ta  in test_arg_dict.items()
+        mf: times_in_days_aD(ta, delta_t_val, start_shift)
+        for mf, ta in test_arg_dict.items()
     }
     t_min = max([t.min() for t in td.values()])
     t_max = min([t.max() for t in td.values()])
     return (t_min, t_max)
+
 
 # function to determine overlapping time frames for models simulations
 # fixme mm 11-19-2022 deprecated
@@ -2829,11 +2845,13 @@ def t_min_tmax_overlap(
     test_arg_list,  # a list of test_args from all models involved
     delta_t_val,  # iterator time step
 ):
-    print("""
+    print(
+        """
         deprecated: This function does not use the start shift
         argument which is important if the iterator does not start at t_0=0
         use t_min_tmax_overlap_2 instead (with a dictionary argument)
-        """)
+        """
+    )
     td = {
         i: times_in_days_aD(test_arg_list[i], delta_t_val)
         for i in range(len(test_arg_list))
@@ -2843,10 +2861,10 @@ def t_min_tmax_overlap(
     return (t_min, t_max)
 
 
-#def t_min_tmax_full(
+# def t_min_tmax_full(
 #    test_arg_list,  # a list of test_args from all models involved
 #    delta_t_val,  # iterator time step
-#):
+# ):
 #    td = {
 #        i: times_in_days_aD(test_arg_list[i], delta_t_val)
 #        for i in range(len(test_arg_list))
@@ -2862,9 +2880,9 @@ def min_max_index(
     delta_t_val,  # iterator time step
     t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
     t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
-    start_shift=0
+    start_shift=0,
 ):
-    ts = times_in_days_aD(test_args, delta_t_val,start_shift)
+    ts = times_in_days_aD(test_args, delta_t_val, start_shift)
 
     def count(acc, i):
         min_i, max_i = acc
@@ -2907,6 +2925,7 @@ def averaged_1d_array(arr, partitions):
 
 # for attribution using variance decomposition (Sha Zhou et al., 2018)
 
+
 # fixme: possible obsolete = gh.averaged_1d_array
 def avg_timeline(timeline, averaging):  # array  # number of steps over which to average
     if averaging < 1:
@@ -2932,6 +2951,7 @@ def avg_timeline(timeline, averaging):  # array  # number of steps over which to
             i += x
     return output
 
+
 def cov_mat(a, b):
     return np.cov(a, b, bias=True)
 
@@ -2944,18 +2964,20 @@ def sum_attribution(y, x1, x2):
     cm2 = cov_mat(x2, y)
     cov_x2_y = cm2[0, 1]
 
-    return tuple((c/var_y for c in (cov_x1_y, cov_x2_y)))
+    return tuple((c / var_y for c in (cov_x1_y, cov_x2_y)))
+
 
 def product_attribution(v, z1, z2):
     y, x1, x2 = map(np.log, (v, z1, z2))
     return sum_attribution(y, x1, x2)
+
 
 def write_data_streams_cache(gm_path, gm):
     # var=ds.variables[var_name]
     if gm_path.exists():
         print("removing old cache file{}")
         os.remove(gm_path)
-    names=gm._fields    
+    names = gm._fields
 
     n_t = gm.cVeg.shape[0]
     time_dim_name = "time"
@@ -2966,186 +2988,243 @@ def write_data_streams_cache(gm_path, gm):
     var_gm2 = ds_gm.createVariable(names[2], np.float64, [time_dim_name])
     var_gm3 = ds_gm.createVariable(names[3], np.float64, [time_dim_name])
     var_gm4 = ds_gm.createVariable(names[4], np.float64, [time_dim_name])
-    var_gm5 = ds_gm.createVariable(names[5], np.float64, [time_dim_name])    
+    var_gm5 = ds_gm.createVariable(names[5], np.float64, [time_dim_name])
     gm_ma0 = np.ma.array(gm[0], mask=np.zeros(gm[0].shape, dtype=np.bool_))
     gm_ma1 = np.ma.array(gm[1], mask=np.zeros(gm[1].shape, dtype=np.bool_))
     gm_ma2 = np.ma.array(gm[2], mask=np.zeros(gm[2].shape, dtype=np.bool_))
     gm_ma3 = np.ma.array(gm[3], mask=np.zeros(gm[3].shape, dtype=np.bool_))
     gm_ma4 = np.ma.array(gm[4], mask=np.zeros(gm[4].shape, dtype=np.bool_))
-    gm_ma5 = np.ma.array(gm[5], mask=np.zeros(gm[5].shape, dtype=np.bool_))    
+    gm_ma5 = np.ma.array(gm[5], mask=np.zeros(gm[5].shape, dtype=np.bool_))
     var_gm0[:] = gm_ma0
     var_gm1[:] = gm_ma1
     var_gm2[:] = gm_ma2
     var_gm3[:] = gm_ma3
     var_gm4[:] = gm_ma4
-    var_gm5[:] = gm_ma5    
-    ds_gm.close()    
-    
-def get_global_mean_vars_all(model_folder,   # string e.g. "ab_classic"
-                            experiment_name, # string, e.g. "CLASSIC_S2_"
-                            lat_var,
-                            lon_var,
-                            ):
+    var_gm5[:] = gm_ma5
+    ds_gm.close()
+
+
+def get_global_mean_vars_all(
+    model_folder,  # string e.g. "ab_classic"
+    experiment_name,  # string, e.g. "CLASSIC_S2_"
+    lat_var,
+    lon_var,
+):
     # def nc_file_name(nc_var_name, experiment_name):
-        # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
+    # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
 
     def nc_global_mean_file_name(experiment_name):
-        return experiment_name+"gm_all_vars.nc"
+        return experiment_name + "gm_all_vars.nc"
 
-    data_str = msh(model_folder).data_str   
+    data_str = msh(model_folder).data_str
     names = data_str._fields
     conf_dict = confDict(model_folder)
-    dataPath=Path(conf_dict["dataPath"])     
-    
-    if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
-        print(""" Found cached global mean files. If you want to recompute the global means
+    dataPath = Path(conf_dict["dataPath"])
+
+    if dataPath.joinpath(
+        nc_global_mean_file_name(experiment_name=experiment_name)
+    ).exists():
+        print(
+            """ Found cached global mean files. If you want to recompute the global means
             remove the following files: """
         )
-        print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
-
-        def get_cached_global_mean(vn):
-            gm_path=dataPath.joinpath(
-                nc_global_mean_file_name(experiment_name=experiment_name))               
-            return nc.Dataset(str(gm_path)).variables[vn].__array__() 
-
-        output=data_streams(*map(get_cached_global_mean, data_streams._fields))      
-        return (
-            output
+        print(
+            dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
         )
 
+        def get_cached_global_mean(vn):
+            gm_path = dataPath.joinpath(
+                nc_global_mean_file_name(experiment_name=experiment_name)
+            )
+            return nc.Dataset(str(gm_path)).variables[vn].__array__()
+
+        output = data_streams(*map(get_cached_global_mean, data_streams._fields))
+        return output
+
     else:
-        gm=globalMask(file_name="common_mask_expanded.nc")
+        gm = globalMask(file_name="common_mask_expanded.nc")
         # load an example file with mask
         # special case for YIBS that doesn't have a mask in all files ecept tas
-        if model_folder=="jon_yib":
-            template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("tas", 
-                experiment_name=experiment_name))).variables['tas'][0,:,:].mask
-        else:
-            template = nc.Dataset(dataPath.joinpath(msh(model_folder).nc_file_name("cSoil", 
-                experiment_name=experiment_name))).variables['cSoil'][0,:,:].mask
-        # gcm=project_2(
-                # source=gm,
-                # target=CoordMask(
-                    # index_mask=np.zeros_like(template),
-                    # tr=SymTransformers(
-                        # ctr=msh(model_folder).make_model_coord_transforms(),
-                        # itr=msh(model_folder).make_model_index_transforms()
-                    # )
-                # )
-        # )
-        gcm=resample_grid(
-            source_coord_mask=gm, 
-            target_coord_mask=CoordMask(
-                    index_mask=np.zeros_like(template),
-                    tr=SymTransformers(
-                        ctr=msh(model_folder).make_model_coord_transforms(),
-                        itr=msh(model_folder).make_model_index_transforms(), 
-                        ),
-                    ),    
-            var=gm.index_mask, 
-            method="nearest"
+        if model_folder == "jon_yib":
+            template = (
+                nc.Dataset(
+                    dataPath.joinpath(
+                        msh(model_folder).nc_file_name(
+                            "tas", experiment_name=experiment_name
+                        )
+                    )
+                )
+                .variables["tas"][0, :, :]
+                .mask
             )
+        else:
+            template = (
+                nc.Dataset(
+                    dataPath.joinpath(
+                        msh(model_folder).nc_file_name(
+                            "cSoil", experiment_name=experiment_name
+                        )
+                    )
+                )
+                .variables["cSoil"][0, :, :]
+                .mask
+            )
+        # gcm=project_2(
+        # source=gm,
+        # target=CoordMask(
+        # index_mask=np.zeros_like(template),
+        # tr=SymTransformers(
+        # ctr=msh(model_folder).make_model_coord_transforms(),
+        # itr=msh(model_folder).make_model_index_transforms()
+        # )
+        # )
+        # )
+        gcm = resample_grid(
+            source_coord_mask=gm,
+            target_coord_mask=CoordMask(
+                index_mask=np.zeros_like(template),
+                tr=SymTransformers(
+                    ctr=msh(model_folder).make_model_coord_transforms(),
+                    itr=msh(model_folder).make_model_index_transforms(),
+                ),
+            ),
+            var=gm.index_mask,
+            method="nearest",
+        )
 
         print("computing means, this may take some minutes...")
 
         def compute_and_cache_global_mean(vn):
-            path = dataPath.joinpath(msh(model_folder).nc_file_name(vn, experiment_name=experiment_name))
-            if vn=="npp_nlim": path=dataPath.joinpath(msh(model_folder).nc_file_name("npp", experiment_name=experiment_name))
+            path = dataPath.joinpath(
+                msh(model_folder).nc_file_name(vn, experiment_name=experiment_name)
+            )
+            if vn == "npp_nlim":
+                path = dataPath.joinpath(
+                    msh(model_folder).nc_file_name(
+                        "npp", experiment_name=experiment_name
+                    )
+                )
             print(path)
             ds = nc.Dataset(str(path))
-            vs=ds.variables
-            lats= vs[lat_var].__array__()
-            lons= vs[lon_var].__array__()
+            vs = ds.variables
+            lats = vs[lat_var].__array__()
+            lons = vs[lon_var].__array__()
             print(vn)
-            var=ds.variables[vn]
+            var = ds.variables[vn]
             # check if we have a cached version (which is much faster)
-            gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-            
-            #model_mask = gh.msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
-            #combined_mask = combine_masks ([model_mask,gcm])
-            gm=global_mean_var(
-                    lats,
-                    lons,
-                    #combined_mask.index_mask,
-                    gcm.index_mask,
-                    var      
-            )     
+            gm_path = dataPath.joinpath(
+                nc_global_mean_file_name(experiment_name=experiment_name)
+            )
+
+            # model_mask = gh.msh(model_folder).spatial_mask(dataPath=Path(conf_dict["dataPath"]))
+            # combined_mask = combine_masks ([model_mask,gcm])
+            gm = global_mean_var(
+                lats,
+                lons,
+                # combined_mask.index_mask,
+                gcm.index_mask,
+                var,
+            )
             return gm * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
-        
-        #map variables to data
+
+        # map variables to data
         print(data_str._fields)
-        output=data_str(*map(compute_and_cache_global_mean, data_str._fields)) 
-        cVeg=output.cVeg if output.cVeg.shape[0]<500 else avg_timeline(output.cVeg, 12)
+        output = data_str(*map(compute_and_cache_global_mean, data_str._fields))
+        cVeg = (
+            output.cVeg if output.cVeg.shape[0] < 500 else avg_timeline(output.cVeg, 12)
+        )
         if "cLitter" in names:
-            cLitter=output.cLitter if output.cLitter.shape[0]<500 else avg_timeline(output.cLitter, 12)
-        cSoil=output.cSoil if output.cSoil.shape[0]<500 else avg_timeline(output.cSoil, 12)        
-        gpp=output.gpp if output.gpp.shape[0]<500 else avg_timeline(output.gpp, 12)
+            cLitter = (
+                output.cLitter
+                if output.cLitter.shape[0] < 500
+                else avg_timeline(output.cLitter, 12)
+            )
+        cSoil = (
+            output.cSoil
+            if output.cSoil.shape[0] < 500
+            else avg_timeline(output.cSoil, 12)
+        )
+        gpp = output.gpp if output.gpp.shape[0] < 500 else avg_timeline(output.gpp, 12)
         if "npp" in names:
-            npp=output.npp if output.npp.shape[0]<500 else avg_timeline(output.npp, 12)
+            npp = (
+                output.npp
+                if output.npp.shape[0] < 500
+                else avg_timeline(output.npp, 12)
+            )
         if "npp_nlim" in names:
-            npp=output.npp_nlim if output.npp_nlim.shape[0]<500 else avg_timeline(output.npp_nlim, 12)            
+            npp = (
+                output.npp_nlim
+                if output.npp_nlim.shape[0] < 500
+                else avg_timeline(output.npp_nlim, 12)
+            )
         if "ra" in names:
-            ra=output.ra if output.ra.shape[0]<500 else avg_timeline(output.ra, 12)    
-        rh=output.rh if output.rh.shape[0]<500 else avg_timeline(output.rh, 12)          
+            ra = output.ra if output.ra.shape[0] < 500 else avg_timeline(output.ra, 12)
+        rh = output.rh if output.rh.shape[0] < 500 else avg_timeline(output.rh, 12)
         # for models like SDGVM where pool data starts earlier than gpp data
-        if cVeg.shape[0]>gpp.shape[0]: cVeg=cVeg[cVeg.shape[0]-gpp.shape[0]:]        
-        if "cLitter" in names and cLitter.shape[0]>gpp.shape[0]: 
-            cLitter=cLitter[cLitter.shape[0]-gpp.shape[0]:]
-        if cSoil.shape[0]>gpp.shape[0]: cSoil=cSoil[cSoil.shape[0]-gpp.shape[0]:]
-        
-        output_final=data_streams(
+        if cVeg.shape[0] > gpp.shape[0]:
+            cVeg = cVeg[cVeg.shape[0] - gpp.shape[0] :]
+        if "cLitter" in names and cLitter.shape[0] > gpp.shape[0]:
+            cLitter = cLitter[cLitter.shape[0] - gpp.shape[0] :]
+        if cSoil.shape[0] > gpp.shape[0]:
+            cSoil = cSoil[cSoil.shape[0] - gpp.shape[0] :]
+
+        output_final = data_streams(
             cVeg=cVeg,
-            cSoil=cLitter+cSoil if "cLitter" in names else cSoil,
-            gpp=gpp, 
-            npp=npp if ("npp" in names) or ("npp_nlim" in names) else gpp-ra,
-            ra=ra if "ra" in names else gpp-npp,
+            cSoil=cLitter + cSoil if "cLitter" in names else cSoil,
+            gpp=gpp,
+            npp=npp if ("npp" in names) or ("npp_nlim" in names) else gpp - ra,
+            ra=ra if "ra" in names else gpp - npp,
             rh=rh,
-            )      
-        gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-        write_data_streams_cache(gm_path, output_final)        
-        return (
-            output_final
-        )    
-       
-def nc_classes_2_masks (FilePath, var_name, classes, global_mask):
-    g_mask=global_mask.index_mask
-    ds = nc.Dataset(FilePath)    
-    var=ds.variables[var_name][:]    
-    ds.close()    
-    for nclass in classes:    
-        var_0=var.copy()
-        var_0[var_0!=nclass]=-9999      
-        var_0[var_0==nclass]=0
-        var_0[var_0==-9999]=1
-        var_0_corrected=var_0.copy()
+        )
+        gm_path = dataPath.joinpath(
+            nc_global_mean_file_name(experiment_name=experiment_name)
+        )
+        write_data_streams_cache(gm_path, output_final)
+        return output_final
+
+
+def nc_classes_2_masks(FilePath, var_name, classes, global_mask):
+    g_mask = global_mask.index_mask
+    ds = nc.Dataset(FilePath)
+    var = ds.variables[var_name][:]
+    ds.close()
+    for nclass in classes:
+        var_0 = var.copy()
+        var_0[var_0 != nclass] = -9999
+        var_0[var_0 == nclass] = 0
+        var_0[var_0 == -9999] = 1
+        var_0_corrected = var_0.copy()
         for i in range(var_0.shape[0]):
-            var_0_corrected[i,:]=var_0[var_0.shape[0]-1-i,:]
-        var_0_masked=np.logical_or(var_0_corrected,g_mask)           
-        cm_0=CoordMask(var_0_masked, global_mask.tr)
-        FileName=FilePath+"_mask_"+str(nclass)+".nc"
+            var_0_corrected[i, :] = var_0[var_0.shape[0] - 1 - i, :]
+        var_0_masked = np.logical_or(var_0_corrected, g_mask)
+        cm_0 = CoordMask(var_0_masked, global_mask.tr)
+        FileName = FilePath + "_mask_" + str(nclass) + ".nc"
         cm_0.write_netCDF4(FileName)
-        print('File written as '+FileName)        
-    
-data_streams = namedtuple(
-    'data_streams',
-    ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
-    ) 
+        print("File written as " + FileName)
 
-def dump_named_tuple_to_json_path(
-        nt,
-        path: Path
-    ):
-    d = nt._asdict()
+
+data_streams = namedtuple("data_streams", ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"])
+
+
+def dump_named_tuple_to_json_path(nt, path: Path):
+    dump_dict_to_json_path(nt._asdict(), path)
+
+
+def dump_dict_to_json_path(d, path: Path):
     with path.open("w") as f:
-            json.dump(d,f)
+        d_s = {str(k):v for k,v in d.items()}
+        json.dump(d_s, f)
 
-def named_tuple_from_dict(t:type, d: Dict):
-     return t._make(d[f] for f in t._fields)
 
-def load_named_tuple_from_json_path(
-        t: type,
-        path: Path
-    ):
+def named_tuple_from_dict(t: type, d: Dict):
+    return t._make(d[f] for f in t._fields)
+
+
+def load_dict_from_json_path(path: Path):
     with path.open("r") as f:
-         d = json.load(f)
-    return named_tuple_from_dict(t, d)
+        d = json.load(f)
+    return d
+
+
+def load_named_tuple_from_json_path(t: type, path: Path):
+    return named_tuple_from_dict(t, load_named_tuple_from_json_path(path))

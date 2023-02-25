@@ -17,6 +17,7 @@ from functools import reduce
 from collections import OrderedDict
 from scipy.interpolate import interp1d
 
+from ComputabilityGraphs.CMTVS import  CMTVS
 import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.ArrayDict import ArrayDict
 
@@ -201,7 +202,7 @@ def compute_and_write_global_mean_var(dataPath, targetPath, index_mask, vn):
         # combined_mask,
         var,
     )
-    gh.write_global_mean_cache(gm_path, gm, vn)
+    gh.write_timeline(gm_path, gm, vn)
     return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
 
 def compute_and_write_global_mean_vars(dataPath,targetPath):
@@ -241,12 +242,11 @@ def compute_and_write_global_mean_vars(dataPath,targetPath):
     return (obss, dvs)
 
 
-
 def get_cached_global_mean_drivers(targetPath):
     o_names = Observables._fields
     d_names = OrgDrivers._fields
     def f(vn):
-        gm = gh.get_cached_global_mean(
+        gm = gh.get_nc_array(
             targetPath.joinpath(nc_global_mean_file_name(vn)), vn
         )
         return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
@@ -259,7 +259,7 @@ def get_cached_global_mean_drivers(targetPath):
 def get_cached_global_mean_observables(targetPath):
     o_names = Observables._fields
     def f(vn):
-        gm = gh.get_cached_global_mean(
+        gm = gh.get_nc_array(
             targetPath.joinpath(nc_global_mean_file_name(vn)), vn
         )
         return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
@@ -278,9 +278,9 @@ def get_global_mean_vars(dataPath,targetPath=None):
     if targetPath is None:
         targetPath = dataPath 
     
-    #o_names = Observables._fields
-    #d_names = OrgDrivers._fields
-    #names = o_names + d_names
+    o_names = Observables._fields
+    d_names = OrgDrivers._fields
+    names = o_names + d_names
         
 
     if all([targetPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
@@ -292,18 +292,6 @@ def get_global_mean_vars(dataPath,targetPath=None):
             print(targetPath.joinpath(nc_global_mean_file_name(vn)))
 
         return get_cached_global_mean_vars(targetPath)
-        #def get_cached_global_mean(vn):
-        #    gm = gh.get_cached_global_mean(
-        #        targetPath.joinpath(nc_global_mean_file_name(vn)), vn
-        #    )
-        #    return gm * 86400 if vn in ["gpp", "rh", "ra"] else gm
-
-        ## map variables to data
-        #odvs = OrgDrivers(*map(get_cached_global_mean, d_names))
-        #obss = Observables(*map(get_cached_global_mean, o_names))
-        #dvs = Drivers(npp=odvs.gpp - odvs.ra, mrso=odvs.mrso, tas=odvs.tas)
-
-        #return (obss, dvs)
 
     else:
         dataPath = Path(conf_dict["dataPath"])
@@ -319,7 +307,8 @@ def get_global_mean_vars_2(conf_dict,targetPath=None):
         download_my_TRENDY_output(conf_dict)
     return get_global_mean_vars(dataPath,targetPath)    
 
-def make_func_dict(dvs, cpa, epa):
+#def make_func_dict(dvs, cpa, epa):
+def make_func_dict(dvs,**kwargs):
     f_d = {
         "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
         "mrso": gh.make_interpol_of_t_in_days(dvs.mrso),
@@ -975,7 +964,7 @@ def get_global_mean_vars_all(experiment_name):
 # print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
 
 # def get_cached_global_mean(vn):
-# gm = gh.get_cached_global_mean(dataPath.joinpath(
+# gm = gh.get_nc_array(dataPath.joinpath(
 # nc_global_mean_file_name(experiment_name=experiment_name)),vn)
 # return gm
 
@@ -1041,12 +1030,14 @@ class ConsistentTestArgs():
     def __init__(
             self,
             confDict: Dict[str,str],
+            mvs: CMTVS
         ):
         """A model (and data) dependent class that expresses
         dependencies between certain parts of the parameterization as
         dictated by a particular choice of estimated and constant
         paramters for parameter estimation """
         self.confDict = confDict
+        self.mvs = mvs
     
     @property
     def dataPath(self):
@@ -1075,9 +1066,11 @@ class ConsistentTestArgs():
             #number_of_months=24 # for testing and tuning mcmc
         )
         return cpa
+
+
     @property
     def epa_opt(self):
-        # this function should compute epa_opt by dataassimilation
+        # this function should compute epa_opt by parameter estimation
         # this is a fake until this is implemented
         return EstimatedParameters(
             beta_leaf=0.6102169482865195, 
@@ -1110,18 +1103,38 @@ class ConsistentTestArgs():
             C_soil_fast_0=1.8746682268250323, 
             C_soil_slow_0=1.9807766341505468
         )
-        
+
+    @property
+    def global_mean_drivers(self):
+        return get_cached_global_mean_drivers(self.dataPath)
+
+    @property
+    def par_dict(self):
+        return  gh.make_param_dict(
+            self.mvs, 
+            self.cpa,
+            self.epa_opt
+        )
 
     def write_data(self, targetPath):
         # write global mean var *.nc files in 
         # the local directory
         #compute_and_write_global_mean_vars(self.dataPath, targetPath)
-        gh.dump_named_tuple_to_json_path(
-            self.cpa,
-            targetPath.joinpath('cpa.json')
+        gh.dump_dict_to_json_path(
+            self.par_dict,
+            targetPath.joinpath('parameter_dict.json')
         )
-        gh.dump_named_tuple_to_json_path(
-            self.epa_opt,
-            targetPath.joinpath('epa_opt.json')
-        )
+        dvs_dict=self.global_mean_drivers._asdict()
+        for k,v in dvs_dict.items():
+            gh.write_timeline_to_nc_file(targetPath.joinpath(f"{k}.nc"),v,k)
+
+        
+        #gh.dump_named_tuple_to_json_path(
+        #    self.cpa,
+        #    targetPath.joinpath('cpa.json')
+        #)
+        #gh.dump_named_tuple_to_json_path(
+        #    self.epa_opt,
+        #    targetPath.joinpath('epa_opt.json')
+        #)
         

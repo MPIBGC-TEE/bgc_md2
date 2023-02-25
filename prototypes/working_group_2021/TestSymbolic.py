@@ -125,7 +125,7 @@ class TestSymbolic(TestCase):
 
     def test_make_func_dict_interface(self):
         # Purpose: this test checks that your make_func_dict accepts the
-        # maximum set of parameters mvs,dvs,cpa,epa because some of the models
+        # maximum set of parameters dvs,cpa,epa because some of the models
         # need some of them and we want to call the function in the same way
         # from the comparison notebooks
         #
@@ -140,7 +140,7 @@ class TestSymbolic(TestCase):
                 conf_dict = gh.confDict(mf)
                 test_args = gh.test_args(mf)
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict["dataPath"]))
-                msh.make_func_dict( dvs, test_args.cpa, test_args.epa_0)
+                msh.make_func_dict( dvs, cpa=test_args.cpa, epa=test_args.epa_0)
 
     def test_make_iterator_sym(self):
         for mf in self.model_folders:
@@ -488,7 +488,7 @@ class TestSymbolic(TestCase):
                 mvs = gh.mvs(mf)
                 conf_dict = gh.confDict(mf)
 
-                fd = msh.make_func_dict(test_args.dvs, test_args.cpa, test_args.epa_0)
+                fd = msh.make_func_dict(test_args.dvs, cpa=test_args.cpa, epa=test_args.epa_0)
                 fd_old=msh.make_func_dict_old(mvs,test_args.dvs, test_args.cpa, test_args.epa_0)
                 months=range(0,len(test_args.dvs.npp))
                 days=[m*30 for m in months]
@@ -545,7 +545,7 @@ class TestSymbolic(TestCase):
                 testDir = self.output_path(mf)
                 self.__class__.clean_dir(testDir)
                 sv = mvs.get_StateVariableTuple()
-                func_dict = msh.make_func_dict(dvs , cpa, epa)
+                func_dict = msh.make_func_dict(dvs , cpa=cpa, epa=epa)
                 X0 = msh.numeric_X_0(mvs,test_args.dvs,test_args.cpa,test_args.epa_0)
                 delta_t_val=5
                 par_dict = gh.make_param_dict(mvs, cpa, epa)
@@ -578,22 +578,22 @@ class TestSymbolic(TestCase):
                 self.assertTrue(np.allclose(res1.X,res2.X))
 
     def test_age_distributions_and_btt_start_in_ss_3(self):
-        # mf = "kv_visit2"
-        for mf in set(self.model_folders):
+        for mf in set(self.model_folders).intersection(["kv_visit2"]):
             with self.subTest(mf=mf):
                 th = gh.th(mf)
                 msh = gh.msh(mf)
                 # we will later remove the code for updating later 
                 cta = msh.ConsistentTestArgs(
                     confDict=gh.confDict(mf),
+                    mvs=gh.mvs(mf)
                 )
                 cta.write_data(Path(mf))
                 #test_args = gh.test_args(mf)
 
                 mvs = gh.mvs(mf)
                 smr = mvs.get_SmoothModelRun()
-                start_mean_age_vec=mvs.get_NumericStartMeanAgeVector()
                 smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+                start_mean_age_vec=mvs.get_NumericStartMeanAgeVector()
                 n_pools=len(mvs.get_StateVariableTuple())
                 # We cant compute the mean by integration since for this example the numeric integration does not
                 #compute solutions for the mean age system starting at X_fix and star
@@ -746,7 +746,7 @@ class TestSymbolic(TestCase):
                 self.__class__.clean_dir(testDir)
                 sv = mvs.get_StateVariableTuple()
                 n_pools = len(sv)
-                func_dict = msh.make_func_dict(dvs , cpa, epa)
+                func_dict = msh.make_func_dict(dvs , cpa=cpa, epa=epa)
                 # X0 = msh.numeric_X_0(mvs,test_args.dvs,test_args.cpa,test_args.epa)
                 par_dict = gh.make_param_dict(mvs, cpa, epa)
                 # compute the start age distribution
@@ -956,7 +956,7 @@ class TestSymbolic(TestCase):
                 delta_t_val = 15  # this affects the precision of the iterator
                 stride = 2  # this does not affect the precision of the iterator but of the averages
                 # but makes it more effiecient (the values in between the strides
-                func_dict = msh.make_func_dict( dvs, cpa, epa)
+                func_dict = msh.make_func_dict(dvs, cpa=cpa, epa=epa)
                 ###############################################################
                 # plotting function
                 def plot_disc_vs_cont(mvs,times,X_disc,X_cont,fn):
@@ -1100,7 +1100,7 @@ class TestSymbolic(TestCase):
                 # times = np.linspace(t_min, t_max, n_steps)
                 times = np.arange(t_min, t_max, delta_t_val * stride)
                 par_dict = gh.make_param_dict(mvs, test_args.cpa, epa)
-                func_dict = msh.make_func_dict( test_args.dvs, test_args.cpa, epa)
+                func_dict = msh.make_func_dict(test_args.dvs, cpa=test_args.cpa, epa=epa)
                 #X0 = msh.numeric_X_0(mvs, test_args.dvs, test_args.cpa, epa).reshape(-1)
                 # in our case we want to compute a steady state start value
                 a_dens_function, X_fix = start_age_distributions_from_steady_state(

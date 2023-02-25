@@ -220,7 +220,7 @@ def get_global_mean_vars(dataPath):
 #             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
-            gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
             return gm
         return (
             Observables(*map(get_cached_global_mean, o_names)),
@@ -385,7 +385,7 @@ def make_func_dict_old(mvs,dvs,cpa,epa):
         "xi": make_xi_func(dvs)
     }
 
-def make_func_dict(dvs,cpa,epa):
+def make_func_dict(dvs, **kwargs):
     return {
         "xi":  lambda t: 1,
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
@@ -420,7 +420,7 @@ def make_param2res_sym(
         epa=EstimatedParameters(*pa)
         
         # Build input and environmental scaler functions
-        func_dict = make_func_dict(dvs,cpa,epa)
+        func_dict = make_func_dict(dvs)
         
         # create a startvector for the iterator from both estimated and fixed parameters 
         # The order is important and corresponds to the order of the statevariables
@@ -661,7 +661,7 @@ def get_global_mean_vars_all(experiment_name):
             # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
 
         # def get_cached_global_mean(vn):
-            # gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
+            # gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
             # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
 
         # #map variables to data

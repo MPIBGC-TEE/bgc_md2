@@ -110,7 +110,7 @@ def traceability_iterator_instance(
     cpa_t = test_args.cpa
     epa_t = test_args.epa_opt
     X_0 = gh.msh(mf).numeric_X_0(mvs_t, dvs_t, cpa_t, epa_t)
-    func_dict = gh.msh(mf).make_func_dict(dvs_t, cpa_t, epa_t)
+    func_dict = gh.msh(mf).make_func_dict(dvs_t, cpa=cpa_t, epa=epa_t)
 
     return gh.traceability_iterator(
         X_0,

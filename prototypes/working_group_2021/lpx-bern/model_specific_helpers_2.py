@@ -118,7 +118,7 @@ def get_global_mean_vars_all(experiment_name):
             # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
 
         # def get_cached_global_mean(vn):
-            # gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
+            # gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
             # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
 
         # #map variables to data

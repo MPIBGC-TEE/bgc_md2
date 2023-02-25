@@ -211,7 +211,7 @@ def get_global_mean_vars(dataPath):
             print( dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
-            return gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            return gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
     
         return (
             Observables(*map(get_cached_global_mean, o_names)),
@@ -329,7 +329,7 @@ def xi(tas,mrso):
     return rh_factor # 1.0     # Set to 1 if no scaler implemented
     # return 1.0
 
-def make_func_dict(dvs,cpa,epa):
+def make_func_dict(dvs, **kwargs):
     npp_f = gh.make_interpol_of_t_in_days(dvs.npp)
     tas_f = gh.make_interpol_of_t_in_days(dvs.tas)
     mrso_f = gh.make_interpol_of_t_in_days(dvs.mrso)
@@ -508,7 +508,7 @@ def make_param2res_sym(
 #             'r_C_BGDL_2_C_SHMS':cpa.k_C_BGDL*(1-epa.fco)
 #         }
         
-        func_dict=make_func_dict(dvs,cpa,epa)
+        func_dict=make_func_dict(dvs)
 
         # size of the timestep in days
         # We could set it to 30 o
@@ -709,7 +709,7 @@ def get_global_mean_vars_all(experiment_name):
             # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
 
         # def get_cached_global_mean(vn):
-            # gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
+            # gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
             # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
 
         # #map variables to data

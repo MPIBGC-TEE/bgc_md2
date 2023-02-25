@@ -36,32 +36,34 @@ mvs=CMTVS(
         s1.mvs.get_BibInfo(),
     },
     computers=s1.mvs.computers
-)    
-# we provide some example data
+)
+# we provide some example parameterization
 
-t0 = 0 #3/2*np.pi
+t0 = 0  #3/2*np.pi
 n_steps = 12  # 2881
 t_max = 144 
 times = np.linspace(t0, t_max, n_steps)
 delta_t_val = (t_max - t0)/n_steps
 dirPath = Path(__file__).parent
-dvs = msh.get_cached_global_mean_drivers(dirPath)
-cpa = gh.load_named_tuple_from_json_path(
-    msh.Constants,
-    dirPath.joinpath("cpa.json")
-)        
-epa_opt = gh.load_named_tuple_from_json_path(
-    msh.EstimatedParameters,
-    dirPath.joinpath("epa_opt.json")
-)        
-func_dict = msh.make_func_dict(dvs,cpa,epa_opt)
-par_dict = gh.make_param_dict(mvs, cpa, epa_opt)
-srm = mvs.get_SmoothReservoirModel()
+par_dict = gh.load_dict_from_json_path(dirPath.joinpath("parameter_dict.json"))
+
+def inter(vn):
+    arr = gh.get_nc_array(dirPath.joinpath(f"{vn}.nc"), vn)
+    return gh.make_interpol_of_t_in_days(arr)
+
+func_dict={
+    "TAS": inter("tas"),
+    "mrso": inter("mrso"),
+    "NPP": inter("npp"),
+}
+    
 # For this example we assume that the system was in steady state 
 # at t_0 with X_fix given by X_fix = M^{-1} 
 # since we know that the system is linear we can easily compute the steady state
 # (in general (nonlinear fluxes) it is not clear that a steady state even exists
 # let alone how to compute it
+srm = mvs.get_SmoothReservoirModel()
+
 start_mean_age_vec, X_fix = sd.start_mean_age_vector_from_steady_state_linear(
     srm,
     t0=t0,
@@ -77,3 +79,4 @@ mvs = mvs.update({
     NumericSimulationTimes(times),
     NumericStartMeanAgeVector(start_mean_age_vec)
 })
+#from IPython import embed; embed()

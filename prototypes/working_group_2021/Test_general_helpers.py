@@ -414,7 +414,7 @@ class Test_general_helpers(InDirTest):
         # def get_cached_global_mean(gm_path, vn):
         #    return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-        res_cache = gh.get_cached_global_mean(cache_path, vn)
+        res_cache = gh.get_nc_array(cache_path, vn)
         # from IPython import embed;embed()
         self.assertTrue((res_cache == res_var).all())
 
@@ -455,7 +455,7 @@ class Test_general_helpers(InDirTest):
         cache_path = Path("{}_gm.nc".format(trunk))
 
         gh.write_global_mean_cache(cache_path, res_var, vn)
-        res_cache = gh.get_cached_global_mean(cache_path, vn)
+        res_cache = gh.get_nc_array(cache_path, vn)
         self.assertTrue((res_cache == res_var).all())
 
         ds.close()
@@ -484,7 +484,7 @@ class Test_general_helpers(InDirTest):
         cache_path = Path("{}_gm.nc".format(trunk))
 
         gh.write_global_mean_cache(cache_path, res_var, vn)
-        res_cache = gh.get_cached_global_mean(cache_path, vn)
+        res_cache = gh.get_nc_array(cache_path, vn)
         self.assertTrue((res_cache == res_var).all())
 
         ds.close()

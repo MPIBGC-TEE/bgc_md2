@@ -299,7 +299,7 @@ def get_global_mean_vars(dataPath):
             print(dataPath.joinpath(nc_global_mean_file_name(vn)))
 
         def get_cached_global_mean(vn):
-            gm = gh.get_cached_global_mean(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
+            gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
             return gm * 86400 if vn in ["gpp", "rh", "ra", "npp"] else gm
 
         return (
@@ -379,7 +379,7 @@ def make_xi_func(Ts):
     return xi_func
 
 
-def make_func_dict( dvs, cpa, epa):
+def make_func_dict( dvs,**kwargs):
     return {
         "NPP": make_npp_func(dvs),
         "xi": make_xi_func(dvs.Ts)
