@@ -1025,7 +1025,7 @@ def get_global_mean_vars_all(experiment_name):
 # output_final
 # )
 
-class ConsistentTestArgs():
+class ConsistentParameterization():
     def __init__(
             self,
             confDict: Dict[str,str],

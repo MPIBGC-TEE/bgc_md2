@@ -583,7 +583,7 @@ class TestSymbolic(TestCase):
                 th = gh.th(mf)
                 msh = gh.msh(mf)
                 # we will later remove the code for updating later 
-                cta = msh.ConsistentTestArgs(
+                cta = msh.ConsistentParameterization(
                     confDict=gh.confDict(mf),
                     mvs=gh.mvs(mf)
                 )
