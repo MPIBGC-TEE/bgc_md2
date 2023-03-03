@@ -162,28 +162,46 @@ def plot_func_with_freeze_points(ax, f_num, title):
             alpha=transparent
         )
 
-#plot_func_with_freeze_points(axs[0], u_num, title="u" )   
-plot_func_with_freeze_points(axs[1], k_num, title="k" )   
-for k, d in frd.items():
-    i_fr=d["i"]
-    t_fr= times[i_fr]
-    ts_fr_bw = times[:i_fr]
-    ts_fr_fw = times[i_fr:]
-    c_fr= d["c"]
+def plot_constant_prolongation(ax,f_num):
+    for k, d in frd.items():
+        i_fr=d["i"]
+        t_fr= times[i_fr]
+        ts_fr_bw = times[:i_fr]
+        ts_fr_fw = times[i_fr:]
+        c_fr= d["c"]
+    
+        def ff(t): 
+            return np.ones_like(t)*f_num(t_fr)
+    
+        ax.plot(
+            ts_fr_fw, 
+            ff(ts_fr_fw), 
+            lw=5,
+            color=c_fr,
+            alpha=transparent,
+            label="k_"
+        )
 
-    def ff(t): 
-        return np.ones_like(t)*k_num(t_fr)
 
-    axs[1].plot(
-        ts_fr_fw, 
-        ff(ts_fr_fw), 
-        lw=5,
-        color=c_fr,
-        alpha=transparent,
-        label="k_"
-    )
+def plot_func_with_constant_prolongation(ax, f_num, title):
+    plot_func_with_freeze_points(ax, f_num, title=title)   
+    plot_constant_prolongation(ax,f_num)
 
-plot_func_with_freeze_points(axs[2], x_num, title="x" )   
+
+plot_func_with_constant_prolongation(axs[0], u_num, title="u")
+plot_func_with_constant_prolongation(axs[1], k_num, title="k")
+
+ax=axs[2]
+plot_func_with_freeze_points(ax, x_c_num, title="x" )   
+vals = x_num(times)
+# plot function
+ax.plot(
+    times,
+    vals,
+    lw=5,
+    color="black"
+)
+
 for k, d in frd.items():
     i_fr=d["i"]
     t_fr= times[i_fr]
@@ -200,7 +218,7 @@ for k, d in frd.items():
     def ff(t): 
         return sol_fr.sol(t).reshape(-1)
 
-    axs[2].plot(
+    ax.plot(
         ts_fr_fw, 
         ff(ts_fr_fw), 
         lw=5,
