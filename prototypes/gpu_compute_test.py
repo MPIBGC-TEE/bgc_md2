@@ -33,10 +33,10 @@ code=Template("""def ${name}(Bs,tfs):
 exec(code.substitute(name="func",r="range"))
 
 # function optimized to run on gpu
-dec_code="""@njit(
+dec_code="""@jit(
     double[:,:,:](double[:,:,:,:],double[:]),
-    #target_backend="cuda",
-    target_backend="cpu",
+    target_backend="cuda",
+    #target_backend="cpu",
     nopython=True,
     fastmath=True
 )
