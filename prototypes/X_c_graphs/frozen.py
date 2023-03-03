@@ -64,7 +64,7 @@ c_map = plt.colormaps['magma']
 cols = c_map.resampled(len(times)).colors
 small=1
 large=20
-transparent=0.2
+transparent=0.1
 def plot_cooling_trajectory(
     ax,
     f_num,
@@ -110,95 +110,199 @@ def plot_trajectory_forward(
         **kwargs
     )
 
+i_fr_1 = int(n_t/4)
+i_fr_2 = int(2.5*n_t/4)
+t_fr_1 = times[i_fr_1]
+t_fr_2 = times[i_fr_2]
 
 fig = plt.figure(figsize=(20, 20))
 axs = fig.subplots(3, sharex=True)
 #############################################################
-ax=axs[0]
-ax.set_title("Input $u(t)$,and frozen input $u_{f_1}=u(t_{f_1})$")
-plot_cooling_trajectory(
-    ax,
-    u_num,
-    s=large,
-    alpha=1
-)
-i_fr_1 = int(n_t/4)*1
-i_fr_2 = int(n_t/4)*2
-t_fr_1 = times[i_fr_1]
-t_fr_2 = times[i_fr_2]
-plot_trajectory_forward(
-    ax,
-    lambda t: u_num(t_fr_1)*np.ones_like(t),
-    i_fr_1,
-    s=large,
-    alpha=transparent
-)
-ax.axvline(x=t_fr_1,lw=0.5,color="black")
+frd={
+    "fr_1":{
+        "i": 60,
+        "c": "green"
+    },
+    "fr_2":{
+        "i": 90,
+        "c": "blue"
+    },
+}
+
+
+def plot_func_with_freeze_points(ax, f_num, title):
+    ax.set_title(title)
+    vals = f_num(times)
+    # plot function
+    ax.plot(
+        times,
+        vals,
+        lw=5,
+        color="black"
+    )
+    # plot freeze point crosshairs
+    for k, d in frd.items():
+        i_fr=d["i"]
+        t_fr= times[i_fr]
+        ts_fr_bw = times[:i_fr]
+        ts_fr_fw = times[i_fr:]
+        c_fr= d["c"]
+        ax.plot(
+            ts_fr_bw,
+            f_num(t_fr)*np.ones_like(ts_fr_bw),
+            lw=0.5,
+            color=c_fr,
+            alpha=transparent
+        )
+        ax.plot(
+            [t_fr,t_fr],
+            [0,float(f_num(t_fr))],
+            lw=0.5,
+            color=c_fr,
+            alpha=transparent
+        )
+
+#plot_func_with_freeze_points(axs[0], u_num, title="u" )   
+plot_func_with_freeze_points(axs[1], k_num, title="k" )   
+for k, d in frd.items():
+    i_fr=d["i"]
+    t_fr= times[i_fr]
+    ts_fr_bw = times[:i_fr]
+    ts_fr_fw = times[i_fr:]
+    c_fr= d["c"]
+
+    def ff(t): 
+        return np.ones_like(t)*k_num(t_fr)
+
+    axs[1].plot(
+        ts_fr_fw, 
+        ff(ts_fr_fw), 
+        lw=5,
+        color=c_fr,
+        alpha=transparent,
+        label="k_"
+    )
+
+plot_func_with_freeze_points(axs[2], x_num, title="x" )   
+for k, d in frd.items():
+    i_fr=d["i"]
+    t_fr= times[i_fr]
+    ts_fr_bw = times[:i_fr]
+    ts_fr_fw = times[i_fr:]
+    c_fr= d["c"]
+    sol_fr = solve_ivp(
+        lambda t, x: u_num(t_fr) - k_num(t_fr) * x,
+        t_span=[t_fr, t_end], 
+        y0=x_num(t_fr),
+        dense_output=True
+    )
+
+    def ff(t): 
+        return sol_fr.sol(t).reshape(-1)
+
+    axs[2].plot(
+        ts_fr_fw, 
+        ff(ts_fr_fw), 
+        lw=5,
+        color=c_fr,
+        alpha=transparent,
+        label="X_{fr_1}(t)"
+    )
+        #ax.plot(
+        #    ts_fr_fw,
+        #    f_num(t_fr)*np.ones_like(ts_fr_fw),
+        #    lw=5,
+        #    color=c_fr,
+        #    alpha=transparent
+        #)
+#plot_cooling_trajectory(
+#    ax,
+#    u_num,
+#    s=large,
+#    alpha=1
+#)
+#plot_trajectory_forward(
+#    ax,
+#    lambda t: u_num(t_fr_1)*np.ones_like(t),
+#    i_fr_1,
+#    s=large,
+#    alpha=transparent
+#)
+#ax.axvline(x=t_fr_1,lw=0.5,color="green")
+##
+#plot_trajectory_forward(
+#    ax,
+#    lambda t: u_num(t_fr_2)*np.ones_like(t),
+#    i_fr_2,
+#    s=large,
+#    alpha=transparent
+#)
+#ax.axvline(x=t_fr_2,lw=0.5,color="black")
 #############################################################
-ax=axs[1]
-plot_cooling_trajectory(
-    ax, 
-    k_num,
-    s=large,
-    alpha=1
-)
-plot_trajectory_forward(
-    ax,
-    lambda t: k_num(t_fr_1)*np.ones_like(t),
-    i_fr_1,
-    s=large,
-    alpha=transparent
-)
-ax.axvline(x=t_fr_1,lw=0.5,color="black")
+#ax=axs[1]
+#plot_cooling_trajectory(
+#    ax, 
+#    k_num,
+#    s=large,
+#    alpha=1
+#)
+#plot_trajectory_forward(
+#    ax,
+#    lambda t: k_num(t_fr_1)*np.ones_like(t),
+#    i_fr_1,
+#    s=large,
+#    alpha=transparent
+#)
+#ax.axvline(x=t_fr_1,lw=0.5,color="black")
 #############################################################
-ax=axs[2]
-ax.set_title("X,X_c, X_f1, X_f2...")
-plot_cooling_trajectory(
-    ax,
-    x_num,
-    s=large,
-    alpha=1,
-    label="x"
-)
-plot_cooling_trajectory(
-    ax,
-    x_c_num,
-    s=large,
-    alpha=transparent,
-    label="x_c"
-)
-sol_fr_1 = solve_ivp(
-    lambda t, x: u_num(t_fr_1) - k_num(t_fr_1) * x,
-    t_span=[t_fr_1, t_end], 
-    y0=x_num(t_fr_1),
-    dense_output=True
-)
-plot_trajectory_forward(
-    ax, 
-    lambda t: sol_fr_1.sol(t).reshape(-1), 
-    i_fr_1,
-    s=large,
-    alpha=transparent,
-    label="X_{fr_1}(t)"
-)
-ax.axvline(x=t_fr_1,lw=0.5,color="black")
-ax.axhline(y=x_c_num(t_fr_1),lw=0.5,color="black")
-sol_fr_2 = solve_ivp(
-    lambda t, x: u_num(t_fr_2) - k_num(t_fr_2) * x,
-    t_span=[t_fr_2, t_end], 
-    y0=x_num(t_fr_2),
-    dense_output=True
-)
-plot_trajectory_forward(
-    ax, 
-    lambda t: sol_fr_2.sol(t).reshape(-1), 
-    i_fr_2,
-    s=large,
-    alpha=transparent,
-    label="X_{fr_2}(t)"
-)
-ax.axvline(x=t_fr_2,lw=0.5,color="black")
-ax.axhline(y=x_c_num(t_fr_2),lw=0.5,color="black")
+#ax=axs[2]
+#ax.set_title("X,X_c, X_f1, X_f2...")
+#plot_cooling_trajectory(
+#    ax,
+#    x_num,
+#    s=large,
+#    alpha=1,
+#    label="x"
+#)
+#plot_cooling_trajectory(
+#    ax,
+#    x_c_num,
+#    s=large,
+#    alpha=transparent,
+#    label="x_c"
+#)
+#sol_fr_1 = solve_ivp(
+#    lambda t, x: u_num(t_fr_1) - k_num(t_fr_1) * x,
+#    t_span=[t_fr_1, t_end], 
+#    y0=x_num(t_fr_1),
+#    dense_output=True
+#)
+#plot_trajectory_forward(
+#    ax, 
+#    lambda t: sol_fr_1.sol(t).reshape(-1), 
+#    i_fr_1,
+#    s=large,
+#    alpha=transparent,
+#    label="X_{fr_1}(t)"
+#)
+#ax.axvline(x=t_fr_1,lw=0.5,color="black")
+#ax.axhline(y=x_c_num(t_fr_1),lw=0.5,color="black")
+#sol_fr_2 = solve_ivp(
+#    lambda t, x: u_num(t_fr_2) - k_num(t_fr_2) * x,
+#    t_span=[t_fr_2, t_end], 
+#    y0=x_num(t_fr_2),
+#    dense_output=True
+#)
+#plot_trajectory_forward(
+#    ax, 
+#    lambda t: sol_fr_2.sol(t).reshape(-1), 
+#    i_fr_2,
+#    s=large,
+#    alpha=transparent,
+#    label="X_{fr_2}(t)"
+#)
+#ax.axvline(x=t_fr_2,lw=0.5,color="black")
+#ax.axhline(y=x_c_num(t_fr_2),lw=0.5,color="black")
 # ax.plot(times,xs,label="x")
 # -
 
