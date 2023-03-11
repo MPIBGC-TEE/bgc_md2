@@ -112,7 +112,7 @@ def syncronized_timelines_from_model_folder(mf):
     dvs = test_args.dvs
     stride = 1  # this does not affect the precision of the iterator but of the averages
     # but makes it more effiecient (the values in between the strides
-    func_dict = msh.make_func_dict(dvs, cpa, epa)
+    func_dict = msh.make_func_dict(dvs, cap=cpa, epa=epa)
 
     # Every model has it's own timeline counted from 0 in days starting
     # from the first day of where IT'S data is available

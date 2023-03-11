@@ -546,6 +546,13 @@ def make_iterator_sym(
         func_dict,
         delta_t_val=1 # defaults to 1day timestep
     ):
+    mit=gh.minimal_iterator_internal(
+            mvs,
+            V_init,
+            pardict,
+            func_dict,
+             delta_t_val
+    )
     B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)
 
     
@@ -765,7 +772,7 @@ def make_param2res_sym(
 #              'xi':xi_func
 #         }
 
-        func_dict=make_func_dict(dvs,cpa,epa)
+        func_dict=make_func_dict(dvs) 
         
         # size of the timestep in days
         # We could set it to 30 o

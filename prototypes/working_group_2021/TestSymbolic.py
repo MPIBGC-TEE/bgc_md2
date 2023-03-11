@@ -142,7 +142,13 @@ class TestSymbolic(TestCase):
                 svs, dvs = msh.get_example_site_vars(Path(conf_dict["dataPath"]))
                 msh.make_func_dict( dvs, cpa=test_args.cpa, epa=test_args.epa_0)
 
-    def test_make_iterator_sym(self):
+    
+    # fixme mm 3-19 2023
+    # to be deprecated: 
+    # we want a more conceise interface 
+    # instead of the mvs that can contain anything..
+    # we want the minimal and specific ingredients
+    def test_make_iterator_sym_old(self):
         for mf in self.model_folders:
             with self.subTest(mf=mf):
 
@@ -199,22 +205,6 @@ class TestSymbolic(TestCase):
                     res_2[i, :] = it_sym_2.__next__().reshape(
                         len(V_init),
                     )
-                # create a smooth model run to check the results against 
-                mvs = mvs.update({
-                    NumericParameterization(
-                        par_dict=test_args.par_dict,
-                        func_dict=test_args.func_dict,
-                    ),
-                    NumericStartValueArray(
-                        msh.numeric_X_0(
-                            mvs,
-                            test_args.dvs,
-                            test_args.cpa,
-                            test_args.epa_0,
-                        )
-                    ),
-                    NumericSimulationTimes(times)
-                })
 
     def test_param2res_sym(self):
         for mf in self.model_folders:

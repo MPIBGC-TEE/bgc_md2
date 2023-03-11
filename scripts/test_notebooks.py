@@ -46,6 +46,7 @@ def is_notebook(py_p):
     return (re.search(pattern, text) is not None)
 
 
+#############################################################################################
 if __name__ == '__main__':
     target_dir=str(Path(sys.argv[1]))
     notebook_paths = [Path(s) for s in glob(f"{target_dir}/**/*.py", recursive=True) if is_notebook(Path(s))]

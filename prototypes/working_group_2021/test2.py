@@ -1,5 +1,5 @@
-#%load_ext autoreload
-#%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 import netCDF4 as nc
 import numpy as np
 import dask.array as da
@@ -108,7 +108,7 @@ def timelines_from_model_folder(mf):
     dvs = test_args.dvs
     stride = 1  # this does not affect the precision of the iterator but of the averages
     # but makes it more effiecient (the values in between the strides
-    func_dict = msh.make_func_dict(dvs, cpa, epa)
+    func_dict = msh.make_func_dict(dvs, cpa=cpa, epa=epa)
 
     # Every model has it's own timeline counted from start_shift in days 
     # till 

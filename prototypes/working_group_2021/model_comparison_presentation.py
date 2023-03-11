@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -95,44 +95,43 @@ test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
 
 # ### Checking data assimilation quality for all models
 
-# +
-# plt.rcParams.update({'font.size': 32})
+plt.rcParams.update({'font.size': 32})
 
 # +
-# import matplotlib.lines as mlines
+import matplotlib.lines as mlines
 
-# for j, mf in enumerate(model_folders):
-#     print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
-#     print ('\033[0m')
-#     fig = plt.figure(figsize=(50,10))
-#     axs=fig.subplots(1, len(gh.msh(mf).Observables._fields))
-    
-#     mvs=test_arg_list[j].mvs
-#     dvs=test_arg_list[j].dvs
-#     cpa=test_arg_list[j].cpa
-#     epa_opt=test_arg_list[j].epa_opt
-    
-#     param2res_sym = gh.msh(mf).make_param2res_sym(mvs,cpa,dvs)
-#     out_simu=param2res_sym(epa_opt)._asdict()
-#     obs=test_arg_list[j].svs._asdict()
-#     print ("Amount of variance explined: ")
-#     for i,f in enumerate(gh.msh(mf).Observables._fields):
-#         resid=out_simu[f]-obs[f]
-#         mean_obs = obs[f].mean()
-#         mean_centered_obs = obs[f] - mean_obs
-#         AVE=1 - np.sum( resid**2) / np.sum( mean_centered_obs**2 )
-#         print(f+ " : " + str(round(AVE,3)) )
-#     for i,f in enumerate(gh.msh(mf).Observables._fields):
-#         axs[i].scatter(out_simu[f], obs[f], c='black')
-#         line = mlines.Line2D([0, 1], [0, 1], color='red')
-#         transform = axs[i].transAxes
-#         line.set_transform(transform)
-#         axs[i].add_line(line)
-#         axs[i].set_title(f)
-#         axs[i].set_xlabel('Matrix output')
-#         axs[i].set_ylabel('Original Trendy output')
-#         axs[i].grid()
-#     plt.show()
+for j, mf in enumerate(model_folders):
+    print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
+    print ('\033[0m')
+    fig = plt.figure(figsize=(50,10))
+    axs=fig.subplots(1, len(gh.msh(mf).Observables._fields))
+  
+    mvs=test_arg_list[j].mvs
+    dvs=test_arg_list[j].dvs
+    cpa=test_arg_list[j].cpa
+    epa_opt=test_arg_list[j].epa_opt
+  
+    param2res_sym = gh.msh(mf).make_param2res_sym(mvs,cpa,dvs)
+    out_simu=param2res_sym(epa_opt)._asdict()
+    obs=test_arg_list[j].svs._asdict()
+    print ("Amount of variance explined: ")
+    for i,f in enumerate(gh.msh(mf).Observables._fields):
+        resid=out_simu[f]-obs[f]
+        mean_obs = obs[f].mean()
+        mean_centered_obs = obs[f] - mean_obs
+        AVE=1 - np.sum( resid**2) / np.sum( mean_centered_obs**2 )
+        print(f+ " : " + str(round(AVE,3)) )
+    for i,f in enumerate(gh.msh(mf).Observables._fields):
+        axs[i].scatter(out_simu[f], obs[f], c='black')
+        line = mlines.Line2D([0, 1], [0, 1], color='red')
+        transform = axs[i].transAxes
+        line.set_transform(transform)
+        axs[i].add_line(line)
+        axs[i].set_title(f)
+        axs[i].set_xlabel('Matrix output')
+        axs[i].set_ylabel('Original Trendy output')
+        axs[i].grid()
+    plt.show()
 # -
 
 

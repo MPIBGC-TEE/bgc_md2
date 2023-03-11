@@ -1883,12 +1883,81 @@ def minimal_iterator(
     # extra_functions: Dict[str, Callable] = dict(),
     t_0=0,
 ):
-    apa = {**cpa._asdict(), **epa._asdict()}
+    #apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
-    t = mvs.get_TimeSymbol()
-    state_vector = mvs.get_StateVariableTuple()
-    delta_t = Symbol("delta_t")
+    return minimal_iterator_internal(
+        mvs,  
+        X_0,
+        pardict,  
+        func_dict,
+        delta_t_val,
+        t_0=0
+    )
+    #t = mvs.get_TimeSymbol()
+    #state_vector = mvs.get_StateVariableTuple()
+    #delta_t = Symbol("delta_t")
 
+    #disc_par_dict = {**par_dict, delta_t: delta_t_val}
+    #B_func = hr.numerical_array_func(
+    #    state_vector=state_vector,
+    #    time_symbol=t,
+    #    expr=mvs.get_CompartmentalMatrix(),
+    #    parameter_dict=par_dict,
+    #    func_dict=func_dict,
+    #)
+    #I_func = hr.numerical_1d_vector_func(
+    #    state_vector=state_vector,
+    #    time_symbol=t,
+    #    expr=mvs.get_InputTuple(),
+    #    parameter_dict=par_dict,
+    #    func_dict=func_dict,
+    #)
+    ## make sure that the startvector X_0 is a ONE dimensional  vector
+    ## since it is important that  X_0 and the result of I(t,X) have
+    ## the same dimension
+    #X_0 = X_0.reshape(-1)
+    #assert I_func(0, X_0).ndim == 1
+
+    #bit = BlockDictIterator(
+    #    iteration_str="it",  # access the inner counter
+    #    start_seed_dict=ArrayDict({"X": X_0, "t": t_0}),
+    #    present_step_funcs=OrderedDict(
+    #        {
+    #            # these are functions that are  applied in order
+    #            # on the start_seed_dict
+    #            # they might compute variables that are purely
+    #            # diagnostic or those that are necessary for the
+    #            # next step
+    #            #
+    #            # The first 2 are essential for any compartmental system
+    #            "B": lambda t, X: -B_func(t, X),
+    #            "I": lambda t, X: I_func(t, X),
+    #            #
+    #            # **extra_functions
+    #        }
+    #    ),
+    #    next_step_funcs=OrderedDict(
+    #        {
+    #            # these functions have to compute the seed for the next timestep
+    #            "X": lambda X, B, I: X + (I - B @ X) * delta_t_val,
+    #            "t": lambda t: t + delta_t_val,
+    #        }
+    #    ),
+    #)
+    #return bit
+
+# fixme mm: 3-10-2023 
+# could have even more succint arguments like NumericParameterization
+def minimal_iterator_internal(
+    mvs,  
+    X_0,
+    pardict,  #: EstimatedParameters
+    func_dict,
+    delta_t_val = 1,  # defaults to 1day timestep
+    # traced_expressions: Dict[str, Expr] = dict(),
+    # extra_functions: Dict[str, Callable] = dict(),
+    t_0=0
+):    
     disc_par_dict = {**par_dict, delta_t: delta_t_val}
     B_func = hr.numerical_array_func(
         state_vector=state_vector,
@@ -1937,7 +2006,6 @@ def minimal_iterator(
         ),
     )
     return bit
-
 
 # fixme mm 12-2 2022
 # should be better called tracebility Iterator result
@@ -2810,8 +2878,6 @@ def get_test_arg_list(model_folders):
 # fixme mm 8-12:
 # it would make sense to create a dictionary indexed by the model name
 # so it can be used for model comparisons by name like this one
-
-
 def get_test_arg_dict(model_folders):
     return {mf: test_args(mf) for mf in model_folders}
 
