@@ -2,29 +2,18 @@
 # without installing the package you have to commit a certain institutianalized
 # crime by adding the parent directory to the front of the python path.
 import sys
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
-from CompartmentalSystems.start_distributions import (
-    start_age_moments_from_empty_spinup,
-    start_age_moments_from_steady_state,
-    start_age_moments_from_zero_initial_content,
-    compute_fixedpoint_numerically,
-    start_age_distributions_from_steady_state,
-    start_age_distributions_from_empty_spinup,
-    start_age_distributions_from_zero_initial_content
-)
-from CompartmentalSystems.ArrayDictResult import  ArrayDictResult
-import CompartmentalSystems.helpers_reservoir as  hr
 import unittest
 import pathlib
 import inspect
 import shutil
 import matplotlib.pyplot as plt
 import numpy as np
+import json
+import matplotlib.pyplot as plt
 from unittest.case import TestCase, skip
 from pathlib import Path
 from importlib import import_module
 from collections import OrderedDict
-import json
 from sympy import  (
     Symbol,
     Function,
@@ -37,8 +26,21 @@ from sympy import  (
     exp,
     diag,
  )   
-import matplotlib.pyplot as plt
 from plotly.offline import plot
+from functools import partial
+
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.start_distributions import (
+    start_age_moments_from_empty_spinup,
+    start_age_moments_from_steady_state,
+    start_age_moments_from_zero_initial_content,
+    compute_fixedpoint_numerically,
+    start_age_distributions_from_steady_state,
+    start_age_distributions_from_empty_spinup,
+    start_age_distributions_from_zero_initial_content
+)
+from CompartmentalSystems.ArrayDictResult import  ArrayDictResult
+import CompartmentalSystems.helpers_reservoir as  hr
 
 from ComputabilityGraphs.CMTVS import CMTVS
 
@@ -205,6 +207,36 @@ class TestSymbolic(TestCase):
                     res_2[i, :] = it_sym_2.__next__().reshape(
                         len(V_init),
                     )
+
+    def test_make_da_iterator(self):
+        for mf in set(self.model_folders).intersection(["bian_ibis"]):
+            with self.subTest(mf=mf):
+                msh = gh.msh(mf)
+                mvs = gh.mvs(mf)
+                test_args = gh.test_args(mf)
+                cpa = test_args.cpa
+                epa = test_args.epa_0
+                dvs = test_args.dvs
+                testDir = self.output_path(mf)
+                self.__class__.clean_dir(testDir)
+                sv = mvs.get_StateVariableTuple()
+                func_dict = msh.make_func_dict(dvs , cpa=cpa, epa=epa)
+                X0 = msh.numeric_X_0(mvs,test_args.dvs,test_args.cpa,test_args.epa_0)
+                delta_t_val=5
+                par_dict = gh.make_param_dict(mvs, cpa, epa)
+                bit = msh.make_da_iterator(
+                    mvs,
+                    X0,
+                    par_dict,
+                    func_dict, 
+                    delta_t_val=delta_t_val,
+                )
+                start = 0
+                stop = 10 
+                step = 2
+                adr = ArrayDictResult(bit)
+                vals = adr[start: stop]
+                #from IPython import embed; embed()
 
     def test_param2res_sym(self):
         for mf in self.model_folders:
@@ -572,15 +604,24 @@ class TestSymbolic(TestCase):
             with self.subTest(mf=mf):
                 th = gh.th(mf)
                 msh = gh.msh(mf)
+                conf_dict=gh.confDict(mf)
+                data_path=Path(conf_dict['dataPath'])
                 # we will later remove the code for updating later 
-                cta = msh.ConsistentParameterization(
-                    confDict=gh.confDict(mf),
-                    mvs=gh.mvs(mf)
-                )
-                cta.write_data(Path(mf))
-                #test_args = gh.test_args(mf)
+                #cta = msh.ConsistentParameterization(
+                #    confDict=gh.confDict(mf),
+                #    mvs=gh.mvs(mf)
+                #)
+                #cta.write_data(Path(mf))
 
+                test_args = gh.test_args(mf)
                 mvs = gh.mvs(mf)
+
+                par_dict,func_dict,X_0 = msh.get_parameterization_from_data_1(
+                        mvs,
+                        data_provider=msh.get_global_mean_vars_2,
+                        conf_dict=conf_dict,
+                        test_args=test_args
+                )
                 smr = mvs.get_SmoothModelRun()
                 smr.initialize_state_transition_operator_cache(lru_maxsize=None)
                 start_mean_age_vec=mvs.get_NumericStartMeanAgeVector()

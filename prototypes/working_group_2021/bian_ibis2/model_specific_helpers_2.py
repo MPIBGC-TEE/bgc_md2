@@ -11,6 +11,7 @@ from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.TimeStepIterator import (
         TimeStepIterator2,
 )
+from collections import OrderedDict
 from copy import copy
 from typing import Callable
 from functools import reduce
@@ -538,7 +539,38 @@ def make_func_dict(dvs, **kwargs):
 # We will proceed as follows:
 # - create $V_0$ 
 # - build the function $f$
+def make_da_iterator(
+        mvs,
+        X_0, #: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    mit=gh.minimal_iterator_internal(
+            mvs,
+            X_0,
+            par_dict,
+            func_dict,
+            delta_t_val
+    )
+    soil_2_out_func=hr.numerical_func_of_t_and_Xvec(
+        state_vector=mvs.get_StateVariableTuple(),
+        time_symbol=mvs.get_TimeSymbol(),
+        expr=mvs.get_AggregatedSoilCarbonOutFlux(),
+        parameter_dict=par_dict,
+        func_dict=func_dict,
+    )
+    present_step_funcs = OrderedDict(
+        {
+            "rh": lambda t,X: soil_2_out_func(t,X)
+        }
+    )
+    mit.add_present_step_funcs(present_step_funcs)
+    return mit
 
+# fixme mm 3-11-2023 
+# this function will be deprecated
+# it is to be replaced by make_da_iterator which avoids some duplication
 def make_iterator_sym(
         mvs,
         V_init, #: StartVector,
@@ -546,13 +578,6 @@ def make_iterator_sym(
         func_dict,
         delta_t_val=1 # defaults to 1day timestep
     ):
-    mit=gh.minimal_iterator_internal(
-            mvs,
-            V_init,
-            pardict,
-            func_dict,
-             delta_t_val
-    )
     B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)
 
     
@@ -591,13 +616,12 @@ def make_iterator_sym(
                 # if Symbol(k) in numOutFluxesBySymbol.keys()
             # ]
         # )
-        rh = np.sum(
-            [
-                numOutFluxesBySymbol[Symbol(k)](it,*X)
-                for k in ["C_mll","C_mwl","C_mrl","C_sll","C_swl","C_srl","C_lll","C_lwl","C_lrl","C_mic","C_prot","C_nonprot","C_pass"] 
-                if Symbol(k) in numOutFluxesBySymbol.keys()
-            ]
-        )
+        vals=[
+            float(numOutFluxesBySymbol[Symbol(k)](it,*X)) # could be a 1x1 dimensional array...
+            for k in ["C_mll","C_mwl","C_mrl","C_sll","C_swl","C_srl","C_lll","C_lwl","C_lrl","C_mic","C_prot","C_nonprot","C_pass"] 
+            if Symbol(k) in numOutFluxesBySymbol.keys()
+        ]
+        rh = np.sum(vals)
         V_new = np.concatenate((X_new.reshape(n,1),np.array([rh]).reshape(1,1)), axis=0)
         
         return V_new

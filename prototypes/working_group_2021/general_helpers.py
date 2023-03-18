@@ -352,16 +352,18 @@ def make_uniform_proposer(
     """
 
     g = np.random.default_rng()
+    print("D=",D)
 
     def GenerateParamValues(c_op):
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + np.random.uniform(-0.5, 0.5, paramNum) * (
-                (c_max - c_min) / D
+            c_new = c_op + np.random.uniform(-0.5, 0.5, paramNum) * ( 
+             (c_max - c_min) / D
             )
             if filter_func(c_new):
                 keep_searching = False
+
         return c_new
 
     return GenerateParamValues
@@ -483,6 +485,8 @@ def autostep_mcmc(
 
     upgraded = 0
     C_op = initial_parameters
+    if not filter_func(initial_parameters):
+        raise ValueError("the initial paramters must pass the filter")
     tb = time()
     first_out = param2res(C_op)
     J_last = costfunction(first_out)
@@ -499,16 +503,19 @@ def autostep_mcmc(
     J_upgraded = np.zeros((2, nsimu))
     D = D_init
     proposer = make_uniform_proposer(
-        c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func
+        c_max=c_max,
+        c_min=c_min,
+        D=D, #* paramNum, 
+        filter_func=filter_func
     )
-    # for simu in tqdm(range(nsimu)):
     st = time()
     accepted_current = 0
     if chunk_size == 0:
         chunk_size = (
             nsimu  # if chunk_size is set to 0 - proceed without updating step size.
         )
-    for simu in range(nsimu):
+    for simu in tqdm(range(nsimu)):
+        print("first",simu)
         if (simu > 0) and (
             simu % chunk_size == 0
         ):  # every chunk size (e.g. 100 iterations) update the proposer step
@@ -533,6 +540,7 @@ def autostep_mcmc(
         c_new = proposer(C_op)
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
+        print("second",simu)
 
         if accept_costfunction(J_last=J_last, J_new=J_new, K=K):
             C_op = c_new
@@ -548,35 +556,35 @@ def autostep_mcmc(
 
         # print some metadata
         # (This could be added to the output file later)
-        if simu % 10 == 0 or simu == (nsimu - 1):
-            print(
-                """ 
-               #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
-               progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-               time elapsed: {minutes:02d}:{sec:02d}
-               overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
-               """.format(
-                    n=upgraded,
-                    r=int(upgraded / (simu + 1) * 100),
-                    simu=simu,
-                    nsimu=nsimu,
-                    pbs="|"
-                    + int(50 * simu / (nsimu - 1)) * "#"
-                    + int((1 - simu / (nsimu - 1)) * 50) * " "
-                    + "|",
-                    p=int(simu / (nsimu - 1) * 100),
-                    minutes=int((time() - st) / 60),
-                    sec=int((time() - st) % 60),
-                    cost=round(J_min, 2),
-                    cost2=round(J_last, 2),
-                    ac=accepted_current / chunk_size * 100,
-                    # rr=int(accepted_current / chunk_size * 100),
-                    ch=chunk_size,
-                    d=round(D, 3),
-                    s=J_min_simu,
-                ),
-                end="\033[5A",  # print always on the same spot of the screen...
-            )
+        #if simu % 10 == 0 or simu == (nsimu - 1):
+        #    print(
+        #        """ 
+        #       #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
+        #       progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+        #       time elapsed: {minutes:02d}:{sec:02d}
+        #       overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
+        #       """.format(
+        #            n=upgraded,
+        #            r=int(upgraded / (simu + 1) * 100),
+        #            simu=simu,
+        #            nsimu=nsimu,
+        #            pbs="|"
+        #            + int(50 * simu / (nsimu - 1)) * "#"
+        #            + int((1 - simu / (nsimu - 1)) * 50) * " "
+        #            + "|",
+        #            p=int(simu / (nsimu - 1) * 100),
+        #            minutes=int((time() - st) / 60),
+        #            sec=int((time() - st) % 60),
+        #            cost=round(J_min, 2),
+        #            cost2=round(J_last, 2),
+        #            ac=accepted_current / chunk_size * 100,
+        #            # rr=int(accepted_current / chunk_size * 100),
+        #            ch=chunk_size,
+        #            d=round(D, 3),
+        #            s=J_min_simu,
+        #        ),
+        #        end="\033[5A",  # print always on the same spot of the screen...
+        #    )
 
     # remove the part of the arrays that is still filled with zeros
     useful_slice = slice(0, upgraded)
@@ -621,6 +629,27 @@ def autostep_mcmc_2(
 
     paramNum = len(initial_parameters)
 
+        # print(model_par_dict)
+        # from IPython import embed;embed()
+
+        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
+        # our fake xi_func could of course be defined outside of param2res but in general it
+        # could be build from estimated parameters and would have to live here...
+        # def xi_func(day):
+        #    month=gh.day_2_month_index(day)
+        #    TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius
+        #    TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
+        #    if TS > epa.T_0:
+        #        xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])
+        #    else:
+        #        xi_out=0
+        #    return(xi_out)
+        #    # return 1.0 # preliminary fake for lack of better data...
+        #
+        # func_dict={
+        #    'NPP':npp_func,
+        #     'xi':xi_func
+        # }
     upgraded = 0
     C_op = initial_parameters
     tb = time()
@@ -641,14 +670,13 @@ def autostep_mcmc_2(
     proposer = make_uniform_proposer_2(
         c_max=c_max, c_min=c_min, D=D, filter_func=filter_func
     )
-    # for simu in tqdm(range(nsimu)):
     st = time()
     accepted_current = 0
     if chunk_size == 0:
         chunk_size = (
             nsimu  # if chunk_size is set to 0 - proceed without updating step size.
         )
-    for simu in range(nsimu):
+    for simu in tqdm(range(nsimu)):
         if (simu > 0) and (
             simu % chunk_size == 0
         ):  # every chunk size (e.g. 100 iterations) update the proposer step
@@ -722,8 +750,8 @@ def autostep_mcmc_2(
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
-# Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 def adaptive_mcmc(
+    # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
     initial_parameters: Iterable,
     covv: np.ndarray,
     filter_func: Callable,
@@ -841,7 +869,7 @@ def mcmc(
     nsimu: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with
+    performs the Markov chain Monte Carlo simulation and returns a tuple of the array of sampled parameter(tuples) with
     shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
 
     :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
@@ -1888,7 +1916,7 @@ def minimal_iterator(
     return minimal_iterator_internal(
         mvs,  
         X_0,
-        pardict,  
+        par_dict,  
         func_dict,
         delta_t_val,
         t_0=0
@@ -1951,13 +1979,16 @@ def minimal_iterator(
 def minimal_iterator_internal(
     mvs,  
     X_0,
-    pardict,  #: EstimatedParameters
+    par_dict,  #: EstimatedParameters
     func_dict,
     delta_t_val = 1,  # defaults to 1day timestep
     # traced_expressions: Dict[str, Expr] = dict(),
     # extra_functions: Dict[str, Callable] = dict(),
     t_0=0
 ):    
+    t = mvs.get_TimeSymbol()
+    state_vector = mvs.get_StateVariableTuple()
+    delta_t = Symbol("delta_t")
     disc_par_dict = {**par_dict, delta_t: delta_t_val}
     B_func = hr.numerical_array_func(
         state_vector=state_vector,
@@ -2835,29 +2866,29 @@ def transform_maker(lat_0, lon_0, step_lat, step_lon):
         # lon2i=lon2i,
     )
 
-
-def read_or_create(
-    path: Path, create_and_write: Callable[[Path], T], read: Callable[[Path], T]
-) -> T:
+def make_cached_func(create_and_write: Callable,read: Callable):
     """
-    A the basic cache functionality:
-    path: the path of the cache file
-    create_and_write: The funciton that creates the  object to be cached and writes it to <path>.
-    read: The function that extracts the cached object from <path>.
+    basic cache functionality:
+    param: create_and_write: The funciton that creates the  object to be cached. 
+    param: The first argument must be a path  
+    read: The function that extracts the cached object. It has only one argument <path>.
     """
-    print("type", type(path))
-    if path.exists():
-        print(
-            "Found cache file {}. If you want to recompute the result remove it.".format(
-                str(path)
+    def read_or_create(*args,**kwargs):
+        path=args[0]
+        if path.exists():
+            print(
+                "Found cache path {}. If you want to recompute the result remove it.".format(
+                    str(path)
+                )
             )
-        )
-        return read(path)
-    else:
-        pp = path.parent
-        if not (pp.exists()):
-            pp.mkdir(parents=True)
-        return create_and_write(path)
+            return read(path)
+        else:
+            pp = path.parent
+            if not (pp.exists()):
+                pp.mkdir(parents=True)
+            return create_and_write(*args,**kwargs)
+    
+    return read_or_create
 
 
 # +
@@ -3286,10 +3317,10 @@ def dump_named_tuple_to_json_path(nt, path: Path):
     dump_dict_to_json_path(nt._asdict(), path)
 
 
-def dump_dict_to_json_path(d, path: Path):
+def dump_dict_to_json_path(d, path: Path,**kwargs):
     with path.open("w") as f:
         d_s = {str(k):v for k,v in d.items()}
-        json.dump(d_s, f)
+        json.dump(d_s, f,**kwargs)
 
 
 def named_tuple_from_dict(t: type, d: Dict):
@@ -3304,3 +3335,25 @@ def load_dict_from_json_path(path: Path):
 
 def load_named_tuple_from_json_path(t: type, path: Path):
     return named_tuple_from_dict(t, load_named_tuple_from_json_path(path))
+
+class Pint1d(interp1d):
+    @classmethod
+    def from_interp1d(cls,intp):
+        return cls(intp.x,intp.y)
+
+    @classmethod
+    def from_netcdf(cls,path):
+        ds = nc.Dataset(str(path))
+        x=ds.variables['x']
+        y=ds.variables['y']
+        return cls(x,y)
+    
+    def cache_netcdf(self,path):
+        ds = nc.Dataset(str(path), "w")  # ,diskless=True,persist=False)
+        length = ds.createDimension("length", size=len(self.x))
+        x = ds.createVariable("x", np.float64, ["length"])
+        x[:] = self.x
+        y = ds.createVariable("y", np.float64, ["length"])
+        y[:] = self.y
+        ds.close
+

@@ -534,32 +534,38 @@ def make_param2res_sym(
         sols=[]
         dpm=30 # 
         n=len(V_init)
-        for m in range(cpa.number_of_months):
-            #dpm = days_per_month[ m % 12]  
-            mra=0
-            mrh=0
-            for d in range(int(dpm/delta_t_val)):
-                v = it_sym.__next__().reshape(n,)
-                # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
-                # at the moment the iterator also computes a flux but in kg^-2 ^day
-            V=StartVector(*v)
-            #from IPython import embed;embed()
-            o=Observables(
-                cVeg=float(V.C_NWT+V.C_AGWT+V.C_GVF+V.C_TR+V.C_GVR),
-                cLitter=float(V.C_AGML+V.C_AGSL+V.C_BGDL+V.C_BGRL),
-                cSoil=float(V.C_AGMS+V.C_YHMS+V.C_BGMS+V.C_SHMS),
-                ra=V.ra/seconds_per_day,
-                rh=V.rh/seconds_per_day # the data is per second while the time units for the iterator refer to days
-            )
-            sols.append(o)
-            
-        sol=np.stack(sols)       
-        #convert to yearly output if necessary (the monthly pool data looks very "yearly")
-        #sol_yr=np.zeros(int(cpa.number_of_months/12)*sol.shape[1]).reshape([int(cpa.number_of_months/12),sol.shape[1]])  
-        #for i in range(sol.shape[1]):
-        #   sol_yr[:,i]=monthly_to_yearly(sol[:,i])
-        #sol=sol_yr
-        return sol 
+        zy=np.zeros(int(cpa.number_of_months/12))
+        cVeg_y=zy
+        cLitter_y=zy
+        cSoil_y=zy
+        z=np.zeros(cpa.number_of_months)
+        ra=z
+        rh=z
+        
+        for y in range(cpa.number_of_months):
+            for mi in range(12):
+                m=12*y+mi
+                cVeg     =0
+                cLitter  =0
+                cSoil    =0
+
+                #dpm = days_per_month[ m % 12]  
+                for d in range(int(dpm/delta_t_val)):
+                    v = it_sym.__next__().reshape(n,)
+                    # actually the original datastream seems to be a flux per area (kg m^-2 ^-s )
+                    # at the moment the iterator also computes a flux but in kg^-2 ^day
+                V=StartVector(*v)
+                cVeg     += float(V.C_NWT+V.C_AGWT+V.C_GVF+V.C_TR+V.C_GVR)/12
+                cLitter  += float(V.C_AGML+V.C_AGSL+V.C_BGDL+V.C_BGRL)/12
+                cSoil    += float(V.C_AGMS+V.C_YHMS+V.C_BGMS+V.C_SHMS)/12
+                ra[m]       = float(V.ra/seconds_per_day)
+                rh[m]       = float(V.rh/seconds_per_day) # the data is per second while the time units for the iterator refer to days
+                
+            cVeg_y[y]     = cVeg     
+            cLitter_y[y]  = cLitter  
+            cSoil_y[y]    = cSoil    
+            sol=Observables(cVeg=cVeg_y,cLitter=cLitter_y,cSoil=cSoil_y,ra=ra,rh=rh)
+            return sol
         
     return param2res
 

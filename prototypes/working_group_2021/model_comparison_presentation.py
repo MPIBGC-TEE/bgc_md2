@@ -67,8 +67,8 @@ model_names={
     "kv_ft_dlem": "DLEM",
     #"Aneesh_SDGVM":"SDGVM",
     "cj_isam": "ISAM",
-    #"bian_ibis2":"IBIS",
-    #"ORCHIDEE-V2":"OCN",
+    ##"bian_ibis2":"IBIS",
+    ##"ORCHIDEE-V2":"OCN",
 }
 
 # ### Exploring model structures
@@ -82,16 +82,15 @@ comparison_table
 # define same step size for each model (in days)
 delta_t_val=30
 
-# +
 # load data and parameters
 model_folders=[(k) for k in model_names]
-test_arg_list=gh.get_test_arg_list(model_folders)
+#test_arg_list=gh.get_test_arg_list(model_folders)
 
 # fixme mm 8-12: 
 # it would make sense to create a dictionary indexed by the model name 
 # so it can be used for model comparisons by name like this one
-test_args_dictionary={mf: gh.test_args(mf) for mf in model_folders}
-# -
+test_arg_dict = {mf: gh.test_args(mf) for mf in model_folders}
+#test_arg_dict
 
 # ### Checking data assimilation quality for all models
 
@@ -100,20 +99,24 @@ plt.rcParams.update({'font.size': 32})
 # +
 import matplotlib.lines as mlines
 
-for j, mf in enumerate(model_folders):
+#for j, mf in enumerate(model_folders):
+for j, mf in enumerate(["cj_isam"]):
     print ('\033[1m'+"Matrix version vs original Trendy output: "+ mf)
     print ('\033[0m')
     fig = plt.figure(figsize=(50,10))
     axs=fig.subplots(1, len(gh.msh(mf).Observables._fields))
   
-    mvs=test_arg_list[j].mvs
-    dvs=test_arg_list[j].dvs
-    cpa=test_arg_list[j].cpa
-    epa_opt=test_arg_list[j].epa_opt
+    mvs=test_arg_dict[mf].mvs
+    dvs=test_arg_dict[mf].dvs
+    cpa=test_arg_dict[mf].cpa
+    epa_opt=test_arg_dict[mf].epa_opt
   
     param2res_sym = gh.msh(mf).make_param2res_sym(mvs,cpa,dvs)
     out_simu=param2res_sym(epa_opt)._asdict()
-    obs=test_arg_list[j].svs._asdict()
+    
+    obs=test_arg_dict[mf].svs._asdict()
+
+    
     print ("Amount of variance explined: ")
     for i,f in enumerate(gh.msh(mf).Observables._fields):
         resid=out_simu[f]-obs[f]
@@ -135,6 +138,10 @@ for j, mf in enumerate(model_folders):
 # -
 
 
+for k in obs.keys():
+    print(k, obs[k].shape, out_simu[k].shape)
+
+
 # ### Plots of traceable components
 
 plt.rcParams.update({'font.size': 16})
@@ -151,7 +158,7 @@ model_cols={
 }
 
 all_comp_dict= moh.get_traceable_components(model_names=model_names,
-             test_arg_list=test_arg_list,
+             test_arg_list=[test_arg_dict[k] for k in model_names],
              delta_t_val=delta_t_val, 
              model_cols=model_cols,
              part=1,

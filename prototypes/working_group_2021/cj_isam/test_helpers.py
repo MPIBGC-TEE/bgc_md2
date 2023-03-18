@@ -183,7 +183,7 @@ def make_test_args(conf_dict,msh,mvs):
         r_C_YHMS_2_C_AGMS=0.9*0.55*2.0/365,
         r_C_YHMS_2_C_SHMS=0.1*0.55*2.0/365,
         #number_of_months=len(svs.rh)
-        number_of_months=120 # for testing and tuning mcmc
+        number_of_months=320*12 # for testing and tuning mcmc
     )
     StartVector = msh.make_StartVector(mvs) 
     V_init= StartVector(

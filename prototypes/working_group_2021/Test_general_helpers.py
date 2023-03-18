@@ -1,15 +1,51 @@
+import dill
 import numpy as np
 import netCDF4 as nc
 from unittest import TestCase, skip
 from numpy.core.fromnumeric import shape
 from pathlib import Path
 from time import time, sleep
+from scipy.interpolate import interp1d
 from testinfrastructure.InDirTest import InDirTest
 import general_helpers as gh
 import matplotlib.pyplot as plt
 
 
 class Test_general_helpers(InDirTest):
+
+    def test_Pint(self):
+        x=np.linspace(0,1,10)
+        y=np.sin(x)
+        intp=interp1d(x,y)
+        f=gh.Pint1d(x,y)
+        p=Path("f.nc")
+        f.cache_netcdf(p)
+        
+        fff=gh.Pint1d.from_netcdf(p)
+        ffintp=gh.Pint1d.from_interp1d(intp)
+
+        x_test=np.linspace(0,1,100)
+        self.assertTrue(
+            np.allclose(
+                intp(x_test),
+                ffintp(x_test)
+            )    
+        )        
+        self.assertTrue(
+            np.allclose(
+                intp(x_test),
+                f(x_test)
+            )    
+        )        
+        self.assertTrue(
+            np.allclose(
+                f(x_test),
+                fff(x_test)
+            )    
+        )        
+        
+        
+
 
     # the test is now obsolete since we 
     # decided to work with a continuous function
@@ -946,14 +982,13 @@ class Test_general_helpers(InDirTest):
         cachePath = Path("cache.nc")
         var_name = "test"
 
-        def caw(path):
+        def caw(path,x,n):
             sleep(2)
-            n = 5
             ds = nc.Dataset(path, "w", persist=True)
             lat = ds.createDimension("lat", size=n)
             lon = ds.createDimension("lon", size=n)
             test = ds.createVariable(var_name, np.float64, ["lat", "lon"])
-            var = np.diag(np.arange(0, n))
+            var = x*np.diag(np.arange(0, n))
             test[:, :] = var
             return var
 
@@ -963,9 +998,10 @@ class Test_general_helpers(InDirTest):
 
         path = Path("cache", "test.nc")
         before = time()
-        res_1 = gh.read_or_create(path=path, create_and_write=caw, read=r)
+        read_or_create=gh.make_cached_func(create_and_write=caw, read=r)
+        res_1 = read_or_create(path,2,5)
         after_1 = time()
-        res_2 = gh.read_or_create(path=path, create_and_write=caw, read=r)
+        res_2 = read_or_create(path,2,5)
         after_2 = time()
         self.assertTrue((res_1 == res_2).all())
         self.assertTrue(after_1 - before > after_2 - after_1)

@@ -4,12 +4,13 @@ from pathlib import Path
 from collections import namedtuple
 import netCDF4 as nc
 import numpy as np
+import pandas as pd
 from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.TimeStepIterator import (
     TimeStepIterator2,
 )
-from typing import Dict
+from typing import Dict,Tuple
 from functools import lru_cache
 from copy import copy
 from typing import Callable
@@ -243,7 +244,6 @@ def compute_and_write_global_mean_vars(dataPath,targetPath):
 
 
 def get_cached_global_mean_drivers(targetPath):
-    o_names = Observables._fields
     d_names = OrgDrivers._fields
     def f(vn):
         gm = gh.get_nc_array(
@@ -295,7 +295,7 @@ def get_global_mean_vars(dataPath,targetPath=None):
 
     else:
         dataPath = Path(conf_dict["dataPath"])
-        return msh.compute_and_write_global_mean_vars(dataPath, targetPath)
+        return compute_and_write_global_mean_vars(dataPath, targetPath)
         
 
 def get_global_mean_vars_2(conf_dict,targetPath=None):
@@ -307,6 +307,12 @@ def get_global_mean_vars_2(conf_dict,targetPath=None):
         download_my_TRENDY_output(conf_dict)
     return get_global_mean_vars(dataPath,targetPath)    
 
+def read_func_dict(path):
+    return {
+        str(sp).split(".")[0]: gh.Pint.from_netcdf(sp)
+        for sp in path.iterdir()
+    }    
+
 def make_func_dict(dvs,**kwargs):
     f_d = {
         "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
@@ -314,6 +320,16 @@ def make_func_dict(dvs,**kwargs):
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
     }
     return f_d
+
+def create_and_write_func_dict(path,dvs,**kwargs):
+    f_d=make_func_dict(dvs,**kwargs)
+    for k,v in fd.items():
+        gh.Pint(v).cache_netcdf(path.joinpath(f"{k}.nc"))
+
+get_func_dict=gh.read_or_create(
+    create_and_write=create_and_write_func_dict,
+    read=read_func_dict
+)
 
 # deprecated
 def make_func_dict_old(mvs, dvs, cpa, epa):
@@ -524,11 +540,18 @@ def make_StartVector(mvs):
         # ["ra","rh"]
     )
 
+#def make_param2res_equilibrium(
+#    mvs: CMTVS,
+#    cpa: ConstantsEquilibrium,
+#    dvs: Drivers
+#) -> Callable[[np.ndarray], np.ndarray]:
 
 def make_param2res_sym(
-    mvs, cpa: Constants, dvs: Drivers
+    mvs: CMTVS,
+    cpa: Constants,
+    dvs: Drivers
 ) -> Callable[[np.ndarray], np.ndarray]:
-    # To compute numeric solutions we will need to build and iterator
+    # To compute the numeric solutions we will need to build and iterator
     # as we did before. As it will need numeric values for all the parameters
     # we will have to create a complete dictionary for all the symbols
     # exept those for the statevariables and time.
@@ -557,48 +580,14 @@ def make_param2res_sym(
         # create a startvector for the iterator from both estimated and fixed parameters
         # The order is important and corresponds to the order of the statevariables
         # Our namedtuple StartVector takes care of this
-        V_init = StartVector(
-            C_leaf=epa.C_leaf_0,
-            C_wood=epa.C_wood_0,
-            C_root=cpa.cVeg_0 - (epa.C_leaf_0 + epa.C_wood_0),
-            C_leaf_litter=epa.C_leaf_litter_0,
-            C_wood_litter=epa.C_wood_litter_0,
-            C_root_litter=cpa.cLitter_0 - (epa.C_leaf_litter_0 + epa.C_wood_litter_0),
-            C_soil_fast=epa.C_soil_fast_0,
-            C_soil_slow=epa.C_soil_slow_0,
-            C_soil_passive=cpa.cSoil_0 - (epa.C_soil_fast_0 + epa.C_soil_slow_0),
-            # ra=cpa.ra_0,
-            rh=cpa.rh_0,
-        )
-        # next we create the parameter dict for the iterator
-        # The iterator does not care if they are estimated or not so we look for them
-        # in the combination
-        apa = {**cpa._asdict(), **epa._asdict()}
-        model_par_dict = {
-            Symbol(k): v for k, v in apa.items() if Symbol(k) in model_par_dict_keys
-        }
+        
+        X_0=numeric_X_0(mvs,dvs,cpa,epa)
+        V_init = StartVector(*X_0.reshape(-1),cpa.rh_0)
+        ## next we create the parameter dict for the iterator
+        ## The iterator does not care if they are estimated or not so we look for them
+        ## in the combination
+        model_par_dict=gh.make_param_dict(mvs,cpa,epa)
 
-        # print(model_par_dict)
-        # from IPython import embed;embed()
-
-        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
-        # our fake xi_func could of course be defined outside of param2res but in general it
-        # could be build from estimated parameters and would have to live here...
-        # def xi_func(day):
-        #    month=gh.day_2_month_index(day)
-        #    TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius
-        #    TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-        #    if TS > epa.T_0:
-        #        xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])
-        #    else:
-        #        xi_out=0
-        #    return(xi_out)
-        #    # return 1.0 # preliminary fake for lack of better data...
-        #
-        # func_dict={
-        #    'NPP':npp_func,
-        #     'xi':xi_func
-        # }
         func_dict = make_func_dict(dvs)
 
         # size of the timestep in days
@@ -873,6 +862,11 @@ def make_param_filter_func(
         cond1 = (c >= c_min).all()
         cond2 = (c <= c_max).all()
         cond3 = c[beta_leaf_ind] + c[beta_wood_ind] < 1
+        print(
+            "cond1",cond1,
+            "cond2",cond2,
+            "cond3",cond3,
+        )
         return cond1 and cond2 and cond3
 
     return isQualified
@@ -1025,115 +1019,196 @@ def get_global_mean_vars_all(experiment_name):
 # output_final
 # )
 
-class ConsistentParameterization():
-    def __init__(
-            self,
-            confDict: Dict[str,str],
-            mvs: CMTVS
-        ):
-        """A model (and data) dependent class that expresses
-        dependencies between certain parts of the parameterization as
-        dictated by a particular choice of estimated and constant
-        paramters for parameter estimation """
-        self.confDict = confDict
-        self.mvs = mvs
+def get_parameterization_from_data_1(
+        mvs: CMTVS,
+        data_provider: Callable[[Dict],Tuple], # function of conf_dict to return (dvs,svs) tuple 
+        #temporary
+        test_args, 
+        conf_dict, 
+    )->Tuple[Dict,Dict,np.array]:
+    """one of possibly many functions (_1)  to reproduce the optimal parameters and startvalues to to run the model forword
+    If will either read them from file or start the dataassimilation that produced them""" 
+    svs, dvs = data_provider(conf_dict)
+    my_function_name= inspect.stack()[0][3])   
+    data_path=Path(conf_dict['dataPath']).joinpath(my_function_name)
+     
+    # the commented lines use testargs to write epa_0,...
+    #for s in ['cpa', 'epa_0','epa_min','epa_max','epa_opt']:
+    #    gh.dump_dict_to_json_path(
+    #        (test_args.__getattribute__(s))._asdict(),
+    #        data_path.joinpath(f"{s}.json"),
+    #        indent=2
+    #    )
     
-    @property
-    def dataPath(self):
-        return Path(self.confDict["dataPath"])
-
-    @property
-    @lru_cache(maxsize=None)
-    def timelines(self):
-        svs, dvs = get_cached_global_mean_vars(self.dataPath)
-        return svs, dvs
-
-    @property
-    def cpa(self):
-        svs, dvs = self.timelines
-        svs_0 = Observables(*map(lambda v: v[0],svs))
-        cpa = Constants(
-            cVeg_0=svs_0.cVeg,
-            cLitter_0=svs_0.cLitter,
-            cSoil_0=svs_0.cSoil,
-            rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
-            npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
-            #ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
-            #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
-            #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
-            number_of_months=len(svs.rh)
-            #number_of_months=24 # for testing and tuning mcmc
+    epa_min,epa_max=tuple(
+        map(
+            lambda p:EstimatedParameters(**gh.load_dict_from_json_path(p)),
+            [
+                data_path.joinpath(f"{s}.json") 
+                for s in ['epa_min','epa_max']
+            ]
         )
-        return cpa
-
-
-    @property
-    def epa_opt(self):
-        # this function should compute epa_opt by parameter estimation
-        # this is a fake until this is implemented
-        return EstimatedParameters(
-            beta_leaf=0.6102169482865195, 
-            beta_wood=0.26331553815787545, 
-            T_0=1.9560345980471245, 
-            E=6.951145421284498, 
-            KM=12.73895376887386, 
-            r_C_leaf_litter_rh=0.0012830039575098323, 
-            r_C_wood_litter_rh=0.0010536416454437036, 
-            r_C_root_litter_rh=0.00022271755326847413, 
-            r_C_soil_fast_rh=0.00013707839288781872, 
-            r_C_soil_slow_rh=3.228645064482276e-05, 
-            r_C_soil_passive_rh=3.8079656062059605e-06, 
-            r_C_leaf_2_C_leaf_litter=0.011755309034589333, 
-            r_C_wood_2_C_wood_litter=0.00012990716959685548, 
-            r_C_root_2_C_root_litter=8.243205281709114e-05, 
-            r_C_leaf_litter_2_C_soil_fast=0.0014521759026031634, 
-            r_C_leaf_litter_2_C_soil_slow=0.000200225210999593, 
-            r_C_leaf_litter_2_C_soil_passive=8.380707345301035e-05, 
-            r_C_wood_litter_2_C_soil_fast=3.19128931685429e-05, 
-            r_C_wood_litter_2_C_soil_slow=7.278721749448471e-05, 
-            r_C_wood_litter_2_C_soil_passive=3.275165103336979e-06, 
-            r_C_root_litter_2_C_soil_fast=0.00044055481426693227, 
-            r_C_root_litter_2_C_soil_slow=3.1019188662910444e-05, 
-            r_C_root_litter_2_C_soil_passive=0.00012243099600679218, 
-            C_leaf_0=0.042596582017273114, 
-            C_wood_0=2.4493874052342517, 
-            C_leaf_litter_0=0.16251047110808622, 
-            C_wood_litter_0=0.17601405444541945, 
-            C_soil_fast_0=1.8746682268250323, 
-            C_soil_slow_0=1.9807766341505468
+    )
+    c_max=np.array(epa_max)
+    c_min=np.array(epa_min)
+    c_0=(c_min+c_max)/2
+    epa_0=EstimatedParameters(*c_0)
+    cpa= Constants(
+        **gh.load_dict_from_json_path(
+            data_path.joinpath("cpa.json") 
         )
+    )
+    C_autostep, J_autostep = gh.autostep_mcmc(
+        initial_parameters=epa_0,
+        filter_func=make_param_filter_func(epa_max,epa_min),
+        param2res=make_param2res_sym(mvs,cpa,dvs),
+        costfunction=gh.make_feng_cost_func(np.array(svs)[:,0:cpa.number_of_months]),
+        nsimu=11,
+        #nsimu=200, # for testing and tuning mcmc
+        #nsimu=20000,
+        c_max=c_max,
+        c_min=c_min,
+        acceptance_rate=15,   # default value | target acceptance rate in %
+        #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=10,   # default value | increase value to reduce initial step size
+        K=2 # default value | increase value to reduce acceptance of higher cost functions
+    )
+    # optimized parameter set (lowest cost function)
+    par_opt=np.min(
+        C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(
+            len(EstimatedParameters._fields),
+            1
+        ),
+        axis=1
+    )
+    epa_opt=EstimatedParameters(*par_opt)
+    gh.dump_dict_to_json_path(
+        epa_opt._asdict(),
+        data_path.joinpath("epa_opt.json"),
+        indent=2
+    )
+    pd.DataFrame(C_autostep).to_csv(data_path.joinpath('da_aa.csv'), sep=',')
+    pd.DataFrame(J_autostep).to_csv(data_path.joinpath('da_j_aa.csv'), sep=',')
+    #pd.DataFrame(epa_opt).to_csv(data_path.joinpath('visit_optimized_pars.csv'), sep=',')
+    #pd.DataFrame(mod_opt).to_csv(data_path.joinpath('visit_optimized_solutions.csv'), sep=',')
+    print("Data assimilation finished!")
 
-    @property
-    def global_mean_drivers(self):
-        return get_cached_global_mean_drivers(self.dataPath)
-
-    @property
-    def par_dict(self):
-        return  gh.make_param_dict(
-            self.mvs, 
-            self.cpa,
-            self.epa_opt
-        )
-
-    def write_data(self, targetPath):
-        # write global mean var *.nc files in 
-        # the local directory
-        #compute_and_write_global_mean_vars(self.dataPath, targetPath)
-        gh.dump_dict_to_json_path(
-            self.par_dict,
-            targetPath.joinpath('parameter_dict.json')
-        )
-        dvs_dict=self.global_mean_drivers._asdict()
-        for k,v in dvs_dict.items():
-            gh.write_timeline_to_nc_file(targetPath.joinpath(f"{k}.nc"),v,k)
+    param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
+    func_dict=get_func_dict(dvs,data_path.joinpath('func_dict')
+    X_0=numeric_X_0(mvs,dvs,cpa,epa_opt)
+    from IPython import embed; embed()
 
         
-        #gh.dump_named_tuple_to_json_path(
-        #    self.cpa,
-        #    targetPath.joinpath('cpa.json')
-        #)
-        #gh.dump_named_tuple_to_json_path(
-        #    self.epa_opt,
-        #    targetPath.joinpath('epa_opt.json')
-        #)
-        
+#class ConsistentParameterization():
+#    def __init__(
+#            self,
+#            confDict: Dict[str,str],
+#            mvs: CMTVS
+#        ):
+#        """A model (and data) dependent class that expresses
+#        dependencies between certain parts of the parameterization as
+#        dictated by a particular choice of estimated and constant
+#        paramters or special assumptions about parameter estimation """
+#        self.confDict = confDict
+#        self.mvs = mvs
+#    
+#    @property
+#    def dataPath(self):
+#        return Path(self.confDict["dataPath"])
+#
+#    @property
+#    @lru_cache(maxsize=None)
+#    def timelines(self):
+#        svs, dvs = get_cached_global_mean_vars(self.dataPath)
+#        return svs, dvs
+#
+#    @property
+#    def cpa(self):
+#        svs, dvs = self.timelines
+#        svs_0 = Observables(*map(lambda v: v[0],svs))
+#        cpa = Constants(
+#            cVeg_0=svs_0.cVeg,
+#            cLitter_0=svs_0.cLitter,
+#            cSoil_0=svs_0.cSoil,
+#            rh_0=svs_0.rh,   # kg/m2/s kg/m2/day
+#            npp_0=dvs.npp[0],   # kg/m2/s kg/m2/day
+#            #ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
+#            #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
+#            #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
+#            number_of_months=len(svs.rh)
+#            #number_of_months=24 # for testing and tuning mcmc
+#        )
+#        return cpa
+#
+#
+#    @property
+#    def epa_opt(self):
+#        # this function should compute epa_opt by parameter estimation
+#        # this is a fake until this is implemented
+#        return EstimatedParameters(
+#            beta_leaf=0.6102169482865195, 
+#            beta_wood=0.26331553815787545, 
+#            T_0=1.9560345980471245, 
+#            E=6.951145421284498, 
+#            KM=12.73895376887386, 
+#            r_C_leaf_litter_rh=0.0012830039575098323, 
+#            r_C_wood_litter_rh=0.0010536416454437036, 
+#            r_C_root_litter_rh=0.00022271755326847413, 
+#            r_C_soil_fast_rh=0.00013707839288781872, 
+#            r_C_soil_slow_rh=3.228645064482276e-05, 
+#            r_C_soil_passive_rh=3.8079656062059605e-06, 
+#            r_C_leaf_2_C_leaf_litter=0.011755309034589333, 
+#            r_C_wood_2_C_wood_litter=0.00012990716959685548, 
+#            r_C_root_2_C_root_litter=8.243205281709114e-05, 
+#            r_C_leaf_litter_2_C_soil_fast=0.0014521759026031634, 
+#            r_C_leaf_litter_2_C_soil_slow=0.000200225210999593, 
+#            r_C_leaf_litter_2_C_soil_passive=8.380707345301035e-05, 
+#            r_C_wood_litter_2_C_soil_fast=3.19128931685429e-05, 
+#            r_C_wood_litter_2_C_soil_slow=7.278721749448471e-05, 
+#            r_C_wood_litter_2_C_soil_passive=3.275165103336979e-06, 
+#            r_C_root_litter_2_C_soil_fast=0.00044055481426693227, 
+#            r_C_root_litter_2_C_soil_slow=3.1019188662910444e-05, 
+#            r_C_root_litter_2_C_soil_passive=0.00012243099600679218, 
+#            C_leaf_0=0.042596582017273114, 
+#            C_wood_0=2.4493874052342517, 
+#            C_leaf_litter_0=0.16251047110808622, 
+#            C_wood_litter_0=0.17601405444541945, 
+#            C_soil_fast_0=1.8746682268250323, 
+#            C_soil_slow_0=1.9807766341505468
+#        )
+#
+#    @property
+#    def global_mean_drivers(self):
+#        return get_cached_global_mean_drivers(self.dataPath)
+#
+#    @property
+#    def par_dict(self):
+#        return  gh.make_param_dict(
+#            self.mvs, 
+#            self.cpa,
+#            self.epa_opt
+#        )
+#
+#    def write_data(self, targetPath):
+#        # write global mean var *.nc files in 
+#        # the local directory
+#        #compute_and_write_global_mean_vars(self.dataPath, targetPath)
+#        gh.dump_dict_to_json_path(
+#            self.par_dict,
+#            targetPath.joinpath('parameter_dict.json')
+#        )
+#        dvs_dict=self.global_mean_drivers._asdict()
+#        for k,v in dvs_dict.items():
+#            gh.write_timeline_to_nc_file(targetPath.joinpath(f"{k}.nc"),v,k)
+#
+#        
+#        #gh.dump_named_tuple_to_json_path(
+#        #    self.cpa,
+#        #    targetPath.joinpath('cpa.json')
+#        #)
+#        #gh.dump_named_tuple_to_json_path(
+#        #    self.epa_opt,
+#        #    targetPath.joinpath('epa_opt.json')
+#        #)
+#        

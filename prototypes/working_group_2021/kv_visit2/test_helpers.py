@@ -200,8 +200,8 @@ def make_test_args(conf_dict,msh,mvs):
         #ra_0=svs_0.ra,   # kg/m2/s kg/m2/day
         #r_C_root_litter_2_C_soil_slow=3.48692403486924e-5,
         #r_C_root_litter_2_C_soil_passive=1.74346201743462e-5,
-        number_of_months=len(svs.rh)
-        #number_of_months=24 # for testing and tuning mcmc
+        #number_of_months=len(svs.rh)
+        number_of_months=24 # for testing and tuning mcmc
     )
 
     StartVector = msh.make_StartVector(mvs) 
@@ -235,5 +235,3 @@ def make_test_args(conf_dict,msh,mvs):
         lons=ds.variables["lon"][:],
         start_date=msh.start_date()
     )
-
-
