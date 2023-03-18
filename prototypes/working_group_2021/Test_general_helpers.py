@@ -996,7 +996,7 @@ class Test_general_helpers(InDirTest):
             ds = nc.Dataset(path)
             return ds.variables[var_name][:, :].data
 
-        path = Path("cache", "test.nc")
+        path = Path("cache", "test")
         before = time()
         read_or_create=gh.make_cached_func(create_and_write=caw, read=r)
         res_1 = read_or_create(path,2,5)
