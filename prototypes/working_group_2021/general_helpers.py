@@ -3318,6 +3318,11 @@ def dump_named_tuple_to_json_path(nt, path: Path):
 
 
 def dump_dict_to_json_path(d, path: Path,**kwargs):
+    dp=path.parent
+    #from IPython import embed; embed()
+    if not dp.exists():
+        dp.mkdir(parents=True)
+
     with path.open("w") as f:
         d_s = {str(k):v for k,v in d.items()}
         json.dump(d_s, f,**kwargs)
@@ -3334,7 +3339,10 @@ def load_dict_from_json_path(path: Path):
 
 
 def load_named_tuple_from_json_path(t: type, path: Path):
-    return named_tuple_from_dict(t, load_named_tuple_from_json_path(path))
+    return named_tuple_from_dict(
+        t, 
+        load_dict_from_json_path(path)
+    )    
 
 class Pint1d(interp1d):
     @classmethod

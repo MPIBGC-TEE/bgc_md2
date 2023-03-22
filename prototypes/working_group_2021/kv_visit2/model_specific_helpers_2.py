@@ -1,5 +1,7 @@
 import sys
 import json
+import inspect
+import os
 from pathlib import Path
 from collections import namedtuple
 import netCDF4 as nc
@@ -307,29 +309,62 @@ def get_global_mean_vars_2(conf_dict,targetPath=None):
         download_my_TRENDY_output(conf_dict)
     return get_global_mean_vars(dataPath,targetPath)    
 
-def read_func_dict(path):
-    return {
-        str(sp).split(".")[0]: gh.Pint.from_netcdf(sp)
-        for sp in path.iterdir()
-    }    
+
+def ivp_from_cache_dir(path):
+    par_dict = gh.load_dict_from_json_path(dirPath.joinpath("parameter_dict.json"))
+    func_dict = load_funcdict(path)
+    #x0 =load(
+    return 
+
+def key2path(path,k):
+    return path.joinpath(f"{k}.nc")
+
+def load_func_dict(path):
+    ds = nc.Dataset(path)
+    dvs = Drivers(tuple(ds.variables[k] for k in Drivers._fields))
+    return make_func_dict(dvs)
+
+def write_func_dict_data(path,dvs,**kwargs):
+    dp=path.parent
+    if not dp.exists():
+        dp.mkdir(parents=True)
+    
+    if path.exists():
+        os.remove(path)
+
+    ds=nc.Dataset(str(path),"w")
+    for k,v in dvs._asdict().items():
+        dim_name=f"time_{k}"
+        ds.createDimension(dim_name,size=len(v)) 
+        x=ds.createVariable(k,float,[dim_name])
+        x=v
+    ds.close()
+
+    #gh.dump_named_tuple_to_json_path(
+    #    dvs,
+    #    path.joinpath("Drivers.json")
+    #)
 
 def make_func_dict(dvs,**kwargs):
-    f_d = {
+    return {
         "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
         "mrso": gh.make_interpol_of_t_in_days(dvs.mrso),
         "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
     }
-    return f_d
 
-def create_and_write_func_dict(path,dvs,**kwargs):
-    f_d=make_func_dict(dvs,**kwargs)
-    for k,v in fd.items():
-        gh.Pint(v).cache_netcdf(path.joinpath(f"{k}.nc"))
+#def get_func_dict(dvs,**kwargs):
+#    my_name=inspect.stack()[0][3]
+#    print(my_name)
+#    path=Path(".cache").joinpath(my_name)
+#    try:    
+#        fd = load_func_dict(path)
+#    #except(FileNotFoundError): 
+#    except(Exception): 
+#        fd = make_func_dict(dvs,**kwargs)
+#        # write cache
+#        write_func_dict_data(path,dvs,**kwargs)
+#    return fd
 
-get_func_dict=gh.read_or_create(
-    create_and_write=create_and_write_func_dict,
-    read=read_func_dict
-)
 
 # deprecated
 def make_func_dict_old(mvs, dvs, cpa, epa):
@@ -1021,24 +1056,26 @@ def get_global_mean_vars_all(experiment_name):
 
 def get_parameterization_from_data_1(
         mvs: CMTVS,
-        data_provider: Callable[[Dict],Tuple], # function of conf_dict to return (dvs,svs) tuple 
+        svs,
+        dvs,
         #temporary
         test_args, 
         conf_dict, 
     )->Tuple[Dict,Dict,np.array]:
     """one of possibly many functions (_1)  to reproduce the optimal parameters and startvalues to to run the model forword
     If will either read them from file or start the dataassimilation that produced them""" 
-    svs, dvs = data_provider(conf_dict)
-    my_function_name= inspect.stack()[0][3])   
+    my_function_name= inspect.stack()[0][3]   
     data_path=Path(conf_dict['dataPath']).joinpath(my_function_name)
      
+    #from IPython import embed; embed()
     # the commented lines use testargs to write epa_0,...
-    #for s in ['cpa', 'epa_0','epa_min','epa_max','epa_opt']:
-    #    gh.dump_dict_to_json_path(
-    #        (test_args.__getattribute__(s))._asdict(),
-    #        data_path.joinpath(f"{s}.json"),
-    #        indent=2
-    #    )
+    data_path.mkdir(exist_ok=True,parents=True)
+    for s in ['cpa', 'epa_0','epa_min','epa_max','epa_opt']:
+        gh.dump_dict_to_json_path(
+            (test_args.__getattribute__(s))._asdict(),
+            data_path.joinpath(f"{s}.json"),
+            indent=2
+        )
     
     epa_min,epa_max=tuple(
         map(
@@ -1063,15 +1100,15 @@ def get_parameterization_from_data_1(
         filter_func=make_param_filter_func(epa_max,epa_min),
         param2res=make_param2res_sym(mvs,cpa,dvs),
         costfunction=gh.make_feng_cost_func(np.array(svs)[:,0:cpa.number_of_months]),
-        nsimu=11,
+        nsimu=2,
         #nsimu=200, # for testing and tuning mcmc
         #nsimu=20000,
         c_max=c_max,
         c_min=c_min,
         acceptance_rate=15,   # default value | target acceptance rate in %
         #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-        chunk_size=10,  # default value | number of iterations to calculate current acceptance ratio and update step size
-        D_init=10,   # default value | increase value to reduce initial step size
+        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=1,   # default value | increase value to reduce initial step size
         K=2 # default value | increase value to reduce acceptance of higher cost functions
     )
     # optimized parameter set (lowest cost function)
@@ -1095,12 +1132,77 @@ def get_parameterization_from_data_1(
     print("Data assimilation finished!")
 
     param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
-    func_dict=get_func_dict(dvs,data_path.joinpath('func_dict')
+    func_dict=make_func_dict(dvs)
     X_0=numeric_X_0(mvs,dvs,cpa,epa_opt)
-    from IPython import embed; embed()
+    X_0_dict={
+        str(sym): X_0[i,0] 
+        for i,sym in enumerate(
+            mvs.get_StateVariableTuple()
+        )
+    }
+    # cache the results
+    
+    return param_dict,func_dict,X_0_dict
 
         
-#class ConsistentParameterization():
+class CachedParameterization():
+    par_dict_path = "param_dict.json"
+    func_dict_data_path = "Drivers.nc"
+    X_0_data_path = "X_0.json"
+        
+    def __init__(
+            self,
+            parameter_dict,
+            drivers,
+            X_0_dict
+        ):
+            self.parameter_dict = parameter_dict
+            self.drivers=drivers
+            self.X_0_dict = X_0_dict
+
+    @classmethod
+    def from_path(cls,data_path):
+        ds=nc.Dataset(
+            str(
+                data_path.joinpath(
+                    cls.func_dict_data_path
+                )
+            )
+        )
+        return cls(
+            gh.load_dict_from_json_path(
+                data_path.joinpath(cls.par_dict_path)
+            ),
+            Drivers(*[ds.variables[k] for k in Drivers._fields]),
+            gh.load_dict_from_json_path((
+                data_path.joinpath(cls.X_0_data_path))
+            )
+        )
+
+    @property
+    def func_dict(self):
+        return make_func_dict(self.drivers)
+            
+    def write(self,data_path):
+        
+        gh.dump_dict_to_json_path(
+            self.parameter_dict,
+            data_path.joinpath(self.par_dict_path),
+            indent=2
+        )
+
+        write_func_dict_data(
+            data_path.joinpath(self.func_dict_data_path),
+            self.drivers
+        )
+
+        gh.dump_dict_to_json_path(
+            self.X_0_dict,
+            data_path.joinpath(self.X_0_data_path),
+            indent=2
+        )
+
+
 #    def __init__(
 #            self,
 #            confDict: Dict[str,str],

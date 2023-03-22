@@ -599,12 +599,28 @@ class TestSymbolic(TestCase):
                 #from IPython import embed; embed() 
                 self.assertTrue(np.allclose(res1.X,res2.X))
 
+    def test_get_parameterization_from_data_1(self):
+        with self.subTest(mf=mf):
+            th = gh.th(mf)
+            msh = gh.msh(mf)
+            conf_dict=gh.confDict(mf)
+            data_path=Path(conf_dict['dataPath'])
+            svs, dvs = msh.get_global_mean_vars_2(conf_dict)
+            par_dict,func_dict,X_0_dict = msh.get_parameterization_from_data_1(
+                mvs,
+                svs,
+                dvs,
+                conf_dict=conf_dict,
+                test_args=test_args
+            )
+
     def test_age_distributions_and_btt_start_in_ss_3(self):
         for mf in set(self.model_folders).intersection(["kv_visit2"]):
             with self.subTest(mf=mf):
                 th = gh.th(mf)
                 msh = gh.msh(mf)
                 conf_dict=gh.confDict(mf)
+                svs, dvs = msh.get_global_mean_vars_2(conf_dict)
                 data_path=Path(conf_dict['dataPath'])
                 # we will later remove the code for updating later 
                 #cta = msh.ConsistentParameterization(
@@ -615,13 +631,24 @@ class TestSymbolic(TestCase):
 
                 test_args = gh.test_args(mf)
                 mvs = gh.mvs(mf)
-
-                par_dict,func_dict,X_0 = msh.get_parameterization_from_data_1(
+                # for
+                par_dict,func_dict,X_0_dict = msh.get_parameterization_from_data_1(
                         mvs,
-                        data_provider=msh.get_global_mean_vars_2,
+                        svs,
+                        dvs,
                         conf_dict=conf_dict,
                         test_args=test_args
                 )
+                cp_org=msh.CachedParameterization(
+                        par_dict,
+                        dvs,
+                        X_0_dict
+                )
+                pp=Path(mf).joinpath("get_parameterization_from_data_1")
+                cp_org.write(pp)
+                cp=msh.CachedParameterization.from_path(pp)
+                par_dict=cp.parameter_dict
+                func_dict=cp.func_dict
                 smr = mvs.get_SmoothModelRun()
                 smr.initialize_state_transition_operator_cache(lru_maxsize=None)
                 start_mean_age_vec=mvs.get_NumericStartMeanAgeVector()

@@ -45,18 +45,12 @@ t_max = 144
 times = np.linspace(t0, t_max, n_steps)
 delta_t_val = (t_max - t0)/n_steps
 dirPath = Path(__file__).parent
-par_dict = gh.load_dict_from_json_path(dirPath.joinpath("parameter_dict.json"))
+from . import model_specific_helpers_2 as msh
 
-def inter(vn):
-    arr = gh.get_nc_array(dirPath.joinpath(f"{vn}.nc"), vn)
-    return gh.make_interpol_of_t_in_days(arr)
-
-func_dict={
-    "TAS": inter("tas"),
-    "mrso": inter("mrso"),
-    "NPP": inter("npp"),
-}
-    
+pp=Path(__file__).parent.joinpath("get_parameterization_from_data_1")
+cp=msh.CachedParameterization.from_path(pp)
+par_dict=cp.parameter_dict
+func_dict=cp.func_dict
 # For this example we assume that the system was in steady state 
 # at t_0 with X_fix given by X_fix = M^{-1} 
 # since we know that the system is linear we can easily compute the steady state
@@ -79,4 +73,3 @@ mvs = mvs.update({
     NumericSimulationTimes(times),
     NumericStartMeanAgeVector(start_mean_age_vec)
 })
-#from IPython import embed; embed()

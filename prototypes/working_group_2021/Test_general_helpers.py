@@ -978,7 +978,7 @@ class Test_general_helpers(InDirTest):
         ref = results_1.averages(parts)
         self.assertTrue(res == ref)
 
-    def test_read_or_create(self):
+    def test_make_cached_func(self):
         cachePath = Path("cache.nc")
         var_name = "test"
 
