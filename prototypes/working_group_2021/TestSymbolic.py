@@ -599,20 +599,52 @@ class TestSymbolic(TestCase):
                 #from IPython import embed; embed() 
                 self.assertTrue(np.allclose(res1.X,res2.X))
 
+    # temporary function to write the files
+    def test_convert_test_args_to_files(self):
+        for mf in set(self.model_folders).intersection(["kv_visit2"]):
+            with self.subTest(mf=mf):
+                msh = gh.msh(mf)
+                test_args = gh.test_args(mf)
+                msh.convert_test_args_to_files(
+                    test_args,
+                    Path(mf).joinpath("trendy_args")
+                )
+   
     def test_get_parameterization_from_data_1(self):
-        with self.subTest(mf=mf):
-            th = gh.th(mf)
-            msh = gh.msh(mf)
-            conf_dict=gh.confDict(mf)
-            data_path=Path(conf_dict['dataPath'])
-            svs, dvs = msh.get_global_mean_vars_2(conf_dict)
-            par_dict,func_dict,X_0_dict = msh.get_parameterization_from_data_1(
-                mvs,
-                svs,
-                dvs,
-                conf_dict=conf_dict,
-                test_args=test_args
-            )
+        for mf in set(self.model_folders).intersection(["kv_visit2"]):
+            with self.subTest(mf=mf):
+                th = gh.th(mf)
+                msh = gh.msh(mf)
+                conf_dict=gh.confDict(mf)
+                data_path=Path(conf_dict['dataPath'])
+                tr_path=Path(mf).joinpath("trendy_args")
+                mvs = gh.mvs(mf)
+                cpa= msh.Constants(
+                    **gh.load_dict_from_json_path(
+                        tr_path.joinpath("cpa.json") 
+                    )
+                )
+
+                epa_min,epa_max,epa_0=tuple(
+                    map(
+                        lambda p:msh.EstimatedParameters(**gh.load_dict_from_json_path(p)),
+                        [
+                            tr_path.joinpath(f"{s}.json") 
+                            for s in ['epa_min','epa_max','epa_0']
+                        ]
+                    )
+                )
+                svs, dvs = msh.get_global_mean_vars_2(conf_dict)
+                par_dict,func_dict,X_0_dict = msh.get_parameterization_from_data_1(
+                    mvs,
+                    svs,
+                    dvs,
+                    cpa,
+                    epa_min,
+                    epa_max,
+                    epa_0,
+                    data_path
+                )
 
     def test_age_distributions_and_btt_start_in_ss_3(self):
         for mf in set(self.model_folders).intersection(["kv_visit2"]):

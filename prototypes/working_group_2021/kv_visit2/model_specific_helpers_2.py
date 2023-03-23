@@ -324,46 +324,6 @@ def load_func_dict(path):
     dvs = Drivers(tuple(ds.variables[k] for k in Drivers._fields))
     return make_func_dict(dvs)
 
-def write_func_dict_data(path,dvs,**kwargs):
-    dp=path.parent
-    if not dp.exists():
-        dp.mkdir(parents=True)
-    
-    if path.exists():
-        os.remove(path)
-
-    ds=nc.Dataset(str(path),"w")
-    for k,v in dvs._asdict().items():
-        dim_name=f"time_{k}"
-        ds.createDimension(dim_name,size=len(v)) 
-        x=ds.createVariable(k,float,[dim_name])
-        x=v
-    ds.close()
-
-    #gh.dump_named_tuple_to_json_path(
-    #    dvs,
-    #    path.joinpath("Drivers.json")
-    #)
-
-def make_func_dict(dvs,**kwargs):
-    return {
-        "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
-        "mrso": gh.make_interpol_of_t_in_days(dvs.mrso),
-        "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
-    }
-
-#def get_func_dict(dvs,**kwargs):
-#    my_name=inspect.stack()[0][3]
-#    print(my_name)
-#    path=Path(".cache").joinpath(my_name)
-#    try:    
-#        fd = load_func_dict(path)
-#    #except(FileNotFoundError): 
-#    except(Exception): 
-#        fd = make_func_dict(dvs,**kwargs)
-#        # write cache
-#        write_func_dict_data(path,dvs,**kwargs)
-#    return fd
 
 
 # deprecated
@@ -1053,22 +1013,10 @@ def get_global_mean_vars_all(experiment_name):
 # return (
 # output_final
 # )
-
-def get_parameterization_from_data_1(
-        mvs: CMTVS,
-        svs,
-        dvs,
-        #temporary
+def convert_test_args_to_files(
         test_args, 
-        conf_dict, 
-    )->Tuple[Dict,Dict,np.array]:
-    """one of possibly many functions (_1)  to reproduce the optimal parameters and startvalues to to run the model forword
-    If will either read them from file or start the dataassimilation that produced them""" 
-    my_function_name= inspect.stack()[0][3]   
-    data_path=Path(conf_dict['dataPath']).joinpath(my_function_name)
-     
-    #from IPython import embed; embed()
-    # the commented lines use testargs to write epa_0,...
+        data_path
+    ):
     data_path.mkdir(exist_ok=True,parents=True)
     for s in ['cpa', 'epa_0','epa_min','epa_max','epa_opt']:
         gh.dump_dict_to_json_path(
@@ -1076,25 +1024,29 @@ def get_parameterization_from_data_1(
             data_path.joinpath(f"{s}.json"),
             indent=2
         )
+
+def get_parameterization_from_data_1(
+        mvs: CMTVS,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        out_put_path
+    )->Tuple[Dict,Dict,np.array]:
+    """one of possibly many functions (_1)  to reproduce the optimal parameters and startvalues to to run the model forword
+    If will either read them from file or start the dataassimilation that produced them""" 
+    my_function_name= inspect.stack()[0][3]   
+    data_path=out_put_path.joinpath(my_function_name)
+     
+    #from IPython import embed; embed()
+    # the commented lines use testargs to write epa_0,...
     
-    epa_min,epa_max=tuple(
-        map(
-            lambda p:EstimatedParameters(**gh.load_dict_from_json_path(p)),
-            [
-                data_path.joinpath(f"{s}.json") 
-                for s in ['epa_min','epa_max']
-            ]
-        )
-    )
     c_max=np.array(epa_max)
     c_min=np.array(epa_min)
     c_0=(c_min+c_max)/2
     epa_0=EstimatedParameters(*c_0)
-    cpa= Constants(
-        **gh.load_dict_from_json_path(
-            data_path.joinpath("cpa.json") 
-        )
-    )
     C_autostep, J_autostep = gh.autostep_mcmc(
         initial_parameters=epa_0,
         filter_func=make_param_filter_func(epa_max,epa_min),
@@ -1144,7 +1096,29 @@ def get_parameterization_from_data_1(
     
     return param_dict,func_dict,X_0_dict
 
+def make_func_dict(dvs,**kwargs):
+    return {
+        "TAS": gh.make_interpol_of_t_in_days(dvs.tas),
+        "mrso": gh.make_interpol_of_t_in_days(dvs.mrso),
+        "NPP": gh.make_interpol_of_t_in_days(dvs.npp),
+    }
         
+def write_func_dict_data(path,dvs,**kwargs):
+    dp=path.parent
+    if not dp.exists():
+        dp.mkdir(parents=True)
+    
+    if path.exists():
+        os.remove(path)
+
+    ds=nc.Dataset(str(path),"w")
+    for k,v in dvs._asdict().items():
+        dim_name=f"time_{k}"
+        ds.createDimension(dim_name,size=len(v)) 
+        x=ds.createVariable(k,float,[dim_name])
+        x=v
+    ds.close()
+
 class CachedParameterization():
     par_dict_path = "param_dict.json"
     func_dict_data_path = "Drivers.nc"
