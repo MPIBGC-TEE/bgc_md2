@@ -1,3 +1,2 @@
-#!/bin/bash
-set -ex
-pip install -r requirements.txt
+pip install -r requirements.src
+jupyter nbextension enable --py jupytext

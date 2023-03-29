@@ -1,0 +1,48 @@
+name: test_windows_developer_installation
+on:
+  push:
+    branches:
+      - master
+      - test
+
+jobs:
+  build:
+    name: test-${{ matrix.os }}-${{ matrix.script }}
+    timeout-minutes: 720
+    strategy:
+      matrix:
+        os: [windows]
+        script: [install_developer_conda.bat, install_developer_mamba.bat]
+        include:
+          - os: windows
+            script: install_developer_mamba.bat
+            miniforge-variant: Mambaforge
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          #remote: # optional
+          repository: MPIBGC-TEE/bgc_md2
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Set up conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: bgc_md2
+          miniforge-version: latest
+          miniforge-variant: ${{matrix.miniforge-variant}}
+      
+      - name: Install dependencies
+        run: |
+          pwd
+          conda --version
+          python --version
+          .\${{ matrix.script }}
+
+      - name: run test suites
+        run: |
+          python scripts/run_test_suites.py

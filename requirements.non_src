@@ -1,0 +1,27 @@
+bokeh
+cf-units
+frozendict
+ipycanvas
+ipyevents
+ipyleaflet
+ipympl
+ipysheet
+ipython
+ipytree
+ipyvolume
+ipyvuetify
+ipywidgets
+jupytext
+matplotlib
+nbformat 
+netCDF4
+networkx
+notebook
+plotly >=3.3.0
+pycairo
+pyresample
+python-igraph
+scipy>=1.4.1
+sympy
+xarray
+zarr

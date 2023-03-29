@@ -1,0 +1,8 @@
+dask[distributed]
+jupyterlab
+jupytext
+nbformat 
+nbmake
+notebook
+pytest
+zarr

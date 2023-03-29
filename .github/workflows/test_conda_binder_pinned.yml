@@ -1,0 +1,51 @@
+name: test_conda_binder_pinned
+
+on:
+  push:
+    branches:
+      - binder # only executed when something is pushed to these branches 
+      - test
+
+jobs:
+  build:
+
+    timeout-minutes: 720
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          #remote: # optional
+          repository: MPIBGC-TEE/bgc_md2
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Set up conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          channels: anaconda, conda-forge
+          activate-environment: binder
+          auto-activate-base: false
+          auto-update-conda: true
+          environment-file: environment.yml
+
+      - name: check python version
+        run: |
+          which python
+          python --version
+      
+      - name: install nbmake
+        run: |
+           conda install nbmake
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.test -r requirements.src
+
+      - name: run test suites
+        run: |
+          python ./scripts/run_test_suites.py

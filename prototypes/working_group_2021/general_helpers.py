@@ -2363,7 +2363,7 @@ def permutation(unordered_vec):
     col = np.array([tup[0] for tup in ordered_tups])
     row = np.arange(n)
     # from IPython import embed; embed()
-    p = sparse.bsr_array((data, (row, col)), dtype=np.int64)
+    p = sparse.bsr_matrix((data, (row, col)), dtype=np.int64)
     ordered_vec = np.array([tup[1] for tup in ordered_tups])
     t = p @ row
     assert (t == col).all()

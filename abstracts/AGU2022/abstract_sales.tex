@@ -5,12 +5,13 @@ How to compare many models with respect to many different diagnostics reliably?
 How to allow models to be formulated in different ways?
 How to make runnable models transparent without implementation details obscuring the scientific content?
 
-bgc_md2 is an open source python library that addresses these questions by providing the following tools:
+bgc_md2 is an open source python library on github and binder. 
 It provides an extendable set of datatypes that capture the essential properties compartmental models have in common and enables the formulation of a model with a few lines of regular python code. The structure of the model is captured in symbolic math (using sympy) and can be checked during the creation of the model e.g. by drawing a carbon flow diagram or printing the flux equations using the same mathematical symbols used in the publication describing the model. 
 This can be done long before a complete parameter set for the model is added and the model can be run e.g. for a benchmark.
 The computation of diagnostic variables both symbolic or numeric is based on the common building blocks which avoids the effort, obscurity and possible inconsistency resulting from a model specific implementation. The difference in available data for different models is addressed by computational graphs.
 Instead of an inflexible schema for a relational database records can have different entries reflecting the available data.
 Using the computability graphs the comparable is extended to the computable data. This allows for instance comparing a model described by a collection of fluxes with one described by matrices.
 bgc_md2 is an extendable library that provides complex and well tested tools for model comparison but does not force the user into a rigid framework.
-Rather than full automation it aims at flexibility of use within the python universe and can be used interactively in a jupyter notebook as well as in parallel computations on a supercomputer for global data assimilation as we do in a current model inter comparison..
+Rather than full automation it aims at flexibility of use within the python universe and can be used interactively in a jupyter notebook as well as in parallel computations on a supercomputer for global data assimilation as we do in a current model inter comparison.
+Example jupyter notebooks can be explored interactively on binder without installation. 
 

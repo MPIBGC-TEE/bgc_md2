@@ -84,6 +84,7 @@
 \newcommand{\cm}[1]{{\color{green} statement $^{#1}$} }
 \newcommand{\oc}[2]{{\color{red} #1  $^{#2}$}}
 \newcommand{\cc}[2]{{\color{green} #1  $^{#2}$}}
+\newcommand{\rt}[1]{{\color{red} #1}}
 \newcommand{\X}{\mathbf{X}}
 \newcommand{\I}{\mathbf{I}}
 \renewcommand{\O}{\mathbf{O}}
@@ -95,17 +96,18 @@
 %\graphicspath{{../figures/}}
 \begin{document}
 
-\title{Applications and limits of the quasi steady state approximations for nonautonomous compartmental systems}
-
+\title{Comment to ``Transient dynamics of terrestrial carbon storage: mathematical foundation and its applications 
+%Applications and limits of the quasi steady state approximations for nonautonomous compartmental systems
+''}
+\citep{Luo2017Biogeosciences}
 
 % \Author[affil]{given_name}{surname}
 
 \Author[]{Markus}{Müller}
-\Author[]{Konstiantin}{Viatkin}
+%\Author[]{Konstiantin}{Viatkin}
 %\Author[]{Yiqi}{Luo}
 
-\affil[]{ADDRESS}
-\affil[]{ADDRESS}
+\affil[1]{School of Integrative Plant Science Cornell College of Agriculture and Life Sciences}
 
 %% The [] brackets identify the author with the corresponding affiliation. 1, 2, 3, etc. should be inserted.
 
@@ -137,64 +139,134 @@
 
 \maketitle
 
+%Luo2022matrix_approach_to_Land_Carbon_modelling,
+%The carbon storage capacity is the maximal amount of carbon that a land ecosystem can store. Traditionally, the storage capacity has been considered as a static concept that results from the balance between carbon input and decomposition when an ecosystem is approximately at steady state (Olson, 1963) (Figure 2a). For example, long-term averaged carbon stock in the soil is lower in tropical than boreal forests, due to faster decomposition rates (i.e., shorter residence time) in tropical soils, notwithstanding higher carbon input from litterfall and plant mortality (Crowther et al., 2019). When this definition is applied to an ecosystem with multiple carbon compartments under non-steady state (i.e., a time-dependent, nonautonomous system), the carbon storage capacity is no longer a static constant; instead, it becomes time-dependent, as both carbon input and residence time vary with time. Regardless, it still sets the maximal amount of carbon that an ecosystem can store at time t.
 
-
+%land_carbon_cycle_modelling_luo2022
+% moving attractor
 \begin{abstract}
-%This  paper has been prompted by a series of claims in the original work \citep{Luo2017Biogeosciences} .
-Quasi steady state descriptions are used as approximations for transient systems for many reasons out of necessity.
-It is important to know in which situations which of their assumed properties become misleading. 
-%This work investigates those claims in the broader mathematical context 
-%and attempts to illustrate some of the central concepts, their limits and how they should be interpreted. 
+  The objections %to \citep{Luo2017Biogeosciences} 
+  fall into different categories.  Firstly, the claim that the ``Carbon Storage
+  Capacity'' $\X_c$ as defined in this paper is an attractor can be 
+  disproved by a counterexample. 
+  The inappropriate use of the term ``attractor'' is particularly unfortunate 
+  since it has a definite meaning in the mathematical theory of nonautonomous dynamical systems, which IS the appropriate tool to study ``transient dynamics''.
+  Together with the many equations the mathematical terminology and it's subtitle 
+  the paper creates the impression that it's claims are founded on a proved 
+  mathematical argument, which they are not, as the counter example alone shows. 
+  This is however not the only problem.   
 
-An important example is 'Carbon Storage Capacity' $\X_c$. The original publication describes the geometric relationship between $\X_p=\X-\X_c$ and the derivative $\dot{\X}$ of $\X$ with respect to time and infers that $\X_c$ is an 'attractor'.  
-We formalize this relationship as far as we can prove it.
-%which is that both vectors stay in the same orthant if the components of the poolwise difference between $\X_c - \X$ have all the same sign, and therefore the solution $\X$ never ``pulls away'' from $\X_c$.
-As a result it becomes aparrent that these properties are indeed not sufficient to draw the conclusion that $\X_c$ 
-attracts the solution $\X$ of the nonautonomous system. We provide a counterexample.
+  Secondly I will show by counter examples that the solution $\X(t)$ does NOT ``chase'' $\X_c(t)$ 
+   which is the main part of the argument for its supposed
+  attractivity.  
+  
+  Thirdly I object to the choice of nomenclature in the context suggested by
+  the word ``transient'' in the title and confirmed by the equations which
+  describe nonautonomous systems.  In this context the nomenclature is outright
+  misleading.  It turns out that the ``Carbon Storage Capacity'' as
+  mathematically defined in the paper is NOT the capacity of a nonautonomous
+  system to store carbon, that consequently the ``Carbon Storage Potential''
+  %defined as the difference between actual storage and the ``Capacity'' 
+  is NOT
+  the amount of carbon potentially to be stored or lost in an nonautonomous
+  system that  neither is ``Residence Time'' 
+  %as defined in the paper 
+  the time of residence of carbon in the system.  
+  If $\X_c$ is not chased, what is ``chasing time''?  
+  These terms clearly promise an applicability to the
+  transient case that simply does not exist.  They are defined for
+  autonomous systems that can reach equilibrium, a concept unsuitable for the presented
+  nonautonomous case, the study of which requires generalizations of the
+  equilibrium concept, namely the above mentioned attractors.  
 
-We also show that although $\X_c(t)$ is not an attractor for the actual carbon content it is a stable fix point for a related 'frozen' autonomous system. 
+  All these concerns do not only relate to the paper under discussion
+  %\citep{Luo2017Biogeosciences} 
+  but also to several other publications which express or use the same ideas, 
+  %\cite{Luo2022matrix_approach_to_Land_Carbon_modelling} {\color{red} many
+  %more} 
+  including a book,
+  %\citep{land_carbon_cycle_modelling_luo2022}, 
+  talks and lectures (e.g the annual international training courses, or a
+  very recent seminar at Cornell).  
+  A list of references will be given in the paper.{\color{red} still to be done} 
+  If I had not checked them, the claims of the paper would have compromised my own work too.
+  
+  To repair and control the confusion two things have to be accomplished:
+  Firstly we have to see where the paper contradicts proven mathematical theory, 
+  and secondly we have to access how applications of the ``traceability framework''. 
+  are affected by the lack of ``mathematical foundation'' as presented in the paper. 
+  Are there parts still standing on solid ground? 
+  Which parts can be partially salvaged by restricting their application to special cases? 
+  
+  As a first step I will show $\X_c(t)$ to be the equilibria of a family of autonomous
+  systems, created by freezing the original system at time $t$.  These frozen
+  systems provide the context in which  the variables ``chasing
+  time'', ``residence time'' $\RT$ and ``carbon storage potential'' $\X_p$ can
+  be interpreted.  The real geometric connection between these frozen systems
+  and the original is shown not to be one of the solution ``chasing'' but the
+  other way around of limited maneuverability of the frozen systems in phase
+  space preventing their equilibria to be too far away from the solution.  
+  
+  Although the paper emphasizes that it supersedes previous quasi steady
+  state approximations based on temporal averages, 
+  % page 155 4.2 
+  these averages have been used in some related publications, citing this paper. 
+  % \cite{DynamicDisequilibrium_LouWeng2011}
+  I will illustrate how those approximations are related to the solution and
+  compare them with both $\X_c$ and real attractors. 
+  \rt{ Until here would actually be enough for a rebuttal. 
+  The next part is actually more closely related to my self defense against being bullied into the application of questionable methods but less easy to refute because 
+  albeit the paper is very grandiose in its claim that ``traceability analysis '' is applicable p 156 left low, 4.4.3 Traceability analysis
+  ``The two terms on the right side of Eq. (2) can be decomposed into traceable components (Xia et al.,2013) so as to identify sources of uncertainty in C cycle projections '' it is extremely vague about how this method (for autonomous systems) is to be applied to non-autonomous systems. Rather than attempting to show that it is not possible I should perhaps better challenge the authors to elaborate (Yiqi accused me repeatedly of not having read the manuscript that supposedly applied the method, albeit until not having shown where it is described. The author of this manuscript has subsequent to our inquiry by email changed his code and the plots...}  
 
-This frozen system also provides the proper context in which  variables related to $\X_c$ like ``chasing time'', ``residence time'' $\RT$ and ``carbon storage potential'' $\X_p$ can be interpretated.
-
-We also provide a scalar surrogate system for the overall mass $x=\sum_{i=1,\dots,n} X_i$ of the system for which some simpler statemetns can be shown which are hard to generalize to the vector $\X_c$.
-
-
-Complementary to the original work, which starts with analysis of 250 published papers about Carbon cycle models we will approach the traceability framework from the mathematical perspective of general compartmental models and discuss the additionally factorizability assumptions with respect to the models they exclude.
-Regarding the ``environmental scalars'' $\xi$ and base line rates $k$  we show that they are not unambiguously defined by the model but a choice in it's formulation.
-Only the product is a diagnostic model property.
-
-
-In the application of the traceability analysis {\color{red} cite Lifen, Xia ...} $\X_c$ appears as a proxy for $\X$. Actually in fact it's temporal mean $\bar{\X_c}$ is used. 
-We show that the accuracy of this approximation depends very much on the length of the time interval over which the mean is taken.
-
+  Apart from the problematic statements concerned with to transient aspects of diagnostic variables which can be easily contradicted without any generalization of the class of models considered in the paper, 
+  I want to challenge, firstly, the assumption that this class covers most of the relevant carbon cycle models
+  \rt{Quote:page 157 left in the middle "The theoretical framework developed in this study has the potential to revolutionize model evaluation. Our analysis indicates that the matrix equation as in Eqs. (1) and (2).}
+  , and secondly, that their differences can be further resolved by the ``traceability analysis''. 
+  
+  Complementary to the original work, which starts with a review of 250 published papers we will start from the mathematical perspective of general compartmental models and derive the definition used in the paper by gradually \emph{decreasing} generality, pointing out which kinds of carbon cycle models are \emph{excluded} by the assumptions of the paper.
+  In particular I will discuss how the assumption of linearity excludes not only microbial models but also those where carbon rates depend on contents of pools of other elements, e.g. Nitrogen and Phosphorus, which  
+  process based flux formulation  are excluded by the factorizability assumptions of the compartmental matrix, into ``environmental scalars'' $\xi(t)$ and ``base line rates'' $k$, why this factorization is ambiguous and therefore unsuitable for inter-comparisons of models with respect to these factors, which removes two levels of from the ``traceability'' hierarchie, claimed to be applicable to this supposedly ``transient'' analysis. 
 \end{abstract}
 
 
 \copyrightstatement{TEXT} %% This section is optional and can be used for copyright transfers.
 
 
-\introduction  %% \introduction[modified heading if necessary]
-We first present the definitions of the ``Transient Tractability Analysis'' 
-from the viewpoint of the theory of compartmental systems in order to show which parts are generally applicable and which rely on specific assumptions. 
-This approach is complementary to the original presentation insofar as it is not restricted to actually \emph{published} but to mathematically {\it possible} models.  
-The first of the diagnostic variables that we will look at more closely is the so called ``carbon storage capacity'' $\X_c$, the motivation behind it's definition, provable mathematical properties and interpretation.
-Later we will look at the more specific ``environmental scalars'' $\xi$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\introduction[Outline]  %% \introduction[modified heading if necessary]
+\rt{$X_c$ discussion starts in \autoref{XcDef}}
 
-
-\subsection{Traceability analysis}
-The traceability analysis defines several diagnostic variables using as much algebraic structure of the mass balance equation as is available.
+In ~\autoref{sec:Definitions} we derive eq. (1) of the paper 
+from the viewpoint of the theory of the most
+general compartmental systems.  
+This approach is complementary to the original
+presentation as it is not restricted to actually \emph{published} but
+to mathematically \emph{possible} models, emphasizing the assumptions 
+to be able to identify more and more specific terms in the mass balance equation.
+We discuss how these assumption limit the generality of eq~(1) including examples of scenarios excluded by them. 
+We then introduce the diagnostic variables of the ``Traceability Framework'' , also in the order of decreasing generality.
 Not all diagnostic variables are possible for all compartmental models. 
+We will start in \autoref{XcDef} with the expressions to compute``carbon storage capacity'' $\X_c$, ``carbon storage potential'' $\X_p$ and ``residence time'' $\RT$ since the formulas can be evaluated for all compartmental models. 
+We address provable mathematical properties and the limited circumstances in which these definitions coincide with the meaning suggested by their names. 
+This will already show that the claims about their predictive superpowers have not only not been justified yet but also that they are unsupportable in principle.
+We then recall existing theory about
+nonautonomous systems from the literature including definitions for different
+kinds of attractors, conditions for their existence as well as definitions of
+times of residence suitable for the transient case.  
 
-We chose here to introduce the diagnostic variables not all at once but rather in the order of decreasing generality.
+In ~\autoref{sec:Examples} will present some counter examples and illustrate the general observations with figures.
 
-The first diagnostic variables are available for all compartmental models and need no additional assumptions. 
-In the later parts of this section we then assume to be able to identify more and more specific terms in the mass balance equation and use those to derive and trace ever more specific diagnostics.
-Thus the very first part is valid for all models but how many of the later parts are applicable to a specific model  depends on how much we know about it.  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Definitions}
+\label{sec:Definitions}
 
 \subsubsection{Derivation of the matrix representation} 
 We adapt the derivation originally found in \citep{Jacquez1972} in order to refer to it's implication for the generality of the formulation used in \citep{Luo2017Biogeosciences}.
-Mathematically Compartmental Models are most economically described as graphs, where the set of compartments $\mathcal{P}$ and the set of non-negative fluxes $\mathcal{F}$ form the the nodes and edges respectively.  
-Choosing numbers as indices we can enumerate  the set of pools $\mathcal{P}=\{p_0,\dots,p_n\}$ where $p_0$ is the outside world and write:
+Mathematically Compartmental Models are most economically described as graphs, where the set of compartments $\mathcal{P}$ and the set of non-negative fluxes $\mathcal{F}$ form the the nodes and edges respectively. 
+Choosing one of $n!$ possible ways to enumerate  the set of pools $\mathcal{P}=\{p_0,\dots,p_n\}$ where $p_0$ is the outside world, we write the contents of the pools as $x_i \text{ for } i \in \{1,\dots,n\} $ and the fluxes as
 \begin{align*}
 %\X  &=(x_1,\dots x_n)^T
 %\\
@@ -224,9 +296,10 @@ F_{i \rightarrow 0}
 F_{i \rightarrow 0}=0 \text{ for }  x_{i} = 0 
 \}
 \end{align*}
-\eqref{massbalance} back into a set of equations for single fluxes from which
-it was originally derived \citep{Jacquez1972} and for which massbalance is guaranteed by definition.
-where $x_i$ is the content of pool $p_i$,
+\label{massbalance} 
+%back into a set of equations for single fluxes from which
+%it was originally derived \citep{Jacquez1972} and 
+where 
 $ 
 I_{0 \rightarrow j} 
 $
@@ -240,7 +313,8 @@ $
 F_{i \rightarrow 0} 
 $
 are fluxes out of the system.
-In general all fluxes can depend on the $x_i$  and time $t$ (trough environmental factors like  Temperature $T(t)$ and moisture $W(t)$.
+
+In general all fluxes can depend on all the $x_i$  and time $t$ (trough environmental factors like  Temperature $T(t)$ and moisture $W(t)$.
 
 The influxes don't have to depend on the $x_i$  but internal and out fluxes must at least depend on their source pool content to guarantee the 
 condition that there is no outflux from an empty pool. 
@@ -248,33 +322,43 @@ condition that there is no outflux from an empty pool.
 % F_{i \rightarrow * }=0 \text{ for }  \X_{i} = 0 
 % $.
 % Where we used the $*$ to indicate either another pool or the outside.
+\newcommand{\xnt}{(x_1, \dots, x_n, t)}
 For every pool we have a mass balance equation.
 \begin{align}
   \frac{d}{d t} x_i 
     &= 
-    \sum_{j\ne i} (-F_{i\rightarrow j}+F_{j\rightarrow j}) + I_{0 \rightarrow i} - F_{i \rightarrow 0} \quad \forall i \in \{1,\dots n\}
-    \\
+    \sum_{j\ne i} (-F_{i\rightarrow j}\xnt
+    +F_{j\rightarrow j}\xnt ) 
+    + I_{0 \rightarrow i}\xnt 
+    - F_{i \rightarrow 0} \quad \forall i \in \{1,\dots n\}
+\end{align}
+Assuming continuity of the fluxes with respect to their source pool 
+$F \in \mathcal C^1$ we can write them in product form. 
+$F_{i \rightarrow j} = r_{j,i} x_i \text{ for } i \in \{1, \dots n\} , j \in \{ 0, 1,\dots ,n\} \text{ and } j \ne i $ 
+\begin{align}
+  \frac{d}{d t} x_i 
     &= - \underbrace{
       \left(
       r_{i \rightarrow } 
       + 
-      \sum_{j \ne i} r_{j,i}
+      \sum_{j \ne i} r_{j,i}\xnt
       \right)
-      }_{=m_{i,i}}
+      }_{=m_{i,i}\xnt}
       x_i
       +
-      \sum_{j \ne i} \underbrace{r_{i,j}}_{- m_{i,j}} x_j
+      \sum_{j \ne i} \underbrace{r_{i,j}\xnt}_{- m_{i,j} \xnt } x_j
       +
-      F_{\rightarrow i}
+      \underbrace{F_{\rightarrow i}\xnt}_{I_{\rightarrow i}}
     \\
     &= 
-      -\sum_{j} m_{i,j} x_j + I_{\rightarrow i}
-    \\
+      -\sum_{j} m_{i,j}\xnt x_j + I_{\rightarrow i}\xnt
+\end{align}
+Writing 
+$\X=(x_1,\dots x_n)^T$ for the ordered tuple of all pool contents, and $\I=(I_{\rightarrow 1},\dots I_{\rightarrow n})^T$ for the ordered tuple of all influxes, we get
+\begin{align}
   \frac{d}{d t} \X &= \I(\X,t) - M(\X,t) \X \label{massbalance_0}
 \end{align}
-where we wrote $F_{i \rightarrow j} = r_{j,i} x_i \text{ for } i \in \{1, \dots n\} , j \in \{ 0, 1,\dots ,n\} \text{ and } j \ne i $ under the smoothness condition that $F \in \mathcal C^1$ \citep{Jacquez1972} 
-$\X=(x_1,\dots x_n)^T$ for the ordered tuple of all pool contents, and $\I=(I_{\rightarrow 1},\dots I_{\rightarrow n})^T$ for the ordered tuple of all influxes.
-$-M$ is called the Compartmental matrix.
+$-M$ is called the Compartmental Matrix. \footnote{Because the enumeration of the set of pools is arbitrary there are, for a model with $n$ pools actually $n!$ such matrix equations, that all describe the same model.}  
 
 \subsubsection{Matrix decomposition} 
 Together with a start-value $\X_0$ \eqref{massbalance_0}  constitutes an "initial value problem" (ivp) which can be solved numerically by moving step by step forward in time.
@@ -283,32 +367,43 @@ Together with a start-value $\X_0$ \eqref{massbalance_0}  constitutes an "initia
 %
 %It is mathematical standard notation to use $X$ in the *formulation* of the ivp (representing the momentary value) althoug *after we have solved it* the solution is expressed as function of time $X(t)$. This avoids confusion since everything appering with arguments is recognizable as explicitly calculable *before* we have solved the ivp.
 
-The system is "nonautonomous" (if either of $\I$ or $M$ depend on time $t$) and "nonlinear" if either $M$ dependents on $X$ or $\I$ cannot be written in the form $\I(\X,t)=I(t)\X$.
+Without further assumptions the system is "nonautonomous" (since either of $\I$ or $M$ can depend on time $t$) 
+and "nonlinear" since either $M$ can depend on $X$ or $\I$ can depends on $X$ in a way that cannot be expressed in the form $\I(\X,t)=\tilde{\I(t)}+I_{mat}(t)\X$ with the matrix $I_{mat}(t)$ independent of $X$.
 
-If $m_{i,i}(\X,t) \ne 0$ it is possible to factorize $M(X,t)$ into a product $M=A(\X,t) K(\X,t)$ where $K$ is a  diagonal matrix and the matrix $A$ has only ones on it's main diagonal. 
+If $m_{i,i}(\X,t) \ne 0$ 
+\footnote{
+  If $m_{i,i}(\X,t) = 0 $ for some $i$ then some elements of $A$ become
+  undefined. However, this does not mean that we could not write $M$ as a
+  product, just that $A$ cannot be inferred and we have to pretend to know the
+  $a_{j,i}\xnt \text{ for } j\ne i \text{ and } \forall \xnt \text{ with }
+  k_{ii}\xnt=0 $ although we could never learn them from any observed fluxes.
+  The same arguments holds for $\bv$.
+}
+it is possible to factorize $M(X,t)$ into a product $M=A(\X,t) K(\X,t)$ where $K$ is
+a diagonal matrix and the matrix $A$ has only ones on it's main diagonal. 
 
-It is always possible to write $\I(\X,t)=\bv(\X,t)u(\X,t)$ where the scalar $u=\sum_{k=1\dots n} \I_k$  and the dimensionless vector $\bv = \I/u$ where $\sum_{k=1\dots n} \beta_k =1$
+If $u=\sum_{k=1\dots n} \I_k \ne 0$ it is possible to determine the dimensionless vector $\bv = \I/u$ where $\sum_{k=1\dots n} \beta_k =1$ and write $\I(\X,t)=\bv(\X,t)u(\X,t)$ 
 Using these terms  we arrive at 
 \begin{align*}
 \frac{d \X}{d t}&=B(\X,t) u(\X,t) - A(\X,t) K(\X,t) \X   
 \end{align*}
 \newcommand{\kiixt}{
       \left(
-      r_{i \rightarrow } (\X,t)
+      r_{i \rightarrow } \xnt
       + 
-      \sum_{l \ne i} r_{l,i} (\X,t)
+      \sum_{l \ne i} r_{l,i} \xnt
       \right)
 }
 with:
 \begin{align}
-  k_{i,i}(\X,t) &=\kiixt \nonumber
+  k_{i,i}\xnt &=\kiixt \nonumber
   \\
-  a_{j,i}(\X,t)  
-  &=\frac{r_{j,i}}{k_{i,i}}=
+  a_{j,i}\xnt
+  &=\frac{r_{j,i}\xnt}{k_{i,i}\xnt}=
   \left\{
   \begin{matrix}
     =\frac{
-    r_{i,j} (\X,t)
+    r_{i,j}\xnt 
   }{
     \kiixt
   } \text{ for } j \ne i
@@ -319,21 +414,28 @@ with:
   \label{aij}
 \end{align}
 The $k_{i,i}$ can be interpreted as the rate of the total flux out of pool $i$. The elements of column $i$ of $A$ describe then which fractions of this total outflux is transferred to pool $j$. 
-Note that at this point the $k_i$ and $a_{i,j}$ are not assumed to be constant but possibly functions of time and $\X$. Therefore writing $M(\X,t) = A(\X,t) K(\X,t)$ is not a big assumption.
-but note that inferring $A$ and $K$ from a given $M$ requires $m_{i,i} \ne 0$
 
 \subsubsection{Assumption of Linearity}
 If we assume the model to be linear and nonautonomous the dependency on $X$ vanishes and we have
-\begin{align*}
-\end{align*}
+either
 \begin{align}
 \frac{d \X}{d t}
-  &=\I(t) - M(t) \X \label{massbalance_linear}
+  &=\tilde{\mathbf{I}}(t)+I_{mat}(t)\X - M(t) \X  \nonumber
+  \\
+  &=\underbrace{\tilde{\mathbf{I}}(t)+(I_{mat}(t) - M(t))}_{L(t)} \X \label{massbalance_linear} \\
+  &=\tilde{\mathbf{I}}(t)+L(t) \X \nonumber
+\end{align}
+or if we insist on a non-state-dependent inputs 
+\begin{align}
+\frac{d \X}{d t}
+  &=\I(t) - M(t) \X \label{massbalance_linear_no_state_dependent}
   \\
   &= \bv(t)u(t) - A(t) K(t) \X \nonumber .
 \end{align} 
-This excludes certain models e.g. the interactions between chemical species in one compartmental model. 
-Imagine that some of the pools contain Nitrogen and others Carbon .
+Eq. \eqref{mass-balance_linear} allows for influxes to be dependent on the receiving pool, e.g. for the influx of carbon through photosynthesis to depend on the the size of the leaf pool. Note that $L$ does not have to be compartmental and therefore not factorizable into $A$ and $K$.
+Eq. \eqref{massbalance_linear_no_state_dependent} is that 
+Both  exclude certain compartmental models e.g. some with interactions between chemical species. 
+Imagine that some of the pools contain Nitrogen and others Carbon.
 It is likely that some fluxes out of carbon pools are controlled by the
 available Nitrogen.  
 Imagine a compartmental system where the startvector
@@ -383,7 +485,7 @@ The linear version of \eqref{aij} is:
 \end{align}
 
 From this representation it is clear that the $a_{i,j}$ are only constant if all rates $r_{j,i} \text{ for } j \in \{0,\dots ,n \}$ contain the \emph{same} time dependent factor $\xi(t)$ , which makes the existence of constant $A$ and $K$ 
-an assumption.
+an \emph{assumption}.
 From a modeling point of view the $\xi_{i,i}$ can be seen as a ``substrate'' dependent rate modifier since it affects everything that leaves the same pool in the same way, whereas $r_{i,*}(t)$ is specific to a single flux an so could be different for different ``processes'' even if they use the same substrate.
 
 
@@ -403,49 +505,61 @@ In some cases we can resolve $\xi$ further.
 $$
 \frac{d X}{d t} = B(t)u(t) - A \xi_{temp}(t) \xi_{mois}(t) K X  
 $$
-
-
-
-
-
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Definition of diagnostic variables}
 
 \subsubsection{Storage capacity $X_c$ and storage potential $X_p$}
-These variables can be defined for any compartmental system and do not require either linearity nor factorizability. 
-We can rearrange \eqref{massbalance_0} and give names to the two summands. 
-$$
-X = M^{-1}(\X,t) \left(\I(\X,t)- \frac{d \X}{d t} \right) \\ 
-  = \underbrace{M^{-1}(\X,t)\I(\X,t)}_{\X_c} - \underbrace{M^{-1}(\X,t) \frac{d \X}{d t} }_{\X_p} \\
-  = \X_c - \X_p
-$$
+\label{XcDef}
+We define it using linearity but not factorizability since it is not used.
+If we solve \eqref{massbalance_0} the solution $\X(t)$ still fulfills the equation 
+\begin{align}
+X(t) = M^{-1}(t) \left(\I(t)- \frac{d \X}{d t} (t)\right) \\ 
+  = \underbrace{M^{-1}(t)\I(t)}_{\X_c(t)} - \underbrace{M^{-1}(t) \frac{d \X}{d t} (t)}_{\X_pi(t)} \\
+  = \X_c(t) - \X_p(t)
+\end{align}
 Note:
-This is not to be read as a recipe to compute $\X$.
-The equation becomes a bit clearer if we adapt the nomenclature to express that we *have solved the ivp* and know its solution $\X(t)$  
-and therefore also  the derivative $\frac{d \X}{d t}=I(\X(t),t) - M(\X(t),t) \X(t) =\dot{\X}(t)$ 
-By substituting the solution $\X(t)$ we get the recipes to compute:
-$$
-\dot{\X}(t) = \I(\X(t),t) - M(\X(t),t) \X \\
-\X_c(t) = M^{-1}(\X(t),t)\I(\X,t) \\ 
-\X_p(t) = \X(t)-\X_c(t) \\ 
-$$
-we see that all the ingredients become explicit functions of time.   
-\footnote{
-  Since all values are taken at the same time $t$ we can drop the time dependence
-  in the notation and write an equation we can use in the iterator.
-  $$
-  \dot{\X} = \I - M \X \\
-  \X_c = \X + \X_p \\ 
-  \X_p = M^{-1}I  \\ 
-  $$
-}
+The original publication \citep[p. 150 after eq.8b ]{Luo2017Biogeosciences} claims that $\X_c$ is an ``attractor'' and attempts to justify this claim by some geometrical arguments. {\color{red} disproved in the appendix}
+We will show : 
+\begin{enumerate}
+\item \label{frozen}
+  That $\X_c(t)$ is an attractor (fixed point)  not for the solution $\X(t)$ of the original system but for the solution of a related \emph{autonomous} system and how this affects the interpretation of the results.
+\item
+  How $\X_c$ and $\X$ are \emph{really} related geometrically.
+\end{enumerate}
+Consider the autonomous linear system 
+
+\begin{align}
+  \frac{d}{d\;t}\tilde{\X}_{t_f} = I_{t_f} - M_{t_f} \tilde{\X}_{t_f}
+  \label{eq:frozen}
+\end{align}
+with constant $M_{t_f}$ and $\I_{t_f}$  obtained
+by \emph{freezing} $M(t_f)$ and $\I(t_f)$ at the same time when we compute ${\X_c}_{t_f}=M^{-1}_{t_f}\I_{t_f}$ (assuming generously that $M_{t_f}$ is invertable)
+If we plug ${\X_c}_{t_f}$ into \eqref{eq:frozen} we get 
+\begin{align*}
+  \frac{d}{d\;t}\tilde{\X}_{t_f} &= I_{t_f} - M_{t_f} {\X_c}_{t_f} \\
+                            &= 0
+\end{align*}
+So ${\X_c}_{t_f}$ is just the fixpoint of this system. 
+Since it is unique and it's basin of attraction is the whole positive orthant the solution $\tilde{\X}_{t_f}(t)$ of the ivp $\tilde{\X}_{t_f}(t=0)=X(t_f)$ will start moving towards it, but also immediately separate from $\X(t)$.  
+$t_f$  is the last guaranteed time where $\X = \tilde{\X}$.
+While $\tilde{\X}(t)$ starts ``chasing'' ${X_c}_{t_f}$ the real solution is affected by new $M(t>t_f)$ and $I(t>t_f)$ and has no obligation to do so.  
+The best prediction of the ability to store carbon at time $t>t_f$ is the solution $\X(t)$. In this sense ${\X_c}_{t_f}$ is a \emph{model within the model} that describes the (less accurate) forecasting under inputs and rates frozen at time $t_f$.0 
+
+Note: \\
+The attractivity of $\X_c$ for $\tilde{\X}$ might partially explain why $\X(t)$ sometimes \emph{looks} as if it was ``chasing'' $\X_c(t)$.
+It is certainly \emph{possible} that the changes in $M(t)$ and $\I(t)$ are either too small to hamper the `pursuit' of $\X$ significantly or occasionally temporarily even help to close the gap.
+This is just not consistently the case, but possibly even frequently in observed systems.
+
+
+This also changes the interpretation of $\X_p$ which is, if we start at at time $t$ from the point $\X(t)$, the storage potential of the \emph{autonomous} system in other words the difference to the steady state pool values if the matrix $M(t)$ and inputs $\I(t)$ \emph{would} stop to depend on time.
+
+
 \subsubsection{Residence Time $\RT$}
 The influx $\I$ can always be written as $\I=\bv u$ .
 Assuming that the pool contents (the components of $\X$)  have dimension $mass$ we can infer from \eqref{massbalance_0}) that the components of $M$ have dimension $\frac{1}{time}$.
 The components of the (inverse) matrix $M^{-1}$ have therefore dimension $time$. Accordingly the product $\RT= M^{-1} \bv$ is a vector of the same shape as $\X$  whose components have dimension $time$.
-In the context of the Traceability Framework $\RT$ is therefore called {\it residence time}.
-A previous paper \citep[Proposition 1]{Rasmussen2016JMB} contains the proof that this formula describes the mean transit time if the system is linear and \emph{autonomous} and in \emph{equilibrium}. (which is explicitly not the case in \citep{Luo2017Biogeosciences}).
+In the context of the Traceability Framework $\RT$ is called {\it residence time}.
+but a previous paper \citep[Proposition 1]{Rasmussen2016JMB} contains the proof that this formula describes the mean transit time if the system is linear and \emph{autonomous} and in \emph{equilibrium}.  Consequently $\RT$is the residence time of system \ref{} 
 
 Note that: 
 \begin{enumerate}
@@ -453,7 +567,7 @@ Note that:
 Residence time is neither the time of residence of a \emph{single} particle (Carbon atom) in the system nor for the \emph{mean} over all particles for the following reasons:
 \begin{enumerate}
   \item 
-  In well mixed systems particles can reside in a pool for different times from zero to infinity. What is common to all particles in a certain pool are the probabilites to leave this pool in the next unit of time towards different destinations. In a nonautonomous system this probability can change with time but still does not distinguish between particles.
+  In well mixed systems particles can reside in a pool for different times from zero to infinity. What is common to all particles in a certain pool are the probabilities to leave this pool in the next unit of time towards different destinations. In a nonautonomous system this probability can change with time but still does not distinguish between particles.
   \item 
   One could compute the mean of these times over all particles exiting a pool, but even then the result is in general not equal to the above mentioned $\RT$ \citet{Rasmussen2016JMB,Metzler2018PNAS}.
   The mean residence time would only coincide with the definition above if the system was autonomous.
@@ -477,25 +591,8 @@ The matrix $M^{-1}$ takes the role of the number $\frac{1}{m}$ .
 In the context of the *Transient Traceability Analysis* the matrix $M^{-1}$ is called \it{Chasing Time}. 
 
 \end{enumerate}
-\section{Properties of $X_c$ }
-The original publication \citep[p. 150 after eq.8b ]{Luo2017Biogeosciences} claims that $\X_c$ is an ``attractor'' and attempts to justify this claim by some geometrical arguments.
-We will show : 
-\begin{enumerate}
-\item
-What can be proven about how $\X_c$ and $\X$ are related geometrically.
-\item
-What would be necessarry to show if $\X_c$ was an attractor for the solution.
-\item
-That $\X_c$ is not an attractor for the solution (counterexample).
-\item \label{frozen}
-That $\X_c$ is an attractor for the solution of a related system and how this affects the interpretation of the results.
-\item \label{pullback}
-Which are the attractors for the solution $\X$.
-\end{enumerate}
 
-\subsection{Who is attracted to $\X_c$ ?}
-Conceptually it is easiest to start with \ref{frozen}.
-In the theory of \emph{autonomous} dynamical systems,  the term ``attractor'' has the following definition. E.g. according to Wikipedia ({\color{red} find some textbook})
+
 \begin{definition}[Attractor]
 {\color{red} might go to the appendix}
   Let $t$ represent time and let $f(t, *)$ be a function which specifies the dynamics of the system. That is, if a is a point in an n-dimensional phase space, representing the initial state of the system, then $f(0, a) = a$ and, for a positive value of $t$, $f(t, a)$ is the result of the evolution of this state after time $t$. 
@@ -517,23 +614,7 @@ In the theory of \emph{autonomous} dynamical systems,  the term ``attractor'' ha
 \end{definition}
 Examples are fixed points, limit cycles or more extravagantly shaped objects like the  
 famous ``strange'' Lorenz attractor. 
-According to this definition $\X_c$ is actually an attractor (even a fixed point) but not fro the solution $\X(t)$ of the original system, but the solution of the autonomous linear system 
-$$
-\tilde{\X}^{\prime} = I_t - M_t \tilde{\X}
-$$ 
-with constant $M_t$ and $\I_t$  obtained
-when we fix $M(t)$ and $\I(t)$ at the same time when we compute $\X_c(t)=M^{-1}(t)\I(t)$.
-$\X_c(t)$ is just the fixpoint of this system. 
-This is also the basis for the definitions of {\it residence time} (within the context of the transient traceability analysis).
-It represents the real mean residence times for the  \emph{autonomous} system in \emph{equilibrium}.
-This also changes the interpretation of $\X_p$ which is the storage potential of the \emph{autonomous} system in other words the difference to the steady state pool values if the matrix $M(t)$ and inputs $\I(t)$ \emph{would} stopp to depend on time.
 
-The correct prediction of the ability to store carbon at time $t$ is the solution $\X(t)$. In this sense $\X_c$ is a \emph{model within the model} that describes the (less accurate) forecasting under frozen inputs and rates. In this light $\X_p$ becomes the \emph{error} of this prediction with respect to the fully modeled $\X$.
-
-Note: \\
-The attractivity of $\X_c$ for $\tilde{\X}$ might partially explain why $\X(t)$ sometimes \emph{looks} as if it was ``tracing'' $\X_c(t)$.
-It is certainly \emph{possible} that the changes in $M(t)$ and $\I(t)$ are either too small to hamper the `pursuit' of $\X$ significantly or occasionally temporarily even help to close the gap.
-This is just not consistently the case, but possibly even frequently in observed systems.
 
 \subsection{Attractors for the solution $\X$}
 Since the original work explicitly discusses a \emph{non}-autonomous system the definition of attractor has to be extended. Due to the time dependence of $M$ and $\I$ attractors are now functions of time.
@@ -605,8 +686,10 @@ replaced by a temporal mean $\bar{\X_c} = \frac{1}{t_2-t_1}\int_{t_1}^{t_2}
 The size of the error $\bar{X_p}$ depends on the new hyper-parameter $\Delta t= t_2-t_1$.
 This has to be taken into account.
 
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Counter Examples}
+\label{sec:Examples}
 \subsection{Geometric observations about the relationship between $\X$ and $\X_c$} 
 
 \begin{figure}[t]
@@ -628,14 +711,14 @@ This has to be taken into account.
 }
 \end{figure}
 \subsubsection{surrogate system for the overall mass}
-We are aming at something like this:
+We are aiming at something like this:
 $$
 \dot{x}=u(t)-m(t)x
 $$ 
 where $x$ is the aggregated mass over all pools.
 The question is how to specify $m(t)$ to insure this.
 
-We start with the special case of a linear but nonautonoumous system (which is the subject of \citep{Luo2017Biogeosciences}):
+We start with the special case of a linear but nonautonomous system (which is the subject of \citep{Luo2017Biogeosciences}):
 $$
 \frac{d \X}{d t}= \I(t) - M(t) \X 
 $$
@@ -659,7 +742,7 @@ $$
 =\frac{d}{d t}\sum_{p \in pools} (\X )_p
 =\frac{d}{d t} x
 $$
-We can now try to costruct our new system for the combined mass $x$, in particular we want to find a function for the time dependent rate $m(t)$ such that. 
+We can now try to construct our new system for the combined mass $x$, in particular we want to find a function for the time dependent rate $m(t)$ such that. 
 $$
 \dot{x}
 =u(t)-m(t) x 
@@ -678,7 +761,7 @@ Notes:
 \begin{enumerate}
 \item 
   $m$ will in general be a function of time $m(t)$ even if the original matrix $M$ is not.
-  This becomes apparrent when we consider that we need the vector $\X$ for every $t$ to define $m(t)$, which means that we also must solve the original system at least simultaneously.
+  This becomes apparent when we consider that we need the vector $\X$ for every $t$ to define $m(t)$, which means that we also must solve the original system at least simultaneously.
   Assuming that we have done so \emph{before} we we can write a little more obviously.
   $$
   m(t) = \frac{
@@ -762,26 +845,26 @@ Using that $M(t)$ is invertable we can write the steady state solution $\X^*$ (f
 \begin{align}
 \X^*=M^{-1}\I
 \end{align}
-We first convince ourselfes that the matrix $M^{-1}$ has indeed only positive elements.
-For a compartmental system the pool contents and imputs are alway positive.
+We first convince ourselves that the matrix $M^{-1}$ has indeed only positive elements.
+For a compartmental system the pool contents and inputs are always positive.
 This is also true for the steady state values of the frozen system.
 If we choose $\I = (1,0,\dots, 0) $ we get $\X^*=M_{:,1}$ so we know that 
 the first column of $M$ must be positive. 
 We can do this with any column to obtain $M_{i,j}>0 \quad \forall i,j$.
 If we assume further that the derivative $\dot{\X}$ has only positive components then the components of 
 $\X_p$ are sums of products of positive values and have to be positive too.
-In case all the components of $\dot{\X}$ are negative then the components of $\X_p$ are negative by the same arguement.
+In case all the components of $\dot{\X}$ are negative then the components of $\X_p$ are negative by the same argument.
 A consequence of this statement is that in case $\dot{\X}$ is either completely in the positive or negative orthant the inner product $\langle \dot{\X},\X_p \rangle \ge 0$ which means that the angle between them is smaller than a right angle.
 
 Unfortunately this argument only applies to the very special cases that all pools increase or decrease simultaneously.
-In general $\dot{\X}$ as well as $\X_p$ can have positive and negative components but in this case the knowledge of the positivity
+In general $\dot{\X}$ as well as $\X_p$ can have positive and negative components but in this case the knowledge of the positive
 of $M^{-1}$ is not sufficient to confine the difference in their directions.
 \end{observation}
 
 \begin{observation}[Direction of $\X_p$ and $\dot{X}$ in special cases]
 The previous observation leads to the conjecture that perhaps $\langle \dot{\X},\X_p \rangle \ge 0$ is generally true, even if $M_{i,j} > 0 $ is not sufficient to prove it.
-There are however special cases where this can be acertained.
-If we talk about $\X_c$ at all we assume the existence of a stable fixedpoint for the frozen system. A necessarry (and sufficient) condition for this is that the real parts of all the eigenvalues of $M$ are greater than zero. 
+There are however special cases where this can be ascertained.
+If we talk about $\X_c$ at all we assume the existence of a stable fixed point for the frozen system. A necessary (and sufficient) condition for this is that the real parts of all the eigenvalues of $M$ are greater than zero. 
 In case all the eigenvalues are real we can express $\X_p$ and $\dot{\X}$ and the linear mapping encoded by $M$ in terms of tbe eigenvectors $e_1,\dots e_n$ and eigenvalues $\lambda_1, \dots \lambda_n$.
 \begin{align}
 \langle \dot{\X},\X_p  \rangle 
@@ -840,12 +923,14 @@ In attributions it is saver to look at $k \xi$
 \videosupplement{TEXT} %% use this section when having video supplements available
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
 \section{$\xi$}    %% Appendix A
 
 \subsection{Examples where the actual value of $\xi$ matters or does not matter}     %% Appendix A1, A2, etc.
 \label{xi_examples}
-E.g. consider variance attribution via covariance as described in the supplementary materia S(9) of \citep{Zhou2018JOC}.
+E.g. consider variance attribution via covariance as described in the supplementary material S(9) of \citep{Zhou2018JOC}.
 The relative contribution $RVar(a b)_a$ of variable $a$ to the variance of the product $a b$ is defined as 
 \begin{align}
   \label{covln}
@@ -853,7 +938,7 @@ The relative contribution $RVar(a b)_a$ of variable $a$ to the variance of the p
 \end{align}
 As an example for an attribution that is independent of the arbitrary $d$
 consider the question of temporal variance of $rt$ to it's factors $\xi$ and
-$br$ via (tenporal) covariance of $rt$ with $\xi$ and $k$ since the temporal
+$br$ via (temporal) covariance of $rt$ with $\xi$ and $k$ since the temporal
 covariance $ cov(ln(k),ln(rt))=0 $ but it is also obvious that an attribution to
 the temporal change of $\xi$ leads to the same result as an attribution to the
 product $\xi k$, so the distinction between contributions of $\xi$ and $k$ is
@@ -875,7 +960,7 @@ of $\xi$ to the variance
   var([ln(\frac{k_1}{\xi_1}),ln(\frac{k_2}{\xi_2})]^T)
 }
 \end{align}
-If we rewrite the second model in the vector wiht an arbitrary $d$ we get a different result
+If we rewrite the second model in the vector with an arbitrary $d$ we get a different result
 
 
 
@@ -1098,6 +1183,8 @@ TEXT
 %%% PHYSICAL UNITS
 %%%
 %%% Please use \unit{} and apply the exponential notation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{to do}
 \begin{enumerate}
 \item
@@ -1121,6 +1208,6 @@ m_f x & < i_f \\
 \rightarrow 
 x < \frac{1}{m_f} i_f=x_f* = x_c
 \end{align*}
-So the prospectimve equilibrium of the frozen system is bigger than the current value.
+So the prospective equilibrium of the frozen system is bigger than the current value.
 \end{enumerate}
 \end{document}

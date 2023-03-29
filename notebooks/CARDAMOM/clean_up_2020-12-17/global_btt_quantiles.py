@@ -205,7 +205,7 @@ def compute_global_btt_quantile(ds, name, q, nr_time_steps, time_step_in_days, n
 
     # the global quantile function is a weighted average of the local quantile functions
     # weights are the respective masses of outflux (area*landfrac*R.sum) in each time step
-    @lru_cache()
+    @lru_cache(maxsize=None)
     def F_btt_sv_global(ai, ti):
         res = np.sum(
             np.array(

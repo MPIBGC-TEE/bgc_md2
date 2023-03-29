@@ -1,0 +1,2 @@
+# we do not want other branches (e.g. binder) that use different branches of the submodules overwrite our submodules
+.gitmodules merge=ours 

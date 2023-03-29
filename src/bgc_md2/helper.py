@@ -272,7 +272,7 @@ class GeneralMvarSetListGridBox(widgets.GridspecLayout):
             self[i, 0] = button_inspect_mvs
             mvs = CMTVS_from_model_name(name)
             results = [ 
-                mvs._get_single_mvar_value(target_class)
+                mvs._get_single_value(target_class)
                 for target_class in self.target_classes
             ]
             out = widgets.Output()

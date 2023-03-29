@@ -1,0 +1,54 @@
+# runs the tests in a binder env without version pinning
+# this checks that the upgrade path is clear
+name: test_conda_binder_free
+on:
+  push:
+    branches:
+      - binder # only executed when something is pushed to these branches
+      - test
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          # remote: # optional
+          repository: MPIBGC-TEE/bgc_md2
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Set up conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          #channels: anaconda, conda-forge
+          channels: conda-forge
+          activate-environment: binder
+          auto-activate-base: false
+          auto-update-conda: true
+          environment-file: environment_free.yml
+
+      - name: check python version
+        run: |
+          which python
+          python --version
+
+      - name: install test requirements 
+        run: |
+           conda install -y -c conda-forge  --file requirements.test
+
+      - name: run setup.py scripts
+        run: |
+          ./postBuild
+
+      - name: run test suites
+        run: |
+          python ./scripts/run_test_suites.py
