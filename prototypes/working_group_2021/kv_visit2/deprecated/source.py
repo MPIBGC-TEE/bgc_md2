@@ -1,188 +1,75 @@
-from sympy import  Symbol, Function, exp, diff, Piecewise
+from pathlib import Path
+from sympy import Symbol, Function, exp, Piecewise
+import numpy as np
+import json
+from CompartmentalSystems import start_distributions as sd
 from ComputabilityGraphs.CMTVS import CMTVS
-from bgc_md2.helper import module_computers
 from bgc_md2.models.BibInfo import BibInfo
 from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
-    TimeSymbol,
-    Temperature,
-    StateVariableTuple,
-    VegetationCarbonStateVariableTuple,
-    SoilCarbonStateVariableTuple,
-    CarbonStateVariableTuple,
-    LuoXiBySymbol
+    NumericParameterization,
+    NumericSimulationTimes,
+    NumericStartValueArray,
+    NumericStartMeanAgeVector,
+    NumericParameterizedSmoothReservoirModel
 )
-import bgc_md2.resolve.computers as bgc_c
+from . import source_1 as s1
+from . import model_specific_helpers_2 as msh
+from .subs_1 import subs_dict
+from bgc_md2 import general_helpers as gh
 
-# Make a small dictionary for the variables we will use
-sym_dict={
-    'C_soil_fast': '',
-    'C_soil_slow': '',
-    'C_soil_passive': '',
-    'C_leaf': '',
-    'C_root': '',
-    'C_wood': '',
-    'C_leaf_litter': '',
-    'C_root_litter': '',
-    'C_wood_litter': '',
-    'r_C_leaf_2_C_leaf_litter': '',
-    'r_C_root_2_C_root_litter': '',
-    'r_C_wood_2_C_wood_litter': '',
-    'r_C_leaf_litter_rh': '',
-    'r_C_root_litter_rh': '',
-    'r_C_wood_litter_rh': '',
-    'r_C_soil_fast_rh': '',
-    'r_C_soil_slow_rh': '',
-    'r_C_soil_passive_rh': '',
-    'r_C_leaf_litter_2_C_soil_fast': '',
-    'r_C_leaf_litter_2_C_soil_slow': '',
-    'r_C_leaf_litter_2_C_soil_passive': '',
-    'r_C_wood_litter_2_C_soil_fast': '',
-    'r_C_wood_litter_2_C_soil_slow': '',
-    'r_C_wood_litter_2_C_soil_passive': '',
-    'r_C_root_litter_2_C_soil_fast': '',
-    'r_C_root_litter_2_C_soil_slow': '',
-    'r_C_root_litter_2_C_soil_passive': '',
-    'mrso': 'soil moisture',
-    'T_0': 'critical temperature',
-    'E': 'activation energy',
-    'KM': 'critical moisture',
-    'beta_leaf': '',
-    'beta_wood': '',
-}
-for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
-    exec(code)
+def subs_xi(var):
+    return var.subs(subs_dict)
 
-# some we will also use some symbols for functions (which appear with an argument) 
-func_dict={
-    'xi': 'a scalar function of temperature and moisture and thereby ultimately of time',
-    'NPP': 'net primary production',
-    'mrso': 'soil moisture',
-    'TAS': 'air temperature',
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-
-t=TimeSymbol("t")
-TAS_C=TAS(t)-273.15
-TS = 0.748*TAS_C + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-#xi=Piecewise(
-#    (exp(E*(1/(10-T_0)-1/(TS-T_0))) * mrso(t)/(KM+mrso(t)),TS > T_0),
-#    (0,True)
-#)
-xi= exp(E*(1/(10-T_0)-1/(TS-T_0))) * mrso(t)/(KM+mrso(t))
-beta_root = 1.0- (beta_leaf+beta_wood)
-svt= (
-            C_leaf,
-	        C_wood,
-	        C_root,
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
-	        C_soil_slow,
-	        C_soil_passive,
-)
-mvs = CMTVS(
+mvs=CMTVS(
     {
-        t,
-        StateVariableTuple(svt),
-        CarbonStateVariableTuple(svt), # the same since we here have only carbon pools
-        VegetationCarbonStateVariableTuple((
-            C_leaf,
-	        C_wood,
-	        C_root,
-        )),
-        SoilCarbonStateVariableTuple((
-	        C_leaf_litter,
-	        C_wood_litter,
-	        C_root_litter,
-	        C_soil_fast,
-	        C_soil_slow,
-	        C_soil_passive,
-        )),
-        InFluxesBySymbol(
-            {
-                C_leaf: NPP(t) * beta_leaf, 
-                C_root: NPP(t) * beta_root, 
-                C_wood: NPP(t) * beta_wood
-            }
-        ),
-        OutFluxesBySymbol(
-            {
-                C_leaf_litter: r_C_leaf_litter_rh*C_leaf_litter*xi,
-                C_wood_litter: r_C_wood_litter_rh*C_wood_litter*xi,
-                C_root_litter: r_C_root_litter_rh*C_root_litter*xi,
-                C_soil_fast: r_C_soil_fast_rh*C_soil_fast*xi,
-                C_soil_slow: r_C_soil_slow_rh*C_soil_slow*xi,
-                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,
-            }
-        ),
-        LuoXiBySymbol(
-            {
-                C_leaf_litter: xi,
-                C_wood_litter: xi,
-                C_root_litter: xi,
-                C_soil_fast: xi,
-                C_soil_slow: xi,
-                C_soil_passive: r_C_soil_passive_rh*C_soil_passive*xi,
-            }
-        ),
-        InternalFluxesBySymbol(
-            {
-                (C_leaf, C_leaf_litter): r_C_leaf_2_C_leaf_litter*C_leaf, 
-                (C_wood, C_wood_litter): r_C_wood_2_C_wood_litter*C_wood, 
-                (C_root, C_root_litter): r_C_root_2_C_root_litter*C_root, 
-                (C_leaf_litter, C_soil_fast)    : r_C_leaf_litter_2_C_soil_fast * C_leaf_litter*xi,
-                (C_leaf_litter, C_soil_slow)    : r_C_leaf_litter_2_C_soil_slow * C_leaf_litter*xi,
-                (C_leaf_litter, C_soil_passive) : r_C_leaf_litter_2_C_soil_passive * C_leaf_litter*xi,
-                (C_wood_litter, C_soil_fast)    : r_C_wood_litter_2_C_soil_fast * C_wood_litter*xi,
-                (C_wood_litter, C_soil_slow)    : r_C_wood_litter_2_C_soil_slow * C_wood_litter*xi,
-                (C_wood_litter, C_soil_passive) : r_C_wood_litter_2_C_soil_passive * C_wood_litter*xi,
-                (C_root_litter, C_soil_fast)    : r_C_root_litter_2_C_soil_fast * C_root_litter*xi,
-                (C_root_litter, C_soil_slow)    : r_C_root_litter_2_C_soil_slow * C_root_litter*xi,
-                (C_root_litter, C_soil_passive) : r_C_root_litter_2_C_soil_passive * C_root_litter*xi,
-            }
-        ),
-        Temperature(TAS),
-        BibInfo(# Bibliographical Information
-            name="Visit",
-            longName="",
-            version="1",
-            entryAuthor="Kostiantyn Viatkin",
-            entryAuthorOrcid="",
-            entryCreationDate="",
-            doi="",
-            sym_dict=sym_dict,
-            func_dict=func_dict
-        ),
+        s1.mvs.get_TimeSymbol(),
+        s1.mvs.get_Temperature(),
+        s1.mvs.get_StateVariableTuple(),
+        s1.mvs.get_CarbonStateVariableTuple(),
+        s1.mvs.get_VegetationCarbonStateVariableTuple(),
+        s1.mvs.get_SoilCarbonStateVariableTuple(),
+        subs_xi(s1.mvs.get_InFluxesBySymbol()),
+        subs_xi(s1.mvs.get_OutFluxesBySymbol()),
+        subs_xi(s1.mvs.get_InternalFluxesBySymbol()),
+        #NumericParameterization(
+        #    par_dict=)
+        s1.mvs.get_BibInfo(),
     },
-
-
-    computers=module_computers(bgc_c)
+    computers=s1.mvs.computers
 )
+# we provide some example parameterization
 
-#mvs.get_CompartmentalMatrix()
+t0 = 0  #3/2*np.pi
+n_steps = 12  # 2881
+t_max = 144 
+times = np.linspace(t0, t_max, n_steps)
+delta_t_val = (t_max - t0)/n_steps
+dirPath = Path(__file__).parent
+from . import model_specific_helpers_2 as msh
 
-# +
-#diff(xi,t)
+pp=Path(__file__).parent.joinpath("get_parameterization_from_data_1")
+cp=msh.CachedParameterization.from_path(pp)
+par_dict=cp.parameter_dict
+func_dict=cp.func_dict
+# For this example we assume that the system was in steady state 
+# at t_0 with X_fix given by X_fix = M^{-1} 
+# since we know that the system is linear we can easily compute the steady state
+# (in general (nonlinear fluxes) it is not clear that a steady state even exists
+# let alone how to compute it
+srm = mvs.get_SmoothReservoirModel()
 
-# +
-#def make_func_dict(dvs)
-#    def tas_num(day):
-#        month=gh.day_2_month_index(day)
-#        return dvs.tas[month]
-#        
-#    def mrso_num(day):
-#        month=gh.day_2_month_index(day)
-#        return dvs.mrso[month]
-#        
-#    f_d={
-#        "TAS": tas_num,
-#        "mrso": mrso_num
-#    }
-#    return f_d
+start_mean_age_vec, X_fix = sd.start_mean_age_vector_from_steady_state_linear(
+    srm,
+    t0=t0,
+    parameter_dict=par_dict,
+    func_set=func_dict
+)
+mvs = mvs.update({
+    NumericParameterization(
+        par_dict=par_dict,
+        func_dict=func_dict
+    ),
+    NumericStartValueArray(X_fix.reshape(-1)),
+    NumericSimulationTimes(times),
+    NumericStartMeanAgeVector(start_mean_age_vec)
+})
