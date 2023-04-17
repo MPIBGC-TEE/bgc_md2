@@ -2,16 +2,24 @@ import sys
 import json 
 from pathlib import Path
 from collections import namedtuple 
+from importlib import import_module
 import netCDF4 as nc
 import numpy as np
 from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
-from CompartmentalSystems.TimeStepIterator import (
-        TimeStepIterator2,
-)
+from CompartmentalSystems.ArrayDictResult import ArrayDictResult
+#from CompartmentalSystems.TimeStepIterator import (
+#        TimeStepIterator2,
+#)
 from copy import copy
 from typing import Callable
-from functools import reduce
+from functools import partial, reduce
+
+model_mod='bgc_md2.models.jon_yib'
+cp_mod=import_module(f"{model_mod}.CachedParameterization")
+make_func_dict=import_module(f"{model_mod}.CachedParameterization").make_func_dict
+Drivers=cp_mod.Drivers
+CachedParameterization=cp_mod.CachedParameterization
 
 sys.path.insert(0,'..') # necessary to import general_helpers
 import general_helpers as gh
@@ -156,10 +164,6 @@ Observables = namedtuple(
     "Observables",
     Observables_annual._fields+Observables_monthly._fields
 )
-Drivers=namedtuple(
-    "Drivers",
-    ["npp","tas","gpp"]
-)
 
 Constants = namedtuple(
     "Constants",
@@ -172,6 +176,7 @@ Constants = namedtuple(
         'clay',        #Constants like clay
         'silt',
         'nyears',       #Run time (years for my model)        
+        'number_of_months',       #Run time (months for my model)        
     ]
 )
 EstimatedParameters = namedtuple(
@@ -298,181 +303,158 @@ def nc_clip_file_name(nc_var_name):
     return experiment_name+"{}_clipped.nc".format(nc_var_name)
 
 
-def get_global_mean_vars(dataPath):
-    # Define function to select geospatial cell and scale data
-    #def f(tup):
-    #    vn, fn = tup
-    #    path = dataPath.joinpath(fn)
-    #    # Read NetCDF data but only at the point where we want them
-    #    ds = nc.Dataset(str(path))
-    #    lats = ds.variables["latitude"].__array__()
-    #    lons = ds.variables["longitude"].__array__()
-    #    
-    #    #check for npp/gpp/rh/ra to convert from kg/m2/s to kg/m2/day
-    #    if vn in ["npp","gpp","rh","ra"]:
-    #        return (gh.global_mean(lats, lons, ds.variables[vn].__array__())*24*60*60)
-    #    else:
-    #        return (gh.global_mean(lats, lons, ds.variables[vn].__array__()))
-    #
-    ## Link symbols and data:
-    #
-    ## Create annual file names (single step if files similarly named)
-    #o_names=[(f,"YIBs_S2_Annual_{}.nc".format(f)) for f in Observables_annual._fields]
-    #
-    ## Create monthly file names (can remove if done in one step above)
-    #monthly_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Observables_monthly._fields]
-    ## Extend name list with monthly names
-    #o_names.extend(monthly_names)
-    #
-    ## create file names for Drivers
-    #d_names=[(f,"YIBs_S2_Monthly_{}.nc".format(f)) for f in Drivers._fields]
-    #
-    ## Link symbols and data for observables/drivers
-    ## print(o_tuples)
-    #return (
-    #    Observables(*map(f, o_names)),
-    #    Drivers(*map(f, d_names))
-    #)
-    o_names=Observables._fields
-    d_names=Drivers._fields
-    names = o_names + d_names 
-
-    if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
-        print(""" Found cached global mean files. If you want to recompute the global means
-            remove the following files: """
-        )
-        for vn in names:
-            print( dataPath.joinpath(nc_global_mean_file_name(vn)))
-
-        def get_cached_global_mean(vn):
-            return gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
-    
-        return (
-            Observables(*map(get_cached_global_mean, o_names)),
-            Drivers(*map(get_cached_global_mean,d_names))
-        )
-
-    else:
-        print("computing means, this may also take some minutes...")
-
-        gm=gh.globalMask()
-        # load an example file with mask
-        template = nc.Dataset(
-                        dataPath.joinpath("YIBs_S2_Monthly_tas.nc")
-                    ).variables['tas'][0,:,:].mask
-        gcm=gh.project_2(
-                source=gm,
-                target=gh.CoordMask(
-                    index_mask=np.zeros_like(template),
-                    tr=gh.SymTransformers(
-                        ctr=make_model_coord_transforms(),
-                        itr=make_model_index_transforms()
+def compute_global_mean_arr_var_dict(dataPath):
+    ds = nc.Dataset(dataPath.joinpath("YIBs_S2_Monthly_tas.nc"))
+    vs=ds.variables
+    lats= vs["latitude"].__array__()
+    lons= vs["longitude"].__array__()
+    template =vs['tas'][0,:,:].mask
+    def var(vn):
+        return nc.Dataset(
+                str(
+                    dataPath.joinpath(
+                        nc_file_name(vn)
                     )
-                )
-        )
-        def compute_and_cache_global_mean(vn):
-            path = dataPath.joinpath(nc_file_name(vn))
-            ds = nc.Dataset(str(path))
-            vs=ds.variables
-            lats= vs["latitude"].__array__()
-            lons= vs["longitude"].__array__()
-            print(vn)
-            var=ds.variables[vn]
-            # check if we have a cached version (which is much faster)
-            gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
+                 )
+             ).variables[vn]
 
-            gm=gh.global_mean_var(
-                    lats,
-                    lons,
-                    gcm.index_mask,
-                    var
-            )
-            
-            #scale per second to per day before caching
-            if vn in ["npp","gpp","rh","ra"]:
-                gm = gm * 86400
-                
-            gh.write_global_mean_cache(
-                    gm_path,
-                    gm,
-                    vn
-            )
-            return gm
     
-        #map variables to data
-        return (
-            Observables(*map(compute_and_cache_global_mean, o_names)),
-            Drivers(*map(compute_and_cache_global_mean, d_names))
+    def gm_func (var,time_slice=slice(None,None,None)):
+        return gh.global_mean_var_with_resampled_mask(
+            template=template,
+            ctr=make_model_coord_transforms(), 
+            itr=make_model_index_transforms(),
+            lats=lats,
+            lons=lons,
+            var=var,
+            time_slice=time_slice
         )
 
+    
+    scaled=["npp","gpp","rh","ra"]
+    arr_dict = {
+        **{vn: gm_func(var(vn) )
+            for vn in set(Observables._fields + Drivers._fields).difference(scaled)
+        }, 
+        **{vn: gm_func(var(vn))*86400 # kg/m2/s kg/m2/day;
+            for vn in scaled 
+        } 
+    }
+    #from IPython import embed;embed()
+    return arr_dict
 
-def make_iterator_sym(
+def get_global_mean_vars(dataPath, targetPath=None):
+    if targetPath is None:
+        targetPath = dataPath
+
+    arr_dict= gh.cached_var_dict(
+        dataPath,
+        targetPath,
+        nc_global_mean_file_name,
+        compute_global_mean_arr_var_dict,
+        names=Observables._fields + Drivers._fields,
+        #flash_cash=True
+    )
+    obs = Observables(*(arr_dict[k] for k in Observables._fields))
+    dvs = Drivers(*(arr_dict[k] for k in Drivers._fields))
+    
+    return (obs,dvs)
+
+def get_global_mean_vars_2(conf_dict,targetPath=None):
+    o_names = Observables._fields
+    d_names = Drivers._fields
+    names = o_names + d_names
+    dataPath = Path(conf_dict["dataPath"])
+    if not(all([dataPath.joinpath(nc_file_name(vn)).exists() for vn in names])):
+        download_my_TRENDY_output(conf_dict)
+    return get_global_mean_vars(dataPath,targetPath)    
+
+def make_da_iterator(
         mvs,
-        V_init, 
+        X_0, #: StartVector,
         par_dict,
         func_dict,
         delta_t_val=1 # defaults to 1day timestep
     ):
-    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
-
-    sv=mvs.get_StateVariableTuple()
-    n=len(sv)
-    # build an array in the correct order of the StateVariables which in our case is already correct 
-    # since V_init was built automatically but in case somebody handcrafted it and changed
-    # the order later in the symbolic formulation....
-    V_arr=np.array(
-        [V_init.__getattribute__(str(v)) for v in sv]+
-        [V_init.rh] #, V_init.ra]
-    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
-
-    numOutFluxesBySymbol={
-        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
-        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
-    } 
-    def f(it,V):
-        X = V[0:n]
-        b = u_func(it,X)
-        B = B_func(it,X)
-        X_new = X + b + B @ X
-        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
-        
-        rh_flux=[
-            numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
-            for k in ["c_lit_cwd","c_lit_met","c_lit_str","c_lit_mic","c_soil_met","c_soil_str","c_soil_mic","c_soil_slow","c_soil_passive"] 
-            if Symbol(k) in numOutFluxesBySymbol.keys()
-        ]
-        
-        #ra_flux=[
-        #    numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
-        #    for k in ["c_leaf","c_root","c_wood"] 
-        #    if Symbol(k) in numOutFluxesBySymbol.keys()
-        #]
-        
-        rh = np.array(rh_flux).sum()
-        #ra = np.array(ra_flux).sum()
-        
-        V_new = np.concatenate(
-            (
-                X_new.reshape(n,1),
-                np.array([rh]).reshape(1,1) #,
-                #np.array([ra]).reshape(1,1)
-            )
-            , axis=0
-        )
-        return V_new
-
-    return TimeStepIterator2(
-        initial_values=V_arr,
-        f=f,
+    # this function has to be modelspecific but because some models 
+    # don't fall in the general case that we can use here
+    return gh.rh_iterator(
+            mvs,
+            X_0,
+            par_dict,
+            func_dict,
+            delta_t_val
     )
+    return mit
 
-def make_StartVector(mvs):
-    return namedtuple(
-        "StartVector",
-        [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["rh"] #,"ra"]
-    ) 
 
+#def make_iterator_sym(
+#        mvs,
+#        V_init, 
+#        par_dict,
+#        func_dict,
+#        delta_t_val=1 # defaults to 1day timestep
+#    ):
+#    B_func, u_func = gh.make_B_u_funcs_2(mvs,par_dict,func_dict,delta_t_val)  
+#
+#    sv=mvs.get_StateVariableTuple()
+#    n=len(sv)
+#    # build an array in the correct order of the StateVariables which in our case is already correct 
+#    # since V_init was built automatically but in case somebody handcrafted it and changed
+#    # the order later in the symbolic formulation....
+#    V_arr=np.array(
+#        [V_init.__getattribute__(str(v)) for v in sv]+
+#        [V_init.rh] #, V_init.ra]
+#    ).reshape(n+1,1) #reshaping is neccessary for matmul (the @ in B @ X)
+#
+#    numOutFluxesBySymbol={
+#        k: gh.numfunc(expr_cont, mvs, delta_t_val=delta_t_val, par_dict=par_dict, func_dict=func_dict) 
+#        for k,expr_cont in mvs.get_OutFluxesBySymbol().items()
+#    } 
+#    def f(it,V):
+#        X = V[0:n]
+#        b = u_func(it,X)
+#        B = B_func(it,X)
+#        X_new = X + b + B @ X
+#        # we also compute the autotrophic and heterotrophic respiration in every (daily) timestep
+#        
+#        rh_flux=[
+#            numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+#            for k in ["c_lit_cwd","c_lit_met","c_lit_str","c_lit_mic","c_soil_met","c_soil_str","c_soil_mic","c_soil_slow","c_soil_passive"] 
+#            if Symbol(k) in numOutFluxesBySymbol.keys()
+#        ]
+#        
+#        #ra_flux=[
+#        #    numOutFluxesBySymbol[Symbol(k)](it,*X.reshape(n,))
+#        #    for k in ["c_leaf","c_root","c_wood"] 
+#        #    if Symbol(k) in numOutFluxesBySymbol.keys()
+#        #]
+#        
+#        rh = np.array(rh_flux).sum()
+#        #ra = np.array(ra_flux).sum()
+#        
+#        V_new = np.concatenate(
+#            (
+#                X_new.reshape(n,1),
+#                np.array([rh]).reshape(1,1) #,
+#                #np.array([ra]).reshape(1,1)
+#            )
+#            , axis=0
+#        )
+#        return V_new
+#
+#    return TimeStepIterator2(
+#        initial_values=V_arr,
+#        f=f,
+#    )
+#
+#def make_StartVector(mvs):
+#    return namedtuple(
+#        "StartVector",
+#        [str(v) for v in mvs.get_StateVariableTuple()]+
+#        ["rh"] #,"ra"]
+#    ) 
+#
 # deprecated
 #def make_func_dict_old(mvs,dvs,cpa,epa):
 #    
@@ -529,38 +511,6 @@ def make_StartVector(mvs):
 #    }
 
 
-def make_func_dict(dvs, **kwargs):
-
-    def xi_leaf(tas):
-        t_ref = 273.15 + 24
-        t_half = 273.15 + 33
-        t_exp = 1.8
-        tf_frac = 0.2
-        s_t = t_exp ** ((tas - t_ref)/10)
-        s_f = (1 + np.exp(tf_frac * (tas-t_half)))
-        return s_t / s_f 
-
-    def xi_soil(tas):
-        t_ref = 273.15 + 28
-        t_half = 273.15 + 0
-        t_exp = 1.9
-        s_t = t_exp ** ((tas - t_ref)/10)
-        s_f = 1 / (1 + np.exp(t_half - tas))
-        return s_t * s_f 
-
-    gpp_func, npp_func, tas_func = map(
-        gh.make_interpol_of_t_in_days,
-        (dvs.gpp, dvs.npp, dvs.tas)
-    )
-
-    return {
-        "temp": tas_func,
-        "GPP": gpp_func,
-        "NPP": npp_func,
-        "xi_leaf": lambda t: xi_leaf(tas_func(t)),
-        "xi_soil": lambda t: xi_soil(tas_func(t))
-    }    
-
 def make_param2res_sym(
         mvs,
         cpa: Constants,
@@ -582,111 +532,38 @@ def make_param2res_sym(
         
         # Parameter vector
         epa=EstimatedParameters(*pa)
+        X_0 = numeric_X_0(mvs, dvs, cpa, epa)
+        dpm=30
+        delta_t_val=dpm/2 
         
-        # Build input and environmental scaler functions
+        par_dict = gh.make_param_dict(mvs, cpa, epa)
         func_dict = make_func_dict(dvs)
         
-        # Parameter dictionary for the iterator
-        apa = {**cpa._asdict(),**epa._asdict()}
-        model_par_dict = {
-            Symbol(k):v for k,v in apa.items()
-            if Symbol(k) in model_par_dict_keys
-        }
-        
-        # Create a startvector for the iterator 
-        V_init = StartVector(
-            c_leaf = apa['c_leaf_0'],
-            c_root = apa['c_root_0'],
-            c_wood = apa['c_veg_0'] - (
-                apa['c_leaf_0'] + 
-                apa['c_root_0']
-            ),
-            c_lit_cwd = apa['c_lit_cwd_0'],
-            c_lit_met = apa['c_lit_met_0'],
-            c_lit_str = apa['c_lit_str_0'],
-            c_lit_mic = apa['c_lit_mic_0'],
-            c_soil_met = apa['c_soil_met_0'],
-            c_soil_str = apa['c_soil_str_0'],
-            c_soil_mic = apa['c_soil_mic_0'],
-            c_soil_slow = apa['c_soil_slow_0'],
-            c_soil_passive = apa['c_soil_0'] - (
-                apa['c_lit_cwd_0'] +
-                apa['c_lit_met_0'] +
-                apa['c_lit_str_0'] +
-                apa['c_lit_mic_0'] +
-                apa['c_soil_met_0'] +
-                apa['c_soil_str_0'] +
-                apa['c_soil_mic_0'] +
-                apa['c_soil_slow_0']
-            ),
-            rh = apa['rh_0'] #,
-            #ra = apa['ra_0']
-        )
-        
-        # define time step and iterator
-        delta_t_val=30 
-        it_sym = make_iterator_sym(
-            mvs,
-            V_init=V_init,
-            par_dict=model_par_dict,
-            func_dict=func_dict,
-            delta_t_val=delta_t_val
-        )
-    
-        # Build functions to sum pools
-        def cVegF(V):
-            return float(V.c_leaf+V.c_wood+V.c_root)
-        
-        def cSoilF(V): 
-            return float(
-                V.c_lit_cwd+
-                V.c_lit_met+
-                V.c_lit_str+
-                V.c_lit_mic+ 
-                V.c_soil_met+
-                V.c_soil_str+
-                V.c_soil_mic+
-                V.c_soil_slow+
-                V.c_soil_passive
+        bitr = ArrayDictResult(
+            make_da_iterator(
+                mvs,
+                X_0,
+                par_dict=par_dict,
+                func_dict=func_dict,
+                delta_t_val=delta_t_val
             )
-        
-        #empty arrays for saving data
-        cVeg_arr=np.zeros(cpa.nyears)
-        cSoil_arr=np.zeros(cpa.nyears)
-        rh_arr=np.zeros(cpa.nyears*12)
-        #ra_arr=np.zeros(cpa.nyears*12)
-        
-        #set days per month, month counter, and step counts
-        dpm = 30                      
-        im = 0
-        steps_per_month=int(dpm/delta_t_val)
-        steps_per_year=int(dpm/delta_t_val)*12
-        
-        # forward simulation by year
-        for y in range(cpa.nyears):
-            cVeg_avg= 0    
-            cSoil_avg = 0
-            for m in range(12):
-                rh_avg=0
-                #ra_avg=0
-                for d in range(steps_per_month):    
-                    V = StartVector(*it_sym.__next__())                  
-                    rh_avg += V.rh
-                    #ra_avg += V.ra
-                    cVeg_avg += cVegF(V)
-                    cSoil_avg += cSoilF(V)
-                rh_arr[im] = rh_avg/steps_per_month
-                #ra_arr[im] = ra_avg/steps_per_month
-                im += 1
-            cVeg_arr[y] = cVeg_avg/steps_per_year
-            cSoil_arr[y] = cSoil_avg/steps_per_year
-            #if y == 100:
-            #    print(V)
+        )
+        number_of_steps = int(cpa.number_of_months/delta_t_val)
+        steps_per_month = int(dpm / delta_t_val)
+        result_dict = bitr[0: number_of_steps: steps_per_month]
+        steps_per_year = steps_per_month*12
+        yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
+        yearly_averages = {
+            key: gh.averaged_1d_array(result_dict[key],yearly_partitions)
+            for key in ["cVeg", "cSoil"]
+        }
+
         return Observables(
-            cVeg = cVeg_arr,
-            cSoil = cSoil_arr,
-            rh = rh_arr) #,
-            #ra = ra_arr)
+            cVeg=yearly_averages["cVeg"],
+            cSoil=yearly_averages["cSoil"],
+            rh=result_dict["rh"]#/(60*60*24)
+        )
+
     return param2res
 
 def make_weighted_cost_func(
@@ -695,32 +572,60 @@ def make_weighted_cost_func(
     
     # Define cost function 
     def costfunction(out_simu: Observables) -> np.float64:
-   
-        #calculate costs for each data stream
-        J_obj1 = (100/obs.cVeg.shape[0]) * np.sum((out_simu.cVeg - obs.cVeg)**2, axis=0) / (obs.cVeg.mean(axis=0)**2)
-        J_obj2 = (100/obs.cSoil.shape[0]) * np.sum((out_simu.cSoil -  obs.cSoil)**2, axis=0) / (obs.cSoil.mean(axis=0)**2)
-        J_obj3 = (100/obs.rh.shape[0]) * np.sum((out_simu.rh - obs.rh)**2, axis=0) / (obs.rh.mean(axis=0)**2)
-        #J_obj4 = (100/obs.ra.shape[0]) * np.sum((out_simu.ra - obs.ra)**2, axis=0) / (obs.ra.mean(axis=0)**2)
+        stream_cost = partial(gh.single_stream_cost,obs,out_simu)
         
-        # sum costs
-        J_new = 100 * (J_obj1 + J_obj2 + J_obj3) # + J_obj4)
+        J_new = (
+            stream_cost("cVeg")
+            + stream_cost("cSoil")
+            + stream_cost("rh")
+        ) # + J_obj4)
+
         return J_new
+   
     return costfunction
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
-        c_min: EstimatedParameters 
-        ) -> Callable[[np.ndarray], bool]:
-
-    # find position of beta_leaf and beta_wood
-    beta_leaf_ind=EstimatedParameters._fields.index("beta_leaf")
-    beta_root_ind=EstimatedParameters._fields.index("beta_root")
+        c_min: EstimatedParameters, 
+        cpa: Constants
+    ) -> Callable[[np.ndarray], bool]:
 
     def isQualified(c):
-        cond1 =  (c >= c_min).all() 
-        cond2 =  (c <= c_max).all() 
-        cond3 =  c[beta_leaf_ind]+c[beta_root_ind] <= 0.99  
-        return (cond1 and cond2) # and cond3)
+        epa=EstimatedParameters(*c)
+        apa = {**cpa._asdict(), **epa._asdict()}
+        def value(field_name):
+            try:
+                return apa[field_name]
+            except Exception as e:
+                print("###########################")
+                print(e)
+                print(field_name)
+                raise e
+        conds=[
+            (c >= c_min).all(), 
+            (c <= c_max).all(), 
+            sum(map(value, ["beta_leaf", "beta_root"])) <= 0.99,
+            sum(map(value, ["c_leaf_0", "c_root_0"])) <= value("c_veg_0"),
+            sum(
+                map(
+                    value,
+                    [   
+                        'c_lit_cwd_0',
+                        'c_lit_met_0',
+                        'c_lit_str_0',
+                        'c_lit_mic_0',
+                        'c_soil_met_0',
+                        'c_soil_str_0',
+                        'c_soil_mic_0',
+                        'c_soil_slow_0',
+                    ]
+                )
+            ) <= value('c_soil_0')
+        ]
+        res = all(conds)
+        if not res:
+            print(conds)
+        return res
         
     return isQualified
 
@@ -813,6 +718,12 @@ data_str = namedtuple( # data streams available in the model
     ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
     )
     
+
+# fixme mm 7-4 2023:
+# model_folder="..." is self referential and would
+# break if we rename the model folder. This is a design flaw (anty pattern)
+# If there is any model specific information it should be computed
+# by model specific functions here and included transmitted in the function call
 def get_global_mean_vars_all(experiment_name):
         return(
             gh.get_global_mean_vars_all(model_folder="jon_yib", 
@@ -821,6 +732,7 @@ def get_global_mean_vars_all(experiment_name):
                             lon_var="longitude",
                             ) 
         )       
+
 ################ function for computing global mean for custom data streams ###################
     
 # def get_global_mean_vars_all(experiment_name="YIBs_S2_"):

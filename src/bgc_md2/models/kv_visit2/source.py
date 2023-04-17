@@ -12,10 +12,10 @@ from bgc_md2.resolve.mvars import (
     NumericStartMeanAgeVector,
     NumericParameterizedSmoothReservoirModel
 )
+#from bgc_md2 import general_helpers as gh
 from . import source_1 as s1
-from . import model_specific_helpers_2 as msh
+from .CachedParameterization import CachedParameterization
 from .subs_1 import subs_dict
-from bgc_md2 import general_helpers as gh
 
 def subs_xi(var):
     return var.subs(subs_dict)
@@ -45,10 +45,9 @@ t_max = 144
 times = np.linspace(t0, t_max, n_steps)
 delta_t_val = (t_max - t0)/n_steps
 dirPath = Path(__file__).parent
-from . import model_specific_helpers_2 as msh
 
-pp=Path(__file__).parent.joinpath("get_parameterization_from_data_1")
-cp=msh.CachedParameterization.from_path(pp)
+pp=Path(__file__).parent.joinpath("parameterization_from_test_args")
+cp=CachedParameterization.from_path(pp)
 par_dict=cp.parameter_dict
 func_dict=cp.func_dict
 # For this example we assume that the system was in steady state 

@@ -293,7 +293,24 @@ def get_global_mean_vars(dataPath):
         )
 
 
-# -
+def make_da_iterator(
+        mvs,
+        X_0, #: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    # this function has to be modelspecific but because some models 
+    # don't fall in the general case that we can use here
+    return gh.rh_iterator(
+            mvs,
+            X_0,
+            par_dict,
+            func_dict,
+            delta_t_val
+    )
+    return mit
+
 
 def make_iterator_sym(
         mvs,

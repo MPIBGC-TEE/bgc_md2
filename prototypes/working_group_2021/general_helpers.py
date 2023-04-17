@@ -8,18 +8,24 @@ from copy import copy, deepcopy
 from itertools import islice
 from time import time
 from sympy.core.expr import Expr
-from scipy.interpolate import interp1d
 from collections import namedtuple
 from frozendict import frozendict
 from importlib import import_module
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 import inspect
 import datetime as dt
 from pathlib import Path
 import json
 import netCDF4 as nc
+import pyresample  # new package: to update bgc_md2 run install_developer_conda script
+from pyresample.bilinear import NumpyBilinearResampler
+import paramiko
+import tarfile
+import gzip
+import shutil
 
 from sympy import (
     Symbol,
@@ -68,6 +74,7 @@ from bgc_md2.resolve.mvars import (
 
 # from bgc_md2.helper import bgc_md2_computers
 import bgc_md2.display_helpers as dh
+import bgc_md2.helper as h
 from typing import TypeVar, Callable, Union, NewType
 
 T = TypeVar("T")
@@ -258,6 +265,11 @@ def test_args(mf):
     print("Loading data and parameters for " + mf + " model...")
     return th(mf).make_test_args(conf_dict=confDict(mf), msh=msh(mf), mvs=mvs(mf))
 
+def test_args_2(mf):
+    print("Loading data and parameters for " + mf + " model...")
+    msh = import_module("{}.model_specific_helpers_2".format(mf))
+    mvs = import_module(f"{msh.model_mod}.source").mvs
+    return th(mf).make_test_args(conf_dict=confDict(mf), msh=msh, mvs=mvs)
 
 # should be part  of CompartmentalSystems
 def make_B_u_funcs(mvs, mpa, func_dict):
@@ -278,7 +290,6 @@ def make_B_u_funcs_2(mvs, model_params, func_dict, delta_t_val=1):
     sym_B = hr.discrete_time_sym(  # hr.euler_forward_B_sym(
         mvs.get_CompartmentalMatrix(), cont_time=t, delta_t=delta_t, iteration=it
     )
-    # from IPython import embed;embed()
     sym_u = hr.discrete_time_sym(mvs.get_InputTuple(), t, delta_t, it)
 
     B_func = hr.numerical_array_func(
@@ -402,6 +413,9 @@ def make_uniform_proposer_2(
     return GenerateParamValues
 
 
+# deprecated 
+# condition for betas to sum up to 1 is incompatible with all of them
+# bein normally distributed
 def make_multivariate_normal_proposer(
     covv: np.ndarray,
     filter_func: Callable[[Iterable], bool],
@@ -630,7 +644,6 @@ def autostep_mcmc_2(
     paramNum = len(initial_parameters)
 
         # print(model_par_dict)
-        # from IPython import embed;embed()
 
         # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
         # our fake xi_func could of course be defined outside of param2res but in general it
@@ -652,8 +665,12 @@ def autostep_mcmc_2(
         # }
     upgraded = 0
     C_op = initial_parameters
+    # check if the initial parameters are valid
+    assert(filter_func(C_op))
+
     tb = time()
     first_out = param2res(C_op)
+    #from IPython import embed; embed()
     J_last = costfunction(first_out)
     J_min = J_last
     J_min_simu = 0
@@ -803,7 +820,6 @@ def adaptive_mcmc(
 
     # for simu in tqdm(range(nsimu)):
     st = time()
-    #  from IPython import embed;embed()
     for simu in range(nsimu):
         # if (upgraded%10 == 0) & (upgraded > nsimu/20):
         if simu > nsimu / 10:
@@ -1133,7 +1149,6 @@ def plot_solutions(fig, times, var_names, tup, names=None):
     if names is None:
         names = tuple(str(i) for i in range(len(tup)))
 
-    # from IPython import embed; embed()
     assert all([tup[0].shape == el.shape for el in tup])
 
     if tup[0].ndim == 1:
@@ -1266,7 +1281,6 @@ def get_nan_pixels(var: nc._netCDF4.Variable):
         n_lat = min(cs, N_lat - I_lat)
         n_lon = min(cs, N_lon - I_lon)
         chunk = var[:, I_lat : I_lat + n_lat, I_lon : I_lon + n_lon]
-        # from IPython import embed;embed()
         return tuple(
             (
                 (I_lat + i_lat, I_lon + i_lon)
@@ -1312,7 +1326,12 @@ def get_weight_mat(lats: np.ma.core.MaskedArray, lons: np.ma.core.MaskedArray):
         ]
     )
 
-
+# note mm 4-13 2023:
+# Only use the function if you can not
+# use global_mean_var because it requires np.array arguments
+# that have to be in memory while the global_mean_var allows
+# netcdf variables and thus can work on objects bigger than
+# memory.
 def global_mean(
     lats: np.ma.core.MaskedArray,
     lons: np.ma.core.MaskedArray,
@@ -1326,7 +1345,9 @@ def global_mean(
     arr=var[:,:,;] # type(arr)=np.ma.core.MaskedArray
     # or if we don't know the shape
     arr=var.__array__()
-    The important thing is not to call this functions with the variables but the arrays.
+    The important thing is not to call this functions with the netcdfc.Variables but the arrays sliced from them.
+    If the mean of a whole variable is requiered it is
+    better to use the sister function global_mean_vars which works also for variables that don't fit into memory.
     """
 
     # copy the mask from the array (first time step)
@@ -1338,12 +1359,35 @@ def global_mean(
     # do not correspond to an unmasked grid cell
     return ((weight_mat * arr).sum(axis=(1, 2)) / wms).data
 
+def global_mean_var_with_resampled_mask(
+    template: np.ndarray,
+    ctr: CoordTransformers,
+    itr: Transformers,
+    lats: np.ma.core.MaskedArray,
+    lons: np.ma.core.MaskedArray,
+    var: nc._netCDF4.Variable,
+    time_slice: slice = slice(None,None,None)# equals [:]
+):
+    gcm = global_coord_mask_resampled(
+        template=template,
+        ctr=ctr, 
+        itr=itr,
+    )
+    mask = gcm.index_mask.__array__()
+    return global_mean_var(
+        lats,
+        lons,
+        mask,
+        var,
+        time_slice
+    ) 
 
 def global_mean_var(
     lats: np.ma.core.MaskedArray,
     lons: np.ma.core.MaskedArray,
     mask: np.array,
     var: nc._netCDF4.Variable,
+    time_slice: slice =slice(None,None,None)# equals [:]
 ) -> np.array:
     """As the signature shows this function expects a netCDF4.Variable
     This is basically metadata which allows us to compute the maean even
@@ -1355,18 +1399,27 @@ def global_mean_var(
     the mask array is used to block out extra pixels that are not
     masked in var
     """
-
     weight_mat = np.ma.array(get_weight_mat(lats, lons), mask=mask)
 
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
     wms = weight_mat.sum()
-
-    n_t = var.shape[0]
-    res = np.zeros(n_t)
-    for it in tqdm(range(n_t)):
+    n_t = var.shape[0] # we assume that time is the first dimension of every var
+    ra = range(
+        0 if time_slice.start is None else max(0, time_slice.start),
+        n_t if time_slice.stop is None else min(n_t, time_slice.stop),
+        1 if time_slice.step is None else time_slice.step
+    )
+    
+    # len(ra) takes care of the corner case:
+    # ra.max-ra.min not a multiple of ra.step
+    res = np.zeros(len(ra)) 
+    print(ra)
+    res_ind=0
+    for it in tqdm(ra):
         el = (weight_mat * var[it, :, :]).sum() / wms
-        res[it] = el
+        res[res_ind] = el
+        res_ind+=1
     return res
 
 
@@ -1446,10 +1499,6 @@ def download_TRENDY_output(
     variables: List[str],
     experiments=["S2"],  # We are using s2 data, can add more
 ):
-    import paramiko
-    import tarfile
-    import gzip
-    import shutil
 
     def unzip_shutil(source_filepath, dest_filepath, model):
         if model == "YIBs":
@@ -1559,22 +1608,8 @@ def download_TRENDY_output(
     print("finished!")
 
 
-# toextend the interpolating functions beyond the last month
-# we have to extend the data fields from which they are derived
-def extend_by_one(field):
-    return np.concatenate([field, field[-2:-1]])
 
 
-def make_interpol_of_t_in_days(field):  # field of values one per month
-    y = extend_by_one(field)
-    # print(y.shape)
-    # from IPython import embed; embed()
-    f_of_month = interp1d(x=np.arange(0.0, len(y)), y=y, kind="cubic")
-
-    def f_of_day(day):
-        return f_of_month(day / 30.0)
-
-    return f_of_day
 
 
 def monthly_to_yearly(monthly):
@@ -1808,7 +1843,6 @@ class TraceTupleIterator(InfiniteIterator):
         # move to the start
         for i in range(start):
             itr.__next__()
-        # from IPython import embed;embed()
 
         tts = [
             tt_avg([itr.__next__() for i in range(stop_p - start_p)])
@@ -1864,41 +1898,6 @@ def make_trace_tuple_func(traced_functions: Dict[str, Callable]):
     return f
 
 
-# def trace_tuple_instance(X, B, I):
-#     # These are values that are computable from the momentary values of X and B
-#     u = I.sum()
-#     b = I / u
-#     B_inv = np.linalg.inv(B)
-#     X_c = B_inv @ I
-#     X_p = X_c - X
-#     X_dot = I - B @ X
-#     RT = X_c / u  # =B_inv@b but cheeper to compute
-#     # we now compute the system X_c and X_p
-#     # This is in general not equal to the sum of the component, but rather a property
-#     # of a surrogate system.
-#     x = X.sum()
-#     x_dot = X_dot.sum()
-#     m_s = (B @ X).sum() / x
-#     x_c = 1 / m_s * u
-#     x_p = x_c - x
-#     rt = x_c / u
-#
-#
-#     return TraceTuple(
-#         X=X,
-#         X_p=X_p,
-#         X_c=X_c,
-#         X_dot=X_dot,
-#         RT=RT,
-#         x=x,
-#         x_p=x_p,
-#         x_c=x_c,
-#         x_dot=x_dot,
-#         rt=rt,
-#         u=u,
-#         AggregatedVegetation2SoilCarbonFlux=0
-#     )
-#
 def minimal_iterator(
     X_0,
     func_dict,
@@ -1906,10 +1905,10 @@ def minimal_iterator(
     dvs,  #: Drivers,
     cpa,  #: Constants,
     epa,  #: EstimatedParameters
+    t_0=0,
     delta_t_val: int = 1,  # defaults to 1day timestep
     # traced_expressions: Dict[str, Expr] = dict(),
     # extra_functions: Dict[str, Callable] = dict(),
-    t_0=0,
 ):
     #apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
@@ -1917,74 +1916,22 @@ def minimal_iterator(
         mvs,  
         X_0,
         par_dict,  
-        func_dict,
-        delta_t_val,
-        t_0=0
+        func_dict=func_dict,
+        t_0=0,
+        delta_t_val=delta_t_val,
     )
-    #t = mvs.get_TimeSymbol()
-    #state_vector = mvs.get_StateVariableTuple()
-    #delta_t = Symbol("delta_t")
-
-    #disc_par_dict = {**par_dict, delta_t: delta_t_val}
-    #B_func = hr.numerical_array_func(
-    #    state_vector=state_vector,
-    #    time_symbol=t,
-    #    expr=mvs.get_CompartmentalMatrix(),
-    #    parameter_dict=par_dict,
-    #    func_dict=func_dict,
-    #)
-    #I_func = hr.numerical_1d_vector_func(
-    #    state_vector=state_vector,
-    #    time_symbol=t,
-    #    expr=mvs.get_InputTuple(),
-    #    parameter_dict=par_dict,
-    #    func_dict=func_dict,
-    #)
-    ## make sure that the startvector X_0 is a ONE dimensional  vector
-    ## since it is important that  X_0 and the result of I(t,X) have
-    ## the same dimension
-    #X_0 = X_0.reshape(-1)
-    #assert I_func(0, X_0).ndim == 1
-
-    #bit = BlockDictIterator(
-    #    iteration_str="it",  # access the inner counter
-    #    start_seed_dict=ArrayDict({"X": X_0, "t": t_0}),
-    #    present_step_funcs=OrderedDict(
-    #        {
-    #            # these are functions that are  applied in order
-    #            # on the start_seed_dict
-    #            # they might compute variables that are purely
-    #            # diagnostic or those that are necessary for the
-    #            # next step
-    #            #
-    #            # The first 2 are essential for any compartmental system
-    #            "B": lambda t, X: -B_func(t, X),
-    #            "I": lambda t, X: I_func(t, X),
-    #            #
-    #            # **extra_functions
-    #        }
-    #    ),
-    #    next_step_funcs=OrderedDict(
-    #        {
-    #            # these functions have to compute the seed for the next timestep
-    #            "X": lambda X, B, I: X + (I - B @ X) * delta_t_val,
-    #            "t": lambda t: t + delta_t_val,
-    #        }
-    #    ),
-    #)
-    #return bit
 
 # fixme mm: 3-10-2023 
-# could have even more succint arguments like NumericParameterization
+# could have even more succint arguments like mvs
 def minimal_iterator_internal(
     mvs,  
     X_0,
     par_dict,  #: EstimatedParameters
     func_dict,
+    t_0=0,
     delta_t_val = 1,  # defaults to 1day timestep
     # traced_expressions: Dict[str, Expr] = dict(),
     # extra_functions: Dict[str, Callable] = dict(),
-    t_0=0
 ):    
     t = mvs.get_TimeSymbol()
     state_vector = mvs.get_StateVariableTuple()
@@ -2040,6 +1987,84 @@ def minimal_iterator_internal(
 
 # fixme mm 12-2 2022
 # should be better called tracebility Iterator result
+def traceability_iterator_result(
+        mvs,  #: CMTVS,
+        X_0,
+        par_dict,
+        func_dict,
+        t_0,
+        delta_t_val,
+):
+    mit = minimal_iterator_internal(
+        mvs,  #: CMTVS,
+        X_0,
+        par_dict,
+        func_dict,
+        delta_t_val=delta_t_val,
+        t_0=t_0,
+    )
+
+    (
+        veg_x_func,
+        soil_x_func,
+        out_2_veg_func,
+        veg_2_soil_func,
+        veg_2_out_func,
+        soil_2_out_func,
+    ) = map(
+        lambda expr: hr.numerical_func_of_t_and_Xvec(
+            state_vector=mvs.get_StateVariableTuple(),
+            time_symbol=mvs.get_TimeSymbol(),
+            expr=expr,
+            parameter_dict=par_dict,
+            func_dict=func_dict,
+        ),
+        [
+            mvs.get_AggregatedVegetationCarbon(),
+            mvs.get_AggregatedSoilCarbon(),
+            mvs.get_AggregatedVegetationCarbonInFlux(),
+            mvs.get_AggregatedVegetation2SoilCarbonFlux(),
+            mvs.get_AggregatedVegetationCarbonOutFlux(),
+            mvs.get_AggregatedSoilCarbonOutFlux(),
+        ],
+    )
+    present_step_funcs = OrderedDict(
+        {
+            "u": lambda I: I.sum(),
+            "b": lambda I, u: I / u,
+            "B_inv": lambda B: np.linalg.inv(B),
+            "X_c": lambda B_inv, I: B_inv @ I,
+            "X_p": lambda X_c, X: X_c - X,
+            "X_dot": lambda I, B, X: I - B @ X,
+            "system_RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
+            "system_RT_sum": lambda system_RT: system_RT.sum(),
+            "x": lambda X: X.sum(),
+            "x_dot": lambda X_dot: X_dot.sum(),
+            "system_m": lambda B, X, x: (B @ X).sum()
+            / x,  # rate of the surrogate system
+            "system_tot": lambda system_m: 1 / system_m,
+            "x_c": lambda system_m, u: 1 / system_m * u,  # x_c of the surrogate system
+            "x_p": lambda x_c, x: x_c - x,
+            "rt": lambda x_c, u: x_c / u,
+            "veg_x": lambda t, X: veg_x_func(t, X),
+            "soil_x": lambda t, X: soil_x_func(t, X),
+            "out_2_veg": lambda t, X: out_2_veg_func(t, X),
+            "veg_2_soil": lambda t, X: veg_2_soil_func(t, X),
+            "veg_2_out": lambda t, X: veg_2_out_func(t, X),
+            "soil_2_out": lambda t, X: soil_2_out_func(t, X),
+            "veg_m": lambda veg_2_out, veg_2_soil, veg_x: (veg_2_out + veg_2_soil)
+            / veg_x,  # veg rate
+            "veg_tot": lambda veg_m: 1 / veg_m,
+            "soil_m": lambda soil_2_out, soil_x: soil_2_out / soil_x,  # soil rate
+            "soil_tot": lambda soil_m: 1 / soil_m,
+            # **extra_functions
+        }
+    )
+    mit.add_present_step_funcs(present_step_funcs)
+    return ArrayDictResult(mit)
+
+# fixme mm 12-2 2022
+# should be better called tracebility Iterator result
 def traceability_iterator(
     X_0,
     func_dict,
@@ -2059,8 +2084,8 @@ def traceability_iterator(
         dvs,  #: Drivers,
         cpa,  #: Constants,
         epa,  #: EstimatedParameters
-        delta_t_val=delta_t_val,
         t_0=t_0,
+        delta_t_val=delta_t_val,
     )
 
     apa = {**cpa._asdict(), **epa._asdict()}
@@ -2261,7 +2286,6 @@ def all_timelines_starting_at_steady_state(
             func_set=sub_func_dict,
             max_order=1,
         )
-        # from IPython import embed; embed()
         return sub_mvs, sub_smr, sub_start_mean_age_vec
 
     veg_sv = mvs.get_VegetationCarbonStateVariableTuple()
@@ -2301,13 +2325,14 @@ def all_timelines_starting_at_steady_state(
     )
     return vals
 
-
-def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
-    # fixme deprecated
-    # just a safety wrapper until every reference to this function
-    # is replaced
-    write_timeline_to_nc_file(gm_path, gm, var_name)
-
+# deprecated
+#def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
+#    # fixme deprecated
+#    # just a safety wrapper until every reference to this function
+#    # is replaced
+#    write_timeline_to_nc_file(gm_path, gm, var_name)
+#
+## deprecated
 def write_timeline_to_nc_file(gm_path, gm: np.array, var_name: str):
     # var=ds.variables[var_name]
     if gm_path.exists():
@@ -2325,11 +2350,49 @@ def write_timeline_to_nc_file(gm_path, gm: np.array, var_name: str):
 
 # deprecated
 # just for savety
-def get_cached_global_mean(gm_path, vn):
-    return get_nc_array(gm_path, vn)
+#def get_cached_global_mean(gm_path, vn):
+#    return get_nc_array(gm_path, vn)
 
 def get_nc_array(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
+
+def read_var_dict(
+        targetPath: Path,
+        varnames: List[str],
+        varname2filename: Callable,
+    ):
+    def get_cached_global_mean(vn):
+        res = get_nc_array(
+            targetPath.joinpath(varname2filename(vn)),
+            vn
+        )
+        print(""" Found cached global mean files. If you want to recompute the global means
+            remove the following files: """
+        )
+        print(targetPath.joinpath(varname2filename(vn)))
+        return res
+
+    return {
+        vn: get_cached_global_mean(vn) 
+        for vn in varnames
+    }    
+
+    
+def write_var_dict(
+        arr_dict: Dict,
+        targetPath: Path,
+        varname2filename: Callable,
+    ):
+    for vn, val in arr_dict.items():
+        write_timeline_to_nc_file(
+            targetPath.joinpath(
+                varname2filename(vn)
+            ),
+            val,
+            vn 
+        )
+        
+        
 
 # fixme: possibly obsolete - see combined_masks_2 using nearest neighbor resampling
 def combine_masks(coord_masks: List["CoordMask"]):
@@ -2439,7 +2502,6 @@ def permutation(unordered_vec):
     data = np.ones(n)
     col = np.array([tup[0] for tup in ordered_tups])
     row = np.arange(n)
-    # from IPython import embed; embed()
     p = sparse.bsr_matrix((data, (row, col)), dtype=np.int64)
     ordered_vec = np.array([tup[1] for tup in ordered_tups])
     t = p @ row
@@ -2594,11 +2656,9 @@ def project_2(source: CoordMask, target: CoordMask):
 #        assert(np.allclose(float_grid_old, float_grid))
 #    except AssertionError:
 #        print(float_grid_old, float_grid)
-#        from IPython import embed; embed()
 #
     # print(float_grid.mean())
     projected_mask = float_grid > 0.5
-    # from IPython import embed; embed()
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
 
 
@@ -2610,8 +2670,6 @@ def resample_grid(
     radius_of_influence=500000,
     neighbours=10,
 ):
-    import pyresample  # new package: to update bgc_md2 run install_developer_conda script
-    from pyresample.bilinear import NumpyBilinearResampler
 
     lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)
     lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)
@@ -2661,6 +2719,28 @@ def resample_grid(
         )
 
     return CoordMask(index_mask=target_var, tr=target_coord_mask.tr)
+
+def global_coord_mask_resampled(
+        template: np.ndarray,
+        ctr,
+        itr
+    ):
+    # common wrapper to be used by all the models
+    # to guarantee the same projection procedure
+    gm= common_global_mask_expanded
+    gcm = resample_grid(
+        source_coord_mask=gm,
+        target_coord_mask=CoordMask(
+            index_mask=np.zeros_like(template),
+            tr=SymTransformers(
+                ctr=ctr,
+                itr=itr,
+            ),
+        ),
+        var=gm.index_mask,
+        method="nearest",
+    )
+    return gcm
 
 
 def resample_nc(
@@ -2810,7 +2890,6 @@ def transform_maker(lat_0, lon_0, step_lat, step_lon):
 
     def i2lat(i_lat):
         if i_lat > (n_lat - 1):
-            # from IPython import embed; embed()
             raise IndexError(
                 "i_lat > n_lat-1; with i_lat={}, n_lat={}".format(i_lat, n_lat)
             )
@@ -3079,6 +3158,8 @@ def product_attribution(v, z1, z2):
     return sum_attribution(y, x1, x2)
 
 
+# fixme mm 4-7-2023 
+# deprecated
 def write_data_streams_cache(gm_path, gm):
     # var=ds.variables[var_name]
     if gm_path.exists():
@@ -3110,13 +3191,33 @@ def write_data_streams_cache(gm_path, gm):
     var_gm5[:] = gm_ma5
     ds_gm.close()
 
-
+# fixme mm 4-7-2023: 
+# see deprecation warning
 def get_global_mean_vars_all(
     model_folder,  # string e.g. "ab_classic"
     experiment_name,  # string, e.g. "CLASSIC_S2_"
     lat_var,
     lon_var,
 ):
+    print("""Deprecation Warning:
+        This function does presently NOT separate concerns (model specific vs.
+        'general' as in general_helpers.py).  Much of its code does not belong
+        here. If a new model was added to the
+        collection some new special cases would likely have to be addressed
+        HERE instead of in the model_specific_helpers_2.py where they belong...
+        This makes the present implementation fragile.  (It can break for all
+        models if a single model changes).  Anything that assumes model
+        specific information does actually NOT belong in general helpers....
+        The most obvious give away is code like: if mf ="AneeshSDGVM"...in the functions
+        that call it from various model_specific_helpers_2.py modules.
+        Less obvious but equally problematic are model specific variable names that
+        are assumed here ...  This function should not be used anymore but
+        replaced a.s.a.p by a new function with different arguments which are
+        computed by the model specific functions ... 
+        """
+    )
+
+
     # def nc_file_name(nc_var_name, experiment_name):
     # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
 
@@ -3199,7 +3300,6 @@ def get_global_mean_vars_all(
             method="nearest",
         )
 
-        print("computing means, this may take some minutes...")
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(
@@ -3236,6 +3336,7 @@ def get_global_mean_vars_all(
 
         # map variables to data
         print(data_str._fields)
+        print("computing means, this may take some minutes...")
         output = data_str(*map(compute_and_cache_global_mean, data_str._fields))
         cVeg = (
             output.cVeg if output.cVeg.shape[0] < 500 else avg_timeline(output.cVeg, 12)
@@ -3270,6 +3371,7 @@ def get_global_mean_vars_all(
         # for models like SDGVM where pool data starts earlier than gpp data
         if cVeg.shape[0] > gpp.shape[0]:
             cVeg = cVeg[cVeg.shape[0] - gpp.shape[0] :]
+            # what if gpp is monthly and cVeg yearly?
         if "cLitter" in names and cLitter.shape[0] > gpp.shape[0]:
             cLitter = cLitter[cLitter.shape[0] - gpp.shape[0] :]
         if cSoil.shape[0] > gpp.shape[0]:
@@ -3313,55 +3415,289 @@ def nc_classes_2_masks(FilePath, var_name, classes, global_mask):
 data_streams = namedtuple("data_streams", ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"])
 
 
-def dump_named_tuple_to_json_path(nt, path: Path):
-    dump_dict_to_json_path(nt._asdict(), path)
 
+def write_parameterization_from_test_args(
+        test_args, 
+        func_dict_param_dict,
+        CachedParameterization: type, # a model specific class with a common interface
+        data_path
+    ):
+    mvs = test_args.mvs
+    svt = mvs.get_StateVariableTuple()
+    V_init=test_args.V_init
+    X_0_dict={k: V_init.__getattribute__(str(k)) for k in svt}
+    cp = CachedParameterization(
+        parameter_dict=test_args.par_dict,
+        drivers=test_args.dvs,
+        X_0_dict=X_0_dict,
+        func_dict_param_dict=func_dict_param_dict
+    )
+    cp.write(data_path)
 
-def dump_dict_to_json_path(d, path: Path,**kwargs):
-    dp=path.parent
-    #from IPython import embed; embed()
-    if not dp.exists():
-        dp.mkdir(parents=True)
+# temporary function to write the files
+def data_assimilation_parameters_from_test_args(
+        test_args, 
+        CachedParameterization: type, # a model specific class with a common interface
+        data_path
+    ):
+    data_path.mkdir(exist_ok=True, parents=True)
+    for s in ['cpa', 'epa_0', 'epa_min', 'epa_max', 'epa_opt']:
+        h.dump_dict_to_json_path(
+            (test_args.__getattribute__(s))._asdict(),
+            data_path.joinpath(f"{s}.json"),
+            indent=2
+        )
+      
+def cached_var_dict(
+        dataPath: Path,
+        targetPath: Path,
+        nc_global_mean_file_name: Callable,
+        compute_arr_var_dict: Callable,
+        names,
+        flash_cash=False
+    ):
 
-    with path.open("w") as f:
-        d_s = {str(k):v for k,v in d.items()}
-        json.dump(d_s, f,**kwargs)
+    if targetPath is None:
+        targetPath = dataPath 
 
+    if flash_cash:
+        for n in names: 
+            p=targetPath.joinpath(nc_global_mean_file_name(n))
+            try:
+                os.remove(p)
+                print(f"removing {p}")
 
-def named_tuple_from_dict(t: type, d: Dict):
-    return t._make(d[f] for f in t._fields)
+            except FileNotFoundError as e:
+                print("could not find {p} to remove")
 
-
-def load_dict_from_json_path(path: Path):
-    with path.open("r") as f:
-        d = json.load(f)
-    return d
-
-
-def load_named_tuple_from_json_path(t: type, path: Path):
-    return named_tuple_from_dict(
-        t, 
-        load_dict_from_json_path(path)
-    )    
-
-class Pint1d(interp1d):
-    @classmethod
-    def from_interp1d(cls,intp):
-        return cls(intp.x,intp.y)
-
-    @classmethod
-    def from_netcdf(cls,path):
-        ds = nc.Dataset(str(path))
-        x=ds.variables['x']
-        y=ds.variables['y']
-        return cls(x,y)
+    try:
+        return read_var_dict(
+            targetPath,
+            names,
+            nc_global_mean_file_name,
+        )    
+    except:   
+        arr_dict = compute_arr_var_dict(
+            dataPath,
+        )
+        write_var_dict(
+            arr_dict,
+            targetPath,
+            nc_global_mean_file_name
+        )
+        return arr_dict
     
-    def cache_netcdf(self,path):
-        ds = nc.Dataset(str(path), "w")  # ,diskless=True,persist=False)
-        length = ds.createDimension("length", size=len(self.x))
-        x = ds.createVariable("x", np.float64, ["length"])
-        x[:] = self.x
-        y = ds.createVariable("y", np.float64, ["length"])
-        y[:] = self.y
-        ds.close
 
+def get_parameterization_from_data(
+        msh,#: module, 
+        mvs: CMTVS,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu=10,
+
+    )->Tuple[Dict,Dict,np.array]:
+    """one of possibly many functions   to reproduce the optimal parameters and startvalues to to run the model forword
+    It replaces the model specific data assimilation 
+    procedures (different models used a different MCMC implementations and none worked for all combinations ) 
+    this one does.
+    """ 
+    
+    c_max=np.array(epa_max)
+    c_min=np.array(epa_min)
+    c_0=np.array(epa_0)
+    epa_0=msh.EstimatedParameters(*c_0)
+    C_autostep, J_autostep = autostep_mcmc_2(
+        initial_parameters=epa_0,
+        filter_func=msh.make_param_filter_func(epa_max,epa_min,cpa),
+        param2res=msh.make_param2res_sym(mvs,cpa,dvs),
+        costfunction=msh.make_weighted_cost_func(svs),
+        nsimu=nsimu,
+        #nsimu=200, # for testing and tuning mcmc
+        #nsimu=20000,
+        c_max=c_max,
+        c_min=c_min,
+        acceptance_rate=15,   # default value | target acceptance rate in %
+        #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=1,   # default value | increase value to reduce initial step size
+        K=2 # default value | increase value to reduce acceptance of higher cost functions
+    )
+    # optimized parameter set (lowest cost function)
+    par_opt=np.min(
+        C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(
+            len(msh.EstimatedParameters._fields),
+            1
+        ),
+        axis=1
+    )
+    epa_opt=msh.EstimatedParameters(*par_opt)
+    print("Data assimilation finished!")
+
+    param_dict=make_param_dict(mvs,cpa,epa_opt) 
+    cpc=msh.CachedParameterization
+    extra_args=cpc.func_dict_param_keys
+
+    X_0=msh.numeric_X_0(mvs,dvs,cpa,epa_opt)
+    X_0_dict={
+        str(sym): X_0[i,0] 
+        for i,sym in enumerate(
+            mvs.get_StateVariableTuple()
+        )
+    }
+    
+    cp=msh.CachedParameterization(param_dict,dvs,X_0_dict)
+    return (
+        cp,
+        C_autostep,
+        J_autostep,
+        epa_opt
+     )    
+
+
+
+def make_cached_data_assimilation_func(
+        func: Callable,
+        msh, # module (model specific) 
+    ) ->Callable:         
+    # create a function with one more parameter: out_put_path
+    # than the original function.
+    sig=inspect.signature(func)
+    def cached_func(
+            data_path,
+            msh,
+            mvs,
+            svs,
+            dvs,
+            cpa,
+            epa_min,
+            epa_max,
+            epa_0,
+            nsimu,
+        )->Tuple[Dict,Dict,np.array]:
+        # check for cached files
+        out_put_path=data_path.joinpath(func.__name__)
+        CP= import_module(f"{msh.model_mod}.CachedParameterization").CachedParameterization
+        sep=","
+        Cs_fn='da_aa.csv'
+        Js_fn='da_j_aa.csv'
+        epa_opt_fn="epa_opt.json"
+        def read_arr(p):
+            return pd.read_csv(
+                p,
+                sep=sep,
+                dtype=float,
+            ).to_numpy().transpose()
+
+        try:
+            cp = CP.from_path(out_put_path)
+            Cs = read_arr(
+                out_put_path.joinpath(Cs_fn)
+            )
+            Js = read_arr(
+                out_put_path.joinpath(Js_fn)
+            )
+            epa_opt=load_named_tuple_from_json_path(
+                msh.EstimatedParameters,
+                out_put_path.joinpath(epa_opt_fn)
+            )
+            fs="\n".join(
+                [Cs_fn,Js_fn,epa_opt_fn]+cp.file_names
+            )
+            print(f"""
+            Found cache files in {out_put_path}:
+            {fs}
+            remove at least one of them to recompute
+            """) 
+
+        except Exception:
+        #except FileNotFoundError:
+            cp,Cs,Js,epa_opt = func(
+                msh,
+                mvs,
+                svs,
+                dvs,
+                cpa,
+                epa_min,
+                epa_max,
+                epa_0,
+                nsimu
+            )
+            cp.write(out_put_path)
+            h.dump_named_tuple_to_json_path(
+                epa_opt,
+                out_put_path.joinpath(epa_opt_fn),
+            )
+            pd.DataFrame(
+                Cs.transpose(),
+                columns=msh.EstimatedParameters._fields
+            ).to_csv(
+                out_put_path.joinpath(Cs_fn), 
+                sep=sep,
+                index=None
+            )
+            pd.DataFrame(
+                Js.transpose()
+            ).to_csv(
+                out_put_path.joinpath(Js_fn),
+                sep=sep,
+                index=None
+            )
+        return cp,Cs,Js,epa_opt
+
+    return cached_func
+
+def rh_iterator(
+        mvs,
+        X_0, #: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    mit=minimal_iterator_internal(
+            mvs,
+            X_0,
+            par_dict,
+            func_dict,
+            delta_t_val
+    )
+    def numfunc(expr):
+        return hr.numerical_func_of_t_and_Xvec(
+            state_vector=mvs.get_StateVariableTuple(),
+            time_symbol=mvs.get_TimeSymbol(),
+            expr=expr,
+            parameter_dict=par_dict,
+            func_dict=func_dict,
+        )
+    fd={
+        "rh": numfunc(mvs.get_AggregatedSoilCarbonOutFlux()),
+        "cVeg": numfunc(mvs.get_AggregatedVegetationCarbon()),
+        "cSoil": numfunc(mvs.get_AggregatedSoilCarbon())
+    }
+    present_step_funcs = OrderedDict(
+        {
+            key: lambda t,X: fd[key](t,X)
+            for key in fd.keys()
+        }
+    )
+    mit.add_present_step_funcs(present_step_funcs)
+    return mit
+
+
+def single_stream_cost(obs, out_simu, key):
+        # calculate costs for each data stream
+        # take into account that model output might be shorter
+        # than the observation (mainly for testing)
+        simu= out_simu.__getattribute__(key)
+        n_simu = simu.shape[0]
+        _obs = obs.__getattribute__(key)[0:n_simu] # cut obs to length
+        cost=(n_simu) * np.sum((simu - _obs)**2, axis=0) / (_obs.mean(axis=0)**2)
+        print(f"J_{key}  = {cost}")
+        return cost
+    
+
+#constants
+common_global_mask_expanded=globalMask("common_mask_expanded.nc")

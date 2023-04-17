@@ -12,7 +12,6 @@ def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
         [
-            "V_init",
             "par_dict",
             "func_dict",
             "mvs",
@@ -188,26 +187,12 @@ def make_test_args(conf_dict,msh,mvs):
         c_veg_0=svs_0.cVeg,
         c_soil_0=svs_0.cSoil,
         fVegSoil_0=svs_0.fVegSoil,  # add the fraction
-        nyears=320
+        number_of_months=3840
     )
     # Assign values to initial pools using InitialPools named tuple
-    StartVector = msh.make_StartVector(mvs)
-    V_init = StartVector(
-        c_leaf=svs_0.cVeg * 0.12,  # set inital pool values to svs values
-        c_root=svs_0.cVeg * 0.12,  # you can set numerical values here directly as well
-        c_wood=svs_0.cVeg * 0.76,
-        c_DPM=svs_0.cSoil * 0.0025,
-        c_RPM=svs_0.cSoil * 0.248,
-        c_BIO=svs_0.cSoil * 0.022,
-        c_HUM=svs_0.cSoil * 0.7275,
-        rh=svs_0.rh,
-        fVegSoil=svs_0.fVegSoil
-        # f_veg2soil=svs_0.f_veg2soil# add the fraction
-    )
     
     ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("JULES-ES-1p0_S2_tsl.nc"))    
     return TestArgs(
-        V_init=V_init,
         par_dict=par_dict,
         func_dict=msh.make_func_dict(dvs,epa=epa_0),
         dvs=dvs,

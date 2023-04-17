@@ -99,12 +99,12 @@ def make_test_args(conf_dict,msh,mvs):
          r_C_passsom_rh=0.000006875*2,
          r_C_surface_microbe_rh=0.000003*2.2,
          C_leaf_0=svs_0.cVeg/3,
-         C_abvstrlit_0= 0.59,    #svs_0.cLitter/4,
-         C_abvmetlit_0= 0.24,    #svs_0.cLitter/4,
-         C_blwstrlit_0= 0.00287261,    #svs_0.cLitter/4,
-         C_surfacemic_0= 9.4e-5,    #svs_0.cSoil/4,
-         C_soilmic_0= 0.049,      #svs_0.cSoil/4,
-         C_slow_0= 0.29828058     #svs_0.cSoil/4
+         C_abvstrlit_0= 0.59, # svs_0.cLitter/4,
+         C_abvmetlit_0= 0.24, # svs_0.cLitter/4,
+         C_blwstrlit_0= 0.00287261, #svs_0.cLitter/4,
+         C_surfacemic_0=svs_0.cSoil/4, #9.4e-5, # 
+         C_soilmic_0=svs_0.cSoil/4, #  0.049,
+         C_slow_0=svs_0.cSoil/4,# 0.29828058 
     )
     epa_min=msh.EstimatedParameters(
          beta_leaf=0, 
@@ -232,7 +232,7 @@ def make_test_args(conf_dict,msh,mvs):
          cRoot_0 = svs_0.cRoot,
          npp_0=dvs.npp[0],
          rh_0=svs_0.rh,
-         number_of_months=len(svs.rh)
+         number_of_months=len(dvs.npp)
     )
 
     StartVector = msh.make_StartVector(mvs) 

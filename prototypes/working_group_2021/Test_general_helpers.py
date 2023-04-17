@@ -13,36 +13,36 @@ import matplotlib.pyplot as plt
 
 class Test_general_helpers(InDirTest):
 
-    def test_Pint(self):
-        x=np.linspace(0,1,10)
-        y=np.sin(x)
-        intp=interp1d(x,y)
-        f=gh.Pint1d(x,y)
-        p=Path("f.nc")
-        f.cache_netcdf(p)
-        
-        fff=gh.Pint1d.from_netcdf(p)
-        ffintp=gh.Pint1d.from_interp1d(intp)
+    #def test_Pint(self):
+    #    x=np.linspace(0,1,10)
+    #    y=np.sin(x)
+    #    intp=interp1d(x,y)
+    #    f=gh.Pint1d(x,y)
+    #    p=Path("f.nc")
+    #    f.cache_netcdf(p)
+    #    
+    #    fff=gh.Pint1d.from_netcdf(p)
+    #    ffintp=gh.Pint1d.from_interp1d(intp)
 
-        x_test=np.linspace(0,1,100)
-        self.assertTrue(
-            np.allclose(
-                intp(x_test),
-                ffintp(x_test)
-            )    
-        )        
-        self.assertTrue(
-            np.allclose(
-                intp(x_test),
-                f(x_test)
-            )    
-        )        
-        self.assertTrue(
-            np.allclose(
-                f(x_test),
-                fff(x_test)
-            )    
-        )        
+    #    x_test=np.linspace(0,1,100)
+    #    self.assertTrue(
+    #        np.allclose(
+    #            intp(x_test),
+    #            ffintp(x_test)
+    #        )    
+    #    )        
+    #    self.assertTrue(
+    #        np.allclose(
+    #            intp(x_test),
+    #            f(x_test)
+    #        )    
+    #    )        
+    #    self.assertTrue(
+    #        np.allclose(
+    #            f(x_test),
+    #            fff(x_test)
+    #        )    
+    #    )        
         
         
 

@@ -339,6 +339,42 @@ def make_func_dict(dvs, **kwargs):
         "xi": lambda t: xi(tas_f(t),mrso_f(t))
     }
 
+def make_da_iterator(
+        mvs,
+        X_0, #: StartVector,
+        par_dict,
+        func_dict,
+        delta_t_val=1 # defaults to 1day timestep
+    ):
+    mit=gh.minimal_iterator_internal(
+            mvs,
+            X_0,
+            par_dict,
+            func_dict,
+            delta_t_val
+    )
+    veg_2_out_func=hr.numerical_func_of_t_and_Xvec(
+        state_vector=mvs.get_StateVariableTuple(),
+        time_symbol=mvs.get_TimeSymbol(),
+        expr=mvs.get_AggregatedVegetationCarbonOutFlux(),
+        parameter_dict=par_dict,
+        func_dict=func_dict,
+    )
+    soil_2_out_func=hr.numerical_func_of_t_and_Xvec(
+        state_vector=mvs.get_StateVariableTuple(),
+        time_symbol=mvs.get_TimeSymbol(),
+        expr=mvs.get_AggregatedSoilCarbonOutFlux(),
+        parameter_dict=par_dict,
+        func_dict=func_dict,
+    )
+    present_step_funcs = OrderedDict(
+        {
+            "ra": lambda t,X: veg_2_out_func(t,X)
+            "rh": lambda t,X: soil_2_out_func(t,X)
+        }
+    )
+    mit.add_present_step_funcs(present_step_funcs)
+    return mit
 
 # this function is deprecated - see general helpers traceability_iterator
 # def make_traceability_iterator(mvs,dvs,cpa,epa):

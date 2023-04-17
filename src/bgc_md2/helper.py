@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 from string import ascii_lowercase, ascii_uppercase
 from functools import _lru_cache_wrapper
 import inspect
+import json
+import numpy as np
+from scipy.interpolate import interp1d
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 # from .models.helpers import computable_mvars, get_single_mvar_value
@@ -498,3 +501,52 @@ def vertical_table(records):
         customVBox(records,"Internal Fluxes",internalfluxbox),
         customVBox(records,"Outfluxes",outfluxbox)
     ])
+
+
+def dump_named_tuple_to_json_path(nt, path: Path):
+    dump_dict_to_json_path(nt._asdict(), path)
+
+
+def dump_dict_to_json_path(d, path: Path,**kwargs):
+    dp=path.parent
+    #from IPython import embed; embed()
+    if not dp.exists():
+        dp.mkdir(parents=True)
+
+    with path.open("w") as f:
+        d_s = {str(k):v for k,v in d.items()}
+        json.dump(d_s, f,**kwargs)
+
+
+def named_tuple_from_dict(t: type, d: Dict):
+    return t._make(d[f] for f in t._fields)
+
+
+def load_dict_from_json_path(path: Path):
+    with path.open("r") as f:
+        d = json.load(f)
+    return d
+
+
+def load_named_tuple_from_json_path(t: type, path: Path):
+    return named_tuple_from_dict(
+        t, 
+        load_dict_from_json_path(path)
+    )    
+    
+
+# toextend the interpolating functions beyond the last month
+# we have to extend the data fields from which they are derived
+def extend_by_one(field):
+    return np.concatenate([field, field[-2:-1]])
+
+def make_interpol_of_t_in_days(field):  # field of values one per month
+    y = extend_by_one(field)
+    # print(y.shape)
+    # from IPython import embed; embed()
+    f_of_month = interp1d(x=np.arange(0.0, len(y)), y=y, kind="cubic")
+
+    def f_of_day(day):
+        return f_of_month(day / 30.0)
+
+    return f_of_day

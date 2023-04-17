@@ -539,6 +539,7 @@ def make_func_dict(dvs, **kwargs):
 # We will proceed as follows:
 # - create $V_0$ 
 # - build the function $f$
+
 def make_da_iterator(
         mvs,
         X_0, #: StartVector,
@@ -546,26 +547,15 @@ def make_da_iterator(
         func_dict,
         delta_t_val=1 # defaults to 1day timestep
     ):
-    mit=gh.minimal_iterator_internal(
+    # this function has to be modelspecific but because some models 
+    # don't fall in the general case that we can use here
+    return gh.rh_iterator(
             mvs,
             X_0,
             par_dict,
             func_dict,
             delta_t_val
     )
-    soil_2_out_func=hr.numerical_func_of_t_and_Xvec(
-        state_vector=mvs.get_StateVariableTuple(),
-        time_symbol=mvs.get_TimeSymbol(),
-        expr=mvs.get_AggregatedSoilCarbonOutFlux(),
-        parameter_dict=par_dict,
-        func_dict=func_dict,
-    )
-    present_step_funcs = OrderedDict(
-        {
-            "rh": lambda t,X: soil_2_out_func(t,X)
-        }
-    )
-    mit.add_present_step_funcs(present_step_funcs)
     return mit
 
 # fixme mm 3-11-2023 
