@@ -1,0 +1,86 @@
+\ProvidesPackageRCS $Header: /cvsroot/latex-beamer/latex-beamer/themes/theme/beamerthemeMPIM.sty,v 1.10 2004/10/07 20:53:10 tantau Exp $
+
+% Copyright 2003 by Till Tantau <tantau@users.sourceforge.net>
+%
+% This program can be redistributed and/or modified under the terms
+% of the GNU Public License, version 2.
+
+
+
+\newif\ifbeamer@secheader
+\beamer@secheaderfalse
+
+\DeclareOptionBeamer{compress}{\beamer@compresstrue}
+\DeclareOptionBeamer{secheader}{\beamer@secheadertrue}
+\ProcessOptionsBeamer
+
+%The logo
+%\titlegraphic{\includegraphics[height=0.1\textheight]{MPI_BGC.pdf}}
+%\logo{\includegraphics[height=0.05\textheight]{MPI_BGC.pdf}}
+
+%Always have a subsection (to display sections well in the navigation bar), and always show a title page for every lecture
+\AtBeginSection{\subsection*{}}
+\AtBeginLecture{\part[\insertshortlecture]{insertlecture}\title[\insertshortlecture]{\insertlecture}\section[\insertshortlecture]{\insertlecture}\frame[plain]{\titlepage}}
+
+%Set the color theme
+\usecolortheme{whale}
+\usecolortheme{orchid}
+\usecolortheme[RGB={178,216,203}]{structure} %Color everything MPI-green
+\setbeamercolor{title}{fg=black}
+\setbeamercolor{frametitle}{fg=black}
+\newcommand<>{\memph}[1]{{\alt#2{\usebeamercolor[fg]{alerted text}{#1}}{#1}}}
+
+%Set the shape of the building blocks
+\useinnertheme[shadow]{rounded}
+\useoutertheme{infolines}
+\setbeamertemplate{navigation symbols}{\insertframenavigationsymbol \insertsectionnavigationsymbol \insertdocnavigationsymbol \insertbackfindforwardnavigationsymbol}
+
+%Show the section title in the headline or not
+\ifbeamer@secheader\else\setbeamertemplate{headline}[default]\fi
+
+%Use squares for itemize bullets, triangles for the second level and stars for the third level
+\useitemizeitemtemplate{\tiny\raise1.5pt\hbox{\donotcoloroutermaths$\blacksquare$} }
+\usesubitemizeitemtemplate{\tiny\raise1.5pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+\usesubsubitemizeitemtemplate{\tiny\raise1.5pt\hbox{\donotcoloroutermaths$\bigstar$}}
+
+%Widen the space between first level items a bit
+\def\@listi{\leftmargin\leftmargini
+            \topsep 3\p@ \@plus2\p@ \@minus2.5\p@
+            \parsep 0\p@
+            \itemsep1em \@plus2\p@ \@minus3\p@}
+\let\@listI\@listi
+
+%The footer. If the compress option is false, show the navigation bar (in the footer)!
+\ifbeamer@compress
+\setbeamertemplate{footline}
+{
+  \leavevmode%
+ \hbox{%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.25ex,dp=1ex,right]{author in head/foot}%
+    \usebeamerfont{author in head/foot}\insertshortauthor \hspace{\stretch{1}} \insertframenumber{} / \inserttotalframenumber \hspace*{2ex}  
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+\else
+\setbeamertemplate{footline}
+{
+\begin{beamercolorbox}[ht=2.25ex,dp=3.75ex]{title in head/foot}
+    \insertnavigation{0.8\paperwidth}
+  \end{beamercolorbox}%
+  \leavevmode%
+ \hbox{%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.25ex,dp=1ex,right]{author in head/foot}%
+    \usebeamerfont{author in head/foot}\insertshortauthor \hspace{\stretch{1}} \insertframenumber{} / \inserttotalframenumber \hspace*{2ex}  
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+\fi
+
+
+
