@@ -30,12 +30,12 @@ display(HTML("<style>.container { width:100% !important; }</style>"))
 
 import inspect
 import bgc_md2.models.testVectorFree.source 
-print(inspect.getsource(bgc_md2.models.testVectorFree.source))
+#print(inspect.getsource(bgc_md2.models.testVectorFree.source)) #uncomment to see the code
 
-# # copy its contents into a new cell. (we can later save it under a new name) 
+# # copy its contents into a new cell. and start (we can later save it under a new name) 
+# It looks a bit like this.
 
 # +
-
 from sympy import var, Symbol, Function 
 from ComputabilityGraphs.CMTVS import CMTVS
 from ComputabilityGraphs.helpers import module_computers
@@ -63,6 +63,13 @@ sym_dict={
 for k in sym_dict.keys():
     code=k+" = Symbol('{0}')".format(k)
     exec(code)
+# Note:
+# The use of exec to execute python code strings seems a bit funny 
+# The normal way woud be: 
+# leaf = Symbol("leaf")
+# wood = Symbol("wood")
+# ...
+# we do it this way, because we wantthe dictionary for documentation later...
 
 # We will also use some symbolic functions ("symbols" with an argument) 
 func_dict={
@@ -72,13 +79,9 @@ func_dict={
 for k in func_dict.keys():
     code=k+" = Function('{0}')".format(k)
     exec(code)
-
 # Note:
-# The use of exec to execute python code strings seems a bit funny 
-# The normal way woud be 
-# leaf = Symbol("leaf")...
-# ...
-# I_leaf
+# Again we want the dictionary for later
+
 t=TimeSymbol("t")
 
 mvs = CMTVS(
@@ -105,7 +108,7 @@ mvs = CMTVS(
 # Tasks:
 # To see what it can do with this information add a new cell an type `mvs.` and press the `tab` key `->`. This will show you the available methods, in other words what can be computed from the provided information.
 #
-# I wanted to see the compartmental the pools, the matrix and the inputs.
+# I wanted to see the compartmental matrix and the inputs.
 
 mvs.get_CompartmentalMatrix()
 
@@ -243,19 +246,11 @@ types=cgh.all_mvars(computers)
 
 # We now use the `ComputabilityGraphs` package to find out what information (mvars) we have to provide to compute the `AggregatedVegetation2SoilCarbonFlux`
 
-# +
-
-ca=h.numbered_aliases("f",computers)
-ta=h.numbered_aliases("T",types)
-# -
-
 import ComputabilityGraphs.or_graph_helpers as ogh
 from bgc_md2.resolve.mvars import AggregatedVegetation2SoilCarbonFlux
 
 mvs.jupyter_widget(
     root_type=AggregatedVegetation2SoilCarbonFlux,
-    computer_aliases_tup=ca,
-    type_aliases_tup=ta 
 )
 
 # We look up the two "light red" = "not provided" Types in the legend 
