@@ -67,12 +67,12 @@ import MIP_output_helpers as moh
 model_folders = [
     "kv_visit2",
     "jon_yib",
-    #"Aneesh_SDGVM", # very fast drop in soil and system tot
-    #"cable-pop", # has not EstimatedParameters
-    #"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
     "yz_jules",
-    "kv_ft_dlem",
-    "bian_ibis2",
+    #"Aneesh_SDGVM", # very fast drop in soil and system tot
+    #"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
+    #"kv_ft_dlem", # not yet converted to the new format
+    #"bian_ibis2", # not yet converted to the new format
+    #"cable-pop", # has not EstimatedParameters
 ]
 delta_t_val = 15
 # test_arg_dict = gh.get_test_arg_dict(model_folders)
@@ -103,9 +103,9 @@ start_sAD, stop_sAD = gh.t_min_tmax_overlap_2(td, delta_t_val, start_shift=start
 
 
 def syncronized_timelines_from_model_folder(mf):
-    test_args = gh.test_args(mf)
+    test_args = gh.test_args_2(mf)
     msh = gh.msh(mf)
-    mvs = gh.mvs(mf)
+    mvs = gh.mvs_2(mf)
     state_vector = mvs.get_StateVariableTuple()
     cpa = test_args.cpa
     epa = test_args.epa_opt
@@ -151,7 +151,7 @@ def yearly_averages(vals):
     return vals.averaged_values(parts)
 
 # for caching all values (dont do this if you have  RAM shortage}
-# take some minutes to compute
+# takes some minutes to compute
 all_values = {mf : syncronized_timelines_from_model_folder(mf) for mf in model_folders}
 all_averaged_values = {mf : yearly_averages(vals) for mf,vals in all_values.items()}
 value_dicts = [all_values, all_averaged_values]
@@ -175,7 +175,7 @@ def plot_time_lines_one_plot_per_property(
         # from IPython import embed; embed()
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
-        td_AD = gh.td_AD(gh.test_args(mf).start_date)
+        td_AD = gh.td_AD(gh.test_args_2(mf).start_date)
         c_times = [(td_AD + mt) / 360 for mt in vals['t']]
         for i,key in enumerate(desired_keys):
             ax = axs[i]

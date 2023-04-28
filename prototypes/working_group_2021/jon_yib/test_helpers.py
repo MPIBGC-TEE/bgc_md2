@@ -13,7 +13,6 @@ def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
         [
-            "V_init",
             "par_dict",
             "func_dict",
             "mvs",
@@ -42,7 +41,7 @@ def make_test_args(conf_dict,msh,mvs):
         c_soil_0 = svs.cSoil[0],
         clay = 0.2028,
         silt = 0.2808,
-        nyears = 320,
+        number_of_months=3840,
     )
 
     par_dict = {
@@ -109,8 +108,6 @@ def make_test_args(conf_dict,msh,mvs):
     epa_max = epa_max._replace(c_soil_mic_0 = svs_0.cSoil)
     epa_max = epa_max._replace(c_soil_slow_0 = svs_0.cSoil)
     
-    # Create namedtuple for initial values
-    StartVector = msh.make_StartVector(mvs)
     
     # Parameter dictionary for the iterator
     apa = {**cpa._asdict(),**epa_0._asdict()}
@@ -127,40 +124,10 @@ def make_test_args(conf_dict,msh,mvs):
         if Symbol(k) in model_par_dict_keys
     }
 
-    # Create a startvector for the iterator 
-    V_init = StartVector(
-        c_leaf = apa['c_leaf_0'],
-        c_root = apa['c_root_0'],
-        c_wood = apa['c_veg_0'] - (
-            apa['c_leaf_0'] + 
-            apa['c_root_0']
-        ),
-        c_lit_cwd = apa['c_lit_cwd_0'],
-        c_lit_met = apa['c_lit_met_0'],
-        c_lit_str = apa['c_lit_str_0'],
-        c_lit_mic = apa['c_lit_mic_0'],
-        c_soil_met = apa['c_soil_met_0'],
-        c_soil_str = apa['c_soil_str_0'],
-        c_soil_mic = apa['c_soil_mic_0'],
-        c_soil_slow = apa['c_soil_slow_0'],
-        c_soil_passive = apa['c_soil_0'] - (
-            apa['c_lit_cwd_0'] +
-            apa['c_lit_met_0'] +
-            apa['c_lit_str_0'] +
-            apa['c_lit_mic_0'] +
-            apa['c_soil_met_0'] +
-            apa['c_soil_str_0'] +
-            apa['c_soil_mic_0'] +
-            apa['c_soil_slow_0']
-        ),
-        rh = apa['rh_0'] #,
-        #ra = apa['ra_0']
-    )
     # actually we want a dataset with mask but we don't have one at 
     # the moment
     ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("YIBs_S2_Monthly_npp.nc"))    
     return TestArgs(
-        V_init=V_init,
         par_dict=model_par_dict,
         func_dict=msh.make_func_dict(dvs),
         dvs=dvs,

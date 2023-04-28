@@ -577,10 +577,6 @@ def make_weighted_cost_func(
         return J_new
     return costfunction
 
-# this function is deprecated - see general helpers traceability_iterator
-# def make_traceability_iterator(mvs,dvs,cpa,epa):
-
-
 def numeric_X_0(mvs,dvs,cpa,epa):
     apa = {**cpa._asdict(), **epa._asdict()}
     par_dict=gh.make_param_dict(mvs,cpa,epa)

@@ -1,11 +1,11 @@
 from pathlib import Path
-from sympy import Symbol, Function, exp, Piecewise
 import numpy as np
+from sympy import Symbol, Function, exp, Piecewise
 import json
 from CompartmentalSystems import start_distributions as sd
 from ComputabilityGraphs.CMTVS import CMTVS
-from bgc_md2.models.BibInfo import BibInfo
-from bgc_md2.resolve.mvars import (
+from ..BibInfo import BibInfo
+from ...resolve.mvars import (
     NumericParameterization,
     NumericSimulationTimes,
     NumericStartValueArray,
@@ -39,17 +39,19 @@ mvs=CMTVS(
 )
 # we provide some example parameterization
 
-t0 = 0  #3/2*np.pi
-n_steps = 12  # 2881
-t_max = 144 
-times = np.linspace(t0, t_max, n_steps)
-delta_t_val = (t_max - t0)/n_steps
 dirPath = Path(__file__).parent
 
-pp=Path(__file__).parent.joinpath("parameterization_from_test_args")
+pp = Path(__file__).parent.joinpath("parameterization_from_test_args")
 cp=CachedParameterization.from_path(pp)
-par_dict=cp.parameter_dict
-func_dict=cp.func_dict
+par_dict = cp.parameter_dict
+func_dict = cp.func_dict
+
+t0 = 0  #3/2*np.pi
+n_steps = 12  # 2881
+number_of_months = cp.drivers.npp.shape[0] 
+t_max = number_of_months*30 # time measured in days 
+times = np.linspace(t0, t_max, n_steps)
+
 # For this example we assume that the system was in steady state 
 # at t_0 with X_fix given by X_fix = M^{-1} 
 # since we know that the system is linear we can easily compute the steady state

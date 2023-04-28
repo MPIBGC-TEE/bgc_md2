@@ -246,6 +246,9 @@ class TraceTuple:
 def mvs(mf):
     return import_module("{}.source".format(mf)).mvs
 
+def mvs_2(mf):
+    msh = import_module("{}.model_specific_helpers_2".format(mf))
+    return import_module(f"{msh.model_mod}.source").mvs
 
 def msh(mf):
     return import_module("{}.model_specific_helpers_2".format(mf))
@@ -1851,51 +1854,51 @@ class TraceTupleIterator(InfiniteIterator):
         return values_2_TraceTuple(tts)
 
 
-def make_trace_tuple_func(traced_functions: Dict[str, Callable]):
-    # create a function that produces all the values we want to track for every timestep
-    def f(X, B, I, it):
-        # These are values that are computable from the momentary values of X and B
-        u = I.sum()
-        b = I / u
-        B_inv = np.linalg.inv(B)
-        X_c = B_inv @ I
-        X_p = X_c - X
-        X_dot = I - B @ X
-        RT = X_c / u  # =B_inv@b but cheeper to compute
-        # we now compute the system X_c and X_p
-        # This is in general not equal to the sum of the component, but rather a property
-        # of a surrogate system.
-        x = X.sum()
-        x_dot = X_dot.sum()
-        m_s = (B @ X).sum() / x
-        x_c = 1 / m_s * u
-        x_p = x_c - x
-        rt = x_c / u
-        # tt=
-        static = {
-            "X": X,
-            "X_p": X_p,
-            "X_c": X_c,
-            "X_dot": X_dot,
-            "RT": RT,
-            "x": x,
-            "m_s": m_s,
-            "x_p": x_p,
-            "x_c": x_c,
-            "x_dot": x_dot,
-            "rt": rt,
-            "u": u,
-        }
-        dynamic = {k: f(it, *X) for k, f in traced_functions.items()}
-
-        def dict_merge(d1, d2):
-            d = deepcopy(d1)
-            d.update(d2)
-            return d
-
-        return TraceTuple(dict_merge(static, dynamic))
-
-    return f
+#def make_trace_tuple_func(traced_functions: Dict[str, Callable]):
+#    # create a function that produces all the values we want to track for every timestep
+#    def f(X, B, I, it):
+#        # These are values that are computable from the momentary values of X and B
+#        u = I.sum()
+#        b = I / u
+#        B_inv = np.linalg.inv(B)
+#        X_c = B_inv @ I
+#        X_p = X_c - X
+#        X_dot = I - B @ X
+#        RT = X_c / u  # =B_inv@b but cheeper to compute
+#        # we now compute the system X_c and X_p
+#        # This is in general not equal to the sum of the component, but rather a property
+#        # of a surrogate system.
+#        x = X.sum()
+#        x_dot = X_dot.sum()
+#        m_s = (B @ X).sum() / x
+#        x_c = 1 / m_s * u
+#        x_p = x_c - x
+#        rt = x_c / u
+#        # tt=
+#        static = {
+#            "X": X,
+#            "X_p": X_p,
+#            "X_c": X_c,
+#            "X_dot": X_dot,
+#            "RT": RT,
+#            "x": x,
+#            "m_s": m_s,
+#            "x_p": x_p,
+#            "x_c": x_c,
+#            "x_dot": x_dot,
+#            "rt": rt,
+#            "u": u,
+#        }
+#        dynamic = {k: f(it, *X) for k, f in traced_functions.items()}
+#
+#        def dict_merge(d1, d2):
+#            d = deepcopy(d1)
+#            d.update(d2)
+#            return d
+#
+#        return TraceTuple(dict_merge(static, dynamic))
+#
+#    return f
 
 
 def minimal_iterator(
@@ -1987,109 +1990,51 @@ def minimal_iterator_internal(
 
 # fixme mm 12-2 2022
 # should be better called tracebility Iterator result
-def traceability_iterator_result(
-        mvs,  #: CMTVS,
-        X_0,
-        par_dict,
-        func_dict,
-        t_0,
-        delta_t_val,
-):
-    mit = minimal_iterator_internal(
-        mvs,  #: CMTVS,
-        X_0,
-        par_dict,
-        func_dict,
-        delta_t_val=delta_t_val,
-        t_0=t_0,
-    )
-
-    (
-        veg_x_func,
-        soil_x_func,
-        out_2_veg_func,
-        veg_2_soil_func,
-        veg_2_out_func,
-        soil_2_out_func,
-    ) = map(
-        lambda expr: hr.numerical_func_of_t_and_Xvec(
-            state_vector=mvs.get_StateVariableTuple(),
-            time_symbol=mvs.get_TimeSymbol(),
-            expr=expr,
-            parameter_dict=par_dict,
-            func_dict=func_dict,
-        ),
-        [
-            mvs.get_AggregatedVegetationCarbon(),
-            mvs.get_AggregatedSoilCarbon(),
-            mvs.get_AggregatedVegetationCarbonInFlux(),
-            mvs.get_AggregatedVegetation2SoilCarbonFlux(),
-            mvs.get_AggregatedVegetationCarbonOutFlux(),
-            mvs.get_AggregatedSoilCarbonOutFlux(),
-        ],
-    )
-    present_step_funcs = OrderedDict(
-        {
-            "u": lambda I: I.sum(),
-            "b": lambda I, u: I / u,
-            "B_inv": lambda B: np.linalg.inv(B),
-            "X_c": lambda B_inv, I: B_inv @ I,
-            "X_p": lambda X_c, X: X_c - X,
-            "X_dot": lambda I, B, X: I - B @ X,
-            "system_RT": lambda X_c, u: X_c / u,  # =B_inv@b but cheeper to compute
-            "system_RT_sum": lambda system_RT: system_RT.sum(),
-            "x": lambda X: X.sum(),
-            "x_dot": lambda X_dot: X_dot.sum(),
-            "system_m": lambda B, X, x: (B @ X).sum()
-            / x,  # rate of the surrogate system
-            "system_tot": lambda system_m: 1 / system_m,
-            "x_c": lambda system_m, u: 1 / system_m * u,  # x_c of the surrogate system
-            "x_p": lambda x_c, x: x_c - x,
-            "rt": lambda x_c, u: x_c / u,
-            "veg_x": lambda t, X: veg_x_func(t, X),
-            "soil_x": lambda t, X: soil_x_func(t, X),
-            "out_2_veg": lambda t, X: out_2_veg_func(t, X),
-            "veg_2_soil": lambda t, X: veg_2_soil_func(t, X),
-            "veg_2_out": lambda t, X: veg_2_out_func(t, X),
-            "soil_2_out": lambda t, X: soil_2_out_func(t, X),
-            "veg_m": lambda veg_2_out, veg_2_soil, veg_x: (veg_2_out + veg_2_soil)
-            / veg_x,  # veg rate
-            "veg_tot": lambda veg_m: 1 / veg_m,
-            "soil_m": lambda soil_2_out, soil_x: soil_2_out / soil_x,  # soil rate
-            "soil_tot": lambda soil_m: 1 / soil_m,
-            # **extra_functions
-        }
-    )
-    mit.add_present_step_funcs(present_step_funcs)
-    return ArrayDictResult(mit)
-
-# fixme mm 12-2 2022
-# should be better called tracebility Iterator result
 def traceability_iterator(
-    X_0,
-    func_dict,
-    mvs,  #: CMTVS,
-    dvs,  #: Drivers,
-    cpa,  #: Constants,
-    epa,  #: EstimatedParameters
-    delta_t_val: int = 1,  # defaults to 1day timestep
-    # traced_expressions: Dict[str, Expr] = dict(),
-    # extra_functions: Dict[str, Callable] = dict(),
-    t_0=0,
-):
-    mit = minimal_iterator(
         X_0,
         func_dict,
         mvs,  #: CMTVS,
         dvs,  #: Drivers,
         cpa,  #: Constants,
         epa,  #: EstimatedParameters
+        t_0,
+        delta_t_val,
+    ):
+    print("""
+    #######################################################
+    Deprecation Warning:
+    rather use traceability_iterator_internal directly
+    for which is called by this  wrapper.
+    """
+    )
+    par_dict = make_param_dict(mvs, cpa, epa)
+    mit = traceability_iterator_internal(
+        mvs, 
+        X_0,
+        par_dict,
+        func_dict,
+        delta_t_val,
+        t_0=0,
+    )
+    return ArrayDictResult(mit)
+
+def traceability_iterator_internal(
+    mvs  : CMTVS,
+    X_0,
+    par_dict,
+    func_dict,
+    delta_t_val: int = 1,  # defaults to 1day timestep
+    t_0=0,
+):
+    mit = minimal_iterator_internal(
+        mvs=mvs,  #: CMTVS,
+        X_0=X_0,
+        par_dict=par_dict,
+        func_dict=func_dict,
         t_0=t_0,
         delta_t_val=delta_t_val,
     )
 
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict = make_param_dict(mvs, cpa, epa)
 
     (
         veg_x_func,
@@ -2148,7 +2093,7 @@ def traceability_iterator(
         }
     )
     mit.add_present_step_funcs(present_step_funcs)
-    return ArrayDictResult(mit)
+    return mit
 
 
 def all_timelines_starting_at_steady_state(
@@ -2383,6 +2328,8 @@ def write_var_dict(
         targetPath: Path,
         varname2filename: Callable,
     ):
+    if not targetPath.exists():
+        targetPath.mkdir(parents=True)
     for vn, val in arr_dict.items():
         write_timeline_to_nc_file(
             targetPath.joinpath(
@@ -2989,7 +2936,7 @@ def get_test_arg_list(model_folders):
 # it would make sense to create a dictionary indexed by the model name
 # so it can be used for model comparisons by name like this one
 def get_test_arg_dict(model_folders):
-    return {mf: test_args(mf) for mf in model_folders}
+    return {mf: test_args_2(mf) for mf in model_folders}
 
 
 def times_in_days_aD(
@@ -3416,37 +3363,6 @@ data_streams = namedtuple("data_streams", ["cVeg", "cSoil", "gpp", "npp", "ra", 
 
 
 
-def write_parameterization_from_test_args(
-        test_args, 
-        func_dict_param_dict,
-        CachedParameterization: type, # a model specific class with a common interface
-        data_path
-    ):
-    mvs = test_args.mvs
-    svt = mvs.get_StateVariableTuple()
-    V_init=test_args.V_init
-    X_0_dict={k: V_init.__getattribute__(str(k)) for k in svt}
-    cp = CachedParameterization(
-        parameter_dict=test_args.par_dict,
-        drivers=test_args.dvs,
-        X_0_dict=X_0_dict,
-        func_dict_param_dict=func_dict_param_dict
-    )
-    cp.write(data_path)
-
-# temporary function to write the files
-def data_assimilation_parameters_from_test_args(
-        test_args, 
-        CachedParameterization: type, # a model specific class with a common interface
-        data_path
-    ):
-    data_path.mkdir(exist_ok=True, parents=True)
-    for s in ['cpa', 'epa_0', 'epa_min', 'epa_max', 'epa_opt']:
-        h.dump_dict_to_json_path(
-            (test_args.__getattribute__(s))._asdict(),
-            data_path.joinpath(f"{s}.json"),
-            indent=2
-        )
       
 def cached_var_dict(
         dataPath: Path,
@@ -3488,7 +3404,7 @@ def cached_var_dict(
         return arr_dict
     
 
-def get_parameterization_from_data(
+def get_parameterization_from_data_1(
         msh,#: module, 
         mvs: CMTVS,
         svs,
@@ -3559,7 +3475,7 @@ def get_parameterization_from_data(
 
 
 
-def make_cached_data_assimilation_func(
+def make_cached_data_assimilation_func_1(
         func: Callable,
         msh, # module (model specific) 
     ) ->Callable:         

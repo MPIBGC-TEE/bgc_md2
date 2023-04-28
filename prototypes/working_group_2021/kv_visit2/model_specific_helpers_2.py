@@ -328,7 +328,8 @@ def make_param2res_sym(
         epa=EstimatedParameters(*pa)
         X_0 = numeric_X_0(mvs, dvs, cpa, epa)
         dpm = 30
-        delta_t_val=dpm/2 # should be divisable
+        steps_per_month = 2
+        delta_t_val = dpm/steps_per_month 
 
         par_dict = gh.make_param_dict(mvs, cpa, epa)
         func_dict = make_func_dict(dvs , cpa=cpa, epa=epa)
@@ -343,7 +344,7 @@ def make_param2res_sym(
         )
         number_of_steps = int(cpa.number_of_months/delta_t_val)
         steps_per_month = int(dpm / delta_t_val)
-        result_dict = bitr[0: number_of_steps, steps_per_month]
+        result_dict = bitr[0: number_of_steps: steps_per_month]
 
         return Observables(
             cVeg=result_dict["cVeg"],

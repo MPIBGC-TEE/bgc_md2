@@ -175,7 +175,6 @@ Constants = namedtuple(
         'c_soil_0',
         'clay',        #Constants like clay
         'silt',
-        'nyears',       #Run time (years for my model)        
         'number_of_months',       #Run time (months for my model)        
     ]
 )
@@ -517,24 +516,16 @@ def make_param2res_sym(
         dvs: Drivers,
     ) -> Callable[[np.ndarray], np.ndarray]:
     
-    # Build dictionary of model parameters
-    srm=mvs.get_SmoothReservoirModel()
-    model_par_dict_keys=srm.free_symbols.difference(
-        [Symbol(str(mvs.get_TimeSymbol()))]+
-        list(mvs.get_StateVariableTuple())
-    )
-     
-    # Create namedtuple for initial values
-    StartVector=make_StartVector(mvs)
     
     # Define actual forward simulation function
     def param2res(pa):
         
         # Parameter vector
-        epa=EstimatedParameters(*pa)
+        epa = EstimatedParameters(*pa)
         X_0 = numeric_X_0(mvs, dvs, cpa, epa)
-        dpm=30
-        delta_t_val=dpm/2 
+        dpm = 30
+        steps_per_month = 2
+        delta_t_val = dpm/steps_per_month 
         
         par_dict = gh.make_param_dict(mvs, cpa, epa)
         func_dict = make_func_dict(dvs)
@@ -628,9 +619,6 @@ def make_param_filter_func(
         return res
         
     return isQualified
-
-# this function is deprecated - see general helpers traceability_iterator
-# def make_traceability_iterator(mvs,dvs,cpa,epa):
 
 def start_date():
     ## this function is important to syncronise our results

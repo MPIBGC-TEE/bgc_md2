@@ -68,8 +68,8 @@ model_folders = [
     #"cable-pop", # has not EstimatedParameters
     #"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
     "yz_jules",
-    "kv_ft_dlem",
-    "bian_ibis2",
+    #"kv_ft_dlem",
+    #"bian_ibis2",
 ]
 delta_t_val = 15
 # test_arg_dict = gh.get_test_arg_dict(model_folders)
@@ -99,9 +99,9 @@ start_shift = 120
 start_sAD, stop_sAD = gh.t_min_tmax_overlap_2(td, delta_t_val, start_shift=start_shift)
 
 def timelines_from_model_folder(mf):
-    test_args = gh.test_args(mf)
+    test_args = gh.test_args_2(mf)
     msh = gh.msh(mf)
-    mvs = gh.mvs(mf)
+    mvs = gh.mvs_2(mf)
     state_vector = mvs.get_StateVariableTuple()
     cpa = test_args.cpa
     epa = test_args.epa_opt
@@ -161,7 +161,7 @@ def plot_time_lines_one_plot_per_model(
         # from IPython import embed; embed()
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
-        td_AD = gh.td_AD(gh.test_args(mf).start_date)
+        td_AD = gh.td_AD(gh.test_args_2(mf).start_date)
         c_times = [(td_AD + mt) / 360 for mt in vals.t]
         for i,key in enumerate(desired_keys):
             y=vals[key]
@@ -249,3 +249,5 @@ fig.subplots_adjust(
     hspace=0.3
 )
 fig.savefig("test2_yearly.pdf")
+
+

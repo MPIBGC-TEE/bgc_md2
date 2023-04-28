@@ -376,9 +376,6 @@ def make_da_iterator(
     mit.add_present_step_funcs(present_step_funcs)
     return mit
 
-# this function is deprecated - see general helpers traceability_iterator
-# def make_traceability_iterator(mvs,dvs,cpa,epa):
-
 def make_iterator_sym(
         mvs,
         V_init, #: StartVector,

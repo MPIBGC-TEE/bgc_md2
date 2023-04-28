@@ -11,7 +11,6 @@ def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
         "TestArgs",
         [
-            "V_init",
             "par_dict",
             "func_dict",
             "mvs",
@@ -204,23 +203,8 @@ def make_test_args(conf_dict,msh,mvs):
         number_of_months=24 # for testing and tuning mcmc
     )
 
-    StartVector = msh.make_StartVector(mvs) 
-    V_init= StartVector(
-        C_leaf=0.051828761170322826,
-        C_wood=1.970572690329994,
-        C_root=svs_0.cVeg-1.970572690329994-0.051828761170322826,
-        C_leaf_litter=0.1202311902470766,
-        C_wood_litter=0.2225433197876749,
-        C_root_litter=svs_0.cLitter-0.2225433197876749-0.1202311902470766,
-        C_soil_fast=1.7309510511856925,
-        C_soil_slow=2.4435101360092473,
-        C_soil_passive=svs_0.cSoil-2.4435101360092473-1.7309510511856925,
-        #ra=svs_0.ra,   # kg/m2/s kg/m2/day;,
-        rh=svs_0.rh   # kg/m2/s kg/m2/day;
-    )
     ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("VISIT_S2_cLitter.nc"))    
     return TestArgs(
-        V_init=V_init,
         par_dict=par_dict,
         func_dict=msh.make_func_dict(dvs),
         dvs=dvs,

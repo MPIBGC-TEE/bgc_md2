@@ -74,18 +74,6 @@ def bgc_md2_computers():
         ]
     )
 
-def numbered_aliases(prefix, things):
-    comp_abbreviations = [f"{prefix}{i}" for i in range(100)] 
-    d = frozendict({
-        v: comp_abbreviations[i]
-        for i, v in enumerate(things)
-    })
-    # provide an ordering function for the aliases
-    # to be used with sorted 
-    key = lambda alias: int(alias[len(prefix):])
-    return (d,key)
-
-
 
 # @Thomas
 # If you think that there should be a plumbing class in between (a Model in the Model-View-Controller sense)
@@ -541,6 +529,10 @@ def extend_by_one(field):
     return np.concatenate([field, field[-2:-1]])
 
 def make_interpol_of_t_in_days(field):  # field of values one per month
+    """
+    Expects an array of monthly values and returns an interpolation function of a temporal variable counted in days. 
+    A 30 day month is assumed.
+    """
     y = extend_by_one(field)
     # print(y.shape)
     # from IPython import embed; embed()

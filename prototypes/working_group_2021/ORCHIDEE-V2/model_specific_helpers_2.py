@@ -762,9 +762,6 @@ def pesudo_yearly_to_monthly(yearly):
 
     return monthly_data
 
-# this function is deprecated - see general helpers traceability_iterator
-# def make_traceability_iterator(mvs,dvs,cpa,epa):
-
 def numeric_X_0(mvs,dvs,cpa,epa):
     # This function creates the startvector for the pools
     # It can be used inside param_2_res and for other iterators that
