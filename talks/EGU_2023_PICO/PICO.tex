@@ -5,7 +5,7 @@
 %\usetheme{Cornell}
 %\usetheme{default}
 %\input{config/commands}
-\input{config/hyphenation}
+%\input{config/hyphenation}
 
 \usepackage[utf8]{inputenc}
 \usepackage{default}
@@ -19,6 +19,7 @@
 \usepackage{multicol}
 \usepackage{tikz}
 \usetikzlibrary{positioning}
+\usepackage[normalem]{ulem}
 
 \usepackage{bm}
 \usepackage{amsfonts}
@@ -82,15 +83,15 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
   % TITLE
    \begin{column}[c]{0.55\textwidth}
    \centering \usebeamerfont{title} \textcolor{titlecolor}{\inserttitle} \\
-    \includegraphics[height=0.3cm, keepaspectratio]{bold_cornell_seal_cmyk_red}
-    \includegraphics[height=0.3cm, keepaspectratio]{minerva}
-    \includegraphics[height=0.3cm, keepaspectratio]{NAU}
-    \includegraphics[height=0.3cm, keepaspectratio]{idiv}
-    \includegraphics[height=0.3cm, keepaspectratio]{Logo_of_the_University_of_Melbourne}
-    \includegraphics[height=0.3cm, keepaspectratio]{EastChinaUni.png}
-    \includegraphics[height=0.3cm, keepaspectratio]{IGSNRR}
-    \includegraphics[height=0.3cm, keepaspectratio]{Northwest_A&F_University}
-    \includegraphics[height=0.3cm, keepaspectratio]{SLU}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/bold_cornell_seal_cmyk_red}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/minerva}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/NAU}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/idiv}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/Logo_of_the_University_of_Melbourne}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/EastChinaUni.png}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/IGSNRR}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/Northwest_A&F_University}
+    \includegraphics[height=0.3cm, keepaspectratio]{Figures/SLU}
 %   \vspace{-0.05cm}
 %   \centering \usebeamerfont{institute} \insertinstitute
   \end{column}
@@ -138,42 +139,21 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
   \vspace{0.05cm}
   % set up the buttons in an mbox
   \centering \mbox{
-     \tocbuttoncolor{presentation}
+     \tocbuttoncolor{Presentation}
      \hspace{\buttonspacingfootline}
        \hyperlink{presentation}{\beamerbutton{Presentation}}
+     
+     \tocbuttoncolor{Screen Shots}
+     \hspace{\buttonspacingfootline}
+       \hyperlink{screenshots}{\beamerbutton{Screen Shots}}
      
      \tocbuttoncolor{Implementation}
      \hspace{\buttonspacingfootline}
        \hyperlink{implementation}{\beamerbutton{Implementation}}
 
-     \tocbuttoncolor{screen shots}
-     \hspace{\buttonspacingfootline}
-       \hyperlink{screen_shots}{\beamerbutton{Screen Shots}}
-     
      \tocbuttoncolor{Links}
      \hspace{\buttonspacingfootline}
        \hyperlink{links}{\beamerbutton{Links}}
-%%     
-%%     \tocbuttoncolor{maximum_entropy}
-%%     \hspace{\buttonspacingfootline}
-%%       \hyperlink{maximum_entropy}{\beamerbutton{Max. Entropy}}
-%%
-%%     \tocbuttoncolor{conclusions}
-%%     \hspace{\buttonspacingfootline}
-%%       \hyperlink{conclusions}{\beamerbutton{Conclusions}}
-%%    
-%%    \tocbuttoncolor{supplementary_material}
-%%     \hspace{\buttonspacingfootline}
-%%      \hyperlink{supplementary_material}{\beamerbutton{Suppl. Mat.}}
-%     \tocbuttoncolor{minor}
-%     \hspace{\buttonspacingfootline}
-%       \hyperlink{minor}{\beamerbutton{Minor Surges}}
-%     \tocbuttoncolor{friction}
-%     \hspace{\buttonspacingfootline}
-%       \hyperlink{friction}{\beamerbutton{Friction}}
-%     \tocbuttoncolor{conclusion}
-%     \hspace{\buttonspacingfootline}
-%       \hyperlink{conclusion}{\beamerbutton{Conclusion}}
 
     % this last one should normaly not be used... it will open the preferences to change the 
     % behaviour of the acrobat reader in fullscreen -> usefull in pico...
@@ -185,7 +165,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
      
 \Acrobatmenu{FullScreenPrefs}{\vspace{0.3cm}\hspace{0.24cm}\mbox{%
     \includegraphics[height=0.04\textheight,keepaspectratio]{%
-	   CreativeCommons_Attribution_License}%
+	   Figures/CreativeCommons_Attribution_License}%
 	  }}
    }
     \vspace{0.05cm}
@@ -211,121 +191,128 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 
 \begin{document}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\mysection{presentation}\label{presentation}
+\mysection{Presentation}\label{presentation}
 
-\begin{frame}\frametitle{How to find the right model for a job?}
+\begin{frame}\frametitle{\alert{Why} would {\bf you} want a model data base?}
   \begin{itemize}
-   \item  We need Collections 
-      \begin{itemize}
-        \item   
-          of {\bf models} e.g.: {\tiny 
-            Arora2005GCB-1 ,CARDAMOM ,$\dots$, Zelenev2000MicrobialEcology 
-          }
-        \item of  {\bf properties} and diagnostics to {\bf compare} them by 
-            
-          \begin{itemize}
-            \item   symbolic e.g. {\tiny mass balance, CompartmentalMatrix, InFluxes $\dots$}
-            {\tiny
-              \[
-              \displaystyle
-              \frac{d}{dt}\left[\begin{matrix}leaf\\wood\end{matrix}\right]
-                =\left[\begin{matrix}I_{leaf}{\left(t
-                \right)}\\I_{wood}\end{matrix}\right]+\left[\begin{matrix}-
-                  k_{leaf 2 wood} - k_{leaf o}{\left(t \right)} &
-                  k_{wood 2 leaf}\\k_{leaf 2 wood} & - k_{wood 2 leaf}
-                  - k_{wood
-                  o}\end{matrix}\right]\left[\begin{matrix}leaf\\wood\end{matrix}\right]
-              \]
+  \pause  
+  \item
+  {\bf Find} (rather than reinvent)  the {\bf right model} for a specific {\bf task}?
+  \pause  
+  \item
+  {\bf Implement} a {\bf new} model but start from a similar one?
+  \pause  
+  \item
+  {\bf Use} {\bf  common infrastructure} to compute diagnostics that are difficult to implement.
+          \pause  
+          e.g. {\tiny carbon flux diagrams, transit times, age distributions $\dots$}
+          \begin{tabular}{llll}
+            \resizebox{4cm}{!}{
+            \begin{minipage}{7cm}
+            \tiny
+            \begin{align*}
+            \frac{d}{dt}\left[\begin{matrix}leaf\\wood\end{matrix}\right] 
+            =
+            \left[\begin{matrix}I_{leaf}{\left(t
+              \right)}\\I_{wood}\end{matrix}\right]+\left[\begin{matrix}-
+                k_{leaf 2 wood} - k_{leaf o}{\left(t \right)} &
+                k_{wood 2 leaf}\\k_{leaf 2 wood} & - k_{wood 2 leaf}
+                - k_{wood
+                o}\end{matrix}\right]\left[\begin{matrix}leaf\\wood\end{matrix}\right]
+            \end{align*}
+            \end{minipage}
             }
-          \item graphic, numeric e.g. {\tiny carbon flux diagrams, transit times, age distributions $\dots$}
-            \begin{tabular}{lll}
-              \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/2pool}} 
-              & 
-              \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/7pool}}
-              & 
-              \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/atmosphere_nonlinear}},
-            %  & 
-            %  $\dots$
-            \end{tabular}
-        \end{itemize}
-      \end{itemize}
-    \item {\bf HOW} do we implement, inspect, test and extend both collections? 
-    \item {\bf HOW} can you steal from it?
+            &
+            \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/2pool}} 
+            & 
+            \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/7pool}}
+            & 
+            \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/atmosphere_nonlinear}}
+          %  & 
+          %  $\dots$
+          \end{tabular}
+        %\end{itemize}
+  \pause  
+  \item Find and {\bf reduce} sources of {\bf uncertainty} in carbon predictions
+  \pause
+  \item \alert{$\dots$ ???}
   \end{itemize}
 \end{frame}
-     
-%      \pause
-%
-%
-%      How to formulate and run an element cycling model within a day?
-%      \pause
-%      \begin{tabular}{lll}
-%        \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/2pool}} 
-%        & 
-%        \begin{minipage}[c]{6cm}
-%          \begin{itemize} 
-%          \item 
-%            test 
-%          \end{itemize} 
-%        \end{minipage}
-%        & 
-%        \raisebox{-.5\height}{\includegraphics[height=2cm]{Figures/7pool}}
-%        \\
-%        simple 
-%          & 
-%          \centering{ 
-%          $\rightarrow \dots \rightarrow \dots $ 
-%          } 
-%          & 
-%          complex
-%      \end{tabular}
-%   \item  
-%compare 
-%      many models with respect to many different diagnostics reliably?
-%   \item  
-%How to allow models to be formulated in different ways?
-%   \item  
-%How to make runnable models transparent without implementation details obscuring the scientific content?
-%   \item  
-%How much does it cost? to keep the collection maintainable
-%   \item  
-%How to steal from the framework?     
-%
-%  \end{itemize}
-%     
+%%%%%%%%%%%%%%%%%
+\begin{frame}\frametitle{\alert{How} can you build one?}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      We need: 
+      \begin{itemize}
+        
+        \item<1->  {\bf collections} 
+        \begin{itemize}
+            \item<2->  
+              of \alert{many} {\bf models}:  {\tiny (from A to Z):
+                Arora2005GCB-1 ,CARDAMOM ,$\dots$, Zelenev2000MicrobialEcology 
+              }
+            \item<3-> of  \alert{many} computable {\bf properties} and diagnostics to {\bf compare} them by 
+                
+         \end{itemize}
+         \item<8->Ways of {\bf organizing} both collections 
+          \begin{itemize}
+            \item<9-> building blocks for models
+            \item<10-> functions of building blocks 
+            \item<11> {\bf computational graph} for {\bf different / evolving} building blocks 
+          \end{itemize}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \onslide<4->{
+      \includegraphics[width=.7\columnwidth]{Figures/modelsTimesFunctions}
+      }
+      \begin{itemize}
+        \item<5->
+        `Copy and paste'? \\
+          $\rightarrow$ bilinear increase of code
+          \\
+          $\rightarrow$ unmaintainable, untestable, errorprone, 
+          hard to change ... 
+          \item<6-> better use the {\bf dry} principle
+          {\bf D}on't {\bf r}epeat {\bf y}ourself 
+        \end{itemize}
+      \end{column}
+    \end{columns}
+  \end{frame}
+      
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\mysection{Screen Shots}\label{screen_shots}
-\subsection{Views}
-\begin{frame}
-\frametitle{Example widget for query result }
-\centering{
-	\includegraphics[height=.9\textheight]{ModelTable.png}
-}
-\note{
-	\begin{enumerate}
-	\item
-	bgc\_md2 is an open source python package availabe on GitHub, developed at the Max-Planck-Institut for BioGeoChemistry in Jena and more recently  in Yiqi Luo's Ecolab at NAU in Flagstaff
-	\item
-	A set of libraries that can be used in other python scripts or interactively (jupyter or IPython )
-	The picture shows a jupiter widget showing a table of models. The orange buttons can be clicked to 
-	expand or collape a more detailed view of the particular model.
-	\item
-	$>$ 30 published vegetation, soil or ecosystems models in a format that
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \mysection{Screen Shots}\label{screenshots}
+  \subsection{Views}
+  \begin{frame}
+  \frametitle{Example widget for query result }
+  \centering{
+    \includegraphics[height=.9\textheight]{Figures/ModelTable.png}
+  }
+  \note{
+    \begin{enumerate}
+    \item
+    bgc\_md2 is an open source python package available on GitHub, developed at the Max-Planck-Institute for Biogeochemistry in Jena and more recently  in Yiqi Luo's Ecolab at NAU in Flagstaff
+    \item
+    A set of libraries that can be used in other python scripts or interactively (jupyter or IPython )
+    The picture shows a jupiter widget showing a table of models. The orange buttons can be clicked to 
+    expand or collapse a more detailed view of the particular model.
+    \item
+    $>$ 30 published vegetation, soil or ecosystems models in a format that
 	for symbolic and numeric computations
 	\item
 	A set of special datatypes that describe components of the models and functions that operate on these datatypes
 	\item 
-	A userinterface that uses a graph library to compute what is computable and can be used for comparisons.
+	A user interface that uses a graph library to compute what is computable and can be used for comparisons.
 	\end{enumerate}
 }
 \end{frame}
 
 \subsection{Single Model Inspection}
 \begin{frame}
-	\frametitle{Analysis with symbolic tools \dots}
+	\frametitle{Analysis with symbolic tools (\texttt{sympy}) \dots}
   \centering{
-	\includegraphics[height=.9\textheight]{mvsTabScreen.png}
+	\includegraphics[height=.9\textheight]{Figures/mvsTabScreen.png}
   }
 	\note{
 	\begin{enumerate}
@@ -340,7 +327,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 \begin{frame}
 	\frametitle{\dots or numerically }
   \centering{
-	\includegraphics[height=.9\textheight]{DataAssimilation.png}
+	\includegraphics[height=.9\textheight]{Figures/DataAssimilation.png}
   }
 	\note{
 	\begin{enumerate}
@@ -357,7 +344,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 %	\frametitle{Implemented diagnostics are available for all models}
 %	\begin{figure}
 %  \centering{
-%	\includegraphics[height=.9\textheight]{TracebilityAnalysis.png}
+%	\includegraphics[height=.9\textheight]{Figures/TracebilityAnalysis.png}
 %  }
 %	\caption{pool content + Tracebility Analysis: carbon storage potential , carbon storage capacity and residence time}
 %	\end{figure}
@@ -376,14 +363,14 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 \begin{frame}
 \frametitle{Database records are python modules}
   \centering{
-  \includegraphics[height=.9\textheight]{source.py.png}
+  \includegraphics[height=.9\textheight]{Figures/source.py.png}
   }
   \note{
   \begin{enumerate}
     \item
     The picture shows the screen shot of the source code of the above model using sympy and some datatypes provided by \texttt{bgc\_md2}  .
     \item
-    The entries of the database dont even have to be complete models. They are implemented in normal python and 
+    The entries of the database don't even have to be complete models. They are implemented in normal python and 
     have in common that they define a set of model properties and a set of functions to connect them.
     There is no special format necessary. 
     The creation of the symbolic formulation can be automated by all means available in python.
@@ -436,7 +423,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 \note{
   \begin{enumerate}
     \item
-    \texttt{bgc\_md2} is not just a collection of models, described as sets of varible of special type like fluxes or matrice, but also 
+    \texttt{bgc\_md2} is not just a collection of models, described as sets of variable of special type like fluxes or matrix, but also 
     a collection of functions whose arguments and return values have these types.
     These functions are here called \texttt{computers} and use python type annotations.
     The computability graph used in the user interface and queries is derived from the 
@@ -451,7 +438,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
   
   \begin{enumerate}
     \item
-      Datatypes defining building blocks of models e.g.\ \texttt{CompartmentalMatrix}, \texttt{InternalFluxesBySymbol}, \dots     
+      Datatypes defining {\bf building blocks} of models e.g.\ \texttt{CompartmentalMatrix}, \texttt{InternalFluxesBySymbol}, \dots     
     \item
       Functions operating on those properties (forming the edges of the graph where the Datatypes are nodes) 
     \item
@@ -471,9 +458,9 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 \begin{frame}
   \frametitle{Userinterface using computability graphs}
   \centering{
-  \includegraphics[height=0.7\textheight]{mvsTabScreenBig.png}
+  \includegraphics[height=0.7\textheight]{Figures/mvsTabScreenBig.png}
   \\
-  Suggested methods automatically created by a graph library
+  Suggested methods automatically created by \texttt{ComputabilityGraphs}
   }
   \note{
   \begin{tiny}
@@ -481,8 +468,8 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
     \item
     The figure shows IPythons options for callable methods on a variable called \texttt{mvs} 
     \item
-    This is standard for mehtods of a python object. 
-    In this case the methods are automatically created and added by a graphalgorithm that computes 
+    This is standard for methods of a python object. 
+    In this case the methods are automatically created and added by a graph algorithm that computes 
     which variables can be computed form the set of provided model properties.
     \item 
     This has far reaching consequences.
@@ -490,7 +477,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
     with respect to all \emph{computable variables} not just the ones provided in the data base record.
     \item
     As an example the matrix formulation of models A and B  can be compared even if neither A nor B defines
-    the matrix as long as it can be computed from other variable (in this case the internal and outfluxes and an ordering of the statevariables)
+    the matrix as long as it can be computed from other variable (in this case the internal and outfluxes and an ordering of the state variables)
     \item
     An obvious consequence is that the information about a model can be provided in different ways.
     There is no need to force the user into a rigid record format.
@@ -522,7 +509,7 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
   \begin{column}{0.7\textwidth}
       \begin{center}
       \begin{figure}
-  	\includegraphics[height=.9\textheight]{StartNodes.pdf}
+  	\includegraphics[height=.9\textheight]{Figures/StartNodes.pdf}
 	%\caption{The computability Graph for variable B (e.g. \texttt{CompartmentalMatrix}}
       \end{figure}
        \end{center}
@@ -590,8 +577,8 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 \begin{frame}
   \frametitle{Example computation via \texttt{CompartmentalSystems}}
 	\begin{figure}
-	\includegraphics[height=0.5\textheight]{atmosphere_nonlinear.pdf}
-		\caption{age distribuition of a pool as function of time}
+	\includegraphics[height=0.5\textheight]{Figures/atmosphere_nonlinear.pdf}
+		\caption{age distribution of a pool as function of time}
 	\end{figure}
   {\tiny
 	\begin{thebibliography}{}
@@ -609,13 +596,23 @@ Biogeochemical Model Database  \texttt{bgc\_md2}
 	\frametitle{Links}
   \begin{itemize}
     \item
-      The README of the package on github (wiht installation instructions):
+      The README of the package on github (with installation instructions):
       \url{https://github.com/MPIBGC-TEE/bgc_md2}
     \item
+      To {\bf explore} some rudimentary tutorials {\bf without installation} use
       \url{https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder}
-      binder for testing some 
-      tutorials (jupyter notebooks) for the creation of new models or a model comparison
-      No istallation neccessary.
+      \begin{itemize}
+        \item Click on the link! 
+        \item After jupyter lab has started  
+        go to \texttt{/binder\_notebooks/illustrativeExamples/} 
+      \item right click on \texttt{createModel.py} 
+      \item choose \texttt{Open With} 
+      \item choose \texttt{Jupytext Notebook} 
+      \end{itemize}
+      This will open an example notebook exploring some of the concepts.
+      More applied examples are coming.
+
+      
   \end{itemize}
 \end{frame}
 
