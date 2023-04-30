@@ -7,7 +7,7 @@ import numpy as np
 from sympy import Symbol, symbols 
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
-from typing import Callable
+from typing import Callable, Tuple, Dict
 import general_helpers as gh
 from functools import reduce, partial
 from importlib import import_module
@@ -248,7 +248,7 @@ def get_global_mean_vars(dataPath, targetPath=None, flash_cache=False):
         nc_global_mean_file_name,
         compute_global_mean_arr_var_dict,
         names=Observables._fields + Drivers._fields,
-        #flash_cash=True
+        flash_cache=flash_cache
     )
     obs = Observables(*(arr_dict[k] for k in Observables._fields))
     dvs = Drivers(*(arr_dict[k] for k in Drivers._fields))
@@ -298,7 +298,6 @@ def make_param2res_sym(
             )
         )
         number_of_steps = int(cpa.number_of_months/delta_t_val)
-        steps_per_month = int(dpm / delta_t_val)
         result_dict = bitr[0: number_of_steps: steps_per_month]
         steps_per_year = steps_per_month*12
         yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
@@ -524,4 +523,43 @@ def get_global_mean_vars_all(experiment_name):
                             lon_var="longitude",
                             ) 
         )
+ 
+def da_res_1(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu=10,
+        acceptance_rate=15,   # default value | target acceptance rate in %
+        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=1,   # default value | increase value to reduce initial step size
+        K=2 # default value | increase value to reduce acceptance of higher cost functions
 
+    )->Tuple[Dict,Dict,np.array]:
+    func=gh.cached_da_res_1_maker(
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization,
+        EstimatedParameters,
+    )    
+    return func(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu,
+        acceptance_rate,   
+        chunk_size,
+        D_init,
+        K
+    )

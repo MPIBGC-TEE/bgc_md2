@@ -8,7 +8,7 @@ from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 # from copy import copy
-from typing import Callable
+from typing import Callable, Tuple, Dict
 from importlib import import_module
 
 # from general_helpers import month_2_day_index, monthly_to_yearly
@@ -321,13 +321,14 @@ def compute_global_mean_arr_var_dict(dataPath):
     return arr_dict
 
 
-def get_global_mean_vars(dataPath,targetPath=None):
+def get_global_mean_vars(dataPath,targetPath=None, flash_cache=False):
     arr_dict= gh.cached_var_dict(
         dataPath,
         targetPath,
         nc_global_mean_file_name,
         compute_global_mean_arr_var_dict,
-        names=Observables._fields + Drivers._fields
+        names=Observables._fields + Drivers._fields,
+        flash_cache=flash_cache
     )
     obs = Observables(*(arr_dict[k] for k in Observables._fields))
     dvs = Drivers(*(arr_dict[k] for k in Drivers._fields))
@@ -888,3 +889,43 @@ def make_param_filter_func(
         return cond1 and cond2 and cond3
 
     return isQualified
+
+def da_res_1(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu=10,
+        acceptance_rate=15,   # default value | target acceptance rate in %
+        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=1,   # default value | increase value to reduce initial step size
+        K=2 # default value | increase value to reduce acceptance of higher cost functions
+
+    )->Tuple[Dict,Dict,np.array]:
+    func=gh.cached_da_res_1_maker(
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization,
+        EstimatedParameters,
+    )    
+    return func(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu,
+        acceptance_rate,   
+        chunk_size,
+        D_init,
+        K
+    )

@@ -11,11 +11,10 @@ from sympy import Symbol, symbols
 from importlib import import_module
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
-from typing import Dict,Tuple
-from functools import lru_cache
+from typing import Dict,Tuple, Callable
+from functools import lru_cache, reduce, partial
 from copy import copy
 from typing import Callable
-from functools import reduce, partial
 from scipy.interpolate import interp1d
 
 from ComputabilityGraphs.CMTVS import  CMTVS
@@ -232,7 +231,7 @@ def compute_global_mean_arr_var_dict(dataPath):
     }
     return arr_dict
 
-def get_global_mean_vars(dataPath,targetPath=None):
+def get_global_mean_vars(dataPath,targetPath=None,flash_cache=False):
     if targetPath is None:
         targetPath = dataPath
 
@@ -242,7 +241,7 @@ def get_global_mean_vars(dataPath,targetPath=None):
         nc_global_mean_file_name,
         compute_global_mean_arr_var_dict,
         names=Observables._fields + OrgDrivers._fields,
-        #flash_cash=True
+        flash_cache=flash_cache
     )
     obs = Observables(*(arr_dict[k] for k in Observables._fields))
     odvs = OrgDrivers(*(arr_dict[k] for k in OrgDrivers._fields))
@@ -343,7 +342,6 @@ def make_param2res_sym(
             )
         )
         number_of_steps = int(cpa.number_of_months/delta_t_val)
-        steps_per_month = int(dpm / delta_t_val)
         result_dict = bitr[0: number_of_steps: steps_per_month]
 
         return Observables(
@@ -468,222 +466,44 @@ def get_global_mean_vars_all(experiment_name):
     )
 
 
-# ################ function for computing global mean for custom data streams ###################
 
-# def get_global_mean_vars_all(experiment_name="VISIT_S2_"):
-# def nc_file_name(nc_var_name, experiment_name="VISIT_S2_"):
-# return experiment_name+"{}.nc".format(nc_var_name)
+def da_res_1(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu=10,
+        acceptance_rate=15,   # default value | target acceptance rate in %
+        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=1,   # default value | increase value to reduce initial step size
+        K=2 # default value | increase value to reduce acceptance of higher cost functions
 
-# def nc_global_mean_file_name(experiment_name="VISIT_S2_"):
-# return experiment_name+"mean_vars.nc"
-
-# data_str = namedtuple(
-# 'data_str',
-# ["cVeg", "cLitter", "cSoil", "gpp", "ra", "rh"]
-# )
-# names = data_str._fields
-# conf_dict = gh.confDict("kv_visit2")
-# dataPath=Path(conf_dict["dataPath"])
-
-# if dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)).exists():
-# print(""" Found cached global mean files. If you want to recompute the global means
-# remove the following files: """
-# )
-# print( dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name)))
-
-# def get_cached_global_mean(vn):
-# gm = gh.get_nc_array(dataPath.joinpath(
-# nc_global_mean_file_name(experiment_name=experiment_name)),vn)
-# return gm
-
-# #map variables to data
-# output=gh.data_streams(*map(get_cached_global_mean, gh.data_streams._fields))
-# return (
-# output
-# )
-
-# else:
-# gm=gh.globalMask()
-# # load an example file with mask
-# template = nc.Dataset(dataPath.joinpath("VISIT_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask
-# gcm=gh.project_2(
-# source=gm,
-# target=gh.CoordMask(
-# index_mask=np.zeros_like(template),
-# tr=gh.SymTransformers(
-# ctr=make_model_coord_transforms(),
-# itr=make_model_index_transforms()
-# )
-# )
-# )
-
-# print("computing means, this may take some minutes...")
-
-# def compute_and_cache_global_mean(vn):
-# path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
-# ds = nc.Dataset(str(path))
-# vs=ds.variables
-# lats= vs["lat"].__array__()
-# lons= vs["lon"].__array__()
-# print(vn)
-# var=ds.variables[vn]
-# # check if we have a cached version (which is much faster)
-# gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-
-# gm=gh.global_mean_var(
-# lats,
-# lons,
-# gcm.index_mask,
-# var
-# )
-# return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
-
-# #map variables to data
-# output=data_str(*map(compute_and_cache_global_mean, data_str._fields))
-# output_final=gh.data_streams(
-# cVeg=output.cVeg,
-# cSoil=output.cLitter+output.cSoil,
-# gpp=output.gpp,
-# npp=output.gpp-output.ra,
-# ra=output.ra,
-# rh=output.rh,
-# )
-# gm_path = dataPath.joinpath(nc_global_mean_file_name(experiment_name=experiment_name))
-# gh.write_data_streams_cache(gm_path, output_final)
-# return (
-# output_final
-# )
-
-
-#def get_parameterization_from_data_1(
-#        mvs: CMTVS,
-#        svs
-#        dvs,
-#        cpa,
-#        epa_min,
-#        epa_max,
-#        epa_0,
-#        nsimu=10,
-#
-#    )->Tuple[Dict,Dict,np.array]:
-#    """one of possibly many functions (_1)  to reproduce the optimal parameters and startvalues to to run the model forword
-#    If will either read them from file or start the dataassimilation that produced them""" 
-#    my_function_name= inspect.stack()[0][3]   
-#    #from IPython import embed; embed()
-#    # the commented lines use testargs to write epa_0,...
-#    
-#    c_max=np.array(epa_max)
-#    c_min=np.array(epa_min)
-#    c_0=(c_min+c_max)/2
-#    epa_0=EstimatedParameters(*c_0)
-#    C_autostep, J_autostep = gh.autostep_mcmc(
-#        initial_parameters=epa_0,
-#        filter_func=make_param_filter_func(epa_max,epa_min),
-#        param2res=make_param2res_sym(mvs,cpa,dvs),
-#        costfunction=gh.make_feng_cost_func(np.array(svs)[:,0:cpa.number_of_months]),
-#        nsimu=nsimu,
-#        #nsimu=200, # for testing and tuning mcmc
-#        #nsimu=20000,
-#        c_max=c_max,
-#        c_min=c_min,
-#        acceptance_rate=15,   # default value | target acceptance rate in %
-#        #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-#        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
-#        D_init=1,   # default value | increase value to reduce initial step size
-#        K=2 # default value | increase value to reduce acceptance of higher cost functions
-#    )
-#    # optimized parameter set (lowest cost function)
-#    par_opt=np.min(
-#        C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(
-#            len(EstimatedParameters._fields),
-#            1
-#        ),
-#        axis=1
-#    )
-#    epa_opt=EstimatedParameters(*par_opt)
-#    print("Data assimilation finished!")
-#
-#    param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
-#    X_0=numeric_X_0(mvs,dvs,cpa,epa_opt)
-#    X_0_dict={
-#        str(sym): X_0[i,0] 
-#        for i,sym in enumerate(
-#            mvs.get_StateVariableTuple()
-#        )
-#    }
-#    
-#    cp=CachedParameterization(param_dict,dvs,X_0_dict)
-#    return (
-#        cp,
-#        C_autostep,
-#        J_autostep,
-#        epa_opt
-#     )    
-#
-#        
-#def get_parameterization_from_data_1(
-#        mvs: CMTVS,
-#        svs,
-#        dvs,
-#        cpa,
-#        epa_min,
-#        epa_max,
-#        epa_0,
-#        nsimu=10,
-#
-#    )->Tuple[Dict,Dict,np.array]:
-#    """one of possibly many functions (_1)  to reproduce the optimal parameters and startvalues to to run the model forword
-#    If will either read them from file or start the dataassimilation that produced them""" 
-#    my_function_name= inspect.stack()[0][3]   
-#    #from IPython import embed; embed()
-#    # the commented lines use testargs to write epa_0,...
-#    
-#    c_max=np.array(epa_max)
-#    c_min=np.array(epa_min)
-#    c_0=(c_min+c_max)/2
-#    epa_0=EstimatedParameters(*c_0)
-#    C_autostep, J_autostep = gh.autostep_mcmc(
-#        initial_parameters=epa_0,
-#        filter_func=make_param_filter_func(epa_max,epa_min),
-#        param2res=make_param2res_2(mvs,cpa,dvs),
-#        costfunction=gh.make_feng_cost_func(np.array(svs)[:,0:cpa.number_of_months]),
-#        nsimu=nsimu,
-#        #nsimu=200, # for testing and tuning mcmc
-#        #nsimu=20000,
-#        c_max=c_max,
-#        c_min=c_min,
-#        acceptance_rate=15,   # default value | target acceptance rate in %
-#        #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
-#        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
-#        D_init=1,   # default value | increase value to reduce initial step size
-#        K=2 # default value | increase value to reduce acceptance of higher cost functions
-#    )
-#    # optimized parameter set (lowest cost function)
-#    par_opt=np.min(
-#        C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(
-#            len(EstimatedParameters._fields),
-#            1
-#        ),
-#        axis=1
-#    )
-#    epa_opt=EstimatedParameters(*par_opt)
-#    print("Data assimilation finished!")
-#
-#    param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
-#    X_0=numeric_X_0(mvs,dvs,cpa,epa_opt)
-#    X_0_dict={
-#        str(sym): X_0[i,0] 
-#        for i,sym in enumerate(
-#            mvs.get_StateVariableTuple()
-#        )
-#    }
-#    
-#    cp=CachedParameterization(param_dict,dvs,X_0_dict)
-#    return (
-#        cp,
-#        C_autostep,
-#        J_autostep,
-#        epa_opt
-#     )    
-
+    )->Tuple[Dict,Dict,np.array]:
+    func=gh.cached_da_res_1_maker(
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization,
+        EstimatedParameters,
+    )    
+    return func(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu,
+        acceptance_rate,   
+        chunk_size,
+        D_init,
+        K
+    )
 

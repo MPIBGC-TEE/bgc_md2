@@ -3370,13 +3370,13 @@ def cached_var_dict(
         nc_global_mean_file_name: Callable,
         compute_arr_var_dict: Callable,
         names,
-        flash_cash=False
+        flash_cache=False
     ):
 
     if targetPath is None:
         targetPath = dataPath 
 
-    if flash_cash:
+    if flash_cache:
         for n in names: 
             p=targetPath.joinpath(nc_global_mean_file_name(n))
             try:
@@ -3404,8 +3404,16 @@ def cached_var_dict(
         return arr_dict
     
 
-def get_parameterization_from_data_1(
-        msh,#: module, 
+def da_res_1_maker(
+        #msh,#: module, 
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization: type,
+        EstimatedParameters: type
+    ):    
+    def compute_func(
         mvs: CMTVS,
         svs,
         dvs,
@@ -3414,89 +3422,108 @@ def get_parameterization_from_data_1(
         epa_max,
         epa_0,
         nsimu=10,
-
-    )->Tuple[Dict,Dict,np.array]:
-    """one of possibly many functions   to reproduce the optimal parameters and startvalues to to run the model forword
-    It replaces the model specific data assimilation 
-    procedures (different models used a different MCMC implementations and none worked for all combinations ) 
-    this one does.
-    """ 
-    
-    c_max=np.array(epa_max)
-    c_min=np.array(epa_min)
-    c_0=np.array(epa_0)
-    epa_0=msh.EstimatedParameters(*c_0)
-    C_autostep, J_autostep = autostep_mcmc_2(
-        initial_parameters=epa_0,
-        filter_func=msh.make_param_filter_func(epa_max,epa_min,cpa),
-        param2res=msh.make_param2res_sym(mvs,cpa,dvs),
-        costfunction=msh.make_weighted_cost_func(svs),
-        nsimu=nsimu,
-        #nsimu=200, # for testing and tuning mcmc
-        #nsimu=20000,
-        c_max=c_max,
-        c_min=c_min,
         acceptance_rate=15,   # default value | target acceptance rate in %
-        #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
         chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
         D_init=1,   # default value | increase value to reduce initial step size
         K=2 # default value | increase value to reduce acceptance of higher cost functions
-    )
-    # optimized parameter set (lowest cost function)
-    par_opt=np.min(
-        C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(
-            len(msh.EstimatedParameters._fields),
-            1
-        ),
-        axis=1
-    )
-    epa_opt=msh.EstimatedParameters(*par_opt)
-    print("Data assimilation finished!")
 
-    param_dict=make_param_dict(mvs,cpa,epa_opt) 
-    cpc=msh.CachedParameterization
-    extra_args=cpc.func_dict_param_keys
-
-    X_0=msh.numeric_X_0(mvs,dvs,cpa,epa_opt)
-    X_0_dict={
-        str(sym): X_0[i,0] 
-        for i,sym in enumerate(
-            mvs.get_StateVariableTuple()
+    )->Tuple[Dict,Dict,np.array]:
+        """one of possibly many functions   to reproduce the optimal parameters and startvalues to to run the model forword
+        It replaces the model specific data assimilation 
+        procedures (different models used a different MCMC implementations and none worked for all combinations ) 
+        this one does.
+        """ 
+        #from IPython import embed; embed()
+        
+        c_max=np.array(epa_max)
+        c_min=np.array(epa_min)
+        c_0=np.array(epa_0)
+        EstimatedParameterCls=type(epa_min)
+        epa_0=EstimatedParameters(*c_0)
+        C_autostep, J_autostep = autostep_mcmc_2(
+            initial_parameters=epa_0,
+            filter_func=make_param_filter_func(epa_max,epa_min,cpa),
+            param2res=make_param2res_sym(mvs,cpa,dvs),
+            costfunction=make_weighted_cost_func(svs),
+            nsimu=nsimu,
+            #nsimu=200, # for testing and tuning mcmc
+            #nsimu=20000,
+            c_max=c_max,
+            c_min=c_min,
+            acceptance_rate=15,   # default value | target acceptance rate in %
+            #chunk_size=100,  # default value | number of iterations to calculate current acceptance ratio and update step size
+            chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+            D_init=1,   # default value | increase value to reduce initial step size
+            K=2 # default value | increase value to reduce acceptance of higher cost functions
         )
-    }
-    
-    cp=msh.CachedParameterization(param_dict,dvs,X_0_dict)
-    return (
-        cp,
-        C_autostep,
-        J_autostep,
-        epa_opt
-     )    
+        # optimized parameter set (lowest cost function)
+        par_opt=np.min(
+            C_autostep[:, np.where(J_autostep[1] == np.min(J_autostep[1]))].reshape(
+                len(EstimatedParameters._fields),
+                1
+            ),
+            axis=1
+        )
+        epa_opt=EstimatedParameters(*par_opt)
+        print("Data assimilation finished!")
 
+        param_dict=make_param_dict(mvs,cpa,epa_opt) 
+        cpc=CachedParameterization
+        extra_args=cpc.func_dict_param_keys
 
+        X_0=numeric_X_0(mvs,dvs,cpa,epa_opt)
+        X_0_dict={
+            str(sym): X_0[i,0] 
+            for i,sym in enumerate(
+                mvs.get_StateVariableTuple()
+            )
+        }
+        
+        cp=CachedParameterization(param_dict,dvs,X_0_dict)
+        return (
+            cp,
+            C_autostep,
+            J_autostep,
+            epa_opt
+        )    
 
-def make_cached_data_assimilation_func_1(
+    return(compute_func)
+
+def cached_da_res_1_maker(
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization: type,
+        EstimatedParameters: type
+    ):    
+    compute_func=da_res_1_maker(
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization,
+        EstimatedParameters,
+    )    
+
+    cached_func=mcdaf(compute_func,CachedParameterization,EstimatedParameters)
+    return cached_func
+
+def mcdaf(
         func: Callable,
-        msh, # module (model specific) 
+        CachedParameterization: type,
+        EstimatedParameters: type,
     ) ->Callable:         
     # create a function with one more parameter: out_put_path
     # than the original function.
     sig=inspect.signature(func)
     def cached_func(
-            data_path,
-            msh,
-            mvs,
-            svs,
-            dvs,
-            cpa,
-            epa_min,
-            epa_max,
-            epa_0,
-            nsimu,
+            data_path, # add an argument 
+            *args,
+            **kwargs
         )->Tuple[Dict,Dict,np.array]:
         # check for cached files
         out_put_path=data_path.joinpath(func.__name__)
-        CP= import_module(f"{msh.model_mod}.CachedParameterization").CachedParameterization
         sep=","
         Cs_fn='da_aa.csv'
         Js_fn='da_j_aa.csv'
@@ -3509,7 +3536,7 @@ def make_cached_data_assimilation_func_1(
             ).to_numpy().transpose()
 
         try:
-            cp = CP.from_path(out_put_path)
+            cp = CachedParameterization.from_path(out_put_path)
             Cs = read_arr(
                 out_put_path.joinpath(Cs_fn)
             )
@@ -3517,7 +3544,7 @@ def make_cached_data_assimilation_func_1(
                 out_put_path.joinpath(Js_fn)
             )
             epa_opt=load_named_tuple_from_json_path(
-                msh.EstimatedParameters,
+                EstimatedParameters,
                 out_put_path.joinpath(epa_opt_fn)
             )
             fs="\n".join(
@@ -3532,15 +3559,8 @@ def make_cached_data_assimilation_func_1(
         except Exception:
         #except FileNotFoundError:
             cp,Cs,Js,epa_opt = func(
-                msh,
-                mvs,
-                svs,
-                dvs,
-                cpa,
-                epa_min,
-                epa_max,
-                epa_0,
-                nsimu
+                *args,
+                **kwargs
             )
             cp.write(out_put_path)
             h.dump_named_tuple_to_json_path(
@@ -3549,7 +3569,7 @@ def make_cached_data_assimilation_func_1(
             )
             pd.DataFrame(
                 Cs.transpose(),
-                columns=msh.EstimatedParameters._fields
+                columns=EstimatedParameters._fields
             ).to_csv(
                 out_put_path.joinpath(Cs_fn), 
                 sep=sep,
@@ -3565,6 +3585,8 @@ def make_cached_data_assimilation_func_1(
         return cp,Cs,Js,epa_opt
 
     return cached_func
+
+
 
 def rh_iterator(
         mvs,
@@ -3616,4 +3638,4 @@ def single_stream_cost(obs, out_simu, key):
     
 
 #constants
-common_global_mask_expanded=globalMask("common_mask_expanded.nc")
+common_global_mask_expanded = globalMask("common_mask_expanded.nc")

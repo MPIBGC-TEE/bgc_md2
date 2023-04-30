@@ -12,7 +12,7 @@ from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 #        TimeStepIterator2,
 #)
 from copy import copy
-from typing import Callable
+from typing import Callable, Tuple, Dict
 from functools import partial, reduce
 
 model_mod='bgc_md2.models.jon_yib'
@@ -342,7 +342,7 @@ def compute_global_mean_arr_var_dict(dataPath):
     #from IPython import embed;embed()
     return arr_dict
 
-def get_global_mean_vars(dataPath, targetPath=None):
+def get_global_mean_vars(dataPath, targetPath=None, flash_cache=False):
     if targetPath is None:
         targetPath = dataPath
 
@@ -352,7 +352,7 @@ def get_global_mean_vars(dataPath, targetPath=None):
         nc_global_mean_file_name,
         compute_global_mean_arr_var_dict,
         names=Observables._fields + Drivers._fields,
-        #flash_cash=True
+        flash_cache=flash_cache
     )
     obs = Observables(*(arr_dict[k] for k in Observables._fields))
     dvs = Drivers(*(arr_dict[k] for k in Drivers._fields))
@@ -721,164 +721,43 @@ def get_global_mean_vars_all(experiment_name):
                             ) 
         )       
 
-################ function for computing global mean for custom data streams ###################
-    
-# def get_global_mean_vars_all(experiment_name="YIBs_S2_"):
 
-    # def nc_file_name(nc_var_name, experiment_name="YIBs_S2_"):
-        # if nc_var_name in ["cVeg", "cSoil"]: return experiment_name+"Annual_{}.nc".format(nc_var_name)
-        # else: return experiment_name+"Monthly_{}.nc".format(nc_var_name)
+def da_res_1(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu=10,
+        acceptance_rate=15,   # default value | target acceptance rate in %
+        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
+        D_init=1,   # default value | increase value to reduce initial step size
+        K=2 # default value | increase value to reduce acceptance of higher cost functions
 
-    # def nc_global_mean_file_name(nc_var_name, experiment_name="YIBs_S2_"):
-        # return experiment_name+"{}_gm_all.nc".format(nc_var_name)
-
-    # data_str = namedtuple( # data streams available in the model
-        # 'data_str',
-        # ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"]
-        # )
-
-    # names = data_str._fields
-    # conf_dict = gh.confDict("jon_yib")
-    # # with Path('config.json').open(mode='r') as f:
-        # # conf_dict = frozendict(json.load(f))
-    # dataPath=Path(conf_dict["dataPath"])    
-    
-    # if all([dataPath.joinpath(nc_global_mean_file_name(vn, experiment_name=experiment_name)).exists() for vn in names]):
-        # print(""" Found cached global mean files. If you want to recompute the global means
-            # remove the following files: """
-        # )
-        # for vn in names:
-            # print( dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)))
-
-        # def get_cached_global_mean(vn):
-            # gm = gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn,experiment_name=experiment_name)),vn)
-            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
-
-        # #map variables to data
-        # output=gh.data_streams(*map(get_cached_global_mean, data_str._fields))
-        # return (
-            # output
-        # )
-
-    # else:
-        # gm=gh.globalMask()
-        # # load an example file with mask
-        # template = nc.Dataset(dataPath.joinpath("YIBs_S2_Monthly_tas.nc")).variables['tas'][0,:,:].mask
-        # gcm=gh.project_2(
-                # source=gm,
-                # target=gh.CoordMask(
-                    # index_mask=np.zeros_like(template),
-                    # tr=gh.SymTransformers(
-                        # ctr=make_model_coord_transforms(),
-                        # itr=make_model_index_transforms()
-                    # )
-                # )
-        # )
-
-        # print("computing means, this may take some minutes...")
-
-        # def compute_and_cache_global_mean(vn):
-            # path = dataPath.joinpath(nc_file_name(vn, experiment_name=experiment_name))
-            # ds = nc.Dataset(str(path))
-            # vs=ds.variables
-            # lats= vs["latitude"].__array__()
-            # lons= vs["longitude"].__array__()
-            # print(vn)
-            # var=ds.variables[vn]
-            # # check if we have a cached version (which is much faster)
-            # gm_path = dataPath.joinpath(nc_global_mean_file_name(vn, experiment_name=experiment_name))
-
-            # gm=gh.global_mean_var(
-                    # lats,
-                    # lons,
-                    # gcm.index_mask,
-                    # var
-            # )
-            # gh.write_global_mean_cache(
-                    # gm_path,
-                    # gm,
-                    # vn
-            # )
-            # return gm * 86400 if vn in ["gpp", "npp", "rh", "ra"] else gm
-        
-        # #map variables to data
-        # output=data_str(*map(compute_and_cache_global_mean, data_str._fields))
-        # return (
-            # gh.data_streams( # required data streams
-                # cVeg=output.cVeg,
-                # cSoil=output.cSoil,
-                # gpp=output.gpp,
-                # npp=output.npp,
-                # ra=output.ra,
-                # rh=output.rh,
-            # )
-        # )
-
-# ################## remove after
-    # if all([dataPath.joinpath(nc_global_mean_file_name(vn)).exists() for vn in names]):
-        # print(""" Found cached global mean files. If you want to recompute the global means
-            # remove the following files: """
-        # )
-        # for vn in names:
-            # print( dataPath.joinpath(nc_global_mean_file_name(vn)))
-
-        # def get_cached_global_mean(vn):
-            # return gh.get_nc_array(dataPath.joinpath(nc_global_mean_file_name(vn)),vn)
-    
-        # return (
-            # Observables(*map(get_cached_global_mean, o_names)),
-            # Drivers(*map(get_cached_global_mean,d_names))
-        # )
-
-    # else:
-        # print("computing means, this may also take some minutes...")
-
-        # gm=gh.globalMask()
-        # # load an example file with mask
-        # template = nc.Dataset(
-                        # dataPath.joinpath("YIBs_S2_Monthly_tas.nc")
-                    # ).variables['tas'][0,:,:].mask
-        # gcm=gh.project_2(
-                # source=gm,
-                # target=gh.CoordMask(
-                    # index_mask=np.zeros_like(template),
-                    # tr=gh.SymTransformers(
-                        # ctr=make_model_coord_transforms(),
-                        # itr=make_model_index_transforms()
-                    # )
-                # )
-        # )
-        # def compute_and_cache_global_mean(vn):
-            # path = dataPath.joinpath(nc_file_name(vn))
-            # ds = nc.Dataset(str(path))
-            # vs=ds.variables
-            # lats= vs["latitude"].__array__()
-            # lons= vs["longitude"].__array__()
-            # print(vn)
-            # var=ds.variables[vn]
-            # # check if we have a cached version (which is much faster)
-            # gm_path = dataPath.joinpath(nc_global_mean_file_name(vn))
-
-            # gm=gh.global_mean_var(
-                    # lats,
-                    # lons,
-                    # gcm.index_mask,
-                    # var
-            # )
-            
-            # #scale per second to per day before caching
-            # if vn in ["npp","gpp","rh","ra"]:
-                # gm = gm * 86400
-                
-            # gh.write_global_mean_cache(
-                    # gm_path,
-                    # gm,
-                    # vn
-            # )
-            # return gm
-    
-        # #map variables to data
-        # return (
-            # Observables(*map(compute_and_cache_global_mean, o_names)),
-            # Drivers(*map(compute_and_cache_global_mean, d_names))
-        # )
+    )->Tuple[Dict,Dict,np.array]:
+    func=gh.cached_da_res_1_maker(
+        make_param_filter_func,
+        make_param2res_sym,
+        make_weighted_cost_func,
+        numeric_X_0,
+        CachedParameterization,
+        EstimatedParameters,
+    )    
+    return func(
+        data_path,
+        mvs,
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu,
+        acceptance_rate,   
+        chunk_size,
+        D_init,
+        K
+    )

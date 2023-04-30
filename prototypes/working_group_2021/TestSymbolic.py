@@ -324,8 +324,8 @@ class TestSymbolic(TestCase):
         for mf in set(self.model_folders):
         #for mf in set(self.model_folders).intersection(
         #    # ["Aneesh_SDGVM"]
-        #    # ["kv_visit2"]
-        #    ["jon_yib"]
+        #    ["kv_visit2"]
+        #    #["jon_yib"]
         #    # ["yz_jules"]
         #):
             with self.subTest(mf=mf):
@@ -352,22 +352,20 @@ class TestSymbolic(TestCase):
                     )
                 )
                 target_path = Path(mf).joinpath("global_means")
+                svs, dvs = msh.get_global_mean_vars(data_path, target_path, flash_cache=False)
                 # when it runs the first time it will create the global mean
                 # cache files there
-                svs, dvs = msh.get_global_mean_vars_2(conf_dict, target_path)
-                # run different data assimilation procedures
+                # if you have to download the original data uncomment the following code
+                # svs, dvs = msh.get_global_mean_vars_2(conf_dict, target_path)
+
+                # assert that we can run different data assimilation procedures 
+                # represented by the name 
                 for func in [
-                    gh.get_parameterization_from_data_1,
-                    # gh.get_parameterization_from_data_2,
+                    msh.da_res_1
                 ]:
                     with self.subTest(func=func):
-                        cpfd = gh.make_cached_data_assimilation_func_1(
-                            func,
-                            msh,
-                        )
-                        cp, _, _, _ = cpfd(
+                        func(
                             data_path,
-                            msh,
                             mvs,
                             svs,
                             dvs,
@@ -376,6 +374,10 @@ class TestSymbolic(TestCase):
                             epa_max,
                             epa_0,
                             nsimu=15,
+                            acceptance_rate=15,   
+                            chunk_size=2,  
+                            D_init=1,   
+                            K=2 
                         )
 
     def test_minimal_iterator_internal_args(self):
