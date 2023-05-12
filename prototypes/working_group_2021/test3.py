@@ -104,9 +104,45 @@ def timelines_from_model_folder(mf):
     msh = gh.msh(mf)
     mvs = gh.mvs_2(mf)
     state_vector = mvs.get_StateVariableTuple()
-    cpa = test_args.cpa
-    epa = test_args.epa_opt
-    dvs = test_args.dvs
+    # load global mean vars
+    target_path = Path(mf).joinpath("global_means")
+    data_path=Path(gh.confDict(mf)["dataPath"])
+    svs, dvs = msh.get_global_mean_vars(data_path, target_path, flash_cache=False)
+    #cpa = test_args.cpa
+    #epa = test_args.epa_opt
+    #dvs = test_args.dvs
+    
+    ##read parameters for data-assimilation
+    #tr_path = Path(mf).joinpath(
+    #    "data_assimilation_parameters_from_test_args"
+    #)
+    #cpa = msh.Constants(
+    #    **h.load_dict_from_json_path(tr_path.joinpath("cpa.json"))
+    #)
+##
+    #epa_min, epa_max, epa_0 = tuple(
+    #    map(
+    #        lambda p: msh.EstimatedParameters(
+    #            **h.load_dict_from_json_path(p)
+    #        ),
+    #        [
+    #            tr_path.joinpath(f"{s}.json")
+    #            for s in ["epa_min", "epa_max", "epa_0"]
+    #        ],
+    #    )
+    #)
+    #perform da (or read results from cache)
+    dir_path = Path(mf).joinpath("output")
+    cp, Cs, Js, epa_opt = msh.gm_da_res_1(output_cache_path=dir_path)
+    #read the dataassimilation results from a cache directory
+    #CP = import_module( f"{msh.model_mod}.CachedParameterization" ).CachedParameterization
+    CP = msh.CachedParameterization
+    cp = CP.from_path(dir_path)
+    X_0 = np.array(
+        [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
+    )
+    func_dict = cp.func_dict
+    par_dict = cp.parameter_dict
     stride = 1  # this does not affect the precision of the iterator but of the averages
     # but makes it more effiecient (the values in between the strides
     func_dict = msh.make_func_dict(dvs, cpa=cpa, epa=epa)
@@ -115,13 +151,14 @@ def timelines_from_model_folder(mf):
     # till 
     n_days=len(dvs[0])*30
 
-
+    
     vals = gh.all_timelines_starting_at_steady_state(
         mvs,
         func_dict,
-        dvs,
-        cpa,
-        epa,
+        par_dict,
+        #dvs,
+        #cpa,
+        #epa,
         t_min=start_shift,
         index_slice=slice(0, int((n_days-start_shift)/delta_t_val), stride),
         delta_t_val=delta_t_val,
