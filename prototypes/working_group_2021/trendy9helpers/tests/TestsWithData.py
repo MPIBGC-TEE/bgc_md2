@@ -6,6 +6,7 @@ import shutil
 from unittest.case import TestCase, skip
 from pathlib import Path
 from importlib import import_module
+from importlib.resources import files as mod_files
 from sympy import (
     Symbol,
     Function,
@@ -50,8 +51,7 @@ from bgc_md2.resolve.mvars import (
 )
 import bgc_md2.helper as h
 
-
-import general_helpers as gh
+from trendy9helpers import general_helpers as gh
 
 model_names = {
     "ab_classic": "CLASSIC",
@@ -98,10 +98,10 @@ class TestsWithData(TestCase):
         return [
             # first tier (best shape)
             "kv_visit2",
-            #"jon_yib",
-            #"yz_jules",
+            "jon_yib",
+            "yz_jules",
             ##
-            #"Aneesh_SDGVM",  # second tier (not quite ready)
+            "Aneesh_SDGVM",  # second tier (not quite ready)
             # "kv_ft_dlem",
             ##
             ##third tier
@@ -111,14 +111,27 @@ class TestsWithData(TestCase):
             ##"cable-pop",
         ]
 
+    def test_make_model_coord_transforms(self):
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                th = gh.th(mf)
+                lats,lons=th.lats_lons()
+
+                msh = gh.msh(mf)
+                # check that we predict the
+                # right latitude values for
+                # a given array index
+                ctr = msh.make_model_coord_transforms()
+                # print(lats)
+                print([ctr.lat2LAT(lat) for lat in lats])
+                print([ctr.lon2LON(lon) for lon in lons])
+
     def test_make_model_index_transforms(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
-                from IPython import embed; embed()
-                test_args = gh.test_args(mf)
+                th = gh.th(mf)
+                lats,lons=th.lats_lons()
                 msh = gh.msh(mf)
-                lats = test_args.lats.data
-                lons = test_args.lons.data
                 # check that we predict the
                 # right latitude values for
                 # a given array index

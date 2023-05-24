@@ -33,7 +33,7 @@ class VirtualCachedParameterization(ABC):
     ]
     # The subclasses have to set some class variables 
     # Drivers= ... (a namedtuple)
-    func_dict_param_keys=None # default 
+    func_dict_param_keys=() # default empty tuple
  
 
     def __init__(
@@ -41,7 +41,7 @@ class VirtualCachedParameterization(ABC):
             parameter_dict,
             drivers,
             X_0_dict,
-            func_dict_param_dict=None
+            func_dict_param_dict=dict()
         ):
             self.parameter_dict = parameter_dict
             self.drivers=drivers
@@ -69,7 +69,7 @@ class VirtualCachedParameterization(ABC):
             data_path.joinpath(cls.X_0_data_path))
         )
         fdpdp = data_path.joinpath(cls.func_dict_param_path)
-        func_dict_param_dict = h.load_dict_from_json_path(fdpdp) if fdpdp.exists() else None
+        func_dict_param_dict = h.load_dict_from_json_path(fdpdp) if fdpdp.exists() else dict()
 
         
         return cls(
@@ -103,7 +103,7 @@ class VirtualCachedParameterization(ABC):
             data_path.joinpath(self.X_0_data_path),
             indent=2
         )
-        if self.func_dict_param_dict is not None:
+        if len(self.func_dict_param_dict) > 0:
             h.dump_dict_to_json_path(
                 self.func_dict_param_dict,
                 data_path.joinpath(self.func_dict_param_path),

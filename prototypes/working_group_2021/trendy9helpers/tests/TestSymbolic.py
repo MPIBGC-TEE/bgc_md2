@@ -79,22 +79,6 @@ experiment_names = {k: v + "_S2_" for k, v in model_names.items()}
 
 
 class TestSymbolic(InDirTest):
-#class TestSymbolic(TestCase):
-    @classmethod
-    def clean_dir(cls, testDirPath):
-        if testDirPath.exists():
-            shutil.rmtree(testDirPath)
-        testDirPath.mkdir(parents=True)
-
-    @classmethod
-    def data_dir_path(cls, mf):
-        confDict = gh.confDict(mf)
-        dataPath = Path(confDict["dataPath"])
-        return dataPath
-
-    def output_path(self, mf):
-        testDirPath = __class__.data_dir_path(mf).joinpath(self.id())
-        return testDirPath
 
     @property
     def model_folders(self):
@@ -103,32 +87,17 @@ class TestSymbolic(InDirTest):
             "kv_visit2",
             #"jon_yib",
             #"yz_jules",
-            ##
+            ###
             #"Aneesh_SDGVM",  # second tier (not quite ready)
-            # "kv_ft_dlem",
-            ##
-            ##third tier
-            ##"cj_isam", # has problems with ODE solution probably due to wrong parameters
-            ## msh.numericX0 also yields a negative pool value for the last pool
-            # "bian_ibis2",#
-            ##"cable-pop",
+            ## "kv_ft_dlem",
+            ###
+            ###third tier
+            ###"cj_isam", # has problems with ODE solution probably due to wrong parameters
+            ### msh.numericX0 also yields a negative pool value for the last pool
+            ## "bian_ibis2",#
+            ###"cable-pop",
         ]
 
-
-    def test_make_model_coord_transforms(self):
-        for mf in set(self.model_folders):
-            with self.subTest(mf=mf):
-                test_args = gh.test_args(mf)
-                msh = gh.msh(mf)
-                lats = test_args.lats.data
-                lons = test_args.lons.data
-                # check that we predict the
-                # right latitude values for
-                # a given array index
-                ctr = msh.make_model_coord_transforms()
-                # print(lats)
-                print([ctr.lat2LAT(lat) for lat in lats])
-                print([ctr.lon2LON(lon) for lon in lons])
 
     def test_age_distributions_and_btt_start_in_ss_3(self):
         # get everything from mvs
@@ -188,9 +157,7 @@ class TestSymbolic(InDirTest):
                     ax = axs[i, 1]
                     ax.plot(times, m_a_arr[:, i])
 
-                testDir = self.output_path(mf)
-                self.__class__.clean_dir(testDir)
-                fig1.savefig(testDir.joinpath("poolwise.pdf"))
+                fig1.savefig("poolwise.pdf")
 
                 fig2 = plt.figure(figsize=(10, 10))
                 axs2 = fig2.subplots(2, 2)
@@ -206,7 +173,7 @@ class TestSymbolic(InDirTest):
                     times, vals.rt, label="rt of surrogate one pool system"
                 )  # steady state transit times
                 ax.legend()
-                fig2.savefig(testDir.joinpath("system.pdf"))
+                fig2.savefig("system.pdf")
                 # construct a function p that takes an age array "ages" as argument
                 # and gives back a three-dimensional ndarray (ages x times x pools)
                 # from the a array-valued function of a single age a_dens_function
@@ -252,7 +219,7 @@ class TestSymbolic(InDirTest):
                     plot(
                         fig,
                         filename=str(
-                            testDir.joinpath("age_distribution_{0}.html".format(sv[n]))
+                            "age_distribution_{0}.html".format(sv[n])
                         ),
                         auto_open=False,
                     )
@@ -277,21 +244,13 @@ class TestSymbolic(InDirTest):
                 )
                 plot(
                     fig_btt,
-                    filename=str(testDir.joinpath("btt_distribution.html")),
+                    filename="btt_distribution.html",
                     auto_open=False,
                 )
 
 
     def test_da_res(self):
-        #for mf in set(self.model_folders):
-        for mf in set(self.model_folders).intersection(
-            [
-                #"Aneesh_SDGVM",
-                "kv_visit2",
-                #"jon_yib",
-                #"yz_jules",
-            ]
-        ):
+        for mf in set(self.model_folders):
             with self.subTest(mf=mf):
                 msh = import_module(f"trendy9helpers.{mf}.model_specific_helpers_2")
                 mvs = import_module(f"{msh.model_mod}.source").mvs
@@ -311,7 +270,7 @@ class TestSymbolic(InDirTest):
                     for f in mod_files(f"trendy9helpers.{mf}").iterdir()
                     if bool(ex.match(f.stem)) & f.is_dir()
                 ]
-                #da_mod_names = ["da_2","da_1"]
+                #da_mod_names = ["da_2","da_1"] 
                 for name in da_mod_names:
                     with self.subTest(name):
                         da_mod = import_module(
@@ -369,6 +328,7 @@ class TestSymbolic(InDirTest):
                         )
                         
                         param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
+                        apa = {**cpa._asdict(), **epa_opt._asdict()}
                         X_0=da_mod.numeric_X_0(mvs,dvs,cpa,epa_opt)
                         X_0_dict={
                             str(sym): X_0[i,0] 
@@ -376,7 +336,19 @@ class TestSymbolic(InDirTest):
                                 mvs.get_StateVariableTuple()
                             )
                         }
-                        cp = msh.CachedParameterization(param_dict,dvs,X_0_dict)
+                        # some models (e.g. yz_jules) need extra parameters to build
+                        # the func_dict for the parameterization
+                        func_dict_param_dict = { 
+                            str(k): v 
+                            for k, v in apa.items() 
+                            if str(k) in msh.CachedParameterization.func_dict_param_keys 
+                        }
+                        cp = msh.CachedParameterization(
+                            param_dict,
+                            dvs,
+                            X_0_dict,
+                            func_dict_param_dict
+                        )
                         cp.write(output_cache_path)
                         #from IPython import embed;embed()
                         # check if we can recreate cp from the cache directory
@@ -413,7 +385,7 @@ class TestSymbolic(InDirTest):
                 CP = import_module(
                     f"{msh.model_mod}.CachedParameterization"
                 ).CachedParameterization
-                dir_path = Path(mf).joinpath("parameterization_from_test_args")
+                dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
                 cp = CP.from_path(dir_path)
                 X_0 = np.array(
                     [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
@@ -457,7 +429,7 @@ class TestSymbolic(InDirTest):
                 CP = import_module(
                     f"{msh.model_mod}.CachedParameterization"
                 ).CachedParameterization
-                dir_path = Path(mf).joinpath("parameterization_from_test_args")
+                dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
                 cp = CP.from_path(dir_path)
                 X_0 = np.array(
                     [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
@@ -497,15 +469,13 @@ class TestSymbolic(InDirTest):
                 CP = import_module(
                     f"{msh.model_mod}.CachedParameterization"
                 ).CachedParameterization
-                dir_path = Path(mf).joinpath("parameterization_from_test_args")
+                dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
                 cp = CP.from_path(dir_path)
                 X_0 = np.array(
                     [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
                 )
                 func_dict = cp.func_dict
                 par_dict = cp.parameter_dict
-                testDir = self.output_path(mf)
-                self.__class__.clean_dir(testDir)
                 conf_dict = gh.confDict(mf)
                 t_min = 0
                 t_max = 1400
@@ -806,7 +776,7 @@ class TestSymbolic(InDirTest):
                 ax.plot(times, vals.veg_x, color=color_dict["veg"], label="$x_veg$")
                 ax.plot(times, vals.soil_x, color=color_dict["soil"], label="$x_soil$")
                 ax.legend()
-                fig2.savefig(testDir.joinpath("system.pdf"))
+                fig2.savefig("system.pdf")
 
                 fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
                 axs = fig1.subplots(n_pools, 2)
@@ -863,4 +833,4 @@ class TestSymbolic(InDirTest):
                         )
                     ax.legend()
 
-                fig1.savefig(testDir.joinpath("poolwise.pdf"))
+                fig1.savefig("poolwise.pdf")

@@ -44,7 +44,7 @@ def xi(tsl, Mw, Ms, Topt, Tcons, mrsos, landCoverFrac):
     # return 1.0
 
 
-def make_func_dict_2(dvs, Mw, Ms, Topt, Tcons):
+def make_func_dict(dvs, Mw, Ms, Topt, Tcons):
         tsl_f, mrso_f, landCoverFrac_f, npp_f = map(
             h.make_interpol_of_t_in_days,
             (dvs.tsl, dvs.mrsos, dvs.landCoverFrac, dvs.npp)
@@ -65,10 +65,9 @@ def make_func_dict_2(dvs, Mw, Ms, Topt, Tcons):
 
 class CachedParameterization(VirtualCachedParameterization):
     Drivers = Drivers
-    func_dict_param_keys=("Mw","Ms","Topt","Tcons")
+    func_dict_param_keys = ("Mw","Ms","Topt","Tcons")
     @property
     def func_dict(self):
-        fdps = self.func_dict_param_dict
         # add special keyword parameters
-        d = make_func_dict_2(self.drivers, **fdps)
+        d = make_func_dict(self.drivers, **self.func_dict_param_dict)
         return d

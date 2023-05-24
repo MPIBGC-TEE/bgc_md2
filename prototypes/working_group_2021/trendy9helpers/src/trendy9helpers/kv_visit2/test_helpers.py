@@ -5,7 +5,9 @@ from pathlib import Path
 import netCDF4 as nc
 import json 
 from functools import lru_cache
+from frozendict import frozendict
 
+# deprecated
 @lru_cache
 def make_test_args(conf_dict,msh,mvs):
     TestArgs=namedtuple(
@@ -219,3 +221,21 @@ def make_test_args(conf_dict,msh,mvs):
         lons=ds.variables["lon"][:],
         start_date=msh.start_date()
     )
+
+
+def confDict():
+    p = Path(__file__).parent.joinpath("config.json")
+    with p.open(
+            "r"
+        ) as f:
+        conf_dict=frozendict(json.load(f))
+    
+    return conf_dict    
+
+
+def lats_lons():
+    conf_dict = confDict() 
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("VISIT_S2_cLitter.nc"))    
+    lats=ds.variables["lat"][:]
+    lons=ds.variables["lon"][:]
+    return lats.data, lons.data

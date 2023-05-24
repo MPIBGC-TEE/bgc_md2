@@ -8,17 +8,13 @@ import numpy as np
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 import bgc_md2.helper as h
 
-# necessary to import general_helpers without making 
-# a package
-import sys
-sys.path.insert(0, "..") 
 from  ... import general_helpers as gh
 from .. import model_specific_helpers_2 as msh  
 
 model_mod = 'bgc_md2.models.kv_visit2'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
-mvs=import_module(f"{model_mod}.source").mvs
 make_func_dict = cp_mod.make_func_dict
+mvs=import_module(f"{model_mod}.source").mvs
 Drivers=cp_mod.Drivers
 Constants = namedtuple(
     "Constants",

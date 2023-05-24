@@ -21,11 +21,11 @@ from ComputabilityGraphs.CMTVS import  CMTVS
 import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.ArrayDict import ArrayDict
 import bgc_md2.helper as h
+from .. import general_helpers as gh
 
 model_mod = 'bgc_md2.models.kv_visit2'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
 mvs=import_module(f"{model_mod}.source").mvs
-make_func_dict = cp_mod.make_func_dict
 
 # some classes (not instances) as arguments for 
 # functions that can produce output of different type
@@ -33,7 +33,6 @@ Drivers=cp_mod.Drivers
 OrgDrivers=cp_mod.OrgDrivers 
 CachedParameterization=cp_mod.CachedParameterization
 
-from .. import general_helpers as gh
 #from bgc_md2.models.kv_visit2.source import  mvs
 #from bgc_md2.models.kv_visit2.CachedParameterization import  Drivers, OrgDrivers
 
