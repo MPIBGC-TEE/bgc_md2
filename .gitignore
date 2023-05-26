@@ -84,6 +84,7 @@ docs/_build/
 docs/_sources/*
 build_docs/_build/
 build_docs/source/_autosummary/
+build_docs/source/auto/
 
 # PyBuilder
 target/
