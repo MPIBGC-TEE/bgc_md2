@@ -76,22 +76,7 @@ model_names = {
 experiment_names = {k: v + "_S2_" for k, v in model_names.items()}
 
 
-class TestsWithData(TestCase):
-    @classmethod
-    def clean_dir(cls, testDirPath):
-        if testDirPath.exists():
-            shutil.rmtree(testDirPath)
-        testDirPath.mkdir(parents=True)
-
-    @classmethod
-    def data_dir_path(cls, mf):
-        confDict = gh.confDict(mf)
-        dataPath = Path(confDict["dataPath"])
-        return dataPath
-
-    def output_path(self, mf):
-        testDirPath = __class__.data_dir_path(mf).joinpath(self.id())
-        return testDirPath
+class TestsWithData(InDirTest):
 
     @property
     def model_folders(self):
@@ -100,7 +85,7 @@ class TestsWithData(TestCase):
             "kv_visit2",
             "jon_yib",
             "yz_jules",
-            ##
+           # ##
             "Aneesh_SDGVM",  # second tier (not quite ready)
             # "kv_ft_dlem",
             ##
@@ -167,4 +152,65 @@ class TestsWithData(TestCase):
                 # lat_min, lat_max = tr.i2lat_min_max(last)
                 # print(lat_max)
                 # self.assertEqual(tr.lat2i(lat_max), last)
+
+
+    def test_global_mean_cache(self):
+        # make sure that the global means in the repo are
+        # identical to the ones computed from the data (up to date)
+        def equal(v1,v2):
+            results=[
+                np.allclose(
+                    v1.__getattribute__(f),
+                    v2.__getattribute__(f)
+                )
+                for f in v1._fields
+            ] 
+            return np.all(results)
+            
+
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                msh = gh.msh(mf)
+                mdp = mod_files(f"trendy9helpers.{mf}")
+                # where to look for global_means
+                ref_cache_path = mdp.joinpath("global_means")
+                test_cache_path = Path(mf).joinpath("global_means")
+                conf_dict=gh.confDict(mf)
+                svs, dvs = msh.get_global_mean_vars(
+                    dataPath=Path(conf_dict['dataPath']), 
+                    targetPath=test_cache_path, 
+                    flash_cache=False
+                )
+                svs_ref, dvs_ref = msh.get_global_mean_vars(
+                    dataPath=None,
+                    targetPath=ref_cache_path, 
+                    flash_cache=False
+                )
+                 
+                for tup in [("svs", "svs_ref"),("dvs", "dvs_ref")]:
+                    with self.subTest(tup=tup):
+                        # from IPython import embed; embed()
+                        t1,t2=tup
+                        v1,v2=map(eval,tup)
+                        res=equal(v1,v2)
+                        if not res:
+                            fig=plt.figure()
+                            fig.suptitle(str(type(v1)).split(".")[-1])
+                            n=len(v1._fields)
+                            axs=fig.subplots(n,1)
+                            for i,f in enumerate(v1._fields):
+                                ax=axs[i]
+                                ax.plot(
+                                    v1.__getattribute__(f),
+                                    label=t1
+                                )
+                                ax.plot(
+                                    v2.__getattribute__(f),
+                                    label=t2
+                                )
+                                ax.legend()
+                                ax.set_title(f)
+                            
+                            fig.savefig(Path(mf).joinpath(f"compare_{tup[0]}.pdf"))
+                        self.assertTrue(res)   
 
