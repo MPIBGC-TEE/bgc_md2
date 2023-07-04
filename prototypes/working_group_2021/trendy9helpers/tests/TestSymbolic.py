@@ -85,10 +85,10 @@ class TestSymbolic(InDirTest):
         return [
             # first tier (best shape)
             "kv_visit2",
-            #"jon_yib",
-            #"yz_jules",
+            "jon_yib",
+            "yz_jules",
             ###
-            #"Aneesh_SDGVM",  # second tier (not quite ready)
+            "Aneesh_SDGVM",  # second tier (not quite ready)
             ## "kv_ft_dlem",
             ###
             ###third tier
@@ -99,19 +99,23 @@ class TestSymbolic(InDirTest):
         ]
 
 
+    def test_start_dt(self):
+        # get everything from mvs
+        # This is the blueprint for a notebook
+        # that does not depend on any data exept those
+        # provided in the model folder
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                print(gh.msh(mf).start_dt())
+
     def test_age_distributions_and_btt_start_in_ss_3(self):
         # get everything from mvs
         # This is the blueprint for a notebook
         # that does not depend on any data exept those
         # provided in the model folder
         for mf in set(self.model_folders):
-        #for mf in set(self.model_folders).intersection(
-        #    # ["Aneesh_SDGVM"]
-        #    ["kv_visit2"]
-        #    # ["jon_yib"]
-        #    # ["yz_jules"]
-        #    ):
             with self.subTest(mf=mf):
+                Path(mf).mkdir()
                 msh = gh.msh(mf)
                 mvs = import_module(f"{msh.model_mod}.source").mvs
 
@@ -157,7 +161,7 @@ class TestSymbolic(InDirTest):
                     ax = axs[i, 1]
                     ax.plot(times, m_a_arr[:, i])
 
-                fig1.savefig("poolwise.pdf")
+                fig1.savefig(Path(mf).joinpath("poolwise.pdf"))
 
                 fig2 = plt.figure(figsize=(10, 10))
                 axs2 = fig2.subplots(2, 2)
@@ -173,7 +177,7 @@ class TestSymbolic(InDirTest):
                     times, vals.rt, label="rt of surrogate one pool system"
                 )  # steady state transit times
                 ax.legend()
-                fig2.savefig("system.pdf")
+                fig2.savefig(Path(mf).joinpath("system.pdf"))
                 # construct a function p that takes an age array "ages" as argument
                 # and gives back a three-dimensional ndarray (ages x times x pools)
                 # from the a array-valued function of a single age a_dens_function
@@ -248,10 +252,10 @@ class TestSymbolic(InDirTest):
                     auto_open=False,
                 )
 
-
-    def test_da_res(self):
+    def test_param2res(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
+                Path(mf).mkdir()
                 msh = import_module(f"trendy9helpers.{mf}.model_specific_helpers_2")
                 mvs = import_module(f"{msh.model_mod}.source").mvs
                 mdp = mod_files(f"trendy9helpers.{mf}")
@@ -263,7 +267,66 @@ class TestSymbolic(InDirTest):
                     flash_cache=False
                 )
                 # we look for data assimilation submodules (directories) with
-                # and thes all of them
+                # names da_0, da_1 ... ,da_9 and test all of them
+                ex = re.compile("da_[0-9]")
+                da_mod_names = [
+                    f.stem 
+                    for f in mod_files(f"trendy9helpers.{mf}").iterdir()
+                    if bool(ex.match(f.stem)) & f.is_dir()
+                ]
+                #da_mod_names = ["da_2","da_1"] 
+                for name in da_mod_names:
+                    with self.subTest(name):
+                        da_mod = import_module(
+                            f"trendy9helpers.{mf}.{name}.mod"
+                        )
+                        # read the constans and ingredients 
+                        da_dir_p = mod_files(f"trendy9helpers.{mf}.{name}")
+                        da_param_path = da_dir_p.joinpath( "par_1","in") 
+                        cpa = da_mod.Constants(
+                            **h.load_dict_from_json_path(da_param_path.joinpath("cpa.json"))
+                        )
+                        epa_0 = da_mod.EstimatedParameters(
+                            **h.load_dict_from_json_path(da_param_path.joinpath("epa_0.json"))
+                        )
+                        mdp = mod_files(f"trendy9helpers.{mf}")
+                        # where to look for global_means
+                        gm_cache_path = mdp.joinpath("global_means")
+                        svs, dvs = msh.get_global_mean_vars(
+                            None, 
+                            gm_cache_path, 
+                            flash_cache=False
+                        )
+                        param2res = da_mod.make_param2res_sym(
+                            mvs,
+                            cpa,
+                            dvs
+                        )    
+                        sim = param2res(np.array(epa_0))
+                        # check that the length of the returned arrays
+                        # matches the length of the observations
+                        for f in sim._fields:
+                            self.assertEqual(
+                                sim.__getattribute__(f).shape,
+                                svs.__getattribute__(f).shape
+                            )
+
+    def test_da_res(self):
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                Path(mf).mkdir()
+                msh = import_module(f"trendy9helpers.{mf}.model_specific_helpers_2")
+                mvs = import_module(f"{msh.model_mod}.source").mvs
+                mdp = mod_files(f"trendy9helpers.{mf}")
+                # where to look for global_means
+                gm_cache_path = mdp.joinpath("global_means")
+                svs, dvs = msh.get_global_mean_vars(
+                    None, 
+                    gm_cache_path, 
+                    flash_cache=False
+                )
+                # we look for data assimilation submodules (directories) with
+                # names da_0, da_1 ... ,da_9 and test all of them
                 ex = re.compile("da_[0-9]")
                 da_mod_names = [
                     f.stem 
@@ -350,7 +413,6 @@ class TestSymbolic(InDirTest):
                             func_dict_param_dict
                         )
                         cp.write(output_cache_path)
-                        #from IPython import embed;embed()
                         # check if we can recreate cp from the cache directory
                         # check that we can run the model 
                         cp_fp = msh.CachedParameterization.from_path(output_cache_path)
@@ -378,6 +440,7 @@ class TestSymbolic(InDirTest):
         # ultimately param2res
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
+                Path(mf).mkdir()
                 msh = gh.msh(mf)
                 mvs = import_module(f"{msh.model_mod}.source").mvs
                 delta_t_val = 5
@@ -424,6 +487,7 @@ class TestSymbolic(InDirTest):
         # this is a stepping stone for ultimately param2res
         for mf in self.model_folders:
             with self.subTest(mf=mf):
+                Path(mf).mkdir()
                 msh = gh.msh(mf)
                 mvs = import_module(f"{msh.model_mod}.source").mvs
                 CP = import_module(
@@ -453,15 +517,8 @@ class TestSymbolic(InDirTest):
 
     def test_aggregate_surrogate_systems(self):
         for mf in set(self.model_folders):
-            # for mf in set(self.model_folders).intersection(
-            #    #["jon_yib"]
-            #    ["kv_visit2"]
-            # ):
             with self.subTest(mf=mf):
-                # test_args = gh.test_args_2(mf)
-                # cpa = test_args.cpa
-                # epa = test_args.epa_opt
-                # dvs = test_args.dvs
+                Path(mf).mkdir()
                 msh = gh.msh(mf)
                 mvs = import_module(f"{msh.model_mod}.source").mvs
                 state_vector = mvs.get_StateVariableTuple()
@@ -776,7 +833,7 @@ class TestSymbolic(InDirTest):
                 ax.plot(times, vals.veg_x, color=color_dict["veg"], label="$x_veg$")
                 ax.plot(times, vals.soil_x, color=color_dict["soil"], label="$x_soil$")
                 ax.legend()
-                fig2.savefig("system.pdf")
+                fig2.savefig(Path(mf).joinpath("system.pdf"))
 
                 fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
                 axs = fig1.subplots(n_pools, 2)
@@ -833,4 +890,5 @@ class TestSymbolic(InDirTest):
                         )
                     ax.legend()
 
-                fig1.savefig("poolwise.pdf")
+                fig1.savefig(Path(mf).joinpath("poolwise.pdf"))
+# If you want to run the script from this location (where the file lives)

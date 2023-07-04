@@ -106,7 +106,10 @@ def make_param_filter_func(
     cpa: Constants
 ) -> Callable[[np.ndarray], bool]:
 
-    def isQualified(c):
+    def isQualified(
+            c,
+            print_conds=False
+        ):
         epa=EstimatedParameters(*c)
         apa = {**cpa._asdict(), **epa._asdict()}
         
@@ -119,8 +122,11 @@ def make_param_filter_func(
             sum(map(value, ["beta_leaf", "beta_wood"])) <= 0.99,
         ]
         res = all(conds)
-        if not res:
-            print(conds)
+
+        if print_conds:
+            if not res:
+                print(conds)
+
         return res
         
     return isQualified
@@ -132,30 +138,17 @@ def make_param2res_sym(
 ) -> Callable[[np.ndarray], np.ndarray]:
 
     # select the first value for the drivers (to represent the past)
-    dvs_f = Drivers(
-        *[
-            dvs.__getattribute__(field)[0]
-            for field in dvs._fields
-        ]
-    )
-    # alternatively compute average of the drivers for the first year
-    # dvs_f = Drivers(
-    #    *[
-    #        dvs.__getattribute__(field)[0:11].sum()/12
-    #        for field in dvs._fields
-    #    ]
-    #)
-    # (but create 3 consecutive values for the inte
-    # create a func dict of functions that return a constant value
+    # (alternatively compute average of the drivers for the first year or chose a midyear value)
     func_dict_const={ 
         "TAS": lambda t: dvs.tas[0],
         "mrso": lambda t: dvs.mrso[0],
         "NPP": lambda t: dvs.npp[0],
     }
+
     def param2res(pa):
 
         epa = EstimatedParameters(*pa)
-        dpm = 30
+        dpm = h.date.days_per_month 
         steps_per_month = 2
         delta_t_val = dpm/steps_per_month 
 
@@ -171,18 +164,19 @@ def make_param2res_sym(
                 delta_t_val=delta_t_val
             )
         )
-        #from IPython import embed; embed()
         number_of_months=dvs.npp.shape[0]
 
-        number_of_steps = int(number_of_months/delta_t_val)
+        number_of_steps = number_of_months*steps_per_month
         result_dict = bitr[0: number_of_steps: steps_per_month]
 
-        return msh.Observables(
+        res = msh.Observables(
             cVeg=result_dict["cVeg"],
             cLitter=result_dict["cLitter"],
             cSoil=result_dict["cSoil"],
             rh=result_dict["rh"]
         )
+        return res
+
     return param2res
 
 # fixme mm 5-15 2023

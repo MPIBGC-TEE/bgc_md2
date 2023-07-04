@@ -4,6 +4,7 @@ import inspect
 import os
 import netCDF4 as nc
 import numpy as np
+import datetime as dt
 import pandas as pd
 from pathlib import Path
 from collections import namedtuple, OrderedDict
@@ -25,6 +26,7 @@ from .. import general_helpers as gh
 
 model_mod = 'bgc_md2.models.kv_visit2'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
+
 mvs=import_module(f"{model_mod}.source").mvs
 
 # some classes (not instances) as arguments for 
@@ -241,7 +243,6 @@ def make_da_iterator(
             func_dict=func_dict,
         )
 
-    #from IPython import embed; embed()
     C_leaf_litter, C_wood_litter, C_root_litter = symbols(
         "C_leaf_litter, C_wood_litter, C_root_litter"
     )
@@ -287,32 +288,49 @@ def make_weighted_cost_func(
 #    dpm= [30 for i in range(12)]
 #    return dpm
 
+def monthly_recording_times_nc_var()->nc.Variable:
+    ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("VISIT_S2_gpp.nc")))
+    times = ds.variables["time"]
+    # times.units #claims months since 1860-01-01
+    # we interpret this as 'trendy months' with 30 'trendy days' 
+    # with 'trendy hours'
+    # which is obviously different from the SI hour but
+    # consistent with the assumption that 12 of the equidistant
+    # values span a year which is supported by the annual
+    # periodicity of the data.
+    return times
 
-def start_date():
+def start_dt()->dt.datetime:
     ## this function is important to syncronise our results
     ## because our data streams start at different times the first day of
     ## a simulation day_ind=0 refers to different dates for different models
     ## we have to check some assumptions on which this calculation is based
     ## Here is how to get these values
-    # ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("VISIT_S2_gpp.nc")))
-    # times = ds.variables["time"]
+    #ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("VISIT_S2_gpp.nc")))
+    #times = ds.variables["time"]
     # tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
     # td = int(tm *30)  #in days since_1860-01-01
-    # import datetime as dt
-    # ad = dt.date(1, 1, 1) # first of January of year 1
-    # sd = dt.date(1860, 1, 1)
-    # td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    ## from td_aD (days since 1-1-1) we can compute the year month and day
-    return gh.date(year=1860, month=1, day=1)
+    return dt.datetime(year=1860, month=1, day=1)
 
 
 data_str = namedtuple("data_str", ["cVeg", "cLitter", "cSoil", "gpp", "ra", "rh"])
 
+def lats_lons():
+    conf_dict = gh.confDict(
+        Path(__file__).parent.name
+    ) 
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("VISIT_S2_cLitter.nc"))    
+    lats=ds.variables["lat"][:]
+    lons=ds.variables["lon"][:]
+    return lats.data, lons.data
 
-def get_global_mean_vars_all(experiment_name):
-    return gh.get_global_mean_vars_all(
-        model_folder="kv_visit2",
-        experiment_name=experiment_name,
-        lat_var="lat",
-        lon_var="lon",
-    )
+def n_months():
+    mp=Path(__file__).parent
+    mf=mp.name
+    data_path=Path(gh.confDict(mf)["dataPath"])
+    target_path = mp.joinpath("global_means")
+    dvs,mvs=get_global_mean_vars(
+        data_path,
+        target_path
+    )    
+    return len(dvs.rh)

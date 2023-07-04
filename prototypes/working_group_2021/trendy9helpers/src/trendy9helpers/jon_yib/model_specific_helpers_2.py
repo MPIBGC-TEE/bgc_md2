@@ -5,15 +5,18 @@ from collections import namedtuple
 from importlib import import_module
 import netCDF4 as nc
 import numpy as np
+import datetime as dt
 from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 from copy import copy
 from typing import Callable, Tuple, Dict
 from functools import partial, reduce
+from importlib.resources import files as mod_files
 
 model_mod='bgc_md2.models.jon_yib'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
+#mvs=import_module(f"{model_mod}.source").mvs
 make_func_dict=import_module(f"{model_mod}.CachedParameterization").make_func_dict
 Drivers=cp_mod.Drivers
 CachedParameterization=cp_mod.CachedParameterization
@@ -342,51 +345,34 @@ def make_weighted_cost_func(
    
     return costfunction
 
+def monthly_recording_times_nc_var():
+    ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("YIBs_S2_Monthly_npp.nc")))
+    times = ds.variables["time"]
+    # times.units #claims months since 1700-01-01
+    # we could interpret this as 'trendy months' with 30 'trendy days' 
+    # with 24 'trendy hours'
+    # which is obviously different from the SI hour but
+    # consistent with the assumption that 12 of the equidistant
+    # values span a year which is supported by the annual
+    # periodicity of the data.
+    return times
 
-def start_date():
+def start_dt():
     ## this function is important to syncronise our results
     ## because our data streams start at different times the first day of 
     ## a simulation day_ind=0 refers to different dates for different models
     ## we have to check some assumptions on which this calculation is based
     ## Here is how to get these values
-    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("YIBs_S2_Monthly_npp.nc")))
+    #ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("YIBs_S2_Monthly_npp.nc")))
     #times = ds.variables["time"]
     #tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
     #td = int(tm *30)  #in days since_1700-01-01 
-    #import datetime as dt
-    #ad = dt.date(1, 1, 1) # first of January of year 1 
-    #sd = dt.date(1700, 1, 1)
-    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
     ## from td_aD (days since 1-1-1) we can compute the year month and day
-    return gh.date(
+    return dt.datetime(
         year=1700, 
         month=1,
         day=1
     )
-
-def make_sim_day_2_day_since_a_D(conf_dict):
-    # this function is extremely important to syncronise our results
-    # because our data streams start at different times the first day of 
-    # a simulation day_ind=0 refers to different dates for different models
-    # we have to check some assumptions on which this calculation is based
-    # for jules the data points are actually spaced monthly with different numbers of days
-    ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("YIBs_S2_Monthly_gpp.nc")))
-    times = ds.variables["time"]
-
-    # we have to check some assumptions on which this calculation is based
-    tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
-    td = int(tm *31)  #in days since_1700-01-01 
-    #NOT assuming a 30 day month...
-    import datetime as dt
-    ad = dt.date(1, 1, 1) # first of January of year 1 
-    sd = dt.date(1700, 1, 1)
-    td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    
-    def f(day_ind: int)->int:
-        return day_ind+td_aD
-
-    return f
-
 
 
 data_str = namedtuple( # data streams available in the model
@@ -395,18 +381,35 @@ data_str = namedtuple( # data streams available in the model
     )
     
 
-# fixme mm 7-4 2023:
-# model_folder="..." is self referential and would
-# break if we rename the model folder. This is a design flaw (anty pattern)
-# If there is any model specific information it should be computed
-# by model specific functions here and included transmitted in the function call
-def get_global_mean_vars_all(experiment_name):
-        return(
-            gh.get_global_mean_vars_all(model_folder="jon_yib", 
-                            experiment_name=experiment_name,
-                            lat_var="latitude",
-                            lon_var="longitude",
-                            ) 
-        )       
+## fixme mm 7-4 2023:
+## model_folder="..." is self referential and would
+## break if we rename the model folder. This is a design flaw (anty pattern)
+## If there is any model specific information it should be computed
+## by model specific functions here and included transmitted in the function call
+#def get_global_mean_vars_all(experiment_name):
+#        return(
+#            gh.get_global_mean_vars_all(model_folder="jon_yib", 
+#                            experiment_name=experiment_name,
+#                            lat_var="latitude",
+#                            lon_var="longitude",
+#                            ) 
+#        )       
 
 
+def lats_lons():
+    conf_dict = gh.confDict(Path(__file__).parent.name) 
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("YIBs_S2_Monthly_npp.nc"))    
+    lats=ds.variables["latitude"][:]
+    lons=ds.variables["longitude"][:]
+    return lats.data, lons.data
+
+def n_months():
+    mp=Path(__file__).parent
+    mf=mp.name
+    data_path=Path(gh.confDict(mf)["dataPath"])
+    target_path = mp.joinpath("global_means")
+    dvs,mvs=get_global_mean_vars(
+        data_path,
+        target_path
+    )    
+    return len(dvs.rh)

@@ -60,6 +60,7 @@ class VirtualCachedParameterization(ABC):
             "r"
         )
         Drivers = cls.Drivers
+        #from IPython import embed; embed()
         dvs = Drivers(*[ds.variables[k][:] for k in Drivers._fields])
         str_dict = h.load_dict_from_json_path(
                 data_path.joinpath(cls.par_dict_path)

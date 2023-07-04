@@ -91,13 +91,17 @@ def make_param2res_sym(
         # Parameter vector
         epa = EstimatedParameters(*pa)
         X_0 = numeric_X_0(mvs, dvs, cpa, epa)
-        dpm = 30
+        dpm = h.date.days_per_month
         steps_per_month = 2
         delta_t_val = dpm/steps_per_month 
         
         par_dict = gh.make_param_dict(mvs, cpa, epa)
         func_dict = make_func_dict(dvs)
         
+        #from IPython import embed; embed()
+        number_of_months=dvs.npp.shape[0]
+        steps_per_month = 2
+        number_of_steps = number_of_months*steps_per_month
         bitr = ArrayDictResult(
             msh.make_da_iterator(
                 mvs,
@@ -107,10 +111,6 @@ def make_param2res_sym(
                 delta_t_val=delta_t_val
             )
         )
-        #from IPython import embed; embed()
-        number_of_months=dvs.npp.shape[0]
-        number_of_steps = int(number_of_months/delta_t_val)
-        steps_per_month = int(dpm / delta_t_val)
         result_dict = bitr[0: number_of_steps: steps_per_month]
         steps_per_year = steps_per_month*12
         yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
@@ -133,7 +133,10 @@ def make_param_filter_func(
         cpa: Constants
     ) -> Callable[[np.ndarray], bool]:
 
-    def isQualified(c):
+    def isQualified(
+            c,
+            print_conds=False
+        ):
         epa=EstimatedParameters(*c)
         apa = {**cpa._asdict(), **epa._asdict()}
         def value(field_name):
@@ -166,9 +169,10 @@ def make_param_filter_func(
             ) <= value('c_soil_0')
         ]
         res = all(conds)
-        if not res:
-            print(conds)
-        return res
+        if print_conds:
+            if not res:
+                print(conds)
+            return res
         
     return isQualified
 

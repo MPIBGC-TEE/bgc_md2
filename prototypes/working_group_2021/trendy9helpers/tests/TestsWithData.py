@@ -99,10 +99,8 @@ class TestsWithData(InDirTest):
     def test_make_model_coord_transforms(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
-                th = gh.th(mf)
-                lats,lons=th.lats_lons()
-
                 msh = gh.msh(mf)
+                lats, lons = msh.lats_lons()
                 # check that we predict the
                 # right latitude values for
                 # a given array index
@@ -114,9 +112,8 @@ class TestsWithData(InDirTest):
     def test_make_model_index_transforms(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
-                th = gh.th(mf)
-                lats,lons=th.lats_lons()
                 msh = gh.msh(mf)
+                lats, lons = msh.lats_lons()
                 # check that we predict the
                 # right latitude values for
                 # a given array index
@@ -214,3 +211,31 @@ class TestsWithData(InDirTest):
                             fig.savefig(Path(mf).joinpath(f"compare_{tup[0]}.pdf"))
                         self.assertTrue(res)   
 
+    def test_timeline_consistency(self):
+        n_mod=len(self.model_folders)
+        for mf in set(self.model_folders):
+            with self.subTest(mf=mf):
+                # The reporting of times differs between 
+                # the models in several ways.
+                # Especially the numbers of days per year
+                # differ between 360 and 365.
+                # some (yz_jules) (seamingly) report the time in si units
+                # (seconds) others in days or months.
+                # we ignore these contradictory timelines and use the index of an array of monthly values to 
+                msh = gh.msh(mf)
+                data_path = Path(gh.confDict(mf)['dataPath'])
+                # make sure that we can find the time variable for inspection of the inconsistency claimed above
+                times = msh.monthly_recording_times_nc_var()
+
+                # now create a plot to show that the approximation by
+                # index is actually cosistent with the seasons
+                obs, dvs = gh.msh(mf).get_example_site_vars(data_path)
+                fig = plt.figure()
+                fields=obs._fields
+                n_fields = len(fields)
+                axs=fig.subplots(n_fields)
+                
+                from IPython import embed; embed()
+                for i in range(n_fields):
+                    ax=axs[i]
+                    ax.plot(obs[i])

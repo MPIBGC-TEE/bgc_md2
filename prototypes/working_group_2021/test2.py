@@ -59,8 +59,8 @@ import bgc_md2.helper as h
 import bgc_md2.resolve.computers as bgc_c
 
 from testinfrastructure.InDirTest import InDirTest
-import general_helpers as gh
-import MIP_output_helpers as moh
+from trendy9helpers import general_helpers as gh
+#import MIP_output_helpers as moh
 model_folders = [
     "kv_visit2",
     "jon_yib",
@@ -90,54 +90,57 @@ model_names = {
     "ORCHIDEE-V2": "OCN",
 }
 # compute the overlap of the models
-td = gh.get_test_arg_dict(model_folders)
 # we want the equilibrium to be computed from Temperatur
 # and Moisture data in the spring. Since all models start
 # in January we start 120 days after the model start of all
 # models in days since THIS MODELS start
 start_shift = 120
-start_sAD, stop_sAD = gh.t_min_tmax_overlap_2(td, delta_t_val, start_shift=start_shift)
+start_sAD, stop_sAD = gh.t_min_max_overlap_gm(model_folders, delta_t_val, start_shift=start_shift)
 
+start_sAD,stop_sAD
+
+# +
 def timelines_from_model_folder(mf):
-    test_args = gh.test_args_2(mf)
     msh = gh.msh(mf)
-    mvs = gh.mvs_2(mf)
-    state_vector = mvs.get_StateVariableTuple()
-    cpa = test_args.cpa
-    epa = test_args.epa_opt
-    dvs = test_args.dvs
-    stride = 1  # this does not affect the precision of the iterator but of the averages
-    # but makes it more effiecient (the values in between the strides
-    func_dict = msh.make_func_dict(dvs, cpa=cpa, epa=epa)
-
-    # Every model has it's own timeline counted from start_shift in days 
-    # till 
-    n_days=len(dvs[0])*30
+    mvs = gh.mvs(mf)
+    nupa=mvs.get_NumericParameterization()
+    # The iterator makes timesteps with length delta_t_val.
+    # iteration 0 refers to t_0 
+    # iteration 1 refers to t_0 + 1
+    # The iterator result supports index slicing in the same way as a list [start,stop,stride]
+    # All three numbers are integers 
+    # This means the first reported value will be the iterator result after start iterations 
+    # with timestep delta_t_val
+    n_days=30* msh.n_months()
+    start_index=0
+    stride = 1   
+    index_slice=slice(start_index, int((n_days-start_shift)/delta_t_val), stride)
 
 
     vals = gh.all_timelines_starting_at_steady_state(
         mvs,
-        func_dict,
-        dvs,
-        cpa,
-        epa,
+        nupa.func_dict,
+        nupa.par_dict,
         t_min=start_shift,
-        index_slice=slice(0, int((n_days-start_shift)/delta_t_val), stride),
+        index_slice=index_slice,
         delta_t_val=delta_t_val,
     )
     return vals
 
+all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
+
+
+# -
 
 def yearly_averages(vals):
     n_days = vals.t.shape[0]
     step = int(360 / delta_t_val)
     parts = hr.partitions(0, n_days, step)
-    print(parts)
+    #print(parts)
     return vals.averaged_values(parts)
-
-
-all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
 all_averaged_values2 = {mf : yearly_averages(vals) for mf,vals in all_values2.items()}
+
+
 
 def plot_time_lines_one_plot_per_model(
     value_dict,
@@ -161,7 +164,7 @@ def plot_time_lines_one_plot_per_model(
         # from IPython import embed; embed()
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
-        td_AD = gh.td_AD(gh.test_args_2(mf).start_date)
+        td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
         c_times = [(td_AD + mt) / 360 for mt in vals.t]
         for i,key in enumerate(desired_keys):
             y=vals[key]

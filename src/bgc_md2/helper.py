@@ -15,6 +15,7 @@ from functools import _lru_cache_wrapper
 import inspect
 import json
 import numpy as np
+import datetime as dt
 from scipy.interpolate import interp1d
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -528,10 +529,76 @@ def load_named_tuple_from_json_path(t: type, path: Path):
 def extend_by_one(field):
     return np.concatenate([field, field[-2:-1]])
 
+class date: 
+    """
+    The trendy9 datasets report the times in different ways in
+    the netcdf files contradicting each over and sometimes themselfes: 
+    Some have 30 day months and 360day years (eg. SDGVM and 
+    jules has 365 day years and claims to report in
+    seconds. The values would lead to a 4 month shift over the simulation time contradictin  the assumption
+    of 12 monthly values per year. 
+
+    The common feature between the models is that they claim
+    12 values per year, keeping in sync with the seasons.
+    We basically ignore the timelines claimed by the models
+    and replace it by a timeline with equidistant months
+    and days using the index of a value and the 
+    startdate to determine the date of the measurment.
+    By adding a fixed number of days per iteration
+
+    This is at least proportional to a 360-day year with 12
+    30-day-months as used by yib and SDGVM but instead of the    insuing slightly longer yib_day or SDGVM day we use
+    the SI day (defined as 3600*24 SI seconds)
+    This keeps our years also close to the gregorian calender
+    (with a maximal difference of a leap day) 
+    """
+
+    # set some class variables
+    days_per_year=365.25
+    days_per_month=days_per_year/12
+    seconds_per_day=60*60*24
+    
+    @classmethod
+    def timestep_date_in_days_since_AD(
+        cls,
+        iteration,
+        delta_t_val,
+        start_dt: dt.datetime,
+        start_shift=0,  # time between the start.date and the iterator's first step in days
+    ):
+        dt_AD = dt.datetime(1,1,1)
+        delta = start_dt - dt_AD
+
+        return cls.days_since_AD(start_dt)+ start_shift + iteration * delta_t_val
+
+    @classmethod
+    def days_since_AD(cls,start_dt: dt.datetime):
+        dt_AD = dt.datetime(1,1,1)
+        delta = start_dt - dt_AD
+        return delta.total_seconds()/cls.seconds_per_day 
+
+
+    @classmethod
+    def timestep_dates_in_days_since_AD(
+        cls,
+        start_dt,  
+        n_months,
+        delta_t_val,  # iterator time step
+        start_shift=0,  # time between the start.date and the iterator's first step in days
+    ):
+        n_days = cls.days_per_month * n_months - start_shift
+        n_iter = int(n_days / delta_t_val)
+        return np.array(
+            tuple(
+                (
+                    cls.timestep_date_in_days_since_AD(i, delta_t_val, start_dt)
+                    for i in np.arange(n_iter)  # days_after_sim_start
+                )
+            )
+        )
 def make_interpol_of_t_in_days(field):  # field of values one per month
     """
     Expects an array of monthly values and returns an interpolation function of a temporal variable counted in days. 
-    A 30 day month is assumed.
     """
     y = extend_by_one(field)
     # print(y.shape)
@@ -539,6 +606,6 @@ def make_interpol_of_t_in_days(field):  # field of values one per month
     f_of_month = interp1d(x=np.arange(0.0, len(y)), y=y, kind="cubic")
 
     def f_of_day(day):
-        return f_of_month(day / 30.0)
+        return f_of_month(day / date.days_per_month)
 
     return f_of_day

@@ -208,8 +208,8 @@ par_dict = cp.parameter_dict
 func_dict = cp.func_dict
 
 t0 = 0  #3/2*np.pi
-n_steps = 12  # 2881
 number_of_months = cp.drivers.npp.shape[0] 
+n_steps = number_of_months
 t_max = number_of_months*30 # time measured in days 
 times = np.linspace(t0, t_max, n_steps)
 

@@ -40,16 +40,17 @@ mvs=CMTVS(
 # we provide some example parameterization
 
 dirPath = Path(__file__).parent
-
+#
 pp = Path(__file__).parent.joinpath("parameterization_from_test_args")
 cp=CachedParameterization.from_path(pp)
 par_dict = cp.parameter_dict
 func_dict = cp.func_dict
 
 t0 = 0  #3/2*np.pi
-n_steps = 12  # 2881
+days_per_month=365.25/12
 number_of_months = cp.drivers.npp.shape[0] 
-t_max = number_of_months*30 # time measured in days 
+n_steps = number_of_months #2881
+t_max = number_of_months*days_per_month # time measured in days 
 times = np.linspace(t0, t_max, n_steps)
 
 # For this example we assume that the system was in steady state 

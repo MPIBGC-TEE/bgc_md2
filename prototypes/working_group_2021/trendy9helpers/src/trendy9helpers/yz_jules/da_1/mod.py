@@ -148,16 +148,31 @@ def make_param_filter_func(
     beta_leaf_ind = EstimatedParameters._fields.index("beta_leaf")
     beta_wood_ind = EstimatedParameters._fields.index("beta_wood")
 
-    def isQualified(c):
-        beta_leaf_ind
-        cond1 = (c >= c_min).all()
-        cond2 = (c <= c_max).all()
-        cond3 = c[beta_leaf_ind] + c[beta_wood_ind] < 1
-        print(
-            "cond1",cond1,
-            "cond2",cond2,
-            "cond3",cond3,
-        )
-        return cond1 and cond2 and cond3
+    def isQualified(
+            c,
+            print_conds=False
+        ):
+        def value(field_name):
+            try:
+                return c[EstimatedParameters._fields.index(field_name)]
+            except Exception as e:
+                print("###########################")
+                print(e)
+                print(field_name)
+                raise e
+
+        conds=[
+            # not necessary any more since the
+            # proposer does not choose values
+            # outside the range
+            # (c >= c_min).all()
+            # (c <= c_max).all()
+            sum(map(value, ["beta_leaf", "beta_wood"])) <= 0.99,
+        ]
+        res=all(conds)
+        if print_conds:
+            if not res:
+                print(conds)
+        return res
 
     return isQualified

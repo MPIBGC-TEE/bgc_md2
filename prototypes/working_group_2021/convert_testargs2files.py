@@ -1,11 +1,14 @@
-import general_helpers as gh
+import general_helpers as gho
+import trendy9helpers.general_helpers as gh
+from importlib import import_module
+from pathlib import Path
 model_folders = [
     # first tier (best shape)
     "kv_visit2",  
-    "jon_yib",
-    "yz_jules",
+    #"jon_yib",
+    #"yz_jules",
     ##
-    "Aneesh_SDGVM", #second tier (not quite ready)
+    #"Aneesh_SDGVM", #second tier (not quite ready)
     #"kv_ft_dlem",
     ##
     ##third tier
@@ -53,7 +56,8 @@ def write_data_assimilation_parameters_from_test_args():
         try:
             cp=CachedParameterization.from_path(dir_path)
         except:    
-            test_args = gh.test_args_2(mf)
+            th = import_module(Path(mf).joinpath("deprecated","test_helpers.py"))
+            test_args=th.make_test_args()
 
             write_data_assimilation_parameters_from_test_args_single(
                 test_args,
@@ -61,3 +65,19 @@ def write_data_assimilation_parameters_from_test_args():
                 dir_path
             )
 
+mf="kv_visit2"
+
+msh = gh.msh(mf)
+mvs=import_module(f"{msh.model_mod}.source").mvs
+th=import_module(f"trendy9helpers.{mf}.test_helpers")
+test_args=th.make_test_args(conf_dict=gh.confDict(mf),msh=msh,mvs=mvs)
+
+#from IPython import embed; embed()
+write_parameterization_from_test_args(
+        test_args, 
+        func_dict_param_dict={},
+        CachedParameterization = import_module(f"{msh.model_mod}.CachedParameterization").CachedParameterization,
+        data_path=gh.data_path(mf)
+
+)
+            

@@ -11,7 +11,7 @@ import bgc_md2.helper as h
 from  ... import general_helpers as gh
 from .. import model_specific_helpers_2 as msh  
 
-model_mod = 'bgc_md2.models.AneeshSDGVM'
+model_mod = 'bgc_md2.models.Aneesh_SDGVM'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
 mvs=import_module(f"{model_mod}.source").mvs
 make_func_dict = cp_mod.make_func_dict
@@ -81,7 +81,10 @@ def make_param_filter_func(
     # find position of beta_leaf and beta_wood
         
     
-    def isQualified(c):
+    def isQualified(
+            c,
+            print_conds=False
+        )-> bool:
         def value(field_name):
             try:
                 return c[EstimatedParameters._fields.index(field_name)]
@@ -91,8 +94,12 @@ def make_param_filter_func(
                 print(field_name)
                 raise e
         conds=[
-            (c >= c_min).all(), 
-            (c <= c_max).all(), 
+            # not necessary any more since the
+            # proposer does not choose values
+            # outside the range
+            #(c >= c_min).all(), 
+            #(c <= c_max).all(),
+
             sum(map(value, ["beta_leaf", "beta_wood"])) <= 0.99,
             value("C_leaf_0") <= cpa.cVeg_0-cpa.cRoot_0, 
             sum(
@@ -100,7 +107,7 @@ def make_param_filter_func(
                     value,
                     ["C_abvstrlit_0","C_abvmetlit_0","C_blwstrlit_0"]
                 )
-            ) <= cpa.cVeg_0,
+            ) <= cpa.cLitter_0,
             sum(
                 map(
                     value,
@@ -109,8 +116,10 @@ def make_param_filter_func(
             ) <= cpa.cSoil_0  
         ]    
         res=all(conds)
-        if not res:
-            print(conds)
+        if print_conds:
+            if not res:
+                print(conds)
+                #from IPython import embed; embed()
         return res
         
     return isQualified
@@ -126,8 +135,8 @@ def make_param2res_sym(
         epa=EstimatedParameters(*pa)
         X_0 = numeric_X_0(mvs, dvs, cpa, epa)
         dpm=30
-        steps_per_month = 2
-        delta_t_val = dpm/steps_per_month 
+        steps_per_month = dpm
+        delta_t_val = 1 #dpm/steps_per_month 
 
         par_dict = gh.make_param_dict(mvs, cpa, epa)
         func_dict = make_func_dict(dvs , cpa=cpa, epa=epa)
@@ -140,23 +149,24 @@ def make_param2res_sym(
                 delta_t_val=delta_t_val
             )
         )
-        #from IPython import embed; embed()
         number_of_months=dvs.npp.shape[0]
-        number_of_steps = int(number_of_months/delta_t_val)
-        result_dict = bitr[0: number_of_steps: steps_per_month]
+        number_of_steps = int(number_of_months * dpm / delta_t_val)
+        result_dict = bitr[0: number_of_steps: steps_per_month]# 1 value per month
         steps_per_year = steps_per_month*12
-        yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
+        #yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
+        yearly_partitions = gh.partitions(0, len(result_dict['rh']), 12)
         yearly_averages = {
             key: gh.averaged_1d_array(result_dict[key],yearly_partitions)
             for key in ["cVeg", "cRoot", "cLitter", "cSoil"]
         }
+        #from IPython import embed; embed()
 
         return msh.Observables(
             cVeg=yearly_averages["cVeg"],
             cRoot=yearly_averages["cRoot"],
             cLitter=yearly_averages["cLitter"],
             cSoil=yearly_averages["cSoil"],
-            rh=result_dict["rh"]#/(60*60*24)
+            rh=result_dict["rh"]/(60*60*24)
         )
     return param2res
 

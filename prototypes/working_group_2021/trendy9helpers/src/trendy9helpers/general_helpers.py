@@ -14,9 +14,9 @@ from importlib import import_module
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 import os
+import datetime as dt
 import pandas as pd
 import inspect
-import datetime as dt
 from pathlib import Path
 import json
 import netCDF4 as nc
@@ -98,8 +98,38 @@ Transformers = namedtuple(
 CoordTransformers = namedtuple(
     "CoordTransformers", ["lat2LAT", "LAT2lat", "lon2LON", "LON2lon"]
 )
-date = namedtuple("date", ["year", "month", "day"])
+    #def __init__(self, year, month, day):
+    #    self.year=year
+    #    self.month=month
+    #    self.day=day
 
+    #@classmethod
+    #def from_trendy_days_since_AD(cls,tdsDA):
+    #    y = int(tdsDA/self.days_per_year)
+    #    m = int((tdsDA- self.days_per_year * y) / self.days_per_month) 
+    #    d = tdsDA - y * self.days_per_year - m * self.days_per_month
+    #    #from IPython import embed; embed()
+    #    return cls(y,m+1,d+1)
+
+    #@property
+    #def trendy_days_since_AD(self) -> np.array:
+
+    #    return (
+    #        self.year * self.days_per_year
+    #        + self.days_per_month * (self.month - 1)
+    #        + self.day-1
+    #    )
+
+    #def __eq__(self,other):
+    #    return all(
+    #        [
+    #            self.year==other.year,
+    #            self.month==other.month,
+    #            self.day==other.day,
+    #        ]
+    #    )    
+    #def __repr__(self):
+    #    return f"{self.month}-{self.day} {self.year})"
 
 def compose_2(f: Callable, g: Callable) -> Callable:
     """Function composition"""
@@ -201,58 +231,13 @@ class SymTransformers:
 # )
 
 
-class TraceTuple:
-    def __init__(self, fd: dict):
-        for k, v in fd.items():
-            self.fd = fd
-            self.__setattr__(k, v)
-
-    @property
-    def _fields(self):
-        return self.fd.keys()
-
-    def averages(self, partitions):
-        return self.__class__(
-            {
-                name: averaged_1d_array(self.__getattribute__(name), partitions)
-                for name in self._fields
-            }
-        )
-
-    def __add__(self, other):
-        """overload + which is useful for averaging"""
-        return self.__class__(
-            {
-                name: self.__getattribute__(name) + other.__getattribute__(name)
-                for name in self._fields
-            }
-        )
-
-    def __truediv__(self, number):
-        """overload / for scalars  which is useful for averaging"""
-
-        return self.__class__(
-            {name: self.__getattribute__(name) / number for name in self._fields}
-        )
-
-    def __eq__(self, other):
-        """overload == which is useful for tests"""
-        return np.all(
-            self.__getattribute__(name) == other.__getattribute__(name)
-            for name in self._fields
-        )
-
 
 # some tiny helper functions for module loading
-#def mvs(mf):
-#    return import_module("{}.source".format(mf)).mvs
-#
-#def mvs_2(mf):
-#    msh = import_module("{}.model_specific_helpers_2".format(mf))
-#    return import_module(f"{msh.model_mod}.source").mvs
-#
+def mvs(mf):
+    return import_module(f"{msh(mf).model_mod}.source").mvs
+
 def msh(mf):
-    return import_module(f"{__package__}.{mf}.model_specific_helpers_2".format(mf))
+    return import_module(f"{__package__}.{mf}.model_specific_helpers_2")
 
 
 def th(mf):
@@ -264,17 +249,130 @@ def confDict(mf):
         confDict = frozendict(json.load(f))
     return confDict
 
+def da_dir_path(p,mf,da_scheme,par_sub_dir):
+    return p.joinpath(mf, da_scheme, par_sub_dir)
 
-#def test_args(mf):
-#    print("Loading data and parameters for " + mf + " model...")
-#    return th(mf).make_test_args(conf_dict=confDict(mf), msh=msh(mf), mvs=mvs(mf))
+def data_path(mf):
+    return Path(confDict(mf)["dataPath"])
 
-#def test_args_2(mf):
-#    print("Loading data and parameters for " + mf + " model...")
-#    msh = import_module("{}.model_specific_helpers_2".format(mf))
-#    mvs = import_module(f"{msh.model_mod}.source").mvs
-#    return th(mf).make_test_args(conf_dict=confDict(mf), msh=msh, mvs=mvs)
+def target_path(p,mf):
+    return p.joinpath(mf,"global_means")
 
+def da_mod_name(mf,da_scheme):
+    return f"trendy9helpers.{mf}.{da_scheme}"
+
+def da_mod(mf,da_scheme):
+    return import_module( f"{da_mod_name(mf,da_scheme)}.mod")
+
+def output_cache_path(p,mf,da_scheme,par_dir):
+    return da_dir_path(p,mf,da_scheme,par_dir).joinpath("out")
+
+def da_param_path(p,mf,da_scheme,par_dir):
+    return da_dir_path(p,mf,da_scheme,par_dir).joinpath("in")
+
+
+def gm_da_from_folder_names(
+    # just a convenience function implementing the folder hirarchy
+    # for the da modules and parameter dirs to be used in different
+    # notebooks and scripts
+    # It is not intended as a central funtion to 't build much on top of.
+    # So please dont
+        p: Path,
+        mf: str,
+        da_scheme: str,
+        param_dir: str
+    ):
+    state_vector = mvs(mf).get_StateVariableTuple()
+    # load global mean vars
+    # data path not necessary unless global means are recomputed
+    svs, dvs = msh(mf).get_global_mean_vars(data_path(mf), target_path(p,mf), flash_cache=False)
+    #
+    # The following lines perform data_assimilation
+    # The following lines perform data_assimilation
+    
+    func=cached_da_res_1_maker(
+        da_mod(mf,da_scheme).make_param_filter_func,
+        da_mod(mf,da_scheme).make_param2res_sym,
+        msh(mf).make_weighted_cost_func,
+        da_mod(mf,da_scheme).numeric_X_0,
+        da_mod(mf,da_scheme).EstimatedParameters,
+    )    
+    # specify from where to read the start parameters ranges and constants  
+    sp=da_dir_path(p,mf,da_scheme,param_dir)
+    if not sp.exists():
+        #sp.mkdir(parents=True,exist_ok=True)
+        # copy example files for the tests as part of the package
+        # If the directory is empty we copy the one used for the da tests which
+        # are part of the package.
+        da_dir_ex_path = mod_files(da_mod_name(mf,da_scheme)).joinpath(param_dir)
+        print(da_dir_ex_path)
+        #from IPython import embed; embed()
+        shutil.copytree(
+            da_dir_ex_path,
+            da_dir_path(p,mf,da_scheme,param_dir), 
+            dirs_exist_ok=True
+        )
+
+    cpa = da_mod(mf,da_scheme).Constants(
+        **h.load_dict_from_json_path(da_param_path(p,mf,da_scheme,param_dir).joinpath("cpa.json"))
+    )
+    epa_min, epa_max, epa_0 = tuple(
+        map(
+            lambda p: da_mod(mf,da_scheme).EstimatedParameters(
+                **h.load_dict_from_json_path(p)
+            ),
+            [
+                da_param_path(p,mf,da_scheme,param_dir).joinpath(f"{s}.json")
+                for s in ["epa_min", "epa_max", "epa_0"]
+            ],
+        )
+    )
+    # check that we can read the hyperparameters
+    hyper_dict = h.load_dict_from_json_path(
+        da_param_path(p,mf,da_scheme,param_dir).joinpath("hyper.json")
+    )
+    # compute the chains and the optimal parameter tuple
+    # (and automatically cache them)
+    Cs, Js, epa_opt = func(
+        output_cache_path(p,mf,da_scheme,param_dir),
+        mvs(mf),
+        svs,
+        dvs,
+        cpa,
+        epa_min,
+        epa_max,
+        epa_0,
+        nsimu=hyper_dict['nsimu'],
+        acceptance_rate=hyper_dict['acceptance_rate'],
+        chunk_size=hyper_dict['chunk_size'],
+        D_init=hyper_dict['D_init'],
+        K=hyper_dict['K'],
+    )
+    # create a parameterization for convinience and return it
+    param_dict=make_param_dict(mvs(mf),cpa,epa_opt) 
+    X_0=da_mod(mf,da_scheme).numeric_X_0(mvs(mf),dvs,cpa,epa_opt)
+    X_0_dict={
+        str(sym): X_0[i,0] 
+        for i,sym in enumerate(
+            mvs(mf).get_StateVariableTuple()
+        )
+    }
+    # some models (e.g. yz_jules) need extra (not represented by symbols) parameters  to build
+    # the func_dict for the parameterization
+    apa = {**cpa._asdict(), **epa_opt._asdict()}
+    func_dict_param_dict = { 
+        str(k): v 
+        for k, v in apa.items() 
+        if str(k) in msh(mf).CachedParameterization.func_dict_param_keys 
+    }
+    cp=msh(mf).CachedParameterization(
+        param_dict,
+        dvs,
+        X_0_dict,
+        func_dict_param_dict
+    )
+    return Cs, Js, epa_opt,cp
+    
 # should be part  of CompartmentalSystems
 def make_B_u_funcs(mvs, mpa, func_dict):
     model_params = {Symbol(k): v for k, v in mpa._asdict().items()}
@@ -399,7 +497,8 @@ def make_uniform_proposer_2(
     filter func must accept parameter array and return either True or False
     :param c_max: array of maximum parameter values
     :param c_min: array of minimum parameter values
-    :param D: a parameter to regulate the proposer step. Higher D means smaller step size
+    :param D: a parameter to regulate the proposer step . 
+    smaller D means smaller step size.
     :param filter_func: model-specific function to filter out impossible parameter combinations
     """
 
@@ -409,7 +508,8 @@ def make_uniform_proposer_2(
         paramNum = len(c_op)
         keep_searching = True
         while keep_searching:
-            c_new = c_op + (np.random.uniform(-0.5, 0.5, paramNum) * c_op * D)
+            #c_new = c_op + (np.random.uniform(-0.5, 0.5, paramNum) * c_op * D) # does not stay between c_min,c_max
+            c_new = c_op + (np.random.uniform(c_min, c_max, paramNum) - c_op) / D
             if filter_func(c_new):
                 keep_searching = False
         return c_new
@@ -419,7 +519,7 @@ def make_uniform_proposer_2(
 
 # deprecated 
 # condition for betas to sum up to 1 is incompatible with all of them
-# bein normally distributed
+# being normally distributed
 def make_multivariate_normal_proposer(
     covv: np.ndarray,
     filter_func: Callable[[Iterable], bool],
@@ -491,11 +591,11 @@ def autostep_mcmc(
     :param nsimu: The length of the chain
     :param c_max: Array of maximum values for each parameter
     :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %, default is 20%
+    :param acceptance_rate: Target acceptance rate in %
     :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
     Set to 0 for constant step size. Default is 100.
-    :param D_init: initial D value (increase to get a smaller step size), default = 1
-    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions), default = 1
+    :param D_init: initial D value (increase to get a smaller step size)
+    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions)
     """
     np.random.seed(seed=10)
 
@@ -609,7 +709,9 @@ def autostep_mcmc(
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
-# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
+# Autostep MCMC: modifying its step every 100 iterations
+# depending on acceptance rate
+#with uniform proposer 
 def autostep_mcmc_2(
     initial_parameters: Iterable,
     filter_func: Callable,
@@ -620,7 +722,7 @@ def autostep_mcmc_2(
     c_min: np.ndarray,
     acceptance_rate=0.23,
     chunk_size=100,
-    D_init=0.10,
+    D_init=5,
     K=1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -637,44 +739,27 @@ def autostep_mcmc_2(
     :param nsimu: The length of the chain
     :param c_max: Array of maximum values for each parameter
     :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %, default is 20%
+    :param acceptance_rate: Target acceptance rate in %
     :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
     Set to 0 for constant step size. Default is 100.
-    :param D_init: initial D value (increase to get a smaller step size), default = 1
-    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions), default = 1
+    :param D_init: initial D value (decrease to get a bigger step size must be larger than 1 which is equivalent to using the full parameter range for the next guess)
+    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions)
     """
+    # if D <1 then the proposer would produce values
+    # outside the parameter range
+    assert(D_init>=1)
+
     np.random.seed(seed=10)
 
-    paramNum = len(initial_parameters)
 
         # print(model_par_dict)
-
-        # Beside the par_dict the iterator also needs the python functions to replace the symbolic ones with
-        # our fake xi_func could of course be defined outside of param2res but in general it
-        # could be build from estimated parameters and would have to live here...
-        # def xi_func(day):
-        #    month=gh.day_2_month_index(day)
-        #    TS = (dvs.tas[month]-273.15) # # convert from Kelvin to Celcius
-        #    TS = 0.748*TS + 6.181 # approximate soil T at 20cm from air T (from https://doi.org/10.1155/2019/6927045)
-        #    if TS > epa.T_0:
-        #        xi_out = np.exp(epa.E*(1/(10-epa.T_0)-1/(TS-epa.T_0))) * dvs.mrso[month]/(epa.KM+dvs.mrso[month])
-        #    else:
-        #        xi_out=0
-        #    return(xi_out)
-        #    # return 1.0 # preliminary fake for lack of better data...
-        #
-        # func_dict={
-        #    'NPP':npp_func,
-        #     'xi':xi_func
-        # }
-    upgraded = 0
     C_op = initial_parameters
-    # check if the initial parameters are valid
-    assert(filter_func(C_op))
+
+    # check if the initial parameters are valid (to avoid an infinite loop before we even start changing them)
+    assert(filter_func(C_op,print_conds=True))
 
     tb = time()
     first_out = param2res(C_op)
-    #from IPython import embed; embed()
     J_last = costfunction(first_out)
     J_min = J_last
     J_min_simu = 0
@@ -685,6 +770,7 @@ def autostep_mcmc_2(
     # initialize the result arrays to the maximum length
     # Depending on many of the parameters will be accepted only
     # a part of them will be filled with real values
+    paramNum = len(initial_parameters)
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
     D = D_init
@@ -692,27 +778,35 @@ def autostep_mcmc_2(
         c_max=c_max, c_min=c_min, D=D, filter_func=filter_func
     )
     st = time()
-    accepted_current = 0
     if chunk_size == 0:
         chunk_size = (
             nsimu  # if chunk_size is set to 0 - proceed without updating step size.
         )
+    
+
+    upgraded = 0
+    accepted_in_last_chunk = 0
     for simu in tqdm(range(nsimu)):
+        if simu % 10 == 0 or simu == (nsimu - 1):
+            print(
+               f""" 
+               #(upgraded): {upgraded}   
+               D value: {D} 
+               target acceptance rate: {acceptance_rate}%
+               current chunk acceptance rate: {int(accepted_in_last_chunk/chunk_size  * 100)}%  
+               overall acceptance rate: {int(upgraded / (simu + 1) * 100)}%  
+               progress: {simu:05d}/{nsimu:05d} {int(simu / (nsimu - 1) * 100):02d}%
+               time elapsed: {int((time() - st) / 60):02d}:{int((time() - st) % 60):02d}
+               overall min cost: {round(J_min, 2)} achieved at {J_min_simu} iteration | last accepted cost: {round(J_last, 2)} 
+               """)
+
         if (simu > 0) and (
             simu % chunk_size == 0
         ):  # every chunk size (e.g. 100 iterations) update the proposer step
-            if accepted_current == 0:
-                accepted_current = 1  # to avoid division by 0
-            if accepted_current / chunk_size > acceptance_rate:
-                D = D * (1 + 0.2)
-            else:
-                D = D * (1 - 0.2)
-            # D = D * np.sqrt(
-            #    acceptance_rate / (accepted_current / chunk_size * 100))  # compare acceptance and update step
-            # if D < (1 / paramNum):  # to avoid being stuck in too large steps that will always fail the filter.
-            #    D = (1 / paramNum)
-            accepted_current = 0
-            # proposer = make_uniform_proposer(c_max=c_max, c_min=c_min, D=D, filter_func=filter_func)
+            chunk_acceptance_rate=accepted_in_last_chunk/ chunk_size
+            D = D * 1.2 if chunk_acceptance_rate < acceptance_rate else max(1, D * 0.8)
+            print(f"D={D}")
+            accepted_in_last_chunk= 0
         if (
             simu % (chunk_size * 20) == 0
         ):  # every 20 chunks - return to the initial step size (to avoid local minimum)
@@ -731,152 +825,122 @@ def autostep_mcmc_2(
             C_upgraded[:, upgraded] = C_op
             J_upgraded[1, upgraded] = J_last
             J_upgraded[0, upgraded] = simu
-            upgraded = upgraded + 1
-            accepted_current = accepted_current + 1
+            upgraded += 1
+            accepted_in_last_chunk += 1
 
         # print some metadata
         # (This could be added to the output file later)
-        if simu % 10 == 0 or simu == (nsimu - 1):
-            print(
-                """ 
-               #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
-               progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-               time elapsed: {minutes:02d}:{sec:02d}
-               overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
-               """.format(
-                    n=upgraded,
-                    r=int(upgraded / (simu + 1) * 100),
-                    simu=simu,
-                    nsimu=nsimu,
-                    pbs="|"
-                    + int(50 * simu / (nsimu - 1)) * "#"
-                    + int((1 - simu / (nsimu - 1)) * 50) * " "
-                    + "|",
-                    p=int(simu / (nsimu - 1) * 100),
-                    minutes=int((time() - st) / 60),
-                    sec=int((time() - st) % 60),
-                    cost=round(J_min, 2),
-                    cost2=round(J_last, 2),
-                    ac=accepted_current / chunk_size * 100,
-                    # rr=int(accepted_current / chunk_size * 100),
-                    ch=chunk_size,
-                    d=round(D, 3),
-                    s=J_min_simu,
-                ),
-                end="\033[5A",  # print always on the same spot of the screen...
-            )
-
     # remove the part of the arrays that is still filled with zeros
     useful_slice = slice(0, upgraded)
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
-def adaptive_mcmc(
-    # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
-    initial_parameters: Iterable,
-    covv: np.ndarray,
-    filter_func: Callable,
-    param2res: Callable[[np.ndarray], np.ndarray],
-    costfunction: Callable[[np.ndarray], np.float64],
-    nsimu: int,
-    sd_controlling_factor=10,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with
-    shape (len(initial_parameters),nsimu) and the array of cost function values with shape (q,nsimu)
-    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
-    :param covv: The covariance matrix (usually estimated from a previously run chain)
-    :param filter_func: function to remove impossible parameter combinations
-    :param param2res: A function that given a parameter(tuple) returns
-    the model output, which has to be an array of the same shape as the observations used to
-    build the cost function.
-    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for
-    a specific set of observations, which is why they do not appear as an argument.
-    :param nsimu: The length of the chain
-    :param sd_controlling_factor: optional parameter to scale the covariance matrix. Increase to get a smaller step size
-    """
-
-    np.random.seed(seed=10)
-
-    paramNum = len(initial_parameters)
-
-    sd = 1 / sd_controlling_factor / paramNum
-    covv = covv * sd
-
-    proposer = make_multivariate_normal_proposer(covv, filter_func)
-
-    upgraded = 0
-    C_op = initial_parameters
-    tb = time()
-    first_out = param2res(C_op)
-
-    J_last = costfunction(first_out)
-    J_min = J_last
-    J_min_simu = 0
-    print("first_iteration done after " + str(time() - tb))
-    # J_last = 400 # original code
-
-    # initialize the result arrays to the maximum length
-    # Depending on many of the parameters will be accepted only
-    # a part of them will be filled with real values
-    C_upgraded = np.zeros((paramNum, nsimu))
-    J_upgraded = np.zeros((2, nsimu))
-
-    # for simu in tqdm(range(nsimu)):
-    st = time()
-    for simu in range(nsimu):
-        # if (upgraded%10 == 0) & (upgraded > nsimu/20):
-        if simu > nsimu / 10:
-            covv = sd * np.cov(C_accepted)
-            proposer = make_multivariate_normal_proposer(covv, filter_func)
-        c_new = proposer(C_op)
-        out_simu = param2res(c_new)
-        J_new = costfunction(out_simu)
-
-        if accept_costfunction(J_last=J_last, J_new=J_new):
-            C_op = c_new
-            J_last = J_new
-            if J_last < J_min:
-                J_min = J_last
-                J_min_simu = simu
-            C_upgraded[:, upgraded] = C_op
-            C_accepted = C_upgraded[:, 0:upgraded]
-            J_upgraded[1, upgraded] = J_last
-            J_upgraded[0, upgraded] = simu
-            upgraded = upgraded + 1
-        # print some metadata
-        # (This could be added to the output file later)
-
-        if simu % 10 == 0 or simu == (nsimu - 1):
-            print(
-                """ 
-#(upgraded): {n}
-overall acceptance ratio till now: {r}% 
-progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-time elapsed: {minutes:02d}:{sec:02d}
-overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
-""".format(
-                    n=upgraded,
-                    r=int(upgraded / (simu + 1) * 100),
-                    simu=simu,
-                    nsimu=nsimu,
-                    pbs="|"
-                    + int(50 * simu / (nsimu - 1)) * "#"
-                    + int((1 - simu / (nsimu - 1)) * 50) * " "
-                    + "|",
-                    p=int(simu / (nsimu - 1) * 100),
-                    minutes=int((time() - st) / 60),
-                    sec=int((time() - st) % 60),
-                    cost=round(J_min, 2),
-                    cost2=round(J_last, 2),
-                    s=J_min_simu,
-                ),
-                end="\033[5A",  # print always on the same spot of the screen...
-            )
-
-    # remove the part of the arrays that is still filled with zeros
-    useful_slice = slice(0, upgraded)
-    return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
+#def adaptive_mcmc(
+#    # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
+#    initial_parameters: Iterable,
+#    covv: np.ndarray,
+#    filter_func: Callable,
+#    param2res: Callable[[np.ndarray], np.ndarray],
+#    costfunction: Callable[[np.ndarray], np.float64],
+#    nsimu: int,
+#    sd_controlling_factor=10,
+#) -> Tuple[np.ndarray, np.ndarray]:
+#    """
+#    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with
+#    shape (len(initial_parameters),nsimu) and the array of cost function values with shape (q,nsimu)
+#    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
+#    :param covv: The covariance matrix (usually estimated from a previously run chain)
+#    :param filter_func: function to remove impossible parameter combinations
+#    :param param2res: A function that given a parameter(tuple) returns
+#    the model output, which has to be an array of the same shape as the observations used to
+#    build the cost function.
+#    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for
+#    a specific set of observations, which is why they do not appear as an argument.
+#    :param nsimu: The length of the chain
+#    :param sd_controlling_factor: optional parameter to scale the covariance matrix. Increase to get a smaller step size
+#    """
+#
+#    np.random.seed(seed=10)
+#
+#    paramNum = len(initial_parameters)
+#
+#    sd = 1 / sd_controlling_factor / paramNum
+#    covv = covv * sd
+#
+#    proposer = make_multivariate_normal_proposer(covv, filter_func)
+#
+#    upgraded = 0
+#    C_op = initial_parameters
+#    tb = time()
+#    first_out = param2res(C_op)
+#
+#    J_last = costfunction(first_out)
+#    J_min = J_last
+#    J_min_simu = 0
+#    print("first_iteration done after " + str(time() - tb))
+#    # J_last = 400 # original code
+#
+#    # initialize the result arrays to the maximum length
+#    # Depending on many of the parameters will be accepted only
+#    # a part of them will be filled with real values
+#    C_upgraded = np.zeros((paramNum, nsimu))
+#    J_upgraded = np.zeros((2, nsimu))
+#
+#    # for simu in tqdm(range(nsimu)):
+#    st = time()
+#    for simu in range(nsimu):
+#        # if (upgraded%10 == 0) & (upgraded > nsimu/20):
+#        if simu > nsimu / 10:
+#            covv = sd * np.cov(C_accepted)
+#            proposer = make_multivariate_normal_proposer(covv, filter_func)
+#        c_new = proposer(C_op)
+#        out_simu = param2res(c_new)
+#        J_new = costfunction(out_simu)
+#
+#        if accept_costfunction(J_last=J_last, J_new=J_new):
+#            C_op = c_new
+#            J_last = J_new
+#            if J_last < J_min:
+#                J_min = J_last
+#                J_min_simu = simu
+#            C_upgraded[:, upgraded] = C_op
+#            C_accepted = C_upgraded[:, 0:upgraded]
+#            J_upgraded[1, upgraded] = J_last
+#            J_upgraded[0, upgraded] = simu
+#            upgraded = upgraded + 1
+#        # print some metadata
+#        # (This could be added to the output file later)
+#
+#        if simu % 10 == 0 or simu == (nsimu - 1):
+#            print(
+#                """ 
+##(upgraded): {n}
+#overall acceptance ratio till now: {r}% 
+#progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+#time elapsed: {minutes:02d}:{sec:02d}
+#overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
+#""".format(
+#                    n=upgraded,
+#                    r=int(upgraded / (simu + 1) * 100),
+#                    simu=simu,
+#                    nsimu=nsimu,
+#                    pbs="|"
+#                    + int(50 * simu / (nsimu - 1)) * "#"
+#                    + int((1 - simu / (nsimu - 1)) * 50) * " "
+#                    + "|",
+#                    p=int(simu / (nsimu - 1) * 100),
+#                    minutes=int((time() - st) / 60),
+#                    sec=int((time() - st) % 60),
+#                    cost=round(J_min, 2),
+#                    cost2=round(J_last, 2),
+#                    s=J_min_simu,
+#                ),
+#                end="\033[5A",  # print always on the same spot of the screen...
+#            )
+#
+#    # remove the part of the arrays that is still filled with zeros
+#    useful_slice = slice(0, upgraded)
+#    return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
 def mcmc(
@@ -973,234 +1037,103 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
-def make_feng_cost_func(
-    obs: np.ndarray,
-) -> Callable[[np.ndarray], np.float64]:
-    # Note:
-    # in our code the dimension 0 is the time
-    # and dimension 1 the pool index
-    means = obs.mean(axis=0)
-    mean_centered_obs = obs - means
-    # now we compute a scaling factor per observable stream
-    # fixme mm 10-28-2021
-    #   The denominators in this case are actually the TEMPORAL variances of the data streams
-    denominators = np.sum(mean_centered_obs**2, axis=0)
-
-    #   The desired effect of automatically adjusting weight could be achieved
-    #   by the mean itself.
-    # dominators = means
-    def costfunction(mod: np.ndarray) -> np.float64:
-        cost = np.mean(np.sum((obs - mod) ** 2, axis=0) / denominators * 100)
-        return cost
-
-    return costfunction
-
-
-def make_jon_cost_func(
-    obs: np.ndarray,
-) -> Callable[[np.ndarray], np.float64]:
-    # Note:
-    # in our code the dimension 0 is the time
-    # and dimension 1 the pool index
-    n = obs.shape[0]
-    means = obs.mean(axis=0)
-    denominators = means**2
-
-    def costfunction(mod: np.ndarray) -> np.float64:
-        cost = (100 / n) * np.sum(100 * np.sum((obs - mod) ** 2, axis=0) / denominators)
-        return cost
-
-    return costfunction
-
-
-def days_per_month():
-    # dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    dpm = [30 for i in range(12)]
-    return dpm
-
-
-def days_per_year():
-    return sum(days_per_month())
-
-
-# def day_2_month_index(day):
-#    months_by_day_arr = np.concatenate(
-#        tuple(
-#            map(lambda m: m * np.ones(days_per_month()[m], dtype=np.int64), range(12))
-#        )
-#    )
-#    #  for variable months
-#    dpy = days_per_year()
-#    return months_by_day_arr[(day % dpy)] + int(day / dpy) * 12
-
-
-def days_since_AD(
-    iteration,
-    delta_t_val,
-    start_date,
-    start_shift=0,  # time between the start.date and the iterator's first step
-):
-    return td_AD(start_date) + start_shift + iteration * delta_t_val
-
-
-def td_AD(start_date):
-    # computes the startdate in days time AD
-    start_year, start_month, start_day = start_date
-    return (
-        start_year * days_per_year()
-        + sum(days_per_month()[0 : (start_month - 1)])
-        + (start_day - 1)
-    )
-
-
-# def month_2_day_index(ns, start_date):
-#    start_month = start_date.month
-#    """ computes the index of the day at the end of the month n in ns
-#    this works on vectors and is faster than a recursive version working
-#    on a single index (since the smaller indices are handled anyway)
-#    """
+#def make_feng_cost_func(
+#    obs: np.ndarray,
+#) -> Callable[[np.ndarray], np.float64]:
+#    # Note:
+#    # in our code the dimension 0 is the time
+#    # and dimension 1 the pool index
+#    means = obs.mean(axis=0)
+#    mean_centered_obs = obs - means
+#    # now we compute a scaling factor per observable stream
+#    # fixme mm 10-28-2021
+#    #   The denominators in this case are actually the TEMPORAL variances of the data streams
+#    denominators = np.sum(mean_centered_obs**2, axis=0)
 #
-#    # We first compute the sequence of day indices up to the highest month in ns
-#    # and then select from this sequence the day indices for the months in ns
-#    d = days_per_month()
-#    dpm = (d[i % len(d)] for i in range(max(ns)))
+#    #   The desired effect of automatically adjusting weight could be achieved
+#    #   by the mean itself.
+#    # dominators = means
+#    def costfunction(mod: np.ndarray) -> np.float64:
+#        cost = np.mean(np.sum((obs - mod) ** 2, axis=0) / denominators * 100)
+#        return cost
 #
-#    # compute indices for which we want to store the results which is the
-#    # list of partial sums of the above list  (repeated)
+#    return costfunction
+
+
+#def make_jon_cost_func(
+#    obs: np.ndarray,
+#) -> Callable[[np.ndarray], np.float64]:
+#    # Note:
+#    # in our code the dimension 0 is the time
+#    # and dimension 1 the pool index
+#    n = obs.shape[0]
+#    means = obs.mean(axis=0)
+#    denominators = means**2
 #
-#    def f(acc, el):
-#        if len(acc) < 1:
-#            res = (el,)
-#        else:
-#            last = acc[-1]
-#            res = acc + (el + last,)
-#        return res
+#    def costfunction(mod: np.ndarray) -> np.float64:
+#        cost = (100 / n) * np.sum(100 * np.sum((obs - mod) ** 2, axis=0) / denominators)
+#        return cost
 #
-#    day_indices_for_continuous_moths = reduce(f, dpm, (0,))
-#    day_indices = reduce(
-#        lambda acc, n: acc + [day_indices_for_continuous_moths[n]],  # for n=0 we want 0
-#        ns,
-#        [],
-#    )
-#    return day_indices
+#    return costfunction
 #
-
-# +
-# def year_2_day_index(ns):
-#     """ computes the index of the day at the end of the year n in ns
-#     this works on vectors
-#     """
-#     return np.array(list(map(lambda n:days_per_year*n,ns)))
-# -
-
-
-class TimeStepIterator2:
-    """iterator for looping forward over the results of a difference equation
-    X_{i+1}=f(X_{i},i)"""
-
-    def __init__(
-        self,
-        initial_values,  # a tuple of values that will be
-        f,  # the function to compute the next ts
-        max_it=False,
-    ):
-        self.initial_values = initial_values
-        self.f = f
-        self.reset()
-        self.max_it = max_it
-
-    def reset(self):
-        self.i = 0
-        self.ts = self.initial_values
-
-    def __iter__(self):
-        self.reset()
-        return self
-
-    def __next__(self):
-        if self.max_it:
-            if self.i == self.max_it:
-                raise StopIteration
-
-        ts = copy(self.ts)
-        ts_new = self.f(self.i, ts)
-        self.ts = ts_new
-        self.i += 1
-        return ts
-
-    def values(self, day_indices):
-        # we traverse the iterator to the highest index and
-        # collect the results we want to keep in a list (acc)
-        tsi = copy(self)
-        tsi.reset()
-
-        def g(acc, i):
-            v = tsi.__next__()
-            if i in day_indices:
-                acc += [v]
-            return acc
-
-        xs = reduce(g, range(max(day_indices) + 1), ([]))
-        return xs
-
-
-def respiration_from_compartmental_matrix(B, X):
-    """This function computes the combined respiration from all pools"""
-    return -np.sum(B @ X)
-
-
-def plot_solutions(fig, times, var_names, tup, names=None):
-    if names is None:
-        names = tuple(str(i) for i in range(len(tup)))
-
-    assert all([tup[0].shape == el.shape for el in tup])
-
-    if tup[0].ndim == 1:
-        n_times = tup[0].shape[0]
-        ax = fig.subplots(1, 1)
-        for i, sol in enumerate(tup):
-            ax.plot(
-                np.array(times).reshape(
-                    n_times,
-                ),
-                sol,
-                marker="o",
-                label=names[i],
-            )
-            ax.set_title(var_names[0])
-            ax.legend()
-    else:
-        n_times, n_vars = tup[0].shape
-
-        fig.set_figheight(n_vars * fig.get_figwidth())
-        axs = fig.subplots(n_vars, 1)
-        colors = ("red", "blue", "green", "orange")
-        for j in range(n_vars):
-            for i, sol in enumerate(tup):
-                axs[j].plot(
-                    np.array(times).reshape(
-                        n_times,
-                    ),
-                    sol[:, j],
-                    marker="+",
-                    label=names[i],
-                )
-                axs[j].set_title(var_names[j])
-                axs[j].legend()
-
-
-def plot_observations_vs_simulations(fig, svs_cut, obs_simu):
-    # svn and obs_simu are both
-    n_plots = len(svs_cut)
-    fig.set_figheight(n_plots * fig.get_figwidth())
-    axs = fig.subplots(n_plots)
-    for i, name in enumerate(svs_cut.__class__._fields):
-        var = svs_cut[i]
-        var_simu = obs_simu[i]
-        axs[i].plot(range(len(var_simu)), var_simu, label="simulation", zorder=2)
-        axs[i].plot(range(len(var)), var, label="observation", zorder=1)
-        axs[i].legend()
-        axs[i].set_title(name)
+#
+#def respiration_from_compartmental_matrix(B, X):
+#    """This function computes the combined respiration from all pools"""
+#    return -np.sum(B @ X)
+#
+#
+#def plot_solutions(fig, times, var_names, tup, names=None):
+#    if names is None:
+#        names = tuple(str(i) for i in range(len(tup)))
+#
+#    assert all([tup[0].shape == el.shape for el in tup])
+#
+#    if tup[0].ndim == 1:
+#        n_times = tup[0].shape[0]
+#        ax = fig.subplots(1, 1)
+#        for i, sol in enumerate(tup):
+#            ax.plot(
+#                np.array(times).reshape(
+#                    n_times,
+#                ),
+#                sol,
+#                marker="o",
+#                label=names[i],
+#            )
+#            ax.set_title(var_names[0])
+#            ax.legend()
+#    else:
+#        n_times, n_vars = tup[0].shape
+#
+#        fig.set_figheight(n_vars * fig.get_figwidth())
+#        axs = fig.subplots(n_vars, 1)
+#        colors = ("red", "blue", "green", "orange")
+#        for j in range(n_vars):
+#            for i, sol in enumerate(tup):
+#                axs[j].plot(
+#                    np.array(times).reshape(
+#                        n_times,
+#                    ),
+#                    sol[:, j],
+#                    marker="+",
+#                    label=names[i],
+#                )
+#                axs[j].set_title(var_names[j])
+#                axs[j].legend()
+#
+#
+#def plot_observations_vs_simulations(fig, svs_cut, obs_simu):
+#    # svn and obs_simu are both
+#    n_plots = len(svs_cut)
+#    fig.set_figheight(n_plots * fig.get_figwidth())
+#    axs = fig.subplots(n_plots)
+#    for i, name in enumerate(svs_cut.__class__._fields):
+#        var = svs_cut[i]
+#        var_simu = obs_simu[i]
+#        axs[i].plot(range(len(var_simu)), var_simu, label="simulation", zorder=2)
+#        axs[i].plot(range(len(var)), var, label="observation", zorder=1)
+#        axs[i].legend()
+#        axs[i].set_title(name)
 
 
 def is_infinite_rec(chunk):
@@ -1616,291 +1549,79 @@ def download_TRENDY_output(
 
 
 
-def monthly_to_yearly(monthly):
-    # TRENDY specific - months weighted like all months are 30 days
-    if len(monthly.shape) > 1:
-        sub_arrays = [
-            monthly[i * 12 : (i + 1) * 12, :, :]
-            for i in range(int(monthly.shape[0] / 12))
-        ]
-    else:
-        sub_arrays = [
-            monthly[i * 12 : (i + 1) * 12,] for i in range(int(monthly.shape[0] / 12))
-        ]
-    return np.stack(list(map(lambda sa: sa.mean(axis=0), sub_arrays)), axis=0)
 
-
-def pseudo_daily_to_yearly(daily):
-    # compute a yearly average from pseudo daily data
-    # for one data point
-    pseudo_days_per_year = pseudo_days_per_month * 12
-    sub_arrays = [
-        daily[i * pseudo_days_per_year : (i + 1) * pseudo_days_per_year, :]
-        for i in range(int(daily.shape[0] / pseudo_days_per_year))
-    ]
-    return np.stack(list(map(lambda sa: sa.mean(axis=0), sub_arrays)), axis=0)
-
-
-def make_feng_cost_func_2(svs):  #: Observables
-    # now we compute a scaling factor per observable stream
-    # fixme mm 10-28-2021
-    # The denominators in this case are actually the TEMPORAL variances of the data streams
-    obs_arr = np.stack([arr for arr in svs], axis=1)
-    means = obs_arr.mean(axis=0)
-    mean_centered_obs = obs_arr - means
-    denominators = np.sum(mean_centered_obs**2, axis=0)
-
-    def feng_cost_func_2(simu):  #: Observables
-        def f(i):
-            arr = simu[i]
-            obs = obs_arr[:, i]
-            diff = ((arr - obs) ** 2).sum() / denominators[i] * 100
-            return diff
-
-        return np.array([f(i) for i in range(len(simu))]).mean()
-
-    return feng_cost_func_2
-
-
-def make_param_filter_func(
-    c_max, c_min, betas: List[str] = []
-) -> Callable[[np.ndarray], bool]:
-    positions = [c_max.__class__._fields.index(beta) for beta in betas]
-
-    def isQualified(c):
-        cond1 = (c >= c_min).all()
-        cond2 = (c <= c_max).all()
-
-        cond3 = np.sum([c[p] for p in positions]) <= 1
-        return cond1 and cond2 and cond3
-
-    return isQualified
-
-
-def make_StartVectorTrace(mvs):
-    # deprecated
-    svt = mvs.get_StateVariableTuple()
-    return namedtuple(
-        "StartVectorTrace",
-        [str(v) for v in svt]
-        + [str(v) + "_p" for v in svt]
-        + [str(v) + "_c" for v in svt]
-        + [str(v) + "_RT" for v in svt],
-    )
-
-
-def make_InitialStartVectorTrace(X_0, mvs, par_dict, func_dict):
-    # test the new iterator
-
-    # we make the X_p and X_c  parts compatible with the ones computed by the iterator
-    # for following timesteps (to keep it)
-    # As you can see in the definition of the iterator these values have no impact on further results
-    B_func, u_func = make_B_u_funcs_2(mvs, par_dict, func_dict)
-    I = u_func(0, X_0)
-    u = I.sum()
-    b = I / u
-    B = B_func(0, X_0)
-    B_inf = np.linalg.inv(B)
-    X_p_0 = B_inf @ I
-    X_c_0 = X_0 + X_p_0
-    RT_0 = B_inf @ b
-    # combine the three
-    # here we rely on order to be consistent
-    # (although we could use also the names of the namedtuple)
-    V_arr = np.concatenate((X_0, X_p_0, X_c_0, RT_0), axis=0)
-    StartVectorTrace = make_StartVectorTrace(mvs)
-    V_init = StartVectorTrace(*V_arr)
-    return V_init
-
-
-# fixme: mm 04-22-2022
-# this function is deprecated rather use traceability_iterator
-# def make_daily_iterator_sym_trace(
-#        mvs,
-#        V_init, #: StartVectorTrace,
-#        par_dict,
-#        func_dict
-#    ):
-#    B_func, I_func = make_B_u_funcs_2(mvs,par_dict,func_dict)
-#    V_arr=np.array(V_init).reshape(-1,1) #reshaping for matmul which expects a one column vector (nr,1)
+#def make_feng_cost_func_2(svs):  #: Observables
+#    # now we compute a scaling factor per observable stream
+#    # fixme mm 10-28-2021
+#    # The denominators in this case are actually the TEMPORAL variances of the data streams
+#    # why would one want to punish something for
+#    # changing????
+#    obs_arr = np.stack([arr for arr in svs], axis=1)
+#    means = obs_arr.mean(axis=0)
+#    mean_centered_obs = obs_arr - means
+#    denominators = np.sum(mean_centered_obs**2, axis=0)
 #
-#    n=len(mvs.get_StateVariableTuple())
-#    def f(it,V):
-#        #the pools are the first n values
-#        X = V[0:n]
-#        I = I_func(it,X)
-#        # we decompose I
-#        u=I.sum()
-#        b=I/u
-#        B = B_func(it,X)
-#        B_inf = np.linalg.inv(B)
-#        X_new = X + I + B @ X
-#        X_p = B_inf @ I
-#        X_c = X_new+X_p
-#        RT = B_inf @ b
-#        V_new = np.concatenate(
-#            (
-#                X_new.reshape(n,1),
-#                X_p.reshape(n,1),
-#                X_c.reshape(n,1),
-#                RT.reshape(n,1),
-#            ),
-#            axis=0
-#        )
-#        return V_new
+#    def feng_cost_func_2(simu):  #: Observables
+#        def f(i):
+#            arr = simu[i]
+#            obs = obs_arr[:, i]
+#            diff = ((arr - obs) ** 2).sum() / denominators[i] * 100
+#            return diff
 #
-#    return TimeStepIterator2(
-#        initial_values=V_arr,
-#        f=f,
+#        return np.array([f(i) for i in range(len(simu))]).mean()
+#
+#    return feng_cost_func_2
+
+
+#def make_param_filter_func(
+#    c_max, c_min, betas: List[str] = []
+#) -> Callable[[np.ndarray], bool]:
+#    positions = [c_max.__class__._fields.index(beta) for beta in betas]
+#
+#    def isQualified(c):
+#        cond1 = (c >= c_min).all()
+#        cond2 = (c <= c_max).all()
+#
+#        cond3 = np.sum([c[p] for p in positions]) <= 1
+#        return cond1 and cond2 and cond3
+#
+#    return isQualified
+
+
+#def make_StartVectorTrace(mvs):
+#    # deprecated
+#    svt = mvs.get_StateVariableTuple()
+#    return namedtuple(
+#        "StartVectorTrace",
+#        [str(v) for v in svt]
+#        + [str(v) + "_p" for v in svt]
+#        + [str(v) + "_c" for v in svt]
+#        + [str(v) + "_RT" for v in svt],
 #    )
 #
-
-
-class InfiniteIterator:
-    def __init__(self, x0, func):  # ,n):
-        self.x0 = x0
-        self.func = func
-
-        self.cur = x0
-        self.pos = 0
-
-    def __iter__(self):
-        # return a fresh instance that starts from the first step)
-        # This is important for the __getitem__ to work
-        # as expected and not have side effects
-        # for
-        # res1=itr[0:10]
-        # res2=itr[0:10]
-
-        c = self.__class__(self.x0, self.func)
-        return c
-        # return self
-
-    def __next__(self):
-        # print(self.pos, self.cur)
-        val = self.func(self.pos, self.cur)
-        self.cur = val
-        self.pos += 1
-        return val
-        # raise StopIteration()
-
-    # @lru_cache
-    def value_at(self, it_max):
-        I = self.__iter__()
-
-        def f_i(acc, i):
-            return I.__next__()
-
-        return reduce(f_i, range(it_max), I.x0)
-
-    def __getitem__(self, arg):
-        # this functions implements the python index notation itr[start:stop:step]
-        # fixme mm 4-26-2022
-        # we could use the cache for value_at if we dont use
-        if isinstance(arg, slice):
-            start = arg.start
-            stop = arg.stop
-            step = arg.step
-            return tuple(islice(self, start, stop, step))
-
-        elif isinstance(arg, int):
-            return (self.value_at(it_max=arg),)
-        else:
-            raise IndexError(
-                """arguments to __getitem__ have to be either
-                indeces or slices."""
-            )
-
-
-def values_2_TraceTuple(tups):
-    # instead of the tuple of TraceTuples that the InfiniteIterator returns
-    # we want a TraceTuple of arrays whith time (iterations)  added as the first dimension
-    return TraceTuple(
-        {
-            name: np.stack(tuple((tup.__getattribute__(name) for tup in tups)))
-            for name in tups[0]._fields
-        }
-    )
-
-
-class TraceTupleIterator(InfiniteIterator):
-    # overload methods specific to the TraceTupleIterator
-    def __getitem__(self, arg):
-        # we call the [] method of the superclass
-        # which returns a tuple of TraceTuples
-        tups = super().__getitem__(arg)
-
-        # But we want a TraceTuple of arrays
-        return values_2_TraceTuple(tups)
-
-    def averaged_values(self, partitions):
-        start = partitions[0][0]
-
-        def tt_avg(tups):
-            # note that this involves overloaded + and /
-            # for TraceTuple
-            l = len(tups)
-            return reduce(lambda acc, el: acc + el, tups) / l
-
-        # make a copy to avoid side effects on self
-        itr = self.__iter__()
-        # move to the start
-        for i in range(start):
-            itr.__next__()
-
-        tts = [
-            tt_avg([itr.__next__() for i in range(stop_p - start_p)])
-            for (start_p, stop_p) in partitions
-        ]
-        return values_2_TraceTuple(tts)
-
-
-#def make_trace_tuple_func(traced_functions: Dict[str, Callable]):
-#    # create a function that produces all the values we want to track for every timestep
-#    def f(X, B, I, it):
-#        # These are values that are computable from the momentary values of X and B
-#        u = I.sum()
-#        b = I / u
-#        B_inv = np.linalg.inv(B)
-#        X_c = B_inv @ I
-#        X_p = X_c - X
-#        X_dot = I - B @ X
-#        RT = X_c / u  # =B_inv@b but cheeper to compute
-#        # we now compute the system X_c and X_p
-#        # This is in general not equal to the sum of the component, but rather a property
-#        # of a surrogate system.
-#        x = X.sum()
-#        x_dot = X_dot.sum()
-#        m_s = (B @ X).sum() / x
-#        x_c = 1 / m_s * u
-#        x_p = x_c - x
-#        rt = x_c / u
-#        # tt=
-#        static = {
-#            "X": X,
-#            "X_p": X_p,
-#            "X_c": X_c,
-#            "X_dot": X_dot,
-#            "RT": RT,
-#            "x": x,
-#            "m_s": m_s,
-#            "x_p": x_p,
-#            "x_c": x_c,
-#            "x_dot": x_dot,
-#            "rt": rt,
-#            "u": u,
-#        }
-#        dynamic = {k: f(it, *X) for k, f in traced_functions.items()}
 #
-#        def dict_merge(d1, d2):
-#            d = deepcopy(d1)
-#            d.update(d2)
-#            return d
+#def make_InitialStartVectorTrace(X_0, mvs, par_dict, func_dict):
+#    # test the new iterator
 #
-#        return TraceTuple(dict_merge(static, dynamic))
-#
-#    return f
-
+#    # we make the X_p and X_c  parts compatible with the ones computed by the iterator
+#    # for following timesteps (to keep it)
+#    # As you can see in the definition of the iterator these values have no impact on further results
+#    B_func, u_func = make_B_u_funcs_2(mvs, par_dict, func_dict)
+#    I = u_func(0, X_0)
+#    u = I.sum()
+#    b = I / u
+#    B = B_func(0, X_0)
+#    B_inf = np.linalg.inv(B)
+#    X_p_0 = B_inf @ I
+#    X_c_0 = X_0 + X_p_0
+#    RT_0 = B_inf @ b
+#    # combine the three
+#    # here we rely on order to be consistent
+#    # (although we could use also the names of the namedtuple)
+#    V_arr = np.concatenate((X_0, X_p_0, X_c_0, RT_0), axis=0)
+#    StartVectorTrace = make_StartVectorTrace(mvs)
+#    V_init = StartVectorTrace(*V_arr)
+#    return V_init
 
 def minimal_iterator(
     X_0,
@@ -2809,8 +2530,6 @@ def model_table(
     mf = model_folders[0]
     import_module("{}.source".format(mf))
 
-    def mvs(mf):
-        return import_module("{}.source".format(mf)).mvs
 
     tups = [(model_names[mf], mvs(mf)) for mf in model_folders]
 
@@ -2927,100 +2646,49 @@ def make_cached_func(create_and_write: Callable,read: Callable):
 # -
 
 
-# a function to get a list of test_args from all models involved in the comparison
-def get_test_arg_list(model_folders):
-    test_arg_list = []
-    for mf in model_folders:
-        current_ta = test_args(mf)
-        test_arg_list.append(current_ta)
-    print("Done!")
-    return test_arg_list
 
 
-# fixme mm 8-12:
-# it would make sense to create a dictionary indexed by the model name
-# so it can be used for model comparisons by name like this one
-def get_test_arg_dict(model_folders):
-    return {mf: test_args_2(mf) for mf in model_folders}
+def package_name():
+    return __package__
+
+def t_min_max_overlap_gm(
+    model_folders: List[str],  
+    delta_t_val: float ,  # iterator time step
+    start_shift=0,  # time b etween the start.date and the time of the iterator's first step in 
+):                           
+
+    tl = [                   
+        h.date.timestep_dates_in_days_since_AD(
+            msh(mf).start_dt(),              
+            msh(mf).n_months(),
+            delta_t_val,     
+            start_shift      
+        )                    
+        for mf in model_folders
+    ]                        
+    t_min = max([t.min() for  t in tl])
+    t_max = min([t.max() for  t in tl])
+    #from IPython import embed;embed()
+    return (t_min, t_max)    
 
 
-def times_in_days_aD(
-    test_args,  # a tuple defined in model-specific test_helpers.py
-    delta_t_val,  # iterator time step
-    start_shift=0,  # time between the start.date and the iterator's first step
+
+
+
+def min_max_index_2(
+        mf: str,  # 
+        delta_t_val: float,  # iterator time step
+        t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
+        t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
+        start_shift=0,
 ):
-    n_months = len(test_args.dvs[0])
-    n_days = 30 * n_months - start_shift
-    n_iter = int(n_days / delta_t_val)
-    return np.array(
-        tuple(
-            (
-                days_since_AD(i, delta_t_val, test_args.start_date)
-                for i in np.arange(n_iter)  # days_after_sim_start
-            )
-        )
-    )
-
-
-# function to determine overlapping time frames for models simulations
-def t_min_tmax_overlap_2(
-    test_arg_dict,  # a dictionary of test_args from all models involved
-    delta_t_val,  # iterator time step
-    start_shift=0,  # time between the start.date and the iterator's first step
-):
-    td = {
-        mf: times_in_days_aD(ta, delta_t_val, start_shift)
-        for mf, ta in test_arg_dict.items()
-    }
-    t_min = max([t.min() for t in td.values()])
-    t_max = min([t.max() for t in td.values()])
-    return (t_min, t_max)
-
-
-# function to determine overlapping time frames for models simulations
-# fixme mm 11-19-2022 deprecated
-def t_min_tmax_overlap(
-    test_arg_list,  # a list of test_args from all models involved
-    delta_t_val,  # iterator time step
-):
-    print(
-        """
-        deprecated: This function does not use the start shift
-        argument which is important if the iterator does not start at t_0=0
-        use t_min_tmax_overlap_2 instead (with a dictionary argument)
-        """
-    )
-    td = {
-        i: times_in_days_aD(test_arg_list[i], delta_t_val)
-        for i in range(len(test_arg_list))
-    }
-    t_min = max([t.min() for t in td.values()])
-    t_max = min([t.max() for t in td.values()])
-    return (t_min, t_max)
-
-
-# def t_min_tmax_full(
-#    test_arg_list,  # a list of test_args from all models involved
-#    delta_t_val,  # iterator time step
-# ):
-#    td = {
-#        i: times_in_days_aD(test_arg_list[i], delta_t_val)
-#        for i in range(len(test_arg_list))
-#    }
-#    t_min = min([t.min() for t in td.values()])
-#    t_max = max([t.max() for t in td.values()])
-#    return (t_min, t_max)
-
-
-# function find the timesteps corresponding to shared times
-def min_max_index(
-    test_args,  # a tuple defined in model-specific test_helpers.py
-    delta_t_val,  # iterator time step
-    t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
-    t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
-    start_shift=0,
-):
-    ts = times_in_days_aD(test_args, delta_t_val, start_shift)
+    ts = h.date.timestep_dates_in_days_since_AD(
+        msh(mf).start_dt(),              
+        msh(mf).n_months(),
+        delta_t_val,     
+        start_shift      
+    )                    
+    #ts = times_in_days_aD(test_args, delta_t_val, start_shift)
 
     def count(acc, i):
         min_i, max_i = acc
@@ -3437,7 +3105,7 @@ def da_res_1_maker(
         different MCMC implementations and none worked for all combinations )
         this one does.
         """ 
-        
+        print(f"D_init={D_init}")    
         c_max=np.array(epa_max)
         c_min=np.array(epa_min)
         c_0=np.array(epa_0)
@@ -3498,7 +3166,8 @@ def mcdaf(
     ) ->Callable:         
     # create a function with two more parameters: output_cache_path
     # than the original function and pipe through all the other parameters.
-    sig=inspect.signature(func)
+    # sig=inspect.signature(func)
+
     def cached_func(
             output_cache_path, # add an argument 
             *args,
@@ -3528,7 +3197,7 @@ def mcdaf(
                 output_cache_path.joinpath(epa_opt_fn)
             )
             fs="\n".join(
-                [Cs_fn,Js_fn,epa_opt_fn]+cp.file_names
+                [Cs_fn,Js_fn,epa_opt_fn] 
             )
             print(f"""
             Found cache files in {output_cache_path}:
@@ -3537,7 +3206,6 @@ def mcdaf(
             """) 
 
         #except Exception as e:
-            #from IPython import embed; embed()
         except FileNotFoundError:
             Cs,Js,epa_opt = func(
                 *args,

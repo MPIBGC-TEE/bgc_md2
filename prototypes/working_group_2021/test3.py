@@ -1,5 +1,9 @@
 # %load_ext autoreload
 # %autoreload 2
+from pathlib import Path
+# set a directory where to store files for this notebooks (parameters, plots..)
+p = Path("test3")
+
 import netCDF4 as nc
 import numpy as np
 import dask.array as da
@@ -26,7 +30,6 @@ import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 from unittest.case import TestCase, skip
-from pathlib import Path
 from importlib import import_module
 from collections import OrderedDict, namedtuple
 from sympy import (
@@ -41,8 +44,11 @@ from sympy import (
     exp,
     diag,
 )
+import shutil
 import matplotlib.pyplot as plt
 from plotly.offline import plot
+from importlib.resources import files as mod_files
+
 
 from ComputabilityGraphs.CMTVS import CMTVS
 
@@ -60,21 +66,18 @@ import bgc_md2.helper as h
 import bgc_md2.resolve.computers as bgc_c
 
 from testinfrastructure.InDirTest import InDirTest
-import general_helpers as gh
-import MIP_output_helpers as moh
+from trendy9helpers import general_helpers as gh
+#import MIP_output_helpers as moh
 model_folders = [
     "kv_visit2",
     "jon_yib",
-    #"Aneesh_SDGVM", # very fast drop in soil and system tot
-    #"cable-pop", # has not EstimatedParameters
-    #"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
+    "Aneesh_SDGVM", # very fast drop in soil and system tot
+    ##"cable-pop", # has not EstimatedParameters
+    ##"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
     "yz_jules",
-    #"kv_ft_dlem",
-    #"bian_ibis2",
+    ##"kv_ft_dlem",
+    ##"bian_ibis2",
 ]
-delta_t_val = 1
-# test_arg_dict = gh.get_test_arg_dict(model_folders)
-# t_min, t_max=gh.t_min_tmax_overlap_2(test_arg_dict, delta_t_val)
 # here we assume that all models started from equilibrium at
 # t_min (which is not correct)
 # according to the S2 experiment they started from equilibrium
@@ -90,97 +93,222 @@ model_names = {
     "bian_ibis2": "IBIS",
     "ORCHIDEE-V2": "OCN",
 }
-# compute the overlap of the models
-td = gh.get_test_arg_dict(model_folders)
 # we want the equilibrium to be computed from Temperatur
 # and Moisture data in the spring. Since all models start
 # in January we start 120 days after the model start of all
 # models in days since THIS MODELS start
 start_shift = 120
-start_sAD, stop_sAD = gh.t_min_tmax_overlap_2(td, delta_t_val, start_shift=start_shift)
+#start_sAD, stop_sAD = gh.t_min_tmax_overlap_gm(model_folders, delta_t_val, start_shift=start_shift)
+delta_t_val = 1 #SDGVM needs small timestep since the rates are so high
 
-def timelines_from_model_folder(mf):
-    test_args = gh.test_args_2(mf)
-    msh = gh.msh(mf)
-    mvs = gh.mvs_2(mf)
-    state_vector = mvs.get_StateVariableTuple()
-    # load global mean vars
-    target_path = Path(mf).joinpath("global_means")
-    data_path=Path(gh.confDict(mf)["dataPath"])
-    svs, dvs = msh.get_global_mean_vars(data_path, target_path, flash_cache=False)
-    #cpa = test_args.cpa
-    #epa = test_args.epa_opt
-    #dvs = test_args.dvs
+# chose da (d"ata assimilation")input and output directories 
+# we want to use
+# they have to exist ;-)
+# da_1 exists for every model as a submodule in the trendy9helpers package under the model folder
+# da_2 exists only for kv_visit2
+da_schemes = {
+    "kv_visit2": "da_1",
+    "jon_yib": "da_1",
+    "Aneesh_SDGVM": "da_1", 
+    ##"cable-pop", # has not EstimatedParameters
+    ##"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
+    "yz_jules": "da_1",
+    ##"kv_ft_dlem",
+    ##"bian_ibis2",
+}
+# the parset name designates a subfolder under trendy9helpers/model_name/da_scheme/
+# and contains two directories in and out (after running da)
+# e.g. for visit trendy9helpers/src/trendy9helpers/kv_visit/da_2/par_1/in or
+# e.g. for visit trendy9helpers/src/trendy9helpers/kv_visit/da_2/par_2 /in
+# it represents different parameters for an mcmc run
+parset_names = {
+    "kv_visit2": "par_1",
+    "jon_yib": "par_1",
+    "Aneesh_SDGVM": "par_1", 
+    ##"cable-pop", # has not EstimatedParameters
+    ##"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
+    "yz_jules": "par_1",
+    ##"kv_ft_dlem",
+    ##"bian_ibis2",
+}
+
+
+da_res={
+    mf: gh.gm_da_from_folder_names(p,mf,da_schemes[mf],parset_names[mf])
+    for mf in model_folders
+}
+da_res
+
+mf="kv_visit2"
+Cs,Js,epa_opt,cp=da_res[mf]
+
+
+cp.Drivers._fields
+
+cpp=Path(f"/home/mm/bgc_md2/src/bgc_md2/models/{mf}/parameterization_from_test_args/")
+cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
+cpp
+
+from bgc_md2.models.kv_visit2.CachedParameterization import CachedParameterization as CP
+CP
+cp2=CP.from_path(cpp)
+
+fig=plt.figure(figsize=(15,15))
+axs=fig.subplots(1,2)
+ax=axs[0]
+ax.plot(Js[0,:])
+ax.set_title("#iterations over #accepted")
+ax=axs[1]
+ax.plot(Js[1,:])
+ax.set_title("costfunction values over #accepted")
+n_par=Cs.shape[0]
+n_par
+fig=plt.figure(figsize=(15,n_par*15))
+axs=fig.subplots(n_par)
+for i in range(n_par):
+    ax=axs[i]
+    ax.plot(Cs[i,:])
+    ax.set_title(f"accepted {epa_opt._fields[i]}")
+
+cpa = gh.da_mod(mf,da_schemes[mf]).Constants(
+    **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath("cpa.json"))
+)
+epa_0 = gh.da_mod(mf,da_schemes[mf]).EstimatedParameters(
+    **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath("epa_0.json"))
+)
+svs, dvs = gh.msh(mf).get_global_mean_vars(gh.data_path(mf), gh.target_path(p,mf), flash_cache=False)
+param2res= gh.da_mod(mf,da_schemes[mf]).make_param2res_sym(gh.mvs(mf),cpa,dvs)
+epa_opt = gh.da_mod(mf,da_schemes[mf]).EstimatedParameters(
+        **h.load_dict_from_json_path(
+            gh.output_cache_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath(f"epa_opt.json")))   
+sim_0 = param2res(epa_0)
+sim_opt =  param2res(epa_opt)
+
+svs.rh.shape
+
+# +
+fig = plt.figure(figsize=(10,50))
+axs=fig.subplots(len(svs._fields),1)
+
+
+for ind,f in enumerate(svs._fields):
+    val_sim_0=sim_0.__getattribute__(f)
+    val_sim_opt=sim_opt.__getattribute__(f)
+    val_obs=svs.__getattribute__(f)
+    axs[ind].plot(range(len(val_sim_0)),val_sim_0,label=f+"_sim_0")
+    axs[ind].plot(range(len(val_sim_opt)),val_sim_opt,label=f+"_sim_opt")
+    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+    axs[ind].legend()
     
-    ##read parameters for data-assimilation
-    #tr_path = Path(mf).joinpath(
-    #    "data_assimilation_parameters_from_test_args"
-    #)
-    #cpa = msh.Constants(
-    #    **h.load_dict_from_json_path(tr_path.joinpath("cpa.json"))
-    #)
-##
-    #epa_min, epa_max, epa_0 = tuple(
-    #    map(
-    #        lambda p: msh.EstimatedParameters(
-    #            **h.load_dict_from_json_path(p)
-    #        ),
-    #        [
-    #            tr_path.joinpath(f"{s}.json")
-    #            for s in ["epa_min", "epa_max", "epa_0"]
-    #        ],
+fig.savefig(p.joinpath(f'solutions_SDGVM.pdf')
+# -
+
+
+
+def timelines_from_model_folder(mf,da_name,par_name):
+    #msh = gh.msh(mf)
+    #mvs = gh.mvs(mf)
+    
+    #cpa = da_mod(mf).Constants(
+    #    **h.load_dict_from_json_path(da_param_path(mf).joinpath("cpa.json")))
+    #epa_opt = da_mod(mf).EstimatedParameters(
+    #    **h.load_dict_from_json_path(
+    #        output_cache_path(mf).joinpath(f"epa_opt.json")))    
+    #    
+    #param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
+    #svs, dvs = msh.get_global_mean_vars(data_path(mf), target_path(mf), flash_cache=False)
+    #X_0=da_mod(mf).numeric_X_0(mvs,dvs,cpa,epa_opt)
+    #X_0_dict={
+    #    str(sym): X_0[i,0] 
+    #    for i,sym in enumerate(
+    #        mvs.get_StateVariableTuple()
     #    )
+    #}
+    ## some models (e.g. yz_jules) need extra (not represented by symbols) parameters  to build
+    ## the func_dict for the parameterization
+    #apa = {**cpa._asdict(), **epa_opt._asdict()}
+    #func_dict_param_dict = { 
+    #    str(k): v 
+    #    for k, v in apa.items() 
+    #    if str(k) in msh.CachedParameterization.func_dict_param_keys 
+    #}
+    #cp = msh.CachedParameterization(
+    #    param_dict,
+    #    dvs,
+    #    X_0_dict,
+    #    func_dict_param_dict
     #)
-    #perform da (or read results from cache)
-    dir_path = Path(mf).joinpath("output")
-    cp, Cs, Js, epa_opt = msh.gm_da_res_1(output_cache_path=dir_path)
-    #read the dataassimilation results from a cache directory
-    #CP = import_module( f"{msh.model_mod}.CachedParameterization" ).CachedParameterization
-    CP = msh.CachedParameterization
-    cp = CP.from_path(dir_path)
-    X_0 = np.array(
-        [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
-    )
-    func_dict = cp.func_dict
-    par_dict = cp.parameter_dict
+    # cp.write(output_cache_path) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
+    cp=cp_from_mf(mf,da_name,par_name)
     stride = 1  # this does not affect the precision of the iterator but of the averages
-    # but makes it more effiecient (the values in between the strides
-    func_dict = msh.make_func_dict(dvs, cpa=cpa, epa=epa)
-
-    # Every model has it's own timeline counted from start_shift in days 
-    # till 
-    n_days=len(dvs[0])*30
-
+    ## but makes it more effiecient (the values in between the strides
+#
+    ## Every model has it's own timeline counted from start_shift in days 
+    ## till 
+    n_days = 30 * msh.n_months()
+#
     
     vals = gh.all_timelines_starting_at_steady_state(
         mvs,
-        func_dict,
-        par_dict,
-        #dvs,
-        #cpa,
-        #epa,
+        cp.func_dict,
+        cp.parameter_dict,
         t_min=start_shift,
         index_slice=slice(0, int((n_days-start_shift)/delta_t_val), stride),
         delta_t_val=delta_t_val,
     )
     return vals
+all_values2 = {mf : timelines_from_model_folder(mf,da_schemes[mf],par_set[mf]) for mf in model_folders}
+
+all_values2[mf]['t']
+
+# +
+# just plot the values for checking just don't run the cell or comment it
+# if you dont want to 
+# we see that Aneeshs model is not in good shape
+mf='Aneesh_SDGVM'
+Xs=all_values2[mf]['X']
+mvs=gh.mvs(mf)
+svt=mvs.get_StateVariableTuple()
+n=len(svt)
+fig=plt.figure(figsize=(10,n/2*10))
+axs=fig.subplots(n)
+td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
+c_times = [(td_AD + mt) / 360 for mt in all_values2[mf]['t']]
+sl=slice(0,None,None)
+for i in range(n):
+    ax=axs[i]
+    ax.plot(c_times[sl], Xs[sl,i])
+    ax.set_title(str(svt[i]))
+Xs.shape,len(c_times)    
+
+
+
+# -
+
+obs_0._fields
+
+
+
+
 
 
 def yearly_averages(vals):
     n_days = vals.t.shape[0]
-    step = int(360 / delta_t_val)
+    step = int(365.25 / delta_t_val)
     parts = hr.partitions(0, n_days, step)
     return vals.averaged_values(parts)
 
-
-all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
+#- 
+# If you can afford the memory you can cache all the averages
+# (usully this is not necessary)
 all_averaged_values2 = {mf : yearly_averages(vals) for mf,vals in all_values2.items()}
 
-all_values2['kv_visit2'].t.shape
-
-all_averaged_values2['kv_visit2'].system_tot
-
-
+#all_values2['kv_visit2'].t.shape
+#
+#all_averaged_values2['kv_visit2'].system_tot
+#
+#
+from bgc_md2 import helper as h
 def plot_time_lines_one_plot_per_model(
     value_dict,
     title_dict,
@@ -203,7 +331,7 @@ def plot_time_lines_one_plot_per_model(
         # from IPython import embed; embed()
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
-        td_AD = gh.td_AD(gh.test_args_2(mf).start_date)
+        td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
         c_times = [(td_AD + mt) / 360 for mt in vals.t]
         for i,key in enumerate(desired_keys):
             y=vals[key]
@@ -271,7 +399,7 @@ fig.subplots_adjust(
     wspace=0.4,
     hspace=0.3
 )
-fig.savefig("test2_fine.pdf")
+fig.savefig(p.joinpath("fine.pdf"))
 style_dict
 
 # +
@@ -326,7 +454,7 @@ def plot_time_lines_one_plot_per_model2(
         # from IPython import embed; embed()
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
-        td_AD = gh.td_AD(gh.test_args_2(mf).start_date)
+        td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
         c_times = [(td_AD + mt) / 360 for mt in vals['t']]
         for i,key in enumerate(desired_keys):
             y=vals[key]
@@ -447,7 +575,7 @@ fig.subplots_adjust(
     wspace=0.4,
     hspace=0.3
 )
-fig.savefig("test2_yearly.pdf")
+fig.savefig(p.joinpath("yearly.pdf"))
 
 # +
 for mf in ['kv_visit2']:
@@ -551,9 +679,8 @@ fig.subplots_adjust(
     wspace=0.4,
     hspace=0.3
 )
-fig.savefig("test2_yearly.pdf")
+fig.savefig(p.joinpath("yearly2.pdf"))
 
 1* 148940000* 1000000 * 0.000000000001
-
 
 

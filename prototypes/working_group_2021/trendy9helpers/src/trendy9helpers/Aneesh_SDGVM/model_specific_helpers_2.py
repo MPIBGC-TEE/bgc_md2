@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import namedtuple 
 import netCDF4 as nc
 import numpy as np
+import datetime as dt
 from sympy import Symbol, symbols 
 from typing import Callable, Tuple, Dict
 from functools import reduce, partial
@@ -13,7 +14,7 @@ from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 
 from ..import general_helpers as gh
-model_mod = 'bgc_md2.models.AneeshSDGVM'
+model_mod = 'bgc_md2.models.Aneesh_SDGVM'
 cp_mod = import_module(f"{model_mod}.CachedParameterization")
 make_func_dict = import_module(f"{model_mod}.CachedParameterization").make_func_dict
 Drivers=cp_mod.Drivers
@@ -278,26 +279,11 @@ def make_weighted_cost_func(
             + 2*stream_cost("cRoot")
             + 2*stream_cost("cLitter")
             + 2*stream_cost("cSoil")
-            + 100.0*stream_cost("rh")
+            + 24*stream_cost("rh")
             #+ stream_cost("ra")
         ) 
         return J_new
         
-        #number_of_ys=out_simu.cVeg.shape[0]
-        #number_of_ms=out_simu.rh.shape[0]
-
-        #J_obj1 = np.mean (( out_simu.cVeg - obs.cVeg )**2)/(2*np.var(obs.cVeg))
-        #J_obj2 = np.mean (( out_simu.cRoot - obs.cRoot )**2)/(2*np.var(obs.cRoot))
-        #J_obj3 = np.mean (( out_simu.cLitter - obs.cLitter )**2)/(2*np.var(obs.cLitter))
-        #J_obj4 = np.mean (( out_simu.cSoil -  obs.cSoil )**2)/(2*np.var(obs.cSoil))
-
-        #J_obj5 = np.mean (( out_simu.rh - obs.rh )**2)/(2*np.var(obs.rh))
-
-        #J_new = (J_obj1 + J_obj2 + J_obj3 + J_obj4)/200 + J_obj5/4
-        ## to make this special costfunction comparable (in its effect on the
-        ## acceptance rate) to the general costfunction proposed by Feng we
-        ## rescale it by a factor
-        #return J_new*400
     return costfunction
 
 
@@ -309,22 +295,32 @@ def nc_global_mean_file_name(nc_var_name, experiment_name="SDGVM_S2_"):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
 
-def start_date():
+def monthly_recording_times_nc_var():
+    ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("SDGVM_S2_npp.nc")))
+    times = ds.variables["time"]
+    # times.units #claims hours since 1900-01-01 00:00:00
+    # we interpret this as "trendy hours" with 
+    # 1 y=360 trendy_days
+    # 1 trendy_day = 24 trendy_hours
+    # which is obviously different from the SI hour but
+    # consistent with the assumption that 12 of the equidistant
+    # values span a year which is supported by the annual
+    # periodicity of the data.
+    # accordingly we return the values multiplied by 24
+    return times.__array__()/24
+
+    #tm = times[0] #time of first observation in Months_since_1900-01 # print(times.units)
+def start_dt():
     ## this function is important to syncronise our results
     ## because our data streams start at different times the first day of 
     ## a simulation day_ind=0 refers to different dates for different models
     ## we have to check some assumptions on which this calculation is based
     ## Here is how to get these values
-    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("SDGVM_S2_npp.nc")))
+    #ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("SDGVM_S2_npp.nc")))
     #times = ds.variables["time"]
-    #tm = times[0] #time of first observation in Months_since_1900-01 # print(times.units)
-    #td = ts/24  #in days since_1900-01-01 
-    #import datetime as dt
-    #ad = dt.date(1, 1, 1) # first of January of year 1 
-    #sd = dt.date(1900, 1, 1)
-    #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    ## from td_aD (days since 1-1-1) we can compute the year month and day
-    return gh.date(
+    #print(times.units)
+    #in days since_1900-01-01 
+    return dt.datetime(
         year=1900, 
         month=1,
         day=16
@@ -335,61 +331,22 @@ data_str = namedtuple( # data streams available in the model
         ["cVeg", "cLitter", "cRoot", "cSoil", "gpp", "npp", "ra", "rh"]
         )
 
-
-# fixme mm 7-4 2023:
-def get_global_mean_vars_all(experiment_name):
-    print("""
-    deprecation warning:
-    model_folder="Aneesh_SDGVM" is self referential and would
-    break if we rename the model folder. This is a design flaw 
-    If there is any model specific information it should be computed
-    by model specific functions. 
-    """
+def lats_lons():
+    conf_dict = gh.confDict(
+        Path(__file__).parent.name
     )
-    return(
-        gh.get_global_mean_vars_all(model_folder="Aneesh_SDGVM", 
-                            experiment_name=experiment_name,
-                            lat_var="latitude",
-                            lon_var="longitude",
-                            ) 
-        )
- 
-def da_res_1(
-        data_path,
-        mvs,
-        svs,
-        dvs,
-        cpa,
-        epa_min,
-        epa_max,
-        epa_0,
-        nsimu=10,
-        acceptance_rate=15,   # default value | target acceptance rate in %
-        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
-        D_init=1,   # default value | increase value to reduce initial step size
-        K=2 # default value | increase value to reduce acceptance of higher cost functions
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("SDGVM_S2_cRoot.nc"))    
+    lats=ds.variables["latitude"][:]
+    lons=ds.variables["longitude"][:]
+    return lats.data, lons.data
 
-    )->Tuple[Dict,Dict,np.array]:
-    func=gh.cached_da_res_1_maker(
-        make_param_filter_func,
-        make_param2res_sym,
-        make_weighted_cost_func,
-        numeric_X_0,
-        CachedParameterization,
-        EstimatedParameters,
+def n_months():
+    mp=Path(__file__).parent
+    mf=mp.name
+    data_path=Path(gh.confDict(mf)["dataPath"])
+    target_path = mp.joinpath("global_means")
+    dvs,mvs=get_global_mean_vars(
+        data_path,
+        target_path
     )    
-    return func(
-        data_path,
-        mvs,
-        svs,
-        dvs,
-        cpa,
-        epa_min,
-        epa_max,
-        epa_0,
-        nsimu,
-        acceptance_rate,   
-        chunk_size,
-        D_init,
-        K
-    )
+    return len(dvs.rh)

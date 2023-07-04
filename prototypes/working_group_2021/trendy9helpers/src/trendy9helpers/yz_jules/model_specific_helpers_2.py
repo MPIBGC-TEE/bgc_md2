@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import namedtuple, OrderedDict
 import netCDF4 as nc
 import numpy as np
+import datetime as dt
 from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
@@ -12,7 +13,6 @@ from typing import Callable, Tuple, Dict
 from importlib import import_module
 
 from .. import general_helpers as gh
-# from general_helpers import month_2_day_index, monthly_to_yearly
 from functools import reduce, partial
 
 
@@ -81,8 +81,9 @@ def spatial_mask(dataPath)->'CoorMask':
         sym_tr
     )
 
+
 def make_model_coord_transforms():
-    """ This function can is used to achieve a target grid LAT,LON with
+    """ This function is used to achieve a target grid LAT,LON with
     - LAT ==   0 at the equator with 
     - LAT == -90 at the south pole,
     - LAT== +90 at the north pole,
@@ -601,8 +602,21 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     ).reshape(len(X_0_dict),1)
     return X_0
 
+def monthly_recording_times_nc_var():
+    ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
+    times = ds.variables["time"]
+    # times.units #claims seconds since 1700-01-01
+    # and a 365 day calendar 
+    # The values are also not aquidistant. So the moths are not
+    # "trendy days" as in kv_visit2, jon_yib, Aneesh_SDGVM
+    # but have obviously different length
+    # which is obviously different from the SI hour but
+    # consistent with the assumption that 12 of the equidistant
+    # values span a year which is supported by the annual
+    # periodicity of the data.
+    return times
 
-def start_date():
+def start_dt():
     ## this function is important to syncronise our results
     ## because our data streams start at different times the first day of 
     ## a simulation day_ind=0 refers to different dates for different models
@@ -610,7 +624,7 @@ def start_date():
     ## for jules the data points are actually spaced monthly with different numbers of days
     ## 
     ## Here is how to get these values
-    #ds=nc.Dataset(str(Path(conf_dict['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
+    #ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("JULES-ES-1p0_S2_cVeg.nc")))
     #times = ds.variables["time"]
     ## we have to check some assumptions on which this calculation is based
     ## for jules the data points are actually spaced with different numbers of days between monthly
@@ -621,27 +635,14 @@ def start_date():
 
     #ts = times[0] #time of first observation in seconds_since_2010_01_01_00_00_00
     #td = int(ts / (3600 * 24)) #in days since_2010_01_01_00_00_00
-    #import datetime as dt
-    #ad = dt.date(1, 1, 1) # first of January of year 1 
-    #sd = dt.date(2010, 1, 1)
     #td_aD = td+(sd - ad).days #first measurement in days_since_1_01_01_00_00_00
-    ## from td_aD (days since 1-1-1) we can compute the year month and day
-    return gh.date(
+    ## from td (days since 1-1-1) we can compute the year month and day
+    return dt.datetime(
         year=1700, 
         month=1,
         day=16
     )
 
-# deprecated
-def get_global_mean_vars_all(experiment_name):
-    return gh.get_global_mean_vars_all(
-        model_folder="yz_jules",
-        experiment_name=experiment_name,
-        lat_var="latitude",
-        lon_var="longitude",
-    )
-    
-data_str = namedtuple("data_str", ["npp_nlim","cVeg", "cSoil", "gpp", "rh"])    
 
 def nc_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
     return experiment_name + "{}.nc".format(nc_var_name)
@@ -649,29 +650,29 @@ def nc_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
 def nc_global_mean_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
     return experiment_name + "{}_gm.nc".format(nc_var_name)
 
-def make_param_filter_func(
-    c_max: EstimatedParameters,
-    c_min: EstimatedParameters,
-    cpa: Constants,
-) -> Callable[[np.ndarray], bool]:
-
-    # find position of beta_leaf and beta_wood
-    beta_leaf_ind = EstimatedParameters._fields.index("beta_leaf")
-    beta_wood_ind = EstimatedParameters._fields.index("beta_wood")
-
-    def isQualified(c):
-        beta_leaf_ind
-        cond1 = (c >= c_min).all()
-        cond2 = (c <= c_max).all()
-        cond3 = c[beta_leaf_ind] + c[beta_wood_ind] < 1
-        print(
-            "cond1",cond1,
-            "cond2",cond2,
-            "cond3",cond3,
-        )
-        return cond1 and cond2 and cond3
-
-    return isQualified
+#def make_param_filter_func(
+#    c_max: EstimatedParameters,
+#    c_min: EstimatedParameters,
+#    cpa: Constants,
+#) -> Callable[[np.ndarray], bool]:
+#
+#    # find position of beta_leaf and beta_wood
+#    beta_leaf_ind = EstimatedParameters._fields.index("beta_leaf")
+#    beta_wood_ind = EstimatedParameters._fields.index("beta_wood")
+#
+#    def isQualified(c):
+#        beta_leaf_ind
+#        cond1 = (c >= c_min).all()
+#        cond2 = (c <= c_max).all()
+#        cond3 = c[beta_leaf_ind] + c[beta_wood_ind] < 1
+#        print(
+#            "cond1",cond1,
+#            "cond2",cond2,
+#            "cond3",cond3,
+#        )
+#        return cond1 and cond2 and cond3
+#
+#    return isQualified
 
 def da_res_1(
         data_path,
@@ -712,3 +713,23 @@ def da_res_1(
         D_init,
         K
     )
+
+def lats_lons():
+    conf_dict = gh.confDict(
+        Path(__file__).parent.name
+    ) 
+    ds=nc.Dataset(Path(conf_dict["dataPath"]).joinpath("JULES-ES-1p0_S2_tsl.nc"))    
+    lats=ds.variables["latitude"][:]
+    lons=ds.variables["longitude"][:]
+    return lats.data, lons.data
+
+def n_months():
+    mp=Path(__file__).parent
+    mf=mp.name
+    data_path=Path(gh.confDict(mf)["dataPath"])
+    target_path = mp.joinpath("global_means")
+    dvs,mvs=get_global_mean_vars(
+        data_path,
+        target_path
+    )    
+    return len(dvs.rh)
