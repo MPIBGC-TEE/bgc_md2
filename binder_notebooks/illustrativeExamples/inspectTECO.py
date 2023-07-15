@@ -97,12 +97,6 @@ _,in_fluxes_soil,out_fluxes_soil,internal_fluxes_soil=hr.extract(combined,sv_set
 
 internal_fluxes_veg, in_fluxes_soil
 
-part_dict =  {
-    sv_set_veg:'green',
-    sv_set_soil:'brown',
-}
-
-
 import igraph as ig
 import matplotlib.pyplot as plt
 #g = ig.Graph(n=10, edges=[[0, 1], [0, 5]])
@@ -110,7 +104,15 @@ Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(), in_fluxes, internal_fluxes, o
 g=ig.Graph.from_networkx(Gnx)
 type(Gnx)
 l=g.layout_sugiyama()
-#ig.plot(g,layout=g.layout_sugiyama())
+ig.plot(g,layout=g.layout_sugiyama())
+
+internal_fluxes
+
+# +
+part_dict =  {
+    sv_set_veg:'green',
+    sv_set_soil:'brown',
+}
 
 hr.igraph_part_plot(
     mvs_mm.get_StateVariableTuple(),
@@ -119,8 +121,10 @@ hr.igraph_part_plot(
     out_fluxes,
     part_dict,
 )
+# -
 
-mvs_mm.provided_mvar_types
+
+mvs_mm.provided_mvar_types,mvs_mm.computable_mvar_types()
 
 
 #Now we can compute the vegetation cycling matrix
@@ -130,13 +134,10 @@ hr.compartmental_matrix_2(
     mvs_mm.get_VegetationCarbonStateVariableTuple()
 )
 
+
 #Now we can compute the soil cycling matrix
 hr.compartmental_matrix_2(
     out_fluxes_soil,
     internal_fluxes_soil,
     state_vector_soil
 )
-
-
-
-

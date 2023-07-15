@@ -63,11 +63,11 @@ from trendy9helpers import general_helpers as gh
 #import MIP_output_helpers as moh
 model_folders = [
     "kv_visit2",
-    "jon_yib",
+    #"jon_yib",
     #"Aneesh_SDGVM", # very fast drop in soil and system tot
     #"cable-pop", # has not EstimatedParameters
     #"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
-    "yz_jules",
+    #"yz_jules",
     #"kv_ft_dlem",
     #"bian_ibis2",
 ]
@@ -99,6 +99,10 @@ start_sAD, stop_sAD = gh.t_min_max_overlap_gm(model_folders, delta_t_val, start_
 
 start_sAD,stop_sAD
 
+import bgc_md2.helper as h
+h.date.days_per_month
+
+
 # +
 def timelines_from_model_folder(mf):
     msh = gh.msh(mf)
@@ -111,7 +115,7 @@ def timelines_from_model_folder(mf):
     # All three numbers are integers 
     # This means the first reported value will be the iterator result after start iterations 
     # with timestep delta_t_val
-    n_days=30* msh.n_months()
+    n_days=h.date.days_per_month* msh.n_months()
     start_index=0
     stride = 1   
     index_slice=slice(start_index, int((n_days-start_shift)/delta_t_val), stride)
@@ -130,6 +134,35 @@ def timelines_from_model_folder(mf):
 all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
 
 
+# +
+## test plot for visit
+#mf="jon_yib"
+#model_mod=f'bgc_md2.models.{mf}'
+#
+#mvs = import_module(f"{model_mod}.source").mvs
+#
+#smr = mvs.get_SmoothModelRun()
+#smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+#start_mean_age_vec = mvs.get_NumericStartMeanAgeVector()
+#sv = mvs.get_StateVariableTuple()
+#n_pools = len(sv)
+#vals=values2["kv_visit2"]
+#fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
+#axs = fig1.subplots(n_pools, 2)
+#dpy=365.25
+#cty=cut_times/dpy
+#for i in range(n_pools):
+#    ax = axs[i, 0]
+#    ax.plot(cty, sol_arr[:n_steps, i], label="sol")
+#    ax.plot(vals.t/dpy, vals.X[:n_steps, i], label="bit")
+#    ax.legend()
+#    ax.set_title(f"{sv[i]} solution")
+#    
+#    ax = axs[i, 1]
+#    ax.plot(cty, m_a_arr[:n_steps, i]/dpy)
+#    ax.set_title(f"{sv[i]} mean_age")
+#
+#fig1.savefig(Path(mf).joinpath("poolwise.pdf"))
 # -
 
 def yearly_averages(vals):
@@ -165,7 +198,7 @@ def plot_time_lines_one_plot_per_model(
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
         td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
-        c_times = [(td_AD + mt) / 360 for mt in vals.t]
+        c_times = [(td_AD + mt) / h.date.days_per_year for mt in vals.t]
         for i,key in enumerate(desired_keys):
             y=vals[key]
             if limit is not None:
@@ -212,8 +245,8 @@ desired_keys = [
     "soil_tot",   
 ]
 fontsize=16
-fsx=15
-fsy=15
+fsx=12
+fsy=12
 fig = plt.figure(figsize=(fsx,fsy))
 fig.suptitle("Daily timelines of Transit Times and Approximations", fontsize=fontsize)
 plot_time_lines_one_plot_per_model(
@@ -222,7 +255,7 @@ plot_time_lines_one_plot_per_model(
     desired_keys=desired_keys,
     style_dict=style_dict,
     fig=fig,
-    limit=int(5*360/delta_t_val) # 5 years
+    limit=int(5*h.date.days_per_year/delta_t_val) # 5 years
 )
 fig.subplots_adjust(
     left=0.1,

@@ -146,7 +146,7 @@ Cs,Js,epa_opt,cp=da_res[mf]
 cp.Drivers._fields
 
 cpp=Path(f"/home/mm/bgc_md2/src/bgc_md2/models/{mf}/parameterization_from_test_args/")
-cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
+#cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
 cpp
 
 from bgc_md2.models.kv_visit2.CachedParameterization import CachedParameterization as CP
@@ -180,9 +180,11 @@ svs, dvs = gh.msh(mf).get_global_mean_vars(gh.data_path(mf), gh.target_path(p,mf
 param2res= gh.da_mod(mf,da_schemes[mf]).make_param2res_sym(gh.mvs(mf),cpa,dvs)
 epa_opt = gh.da_mod(mf,da_schemes[mf]).EstimatedParameters(
         **h.load_dict_from_json_path(
-            gh.output_cache_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath(f"epa_opt.json")))   
+            gh.output_cache_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath("epa_opt.json")))   
 sim_0 = param2res(epa_0)
 sim_opt =  param2res(epa_opt)
+
+
 
 svs.rh.shape
 
@@ -200,56 +202,22 @@ for ind,f in enumerate(svs._fields):
     axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
     axs[ind].legend()
     
-fig.savefig(p.joinpath(f'solutions_SDGVM.pdf')
+fig.savefig(p.joinpath(mf,'solutions.pdf'))
 # -
+da_res["kv_visit2"][3]
 
 
-
-def timelines_from_model_folder(mf,da_name,par_name):
-    #msh = gh.msh(mf)
-    #mvs = gh.mvs(mf)
-    
-    #cpa = da_mod(mf).Constants(
-    #    **h.load_dict_from_json_path(da_param_path(mf).joinpath("cpa.json")))
-    #epa_opt = da_mod(mf).EstimatedParameters(
-    #    **h.load_dict_from_json_path(
-    #        output_cache_path(mf).joinpath(f"epa_opt.json")))    
-    #    
-    #param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
-    #svs, dvs = msh.get_global_mean_vars(data_path(mf), target_path(mf), flash_cache=False)
-    #X_0=da_mod(mf).numeric_X_0(mvs,dvs,cpa,epa_opt)
-    #X_0_dict={
-    #    str(sym): X_0[i,0] 
-    #    for i,sym in enumerate(
-    #        mvs.get_StateVariableTuple()
-    #    )
-    #}
-    ## some models (e.g. yz_jules) need extra (not represented by symbols) parameters  to build
-    ## the func_dict for the parameterization
-    #apa = {**cpa._asdict(), **epa_opt._asdict()}
-    #func_dict_param_dict = { 
-    #    str(k): v 
-    #    for k, v in apa.items() 
-    #    if str(k) in msh.CachedParameterization.func_dict_param_keys 
-    #}
-    #cp = msh.CachedParameterization(
-    #    param_dict,
-    #    dvs,
-    #    X_0_dict,
-    #    func_dict_param_dict
-    #)
-    # cp.write(output_cache_path) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
-    cp=cp_from_mf(mf,da_name,par_name)
+def timelines(mf,cp):
     stride = 1  # this does not affect the precision of the iterator but of the averages
     ## but makes it more effiecient (the values in between the strides
 #
     ## Every model has it's own timeline counted from start_shift in days 
     ## till 
-    n_days = 30 * msh.n_months()
+    n_days = 30 * gh.msh(mf).n_months()
 #
     
     vals = gh.all_timelines_starting_at_steady_state(
-        mvs,
+        gh.mvs(mf),
         cp.func_dict,
         cp.parameter_dict,
         t_min=start_shift,
@@ -257,7 +225,11 @@ def timelines_from_model_folder(mf,da_name,par_name):
         delta_t_val=delta_t_val,
     )
     return vals
-all_values2 = {mf : timelines_from_model_folder(mf,da_schemes[mf],par_set[mf]) for mf in model_folders}
+all_values2 = {mf : timelines(mf,tup[3]) for mf,tup in da_res.items()}
+
+# you could also read the parameterizations directly from the da_cache (if the folders and 
+# submodules and parameterdirs exist)
+all_values3 = {mf : timelines(mf,gh.gm_cp_from_folder_names(p,mf,da_schemes[mf],parset_names[mf])) for mf,tup in da_res.items()}
 
 all_values2[mf]['t']
 

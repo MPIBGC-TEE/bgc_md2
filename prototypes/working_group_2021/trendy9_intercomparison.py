@@ -78,7 +78,7 @@ model_folders = [
     #"bian_ibis2", # not yet converted to the new format
     #"cable-pop", # has not EstimatedParameters
 ]
-delta_t_val = 15
+delta_t_val = 15.22668056279312
 # test_arg_dict = gh.get_test_arg_dict(model_folders)
 # t_min, t_max=gh.t_min_tmax_overlap_2(test_arg_dict, delta_t_val)
 # here we assume that all models started from equilibrium at
@@ -109,6 +109,7 @@ start_sAD, stop_sAD = gh.t_min_max_overlap_gm(
     delta_t_val,
     start_shift=start_shift
 )
+start_sAD,stop_sAD
 
 
 ""
@@ -156,7 +157,46 @@ def syncronized_timelines_from_model_folder(mf):
 all_values = {mf : syncronized_timelines_from_model_folder(mf) for mf in model_folders}
 
 ""
-all_values['kv_visit2']["t"]
+mf="kv_visit2"
+stride = 1  # this does not affect the precision of the iterator but of the averages
+# but makes it more effiecient (the values in between the strides
+
+# Every model has it's own timeline counted from 0 in days starting
+# from the first day of where IT'S data is available
+
+# To compare the output of one model to the simultaneous output of
+# another model to compute the indices of the iterator timesteps
+# for the appropriate common time tc
+start, stop = gh.min_max_index_2(
+    mf, delta_t_val, start_sAD, stop_sAD, start_shift
+)
+start, stop
+
+""
+vals=all_values[mf]
+model_mod=f'bgc_md2.models.{mf}'
+mvs = import_module(f"{model_mod}.source").mvs
+sv = mvs.get_StateVariableTuple()
+n_pools = len(sv)
+vals.t,
+
+""
+fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
+axs = fig1.subplots(n_pools, 2)
+dpy=365.25
+td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
+c_times = [(td_AD + mt) / dpy for mt in vals['t']]
+for i in range(n_pools):
+    ax = axs[i, 0]
+    ax.plot(c_times, vals.X[:,i], label="bit")
+    ax.legend()
+    ax.set_title(f"{sv[i]} solution")
+    
+    #ax = axs[i, 1]
+    #ax.plot(cty, m_a_arr[:n_steps, i]/dpy)
+    #ax.set_title(f"{sv[i]} mean_age")
+
+fig1.savefig(Path(mf).joinpath("poolwise.pdf"))
 
 
 ""
@@ -192,7 +232,7 @@ def plot_time_lines_one_plot_per_property(
         # transform the times of the individual iterators back to
         # the common format (days since aD and then to years)
         td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
-        c_times = [(td_AD + mt) / 360 for mt in vals['t']]
+        c_times = [(td_AD + mt) / 365.25 for mt in vals['t']]
         for i,key in enumerate(desired_keys):
             ax = axs[i]
             ax.set_title(title_dict[key] if key in title_keys else key)

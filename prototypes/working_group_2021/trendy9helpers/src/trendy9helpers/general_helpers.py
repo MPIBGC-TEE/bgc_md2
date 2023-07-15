@@ -270,13 +270,100 @@ def output_cache_path(p,mf,da_scheme,par_dir):
 def da_param_path(p,mf,da_scheme,par_dir):
     return da_dir_path(p,mf,da_scheme,par_dir).joinpath("in")
 
+def gm_cp_from_folder_names(
+    # just a convenience function implementing the folder hierarchy
+    # just a convenience function implementing the folder hirarchy
+    # p/
+    #   model/
+    #       da_scheme/
+    #           param_dir/
+    #               in/
+    #                   cpa.json
+    #                   epa_min.json
+    #                   epa_max.json
+    #                   epa_0.json
+    #                   hyper.json
+    #                            
+    # p/
+    #   model/
+    #       da_scheme/
+    #           param_dir/
+    #               out/
+    #                   epa_opt.json
+    #
+    # for the da modules and parameter dirs to be used in different
+    # notebooks and scripts
+    # It is not intended as a central funtion to build much on top of.
+    # So please don't! ;-)
+        p: Path,
+        mf: str,
+        da_scheme: str,
+        param_dir: str
+    ):
+    state_vector = mvs(mf).get_StateVariableTuple()
+    # load global mean vars
+    # data path not necessary unless global means are recomputed
+    svs, dvs = msh(mf).get_global_mean_vars(data_path(mf), target_path(p,mf), flash_cache=False)
+    #
+    # The following lines perform data_assimilation
+    
+    cpa = da_mod(mf,da_scheme).Constants(
+        **h.load_dict_from_json_path(da_param_path(p,mf,da_scheme,param_dir).joinpath("cpa.json"))
+    )
+    epa_opt = da_mod(mf,da_scheme).EstimatedParameters(
+                **h.load_dict_from_json_path(
+                    output_cache_path(p,mf,da_scheme,param_dir).joinpath("epa_opt.json")
+                )
+    )
+    # create a parameterization for convinience and return it
+    param_dict=make_param_dict(mvs(mf),cpa,epa_opt) 
+    X_0=da_mod(mf,da_scheme).numeric_X_0(mvs(mf),dvs,cpa,epa_opt)
+    X_0_dict={
+        str(sym): X_0[i,0] 
+        for i,sym in enumerate(
+            mvs(mf).get_StateVariableTuple()
+        )
+    }
+    # some models (e.g. yz_jules) need extra (not represented by symbols) parameters  to build
+    # the func_dict for the parameterization
+    apa = {**cpa._asdict(), **epa_opt._asdict()}
+    func_dict_param_dict = { 
+        str(k): v 
+        for k, v in apa.items() 
+        if str(k) in msh(mf).CachedParameterization.func_dict_param_keys 
+    }
+    cp=msh(mf).CachedParameterization(
+        param_dict,
+        dvs,
+        X_0_dict,
+        func_dict_param_dict
+    )
+    return cp
 
 def gm_da_from_folder_names(
     # just a convenience function implementing the folder hirarchy
-    # for the da modules and parameter dirs to be used in different
+    # p/
+    #   model/
+    #       da_scheme/
+    #           param_dir/
+    #               in/
+    #                   cpa.json
+    #                   epa_min.json
+    #                   epa_max.json
+    #                   epa_0.json
+    #                   hyper.json
+    #                            
+    # p/
+    #   model/
+    #       da_scheme/
+    #           param_dir/
+    #               out/
+    #                   epa_opt.json
+    #
+    # where da_scheme is a submodule of trendy9helpers/model/ (e.g. da_1, da_2)
     # notebooks and scripts
-    # It is not intended as a central funtion to 't build much on top of.
-    # So please dont
+    # It is not intended as a central funtion to build much on top of.
+    # So please don't! ;-)
         p: Path,
         mf: str,
         da_scheme: str,

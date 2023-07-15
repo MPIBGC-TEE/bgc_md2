@@ -1,7 +1,7 @@
 """
 Module for defining variable types for the description of compartmental models and model runs
 """
-from typing import Tuple
+from typing import Tuple, Callable
 from frozendict import frozendict
 import numpy as np
 from sympy import (
@@ -229,8 +229,59 @@ class ColumnVectorLike(MatrixLike):
     # fixme add some check that there is only one column...
     pass
 
-class NumericStartMeanAgeVector(ColumnVectorLike):
+
+class NumericStartMeanAgeTuple(ColumnVectorLike):
+    """ The start mean ages of the mass in the pools """
+
     pass
+
+
+
+class SubSmoothModelRun(SmoothModelRun):
+    """subsystem SmoothModelRun 
+    usually derived from the model rund for the whole system.
+    """
+    @classmethod
+    def from_smr(cls,smr):
+        return cls(
+            smr.model,
+            smr.parameter_dict,
+            smr.start_values,
+            smr.times,
+            smr.func_set,
+        )    
+
+class VegetationCarbonSmoothModelRun(SubSmoothModelRun):
+    """subsystem for vegetation 
+    carbon
+    usually derived from the model rund for the whole system.
+    """
+    pass
+
+class SoilCarbonSmoothModelRun(SubSmoothModelRun):
+    """subsystem modelrun for soil 
+    carbon 
+    usually derived from the model rund for the whole system.
+    """
+    pass
+
+class StartConditionMaker:
+    """created from a function that 
+    receives a parameterized SmoothReservoirModel 
+    must return consistent a tuple
+    - startvalues
+    - start_mean_ages
+    - start_age_density_func
+    
+    """
+    def __init__(
+        self,
+        func: Callable 
+    ):
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
 
 
 class LuoXiDiagonalMatrix(MatrixLike):
@@ -538,20 +589,27 @@ class NumericStartValueArray(np.ndarray):
 
 
 class NumericParameterization:
-    # Note:
-    # A parameterization implicitly refers to a unique specific
-    # symbolic model:
-    #
-    # 1.)   Obviously the keys of the par_dict and func_dict can
-    #       only be substituted in a model with these symbols present
-    # 2.)   Even if a symbolic model had the same free symbols
-    #       these symbols aquire meaning from their use in the symbolic
-    #       expressions.
-    #
-    #
-    # An instance would naturally contain a referece to the model (self.model=).
-    # This reference is omitted on purpose since the model might be given
-    # only implicitly by variables defined in a model describing source.py
+    """An instance of this class is created by
+    NumericParameterization(par_dict,func_dict) Where  the par_dict
+    is a dictionary of the sympolic parameters in the model as keys
+    and numeric values as values. And func_dict is a dictionary with
+    the names of the symbolic functions as key and a callable as value.
+    The callable must have a signature that is compatible with the symbolic function
+    call in the model description (The correct number and order of arguments)
+    
+    Note: A parameterization
+    implicitly refers to symbolic models that have exactly
+    these parameters and functions (usually only a specific model):
+    Obviously the keys of the par_dict and func_dict can only be
+    substituted in a model with these symbols present
+    
+    This however can not be checked at the time of instantiatiion.
+    Actually the same NumericParameterization could work for several
+    different symbolic models, if they have the same  symbolic
+    parameters and functions. If the parameterization is 
+    incomplete this will lead to errors in later computations that rely on the 
+    substitution of symbols with values and concrete functions.
+    """
     def __init__(self, par_dict, func_dict):
         self.par_dict = frozendict(par_dict)
         self.func_dict = frozendict(func_dict)
@@ -561,6 +619,23 @@ class NumericParameterizedSmoothReservoirModel:
     def __init__(self, srm, parameterization):
         self.srm = srm
         self.parameterization = parameterization
+
+
+class SubNumericParameterizedSmoothReservoirModel(NumericParameterizedSmoothReservoirModel):
+    @classmethod
+    def from_nprm(cls,nprm): 
+        return cls(
+            nprm.srm,
+            nprm.parameterization
+        )    
+
+
+class NumericParameterizedVegetationCarbonSmoothReservoirModel(SubNumericParameterizedSmoothReservoirModel):
+    pass
+
+
+class NumericParameterizedSoilCarbonSmoothReservoirModel(SubNumericParameterizedSmoothReservoirModel):
+    pass
 
 
 class QuantityStartValueArray(np.ndarray):
@@ -605,11 +680,51 @@ class ArrayLike(np.ndarray):
     def __hash__(self):
         return hash(tuple(self))
 
+
 class NumericSolutionArray(ArrayLike):
     pass
 
+
 class NumericMeanAgeSolutionArray(ArrayLike):
     pass
+
+
+class NumericMeanBackwardTransitTimeSolution(ArrayLike):
+    pass
+
+
+class NumericSoilCarbonStartMeanAgeTuple(
+    ColumnVectorLike
+):
+    """ The start mean ages of the mass in the soil pools 
+    This is NOT independent form the NumericStartMeanAgeTuple but also not a subset. It is important that both are computed based on the same assumptions"""
+
+    pass
+
+class NumericVegetationCarbonStartMeanAgeTuple(
+    ColumnVectorLike
+    ):
+    """ The start mean ages of the mass in the vegetation pools 
+    This is NOT independent form the NumericStartMeanAgeTuple but also not a subset. It is important that both are computed based on the same assumptions"""
+
+    pass
+
+
+class NumericVegetationCarbonMeanBackwardTransitTimeSolution(ArrayLike):
+    pass
+
+
+class NumericSoilCarbonMeanBackwardTransitTimeSolution(ArrayLike):
+    pass
+
+
+class NumericVegetationCarbonMeanAgeSolutionArray(ArrayLike):
+    pass
+
+
+class NumericSoilCarbonMeanAgeSolutionArray(ArrayLike):
+    pass
+
 
 class QuantitySolutionArray(ArrayLike):
     pass
@@ -642,8 +757,6 @@ class QuantityParameterization(NumericParameterization):
         self.state_var_units = state_var_units
         self.time_unit = time_unit
 
-
-        
 
 class QuantityParameterizedSmoothReservoirModel:
     def __init__(self, srm, parameterization):

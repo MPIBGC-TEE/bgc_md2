@@ -14,6 +14,9 @@
 # ---
 
 # +
+# %matplotlib inline
+# %load_ext autoreload
+# %autoreload 2
 import shutil
 import re
 from unittest.case import TestCase, skip
@@ -63,6 +66,7 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 import bgc_md2.helper as h
+from trendy9helpers import general_helpers as gh
 
 
 # +
@@ -83,101 +87,114 @@ model_mod=f'bgc_md2.models.{mf}'
 
 mvs = import_module(f"{model_mod}.source").mvs
 
-smr = mvs.get_SmoothModelRun()
-smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-start_mean_age_vec = mvs.get_NumericStartMeanAgeVector()
-sv = mvs.get_StateVariableTuple()
-n_pools = len(sv)
-order = 1
-arr, func = smr._solve_age_moment_system( order, start_mean_age_vec.reshape(1, n_pools)) 
+times = mvs.get_NumericSimulationTimes()
+
+
+start_shift = times[0]
+dpy = h.date.days_per_year
+td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
+ad_days= td_AD + times
+ad_times= ad_days / dpy 
+#start_sAD,stop_sAD = ad_days[0],ad_days[-1]
+#start_sAD,stop_sAD,ad_days
+
+#stride = 2.0  # this does not affect the precision of the iterator but of the averages
+#delta_t_val=(times[1]-times[0])/stride
+#delta_t_val
+
+# +
+# but makes it more effiecient (the values in between the strides
+
+# Every model has it's own timeline counted from 0 in days starting
+# from the first day of where IT'S data is available
+
+# To compare the output of one model to the simultaneous output of
+# another model to compute the indices of the iterator timesteps
+# for the appropriate common time tc
+#start, stop = gh.min_max_index_2(
+#    mf, delta_t_val, start_sAD, stop_sAD, start_shift
+#)
+#start, stop, stop*delta_t_val+start_shift+td_AD
 # -
 
-times = mvs.get_NumericSimulationTimes()
+smr = mvs.get_SmoothModelRun()
+#smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+start_mean_age_vec = mvs.get_NumericStartMeanAgeTuple()
+sv = mvs.get_StateVariableTuple()
+n_pools = len(sv)
+#order = 1
+#arr, func = smr._solve_age_moment_system( order, start_mean_age_vec.reshape(1, n_pools)) 
+#arr, func = smr._solve_age_moment_system( order, start_mean_age_vec)
+
+# X_fix=mvs.get_NumericStartValueArray()
+
 t0 = times[0]
-n_steps = 2800 # for testing
-#n_steps = len(times)
-cut_times=times[:n_steps]
+n_steps = len(times)
 # compute the indeces for the iterator to test the resulst
-stride=2
+#stride=2
 #assuming an equidistant times array
-delta_t_val=(times[1]-times[0])/stride
-sol_arr = arr[:n_steps,0:n_pools]
-m_a_arr = arr[:n_steps,n_pools:2*n_pools]
+#delta_t_val=(times[1]-times[0])/stride
+#sol_arr = arr[:n_steps,0:n_pools]
+#m_a_arr = arr[:n_steps,n_pools:2*n_pools]
 # the colums n+1..2n are the first age_moments (mean)
 ## plot the continuous solution (by ODE) solver against the  iterator
 ## generated one.
 
-mvs.get_NumericStartValueArray()
-
-start_mean_age_vec
-
-# +
-from trendy9helpers import general_helpers as gh
-par_dict = mvs.get_NumericParameterization().par_dict
-func_dict = mvs.get_NumericParameterization().func_dict
-X_0=mvs.get_NumericStartValueArray()
-
-bit = ArrayDictResult(
-    gh.traceability_iterator_internal(
-        mvs, X_0, par_dict, func_dict, delta_t_val=delta_t_val, t_0=t0
-    )
-)
-max_iter=int((cut_times[-1]-t0)/delta_t_val)
-max_iter
-vals=bit[0:max_iter:stride]
-vals.t,cut_times
-
+sol_arr2 = mvs.get_NumericSolutionArray()
+m_a_arr2 = mvs.get_NumericMeanAgeSolutionArray()
 fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
 axs = fig1.subplots(n_pools, 2)
-dpy=364.25
-cty=cut_times/dpy
+vcsv = mvs.get_VegetationCarbonStateVariableTuple()
+veg_m_a_arr2 = mvs.get_NumericVegetationCarbonMeanAgeSolutionArray()
+#start_ind=200
+start_ind=0
 for i in range(n_pools):
     ax = axs[i, 0]
-    ax.plot(cty, sol_arr[:n_steps, i], label="sol")
-    ax.plot(vals.t/dpy, vals.X[:n_steps, i], label="bit")
+    ax.plot(ad_times, sol_arr2[:n_steps, i], label="sol")
+    #ax.plot(ad_vals, vals.X[:, i], label="bit")
     ax.legend()
     ax.set_title(f"{sv[i]} solution")
     
     ax = axs[i, 1]
-    ax.plot(cty, m_a_arr[:n_steps, i]/dpy)
+    #ax.plot(ad_times[start_ind:n_steps], m_a_arr[start_ind:n_steps, i]/dpy, label="1")
+    ax.plot(ad_times[start_ind:n_steps], m_a_arr2[start_ind:n_steps, i]/dpy, label="sys")
+    if sv[i] in vcsv:
+        ax.plot(ad_times[start_ind:n_steps], veg_m_a_arr2[start_ind:n_steps,i]/dpy, label="veg")
+    ax.legend()
     ax.set_title(f"{sv[i]} mean_age")
 
 fig1.savefig(Path(mf).joinpath("poolwise.pdf"))
+# 
+# # +
 
-# +
-sm_a_arr = smr.system_age_moment(order,start_mean_age_vec.reshape(1, n_pools))
 fig1 = plt.figure(figsize=(2 * 10,  10))
 axs = fig1.subplots(1, 2)
-dpy=364.25
+dpy = 364.25
 ax = axs[0]
-#ax.plot(times, vals.X[:, i], label="bit")
-ax.plot(cut_times/dpy, np.sum(sol_arr,axis=1), label="sol")
-ax.plot(vals.t/dpy, vals.x, label="sol")
+ax.plot(ad_times, np.sum(sol_arr2,axis=1), label="sol")
 ax.legend()
 ax.set_title("cumulativ solution")
 
-ax = axs[ 1]
-ax.plot(times/dpy, sm_a_arr/dpy)
+ax = axs[1]
+ax.plot(times/dpy, m_a_arr2/dpy)
+ax.plot(ad_times[start_ind:n_steps], m_a_arr2[start_ind:n_steps]/dpy, label="system")
 ax.set_title(f"system mean_age")
 
 fig1.savefig(Path(mf).joinpath("system_mean_age.pdf"))
-# -
+#####################################################
+soil_mean_btts2 = mvs.get_NumericSoilCarbonMeanBackwardTransitTimeSolution()
+mean_btts2 = mvs.get_NumericMeanBackwardTransitTimeSolution()
+veg_mean_btts2 = mvs.get_NumericVegetationCarbonMeanBackwardTransitTimeSolution()
 
 fig2 = plt.figure(figsize=(10, 10))
 axs2 = fig2.subplots(1, 1)
-mean_btts = smr.backward_transit_time_moment(
-    order=1, start_age_moments=start_mean_age_vec.reshape(1, n_pools)
-)
 ax = axs2
-ax.plot(times/dpy, mean_btts, label="mean backward transit time")
-#ax.plot(
-#    times, vals.system_RT_sum, label="$\sum_i (RT)_i$"
-#)  # steady state transit times
-#ax.plot(
-#    times, vals.rt, label="rt of surrogate one pool system"
-#)  # steady state transit times
+ax.plot(ad_times, mean_btts2, label="mean btts2")
+ax.plot(ad_times, veg_mean_btts2, color="green", label="veg_mean btts2")
+ax.plot(ad_times, soil_mean_btts2, color="brown",label="soil_mean btts2")
 ax.legend()
-fig2.savefig(Path(mf).joinpath("system.pdf"))
+fig2.savefig(Path(mf).joinpath("btts.pdf"))
+
 
 # +
 # construct a function p that takes an age array "ages" as argument
@@ -185,15 +202,21 @@ fig2.savefig(Path(mf).joinpath("system.pdf"))
 # from the a array-valued function of a single age a_dens_function
 srm = mvs.get_SmoothReservoirModel()
 a_dens_function, X_fix = start_age_distributions_from_steady_state(
-    srm, t0=t0, parameter_dict=par_dict, func_set=func_dict, x0=X_0
+    srm, 
+    t0=t0, 
+    parameter_dict=
+    smr.parameter_dict, 
+    func_set=smr.func_set, 
+    x0=smr.start_values#x0=X_0
 )
 p = smr.pool_age_densities_func(a_dens_function)
 ages = np.linspace(
     0,
     (np.array(start_mean_age_vec, dtype=float).reshape(-1)).max() * 2,
     2,
-)  # 21)
+)  
 age_densities = p(ages)
+#from IPython import embed; embed()
 
 for n in range(srm.nr_pools):
     max_ind = np.argmin(ages < start_mean_age_vec[n] * 2)
@@ -212,7 +235,7 @@ for n in range(srm.nr_pools):
     )
     smr.add_line_to_density_plot_plotly(
         fig,
-        data=m_a_arr[:, n],
+        data=m_a_arr2[:, n],
         color="#FF0000",
         name="mean age",
         time_stride=1,
@@ -225,7 +248,7 @@ for n in range(srm.nr_pools):
     plot(
         fig,
         filename=str(
-            "age_distribution_{0}.html".format(sv[n])
+            Path(mf).joinpath(f"age_distribution_{sv[n]}.html")
         ),
         auto_open=False,
     )
@@ -239,7 +262,7 @@ fig_btt = smr.plot_3d_density_plotly(
 )
 smr.add_line_to_density_plot_plotly(
     fig_btt,
-    data=mean_btts,
+    data=mean_btts2,
     color="#FF0000",
     name="mean age",
     time_stride=1,
@@ -250,11 +273,10 @@ smr.add_line_to_density_plot_plotly(
 )
 plot(
     fig_btt,
-    filename="btt_distribution.html",
+    filename=str(
+        Path(mf).joinpath("btt_distribution.html")
+    ),
     auto_open=False,
 )
 # -
-
-
-
 

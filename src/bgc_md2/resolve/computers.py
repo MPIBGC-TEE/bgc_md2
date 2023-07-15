@@ -1,12 +1,17 @@
-from sympy import Symbol, ImmutableMatrix
+from sympy import Symbol, ImmutableMatrix, Function, sympify
 from functools import lru_cache
 import numpy as np
 from typing import Tuple
 from sympy.physics.units import Quantity
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+import CompartmentalSystems.helpers_reservoir as hr
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
+import CompartmentalSystems.start_distributions as sd
+from . import computer_helpers as ch
 from .mvars import (
     InFluxesBySymbol,
     OutFluxesBySymbol,
-    LuoXiBySymbol,
+    #LuoXiBySymbol,
     InternalFluxesBySymbol,
     CarbonInFluxesBySymbol,
     CarbonOutFluxesBySymbol,
@@ -21,7 +26,7 @@ from .mvars import (
     CarbonStateVariableTuple,
     NitrogenStateVariableTuple,
     CompartmentalMatrix,
-    LuoXiDiagonalMatrix,
+    #LuoXiDiagonalMatrix,
     CarbonCompartmentalMatrix,
     NitrogenCompartmentalMatrix,
     # CompartmentalMatrixStructure,
@@ -31,6 +36,8 @@ from .mvars import (
     CarbonInputScalar,
     NitrogenInputTuple,
     VegetationCarbonInputScalar,
+    VegetationCarbonSmoothModelRun,
+    SoilCarbonSmoothModelRun,
     VegetationCarbonInputPartitioningTuple,
     VegetationCarbonInputTuple,
     VegetationCarbonStateVariableTuple,
@@ -48,7 +55,16 @@ from .mvars import (
     NumericCompartmentalMatrixFunc,
     NumericStartAgeDensityFunc,
     NumericCompartmentalMatrixSolutionTuple,
-    NumericStartMeanAgeVector,
+    NumericStartMeanAgeTuple,
+    NumericVegetationCarbonStartMeanAgeTuple,
+    NumericSoilCarbonStartMeanAgeTuple,
+    NumericMeanBackwardTransitTimeSolution,
+    NumericVegetationCarbonMeanBackwardTransitTimeSolution,
+    NumericSoilCarbonMeanBackwardTransitTimeSolution,
+    NumericVegetationCarbonMeanAgeSolutionArray,
+    NumericSoilCarbonMeanAgeSolutionArray,
+    NumericParameterizedVegetationCarbonSmoothReservoirModel,
+    NumericParameterizedSoilCarbonSmoothReservoirModel,
     # NumericCarbonStoragePotentialSolutionList,
     # NumericCarbonStorageCapacitySolutionList,
     QuantityParameterization,
@@ -68,13 +84,143 @@ from .mvars import (
     AggregatedVegetation2SoilCarbonFlux,
     AggregatedSoil2VegetationCarbonFlux,
     SoilCarbonStateVariableTuple,
-    LuoTau,
-    LuoRT,
+    #LuoTau,
+    #LuoRT,
+    StartConditionMaker
 
 )
-from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-import CompartmentalSystems.helpers_reservoir as hr
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+
+def mean_age_start_value_tuple_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedSmoothReservoirModel
+    )-> NumericStartMeanAgeTuple:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericStartMeanAgeTuple(ma0)
+
+def mean_age_vegetation_carbon_start_value_tuple_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedVegetationCarbonSmoothReservoirModel
+    )-> NumericVegetationCarbonStartMeanAgeTuple:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericVegetationCarbonStartMeanAgeTuple(ma0)
+
+
+def start_value_array_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedSmoothReservoirModel
+    )->NumericStartValueArray:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericStartValueArray(x0)
+
+
+def mean_age_soil_carbon_start_value_tuple_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedSoilCarbonSmoothReservoirModel
+    )-> NumericSoilCarbonStartMeanAgeTuple:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericSoilCarbonStartMeanAgeTuple(ma0)
+
+def numeric_mean_age_solution_array(
+        smr: SmoothModelRun,
+        start_mean_age_vec: NumericStartMeanAgeTuple,
+    ) -> NumericMeanAgeSolutionArray:
+    n_pools = len(start_mean_age_vec)
+    order = 1
+    arr, func = smr._solve_age_moment_system(order, start_mean_age_vec.reshape(1, n_pools)) 
+    # unfortunately the solution is a wasted byproduct
+    #sol_arr = arr[:,0:n_pools] of the sol
+    m_a_arr = arr[:,n_pools:2*n_pools]
+    return m_a_arr
+
+
+def numeric_mean_btt_solution(
+        smr: SmoothModelRun,
+        start_mean_age_vec: NumericStartMeanAgeTuple,
+    ) -> NumericMeanBackwardTransitTimeSolution:
+    n_pools = len(start_mean_age_vec)
+    order = 1
+    return smr.backward_transit_time_moment(order, start_mean_age_vec.reshape(1, n_pools)) 
+
+
+def numeric_vegetation_carbon_mean_btt_array(
+        veg_smav: NumericVegetationCarbonStartMeanAgeTuple,
+        veg_smr: VegetationCarbonSmoothModelRun
+    ) -> NumericVegetationCarbonMeanBackwardTransitTimeSolution:
+
+    n_pools = len(veg_smav)
+    return veg_smr.backward_transit_time_moment(
+         order=1, 
+         start_age_moments=veg_smav.reshape(1,n_pools)
+    )
+
+def numeric_soil_carbon_mean_btt_array(
+        sub_smav: NumericSoilCarbonStartMeanAgeTuple,
+        sub_smr: SoilCarbonSmoothModelRun
+    ) -> NumericSoilCarbonMeanBackwardTransitTimeSolution:
+
+    n_pools = len(sub_smav)
+    return NumericSoilCarbonMeanBackwardTransitTimeSolution(
+        sub_smr.backward_transit_time_moment(
+             order=1, 
+            start_age_moments=sub_smav.reshape(1,n_pools)
+        )
+    )    
+
+def vegetation_carbon_smr(
+        smr: SmoothModelRun,
+        veg_sv: VegetationCarbonStateVariableTuple
+    )-> VegetationCarbonSmoothModelRun: 
+    return  VegetationCarbonSmoothModelRun.from_smr(
+        ch.sub_mr_smav(
+            smr,
+            veg_sv,
+        )
+    )
+
+def soil_carbon_smr(
+        smr: SmoothModelRun,
+        soil_sv: SoilCarbonStateVariableTuple
+    )-> SoilCarbonSmoothModelRun: 
+    return  SoilCarbonSmoothModelRun.from_smr(
+        ch.sub_mr_smav(
+            smr,
+            soil_sv,
+        )
+    )
+
+
+def numeric_vegetation_carbon_mean_age_array(
+        veg_smav: NumericVegetationCarbonStartMeanAgeTuple,
+        veg_smr:  VegetationCarbonSmoothModelRun
+    ) -> NumericVegetationCarbonMeanAgeSolutionArray:
+
+    n_pools = len(veg_smav)
+    arr, func = veg_smr._solve_age_moment_system(
+         max_order=1, 
+         start_age_moments=veg_smav
+    )
+    # unfortunately the solution is a wasted byproduct
+    #sol_arr = arr[:,0:n_pools] of the sol
+    m_a_arr = arr[:,n_pools:2*n_pools]
+    return NumericVegetationCarbonMeanAgeSolutionArray(m_a_arr)
+
+
+def numeric_soil_carbon_mean_age_array(
+        soil_smav: NumericSoilCarbonStartMeanAgeTuple,
+        soil_smr: SoilCarbonSmoothModelRun
+    ) -> NumericSoilCarbonMeanAgeSolutionArray:
+
+    n_pools = len(soil_smav)
+    arr, func = soil_smr._solve_age_moment_system(
+         max_order=1, 
+         start_age_moments=soil_smav
+    )
+    # unfortunately the solution is a wasted byproduct
+    #sol_arr = arr[:,0:n_pools] of the sol
+    m_a_arr = arr[:,n_pools:2*n_pools]
+    return NumericSoilCarbonMeanAgeSolutionArray(m_a_arr)
+
+
 def aggregated_vegetation_carbon(
         vcsvt: VegetationCarbonStateVariableTuple,
     ) -> AggregatedVegetationCarbon:
@@ -85,18 +231,18 @@ def aggregated_soil_carbon(
     ) -> AggregatedSoilCarbon:
     return sum(scsvt)
 
-def luo_rt_vec(
-        tau: LuoTau,
-        beta: CarbonInputPartitioningTuple
-    ) -> LuoRT:
-   return tau*beta         
+#def luo_rt_vec(
+#        tau: LuoTau,
+#        beta: CarbonInputPartitioningTuple
+#    ) -> LuoRT:
+#   return tau*beta         
 
-def luo_Tau(
-        ccm: CarbonCompartmentalMatrix
-    ) -> LuoTau:
-    # very expensive (symbolic inverse)    
-    print("start")
-    return LuoTau(-ccm.inv())
+#def luo_Tau(
+#        ccm: CarbonCompartmentalMatrix
+#    ) -> LuoTau:
+#    # very expensive (symbolic inverse)    
+#    print("start")
+#    return LuoTau(-ccm.inv())
 
 #def temperature_derivative_of_RT(
 #    rt:LuoRT
@@ -529,11 +675,11 @@ def compartmental_matrix_2(
 ) -> CompartmentalMatrix:
     return CompartmentalMatrix(hr.compartmental_matrix_2(ofl, ifl, svt))
 
-#@lru_cache
-def luo_xi_diagonal_matrix(
-    ofl: LuoXiBySymbol,  svt: StateVariableTuple
-) -> LuoXiDiagonalMatrix:
-    return LuoXiDiagonalMatrix()
+##@lru_cache
+#def luo_xi_diagonal_matrix(
+#    ofl: LuoXiBySymbol,  svt: StateVariableTuple
+#) -> LuoXiDiagonalMatrix:
+#    return LuoXiDiagonalMatrix()
 
 
 #@lru_cache
@@ -648,13 +794,49 @@ def numeric_model_run_1(
         npsrm.parameterization.func_dict,
     )
 
-
 #@lru_cache
 def numeric_parameterized_smooth_reservoir_model_1(
     srm: SmoothReservoirModel,
     para_num: NumericParameterization,
 ) -> NumericParameterizedSmoothReservoirModel:
     return NumericParameterizedSmoothReservoirModel(srm, para_num)
+
+
+#@lru_cache
+def numeric_parameterized_smooth_reservoir_model_2(
+    smr: SmoothModelRun,
+) -> NumericParameterizedSmoothReservoirModel:
+    para_num=NumericParameterization(
+        par_dict=smr.parameter_dict,
+        func_dict=smr.func_set
+    )    
+    return NumericParameterizedSmoothReservoirModel(smr.model, para_num)
+
+
+#@lru_cache
+def numeric_soil_carbon_parameterized_smooth_reservoir_model_2(
+    smr: SoilCarbonSmoothModelRun,
+) -> NumericParameterizedSoilCarbonSmoothReservoirModel:
+# this should actually use an algebraic type # but Computability graphs does not yet 
+# work with this type of generics
+    para_num=NumericParameterization(
+        par_dict=smr.parameter_dict,
+        func_dict=smr.func_set
+    )    
+    return NumericParameterizedSoilCarbonSmoothReservoirModel(smr.model, para_num)
+
+
+#@lru_cache
+def numeric_vegetation_carbon_parameterized_smooth_reservoir_model_2(
+    smr: VegetationCarbonSmoothModelRun,
+) -> NumericParameterizedVegetationCarbonSmoothReservoirModel:
+# this should actually use an algebraic type # but Computability graphs does not yet 
+# work with this type of generics
+    para_num=NumericParameterization(
+        par_dict=smr.parameter_dict,
+        func_dict=smr.func_set
+    )    
+    return NumericParameterizedVegetationCarbonSmoothReservoirModel(smr.model, para_num)
 
 
 #@lru_cache
