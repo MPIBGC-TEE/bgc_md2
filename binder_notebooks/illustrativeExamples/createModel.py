@@ -385,6 +385,11 @@ start_mean_age_vec
 mvs.jupyter_widget(
     root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution
 )
+
+tl,fig,fl=mvs.dep_graph_figure(
+    root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution
+)
+tl
 # Looking at the graph we see that the requirements could be satisfied by providing
 # 1.)
 #   VegetationCarbonStateVariableTuple 
@@ -659,7 +664,7 @@ veg_age_densities = veg_p(veg_ages)
 from pathlib import Path
 from plotly.offline import plot,iplot
 for n in range(veg_smr.nr_pools):
-    max_ind = np.argmin(veg_ages < start_mean_age_vec[n] * 2)
+    max_ind = np.argmin(veg_ages < veg_start_mean_age_vec[n] * 2)
     fig = veg_smr.plot_3d_density_plotly(
         "age distribution pool {0}".format(sv[n]),
         veg_age_densities[0:max_ind, :, n],
@@ -669,7 +674,7 @@ for n in range(veg_smr.nr_pools):
     fig.add_scatter3d(
         x=np.array([-t0 for a in veg_ages]),
         y=np.array([a for a in veg_ages]),
-        z=np.array([a_dens_function(a)[n] for a in veg_ages]),
+        z=np.array([veg_a_dens_function(a)[n] for a in veg_ages]),
         mode="lines",
         line=dict(color="#FF0000", width=15),
     )
