@@ -17,8 +17,9 @@ from ...resolve.mvars import (
     NumericParameterization,
     NumericSimulationTimes,
     NumericStartValueArray,
-    NumericStartMeanAgeVector,
-    NumericParameterizedSmoothReservoirModel
+    NumericStartMeanAgeTuple,
+    NumericParameterizedSmoothReservoirModel,
+    StartConditionMaker
 )
 from ...resolve import computers as bgc_c
 from ..BibInfo import BibInfo
@@ -224,20 +225,36 @@ times = np.linspace(t0, t_max, n_steps)
 # since we know that the system is linear we can easily compute the steady state
 # (in general (nonlinear fluxes) it is not clear that a steady state even exists
 # let alone how to compute it
-srm = mvs.get_SmoothReservoirModel()
 
-start_mean_age_vec, X_fix = sd.start_mean_age_vector_from_steady_state_linear(
-    srm,
-    t0=t0,
-    parameter_dict=par_dict,
-    func_set=func_dict
-)
+# The following function computes consistent steady state start conditions for the whole system and all subsystems
+def scm(
+        npsrm #: NumericParameterizedSmoothReservoirModel or a subclass 
+    ):
+    srm=npsrm.srm # the Smoth reservoir model (or a subclass)
+    nupa=npsrm.parameterization
+    par_dict=nupa.par_dict
+    func_dict=nupa.func_dict
+    a_dens_function, X_fix = sd.start_age_distributions_from_steady_state(
+        srm, 
+        t0=t0, 
+        parameter_dict= par_dict, 
+        func_set=func_dict, 
+        #x0=smr.start_values#x0=X_0
+    )
+    start_mean_age_vec = sd.start_age_moments_from_steady_state(
+        srm,
+        t0=t0,
+        parameter_dict=par_dict,
+        func_set=func_dict,
+        max_order=1,
+        x0=X_fix
+    ).reshape(-1)
+    return X_fix,start_mean_age_vec, a_dens_function
 mvs = mvs.update({
     NumericParameterization(
         par_dict=par_dict,
         func_dict=func_dict
     ),
-    NumericStartValueArray(X_fix.reshape(-1)),
     NumericSimulationTimes(times),
-    NumericStartMeanAgeVector(start_mean_age_vec)
+    StartConditionMaker(scm)
 })

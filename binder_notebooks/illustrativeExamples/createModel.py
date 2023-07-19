@@ -1,7 +1,7 @@
 # +
 # adjust the output to full width
 from IPython.display import HTML
-display(HTML("<style>.container { width:100% !important; }</style>"))
+#display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # make changes to imported files immidiately available 
 # avoiding the need to reload (in most cases)
@@ -385,11 +385,22 @@ start_mean_age_vec
 mvs.jupyter_widget(
     root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution
 )
-
-tl,fig,fl=mvs.dep_graph_figure(
-    root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution
+from pathlib import Path
+p=Path("/home/mm/bgc_md2/manuscripts/pythonPackages")
+tl, fig, fl = mvs.dep_graph_figure(
+    root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution,
+    targetPaths=[
+        p.joinpath(name) 
+        for name in [
+            "TypeLegend.tex",
+            "dep_graph.pdf",
+            "ComputerLegend.tex"
+        ]
+    ]
 )
-tl
+print(tl)
+print(fl)
+rom IPython import embed; embed()
 # Looking at the graph we see that the requirements could be satisfied by providing
 # 1.)
 #   VegetationCarbonStateVariableTuple 

@@ -48,6 +48,26 @@ class VirtualCachedParameterization(ABC):
             self.X_0_dict = X_0_dict
             self.func_dict_param_dict=func_dict_param_dict
 
+    @classmethod
+    def parameter_dict_from_path(cls,data_path):
+        str_dict = h.load_dict_from_json_path(
+                data_path.joinpath(cls.par_dict_path)
+            )
+        return {Symbol(k): v for k,v in str_dict.items()}
+    
+    @classmethod
+    def X_0_dict_from_path(cls,data_path):
+        return {
+            Symbol(k): v 
+            for k, v in h.load_dict_from_json_path(
+                data_path.joinpath(cls.X_0_data_path)
+            ).items()
+        }
+    @classmethod
+    def func_dict_param_dict_from_path(cls,data_path):
+        fdpdp = data_path.joinpath(cls.func_dict_param_path)
+        return h.load_dict_from_json_path(fdpdp) if fdpdp.exists() else dict()
+        
 
     @classmethod
     def from_path(cls,data_path):
@@ -62,22 +82,14 @@ class VirtualCachedParameterization(ABC):
         Drivers = cls.Drivers
         #from IPython import embed; embed()
         dvs = Drivers(*[ds.variables[k][:] for k in Drivers._fields])
-        str_dict = h.load_dict_from_json_path(
-                data_path.joinpath(cls.par_dict_path)
-            )
-        par_dict = {Symbol(k): v for k,v in str_dict.items()}
-        X_0_dict = h.load_dict_from_json_path((
-            data_path.joinpath(cls.X_0_data_path))
-        )
-        fdpdp = data_path.joinpath(cls.func_dict_param_path)
-        func_dict_param_dict = h.load_dict_from_json_path(fdpdp) if fdpdp.exists() else dict()
+         
 
         
         return cls(
-            parameter_dict=par_dict,
+            parameter_dict=cls.parameter_dict_from_path(data_path),
             drivers=dvs,
-            X_0_dict=X_0_dict,
-            func_dict_param_dict=func_dict_param_dict
+            X_0_dict=cls.X_0_dict_from_path(data_path),
+            func_dict_param_dict=cls.func_dict_param_dict_from_path(data_path)
         )
 
     @property
