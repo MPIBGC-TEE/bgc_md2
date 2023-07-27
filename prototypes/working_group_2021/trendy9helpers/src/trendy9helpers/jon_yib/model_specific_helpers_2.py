@@ -13,6 +13,7 @@ from copy import copy
 from typing import Callable, Tuple, Dict
 from functools import partial, reduce
 from importlib.resources import files as mod_files
+import bgc_md2.helper as h
 
 model_mod='bgc_md2.models.jon_yib'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
@@ -277,7 +278,6 @@ def compute_global_mean_arr_var_dict(dataPath):
             for vn in scaled 
         } 
     }
-    #from IPython import embed;embed()
     return arr_dict
 
 def get_global_mean_vars(dataPath, targetPath=None, flash_cache=False):
@@ -306,6 +306,7 @@ def get_global_mean_vars_2(conf_dict,targetPath=None):
         download_my_TRENDY_output(conf_dict)
     return get_global_mean_vars(dataPath,targetPath)    
 
+
 def make_da_iterator(
         mvs,
         X_0, #: StartVector,
@@ -325,7 +326,49 @@ def make_da_iterator(
     return mit
 
 
-
+def synthetic_observables(
+        mvs,
+        X_0,
+        par_dict,
+        func_dict,
+        dvs
+    ):
+    # - create and run the da iterator and 
+    # - project the result to the size of the  osbvservables 
+    #   (model specifically some variables are 
+    #   yearly others monthly)
+    #
+    # called by the different param2res functions
+    # of the  different da schemes which differ in the
+    # way they produce parameters for the forward run
+    # but not in how to perform it and project it to
+    # the shape of the observables
+    dpm = h.date.days_per_month
+    number_of_months=dvs.npp.shape[0]
+    steps_per_month = 2
+    delta_t_val = dpm/steps_per_month 
+    number_of_steps = number_of_months*steps_per_month
+    bitr = ArrayDictResult(
+            make_da_iterator(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+    )
+    result_dict = bitr[0: number_of_steps: steps_per_month]
+    yearly_partitions = gh.partitions(0, number_of_months, 12)
+    yearly_averages = {
+        key: gh.averaged_1d_array(result_dict[key],yearly_partitions)
+        for key in ["cVeg", "cSoil"]
+    }
+    
+    return Observables(
+        cVeg=yearly_averages["cVeg"],
+        cSoil=yearly_averages["cSoil"],
+        rh=result_dict["rh"]#/(60*60*24)
+    )
 
 def make_weighted_cost_func(
         obs: Observables

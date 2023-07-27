@@ -158,6 +158,7 @@ dask-worker-space
 *.swp
 *.swo
 tests/tmp
+prototypes/working_group_2021/trendy9helpers/tests/tmp/*
 prototypes/working_group_2021/.Rhistory
 prototypes/working_group_2021/kv_visit/.Rhistory
 prototypes/working_group_2021/kv_visit_R/.Rhistory

@@ -118,7 +118,7 @@ def syncronized_timelines_from_model_folder(mf):
     mvs = gh.mvs(mf)
     nupa=mvs.get_NumericParameterization()
     state_vector = mvs.get_StateVariableTuple()
-    stride = 1  # this does not affect the precision of the iterator but of the averages
+    stride = 15  # this does not affect the precision of the iterator but of the averages
     # but makes it more effiecient (the values in between the strides
 
     # Every model has it's own timeline counted from 0 in days starting
@@ -128,8 +128,7 @@ def syncronized_timelines_from_model_folder(mf):
     # another model to compute the indices of the iterator timesteps
     # for the appropriate common time tc
     start, stop = gh.min_max_index_2(
-        mf, delta_t_val, start_sAD, stop_sAD, start_shift
-    )
+        mf, delta_t_val, start_sAD, stop_sAD, start_shift)
     # from IPython import embed; embed()
     vals = gh.all_timelines_starting_at_steady_state(
         mvs,
@@ -178,7 +177,7 @@ model_mod=f'bgc_md2.models.{mf}'
 mvs = import_module(f"{model_mod}.source").mvs
 sv = mvs.get_StateVariableTuple()
 n_pools = len(sv)
-vals.t,
+vals.t
 
 ""
 fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))

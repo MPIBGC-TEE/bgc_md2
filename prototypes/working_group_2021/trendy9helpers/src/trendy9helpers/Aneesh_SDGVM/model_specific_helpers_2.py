@@ -5,7 +5,7 @@ from collections import namedtuple
 import netCDF4 as nc
 import numpy as np
 import datetime as dt
-from sympy import Symbol, symbols 
+from sympy import Symbol, symbols, var 
 from typing import Callable, Tuple, Dict
 from functools import reduce, partial
 from importlib import import_module
@@ -13,6 +13,7 @@ from collections import OrderedDict
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 
+import bgc_md2.helper as h
 from ..import general_helpers as gh
 model_mod = 'bgc_md2.models.Aneesh_SDGVM'
 cp_mod = import_module(f"{model_mod}.CachedParameterization")
@@ -207,12 +208,12 @@ def get_global_mean_vars_2(conf_dict, targetPath=None):
         return get_global_mean_vars(dataPath, targetPath)    
 
 
-def make_StartVector(mvs):
-    return namedtuple(
-        "StartVector",
-        [str(v) for v in mvs.get_StateVariableTuple()]+
-        ["rh"]
-    ) 
+#def make_StartVector(mvs):
+#    return namedtuple(
+#        "StartVector",
+#        [str(v) for v in mvs.get_StateVariableTuple()]+
+#        ["rh"]
+#    ) 
 
 
 
@@ -250,24 +251,77 @@ def make_da_iterator(
         )
 
     #from IPython import embed; embed()
-    C_abvstrlit, C_abvmetlit, C_belowstrlit, C_belowmetlit, C_root = symbols(
-        "C_abvstrlit,C_abvmetlit, C_belowstrlit, C_belowmetlit, C_root"
+    var(
+        """C_abvstrlit,C_abvmetlit, C_belowstrlit, C_belowmetlit, C_root,
+        C_surface_microbe, C_soil_microbe, C_slowsom, C_passsom"""
     ) 
     #create the functions
-    fd = {
+    fd = OrderedDict({
         "cLitter":  numfunc(
              C_abvstrlit + C_abvmetlit + C_belowstrlit + C_belowmetlit
         ), 
-        "cRoot": numfunc(C_root)
-    }    
+        "cSoil": numfunc(C_surface_microbe + C_soil_microbe + C_slowsom + C_passsom), # redifine cSoil to keep mvs consitent with rh
+        "cRoot": numfunc(C_root),
+    })    
+    def make_func(key):
+        return lambda t,X: fd[key](t,X)
+
     present_step_funcs = OrderedDict(
         {
-            key: lambda t,X: fd[key](t,X)
+            key: make_func(key) 
             for key in fd.keys()
         }
     )
     mit.add_present_step_funcs(present_step_funcs)
     return mit
+
+def synthetic_observables(
+        mvs,
+        X_0,
+        par_dict,
+        func_dict,
+        dvs
+    ):
+    # - create and run the da iterator and 
+    # - project the result to the size of the  osbvservables 
+    #   (model specifically some variables are 
+    #   yearly others monthly)
+    #
+    # called by the different param2res functions
+    # of the  different da schemes which differ in the
+    # way they produce parameters for the forward run
+    # but not in how to perform it and project it to
+    # the shape of the observables
+    dpm = h.date.days_per_month 
+    steps_per_month = 15
+    delta_t_val = dpm/steps_per_month 
+    bitr = ArrayDictResult(
+        make_da_iterator(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+    )
+    number_of_months=len(dvs.npp)
+
+    number_of_steps = number_of_months * steps_per_month
+    result_dict = bitr[0: number_of_steps: steps_per_month]
+    yearly_partitions = gh.partitions(0, len(result_dict['rh']), 12)
+    yearly_averages = {
+        key: gh.averaged_1d_array(result_dict[key],yearly_partitions)
+        for key in ["cVeg", "cRoot", "cLitter", "cSoil"]
+    }
+
+    return Observables(
+        cVeg=yearly_averages["cVeg"],
+        cRoot=yearly_averages["cRoot"],
+        cLitter=yearly_averages["cLitter"],
+        cSoil=yearly_averages["cSoil"],
+        rh=result_dict["rh"]#*(60*60*24)
+    )
+
 
 def make_weighted_cost_func(
         obs: Observables

@@ -89,13 +89,13 @@ class TestSymbolic(InDirTest):
             "yz_jules",
             ###
             "Aneesh_SDGVM",  # second tier (not quite ready)
-            ## "kv_ft_dlem",
-            ###
-            ###third tier
-            ###"cj_isam", # has problems with ODE solution probably due to wrong parameters
-            ### msh.numericX0 also yields a negative pool value for the last pool
-            ## "bian_ibis2",#
-            ###"cable-pop",
+            ### "kv_ft_dlem",
+            ####
+            ####third tier
+            ####"cj_isam", # has problems with ODE solution probably due to wrong parameters
+            #### msh.numericX0 also yields a negative pool value for the last pool
+            ### "bian_ibis2",#
+            ####"cable-pop",
         ]
 
 
@@ -121,7 +121,7 @@ class TestSymbolic(InDirTest):
 
                 smr = mvs.get_SmoothModelRun()
                 smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-                start_mean_age_vec = mvs.get_NumericStartMeanAgeVector()
+                start_mean_age_vec = mvs.get_NumericStartMeanAgeTuple()
                 sv = mvs.get_StateVariableTuple()
                 n_pools = len(sv)
                 order = 1
@@ -141,27 +141,55 @@ class TestSymbolic(InDirTest):
                 times = mvs.get_NumericSimulationTimes()
                 X_0 = mvs.get_NumericStartValueArray()
                 t0 = times[0]
+                stride = 5
+                delta_t_val = (times[1]-times[0])/stride
                 par_dict = mvs.get_NumericParameterization().par_dict
                 func_dict = mvs.get_NumericParameterization().func_dict
                 bit = ArrayDictResult(
                     gh.traceability_iterator_internal(
-                        mvs, X_0, par_dict, func_dict, delta_t_val=15, t_0=t0
+                        mvs,
+                        X_0,
+                        par_dict,
+                        func_dict,
+                        delta_t_val=delta_t_val,
+                        t_0=t0
                     )
                 )
                 fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
                 axs = fig1.subplots(n_pools, 2)
-                n_steps = 12  # for testing
-                vals = bit[0:n_steps]
+                times_max_index=min(len(times),100)# for testing
+                iterator_max_step_index = times_max_index*stride  # for testing
+                # produces vals.t = times[0:times_max_index]
+                vals = bit[0:iterator_max_step_index:stride]
                 for i in range(n_pools):
                     ax = axs[i, 0]
-                    ax.plot(times, vals.X[:, i], label="bit")
 
-                    ax.plot(times, solutions[:, i], label="sol")
+                    ax.plot(
+                        times[: times_max_index],
+                        solutions[: times_max_index, i],
+                        label="sol"
+                    )
+                    ax.plot(vals.t[:], vals.X[:, i], label="bit")
                     ax.legend()
                     ax = axs[i, 1]
                     ax.plot(times, m_a_arr[:, i])
 
                 fig1.savefig(Path(mf).joinpath("poolwise.pdf"))
+
+                self.assertTrue(
+                    np.allclose(
+                        times[:times_max_index],
+                        vals.t
+                   )
+                ) 
+                #from IPython import embed; embed()
+                self.assertTrue(
+                    np.allclose(
+                        solutions[:times_max_index,0:n_pools],
+                        vals.X,
+                        rtol=2e-2 #2%
+                   )
+                )   
 
                 fig2 = plt.figure(figsize=(10, 10))
                 axs2 = fig2.subplots(2, 2)
@@ -171,10 +199,10 @@ class TestSymbolic(InDirTest):
                 ax = axs2[0, 0]
                 ax.plot(times, mean_btts, label="mean backward transit time")
                 ax.plot(
-                    times, vals.system_RT_sum, label="$\sum_i (RT)_i$"
+                    vals.t, vals.system_RT_sum, label="$\sum_i (RT)_i$"
                 )  # steady state transit times
                 ax.plot(
-                    times, vals.rt, label="rt of surrogate one pool system"
+                    vals.t, vals.rt, label="rt of surrogate one pool system"
                 )  # steady state transit times
                 ax.legend()
                 fig2.savefig(Path(mf).joinpath("system.pdf"))
@@ -255,7 +283,6 @@ class TestSymbolic(InDirTest):
     def test_param2res(self):
         for mf in set(self.model_folders):
             with self.subTest(mf=mf):
-                Path(mf).mkdir()
                 msh = import_module(f"trendy9helpers.{mf}.model_specific_helpers_2")
                 mvs = import_module(f"{msh.model_mod}.source").mvs
                 mdp = mod_files(f"trendy9helpers.{mf}")
@@ -274,19 +301,21 @@ class TestSymbolic(InDirTest):
                     for f in mod_files(f"trendy9helpers.{mf}").iterdir()
                     if bool(ex.match(f.stem)) & f.is_dir()
                 ]
-                #da_mod_names = ["da_2","da_1"] 
+                #da_mod_names = ["da_0"]#,"da_1"] 
                 for name in da_mod_names:
                     with self.subTest(name):
+                        outp=Path(mf).joinpath(name)
+                        outp.mkdir(parents=True)
                         da_mod = import_module(
                             f"trendy9helpers.{mf}.{name}.mod"
                         )
                         # read the constans and ingredients 
                         da_dir_p = mod_files(f"trendy9helpers.{mf}.{name}")
                         da_param_path = da_dir_p.joinpath( "par_1","in") 
-                        cpa = da_mod.Constants(
+                        fcpa = da_mod.FreeConstants(
                             **h.load_dict_from_json_path(da_param_path.joinpath("cpa.json"))
                         )
-                        epa_0 = da_mod.EstimatedParameters(
+                        fepa_0 = da_mod.FreeEstimatedParameters(
                             **h.load_dict_from_json_path(da_param_path.joinpath("epa_0.json"))
                         )
                         mdp = mod_files(f"trendy9helpers.{mf}")
@@ -297,17 +326,31 @@ class TestSymbolic(InDirTest):
                             gm_cache_path, 
                             flash_cache=False
                         )
+                        epa_0 = da_mod.epa_0(fepa_0, dvs, svs)
                         param2res = da_mod.make_param2res_sym(
                             mvs,
-                            cpa,
-                            dvs
+                            fcpa,
+                            dvs,
+                            svs 
                         )    
-                        sim = param2res(np.array(epa_0))
+                        sim_0 = param2res(np.array(epa_0))
+                        fig = plt.figure(figsize=(10,50))
+                        axs=fig.subplots(len(svs._fields),1)
+                        
+                        
+                        for ind,f in enumerate(svs._fields):
+                            val_sim_0=sim_0.__getattribute__(f)
+                            val_obs=svs.__getattribute__(f)
+                            axs[ind].plot(range(len(val_sim_0)),val_sim_0,label=f+"_sim_0")
+                            axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+                            axs[ind].legend()
+                            
+                        fig.savefig(outp.joinpath('param2res.pdf'))
                         # check that the length of the returned arrays
                         # matches the length of the observations
-                        for f in sim._fields:
+                        for f in sim_0._fields:
                             self.assertEqual(
-                                sim.__getattribute__(f).shape,
+                                sim_0.__getattribute__(f).shape,
                                 svs.__getattribute__(f).shape
                             )
 
@@ -333,7 +376,7 @@ class TestSymbolic(InDirTest):
                     for f in mod_files(f"trendy9helpers.{mf}").iterdir()
                     if bool(ex.match(f.stem)) & f.is_dir()
                 ]
-                #da_mod_names = ["da_2","da_1"] 
+                #da_mod_names = ["da_1"]
                 for name in da_mod_names:
                     with self.subTest(name):
                         da_mod = import_module(
@@ -341,6 +384,7 @@ class TestSymbolic(InDirTest):
                         )
                         
                         func=gh.cached_da_res_1_maker(
+                            da_mod.make_proposer,
                             da_mod.make_param_filter_func,
                             da_mod.make_param2res_sym,
                             msh.make_weighted_cost_func,
@@ -353,14 +397,17 @@ class TestSymbolic(InDirTest):
                         # read the constans and ingredients 
                         da_dir_p = mod_files(f"trendy9helpers.{mf}.{name}")
                         da_param_path = da_dir_p.joinpath( "par_1","in") 
-                        cpa = da_mod.Constants(
+                        fcpa = da_mod.FreeConstants(
                             **h.load_dict_from_json_path(da_param_path.joinpath("cpa.json"))
                         )
-                        epa_min, epa_max, epa_0 = tuple(
+                        def ep(p):
+                            d = h.load_dict_from_json_path(p)
+                            ep = da_mod.FreeEstimatedParameters(**d)
+                            return ep
+
+                        fepa_min, fepa_max, fepa_0 = tuple(
                             map(
-                                lambda p: da_mod.EstimatedParameters(
-                                    **h.load_dict_from_json_path(p)
-                                ),
+                                ep,
                                 [
                                     da_param_path.joinpath(f"{s}.json")
                                     for s in ["epa_min", "epa_max", "epa_0"]
@@ -374,15 +421,16 @@ class TestSymbolic(InDirTest):
                         hyper_dict = h.load_dict_from_json_path(
                             da_param_path.joinpath("hyper_test.json")
                         )
+                        cpa = da_mod.cpa(fcpa, dvs, svs)
                         Cs, Js, epa_opt = func(
                             output_cache_path,
                             mvs,
                             svs,
                             dvs,
-                            cpa,
-                            epa_min,
-                            epa_max,
-                            epa_0,
+                            fcpa,
+                            da_mod.epa_min(fepa_min,dvs,svs),
+                            da_mod.epa_max(fepa_max,dvs,svs),
+                            da_mod.epa_0(fepa_0,dvs,svs),
                             nsimu=hyper_dict['nsimu'],
                             acceptance_rate=hyper_dict['acceptance_rate'],
                             chunk_size=hyper_dict['chunk_size'],
@@ -390,11 +438,12 @@ class TestSymbolic(InDirTest):
                             K=hyper_dict['K'],
                         )
                         
-                        param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
+                        #param_dict=gh.make_param_dict(mvs,cpa,epa_opt) 
                         apa = {**cpa._asdict(), **epa_opt._asdict()}
-                        X_0=da_mod.numeric_X_0(mvs,dvs,cpa,epa_opt)
+                        param_dict=gh.make_param_dict2(mvs,apa) 
+                        X_0=da_mod.numeric_X_0(mvs,dvs,apa)
                         X_0_dict={
-                            str(sym): X_0[i,0] 
+                            sym: X_0[i,0] 
                             for i,sym in enumerate(
                                 mvs.get_StateVariableTuple()
                             )
@@ -418,7 +467,7 @@ class TestSymbolic(InDirTest):
                         cp_fp = msh.CachedParameterization.from_path(output_cache_path)
 
                         X_0 = np.array(
-                            [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
+                            [cp.X_0_dict[s] for s in mvs.get_StateVariableTuple()]
                         )
                         func_dict = cp.func_dict
                         par_dict = cp.parameter_dict
@@ -451,7 +500,7 @@ class TestSymbolic(InDirTest):
                 dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
                 cp = CP.from_path(dir_path)
                 X_0 = np.array(
-                    [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
+                    [cp.X_0_dict[s] for s in mvs.get_StateVariableTuple()]
                 )
                 func_dict = cp.func_dict
                 par_dict = cp.parameter_dict
@@ -496,7 +545,7 @@ class TestSymbolic(InDirTest):
                 dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
                 cp = CP.from_path(dir_path)
                 X_0 = np.array(
-                    [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
+                    [cp.X_0_dict[s] for s in mvs.get_StateVariableTuple()]
                 )
                 func_dict = cp.func_dict
                 par_dict = cp.parameter_dict
@@ -514,6 +563,65 @@ class TestSymbolic(InDirTest):
                 step = 2
                 adr = ArrayDictResult(bit)
                 vals = adr[start:stop]
+    
+    def test_synthetic_observables(self):
+        # this is a stepping stone for ultimately param2res
+        for mf in self.model_folders:
+            with self.subTest(mf=mf):
+                outp=Path(mf)
+                outp.mkdir()
+                msh = gh.msh(mf)
+                mvs = import_module(f"{msh.model_mod}.source").mvs
+                CP = import_module(
+                    f"{msh.model_mod}.CachedParameterization"
+                ).CachedParameterization
+                dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
+                mdp = mod_files(f"trendy9helpers.{mf}")
+                gm_cache_path = mdp.joinpath("global_means")
+                svs, dvs = msh.get_global_mean_vars(
+                    None, 
+                    gm_cache_path, 
+                    flash_cache=False
+                )
+                cp=CP(
+                    parameter_dict=CP.parameter_dict_from_path(dir_path),
+                    drivers=dvs,
+                    X_0_dict=CP.X_0_dict_from_path(dir_path),
+                    func_dict_param_dict=CP.func_dict_param_dict_from_path(dir_path)
+                )
+                #cp = CP.from_path(dir_path)
+                X_0 = np.array(
+                    [cp.X_0_dict[s] for s in mvs.get_StateVariableTuple()]
+                )
+                func_dict = cp.func_dict
+                par_dict = cp.parameter_dict
+                synth_obs=msh.synthetic_observables(
+                    mvs,
+                    X_0,
+                    par_dict=par_dict,
+                    func_dict=func_dict,
+                    dvs=dvs
+                )
+                fig = plt.figure(figsize=(10,50))
+                axs=fig.subplots(len(svs._fields),1)
+                
+                
+                for ind,f in enumerate(svs._fields):
+                    val_sim_0=synth_obs.__getattribute__(f)
+                    val_obs=svs.__getattribute__(f)
+                    axs[ind].plot(range(len(val_sim_0)),val_sim_0,label=f+"_synth")
+                    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+                    axs[ind].legend()
+                    
+                fig.savefig(outp.joinpath('plot.pdf'))
+                self.assertTrue(
+                    all(
+                        [
+                            svs.__getattribute__(f).shape == synth_obs.__getattribute__(f).shape
+                            for f in  svs._fields
+                        ]
+                    )
+                )
 
     def test_aggregate_surrogate_systems(self):
         for mf in set(self.model_folders):
@@ -529,7 +637,7 @@ class TestSymbolic(InDirTest):
                 dir_path = mod_files(f"trendy9helpers.{mf}").joinpath("parameterization_from_test_args")
                 cp = CP.from_path(dir_path)
                 X_0 = np.array(
-                    [cp.X_0_dict[str(s)] for s in mvs.get_StateVariableTuple()]
+                    [cp.X_0_dict[s] for s in mvs.get_StateVariableTuple()]
                 )
                 func_dict = cp.func_dict
                 par_dict = cp.parameter_dict

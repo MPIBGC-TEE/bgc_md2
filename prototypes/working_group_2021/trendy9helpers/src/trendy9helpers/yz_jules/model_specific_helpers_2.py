@@ -8,6 +8,7 @@ import datetime as dt
 from sympy import Symbol
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.ArrayDictResult import ArrayDictResult
+import bgc_md2.helper as h
 # from copy import copy
 from typing import Callable, Tuple, Dict
 from importlib import import_module
@@ -434,6 +435,47 @@ def make_da_iterator(
     return mit
 
 
+def synthetic_observables(
+        mvs,
+        X_0,
+        par_dict,
+        func_dict,
+        dvs
+    ):
+    # - create and run the da iterator and 
+    # - project the result to the size of the  osbvservables 
+    #   (model specifically some variables are 
+    #   yearly others monthly)
+    #
+    # called by the different param2res functions
+    # of the  different da schemes which differ in the
+    # way they produce parameters for the forward run
+    # but not in how to perform it and project it to
+    # the shape of the observables
+    dpm = h.date.days_per_month
+    number_of_months=dvs.npp.shape[0]
+    steps_per_month = 2
+    delta_t_val = dpm/steps_per_month 
+    number_of_steps = number_of_months*steps_per_month
+    bitr = ArrayDictResult(
+        make_da_iterator(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+    )
+    result_dict = bitr[0: number_of_steps :steps_per_month]
+
+    return Observables(
+        cVeg=result_dict["cVeg"],
+        cSoil=result_dict["cSoil"],
+        fVegSoil=result_dict["fVegSoil"],
+        rh=result_dict["rh"]#/(60*60*24)
+    )
+
+
 def make_iterator_sym(
         mvs,
         V_init: "StartVector",
@@ -650,69 +692,7 @@ def nc_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
 def nc_global_mean_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
     return experiment_name + "{}_gm.nc".format(nc_var_name)
 
-#def make_param_filter_func(
-#    c_max: EstimatedParameters,
-#    c_min: EstimatedParameters,
-#    cpa: Constants,
-#) -> Callable[[np.ndarray], bool]:
-#
-#    # find position of beta_leaf and beta_wood
-#    beta_leaf_ind = EstimatedParameters._fields.index("beta_leaf")
-#    beta_wood_ind = EstimatedParameters._fields.index("beta_wood")
-#
-#    def isQualified(c):
-#        beta_leaf_ind
-#        cond1 = (c >= c_min).all()
-#        cond2 = (c <= c_max).all()
-#        cond3 = c[beta_leaf_ind] + c[beta_wood_ind] < 1
-#        print(
-#            "cond1",cond1,
-#            "cond2",cond2,
-#            "cond3",cond3,
-#        )
-#        return cond1 and cond2 and cond3
-#
-#    return isQualified
 
-def da_res_1(
-        data_path,
-        mvs,
-        svs,
-        dvs,
-        cpa,
-        epa_min,
-        epa_max,
-        epa_0,
-        nsimu=10,
-        acceptance_rate=15,   # default value | target acceptance rate in %
-        chunk_size=2,  # default value | number of iterations to calculate current acceptance ratio and update step size
-        D_init=1,   # default value | increase value to reduce initial step size
-        K=2 # default value | increase value to reduce acceptance of higher cost functions
-
-    )->Tuple[Dict,Dict,np.array]:
-    func=gh.cached_da_res_1_maker(
-        make_param_filter_func,
-        make_param2res_sym,
-        make_weighted_cost_func,
-        numeric_X_0,
-        CachedParameterization,
-        EstimatedParameters,
-    )    
-    return func(
-        data_path,
-        mvs,
-        svs,
-        dvs,
-        cpa,
-        epa_min,
-        epa_max,
-        epa_0,
-        nsimu,
-        acceptance_rate,   
-        chunk_size,
-        D_init,
-        K
-    )
 
 def lats_lons():
     conf_dict = gh.confDict(

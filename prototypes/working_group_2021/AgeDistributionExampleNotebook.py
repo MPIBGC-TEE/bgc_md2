@@ -101,23 +101,9 @@ ad_times= ad_days / dpy
 #stride = 2.0  # this does not affect the precision of the iterator but of the averages
 #delta_t_val=(times[1]-times[0])/stride
 #delta_t_val
-
-# +
-# but makes it more effiecient (the values in between the strides
-
-# Every model has it's own timeline counted from 0 in days starting
-# from the first day of where IT'S data is available
-
-# To compare the output of one model to the simultaneous output of
-# another model to compute the indices of the iterator timesteps
-# for the appropriate common time tc
-#start, stop = gh.min_max_index_2(
-#    mf, delta_t_val, start_sAD, stop_sAD, start_shift
-#)
-#start, stop, stop*delta_t_val+start_shift+td_AD
 # -
 
-smr = mvs.get_SmoothModelRun()
+#smr = mvs.get_SmoothModelRun()
 #smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 start_mean_age_vec = mvs.get_NumericStartMeanAgeTuple()
 sv = mvs.get_StateVariableTuple()
@@ -126,7 +112,7 @@ n_pools = len(sv)
 #arr, func = smr._solve_age_moment_system( order, start_mean_age_vec.reshape(1, n_pools)) 
 #arr, func = smr._solve_age_moment_system( order, start_mean_age_vec)
 
-# X_fix=mvs.get_NumericStartValueArray()
+X_fix=mvs.get_NumericStartValueArray()
 
 t0 = times[0]
 n_steps = len(times)
@@ -139,6 +125,8 @@ n_steps = len(times)
 # the colums n+1..2n are the first age_moments (mean)
 ## plot the continuous solution (by ODE) solver against the  iterator
 ## generated one.
+
+mvs.computable_mvar_types()
 
 sol_arr2 = mvs.get_NumericSolutionArray()
 m_a_arr2 = mvs.get_NumericMeanAgeSolutionArray()
@@ -278,5 +266,3 @@ plot(
     ),
     auto_open=False,
 )
-# -
-

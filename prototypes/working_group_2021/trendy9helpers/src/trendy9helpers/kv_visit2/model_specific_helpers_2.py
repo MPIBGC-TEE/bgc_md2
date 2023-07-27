@@ -179,7 +179,7 @@ def get_global_mean_vars(dataPath,targetPath=None,flash_cache=False):
     if targetPath is None:
         targetPath = dataPath
 
-    arr_dict= gh.cached_var_dict(
+    arr_dict = gh.cached_var_dict(
         dataPath,
         targetPath,
         nc_global_mean_file_name,
@@ -259,6 +259,47 @@ def make_da_iterator(
     mit.add_present_step_funcs(present_step_funcs)
     return mit
 
+def synthetic_observables(
+        mvs,
+        X_0,
+        par_dict,
+        func_dict,
+        dvs
+    ):
+    # - create and run the da iterator and 
+    # - project the result to the size of the  osbvservables 
+    #   (model specifically some variables are 
+    #   yearly others monthly)
+    #
+    # called by the different param2res functions
+    # of the  different da schemes which differ in the
+    # way they produce parameters for the forward run
+    # but not in how to perform it and project it to
+    # the shape of the observables
+    dpm = h.date.days_per_month 
+    steps_per_month = 2
+    delta_t_val = dpm/steps_per_month 
+    bitr = ArrayDictResult(
+        make_da_iterator(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            delta_t_val=delta_t_val
+        )
+    )
+    number_of_months=len(dvs.npp)
+
+    number_of_steps = number_of_months * steps_per_month
+    result_dict = bitr[0: number_of_steps: steps_per_month]
+
+    return Observables(
+        cVeg=result_dict["cVeg"],
+        cLitter=result_dict["cLitter"],
+        cSoil=result_dict["cSoil"],
+        rh=result_dict["rh"]
+    )
+
 def make_weighted_cost_func(
         obs: Observables
     ) -> Callable[[Observables],np.float64]:
@@ -280,32 +321,22 @@ def make_weighted_cost_func(
 
 
 
-
-
-
-# def days_per_month():
-#    #dpm= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-#    dpm= [30 for i in range(12)]
-#    return dpm
-
 def monthly_recording_times_nc_var()->nc.Variable:
     ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("VISIT_S2_gpp.nc")))
     times = ds.variables["time"]
     # times.units #claims months since 1860-01-01
-    # we interpret this as 'trendy months' with 30 'trendy days' 
-    # with 'trendy hours'
-    # which is obviously different from the SI hour but
+    # we interpret this as months of equal length
     # consistent with the assumption that 12 of the equidistant
     # values span a year which is supported by the annual
     # periodicity of the data.
     return times
 
 def start_dt()->dt.datetime:
-    ## this function is important to syncronise our results
-    ## because our data streams start at different times the first day of
-    ## a simulation day_ind=0 refers to different dates for different models
-    ## we have to check some assumptions on which this calculation is based
-    ## Here is how to get these values
+    # this function is important to syncronise our results because the trendy9
+    # data streams start at different times the first day of a simulation
+    # day_ind=0 refers to different dates for different models we have to check
+    # some assumptions on which this calculation is based Here is how to get
+    # these values
     #ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("VISIT_S2_gpp.nc")))
     #times = ds.variables["time"]
     # tm = times[0] #time of first observation in Months_since_1860-01 # print(times.units)
@@ -324,13 +355,14 @@ def lats_lons():
     lons=ds.variables["lon"][:]
     return lats.data, lons.data
 
+
 def n_months():
-    mp=Path(__file__).parent
-    mf=mp.name
+    mp = Path(__file__).parent
+    mf = mp.name
     data_path=Path(gh.confDict(mf)["dataPath"])
     target_path = mp.joinpath("global_means")
-    dvs,mvs=get_global_mean_vars(
+    svs, dvs =get_global_mean_vars(
         data_path,
         target_path
-    )    
-    return len(dvs.rh)
+    )
+    return len(dvs.npp)

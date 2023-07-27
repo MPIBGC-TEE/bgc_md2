@@ -17,20 +17,46 @@ mvs=import_module(f"{model_mod}.source").mvs
 make_func_dict = cp_mod.make_func_dict
 Drivers=cp_mod.Drivers
 
-Constants = namedtuple(
-    "Constants",
+# this is what is read from cpa.json 
+FreeConstants = namedtuple(
+    "FreeConstants",
+    []
+    # funny you actually don't have any free constants
+    # so your cpa.json is empty and everything is guessed, but you 
+    # could transfer some of the FreeEstimatedParameters here if 
+    # you have a good guess for their value
+)    
+DerivedConstants = namedtuple(
+    "DerivedConstants",
     [
+        "cVeg_0",
+        "cRoot_0",
         "cLitter_0",
         "cSoil_0",
-        "cRoot_0",
-        "cVeg_0",
-        "npp_0",
-        "rh_0"
     ]
 )
+Constants = namedtuple(
+    "Constants",
+    [*FreeConstants._fields,*DerivedConstants._fields] 
+)
+def cpa(
+        fcpa: FreeConstants,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    ) -> Constants:
+    dcpa = DerivedConstants(
+        cVeg_0=svs.cVeg[0],
+        cRoot_0=svs.cRoot[0],
+        cLitter_0=svs.cLitter[0],
+        cSoil_0=svs.cSoil[0],
+    )
+    print(f"############################## dcpa={dcpa}")
+    return Constants(*fcpa, *dcpa)
 
-EstimatedParameters = namedtuple(
-    "EstimatedParameters",[
+
+FreeEstimatedParameters = namedtuple(
+    "FreeEstimatedParameters",
+    [
          'beta_leaf',
          'beta_wood',
          #beta_root,
@@ -61,21 +87,135 @@ EstimatedParameters = namedtuple(
          'r_C_slowsom_rh',
          'r_C_passsom_rh',
          'r_C_soil_microbe_rh',
-         'C_leaf_0',
-        #'C_root_0',
-         'C_abvstrlit_0',
-         'C_abvmetlit_0',
-         'C_blwstrlit_0',
-         'C_surfacemic_0',
-         'C_soilmic_0',
-         'C_slow_0'
     ]
 )
+DerivedEstimatedParameters = namedtuple(
+    "DerivedEstimatedParameters",
+    [
+        'C_leaf_0', 
+        'C_abvstrlit_0',
+        'C_abvmetlit_0',
+        'C_blwstrlit_0',
+        'C_surfacemic_0',
+        'C_soilmic_0',
+        'C_slow_0'
+    ]
+)
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",
+    [*FreeEstimatedParameters._fields, *DerivedEstimatedParameters._fields]
+)
+def epa_min(
+    fepa: FreeEstimatedParameters,
+    dvs: msh.Drivers,
+    svs: msh.Observables
+) -> EstimatedParameters:
+    # this function can obviously be changed
+    # it avoids contradictions between the startvalues and 
+    # data 
+    depa = DerivedEstimatedParameters(
+         C_leaf_0=0,
+         C_abvstrlit_0=0,
+         C_abvmetlit_0=0,
+         C_blwstrlit_0=0,
+         C_surfacemic_0=0,
+         C_soilmic_0=0,
+         C_slow_0=0
+    )
+    return EstimatedParameters(*fepa, *depa)
+
+def epa_max(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed
+    # it avoids contradictions between the startvalues and 
+    # data 
+    cv = svs.cVeg[0]
+    cl = svs.cLitter[0]
+    cs = svs.cSoil[0]
+    depa = DerivedEstimatedParameters(
+        C_leaf_0=cv, 
+        C_abvstrlit_0=cl,
+        C_abvmetlit_0=cl,
+        C_blwstrlit_0=cl,
+        C_surfacemic_0=cs,
+        C_soilmic_0=cs,
+        C_slow_0=cs
+    )
+    return EstimatedParameters(*fepa,*depa)
+
+def epa_0(
+    fepa: FreeEstimatedParameters,
+    dvs: msh.Drivers,
+    svs: msh.Observables
+) -> EstimatedParameters:
+    # this function can obviously be changed
+    # it avoids contradictions between the startvalues and 
+    # data 
+    cv = svs.cVeg[0]/2
+    cl = svs.cLitter[0]/4
+    cs = svs.cSoil[0]/4
+    depa = DerivedEstimatedParameters(
+        C_leaf_0=cv, 
+        C_abvstrlit_0=cl,
+        C_abvmetlit_0=cl,
+        C_blwstrlit_0=cl,
+        C_surfacemic_0=cs,
+        C_soilmic_0=cs,
+        C_slow_0=cs
+    )
+    return EstimatedParameters(*fepa, *depa)
+
+
+def make_proposer(
+    c_max: EstimatedParameters,
+    c_min: EstimatedParameters, 
+    fcpa: FreeConstants,
+    dvs: msh.Drivers,
+    svs: msh.Observables
+) -> Callable[[np.ndarray, float, bool], np.ndarray]:
+    cpa_v = cpa(fcpa, dvs, svs)
+    """Returns a function that will be used by the mcmc algorithm to propose
+    a new parameter value tuple based on a given one.
+    The two arrays c_max and c_min define the boundaries
+    of the n-dimensional rectangular domain for the parameters and must be of
+    the same shape.  After a possible parameter value has been sampled the
+    filter_func will be applied to it to either accept or discard it.  So
+    filter func must accept parameter array and return either True or False
+    :param c_max: array of maximum parameter values
+    :param c_min: array of minimum parameter values
+    :param D: a damping parameter to regulate the proposer step 
+     larger D means smaller step size. If the maximum distance for a new value is
+     max_dist then the proposer will make a max_dist/ 
+    :param filter_func: model-specific function to filter out impossible 
+    parameter combinations
+    """
+
+
+    g = np.random.default_rng()
+    # filter out the startvalues and use a dirichlet distribution 
+    # for them  
+    dirichlet_tups= [
+        (["beta_leaf", "beta_wood"], 1),
+        (["C_leaf_0" ], cpa_v.cVeg_0),
+        (["C_abvstrlit_0", "C_abvmetlit_0", "C_blwstrlit_0"], cpa_v.cLitter_0),
+        (["C_surfacemic_0", "C_soilmic_0", "C_slow_0"], cpa_v.cSoil_0),
+    ]
+    return gh.make_dirichlet_uniform_proposer(
+        dirichlet_tups=dirichlet_tups,
+        EstimatedParameters=EstimatedParameters,
+        c_min=c_min,
+        c_max=c_max
+    )
 
 def make_param_filter_func(
         c_max: EstimatedParameters,
         c_min: EstimatedParameters, 
-        cpa: Constants,
+        fcpa: Constants,
+        dvs: Drivers,
+        svs: msh.Observables,
         ) -> Callable[[np.ndarray], bool]:
 
     # find position of beta_leaf and beta_wood
@@ -96,24 +236,24 @@ def make_param_filter_func(
         conds=[
             # not necessary any more since the
             # proposer does not choose values
-            # outside the range
-            #(c >= c_min).all(), 
-            #(c <= c_max).all(),
+            # outside the range except for a human error in epa_0...
+            (c >= c_min).all(), 
+            (c <= c_max).all(),
 
             sum(map(value, ["beta_leaf", "beta_wood"])) <= 0.99,
-            value("C_leaf_0") <= cpa.cVeg_0-cpa.cRoot_0, 
+            sum(map(value, ["C_leaf_0"])) <= svs.cVeg[0],
             sum(
                 map(
                     value,
-                    ["C_abvstrlit_0","C_abvmetlit_0","C_blwstrlit_0"]
+                    ["C_abvstrlit_0", "C_abvmetlit_0", "C_blwstrlit_0"]
                 )
-            ) <= cpa.cLitter_0,
+            ) <= svs.cLitter[0],
             sum(
                 map(
                     value,
                     ["C_surfacemic_0", "C_soilmic_0", "C_slow_0"]
                 )
-            ) <= cpa.cSoil_0  
+            ) <= svs.cSoil[0]  
         ]    
         res=all(conds)
         if print_conds:
@@ -127,74 +267,59 @@ def make_param_filter_func(
 
 def make_param2res_sym(
         mvs,
-        cpa: Constants,
-        dvs: Drivers
+        fcpa: Constants,
+        dvs: Drivers,
+        svs: msh.Observables
 ) -> Callable[[np.ndarray], np.ndarray]: 
     
+    cpa_v = cpa(fcpa, dvs, svs)
     def param2res(pa):
         epa=EstimatedParameters(*pa)
-        X_0 = numeric_X_0(mvs, dvs, cpa, epa)
-        dpm=30
-        steps_per_month = dpm
-        delta_t_val = 1 #dpm/steps_per_month 
-
-        par_dict = gh.make_param_dict(mvs, cpa, epa)
-        func_dict = make_func_dict(dvs , cpa=cpa, epa=epa)
-        bitr = ArrayDictResult(
-            msh.make_da_iterator(
-                mvs,
-                X_0,
-                par_dict=par_dict,
-                func_dict=func_dict,
-                delta_t_val=delta_t_val
-            )
-        )
-        number_of_months=dvs.npp.shape[0]
-        number_of_steps = int(number_of_months * dpm / delta_t_val)
-        result_dict = bitr[0: number_of_steps: steps_per_month]# 1 value per month
-        steps_per_year = steps_per_month*12
-        #yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
-        yearly_partitions = gh.partitions(0, len(result_dict['rh']), 12)
-        yearly_averages = {
-            key: gh.averaged_1d_array(result_dict[key],yearly_partitions)
-            for key in ["cVeg", "cRoot", "cLitter", "cSoil"]
-        }
-        #from IPython import embed; embed()
-
-        return msh.Observables(
-            cVeg=yearly_averages["cVeg"],
-            cRoot=yearly_averages["cRoot"],
-            cLitter=yearly_averages["cLitter"],
-            cSoil=yearly_averages["cSoil"],
-            rh=result_dict["rh"]/(60*60*24)
+        apa = {**cpa_v._asdict(), **epa._asdict()}
+        X_0 = numeric_X_0(mvs, dvs, apa)
+        par_dict = gh.make_param_dict2(mvs, apa)
+        func_dict = make_func_dict(dvs , cpa=cpa_v, epa=epa)
+        return msh.synthetic_observables(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            dvs=dvs
         )
     return param2res
 
 
-def numeric_X_0(mvs,dvs,cpa,epa):
+def numeric_X_0(mvs,dvs,apa):
     # This function creates the startvector for the pools
     # It can be used inside param_2_res and for other iterators that
     # track all carbon stocks
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict=gh.make_param_dict(mvs,cpa,epa)
-    X_0_dict={
-        "C_leaf": apa['C_leaf_0'],     
-        "C_root": apa['cRoot_0'],     
-        "C_wood": apa['cVeg_0'] - (apa['C_leaf_0'] +  apa['cRoot_0']),  
+    par_dict = gh.make_param_dict2(mvs, apa)
+    X_0_dict = {
+        "C_leaf": apa['C_leaf_0'],
+        "C_root": apa['cRoot_0'],
+        "C_wood": apa['cVeg_0'] - (apa['C_leaf_0'] ),
         "C_abvstrlit": apa['C_abvstrlit_0'],
         "C_abvmetlit": apa['C_abvmetlit_0'],
         "C_belowstrlit": apa["C_blwstrlit_0"],
-        "C_belowmetlit":apa["cLitter_0"]- apa["C_abvstrlit_0"] - apa["C_abvmetlit_0"] - apa["C_blwstrlit_0"],
-        "C_surface_microbe":apa["C_surfacemic_0"],
+        "C_belowmetlit": (
+            apa["cLitter_0"]
+            - apa["C_abvstrlit_0"]
+            - apa["C_abvmetlit_0"]
+            - apa["C_blwstrlit_0"]
+        ),
+        "C_surface_microbe": apa["C_surfacemic_0"],
         "C_soil_microbe": apa["C_soilmic_0"],
-        "C_slowsom":apa["C_slow_0"],
-        "C_passsom":apa["cSoil_0"] - apa["C_surfacemic_0"] - apa["C_soilmic_0"] - apa["C_slow_0"]
+        "C_slowsom": apa["C_slow_0"],
+        "C_passsom": (
+            apa["cSoil_0"]
+            - apa["C_surfacemic_0"]
+            - apa["C_soilmic_0"]
+            - apa["C_slow_0"]
+        )
     }
     X_0= np.array(
         [
             X_0_dict[str(v)] for v in mvs.get_StateVariableTuple()
         ]
-    ).reshape(len(X_0_dict),1)
+    ).reshape(len(X_0_dict), 1)
     return X_0
-
-

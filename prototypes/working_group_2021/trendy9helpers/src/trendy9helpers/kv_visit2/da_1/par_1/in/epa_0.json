@@ -21,11 +21,5 @@
   "r_C_wood_litter_2_C_soil_passive": 1.99252801992528e-05,
   "r_C_root_litter_2_C_soil_fast": 7.4719800747198e-05,
   "r_C_root_litter_2_C_soil_slow": 3.48692403486924e-05,
-  "r_C_root_litter_2_C_soil_passive": 1.74346201743462e-05,
-  "C_leaf_0": 0.051828761170322826,
-  "C_wood_0": 1.970572690329994,
-  "C_leaf_litter_0": 0.1202311902470766,
-  "C_wood_litter_0": 0.2225433197876749,
-  "C_soil_fast_0": 1.7309510511856925,
-  "C_soil_slow_0": 2.4435101360092473
+  "r_C_root_litter_2_C_soil_passive": 1.74346201743462e-05
 }

@@ -98,38 +98,39 @@ Transformers = namedtuple(
 CoordTransformers = namedtuple(
     "CoordTransformers", ["lat2LAT", "LAT2lat", "lon2LON", "LON2lon"]
 )
-    #def __init__(self, year, month, day):
-    #    self.year=year
-    #    self.month=month
-    #    self.day=day
+# def __init__(self, year, month, day):
+#    self.year=year
+#    self.month=month
+#    self.day=day
 
-    #@classmethod
-    #def from_trendy_days_since_AD(cls,tdsDA):
-    #    y = int(tdsDA/self.days_per_year)
-    #    m = int((tdsDA- self.days_per_year * y) / self.days_per_month) 
-    #    d = tdsDA - y * self.days_per_year - m * self.days_per_month
-    #    #from IPython import embed; embed()
-    #    return cls(y,m+1,d+1)
+# @classmethod
+# def from_trendy_days_since_AD(cls,tdsDA):
+#    y = int(tdsDA/self.days_per_year)
+#    m = int((tdsDA- self.days_per_year * y) / self.days_per_month)
+#    d = tdsDA - y * self.days_per_year - m * self.days_per_month
+#    #from IPython import embed; embed()
+#    return cls(y,m+1,d+1)
 
-    #@property
-    #def trendy_days_since_AD(self) -> np.array:
+# @property
+# def trendy_days_since_AD(self) -> np.array:
 
-    #    return (
-    #        self.year * self.days_per_year
-    #        + self.days_per_month * (self.month - 1)
-    #        + self.day-1
-    #    )
+#    return (
+#        self.year * self.days_per_year
+#        + self.days_per_month * (self.month - 1)
+#        + self.day-1
+#    )
 
-    #def __eq__(self,other):
-    #    return all(
-    #        [
-    #            self.year==other.year,
-    #            self.month==other.month,
-    #            self.day==other.day,
-    #        ]
-    #    )    
-    #def __repr__(self):
-    #    return f"{self.month}-{self.day} {self.year})"
+# def __eq__(self,other):
+#    return all(
+#        [
+#            self.year==other.year,
+#            self.month==other.month,
+#            self.day==other.day,
+#        ]
+#    )
+# def __repr__(self):
+#    return f"{self.month}-{self.day} {self.year})"
+
 
 def compose_2(f: Callable, g: Callable) -> Callable:
     """Function composition"""
@@ -231,10 +232,10 @@ class SymTransformers:
 # )
 
 
-
 # some tiny helper functions for module loading
 def mvs(mf):
     return import_module(f"{msh(mf).model_mod}.source").mvs
+
 
 def msh(mf):
     return import_module(f"{__package__}.{mf}.model_specific_helpers_2")
@@ -249,26 +250,34 @@ def confDict(mf):
         confDict = frozendict(json.load(f))
     return confDict
 
-def da_dir_path(p,mf,da_scheme,par_sub_dir):
+
+def da_dir_path(p, mf, da_scheme, par_sub_dir):
     return p.joinpath(mf, da_scheme, par_sub_dir)
+
 
 def data_path(mf):
     return Path(confDict(mf)["dataPath"])
 
-def target_path(p,mf):
-    return p.joinpath(mf,"global_means")
 
-def da_mod_name(mf,da_scheme):
+def target_path(p, mf):
+    return p.joinpath(mf, "global_means")
+
+
+def da_mod_name(mf, da_scheme):
     return f"trendy9helpers.{mf}.{da_scheme}"
 
-def da_mod(mf,da_scheme):
-    return import_module( f"{da_mod_name(mf,da_scheme)}.mod")
 
-def output_cache_path(p,mf,da_scheme,par_dir):
-    return da_dir_path(p,mf,da_scheme,par_dir).joinpath("out")
+def da_mod(mf, da_scheme):
+    return import_module(f"{da_mod_name(mf,da_scheme)}.mod")
 
-def da_param_path(p,mf,da_scheme,par_dir):
-    return da_dir_path(p,mf,da_scheme,par_dir).joinpath("in")
+
+def output_cache_path(p, mf, da_scheme, par_dir):
+    return da_dir_path(p, mf, da_scheme, par_dir).joinpath("out")
+
+
+def da_param_path(p, mf, da_scheme, par_dir):
+    return da_dir_path(p, mf, da_scheme, par_dir).joinpath("in")
+
 
 def gm_cp_from_folder_names(
     # just a convenience function implementing the folder hierarchy
@@ -283,7 +292,7 @@ def gm_cp_from_folder_names(
     #                   epa_max.json
     #                   epa_0.json
     #                   hyper.json
-    #                            
+    #
     # p/
     #   model/
     #       da_scheme/
@@ -295,53 +304,51 @@ def gm_cp_from_folder_names(
     # notebooks and scripts
     # It is not intended as a central funtion to build much on top of.
     # So please don't! ;-)
-        p: Path,
-        mf: str,
-        da_scheme: str,
-        param_dir: str
-    ):
+    p: Path,
+    mf: str,
+    da_scheme: str,
+    param_dir: str,
+):
     state_vector = mvs(mf).get_StateVariableTuple()
     # load global mean vars
     # data path not necessary unless global means are recomputed
-    svs, dvs = msh(mf).get_global_mean_vars(data_path(mf), target_path(p,mf), flash_cache=False)
+    svs, dvs = msh(mf).get_global_mean_vars(
+        data_path(mf), target_path(p, mf), flash_cache=False
+    )
     #
     # The following lines perform data_assimilation
-    
-    cpa = da_mod(mf,da_scheme).Constants(
-        **h.load_dict_from_json_path(da_param_path(p,mf,da_scheme,param_dir).joinpath("cpa.json"))
-    )
-    epa_opt = da_mod(mf,da_scheme).EstimatedParameters(
-                **h.load_dict_from_json_path(
-                    output_cache_path(p,mf,da_scheme,param_dir).joinpath("epa_opt.json")
-                )
-    )
-    # create a parameterization for convinience and return it
-    param_dict=make_param_dict(mvs(mf),cpa,epa_opt) 
-    X_0=da_mod(mf,da_scheme).numeric_X_0(mvs(mf),dvs,cpa,epa_opt)
-    X_0_dict={
-        str(sym): X_0[i,0] 
-        for i,sym in enumerate(
-            mvs(mf).get_StateVariableTuple()
+
+    cpa = da_mod(mf, da_scheme).Constants(
+        **h.load_dict_from_json_path(
+            da_param_path(p, mf, da_scheme, param_dir).joinpath("cpa.json")
         )
+    )
+    epa_opt = da_mod(mf, da_scheme).EstimatedParameters(
+        **h.load_dict_from_json_path(
+            output_cache_path(p, mf, da_scheme, param_dir).joinpath("epa_opt.json")
+        )
+    )
+    apa = {**cpa._asdict(), **epa._asdict()}
+    # create a parameterization for convinience and return it
+    param_dict = make_param_dict(mvs(mf), cpa, epa_opt)
+    X_0 = da_mod(mf, da_scheme).numeric_X_0(mvs(mf), dvs, cpa, epa_opt)
+    X_0_dict = {
+        str(sym): X_0[i, 0] for i, sym in enumerate(mvs(mf).get_StateVariableTuple())
     }
     # some models (e.g. yz_jules) need extra (not represented by symbols) parameters  to build
     # the func_dict for the parameterization
     apa = {**cpa._asdict(), **epa_opt._asdict()}
-    func_dict_param_dict = { 
-        str(k): v 
-        for k, v in apa.items() 
-        if str(k) in msh(mf).CachedParameterization.func_dict_param_keys 
+    func_dict_param_dict = {
+        str(k): v
+        for k, v in apa.items()
+        if str(k) in msh(mf).CachedParameterization.func_dict_param_keys
     }
-    cp=msh(mf).CachedParameterization(
-        param_dict,
-        dvs,
-        X_0_dict,
-        func_dict_param_dict
-    )
+    cp = msh(mf).CachedParameterization(param_dict, dvs, X_0_dict, func_dict_param_dict)
     return cp
 
+
 def gm_da_from_folder_names(
-    # just a convenience function implementing the folder hirarchy
+    # just a convenience function implementing the folder hierarchy
     # p/
     #   model/
     #       da_scheme/
@@ -352,7 +359,7 @@ def gm_da_from_folder_names(
     #                   epa_max.json
     #                   epa_0.json
     #                   hyper.json
-    #                            
+    #
     # p/
     #   model/
     #       da_scheme/
@@ -361,105 +368,101 @@ def gm_da_from_folder_names(
     #                   epa_opt.json
     #
     # where da_scheme is a submodule of trendy9helpers/model/ (e.g. da_1, da_2)
-    # notebooks and scripts
+    # just for notebooks and scripts
     # It is not intended as a central funtion to build much on top of.
     # So please don't! ;-)
-        p: Path,
-        mf: str,
-        da_scheme: str,
-        param_dir: str
-    ):
+    p: Path,
+    mf: str,
+    da_scheme: str,
+    param_dir: str,
+):
     state_vector = mvs(mf).get_StateVariableTuple()
     # load global mean vars
     # data path not necessary unless global means are recomputed
-    svs, dvs = msh(mf).get_global_mean_vars(data_path(mf), target_path(p,mf), flash_cache=False)
+    svs, dvs = msh(mf).get_global_mean_vars(
+        data_path(mf), target_path(p, mf), flash_cache=False
+    )
     #
     # The following lines perform data_assimilation
     # The following lines perform data_assimilation
-    
-    func=cached_da_res_1_maker(
-        da_mod(mf,da_scheme).make_param_filter_func,
-        da_mod(mf,da_scheme).make_param2res_sym,
+
+    func = cached_da_res_1_maker(
+        da_mod(mf, da_scheme).make_proposer,
+        da_mod(mf, da_scheme).make_param_filter_func,
+        da_mod(mf, da_scheme).make_param2res_sym,
         msh(mf).make_weighted_cost_func,
-        da_mod(mf,da_scheme).numeric_X_0,
-        da_mod(mf,da_scheme).EstimatedParameters,
-    )    
-    # specify from where to read the start parameters ranges and constants  
-    sp=da_dir_path(p,mf,da_scheme,param_dir)
+        da_mod(mf, da_scheme).numeric_X_0,
+        da_mod(mf, da_scheme).EstimatedParameters,
+    )
+    # specify from where to read the start parameters ranges and constants
+    sp = da_dir_path(p, mf, da_scheme, param_dir)
     if not sp.exists():
-        #sp.mkdir(parents=True,exist_ok=True)
+        # sp.mkdir(parents=True,exist_ok=True)
         # copy example files for the tests as part of the package
         # If the directory is empty we copy the one used for the da tests which
         # are part of the package.
-        da_dir_ex_path = mod_files(da_mod_name(mf,da_scheme)).joinpath(param_dir)
+        da_dir_ex_path = mod_files(da_mod_name(mf, da_scheme)).joinpath(param_dir)
         print(da_dir_ex_path)
-        #from IPython import embed; embed()
+        # from IPython import embed; embed()
         shutil.copytree(
-            da_dir_ex_path,
-            da_dir_path(p,mf,da_scheme,param_dir), 
-            dirs_exist_ok=True
+            da_dir_ex_path, da_dir_path(p, mf, da_scheme, param_dir), dirs_exist_ok=True
         )
 
-    cpa = da_mod(mf,da_scheme).Constants(
-        **h.load_dict_from_json_path(da_param_path(p,mf,da_scheme,param_dir).joinpath("cpa.json"))
+    cpa = da_mod(mf, da_scheme).FreeConstants(
+        **h.load_dict_from_json_path(
+            da_param_path(p, mf, da_scheme, param_dir).joinpath("cpa.json")
+        )
     )
-    epa_min, epa_max, epa_0 = tuple(
+    fepa_min, fepa_max, fepa_0 = tuple(
         map(
-            lambda p: da_mod(mf,da_scheme).EstimatedParameters(
+            lambda p: da_mod(mf, da_scheme).FreeEstimatedParameters(
                 **h.load_dict_from_json_path(p)
             ),
             [
-                da_param_path(p,mf,da_scheme,param_dir).joinpath(f"{s}.json")
+                da_param_path(p, mf, da_scheme, param_dir).joinpath(f"{s}.json")
                 for s in ["epa_min", "epa_max", "epa_0"]
             ],
         )
     )
     # check that we can read the hyperparameters
     hyper_dict = h.load_dict_from_json_path(
-        da_param_path(p,mf,da_scheme,param_dir).joinpath("hyper.json")
+        da_param_path(p, mf, da_scheme, param_dir).joinpath("hyper.json")
     )
     # compute the chains and the optimal parameter tuple
     # (and automatically cache them)
     Cs, Js, epa_opt = func(
-        output_cache_path(p,mf,da_scheme,param_dir),
+        output_cache_path(p, mf, da_scheme, param_dir),
         mvs(mf),
         svs,
         dvs,
         cpa,
-        epa_min,
-        epa_max,
-        epa_0,
-        nsimu=hyper_dict['nsimu'],
-        acceptance_rate=hyper_dict['acceptance_rate'],
-        chunk_size=hyper_dict['chunk_size'],
-        D_init=hyper_dict['D_init'],
-        K=hyper_dict['K'],
+        da_mod(mf, da_scheme).epa_min(fepa_min, dvs, svs),
+        da_mod(mf, da_scheme).epa_max(fepa_max, dvs, svs),
+        da_mod(mf, da_scheme).epa_0(fepa_0, dvs, svs),
+        nsimu=hyper_dict["nsimu"],
+        acceptance_rate=hyper_dict["acceptance_rate"],
+        chunk_size=hyper_dict["chunk_size"],
+        D_init=hyper_dict["D_init"],
+        K=hyper_dict["K"],
     )
     # create a parameterization for convinience and return it
-    param_dict=make_param_dict(mvs(mf),cpa,epa_opt) 
-    X_0=da_mod(mf,da_scheme).numeric_X_0(mvs(mf),dvs,cpa,epa_opt)
-    X_0_dict={
-        str(sym): X_0[i,0] 
-        for i,sym in enumerate(
-            mvs(mf).get_StateVariableTuple()
-        )
+    param_dict = make_param_dict(mvs(mf), cpa, epa_opt)
+    X_0 = da_mod(mf, da_scheme).numeric_X_0(mvs(mf), dvs, cpa, epa_opt)
+    X_0_dict = {
+        str(sym): X_0[i, 0] for i, sym in enumerate(mvs(mf).get_StateVariableTuple())
     }
     # some models (e.g. yz_jules) need extra (not represented by symbols) parameters  to build
     # the func_dict for the parameterization
     apa = {**cpa._asdict(), **epa_opt._asdict()}
-    func_dict_param_dict = { 
-        str(k): v 
-        for k, v in apa.items() 
-        if str(k) in msh(mf).CachedParameterization.func_dict_param_keys 
+    func_dict_param_dict = {
+        str(k): v
+        for k, v in apa.items()
+        if str(k) in msh(mf).CachedParameterization.func_dict_param_keys
     }
-    cp=msh(mf).CachedParameterization(
-        param_dict,
-        dvs,
-        X_0_dict,
-        func_dict_param_dict
-    )
-    return Cs, Js, epa_opt,cp
-    
+    cp = msh(mf).CachedParameterization(param_dict, dvs, X_0_dict, func_dict_param_dict)
+    return Cs, Js, epa_opt, cp
+
+
 # should be part  of CompartmentalSystems
 def make_B_u_funcs(mvs, mpa, func_dict):
     model_params = {Symbol(k): v for k, v in mpa._asdict().items()}
@@ -520,51 +523,92 @@ def numfunc(expr_cont, mvs, delta_t_val, par_dict, func_dict):
 
 
 def make_param_dict(mvs, cpa, epa):
+    # legacy wrapper
+    # Parameter dictionary for the iterator
+    apa = {**cpa._asdict(), **epa._asdict()}
+    return make_param_dict2(mvs, apa)
+
+
+def make_param_dict2(mvs: CMTVS, apa: Dict) -> Dict:
     srm = mvs.get_SmoothReservoirModel()
     model_par_dict_keys = srm.free_symbols.difference(
         [Symbol(str(mvs.get_TimeSymbol()))] + list(mvs.get_StateVariableTuple())
     )
     # Parameter dictionary for the iterator
-    apa = {**cpa._asdict(), **epa._asdict()}
     model_par_dict = {
         Symbol(k): v for k, v in apa.items() if Symbol(k) in model_par_dict_keys
     }
     return model_par_dict
 
 
-def make_uniform_proposer(
-    c_max: Iterable,
-    c_min: Iterable,
-    D: float,
-    filter_func: Callable[[np.ndarray], bool],
-) -> Callable[[Iterable], Iterable]:
-    """Returns a function that will be used by the mcmc algorithm to propose
-    a new parameter value tuple based on a given one.
-    The two arrays c_max and c_min define the boundaries
-    of the n-dimensional rectangular domain for the parameters and must be of
-    the same shape.  After a possible parameter value has been sampled the
-    filter_func will be applied to it to either accept or discard it.  So
-    filter func must accept parameter array and return either True or False
-    :param c_max: array of maximum parameter values
-    :param c_min: array of minimum parameter values
-    :param D: a parameter to regulate the proposer step. Higher D means smaller step size
-    :param filter_func: model-specific function to filter out impossible parameter combinations
-    """
+def make_dirichlet_uniform_proposer(
+    dirichlet_tups: Dict[List[str], float],
+    EstimatedParameters: type,  # model and da_scheme specific
+    c_min,
+    c_max,
+):
+    # uses dirichlet distribution for the parameters that should add up
+    # to a constant (like the betas that have to sum up to one
+    # or start values of the veg pools that have to sum up to the first
+    # observed cVeg (same for soil)
+    dirichlet_name_lists = [names for names, _ in dirichlet_tups]  #
+    dirichlet_p_sums = [p_sums for _, p_sums in dirichlet_tups]
+    # compute the positions of the names in EstimatedParameters
+    # in order to avoid this in every call of the proposer
+    rest_keys = set(EstimatedParameters._fields).difference(
+        sum(dirichlet_name_lists, [])
+    )
 
-    g = np.random.default_rng()
-    print("D=",D)
+    def ind(names):
+        try:
+            positions = [EstimatedParameters._fields.index(name) for name in names]
+            return positions
+        except ValueError:
+            for name in names:
+                try:
+                    EstimatedParameters._fields.index(name)
+                except ValueError:
+                    raise ValueError(f"{name} is not in fields")
 
-    def GenerateParamValues(c_op):
-        paramNum = len(c_op)
-        keep_searching = True
-        while keep_searching:
-            c_new = c_op + np.random.uniform(-0.5, 0.5, paramNum) * ( 
-             (c_max - c_min) / D
-            )
-            if filter_func(c_new):
-                keep_searching = False
+    pss = list(map(ind, [*dirichlet_name_lists, rest_keys]))
+    dirichlet_pss = pss[:-1]
+    rest_ps = pss[-1]
 
-        return c_new
+    paramNum = len(rest_keys)
+
+    def GenerateParamValues(c_op, D, print_conds=False):
+        p = 1.0 / D
+
+        def dirichlet_update(positions, p_sum):
+            v = np.array([c_op[p] for p in positions])
+            # v_min=np.array(
+            #    [
+            #        c_min[p] for p in positions
+            #    ]
+            # )
+            # v_max=np.array(
+            #    [
+            #        c_max[p] for p in positions
+            #    ]
+            # )
+            x = np.random.dirichlet(alpha=(1,) * (len(v) + 1))[0:-1] * p_sum
+            return (1 - p) * v + p * x
+
+        valss = [
+            dirichlet_update(ps, p_sum)
+            for ps, p_sum in zip(dirichlet_pss, dirichlet_p_sums)
+        ]
+        dirichlet_val_pos_tups = zip(valss, dirichlet_pss)
+
+        cu_op, cu_min, cu_max = map(lambda c: c[rest_ps], [c_op, c_min, c_max])
+        cu_new = (1 - p) * cu_op + p * np.random.uniform(cu_min, cu_max, paramNum)
+
+        ###########################
+        cp_new = np.zeros_like(c_op)
+        for vals, positions in [*dirichlet_val_pos_tups, (cu_new, rest_ps)]:
+            cp_new[positions] = vals
+        ###########################
+        return cp_new
 
     return GenerateParamValues
 
@@ -572,7 +616,6 @@ def make_uniform_proposer(
 def make_uniform_proposer_2(
     c_max: Iterable,
     c_min: Iterable,
-    D: float,
     filter_func: Callable[[np.ndarray], bool],
 ) -> Callable[[Iterable], Iterable]:
     """Returns a function that will be used by the mcmc algorithm to propose
@@ -584,45 +627,30 @@ def make_uniform_proposer_2(
     filter func must accept parameter array and return either True or False
     :param c_max: array of maximum parameter values
     :param c_min: array of minimum parameter values
-    :param D: a parameter to regulate the proposer step . 
+    :param D: a parameter to regulate the proposer step .
     smaller D means smaller step size.
     :param filter_func: model-specific function to filter out impossible parameter combinations
     """
 
     g = np.random.default_rng()
 
-    def GenerateParamValues(c_op, D):
+    def GenerateParamValues(c_op, D, print_conds=False):
         paramNum = len(c_op)
         keep_searching = True
+        counter = 0
+        print_conds = False
         while keep_searching:
-            #c_new = c_op + (np.random.uniform(-0.5, 0.5, paramNum) * c_op * D) # does not stay between c_min,c_max
+            counter += 1
+            # c_new = c_op + (np.random.uniform(-0.5, 0.5, paramNum) * c_op * D) # does not stay between c_min,c_max
             c_new = c_op + (np.random.uniform(c_min, c_max, paramNum) - c_op) / D
-            if filter_func(c_new):
+            if counter % 10:
+                print(
+                    f"warning:{counter} unsuccsessful attempts to propose new parameters"
+                )
+                print_conds = True
+
+            if filter_func(c_new, print_conds=print_conds):
                 keep_searching = False
-        return c_new
-
-    return GenerateParamValues
-
-
-# deprecated 
-# condition for betas to sum up to 1 is incompatible with all of them
-# being normally distributed
-def make_multivariate_normal_proposer(
-    covv: np.ndarray,
-    filter_func: Callable[[Iterable], bool],
-) -> Callable[[Iterable], Iterable]:
-    """Returns a function that will be used by mcmc algorithm to propose
-    a new parameter(tuple) based on a given one.
-    :param covv: The covariance matrix (usually estimated from a previously run chain)
-    :param filter_func: model-specific function to filter out impossible parameter combinations
-    """
-
-    def GenerateParamValues(c_op):
-        flag = True
-        while flag:
-            c_new = c_op + np.random.multivariate_normal(np.zeros(len(c_op)), covv)
-            if filter_func(c_new):
-                flag = False
         return c_new
 
     return GenerateParamValues
@@ -650,158 +678,13 @@ def accept_costfunction(J_last: float, J_new: float, K=2):
     return accept
 
 
-# Autostep MCMC: with uniform proposer modifying its step every 100 iterations depending on acceptance rate
-def autostep_mcmc(
-    initial_parameters: Iterable,
-    filter_func: Callable,
-    param2res: Callable[[np.ndarray], np.ndarray],
-    costfunction: Callable[[np.ndarray], np.float64],
-    nsimu: int,
-    c_max: np.ndarray,
-    c_min: np.ndarray,
-    acceptance_rate=15,
-    chunk_size=100,
-    D_init=1,
-    K=1,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples)
-    with shape (len(initial_parameters),nsimu) and the array of costfunction values with shape (q,nsimu)
-
-    :param initial_parameters: The initial guess for the parameter (tuple) to be estimated
-    :param filter_func: model-specific function to filter out impossible parameter combinations
-    :param param2res: A function that given a parameter(tuple) returns
-    the model output, which has to be an array of the same shape as the observations used to
-    build the cost function.
-    :param costfunction: A function that given a model output returns a real number. It is assumed to be created for a
-    specific set of observations, which is why they do not appear as an argument.
-    :param nsimu: The length of the chain
-    :param c_max: Array of maximum values for each parameter
-    :param c_min: Array of minimum values for each parameter
-    :param acceptance_rate: Target acceptance rate in %
-    :param chunk_size: number of iterations for which current acceptance ratio is assessed to modify the proposer step
-    Set to 0 for constant step size. Default is 100.
-    :param D_init: initial D value (increase to get a smaller step size)
-    :param K: allowance coeffitient (increase K to reduce acceptance of higher cost functions)
-    """
-    np.random.seed(seed=10)
-
-    paramNum = len(initial_parameters)
-
-    upgraded = 0
-    C_op = initial_parameters
-    if not filter_func(initial_parameters):
-        raise ValueError("the initial paramters must pass the filter")
-    tb = time()
-    first_out = param2res(C_op)
-    J_last = costfunction(first_out)
-    J_min = J_last
-    J_min_simu = 0
-    print("First_iteration done after " + str(round(time() - tb, 2)) + "s")
-    print("Status update every 10 iterations:")
-    # J_last = 400 # original code
-
-    # initialize the result arrays to the maximum length
-    # Depending on many of the parameters will be accepted only
-    # a part of them will be filled with real values
-    C_upgraded = np.zeros((paramNum, nsimu))
-    J_upgraded = np.zeros((2, nsimu))
-    D = D_init
-    proposer = make_uniform_proposer(
-        c_max=c_max,
-        c_min=c_min,
-        D=D, #* paramNum, 
-        filter_func=filter_func
-    )
-    st = time()
-    accepted_current = 0
-    if chunk_size == 0:
-        chunk_size = (
-            nsimu  # if chunk_size is set to 0 - proceed without updating step size.
-        )
-    for simu in tqdm(range(nsimu)):
-        print("first",simu)
-        if (simu > 0) and (
-            simu % chunk_size == 0
-        ):  # every chunk size (e.g. 100 iterations) update the proposer step
-            if accepted_current == 0:
-                accepted_current = 1  # to avoid division by 0
-            D = D * np.sqrt(
-                acceptance_rate / (accepted_current / chunk_size * 100)
-            )  # compare acceptance and update step
-            if D < (
-                1 / paramNum
-            ):  # to avoid being stuck in too large steps that will always fail the filter.
-                D = 1 / paramNum
-            accepted_current = 0
-            proposer = make_uniform_proposer(
-                c_max=c_max, c_min=c_min, D=D * paramNum, filter_func=filter_func
-            )
-        if (
-            simu % (chunk_size * 20) == 0
-        ):  # every 20 chunks - return to the initial step size (to avoid local minimum)
-            D = D_init
-
-        c_new = proposer(C_op)
-        out_simu = param2res(c_new)
-        J_new = costfunction(out_simu)
-        print("second",simu)
-
-        if accept_costfunction(J_last=J_last, J_new=J_new, K=K):
-            C_op = c_new
-            J_last = J_new
-            if J_last < J_min:
-                J_min = J_last
-                J_min_simu = simu
-            C_upgraded[:, upgraded] = C_op
-            J_upgraded[1, upgraded] = J_last
-            J_upgraded[0, upgraded] = simu
-            upgraded = upgraded + 1
-            accepted_current = accepted_current + 1
-
-        # print some metadata
-        # (This could be added to the output file later)
-        #if simu % 10 == 0 or simu == (nsimu - 1):
-        #    print(
-        #        """ 
-        #       #(upgraded): {n}  | D value: {d} | overall acceptance rate: {r}%  
-        #       progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-        #       time elapsed: {minutes:02d}:{sec:02d}
-        #       overall min cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
-        #       """.format(
-        #            n=upgraded,
-        #            r=int(upgraded / (simu + 1) * 100),
-        #            simu=simu,
-        #            nsimu=nsimu,
-        #            pbs="|"
-        #            + int(50 * simu / (nsimu - 1)) * "#"
-        #            + int((1 - simu / (nsimu - 1)) * 50) * " "
-        #            + "|",
-        #            p=int(simu / (nsimu - 1) * 100),
-        #            minutes=int((time() - st) / 60),
-        #            sec=int((time() - st) % 60),
-        #            cost=round(J_min, 2),
-        #            cost2=round(J_last, 2),
-        #            ac=accepted_current / chunk_size * 100,
-        #            # rr=int(accepted_current / chunk_size * 100),
-        #            ch=chunk_size,
-        #            d=round(D, 3),
-        #            s=J_min_simu,
-        #        ),
-        #        end="\033[5A",  # print always on the same spot of the screen...
-        #    )
-
-    # remove the part of the arrays that is still filled with zeros
-    useful_slice = slice(0, upgraded)
-    return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
-
-
 # Autostep MCMC: modifying its step every 100 iterations
 # depending on acceptance rate
-#with uniform proposer 
+# with uniform proposer
 def autostep_mcmc_2(
     initial_parameters: Iterable,
-    filter_func: Callable,
+    proposer: Callable,
+    filter_func: Callable[[np.ndarray, bool], bool],
     param2res: Callable[[np.ndarray], np.ndarray],
     costfunction: Callable[[np.ndarray], np.float64],
     nsimu: int,
@@ -834,16 +717,18 @@ def autostep_mcmc_2(
     """
     # if D <1 then the proposer would produce values
     # outside the parameter range
-    assert(D_init>=1)
+    assert D_init >= 1
 
     np.random.seed(seed=10)
 
-
-        # print(model_par_dict)
+    # print(model_par_dict)
     C_op = initial_parameters
 
     # check if the initial parameters are valid (to avoid an infinite loop before we even start changing them)
-    assert(filter_func(C_op,print_conds=True))
+    assert filter_func(
+        C_op,
+        print_conds=True,
+    ), "initial conditions don't match the filter"
 
     tb = time()
     first_out = param2res(C_op)
@@ -861,22 +746,18 @@ def autostep_mcmc_2(
     C_upgraded = np.zeros((paramNum, nsimu))
     J_upgraded = np.zeros((2, nsimu))
     D = D_init
-    proposer = make_uniform_proposer_2(
-        c_max=c_max, c_min=c_min, D=D, filter_func=filter_func
-    )
     st = time()
     if chunk_size == 0:
         chunk_size = (
             nsimu  # if chunk_size is set to 0 - proceed without updating step size.
         )
-    
 
     upgraded = 0
     accepted_in_last_chunk = 0
     for simu in tqdm(range(nsimu)):
         if simu % 10 == 0 or simu == (nsimu - 1):
             print(
-               f""" 
+                f""" 
                #(upgraded): {upgraded}   
                D value: {D} 
                target acceptance rate: {acceptance_rate}%
@@ -885,21 +766,26 @@ def autostep_mcmc_2(
                progress: {simu:05d}/{nsimu:05d} {int(simu / (nsimu - 1) * 100):02d}%
                time elapsed: {int((time() - st) / 60):02d}:{int((time() - st) % 60):02d}
                overall min cost: {round(J_min, 2)} achieved at {J_min_simu} iteration | last accepted cost: {round(J_last, 2)} 
-               """)
+               """
+            )
 
         if (simu > 0) and (
             simu % chunk_size == 0
         ):  # every chunk size (e.g. 100 iterations) update the proposer step
-            chunk_acceptance_rate=accepted_in_last_chunk/ chunk_size
+            chunk_acceptance_rate = accepted_in_last_chunk / chunk_size
             D = D * 1.2 if chunk_acceptance_rate < acceptance_rate else max(1, D * 0.8)
             print(f"D={D}")
-            accepted_in_last_chunk= 0
+            accepted_in_last_chunk = 0
         if (
             simu % (chunk_size * 20) == 0
         ):  # every 20 chunks - return to the initial step size (to avoid local minimum)
             D = D_init
 
-        c_new = proposer(C_op, D)
+        keep_searching = True
+        while keep_searching:
+            c_new = proposer(C_op, D)
+            if filter_func(c_new, print_conds=True):
+                keep_searching = False
         out_simu = param2res(c_new)
         J_new = costfunction(out_simu)
 
@@ -922,7 +808,7 @@ def autostep_mcmc_2(
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
-#def adaptive_mcmc(
+# def adaptive_mcmc(
 #    # Adaptive MCMC: with multivariate normal proposer based on adaptive covariance matrix
 #    initial_parameters: Iterable,
 #    covv: np.ndarray,
@@ -931,7 +817,7 @@ def autostep_mcmc_2(
 #    costfunction: Callable[[np.ndarray], np.float64],
 #    nsimu: int,
 #    sd_controlling_factor=10,
-#) -> Tuple[np.ndarray, np.ndarray]:
+# ) -> Tuple[np.ndarray, np.ndarray]:
 #    """
 #    performs the Markov chain Monte Carlo simulation an returns a tuple of the array of sampled parameter(tuples) with
 #    shape (len(initial_parameters),nsimu) and the array of cost function values with shape (q,nsimu)
@@ -1000,13 +886,13 @@ def autostep_mcmc_2(
 #
 #        if simu % 10 == 0 or simu == (nsimu - 1):
 #            print(
-#                """ 
+#                """
 ##(upgraded): {n}
-#overall acceptance ratio till now: {r}% 
-#progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
-#time elapsed: {minutes:02d}:{sec:02d}
-#overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2} 
-#""".format(
+# overall acceptance ratio till now: {r}%
+# progress: {simu:05d}/{nsimu:05d} {pbs} {p:02d}%
+# time elapsed: {minutes:02d}:{sec:02d}
+# overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {cost2}
+# """.format(
 #                    n=upgraded,
 #                    r=int(upgraded / (simu + 1) * 100),
 #                    simu=simu,
@@ -1124,9 +1010,9 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
     return C_upgraded[:, useful_slice], J_upgraded[:, useful_slice]
 
 
-#def make_feng_cost_func(
+# def make_feng_cost_func(
 #    obs: np.ndarray,
-#) -> Callable[[np.ndarray], np.float64]:
+# ) -> Callable[[np.ndarray], np.float64]:
 #    # Note:
 #    # in our code the dimension 0 is the time
 #    # and dimension 1 the pool index
@@ -1147,9 +1033,9 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
 #    return costfunction
 
 
-#def make_jon_cost_func(
+# def make_jon_cost_func(
 #    obs: np.ndarray,
-#) -> Callable[[np.ndarray], np.float64]:
+# ) -> Callable[[np.ndarray], np.float64]:
 #    # Note:
 #    # in our code the dimension 0 is the time
 #    # and dimension 1 the pool index
@@ -1164,12 +1050,12 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
 #    return costfunction
 #
 #
-#def respiration_from_compartmental_matrix(B, X):
+# def respiration_from_compartmental_matrix(B, X):
 #    """This function computes the combined respiration from all pools"""
 #    return -np.sum(B @ X)
 #
 #
-#def plot_solutions(fig, times, var_names, tup, names=None):
+# def plot_solutions(fig, times, var_names, tup, names=None):
 #    if names is None:
 #        names = tuple(str(i) for i in range(len(tup)))
 #
@@ -1209,7 +1095,7 @@ overall minimum cost: {cost} achieved at {s} iteration | last accepted cost: {co
 #                axs[j].legend()
 #
 #
-#def plot_observations_vs_simulations(fig, svs_cut, obs_simu):
+# def plot_observations_vs_simulations(fig, svs_cut, obs_simu):
 #    # svn and obs_simu are both
 #    n_plots = len(svs_cut)
 #    fig.set_figheight(n_plots * fig.get_figwidth())
@@ -1350,6 +1236,7 @@ def get_weight_mat(lats: np.ma.core.MaskedArray, lons: np.ma.core.MaskedArray):
         ]
     )
 
+
 # note mm 4-13 2023:
 # Only use the function if you can not
 # use global_mean_var because it requires np.array arguments
@@ -1383,6 +1270,7 @@ def global_mean(
     # do not correspond to an unmasked grid cell
     return ((weight_mat * arr).sum(axis=(1, 2)) / wms).data
 
+
 def global_mean_var_with_resampled_mask(
     template: np.ndarray,
     ctr: CoordTransformers,
@@ -1390,28 +1278,23 @@ def global_mean_var_with_resampled_mask(
     lats: np.ma.core.MaskedArray,
     lons: np.ma.core.MaskedArray,
     var: nc._netCDF4.Variable,
-    time_slice: slice = slice(None,None,None)# equals [:]
+    time_slice: slice = slice(None, None, None),  # equals [:]
 ):
     gcm = global_coord_mask_resampled(
         template=template,
-        ctr=ctr, 
+        ctr=ctr,
         itr=itr,
     )
     mask = gcm.index_mask.__array__()
-    return global_mean_var(
-        lats,
-        lons,
-        mask,
-        var,
-        time_slice
-    ) 
+    return global_mean_var(lats, lons, mask, var, time_slice)
+
 
 def global_mean_var(
     lats: np.ma.core.MaskedArray,
     lons: np.ma.core.MaskedArray,
     mask: np.array,
     var: nc._netCDF4.Variable,
-    time_slice: slice =slice(None,None,None)# equals [:]
+    time_slice: slice = slice(None, None, None),  # equals [:]
 ) -> np.array:
     """As the signature shows this function expects a netCDF4.Variable
     This is basically metadata which allows us to compute the maean even
@@ -1428,22 +1311,22 @@ def global_mean_var(
     # to compute the sum of weights we add only those weights that
     # do not correspond to an unmasked grid cell
     wms = weight_mat.sum()
-    n_t = var.shape[0] # we assume that time is the first dimension of every var
+    n_t = var.shape[0]  # we assume that time is the first dimension of every var
     ra = range(
         0 if time_slice.start is None else max(0, time_slice.start),
         n_t if time_slice.stop is None else min(n_t, time_slice.stop),
-        1 if time_slice.step is None else time_slice.step
+        1 if time_slice.step is None else time_slice.step,
     )
-    
+
     # len(ra) takes care of the corner case:
     # ra.max-ra.min not a multiple of ra.step
-    res = np.zeros(len(ra)) 
+    res = np.zeros(len(ra))
     print(ra)
-    res_ind=0
+    res_ind = 0
     for it in tqdm(ra):
         el = (weight_mat * var[it, :, :]).sum() / wms
         res[res_ind] = el
-        res_ind+=1
+        res_ind += 1
     return res
 
 
@@ -1523,7 +1406,6 @@ def download_TRENDY_output(
     variables: List[str],
     experiments=["S2"],  # We are using s2 data, can add more
 ):
-
     def unzip_shutil(source_filepath, dest_filepath, model):
         if model == "YIBs":
             f = tarfile.open(source_filepath, "r:gz")
@@ -1632,12 +1514,7 @@ def download_TRENDY_output(
     print("finished!")
 
 
-
-
-
-
-
-#def make_feng_cost_func_2(svs):  #: Observables
+# def make_feng_cost_func_2(svs):  #: Observables
 #    # now we compute a scaling factor per observable stream
 #    # fixme mm 10-28-2021
 #    # The denominators in this case are actually the TEMPORAL variances of the data streams
@@ -1660,9 +1537,9 @@ def download_TRENDY_output(
 #    return feng_cost_func_2
 
 
-#def make_param_filter_func(
+# def make_param_filter_func(
 #    c_max, c_min, betas: List[str] = []
-#) -> Callable[[np.ndarray], bool]:
+# ) -> Callable[[np.ndarray], bool]:
 #    positions = [c_max.__class__._fields.index(beta) for beta in betas]
 #
 #    def isQualified(c):
@@ -1675,7 +1552,7 @@ def download_TRENDY_output(
 #    return isQualified
 
 
-#def make_StartVectorTrace(mvs):
+# def make_StartVectorTrace(mvs):
 #    # deprecated
 #    svt = mvs.get_StateVariableTuple()
 #    return namedtuple(
@@ -1687,7 +1564,7 @@ def download_TRENDY_output(
 #    )
 #
 #
-#def make_InitialStartVectorTrace(X_0, mvs, par_dict, func_dict):
+# def make_InitialStartVectorTrace(X_0, mvs, par_dict, func_dict):
 #    # test the new iterator
 #
 #    # we make the X_p and X_c  parts compatible with the ones computed by the iterator
@@ -1710,6 +1587,7 @@ def download_TRENDY_output(
 #    V_init = StartVectorTrace(*V_arr)
 #    return V_init
 
+
 def minimal_iterator(
     X_0,
     func_dict,
@@ -1722,29 +1600,30 @@ def minimal_iterator(
     # traced_expressions: Dict[str, Expr] = dict(),
     # extra_functions: Dict[str, Callable] = dict(),
 ):
-    #apa = {**cpa._asdict(), **epa._asdict()}
+    # apa = {**cpa._asdict(), **epa._asdict()}
     par_dict = make_param_dict(mvs, cpa, epa)
     return minimal_iterator_internal(
-        mvs,  
+        mvs,
         X_0,
-        par_dict,  
+        par_dict,
         func_dict=func_dict,
         t_0=0,
         delta_t_val=delta_t_val,
     )
 
-# fixme mm: 3-10-2023 
+
+# fixme mm: 3-10-2023
 # could have even more succint arguments like mvs
 def minimal_iterator_internal(
-    mvs,  
+    mvs,
     X_0,
     par_dict,  #: EstimatedParameters
     func_dict,
     t_0=0,
-    delta_t_val = 1,  # defaults to 1day timestep
+    delta_t_val=1,  # defaults to 1day timestep
     # traced_expressions: Dict[str, Expr] = dict(),
     # extra_functions: Dict[str, Callable] = dict(),
-):    
+):
     t = mvs.get_TimeSymbol()
     state_vector = mvs.get_StateVariableTuple()
     delta_t = Symbol("delta_t")
@@ -1797,19 +1676,21 @@ def minimal_iterator_internal(
     )
     return bit
 
+
 # fixme mm 12-2 2022
 # should be better called tracebility Iterator result
 def traceability_iterator(
-        X_0,
-        func_dict,
-        mvs,  #: CMTVS,
-        dvs,  #: Drivers,
-        cpa,  #: Constants,
-        epa,  #: EstimatedParameters
-        t_0,
-        delta_t_val,
-    ):
-    print("""
+    X_0,
+    func_dict,
+    mvs,  #: CMTVS,
+    dvs,  #: Drivers,
+    cpa,  #: Constants,
+    epa,  #: EstimatedParameters
+    t_0,
+    delta_t_val,
+):
+    print(
+        """
     #######################################################
     Deprecation Warning:
     rather use traceability_iterator_internal directly
@@ -1818,7 +1699,7 @@ def traceability_iterator(
     )
     par_dict = make_param_dict(mvs, cpa, epa)
     mit = traceability_iterator_internal(
-        mvs, 
+        mvs,
         X_0,
         par_dict,
         func_dict,
@@ -1827,8 +1708,9 @@ def traceability_iterator(
     )
     return ArrayDictResult(mit)
 
+
 def traceability_iterator_internal(
-    mvs  : CMTVS,
+    mvs: CMTVS,
     X_0,
     par_dict,
     func_dict,
@@ -1843,7 +1725,6 @@ def traceability_iterator_internal(
         t_0=t_0,
         delta_t_val=delta_t_val,
     )
-
 
     (
         veg_x_func,
@@ -1927,12 +1808,7 @@ def all_timelines_starting_at_steady_state(
     )
     bit = ArrayDictResult(
         traceability_iterator_internal(
-            mvs,
-            X_fix,
-            par_dict,
-            func_dict,
-            delta_t_val=delta_t_val, 
-            t_0=t_min
+            mvs, X_fix, par_dict, func_dict, delta_t_val=delta_t_val, t_0=t_min
         )
     )
     vals = bit[index_slice]
@@ -2083,8 +1959,9 @@ def all_timelines_starting_at_steady_state(
     )
     return vals
 
+
 # deprecated
-#def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
+# def write_global_mean_cache(gm_path, gm: np.array, var_name: str):
 #    # fixme deprecated
 #    # just a safety wrapper until every reference to this function
 #    # is replaced
@@ -2106,53 +1983,44 @@ def write_timeline_to_nc_file(gm_path, gm: np.array, var_name: str):
     var_gm[:] = gm_ma
     ds_gm.close()
 
+
 # deprecated
 # just for savety
-#def get_cached_global_mean(gm_path, vn):
+# def get_cached_global_mean(gm_path, vn):
 #    return get_nc_array(gm_path, vn)
+
 
 def get_nc_array(gm_path, vn):
     return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
+
 def read_var_dict(
-        targetPath: Path,
-        varnames: List[str],
-        varname2filename: Callable,
-    ):
+    targetPath: Path,
+    varnames: List[str],
+    varname2filename: Callable,
+):
     def get_cached_global_mean(vn):
-        res = get_nc_array(
-            targetPath.joinpath(varname2filename(vn)),
-            vn
-        )
-        print(""" Found cached global mean files. If you want to recompute the global means
+        res = get_nc_array(targetPath.joinpath(varname2filename(vn)), vn)
+        print(
+            """ Found cached global mean files. If you want to recompute the global means
             remove the following files: """
         )
         print(targetPath.joinpath(varname2filename(vn)))
         return res
 
-    return {
-        vn: get_cached_global_mean(vn) 
-        for vn in varnames
-    }    
+    return {vn: get_cached_global_mean(vn) for vn in varnames}
 
-    
+
 def write_var_dict(
-        arr_dict: Dict,
-        targetPath: Path,
-        varname2filename: Callable,
-    ):
+    arr_dict: Dict,
+    targetPath: Path,
+    varname2filename: Callable,
+):
     if not targetPath.exists():
         targetPath.mkdir(parents=True)
     for vn, val in arr_dict.items():
-        write_timeline_to_nc_file(
-            targetPath.joinpath(
-                varname2filename(vn)
-            ),
-            val,
-            vn 
-        )
-        
-        
+        write_timeline_to_nc_file(targetPath.joinpath(varname2filename(vn)), val, vn)
+
 
 # fixme: possibly obsolete - see combined_masks_2 using nearest neighbor resampling
 def combine_masks(coord_masks: List["CoordMask"]):
@@ -2396,8 +2264,8 @@ def project_2(source: CoordMask, target: CoordMask):
     # and interpolate the source mask on them
     lats = np.array(list(map(s_tr.i2lat, range(s_n_lat))))
     lons = np.array(list(map(s_tr.i2lon, range(s_n_lon))))
-    kind="cubic"
-    #f_old = interpolate.interp2d(x=lons, y=lats, z=s_mask,kind=kind) # deprecated by scipy
+    kind = "cubic"
+    # f_old = interpolate.interp2d(x=lons, y=lats, z=s_mask,kind=kind) # deprecated by scipy
     # now we apply this interpolating function to the target grid
     # points
     target_lats = np.array(list(map(t_tr.i2lat, range(t_n_lat))))
@@ -2405,18 +2273,19 @@ def project_2(source: CoordMask, target: CoordMask):
     # order lats and lons since f returns an array that assumes this anyway
     otlats, p_lat, p_lat_inv = target.ordered_lats()
     otlons, p_lon, p_lon_inv = target.ordered_lons()
-    #val_old = f_old(otlons, otlats)
-    #float_grid_old = p_lat_inv @ f_old(otlons, otlats) @ p_lon_inv
-    from scipy.interpolate import  RegularGridInterpolator as RGI
-    f = RGI ((lons, lats), s_mask.T, method=kind, bounds_error=False)
-    ootlons, ootlats= np.meshgrid(otlons, otlats, indexing='ij', sparse=True)
+    # val_old = f_old(otlons, otlats)
+    # float_grid_old = p_lat_inv @ f_old(otlons, otlats) @ p_lon_inv
+    from scipy.interpolate import RegularGridInterpolator as RGI
+
+    f = RGI((lons, lats), s_mask.T, method=kind, bounds_error=False)
+    ootlons, ootlats = np.meshgrid(otlons, otlats, indexing="ij", sparse=True)
     val_new = f((ootlons, ootlats)).T
-    float_grid = p_lat_inv @ val_new  @ p_lon_inv
-#    try:
-#        assert(np.allclose(float_grid_old, float_grid))
-#    except AssertionError:
-#        print(float_grid_old, float_grid)
-#
+    float_grid = p_lat_inv @ val_new @ p_lon_inv
+    #    try:
+    #        assert(np.allclose(float_grid_old, float_grid))
+    #    except AssertionError:
+    #        print(float_grid_old, float_grid)
+    #
     # print(float_grid.mean())
     projected_mask = float_grid > 0.5
     return CoordMask(index_mask=np.logical_or(projected_mask, t_mask), tr=t_tr)
@@ -2430,7 +2299,6 @@ def resample_grid(
     radius_of_influence=500000,
     neighbours=10,
 ):
-
     lon2d, lat2d = np.meshgrid(source_coord_mask.lons, source_coord_mask.lats)
     lon2d_t, lat2d_t = np.meshgrid(target_coord_mask.lons, target_coord_mask.lats)
 
@@ -2480,14 +2348,11 @@ def resample_grid(
 
     return CoordMask(index_mask=target_var, tr=target_coord_mask.tr)
 
-def global_coord_mask_resampled(
-        template: np.ndarray,
-        ctr,
-        itr
-    ):
+
+def global_coord_mask_resampled(template: np.ndarray, ctr, itr):
     # common wrapper to be used by all the models
     # to guarantee the same projection procedure
-    gm= common_global_mask_expanded
+    gm = common_global_mask_expanded
     gcm = resample_grid(
         source_coord_mask=gm,
         target_coord_mask=CoordMask(
@@ -2617,7 +2482,6 @@ def model_table(
     mf = model_folders[0]
     import_module("{}.source".format(mf))
 
-
     tups = [(model_names[mf], mvs(mf)) for mf in model_folders]
 
     return dh.table(
@@ -2703,15 +2567,17 @@ def transform_maker(lat_0, lon_0, step_lat, step_lon):
         # lon2i=lon2i,
     )
 
-def make_cached_func(create_and_write: Callable,read: Callable):
+
+def make_cached_func(create_and_write: Callable, read: Callable):
     """
     basic cache functionality:
-    param: create_and_write: The funciton that creates the  object to be cached. 
-    param: The first argument must be a path  
+    param: create_and_write: The funciton that creates the  object to be cached.
+    param: The first argument must be a path
     read: The function that extracts the cached object. It has only one argument <path>.
     """
-    def read_or_create(*args,**kwargs):
-        path=args[0]
+
+    def read_or_create(*args, **kwargs):
+        path = args[0]
         if path.exists():
             print(
                 "Found cache path {}. If you want to recompute the result remove it.".format(
@@ -2723,8 +2589,8 @@ def make_cached_func(create_and_write: Callable,read: Callable):
             pp = path.parent
             if not (pp.exists()):
                 pp.mkdir(parents=True)
-            return create_and_write(*args,**kwargs)
-    
+            return create_and_write(*args, **kwargs)
+
     return read_or_create
 
 
@@ -2733,49 +2599,38 @@ def make_cached_func(create_and_write: Callable,read: Callable):
 # -
 
 
-
-
 def package_name():
     return __package__
 
+
 def t_min_max_overlap_gm(
-    model_folders: List[str],  
-    delta_t_val: float ,  # iterator time step
-    start_shift=0,  # time b etween the start.date and the time of the iterator's first step in 
-):                           
-
-    tl = [                   
+    model_folders: List[str],
+    delta_t_val: float,  # iterator time step
+    start_shift=0,  # time b etween the start.date and the time of the iterator's first step in
+):
+    tl = [
         h.date.timestep_dates_in_days_since_AD(
-            msh(mf).start_dt(),              
-            msh(mf).n_months(),
-            delta_t_val,     
-            start_shift      
-        )                    
+            msh(mf).start_dt(), msh(mf).n_months(), delta_t_val, start_shift
+        )
         for mf in model_folders
-    ]                        
-    t_min = max([t.min() for  t in tl])
-    t_max = min([t.max() for  t in tl])
-    #from IPython import embed;embed()
-    return (t_min, t_max)    
-
-
-
+    ]
+    t_min = max([t.min() for t in tl])
+    t_max = min([t.max() for t in tl])
+    # from IPython import embed;embed()
+    return (t_min, t_max)
 
 
 def min_max_index_2(
-        mf: str,  # 
-        delta_t_val: float,  # iterator time step
-        t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
-        t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
-        start_shift=0,
+    mf: str,  #
+    delta_t_val: float,  # iterator time step
+    t_min,  # output of t_min_tmax_overlap or t_min_tmax_full
+    t_max,  # output of t_min_tmax_overlap or t_min_tmax_full
+    start_shift=0,
 ):
     ts = h.date.timestep_dates_in_days_since_AD(
-        msh(mf).start_dt(),              
-        msh(mf).n_months(),
-        delta_t_val,     
-        start_shift      
-    )                    
-    #ts = times_in_days_aD(test_args, delta_t_val, start_shift)
+        msh(mf).start_dt(), msh(mf).n_months(), delta_t_val, start_shift
+    )
+    # ts = times_in_days_aD(test_args, delta_t_val, start_shift)
 
     def count(acc, i):
         min_i, max_i = acc
@@ -2865,7 +2720,7 @@ def product_attribution(v, z1, z2):
     return sum_attribution(y, x1, x2)
 
 
-# fixme mm 4-7-2023 
+# fixme mm 4-7-2023
 # deprecated
 def write_data_streams_cache(gm_path, gm):
     # var=ds.variables[var_name]
@@ -2898,7 +2753,8 @@ def write_data_streams_cache(gm_path, gm):
     var_gm5[:] = gm_ma5
     ds_gm.close()
 
-# fixme mm 4-7-2023: 
+
+# fixme mm 4-7-2023:
 # see deprecation warning
 def get_global_mean_vars_all(
     model_folder,  # string e.g. "ab_classic"
@@ -2906,7 +2762,8 @@ def get_global_mean_vars_all(
     lat_var,
     lon_var,
 ):
-    print("""Deprecation Warning:
+    print(
+        """Deprecation Warning:
         This function does presently NOT separate concerns (model specific vs.
         'general' as in general_helpers.py).  Much of its code does not belong
         here. If a new model was added to the
@@ -2923,7 +2780,6 @@ def get_global_mean_vars_all(
         computed by the model specific functions ... 
         """
     )
-
 
     # def nc_file_name(nc_var_name, experiment_name):
     # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
@@ -3006,7 +2862,6 @@ def get_global_mean_vars_all(
             var=gm.index_mask,
             method="nearest",
         )
-
 
         def compute_and_cache_global_mean(vn):
             path = dataPath.joinpath(
@@ -3122,23 +2977,20 @@ def nc_classes_2_masks(FilePath, var_name, classes, global_mask):
 data_streams = namedtuple("data_streams", ["cVeg", "cSoil", "gpp", "npp", "ra", "rh"])
 
 
-
-      
 def cached_var_dict(
-        dataPath: Path,
-        targetPath: Path,
-        nc_global_mean_file_name: Callable,
-        compute_arr_var_dict: Callable,
-        names,
-        flash_cache=False
-    ):
-
+    dataPath: Path,
+    targetPath: Path,
+    nc_global_mean_file_name: Callable,
+    compute_arr_var_dict: Callable,
+    names,
+    flash_cache=False,
+):
     if targetPath is None:
-        targetPath = dataPath 
+        targetPath = dataPath
 
     if flash_cache:
-        for n in names: 
-            p=targetPath.joinpath(nc_global_mean_file_name(n))
+        for n in names:
+            p = targetPath.joinpath(nc_global_mean_file_name(n))
             try:
                 os.remove(p)
                 print(f"removing {p}")
@@ -3151,194 +3003,171 @@ def cached_var_dict(
             targetPath,
             names,
             nc_global_mean_file_name,
-        )    
-    except:   
+        )
+    except:
         arr_dict = compute_arr_var_dict(
             dataPath,
         )
-        write_var_dict(
-            arr_dict,
-            targetPath,
-            nc_global_mean_file_name
-        )
+        write_var_dict(arr_dict, targetPath, nc_global_mean_file_name)
         return arr_dict
-    
+
 
 def da_res_1_maker(
-        #msh,#: module, 
-        make_param_filter_func,
-        make_param2res_sym,
-        make_weighted_cost_func,
-        numeric_X_0,
-        EstimatedParameters: type
-    ):    
+    # msh,#: module,
+    make_proposer,
+    make_param_filter_func,
+    make_param2res_sym,
+    make_weighted_cost_func,
+    numeric_X_0,
+    EstimatedParameters: type,
+):
     def compute_func(
         mvs: CMTVS,
         svs,
         dvs,
-        cpa,
+        fcpa,
         epa_min,
         epa_max,
         epa_0,
         nsimu,
-        acceptance_rate,   
-        chunk_size,  
-        D_init,   
-        K
-    )->Tuple[Dict,Dict,np.array]:
-        """one of possibly many functions   to reproduce the optimal parameters
-        and startvalues to to run the model forword It replaces the model
+        acceptance_rate,
+        chunk_size,
+        D_init,
+        K,
+    ) -> Tuple[Dict, Dict, np.array]:
+        """one of possibly many functions to reproduce the optimal parameters
+        and startvalues to run the model forword. It replaces the model
         specific data assimilation procedures (different models used a
         different MCMC implementations and none worked for all combinations )
         this one does.
-        """ 
-        print(f"D_init={D_init}")    
-        c_max=np.array(epa_max)
-        c_min=np.array(epa_min)
-        c_0=np.array(epa_0)
-        epa_0=EstimatedParameters(*c_0)
+        """
+        print(f"D_init={D_init}")
+        c_max = np.array(epa_max)
+        c_min = np.array(epa_min)
+        c_0 = np.array(epa_0)
+        epa_0 = EstimatedParameters(*c_0)
         C_autostep, J_autostep = autostep_mcmc_2(
-            initial_parameters=epa_0,
-            filter_func=make_param_filter_func(epa_max,epa_min,cpa),
-            param2res=make_param2res_sym(mvs,cpa,dvs),
+            initial_parameters=np.array(epa_0),
+            proposer=make_proposer(
+                c_max=c_max, c_min=c_min, fcpa=fcpa, dvs=dvs, svs=svs
+            ),
+            filter_func=make_param_filter_func(
+                c_max=c_max, c_min=c_min, fcpa=fcpa, dvs=dvs, svs=svs
+            ),
+            param2res=make_param2res_sym(mvs, fcpa, dvs, svs),
             costfunction=make_weighted_cost_func(svs),
             nsimu=nsimu,
             c_max=c_max,
             c_min=c_min,
             acceptance_rate=acceptance_rate,
-            chunk_size=chunk_size,  
-            D_init=D_init,  
-            K=K
+            chunk_size=chunk_size,
+            D_init=D_init,
+            K=K,
         )
         # optimized parameter set (lowest cost function)
-        J_vals=J_autostep[1]
-        par_opt=C_autostep[:,np.argmin(J_vals)]
-        epa_opt=EstimatedParameters(*par_opt)
+        J_vals = J_autostep[1]
+        par_opt = C_autostep[:, np.argmin(J_vals)]
+        epa_opt = EstimatedParameters(*par_opt)
         print("Data assimilation finished!")
-        
-        return (
-            C_autostep,
-            J_autostep,
-            epa_opt
-        )    
 
-    return(compute_func)
+        return (C_autostep, J_autostep, epa_opt)
+
+    return compute_func
 
 
 def cached_da_res_1_maker(
-        make_param_filter_func,
-        make_param2res_sym,
-        make_weighted_cost_func,
-        numeric_X_0,
-        EstimatedParameters: type
-    ):    
-    compute_func=da_res_1_maker(
+    make_proposer,
+    make_param_filter_func,
+    make_param2res_sym,
+    make_weighted_cost_func,
+    numeric_X_0,
+    EstimatedParameters: type,
+):
+    compute_func = da_res_1_maker(
+        make_proposer,
         make_param_filter_func,
         make_param2res_sym,
         make_weighted_cost_func,
         numeric_X_0,
         EstimatedParameters,
-    )    
-
-    cached_func=mcdaf(
-        compute_func,
-        #CachedParameterization,
-        EstimatedParameters
     )
+
+    cached_func = mcdaf(compute_func, EstimatedParameters)
     return cached_func
 
-def mcdaf( 
-        func: Callable,
-        EstimatedParameters: type,
-    ) ->Callable:         
+
+def mcdaf(
+    func: Callable,
+    EstimatedParameters: type,
+) -> Callable:
     # create a function with two more parameters: output_cache_path
     # than the original function and pipe through all the other parameters.
     # sig=inspect.signature(func)
 
     def cached_func(
-            output_cache_path, # add an argument 
-            *args,
-            **kwargs
-        )->Tuple[Dict,Dict,np.array]:
+        output_cache_path, *args, **kwargs  # add an argument
+    ) -> Tuple[Dict, Dict, np.array]:
         # check for cached files
-        sep=","
-        Cs_fn='da_aa.csv'
-        Js_fn='da_j_aa.csv'
-        epa_opt_fn="epa_opt.json"
+        sep = ","
+        Cs_fn = "da_aa.csv"
+        Js_fn = "da_j_aa.csv"
+        epa_opt_fn = "epa_opt.json"
+
         def read_arr(p):
-            return pd.read_csv(
-                p,
-                sep=sep,
-                dtype=float,
-            ).to_numpy().transpose()
+            return (
+                pd.read_csv(
+                    p,
+                    sep=sep,
+                    dtype=float,
+                )
+                .to_numpy()
+                .transpose()
+            )
 
         try:
-            Cs = read_arr(
-                output_cache_path.joinpath(Cs_fn)
+            Cs = read_arr(output_cache_path.joinpath(Cs_fn))
+            Js = read_arr(output_cache_path.joinpath(Js_fn))
+            epa_opt = h.load_named_tuple_from_json_path(
+                EstimatedParameters, output_cache_path.joinpath(epa_opt_fn)
             )
-            Js = read_arr(
-                output_cache_path.joinpath(Js_fn)
-            )
-            epa_opt=h.load_named_tuple_from_json_path(
-                EstimatedParameters,
-                output_cache_path.joinpath(epa_opt_fn)
-            )
-            fs="\n".join(
-                [Cs_fn,Js_fn,epa_opt_fn] 
-            )
-            print(f"""
+            fs = "\n".join([Cs_fn, Js_fn, epa_opt_fn])
+            print(
+                f"""
             Found cache files in {output_cache_path}:
             {fs}
             remove at least one of them to recompute
-            """) 
-
-        #except Exception as e:
-        except FileNotFoundError:
-            Cs,Js,epa_opt = func(
-                *args,
-                **kwargs
+            """
             )
+
+        # except Exception as e:
+        except FileNotFoundError:
+            Cs, Js, epa_opt = func(*args, **kwargs)
             if not output_cache_path.exists():
                 output_cache_path.mkdir(parents=True)
             h.dump_named_tuple_to_json_path(
                 epa_opt,
                 output_cache_path.joinpath(epa_opt_fn),
             )
-            pd.DataFrame(
-                Cs.transpose(),
-                columns=EstimatedParameters._fields
-            ).to_csv(
-                output_cache_path.joinpath(Cs_fn), 
-                sep=sep,
-                index=None
+            pd.DataFrame(Cs.transpose(), columns=EstimatedParameters._fields).to_csv(
+                output_cache_path.joinpath(Cs_fn), sep=sep, index=None
             )
-            pd.DataFrame(
-                Js.transpose()
-            ).to_csv(
-                output_cache_path.joinpath(Js_fn),
-                sep=sep,
-                index=None
+            pd.DataFrame(Js.transpose()).to_csv(
+                output_cache_path.joinpath(Js_fn), sep=sep, index=None
             )
-        return Cs,Js,epa_opt
+        return Cs, Js, epa_opt
 
     return cached_func
 
 
-
 def rh_iterator(
-        mvs,
-        X_0, #: StartVector,
-        par_dict,
-        func_dict,
-        delta_t_val=1 # defaults to 1day timestep
-    ):
-    mit=minimal_iterator_internal(
-            mvs,
-            X_0,
-            par_dict,
-            func_dict,
-            delta_t_val
-    )
+    mvs,
+    X_0,  #: StartVector,
+    par_dict,
+    func_dict,
+    delta_t_val=1,  # defaults to 1day timestep
+):
+    mit = minimal_iterator_internal(mvs, X_0, par_dict, func_dict, delta_t_val)
+
     def numfunc(expr):
         return hr.numerical_func_of_t_and_Xvec(
             state_vector=mvs.get_StateVariableTuple(),
@@ -3347,32 +3176,32 @@ def rh_iterator(
             parameter_dict=par_dict,
             func_dict=func_dict,
         )
-    fd={
+
+    fd = {
         "rh": numfunc(mvs.get_AggregatedSoilCarbonOutFlux()),
         "cVeg": numfunc(mvs.get_AggregatedVegetationCarbon()),
-        "cSoil": numfunc(mvs.get_AggregatedSoilCarbon())
+        "cSoil": numfunc(mvs.get_AggregatedSoilCarbon()),
     }
-    present_step_funcs = OrderedDict(
-        {
-            key: lambda t,X: fd[key](t,X)
-            for key in fd.keys()
-        }
-    )
+
+    def make_func(key):
+        return lambda t, X: fd[key](t, X)
+
+    present_step_funcs = OrderedDict({key: make_func(key) for key in fd.keys()})
     mit.add_present_step_funcs(present_step_funcs)
     return mit
 
 
 def single_stream_cost(obs, out_simu, key):
-        # calculate costs for each data stream
-        # take into account that model output might be shorter
-        # than the observation (mainly for testing)
-        simu= out_simu.__getattribute__(key)
-        n_simu = simu.shape[0]
-        _obs = obs.__getattribute__(key)[0:n_simu] # cut obs to length
-        cost=(n_simu) * np.sum((simu - _obs)**2, axis=0) / (_obs.mean(axis=0)**2)
-        print(f"J_{key}  = {cost}")
-        return cost
-    
+    # calculate costs for each data stream
+    # take into account that model output might be shorter
+    # than the observation (mainly for testing)
+    simu = out_simu.__getattribute__(key)
+    n_simu = simu.shape[0]
+    _obs = obs.__getattribute__(key)[0:n_simu]  # cut obs to length
+    cost = (n_simu) * np.sum((simu - _obs) ** 2, axis=0) / (_obs.mean(axis=0) ** 2)
+    print(f"J_{key}  = {cost}")
+    return cost
 
-#constants
+
+# constants
 common_global_mask_expanded = globalMask("common_mask_expanded.nc")

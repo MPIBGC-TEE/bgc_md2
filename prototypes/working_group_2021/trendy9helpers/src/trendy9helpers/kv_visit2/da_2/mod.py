@@ -53,26 +53,55 @@ model_mod = 'bgc_md2.models.kv_visit2'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
 mvs=import_module(f"{model_mod}.source").mvs
 make_func_dict = cp_mod.make_func_dict
-Drivers=cp_mod.Drivers
-Constants = namedtuple(
-    "Constants",
+#Drivers=cp_mod.Drivers
+
+FreeConstants = namedtuple(
+    "FreeConstants",
+    [] 
+    #funny you actually don't have any free constants, but you 
+    # could transfer some of the FreeEstimatedParameters here if 
+    # you have a good guess for their value
+)    
+
+# this is what is read from cpa.json 
+FreeConstants = namedtuple(
+    "FreeConstants",
+    []
+    # funny! 
+    # You actually don't have any free constants, but you 
+    # could transfer some of the FreeEstimatedParameters here if 
+    # you have a good guess for their value
+)    
+DerivedConstants = namedtuple(
+    "DerivedConstants",
     [
-        "cLitter_0",
-        "cSoil_0",
-        "cVeg_0",
         "npp_0",
-        "rh_0",
-        # "ra_0",
+        "rh_0"
     ],
 )
+Constants = namedtuple(
+    "Constants",
+    [*FreeConstants._fields,*DerivedConstants._fields] 
+)
+
+def cpa(
+        fcpa: FreeConstants,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    ) -> Constants:
+    dcpa = DerivedConstants(
+        npp_0=dvs.npp[0],
+        rh_0=svs.rh[0],
+    )
+    return Constants(*fcpa, *dcpa)
+
 # Note that the observables are from the point of view of the mcmc also considered to be constant (or unestimated)
-# parameters. In this case we may use only the first entry e.g. to derive startvalues and their length (number of months)
+# parameters. 
 # The destinction is only made for the data assimilation to isolate those parameters
 # that the mcmc will try to optimise
 # It is better to start with only a few
-
-EstimatedParameters = namedtuple(
-    "EstimatedParameters",
+FreeEstimatedParameters = namedtuple(
+    "FreeEstimatedParameters",
     [
         "beta_leaf",
         "beta_wood",
@@ -96,14 +125,57 @@ EstimatedParameters = namedtuple(
         "r_C_wood_litter_2_C_soil_passive",
         "r_C_root_litter_2_C_soil_fast",
         "r_C_root_litter_2_C_soil_slow",
-        "r_C_root_litter_2_C_soil_passive"
+        "r_C_root_litter_2_C_soil_passive",
     ],
 )
+DerivedEstimatedParameters = namedtuple(
+    "DerivedEstimatedParameters",
+    []
+)
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",
+    [*FreeEstimatedParameters._fields,*DerivedEstimatedParameters._fields] 
+)
+
+def epa_min(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed
+    # it avoids contradictions between the startvalues and 
+    # data 
+    depa = DerivedEstimatedParameters()
+    return EstimatedParameters(*fepa,*depa)
+
+def epa_max(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed
+    # it avoids contradictions between the startvalues and 
+    # data 
+    depa = DerivedEstimatedParameters()
+    return EstimatedParameters(*fepa,*depa)
+
+def epa_0(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed
+    # it avoids contradictions between the startvalues and 
+    # data 
+    depa = DerivedEstimatedParameters()
+    return EstimatedParameters(*fepa,*depa)
 
 def make_param_filter_func(
     c_max: EstimatedParameters,
     c_min: EstimatedParameters,
-    cpa: Constants
+    fcpa: FreeConstants,
+    dvs: msh.Drivers,
+    svs: msh.Observables
 ) -> Callable[[np.ndarray], bool]:
 
     def isQualified(
@@ -111,7 +183,7 @@ def make_param_filter_func(
             print_conds=False
         ):
         epa=EstimatedParameters(*c)
-        apa = {**cpa._asdict(), **epa._asdict()}
+        apa = {**fcpa._asdict(), **epa._asdict()}
         
         def value(field_name):
             return apa[field_name]
@@ -131,10 +203,51 @@ def make_param_filter_func(
         
     return isQualified
 
+def make_proposer(
+        c_max: EstimatedParameters,
+        c_min: EstimatedParameters, 
+        fcpa: FreeConstants,
+        dvs: msh.Drivers,
+        svs: msh.Observables,
+    ) -> Callable[[np.ndarray,float,bool], np.ndarray]:
+    
+    cpa_val = cpa(fcpa,dvs,svs)
+    """Returns a function that will be used by the mcmc algorithm to propose
+    a new parameter value tuple based on a given one.
+    The two arrays c_max and c_min define the boundaries
+    of the n-dimensional rectangular domain for the parameters and must be of
+    the same shape.  After a possible parameter value has been sampled the
+    filter_func will be applied to it to either accept or discard it.  So
+    filter func must accept parameter array and return either True or False
+    :param c_max: array of maximum parameter values
+    :param c_min: array of minimum parameter values
+    :param D: a damping parameter to regulate the proposer step 
+     larger D means smaller step size. If the maximum distance for a new value is
+     max_dist then the proposer will make a max_dist/ 
+    :param filter_func: model-specific function to filter out impossible 
+    parameter combinations
+    """
+
+
+    g = np.random.default_rng()
+    # filter out the startvalues and use a dirichlet distribution 
+    # for them  
+    dirichlet_tups= [
+        (["beta_leaf", "beta_wood"],1)
+    ]
+    #return GenerateParamValues
+    return gh.make_dirichlet_uniform_proposer(
+        dirichlet_tups=dirichlet_tups,
+        EstimatedParameters=EstimatedParameters,
+        c_min=c_min,
+        c_max=c_max
+    )
+
 def make_param2res_sym(
     mvs: CMTVS,
-    cpa: Constants,
-    dvs: Drivers,
+    fcpa: FreeConstants,
+    dvs: msh.Drivers,
+    svs: msh.Observables,
 ) -> Callable[[np.ndarray], np.ndarray]:
 
     # select the first value for the drivers (to represent the past)
@@ -144,51 +257,34 @@ def make_param2res_sym(
         "mrso": lambda t: dvs.mrso[0],
         "NPP": lambda t: dvs.npp[0],
     }
-
+    cpa_v=cpa(fcpa, dvs, svs)
     def param2res(pa):
 
         epa = EstimatedParameters(*pa)
-        dpm = h.date.days_per_month 
-        steps_per_month = 2
-        delta_t_val = dpm/steps_per_month 
 
-        par_dict = gh.make_param_dict(mvs, cpa, epa)
-        func_dict = make_func_dict(dvs , cpa=cpa, epa=epa)
+        par_dict = gh.make_param_dict(mvs, cpa_v, epa)
+        func_dict = make_func_dict(dvs , cpa=cpa_v, epa=epa)
         X_0 = numeric_X_0_internal(mvs, par_dict, func_dict_const)
-        bitr = ArrayDictResult(
-            msh.make_da_iterator(
-                mvs,
-                X_0,
-                par_dict=par_dict,
-                func_dict=func_dict,
-                delta_t_val=delta_t_val
-            )
+        return msh.synthetic_observables(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            dvs=dvs
         )
-        number_of_months=dvs.npp.shape[0]
-
-        number_of_steps = number_of_months*steps_per_month
-        result_dict = bitr[0: number_of_steps: steps_per_month]
-
-        res = msh.Observables(
-            cVeg=result_dict["cVeg"],
-            cLitter=result_dict["cLitter"],
-            cSoil=result_dict["cSoil"],
-            rh=result_dict["rh"]
-        )
-        return res
 
     return param2res
 
 # fixme mm 5-15 2023
 # hopefully disposable in the future
-def numeric_X_0(mvs, dvs, cpa, epa):
+def numeric_X_0(mvs, dvs, apa):
     # This function creates the startvector for the pools
     # It can be used inside param_2_res and for other iterators that
     # track all carbon stocks
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict = gh.make_param_dict(mvs, cpa, epa)
+    par_dict = gh.make_param_dict2(mvs, apa)
     func_dict=make_func_dict(dvs)
     return numeric_X_0_internal(mvs,par_dict,func_dict)
+
 
 def numeric_X_0_internal(mvs, par_dict, func_dict,t_0=0):
     # This function creates the startvector for the pools
@@ -218,7 +314,7 @@ def numeric_X_0_internal(mvs, par_dict, func_dict,t_0=0):
     B_0=B_func(t_0, px0)
     I_0=I_func(t_0, px0)
     
-    X_0 = (np.linalg.inv(B_0) @ I_0).reshape(
+    X_0 = (np.linalg.inv(B_0) @ (-I_0)).reshape(
         len(state_vector), 1
     )
     return X_0

@@ -17,40 +17,47 @@ cp_mod=import_module(f"{model_mod}.CachedParameterization")
 mvs=import_module(f"{model_mod}.source").mvs
 make_func_dict = cp_mod.make_func_dict
 Drivers=cp_mod.Drivers
-
-Constants = namedtuple(
+FreeConstants = namedtuple(
+    "FreeConstants",
+    []
+)    
+DerivedConstants = namedtuple(
     "Constants",
     [
-        'npp_0',  # Initial input/pools
-        'rh_0',
         'c_veg_0',
         'c_soil_0',
         'fVegSoil_0',  # Total carbon mass from vegetation directly into the soil
-        'number_of_months'  # Run time 
     ]
 )
+Constants = namedtuple(
+    "Constants",
+    [*FreeConstants._fields,*DerivedConstants._fields] 
+)
+def cpa(
+        fcpa: FreeConstants,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    ) -> Constants:
+    dcpa = DerivedConstants(
+        # Total carbon mass from vegetation directly into the soil
+        c_veg_0=svs.cVeg[0],
+        c_soil_0=svs.cSoil[0],
+        fVegSoil_0=svs.fVegSoil[0],  # Total carbon mass from vegetation directly into the soil
+    )
+    return Constants(*fcpa, *dcpa)
 
-EstimatedParameters = namedtuple(
-    'EstimatedParameters',
+
+FreeEstimatedParameters = namedtuple(
+    'FreeEstimatedParameters',
     [
-        'c_leaf_0',  # Names: c_poolname_0
-        'c_wood_0',  # Only initial pools that are estimated
-        'c_DPM_0',
-        'c_RPM_0',
-        'c_BIO_0',
-
-        'beta_leaf',
-        'beta_wood',
         'Mw',
         'Ms',
         'Topt',
         'Tcons',
-
         'r_c_DPM_rh',
         'r_c_RPM_rh',
         'r_c_BIO_rh',
         'r_c_HUM_rh',
-
         'r_c_leaf_2_c_DPM',
         'r_c_leaf_2_c_RPM',
         'r_c_wood_2_c_DPM',
@@ -65,20 +72,116 @@ EstimatedParameters = namedtuple(
         'r_c_HUM_2_c_BIO',
     ]
 )
+DerivedEstimatedParameters = namedtuple(
+    'DerivedEstimatedParameters',
+    [
+        'c_leaf_0',
+        'c_wood_0',
+        'c_DPM_0',
+        'c_RPM_0',
+        'c_BIO_0',
+        'beta_leaf',
+        'beta_wood',
+    ]
+)
+EstimatedParameters = namedtuple(
+    "EstimatedParameters",
+    [*FreeEstimatedParameters._fields, *DerivedEstimatedParameters._fields] 
+)
+def epa_0(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed to other forms
+    # it should however avoid contradictions between the startvalues and 
+    # for the pools and the rates and fluxes
+    cv = svs.cVeg[0]/3
+    cs = svs.cSoil[0]/4
+    b = 1.0/3
+    depa = DerivedEstimatedParameters(
+        c_leaf_0=cv,
+        c_wood_0=cv,
+        c_DPM_0=cs,
+        c_RPM_0=cs,
+        c_BIO_0=cs,
+        beta_leaf=b,
+        beta_wood=b,
+    )
+    return EstimatedParameters(*fepa, *depa)
+
+
+def epa_min(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed to other forms
+    # it should however avoid contradictions between the startvalues and 
+    # for the pools and the rates and fluxes
+    cv = 0
+    cs = 0
+    b = 0
+    depa = DerivedEstimatedParameters(
+        c_leaf_0=cv,
+        c_wood_0=cv,  
+        c_DPM_0=cs,
+        c_RPM_0=cs,
+        c_BIO_0=cs,
+        beta_leaf=b,
+        beta_wood=b,
+    )
+    return EstimatedParameters(*fepa, *depa)
+
+
+def epa_max(
+        fepa: FreeEstimatedParameters,
+        dvs: msh.Drivers,
+        svs: msh.Observables
+    )->EstimatedParameters:
+    # this function can obviously be changed to other forms
+    # it should however avoid contradictions between the startvalues and 
+    # for the pools and the rates and fluxes
+    cv = svs.cVeg[0]
+    cs = svs.cSoil[0]
+    b = 1.0
+    depa = DerivedEstimatedParameters(
+        c_leaf_0=cv,
+        c_wood_0=cv,  
+        c_DPM_0=cs,
+        c_RPM_0=cs,
+        c_BIO_0=cs,
+        beta_leaf=b,
+        beta_wood=b,
+    )
+    return EstimatedParameters(*fepa, *depa)
 
 def make_param2res_sym(
         mvs,
-        cpa: Constants,
+        fcpa: FreeConstants,
         dvs: Drivers,
+        svs: msh.Observables
 ) -> Callable[[np.ndarray], np.ndarray]:
     def param2res(pa):
-        epa=EstimatedParameters(*pa)
-        X_0 = numeric_X_0(mvs, dvs, cpa, epa)
-        dpm=30
+        epa = EstimatedParameters(*pa)
+
+        apa = {
+            **fcpa._asdict(),
+            **epa._asdict(),
+            'c_root_0': svs.cVeg[0] - (epa.c_leaf_0 + epa.c_wood_0),
+            'c_veg_0': svs.cVeg[0],
+            'c_soil_0': svs.cSoil[0],
+            # Total carbon mass from vegetation directly into the soil
+            'fVegSoil_0': svs.fVegSoil[0],
+        }
+        X_0 = numeric_X_0(mvs, dvs, apa)
+
+        #from IPython import embed; embed()
+        dpm=h.date.days_per_month
         steps_per_month = 2
         delta_t_val = dpm/steps_per_month 
 
-        par_dict = gh.make_param_dict(mvs, cpa, epa)
+        par_dict = gh.make_param_dict2(mvs, apa)
         func_dict = make_func_dict(
             dvs,
             epa.Mw,
@@ -86,39 +189,21 @@ def make_param2res_sym(
             epa.Topt,
             epa.Tcons,
         )
-        bitr = ArrayDictResult(
-            msh.make_da_iterator(
-                mvs,
-                X_0,
-                par_dict=par_dict,
-                func_dict=func_dict,
-                delta_t_val=delta_t_val
-            )
-        )
-        number_of_steps= int(cpa.number_of_months * 30 / delta_t_val)
-        steps_per_month = int(dpm / delta_t_val)
-        result_dict = bitr[0: number_of_steps :steps_per_month]
-        #steps_per_year = steps_per_month*12
-        #yearly_partitions = gh.partitions(0, number_of_steps, steps_per_year)
-        #yearly_averages = {
-        #    key: gh.averaged_1d_array(result_dict[key],yearly_partitions)
-        #    for key in ["cVeg", "cRoot", "cLitter", "cSoil"]
-        #}
-
-        return msh.Observables(
-            cVeg=result_dict["cVeg"],
-            cSoil=result_dict["cSoil"],
-            fVegSoil=result_dict["fVegSoil"],
-            rh=result_dict["rh"]#/(60*60*24)
+        return msh.synthetic_observables(
+            mvs,
+            X_0,
+            par_dict=par_dict,
+            func_dict=func_dict,
+            dvs=dvs
         )
     return param2res
 
-def numeric_X_0(mvs,dvs,cpa,epa):
+
+def numeric_X_0(mvs,dvs,apa):
     # This function creates the startvector for the pools
     # It can be used inside param_2_res and for other iterators that
     # track all carbon stocks
-    apa = {**cpa._asdict(), **epa._asdict()}
-    par_dict=gh.make_param_dict(mvs,cpa,epa)
+    par_dict=gh.make_param_dict2(mvs,apa)
     X_0_dict={
         "c_leaf": apa['c_leaf_0'],     
         "c_wood": apa['c_wood_0'],     
@@ -135,23 +220,94 @@ def numeric_X_0(mvs,dvs,cpa,epa):
     ).reshape(len(X_0_dict),1)
     return X_0
 
-# fixme mm 5-18
-# there are some conditions missing to 
-# prevent negative startvalues
+def make_proposer(
+    c_max: EstimatedParameters,
+    c_min: EstimatedParameters, 
+    fcpa: FreeConstants,
+    dvs: msh.Drivers,
+    svs: msh.Observables
+) -> Callable[[np.ndarray, float, bool], np.ndarray]:
+    cpa_v = cpa(fcpa, dvs, svs)
+    """Returns a function that will be used by the mcmc algorithm to propose
+    a new parameter value tuple based on a given one.
+    The two arrays c_max and c_min define the boundaries
+    of the n-dimensional rectangular domain for the parameters and must be of
+    the same shape.  After a possible parameter value has been sampled the
+    filter_func will be applied to it to either accept or discard it.  So
+    filter func must accept parameter array and return either True or False
+    :param c_max: array of maximum parameter values
+    :param c_min: array of minimum parameter values
+    :param D: a damping parameter to regulate the proposer step 
+     larger D means smaller step size. If the maximum distance for a new value is
+     max_dist then the proposer will make a max_dist/ 
+    :param filter_func: model-specific function to filter out impossible 
+    parameter combinations
+    """
+
+
+    g = np.random.default_rng()
+    # filter out the startvalues and use a dirichlet distribution 
+    # for them  
+    dirichlet_tups= [
+        (["beta_leaf", "beta_wood"],1),
+        (["c_leaf_0", "c_wood_0"], cpa_v.c_veg_0),
+        (['c_DPM_0', 'c_RPM_0', 'c_BIO_0'],cpa_v.c_soil_0),
+    ]
+    # Note mm 7-25-2023
+    # we could also try to make r_c_root_2_c_RPM fit svs.fVegSoil[0]
+    # c_root_0 = svs.cVeg[0] - (epa.c_leaf_0 + epa.c_wood_0)
+    # r_c_root_2_c_RPM = (
+    #    svs.fVegSoil[0]
+    #    -
+    #    (
+    #        (epa.r_c_leaf_2_c_DPM + epa.r_c_leaf_2_c_RPM) * epa.c_leaf_0
+    #        + 
+    #        (epa.r_c_wood_2_c_DPM + epa.r_c_wood_2_c_RPM) * epa.c_wood_0
+    #        + 
+    #        epa.r_c_root_2_c_DPM * c_root_0
+    #    )
+    #)/c_root_0
+    #
+    # but this would also require to choose 
+    # epa.r_c_leaf_2_c_DPM,
+    # epa.r_c_leaf_2_c_RPM,
+    # epa.r_c_wood_2_c_DPM,
+    # epa.r_c_wood_2_c_RPM,
+    # epa.r_c_root_2_c_DPM,
+    # automatically 
+    # to guarantee that: r_c_root_2_c_RPM > 0
+    # which could be done via recursive dirichlet distributions 
+    # If implemented we would move
+    # r_c_leaf_2_c_DPM,
+    # r_c_leaf_2_c_RPM,
+    # r_c_wood_2_c_DPM,
+    # r_c_wood_2_c_RPM,
+    # r_c_root_2_c_DPM,
+    # from the FreeEstimatedParameters to the DerivedEstimatedParameters
+    # and remove 
+    # r_c_root_2_c_RPM from EstimatedParameters alltogether 
+    # (and compute it via the above expression 
+    return gh.make_dirichlet_uniform_proposer(
+        dirichlet_tups=dirichlet_tups,
+        EstimatedParameters=EstimatedParameters,
+        c_min=c_min,
+        c_max=c_max
+    )
+
+
 def make_param_filter_func(
     c_max: EstimatedParameters,
     c_min: EstimatedParameters,
-    cpa: Constants,
+    fcpa: FreeConstants,
+    dvs: Drivers,
+    svs: msh.Observables
 ) -> Callable[[np.ndarray], bool]:
-
-    # find position of beta_leaf and beta_wood
-    beta_leaf_ind = EstimatedParameters._fields.index("beta_leaf")
-    beta_wood_ind = EstimatedParameters._fields.index("beta_wood")
 
     def isQualified(
             c,
             print_conds=False
         ):
+        epa=EstimatedParameters(*c)
         def value(field_name):
             try:
                 return c[EstimatedParameters._fields.index(field_name)]
@@ -162,13 +318,15 @@ def make_param_filter_func(
                 raise e
 
         conds=[
-            # not necessary any more since the
-            # proposer does not choose values
-            # outside the range
-            # (c >= c_min).all()
-            # (c <= c_max).all()
+            (c >= c_min).all(),
+            (c <= c_max).all(),
             sum(map(value, ["beta_leaf", "beta_wood"])) <= 0.99,
+            sum(map(value, ["c_leaf_0", "c_wood_0"])) <= svs.cVeg[0],
+            sum(map(value, ['c_DPM_0', 'c_RPM_0', 'c_BIO_0'])) <= svs.cSoil[0]
         ]
+
+        # from IPython import embed; embed()
+        print(conds)
         res=all(conds)
         if print_conds:
             if not res:

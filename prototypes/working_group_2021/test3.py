@@ -1,8 +1,7 @@
 # %load_ext autoreload
 # %autoreload 2
 from pathlib import Path
-# set a directory where to store files for this notebooks (parameters, plots..)
-p = Path("test3")
+
 
 import netCDF4 as nc
 import numpy as np
@@ -78,10 +77,6 @@ model_folders = [
     ##"kv_ft_dlem",
     ##"bian_ibis2",
 ]
-# here we assume that all models started from equilibrium at
-# t_min (which is not correct)
-# according to the S2 experiment they started from equilibrium
-# but at different times
 model_names = {
     "yz_jules": "JULES",
     "cable-pop": "CABLE",
@@ -93,6 +88,10 @@ model_names = {
     "bian_ibis2": "IBIS",
     "ORCHIDEE-V2": "OCN",
 }
+# here we assume that all models started from equilibrium at
+# t_min (which is not correct)
+# according to the S2 experiment they started from equilibrium
+# but at different times
 # we want the equilibrium to be computed from Temperatur
 # and Moisture data in the spring. Since all models start
 # in January we start 120 days after the model start of all
@@ -101,58 +100,78 @@ start_shift = 120
 #start_sAD, stop_sAD = gh.t_min_tmax_overlap_gm(model_folders, delta_t_val, start_shift=start_shift)
 delta_t_val = 1 #SDGVM needs small timestep since the rates are so high
 
-# chose da (d"ata assimilation")input and output directories 
-# we want to use
-# they have to exist ;-)
+# ### @Kostia:
+# #### To run any model we only need a parameterization which consists of 
+# - a parameter_dict (stored as a json file)
+# - a func_dict
+#     - build from a dvs cached as netcdf file and  
+#     - for some models (jules) and additional func_dict_param_dict to build the func_dict) 
+# - a start_value_dict (stored as a json file)
+# - a model specific class called CachedParameterization which handles reading, and writing 
+#   the files and building the more abstract ingredients:
+#   -parameter_dict
+#   -func_dict and 
+#   -start_value_dict 
+#   from these files 
+#
+# The former distinction in epa and cpa was specific to a certain kind of data assimilation, which is irrelevant for running the model, and had to be abandoned since we now have the
+# possibility of different da schemes per model (and therefore different sets of parameters
+# we consider constant or to be estimated)
+#
+# #### How to get such a parameterization for the models?
+# There are three approaches:
+# 1. from data assimilation 
+# - We specify a da module (implemented in the trendy9helpers package) which implies a 
+#   certain definition of estimated parameters and constants and assumes the existence of  
+#   directories and files containing the such parameters including hyper parameters for the 
+#   mcmc runs. 
+#   (detailes explained below)
+#   Although the results of different data assimilation schemes imply different optimized parameters (not only values) there is always a way to combine the constants and estimated 
+#   parameters to build a parameterization. The da functions now return not only a specific epa_opt but also a parameterization.
+#
+# 1. from (possibly hand tuned) model specific parameter files (which assumes the existence of directories containing the json files for the parameter_dicts and X_0_dicts, and constructing the CachedParameterization instance from the global_means which are part of the trendy9helpers package.
+#
+# 1. from (model specific) complete CachedParameterization instances (written to disk in a named directory). This would save an extra netcdf file for the drivers and thus be independent from the trendy9helpers package, but wasting space by saving the (same) drivers multiple times. This mehtod is used for examples for the core framework where the dependency of trendy9helpers is to be avoided...
+#   
+#
+# Approaches 1 and 2 (combined with the fiddeling of either the parameters for the da (1) or directly with the model parameters (2) are intended to find a reasonable parameterization,
+# whereas (3) is intended to store the result of such fiddeling independently from the data
+# used to get it. 
+#
+# The following code demonstrates all approaches and also contains some 
+# diagnostic plots to check that the parametrization in question is sane.
+# So the first part is similar to the old "inspect_model.py".
+# You can easily remove it from here, put it in an extra notebook or script(s), and keep only the essential second part as test3.py
+
+# +
+# variant 1.) Model parameters from data assimilation.
+# chose da (d"ata "a"ssimilation") module of the trendy9helpers package to be used.
 # da_1 exists for every model as a submodule in the trendy9helpers package under the model folder
-# da_2 exists only for kv_visit2
-da_schemes = {
-    "kv_visit2": "da_1",
-    "jon_yib": "da_1",
-    "Aneesh_SDGVM": "da_1", 
-    ##"cable-pop", # has not EstimatedParameters
-    ##"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
-    "yz_jules": "da_1",
-    ##"kv_ft_dlem",
-    ##"bian_ibis2",
-}
-# the parset name designates a subfolder under trendy9helpers/model_name/da_scheme/
-# and contains two directories in and out (after running da)
+# da_2 exists only for kv_visit2. 
+# the parset name designates a subfolder under 
+# trendy9helpers/model_name/da_scheme/
+# and contains two directories "in" and "out" 
+# (with "out" appearing after running da)
 # e.g. for visit trendy9helpers/src/trendy9helpers/kv_visit/da_2/par_1/in or
 # e.g. for visit trendy9helpers/src/trendy9helpers/kv_visit/da_2/par_2 /in
-# it represents different parameters for an mcmc run
-parset_names = {
-    "kv_visit2": "par_1",
-    "jon_yib": "par_1",
-    "Aneesh_SDGVM": "par_1", 
-    ##"cable-pop", # has not EstimatedParameters
-    ##"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
-    "yz_jules": "par_1",
-    ##"kv_ft_dlem",
-    ##"bian_ibis2",
-}
-
-
-da_res={
-    mf: gh.gm_da_from_folder_names(p,mf,da_schemes[mf],parset_names[mf])
-    for mf in model_folders
-}
-da_res
-
+# it represents different  parameters (start, min, max, hyper-parameters ) 
+# for an mcmc run
+    
+# set a directory where to create all the foldesr and store all the files  (parameters, plots..)
+p = Path(".")
+print(p.absolute())
 mf="kv_visit2"
-Cs,Js,epa_opt,cp=da_res[mf]
+da_scheme="da_2"
+par_dir="par_1"
+# this implies the existence of a directory p/da_1/par_1/in/
+# containing epa0.json, epa_min.json, epa_max.json, cpa.json, hyper.json
+Cs, Js, epa_opt, test_cp1 = gh.gm_da_from_folder_names(p, mf, da_scheme, par_dir)
+#lets also store the parameterization for later in a dictionary, that we will expand later
+all_cps={mf: test_cp1}
+# -
 
 
-cp.Drivers._fields
-
-cpp=Path(f"/home/mm/bgc_md2/src/bgc_md2/models/{mf}/parameterization_from_test_args/")
-#cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
-cpp
-
-from bgc_md2.models.kv_visit2.CachedParameterization import CachedParameterization as CP
-CP
-cp2=CP.from_path(cpp)
-
+# some diagnostic plots for the data assimilation 
 fig=plt.figure(figsize=(15,15))
 axs=fig.subplots(1,2)
 ax=axs[0]
@@ -170,25 +189,23 @@ for i in range(n_par):
     ax.plot(Cs[i,:])
     ax.set_title(f"accepted {epa_opt._fields[i]}")
 
-cpa = gh.da_mod(mf,da_schemes[mf]).Constants(
-    **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath("cpa.json"))
+# +
+# look at the output of the param2res function (for da_2) for epa0 and epa_opt
+# and compare it to the observations
+cpa = gh.da_mod(mf,da_scheme).Constants(
+    **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_scheme,par_dir).joinpath("cpa.json"))
 )
-epa_0 = gh.da_mod(mf,da_schemes[mf]).EstimatedParameters(
-    **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath("epa_0.json"))
+epa_0 = gh.da_mod(mf,da_scheme).EstimatedParameters(
+    **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_scheme,par_dir).joinpath("epa_0.json"))
 )
 svs, dvs = gh.msh(mf).get_global_mean_vars(gh.data_path(mf), gh.target_path(p,mf), flash_cache=False)
-param2res= gh.da_mod(mf,da_schemes[mf]).make_param2res_sym(gh.mvs(mf),cpa,dvs)
-epa_opt = gh.da_mod(mf,da_schemes[mf]).EstimatedParameters(
+param2res= gh.da_mod(mf,da_scheme).make_param2res_sym(gh.mvs(mf),cpa,dvs,svs)
+epa_opt = gh.da_mod(mf,da_scheme).EstimatedParameters(
         **h.load_dict_from_json_path(
-            gh.output_cache_path(p,mf,da_schemes[mf],parset_names[mf]).joinpath("epa_opt.json")))   
+            gh.output_cache_path(p,mf,da_scheme,par_dir).joinpath("epa_opt.json")))   
 sim_0 = param2res(epa_0)
 sim_opt =  param2res(epa_opt)
 
-
-
-svs.rh.shape
-
-# +
 fig = plt.figure(figsize=(10,50))
 axs=fig.subplots(len(svs._fields),1)
 
@@ -202,9 +219,122 @@ for ind,f in enumerate(svs._fields):
     axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
     axs[ind].legend()
     
-fig.savefig(p.joinpath(mf,'solutions.pdf'))
+fig.savefig(p.joinpath(mf,'param2res.pdf'))
+
+
+# +
+# read hand-tuned Parameter files from named directories.
+# for mf in model_folders:
+def cp_from_parameter_dir(p,mf,sub_dir_path):
+    CP=import_module(f"bgc_md2.models.{mf}.CachedParameterization").CachedParameterization
+    htpi=p.joinpath(mf,sub_dir_path)
+    svs,dvs=gh.msh(mf).get_global_mean_vars(gh.data_path(mf))
+    cp=CP(
+        parameter_dict=CP.parameter_dict_from_path(htpi),
+        drivers=dvs,
+        X_0_dict=CP.X_0_dict_from_path(htpi),
+        func_dict_param_dict=CP.func_dict_param_dict_from_path(htpi)
+    )
+    return cp
+
+test_cp2A=cp_from_parameter_dir(p,"kv_visit2",Path("hand_tuned_1").joinpath("in"))
+test_cp2A.X_0_dict,test_cp2A.parameter_dict
+
+
+# +
+def cp_from_model_dir(mf):
+    # alternatively method 2B reads a complete Parameterization which 
+    # includes a Drivers.nc file.
+    # (here from the folder in which the source.py file resides)
+    # this is usefull for ONE example complete parameterization
+    # and does not need the trendy9helper package.
+    cpp=Path(f"/home/mm/bgc_md2/src/bgc_md2/models/{mf}/parameterization_from_test_args/")
+#cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
+    CP=import_module(f"bgc_md2.models.{mf}.CachedParameterization").CachedParameterization
+    return CP.from_path(cpp)
+
+test_cp2B=cp_from_model_dir("kv_visit2")
 # -
-da_res["kv_visit2"][3]
+
+
+
+
+# +
+# sanity checke (reproducing observables)
+# make some basic test plots ensuring that we don't have negative pool values 
+# and so on.
+#cp=test_cp1
+#cp=test_cp2A
+cp=test_cp2A
+
+mvs=import_module(f"bgc_md2.models.{mf}.source").mvs
+synth_obs=gh.msh(mf).synthetic_observables(
+    mvs,
+    np.array([cp.X_0_dict[v] for v in mvs.get_StateVariableTuple()]),
+    cp.parameter_dict,
+    cp.func_dict,
+    dvs
+)
+
+
+fig = plt.figure(figsize=(10,50))
+axs=fig.subplots(len(svs._fields),1)
+for ind,f in enumerate(svs._fields):
+    val_sim=synth_obs.__getattribute__(f)
+    val_obs=svs.__getattribute__(f)
+    axs[ind].plot(range(len(val_sim)),val_sim,label=f+"_sim")
+    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+    axs[ind].legend()
+    
+fig.savefig(p.joinpath(mf,'sythetic_observables.pdf'))
+# -
+
+# sanety check solutions 
+import bgc_md2.resolve.mvars as mvars
+mvs.provided_mvar_types
+mvs=mvs.remove(
+    [
+        mvars.NumericParameterization,
+        mvars.StartConditionMaker,
+        mvars.NumericSimulationTimes
+    ]
+)
+dpy = h.date.days_per_year
+dpm = h.date.days_per_month
+times=np.arange(0,dpm*len(cp.drivers[0]),dpm/2)
+times
+
+td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
+ad_days= td_AD + times
+ad_times= ad_days / dpy 
+mvs=mvs.update(
+    {
+        mvars.NumericParameterization(
+            par_dict=cp.parameter_dict,
+            func_dict=cp.func_dict
+        ),
+        mvars.NumericStartValueDict(cp.X_0_dict),
+        mvars.NumericSimulationTimes(times)
+    }    
+)
+sv = mvs.get_StateVariableTuple()
+n_pools = len(sv)
+fig1 = plt.figure(figsize=(2 * 10, n_pools * 10))
+axs = fig1.subplots(n_pools, 1)
+sol_arr2 = mvs.get_NumericSolutionArray()
+#vcsv = mvs.get_VegetationCarbonStateVariableTuple()
+#veg_m_a_arr2 = mvs.get_NumericVegetationCarbonMeanAgeSolutionArray()
+#start_ind=200
+start_ind=0
+for i in range(n_pools):
+    ax = axs[i,]
+    ax.plot(ad_times, sol_arr2[:, i], label="sol")
+    ax.legend()
+    ax.set_title(f"{sv[i]} solution")
+
+
+
+
 
 
 def timelines(mf,cp):
@@ -225,11 +355,18 @@ def timelines(mf,cp):
         delta_t_val=delta_t_val,
     )
     return vals
-all_values2 = {mf : timelines(mf,tup[3]) for mf,tup in da_res.items()}
 
-# you could also read the parameterizations directly from the da_cache (if the folders and 
-# submodules and parameterdirs exist)
-all_values3 = {mf : timelines(mf,gh.gm_cp_from_folder_names(p,mf,da_schemes[mf],parset_names[mf])) for mf,tup in da_res.items()}
+
+all_values2 = {
+    mf : timelines(mf,cp_from_parameter_dir(p,mf,Path("hand_tuned_1").joinpath("in"))) 
+    for mf in model_folders
+}
+
+# +
+# you could also handarrange which kind of parameterisation is to be used for which model
+
+#all_values3 = {mf : timelines(mf,gh.gm_cp_from_folder_names(p,mf,da_schemes[mf],parset_names[mf])) for mf,tup in da_res.items()}
+# -
 
 all_values2[mf]['t']
 
@@ -258,10 +395,6 @@ Xs.shape,len(c_times)
 # -
 
 obs_0._fields
-
-
-
-
 
 
 def yearly_averages(vals):
@@ -654,5 +787,3 @@ fig.subplots_adjust(
 fig.savefig(p.joinpath("yearly2.pdf"))
 
 1* 148940000* 1000000 * 0.000000000001
-
-

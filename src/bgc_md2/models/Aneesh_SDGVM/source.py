@@ -138,7 +138,7 @@ mvs = CMTVS(
         VegetationCarbonStateVariableTuple((
             C_leaf, 
             C_wood, 
-            C_root, 
+            #C_root, 
         )),
         SoilCarbonStateVariableTuple((
             C_abvstrlit,

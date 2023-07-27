@@ -1,5 +1,5 @@
 {
-  "nsimu": 20,
+  "nsimu": 10,
   "acceptance_rate": 15,   
   "chunk_size": 2,
   "D_init": 1,
