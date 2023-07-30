@@ -1,0 +1,54 @@
+
+Compartmental systems are a particular class of dynamical systems that describe
+the flow of conserved quantities such as mass and energy through a network of
+interconnected compartments.  The main purpose and greatest challenge of this
+work is to make such models {\bf transparent} by  facilitating  comparisons
+between them.  Firstly the scientific challenge is to find the common
+diagnostics by which we can compare models. The technical challenge is how to
+implement them in a way to make them applicable to many models and thirdly how
+to describe models compactly enough to facilitate a maintainable collection of
+reasonable size and flexible enough to formulate models in the many different
+ways in which they appear in the literature.  To address the first question we
+enhance the common diagnostics of pool contents and fluxes by the the
+computations of age and transit time distributions for whole models and
+especially subsystems like vegation or soil which is essential to be able to
+compare models with conceptually different pools, i.e. two ecosystem models
+will likely both have a vegetation part , however consist it might consist of two pools
+(i.e. leaf and root) in one but three pools (i.e. leaf, wood, root) in the
+other.  
+To address the technical challenge we avoid duplication in two very
+rigorous and novel ways: We provide common eqivalent building blocks for models
+implemented in symbolic math via \texttt{sympy} as special types, and a set of
+type annotated functions operating on these types as building blocks which can
+be combined by a graph library to compute every possible result,
+reachable by any recursive combination of these functions. 
+This allows us to formulate models compactly and
+flexibly in different equivalent ways i.e. via fluxes, flowdiagrams, or
+matrices and at the same time to avoid the implementation of many of similar
+functions for the same result.  Thus we can also not only query and compare
+what is provided, as in the model description records of a conventional data
+base, but also what is {\bf computable} from them.  The combination of these
+capabilities is expressed in the package \texttt{bgc\_md2} (Biogeochemical
+Model Database ), which apart from the tools mentioned above also represents a small
+(30+) collection of models, motivated by our own work on the terrestrial carbon
+cycle.
+As a proof of concept of this approach we use \texttt{bgc\_md2} to reconstruct
+four models of the trendy9 model intercomparison, symbolicly, guess some parameters
+run them with the trendy9 driver data and compare them with respect to transient 
+mean ages and transit times of carbon trough the vegetation and soil subsystems.
+This presentation concentrates on the software and only links to the mathematical foundations
+which are published already or in preparation.
+
+%implemented analysis tools include symbolic computations  of model
+%decomposition into subsystems, flowdiagrams, transformation and reformulation
+%with respect to different building blocks e.g. matrix versus flux equations and
+%also difficult to obtain numerical metrics to characterize timescales of mass
+%flow in compartmental systems such as the age of the mass and transit time
+%trough the entire system, subsystems like vegetation or soil, or individual
+%compartments.
+%The actual computations were outsourced into other packages where \LAPM (Linear
+%Autonomous Pool Models) provides functions for the analysis of compartmental
+%systems at equilibrium, \CompartmentalSystems tools for the analysis of
+%non-autonomous linear compartmental systems and \ComputabilityGraphs
+%determines the set of all possible computations that can be performed on a
+%model depending on information available from its description.

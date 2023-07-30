@@ -1,0 +1,67 @@
+\usepackage{listings}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amscd}
+\usepackage{tikz}
+\usetikzlibrary{snakes,arrows,shapes}
+\usepackage{graphicx}
+%\usepackage{caption}
+\usepackage{appendix}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[round]{natbib}
+\usepackage{bm}
+%\usepackage{chemist}
+%\usepackage{chemformula}
+\usepackage{breqn}
+\usepackage{enumitem}
+\usepackage{setspace} %needed for preprint in doublelinespace 
+%\usepackage[colorinlistoftodos, textwidth=4cm, shadow]{todonotes} %comments and
+\usepackage[normalem]{ulem} % provides strike out
+\usepackage{caption}
+\DeclareRobustCommand{\figref}[1]{ Fig. \ref{#1}}
+\DeclareRobustCommand{\revref}[1]{Comment: \ref{#1}}
+\DeclareRobustCommand{\Theoref}[1]{Theorem \ref{#1}}
+\DeclareRobustCommand{\Defref}[1]{\mbox{Definition \ref{#1}}}
+\DeclareRobustCommand{\enumref}[1]{\ref{#1}}
+\DeclareRobustCommand{\appendixref}[1]{appendix \ref{#1}}
+\DeclareRobustCommand{\Appendixref}[1]{Appendix \ref{#1}}
+\DeclareRobustCommand{\sectionref}[1]{ section \ref{#1}}
+\DeclareRobustCommand{\tupelref}[2]{\enumref{#1} \enumref{#2}}
+%\definecolor{dark-green}{rgb}{0,0.25,0}
+% vectors and matrices
+\renewcommand{\vec}[1]{\boldsymbol{\mathbf{#1}}}
+\newcommand{\tens}[1]{\mathrm{#1}}
+
+% d/dt not italic, dt in integrals d upright, even putting the space before
+\newcommand{\deriv}[1]{\frac{\mathrm{d}}{\mathrm{d}#1}}
+\newcommand{\dd}[1]{\,\mathrm{d}#1}
+\newcommand{\pderiv}[1]{\frac{\partial}{\partial #1}}
+
+\newcommand{\suml}{\sum\limits}
+\newcommand{\prodl}{\prod\limits}
+\newcommand{\intl}{\int\limits}
+\newcommand{\liml}{\lim\limits}
+\newcommand{\LAPM}{\texttt{LAPM} }
+\newcommand{\sympy}{\texttt{SymPy} }
+\newcommand{\python}{\texttt{Python} }
+\newcommand{\CompartmentalSystems}{\texttt{CompartmentalSystems} }
+\newcommand{\ComputabilityGraphs}{\texttt{ComputabilityGraphs} }
+\newcommand{\todo}[1]{{\color{red} comment:\\
+#1} }
+%\newcommand{\bgc_md2}{\texttt{bgc \textunderscore md2}}
+
+% numbers
+\newcommand{\N}{numbersystem:N}
+\newcommand{\R}{numbersystem:R}
+\newcommand{\CN}{numbersystem:C}
+\newcommand{\Rpd}{numbersystem:Rpd}
+\newcommand{\Rp}{numbersystem:Rp}
+
+\newcommand{\tnot}{\gls{symb:t0}}
+\newcommand{\transpose}{symb:transpose}
+
+
+\graphicspath{{./figures/}}
