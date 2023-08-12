@@ -182,7 +182,7 @@ be able to repeatedly refactor the code base w.r.t better abstractions requires
 software engineering techniques like unit testing and more specifically a 'test
 hull' i.e. a comprehensive set of tests to provide coverage for the
 features, so that their implementation can be changed with confidence.  Apart
-from the benefit of inducing better engendering practices the work on a model
+from the benefit of inducing better engeneering practices the work on a model
 data base has the benefit of \emph{unveiling} these abstractions.  Their choice
 is not accidental but the result of a decade of refinement and a major outcome
 of the project.  An example for this clarifying feedback of software
@@ -197,7 +197,7 @@ that collects a number of compartmental models specialized on soil models.  The
 software we are going to present can be seen as the result of countless
 refactoring and two major design iterations of this initial project, the result
 of contributions of many codevelopers, user input,  and a decade of critical
-evaluation and resulting change of design choices.  The result not only far
+evaluation and resulting change.  The result not only far
 exceeds \SoilR's capabilities but also constitutes our best proposal for an
 extendable community tool so far.  In particular the new approach
 \begin{enumerate}
@@ -390,16 +390,21 @@ which could be approximated by many measurements but looses this interpretation 
 More recently proposed metrics 
 like `carbon storage capacity',  `carbon storage potential' and `residence time' suffer from the same issue.
 \todo{
-  @Kostia, could you collect the Matrix approach references in the bib file and cite them here?
+  @Kostia, could you collect papers citing CarbonStoragePotential and CarbonStorageCapacity in the bib file and cite them here?
 }
 They have a physical meaningful interpretation only in equilibrium 
 but loose it if their formal definition is extended to the transient case (nonautonomous compartmental systems) as in \citep{Luo2017Biogeosciences}
 While we could implement a function applying such a definition, fulfilling \enumref{enum:function} it would violate \enumref{enum:measurable} and because of the name also be very misleading. 
 A user asking for  'ResidenceTime' (by applying such a function) would reasonably expect the transient 'time of residence' of material and not the time of residence the material  
 \emph{would} have if the system was frozen at this moment \emph{and} allowed to reach its equilibrium.
-
+\todo{@Holger\\
+In the following paragraph I played it save . Carlos had mentioned entropy in an age old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM
+}
 A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
-of dynamical systems \citep{Ebeling1998}. For nonautonomous linear systems it has 
+of dynamical systems \citep{Ebeling1998}. 
+For 
+%non? 
+autonomous linear systems it has 
 been used to describe the uncertainty of a particle's path through a
 compartmental system, quantifying how difficult it is to predict this path. 
 and to compare path properties of models with different number of
@@ -414,7 +419,7 @@ Surprisingly the literature even contains proposals for metrics that can not be 
                 &=& \I(t) + A \xi K(t) \, \X
   \label{eq:AxiK}
 \end{eqnarray}
-\todo{@Kostia, could you collect the Matrix approach references in the bib file and cite them here?, there is also a reference to a paper of Carlos and me referenced in Yiqi's 2017 paper}
+\todo{@Kostia, could you collect the `matrix approach references' (w.r.t. the decomposition into $A \xi K$ in the TEE-clean.bib file and cite them here? }
 While it is certainly possible to derive \eqref{eq:LinCompartmentalSystem} unambiguously from \eqref{eq:AxiK} the opposite direction is not possible. Neither is the form \eqref{eq:AxiK} as general as \eqref{eq:LinCompartmentalSystem} nor is the decomposition uniquely defined.
 While the issue with generality could be solved similarly to the equilibrium
 issue by introducing subtypes of decomposable matrices and fluxes the issue of
