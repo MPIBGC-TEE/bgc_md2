@@ -1,4 +1,5 @@
-\usepackage{listings}
+%\usepackage{listings}
+\usepackage{minted}
 \usepackage{array}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -21,11 +22,11 @@
 %\usepackage[colorinlistoftodos, textwidth=4cm, shadow]{todonotes} %comments and
 \usepackage[normalem]{ulem} % provides strike out
 \usepackage{caption}
-\DeclareRobustCommand{\figref}[1]{ Fig. \ref{#1}}
+\DeclareRobustCommand{\figref}[1]{Fig. \ref{#1}}
 \DeclareRobustCommand{\revref}[1]{Comment: \ref{#1}}
 \DeclareRobustCommand{\Theoref}[1]{Theorem \ref{#1}}
 \DeclareRobustCommand{\Defref}[1]{\mbox{Definition \ref{#1}}}
-\DeclareRobustCommand{\enumref}[1]{\ref{#1}}
+\DeclareRobustCommand{\enumref}[1]{\ref{#1}.}
 \DeclareRobustCommand{\appendixref}[1]{appendix \ref{#1}}
 \DeclareRobustCommand{\Appendixref}[1]{Appendix \ref{#1}}
 \DeclareRobustCommand{\sectionref}[1]{ section \ref{#1}}
@@ -47,7 +48,7 @@
 \newcommand{\LAPM}{\texttt{LAPM} }
 \newcommand{\SoilR}{\texttt{SoilR} }
 %\newcommand{\R}{\texttt{R} }
-\newcommand{\sympy}{\texttt{SymPy} }
+\newcommand{\sympy}{\texttt{SymPy}}
 \newcommand{\python}{\texttt{Python} }
 \newcommand{\CompartmentalSystems}{\texttt{CompartmentalSystems} }
 \newcommand{\ComputabilityGraphs}{\texttt{ComputabilityGraphs} }
