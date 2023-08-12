@@ -212,7 +212,6 @@ value_dicts = [all_values, all_averaged_values]
 
 
 ""
-from bgc_md2 import helper as h
 def plot_time_lines_one_plot_per_property(
     value_dict,
     title_dict,

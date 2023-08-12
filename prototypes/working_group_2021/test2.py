@@ -133,14 +133,17 @@ def timelines_from_model_folder(mf):
 
 all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
 
-
 # +
 ## test plot for visit
-#mf="jon_yib"
-#model_mod=f'bgc_md2.models.{mf}'
+#mf="kv_visit2"
+mf="jon_yib"
+model_mod=f'bgc_md2.models.{mf}'
 #
-#mvs = import_module(f"{model_mod}.source").mvs
-#
+mvs = import_module(f"{model_mod}.source").mvs
+fig=plt.figure()
+ax=fig.subplots(1,1)
+g=mvs.closure_graph_plot(ax)
+
 #smr = mvs.get_SmoothModelRun()
 #smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 #start_mean_age_vec = mvs.get_NumericStartMeanAgeVector()
