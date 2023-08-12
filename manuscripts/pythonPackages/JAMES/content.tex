@@ -1090,9 +1090,12 @@ In fact there are many results that could be implemented quite easily.
 E.g. we implemented the two types \texttt{VegetationCarbonStateVariableTuple} and 
 \texttt{SoilCarbonStateVariableTuple}. It would have been easy to created something similar for e.g. Nitrogen. However the number of types would quickly become large since their
 are also related types that would have to be duplicated, i.e. \texttt{NumericVegetationCarbonSolutionArray} or \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution} ...
-It would be more elegant to express these relationships between types by a concept called
-algebraic data types which is used e.g. in  Haskell but also available in \python 's type hint syntax but not yet implemented in \ComputabilityGraphs.
-The concept is actually very simple as e.g. a type that uses another type as parameter like a list of integers \texttt{List[int]}. Algebraic types would give us a bigger namespace for less awkward type names and also avoid some boilerplate code for the `computers'.
+To combat this `combinatoric explosion' it would be more elegant to express these relationships between types by a concept called
+algebraic data types which is used e.g. in  \texttt{Haskell} but also available in \python 's type hint syntax but not yet implemented in \ComputabilityGraphs{}.
+The concept is actually very simple as e.g. a type that uses another type as parameter like a list of integers \texttt{List[int]}. Algebraic types would give us a bigger namespace 
+for less awkward type names and also avoid some boilerplate code for the `computers'.
+\footnote{R does allow polymorphism in all arguments by means of \texttt{S4} classes, but does not allow algebraic types. So in SoilR the combinatoric explosion also lead to longer and longer type names.
+}
 Another related extension of \ComputabilityGraphs is to allow `computers' that return tuples . 
 This could be used to minimize the number of recursive computer application for sets of desired results.   
 
@@ -1104,6 +1107,9 @@ provides a printer module that allows the translation of \sympy{}
 expressions to many different programming languages including but not limited to C, Fortran, Java, R and Julia.
 So that models could also be translated to these languages automatically. 
 A possible application of this ability would be to automatically compile different land-carbon models from \texttt{bgc\_md2}'s collection into an earth system model without the need to reimplement them in the targeted language. 
+\subsubsection{Benchmarking Testbed and Stepping Stone for the Implementations of Diagnostics in other Projects}
+Our packages have hundreds of unit test cases. If the integration of transit time computations into an existing earth system model was desired, these test could be adapted
+much faster than created from scratch. For nonlinear and nonautonomous systems, where analytical tests are hard to come by, \texttt{bgc\_md} can be used as a benchmark for any desired model (which could be implemented much more quickly there and then used as a reference in a set of tests for the new implementation.
 \subsubsection{Documentation and Error Messages}
 Our software tools are written in \python. 
 This has advantages:
