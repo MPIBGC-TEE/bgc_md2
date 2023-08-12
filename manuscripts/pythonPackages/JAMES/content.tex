@@ -1055,11 +1055,11 @@ The symbolic part takes usually much less than a day,
 and adding parameters muss less than finding them in the literature.
 When you are happy with your code a pull request will put your model into the default location 
 and make it subject to the tests. 
-\subsubsection{More Real Parametrization and Driver data}
+\subsubsection{More Real Parametrizations and Driver data}
 Many of the model descriptions contain a variable of type \texttt{NumericParameterization} 
-which contains a dictionaries for parameter values and functions, mapping the symbolic description to a runnable model.
+which contains dictionaries for parameter values and functions, mapping the symbolic description to a runnable model.
 These \texttt{NumericParameterization} instances are usually extremely small example data sets, whose purpose is to give users some arguments to test the numerical results with.
-This is intended. \texttt{0bgc\_md2} is not a place to store data.
+This is intended. \texttt{bgc\_md2} is not a place to store data.
 However we would like to apply models to real data. Usually via model and data set specific code that makes available data accessible to our models.
 It is surprisingly tedious \todo{Big THANKS to Veronika, for doing it for many models} and sometimes impossible to find scientifically meaningful parameters for many models.
 In the case of earth system models we would need such a set of parameters and driver functions for each spatial pixel.
@@ -1069,7 +1069,7 @@ often not possible to estimate them accurately even from synthetic model output.
   Usually due to identifiability issues. 
   30 or more parameters can hardly be expected to be estimable from much fewer data streams
 }
-We have created a small trendy9 specific package for gluing the data to \texttt{bgc\_md}'s, with parameter estimation code for four models.
+We have created a small trendy9 specific package for gluing the data to \texttt{bgc\_md}'s models, with parameter estimation code for four models.
 It would be very beneficial to have more gluing code for more data sets available...
 
 
