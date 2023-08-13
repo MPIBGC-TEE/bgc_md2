@@ -59,7 +59,7 @@ Imagine a bucket standing on a table under a water tap. Now drill some small
 holes in the bottom and attach some short pipes that lead to other buckets
 standing on some chairs and drill holes in their bottom to attach pipes to even
 more buckets standing on the ground. Drill holes again in the bottom so that
-water can leak out ...  It turns out that regardless of the number of buckets
+water can leak out...  It turns out that regardless of the number of buckets
 pipes or taps, the amount of water in the buckets at any time in the future can
 be predicted very accurately without knowing the details of how exactly the
 water flows through the buckets, for instance where the holes in the bottom are
@@ -397,7 +397,7 @@ While we could implement a function applying such a definition, fulfilling \enum
 A user asking for  'ResidenceTime' (by applying such a function) would reasonably expect the transient 'time of residence' of material and not the time of residence the material  
 \emph{would} have \emph{if} the system was frozen at this moment \emph{and} allowed (infinite) time to reach its equilibrium.
 \todo{@Holger\\
-In the following paragraph I played it save . Carlos had mentioned entropy in an  old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
+In the following paragraph I played it save. Carlos had mentioned entropy in an  old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
 }
 A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
 of dynamical systems \citep{Ebeling1998}. 
@@ -620,7 +620,7 @@ This rigorous description actually defines computability graphs that we exploit 
       Without performing any actual computation we know which results we can
       compute (30 light green nodes) from the 11 provided variables (dark
       green), some of them in different ways via intermediate results
-      (as explained in  \figref{fig:dep_graph} below) .  This
+      (as explained in  \figref{fig:dep_graph} below).  This
       information is used to automatically add methods to an \texttt{CMTVS}
       instance, so that interactive python environments suggest computable
       results to the user. In this case 30 new methods appear automatically, including very complex results like the pool specific transient 
@@ -1018,12 +1018,13 @@ subsystems, across different models.  } \label{fig:btt_4models} \end{figure}
   belong to which subsystem.  } \label{fig:stock_mean} \end{figure}  
 
 
-\section{Conclusions} \label{sec:ConclusionsAndOutlook}.  We implemented a
+\section{Conclusions} \label{sec:ConclusionsAndOutlook}
+We implemented a
 practically usable tool for the creation, collection, inspection and comparison
 of compartmental models and demonstrated how it could be applied quickly to the
 practical problem, of comparing several models with respect to a numerical
 result complex enough to make its implementation on a per model basis
-prohibitively expensive.  We created examples to teach new user how use the
+prohibitively expensive.  We created examples to teach new users how use the
 existing capabilities, how to query the collection and how to add models to it.
 These immediate practical benefits are sufficient for many simple application and
 are to our knowledge unprecedented.  In the process some lessons have been
@@ -1032,7 +1033,7 @@ interested in extending our work.  An important one is the fertile feedback of
 the self imposed restriction to properties that are either results or arguments
 of computations on the clarity of the description of features.  Another one is
 the implementation of all the tools as libraries rather than a framework, which
-allows the use of the provided tools in situation that we do not anticipate yet
+allows the use of the provided tools in situations that we do not anticipate yet
 and allows us to be strict in the data base part without creating a bottleneck.
 We have also collected some more general observations: Creating collections of
 many models and many metrics consistently applicable to all of them is hard,
@@ -1051,7 +1052,9 @@ The easiest way to extend the data base is to contribute new models.
 We have created an example notebook as an interactive tutorial.
 Since very few building blocks are necessary, adding a new model is actually very simple.
 The symbolic part takes usually much less than a day, 
-and adding parameters muss less than finding them in the literature.
+and adding parameters much less time than finding them in the literature.
+Since \texttt{CMTVS} instances are normal python objects and have update and remove methods, models can use other models as source and extend them dynamically.
+The already stored models descriptions are \python{} modules and can import others or be imported by them.
 When you are happy with your code a pull request will put your model into the default location 
 and make it subject to the tests. 
 \subsubsection{More Real Parametrizations and Driver data}
@@ -1060,7 +1063,7 @@ which contains dictionaries for parameter values and functions, mapping the symb
 These \texttt{NumericParameterization} instances are usually extremely small example data sets, whose purpose is to give users some arguments to test the numerical results with.
 This is intended. \texttt{bgc\_md2} is not a place to store data.
 However we would like to apply models to real data. Usually via model and data set specific code that makes available data accessible to our models.
-It is surprisingly tedious \todo{Big THANKS to Veronika, for doing it for many models} and sometimes impossible to find scientifically meaningful parameters for many models.
+It is surprisingly tedious \todo{Big THANKS to Veronika, for doing it for many models} and for some models impossible to find scientifically meaningful parameters in the literature.
 In the case of earth system models we would need such a set of parameters and driver functions for each spatial pixel.
 Even for model intercomparison projects like trendy \todo{@Kostia Trendy Quotation?} these parameters are usually not publicly available and it is 
 often not possible to estimate them accurately even from synthetic model output. 
@@ -1076,8 +1079,9 @@ It would be very beneficial to have more gluing code for more data sets availabl
 Adding `computers' is technically very simple. It will make you think though.
 In the `language' of \texttt{bgc\_md2} anything worth saying about a compartmental model is the result of a computation, or an argument that influences other computations or most likely both.
 Adding a new computer is the simplest case, since one has only to make sure that for \emph{any} arguments that fit the type signature a unique result can be computed. If new argument types or new result types have to be introduced it is usually worth asking if these arguments could be computed from something simpler. The reiteration of this process can lead to astonishing results.
-At some point we wanted to add information about the vegetation subsystems of some ecosystem models needed the related subsystem compartmental matrix as in \citep{Ceballos2018Biogeosciences}. Adding it as a model property would have been very error prone.
-Adding a projection operation on the matrix possible but far more complicated
+At some point we wanted to add information about the vegetation subsystems of some ecosystem models. 
+We needed the related subsystem compartmental matrix as in \citep{Ceballos2018Biogeosciences}. 
+Adding it as a model property would have been very error prone, adding a projection operation on the matrix would have been possible but far more complicated
 than the graph description that is now implemented and allows to specify a
 vegetation state variable tuple from which not only the vegetation
 compartmental matrix can be computed but any other vegetation related result too. 
@@ -1088,17 +1092,17 @@ The sets of `computers' and their argument and result types is by no means compr
 In fact there are many results that could be implemented quite easily. 
 E.g. we implemented the two types \texttt{VegetationCarbonStateVariableTuple} and 
 \texttt{SoilCarbonStateVariableTuple}. It would have been easy to created something similar for e.g. Nitrogen. However the number of types would quickly become large since their
-are also related types that would have to be duplicated, i.e. \texttt{NumericVegetationCarbonSolutionArray} or \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution} ...
+are also related types that would have to be duplicated, i.e. \texttt{NumericVegetationCarbonSolutionArray} or \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution}...
 To combat this `combinatoric explosion' it would be more elegant to express these relationships between types by a concept called
 algebraic data types which is used e.g. in  \texttt{Haskell} but also available in \python{} 's type hint syntax but not yet implemented in \ComputabilityGraphs{}.
 The concept is actually very simple as e.g. a type that uses another type as parameter like a list of integers \texttt{List[int]}. Algebraic types would give us a bigger namespace 
 for less awkward type names and also avoid some boilerplate code for the `computers'.
 \footnote{R does allow polymorphism in all arguments by means of \texttt{S4} classes, but does not allow algebraic types. So in SoilR the combinatoric explosion also lead to longer and longer type names.
 }
-Another related extension of \ComputabilityGraphs{} is to allow `computers' that return tuples . 
+Another related extension of \ComputabilityGraphs{} is to allow `computers' that return tuples. 
 This could be used to minimize the number of recursive computer application for sets of desired results.   
 
-\subsubsection{Automatic Code Generation and Integration into Earth System Models}
+\subsubsection{Automatic Code Generation, Other Languages and Integration into Earth System Models}
 \texttt{bgc\_md2} uses symbolic math to describe the model equations. It then
 uses \sympy{}'s facilities to first translate these expressions into regular python code and execute it in a special environment that can be influenced.
 \sympy{}
@@ -1106,10 +1110,16 @@ provides a printer module that allows the translation of \sympy{}
 expressions to many different programming languages including but not limited to C, Fortran, Java, R and Julia.
 So that models could also be translated to these languages automatically. 
 A possible application of this ability would be to automatically compile different land-carbon models from \texttt{bgc\_md2}'s collection into an earth system model without the need to reimplement them in the targeted language. 
-\subsubsection{Benchmarking Testbed and Stepping Stone for the Implementations of Diagnostics in other Projects}
+Remarkably \ComputabilityGraphs could also easily be extended to use collections of `computers' in other languages. 
+It acts much like a compiler and could use the graphs to automatically create code calling the `computers' recursively in the right order. 
+\footnote{At the moment this is not necessary since the computations traversing the graph in reverse are all performed immediately in python with with a growing intermediate result dictionary}  
+This is extremely useful for the next possible extension.
+
+\subsubsection{Benchmarking Testbed and Stepping Stone for the Implementations of Diagnostics in Other Projects}
 Our packages have hundreds of unit test cases. If the integration of transit time computations into an existing earth system model was desired, these test could be adapted
 much faster than created from scratch. For nonlinear and nonautonomous systems, where analytical tests are hard to come by, \texttt{bgc\_md} can be used as a benchmark for any desired model (which could be implemented much more quickly there and then used as a reference in a set of tests for the new implementation.
-\subsubsection{Documentation and Error Messages}
+
+\subsubsection{Documentation, Error Messages}
 Our software tools are written in \python{}. 
 This has advantages:
 \begin{itemize}
@@ -1132,6 +1142,26 @@ This is an ongoing task: While \LAPM{} and \CompartmentalSystems{} are pretty we
 \todo{Big Thanks to Holger!!!} 
 \texttt{bgc\_md} and \ComputabilityGraphs{} are not yet and none of the packages is `fool proof'. 
 
+\subsubsection{Polished UI, Web Interface}
+We implemented some widgets to use in \texttt{Jupyter} notebooks (e.g. to show a subset
+of the models in an interactive table or to explore the computability graphs).
+These widgets are absolutely basic  proofs of concept, mainly intended to icite a skilled web developer 
+(or enthusiastic student in need of a project) to transform them into something much
+more useful (a click on an edge in a computability graph could generate and print code for this path) and shiny.
+This is especially true for the graph visualizations. 
+Plotting (mathematical) graphs is a surprisingly hard problem and
+standard plotting libraries like \texttt{matplotlib} or
+\texttt{igrap} support only basic graph layout algorithms.  
+Widgets or web applications using \texttt{javascript} would allow to use more specialized libraries like \texttt{Cytoscape.js} 
+and make the interactive exploration or publications- ready printing of the compartmental model (as well as the computability graphs) 
+much more beautiful. 
+It would also be relatively easy to host \texttt{bgc\_md2} based on a server, preferably with access to many datasets.
+A \texttt{Jupyter} server would be the most flexible option for scientific users, 
+but specialized and less interactive websites for model or result presentations could 
+easily be build using the existing example widgets as a starting points. 
+
+
+
 
 
 
@@ -1145,7 +1175,7 @@ This is an ongoing task: While \LAPM{} and \CompartmentalSystems{} are pretty we
 %the standard one using Conda. 
 %All packages have extensive testsuites which are triggered by every commit but
 %can also be run manually e.g. after installation which we strongly recommend.
-%The test suites are  stored in the folder \texttt{tests} under the root of the repo . If they run successfully, then all the functionality of the four packages is readily accesible. 
+%The test suites are  stored in the folder \texttt{tests} under the root of the repo. If they run successfully, then all the functionality of the four packages is readily accesible. 
 %
 %Detailed instructions of the installation procedure can be found in the `README.md' file of the \texttt{bgc\_md2} repository. 
 %
@@ -1155,7 +1185,7 @@ This is an ongoing task: While \LAPM{} and \CompartmentalSystems{} are pretty we
 %into a hypertext documentation which is served by GitHub. It's automatically updated when changes to the documentation are pushed to the master branch of the repositories. 
 %
 %In addition to this documentation, we provide Jupyter notebooks for each package, with demonstrations of specific aspects of the available functionality.
-%Each package has a 'notebooks' folder where the Jupyter notebooks are stored. However, they are stored as source .py files and not in the original .ipynb format. 
+%Each package has a 'notebooks' folder where the Jupyter notebooks are stored. However, they are stored as source.py files and not in the original.ipynb format. 
 %The reason for this is that to maintain the notebooks under version control and avoid conflicts among different versions on different machines, we store the notebooks as regular python files. To convert these files to Jupyter notebooks, we recommend to use Jupytext, which does the translation with a simple `convert' command. 
 %
 %\section{Illustrative example}
@@ -1435,7 +1465,7 @@ or if we insist on a non-state-dependent inputs
 \frac{d \X}{d t}
   &=\I(t) - M(t) \X \label{massbalance_linear_no_state_dependent}
   \\
-  &= \bv(t)u(t) - A(t) K(t) \X \nonumber .
+  &= \bv(t)u(t) - A(t) K(t) \X \nonumber.
 \end{align} 
 Eq. \eqref{mass-balance_linear} allows for influxes to be dependent on the receiving pool, e.g. for the influx of carbon through photosynthesis to depend on the the size of the leaf pool. Note that $L$ does not have to be compartmental and therefore not factorizable into $A$ and $K$.
 Eq. \eqref{massbalance_linear_no_state_dependent} is that 
