@@ -348,8 +348,7 @@ It is the first of the following criteria:
 
 Beside the content of pools the whole system or subsystem and fluxes between
 them, ages, and transit times are key quantities of compartmental systems that
-fulfill all of these criteria: \enumref{enum:function}, \enumref{enum:general} and
-\enumref{enum:measurable}.
+fulfill all of these criteria.%: \enumref{enum:function}, \enumref{enum:general} and \enumref{enum:measurable}.
 They help to better understand underlying system dynamics and to compare models
 with different sizes or structures.  They can in principle be measured: While
 age describes how old material in the system is, transit time describes how
@@ -381,8 +380,8 @@ considered properties of the model rather than reality.
   concept of a single 'rate' applied to all material in a pool is implied by
   the definition of compartmental systems.
 } 
-Flux rates and compartmental matrices, and more importantly properties derived from them, fall into  this category. 
-One example is `turnover time' which is defined as the quotient between between content of and outflux from a pool, or as the inverse of the rate. 
+Flux rates and compartmental matrices, and more importantly (some) properties derived from them, fall into  this category. 
+One example is `turnover time' which is defined as the quotient between content of and outflux from a pool, or as the inverse of the rate. 
 `Turnover time' is an interesting example as it violates, \enumref{enum:measurable} or \enumref{enum:general}, 
 because it turns out that for a one pool system in equilibrium it actually coincides with the mean backward transit time
 which could be approximated by many measurements but looses this interpretation in any non-equilibrium state.
@@ -396,9 +395,9 @@ They have a physical meaningful interpretation only in equilibrium
 but loose it if their formal definition is extended to the transient case (nonautonomous compartmental systems) as in \citep{Luo2017Biogeosciences}
 While we could implement a function applying such a definition, fulfilling \enumref{enum:function} it would violate \enumref{enum:measurable} and because of the name also be very misleading. 
 A user asking for  'ResidenceTime' (by applying such a function) would reasonably expect the transient 'time of residence' of material and not the time of residence the material  
-\emph{would} have if the system was frozen at this moment \emph{and} allowed to reach its equilibrium.
+\emph{would} have \emph{if} the system was frozen at this moment \emph{and} allowed (infinite) time to reach its equilibrium.
 \todo{@Holger\\
-In the following paragraph I played it save . Carlos had mentioned entropy in an age old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
+In the following paragraph I played it save . Carlos had mentioned entropy in an  old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
 }
 A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
 of dynamical systems \citep{Ebeling1998}. 
@@ -1121,10 +1120,10 @@ This has advantages:
 \end{itemize}
 but also disadvantages: The same permissiveness that allows for rapid prototyping and interactive use can also make the detection of unintended misuse harder.
 In strictly typed languages like Haskell many unintended usecases are already detected at compile time and reported as errors.
-This 'fail early and hard' philosophy , facilitates the creation of 'fool proof'
+This 'fail early and hard' philosophy, facilitates the creation of 'fool proof'
 'software', whereas interactive environments, notably  R and python follow
 almost the opposite approach.  They try their best to make sense of anything
-thrown at them which can delay the detection of an error and thereby remove the effects from the cause.
+thrown at them which can delay the detection of an error and thereby remove the effects far from the cause.
 Complex libraries like \texttt{bgc\_md2} which sits on top of \CompartmentalSystems{} which sits on top of \LAPM{} which sits on top of \texttt{numpy}, \texttt{SciPy} and \sympy{}
 need extra care to filter out user input that could cause trouble further down the call stack. 
 \footnote{E.g. in some corner cases the underlying libraries might treat a matrix of dimensions n,1 differently than an array of dimension (n,), while users usually do not anticipate this.} This becomes more important the less obvious the computation in question is. 
@@ -1374,7 +1373,7 @@ Together with a start-value $\X_0$ \eqref{massbalance_0}  constitutes an "initia
 %It is mathematical standard notation to use $X$ in the *formulation* of the ivp (representing the momentary value) althoug *after we have solved it* the solution is expressed as function of time $X(t)$. This avoids confusion since everything appering with arguments is recognizable as explicitly calculable *before* we have solved the ivp.
 
 Without further assumptions the system is "nonautonomous" (since either of $\I$ or $M$ can depend on time $t$) 
-and "nonlinear" since either $M$ can depend on $X$ or $\I$ can depends on $X$ in a way that cannot be expressed in the form $\I(\X,t)=\tilde{\I(t)}+I_{mat}(t)\X$ with the matrix $I_{mat}(t)$ independent of $X$.
+and "nonlinear" since either $M$ can depend on $\X$ or $\I$ can depend on $\X$ in a way that cannot be expressed in the form $\I(\X,t)=\tilde{\I(t)}+I_{mat}(t)\X$ with the matrix $I_{mat}(t)$ independent of $X$.
 
 If $m_{i,i}(\X,t) \ne 0$ 
 \footnote{
@@ -1422,7 +1421,7 @@ with:
 The $k_{i,i}$ can be interpreted as the rate of the total flux out of pool $i$. The elements of column $i$ of $A$ describe then which fractions of this total outflux is transferred to pool $j$. 
 
 \subsubsection{Assumption of Linearity}
-If we assume the model to be linear and nonautonomous the dependency on $X$ vanishes and we have
+If we assume the model to be linear and nonautonomous the dependency on $\X$ vanishes and we have
 either
 \begin{align}
 \frac{d \X}{d t}
@@ -1555,7 +1554,7 @@ Any sensible attribution of this kind has to be shown to be robust to changes of
 \section*{Open Research Section}
 The data used for the example could be obtained from several servers that offer trendy9 data.
 The example is however not intended to answer a `real' research question, but to show how a model comparison could look like,
-if we \emph{had} access to the parameter used in the original trendy9 model runs.
+if we \emph{had} access to the parameter sets used in the original trendy9 model runs.
 We chose `reasonable' parameters for the models as \emph{if} we knew them for a pixel.
 All code is available on GitHub and the example notebooks can be interactively explored on \href{https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder}{binder}.
 
