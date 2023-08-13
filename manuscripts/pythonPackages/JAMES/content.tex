@@ -10,7 +10,7 @@
 
 % Example: \title{This is a test title}
 \title{The biogeochemichal model data base \texttt{bgc\_md2} and python
-packages  \LAPM, \CompartmentalSystems, \ComputabilityGraphs for the analysis of compartmental dynamical systems}
+packages  \LAPM, \CompartmentalSystems, \ComputabilityGraphs{} for the analysis of compartmental dynamical systems}
 %\date{\today}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -192,7 +192,7 @@ Astonishingly this excludes some metrics for compartmental systems that have
 been proposed, as we will see.
 
 Our first encounter with the challenge of a model collection was the
-development of \SoilR \citep{Sierra2012GeosciModelDev}, a \texttt{R} package
+development of \SoilR{} \citep{Sierra2012GeosciModelDev}, a \texttt{R} package
 that collects a number of compartmental models specialized on soil models.  The
 software we are going to present can be seen as the result of countless
 refactoring and two major design iterations of this initial project, the result
@@ -208,7 +208,7 @@ extendable community tool so far.  In particular the new approach
   \item 
     describes compartmental models as graphs, \emph{or} matrix equations and enables the \emph{automatic conversions} between them, thereby enable ling the definition of subsystems by simply naming their pools.
   \item
-    adds diagnostics (transit time and age distributions) not present in \SoilR.
+    adds diagnostics (transit time and age distributions) not present in \SoilR{}.
   \item
     provides a much simpler user interface 
     to the vast number of analytical tools that had already made the creation of a navigable documentation an overwhelming job for \SoilR. 
@@ -224,14 +224,14 @@ extendable community tool so far.  In particular the new approach
 
 We developed three python packages for the representation, classification, collection and analysis  of compartmental systems, implementing methods for the computation of age and transit times, that can be performed for particular systems under given assumptions, and tools to automatically \emph{restrict} their use.
 These open source packages are called: 
-\LAPM (Linear Autonomous Pool Models),
-\CompartmentalSystems  and
+\LAPM{} (Linear Autonomous Pool Models),
+\CompartmentalSystems{}  and
 \texttt{bgc\_md2} (Biogeochemical Model Database).
 This manuscript provides a general introduction to these packages 
 with emphasis of their combined use via \texttt{bgc\_md2}.
 The latter implements a set of model describing properties that form the (exclusive) arguments and return values of strictly typed functions, forming a network of computability which we use 
 to implement a declarative domain specific language for model creation, inspection, querying and thus comparison.
-To facilitate this we implemented a fourth package \ComputabilityGraphs based upon the  type hinting syntax of modern \python versions, extending its use to predicting what is computable.   
+To facilitate this we implemented a fourth package \ComputabilityGraphs{} based upon the  type hinting syntax of modern \python{} versions, extending its use to predicting what is computable.   
 The requirement to define every model property as a variable of a specific
 type, and to provide a function to compute it from other model property (i.e.
 variable of well defined \emph{types}) also provides a rigorous filter for what
@@ -398,7 +398,7 @@ While we could implement a function applying such a definition, fulfilling \enum
 A user asking for  'ResidenceTime' (by applying such a function) would reasonably expect the transient 'time of residence' of material and not the time of residence the material  
 \emph{would} have if the system was frozen at this moment \emph{and} allowed to reach its equilibrium.
 \todo{@Holger\\
-In the following paragraph I played it save . Carlos had mentioned entropy in an age old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM
+In the following paragraph I played it save . Carlos had mentioned entropy in an age old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
 }
 A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
 of dynamical systems \citep{Ebeling1998}. 
@@ -445,7 +445,7 @@ linear, autonomous, pool models,
 \dot{\X} = \I + M \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
 \end{equation}
 for which interesting properties can be
-obtained by the \LAPM package.  The equilibrium $x^*$ is defined by the
+obtained by the \LAPM{} package.  The equilibrium $x^*$ is defined by the
 condition  $\dot{\X}=0$ which translates to $-M \X^*= \I$ which means that for
 pool contents $\X^*$ the influxes $\I$ match the outfluxes $M \X^*$ exactly.  It is
 straightforward to see that for this to happen all 
@@ -474,7 +474,7 @@ distribution, which depends on compartmental matrix $B$ and the equilibrium
 solution $x^*$ for the system age distribution and the $B$ and the input $u$
 for the transit time distribution \citep{Metzler2018MGS}.
 Compartmental systems at equilibrium have similar properties as continuous-time absorbing Markov Chains \citep{Metzler2018MGS}.
-Therefore, we can obtain other quantities of interest such as  the path entropy of particles that travel across the system and the occupation time of particles inside compartments \citep{Metzler2020}. These properties of linear autonomous compartmental systems at equilibrium can be obtained with the \LAPM package.
+Therefore, we can obtain other quantities of interest such as  the path entropy of particles that travel across the system and the occupation time of particles inside compartments \citep{Metzler2020}. These properties of linear autonomous compartmental systems at equilibrium can be obtained with the \LAPM{} package.
 
 Interestingly the properties of linear autonomous systems in equilibrium can
 also be computed for nonlinear systems in equilibrium if such an equilibrium
@@ -491,7 +491,7 @@ If the inverse ${M^*}^{-1}$ exists transit time and age distributions can be com
 \citep{Metzler2018MGS}.
 and therefore also  nonlinear autonomous
 systems at equilibrium can be analyzed with the by the
-\LAPM package.
+\LAPM{} package.
 Note however,that 
 \eqref{eq:x_Minv_I} is useless to determine $\X^*$ and 
 no such $\X^*$ might exist for some systems
@@ -518,7 +518,7 @@ subsequent time $t > t_0$. It is numerically computable by solving an matrix
 ode derived from \eqref{sec:trajectory} 
 From $\Phi(t,t_0)$ we can obtain not only the temporal evolution of the
 solution $\X(t)$ but also of the distributions of ages of the mass in the compartments and in the entire system \citep{Metzler2018PNAS}.
-The \CompartmentalSystems package provides all the functionality necessary to do these computations, which rely on a description of the time-dependent input vector $u(t)$ and the compartmental matrix $B(t)$, as well as initial age distributions for the compartments.
+The \CompartmentalSystems{} package provides all the functionality necessary to do these computations, which rely on a description of the time-dependent input vector $u(t)$ and the compartmental matrix $B(t)$, as well as initial age distributions for the compartments.
 
 Furthermore, these computations can also be obtained for nonlinear systems of the form
 \begin{equation} \label{eq:NANLS}
@@ -534,16 +534,16 @@ specific trajectory. Detailed methods for the computation are provided in
 \citet{Metzler2018PNAS}
 
 %\section{Software description}
-\section{The \python packages}
+\section{The \python{} packages}
 \label{sec:PythonPackages}
-\subsection{\LAPM}
-Linear Autonomous Pool Models (\LAPM) is a python 3 package for the study of autonomous compartmental systems at equilibrium such as those described in section \ref{sec:Equilibrium}. 
+\subsection{\LAPM{}}
+Linear Autonomous Pool Models (\LAPM{}) is a python 3 package for the study of autonomous compartmental systems at equilibrium such as those described in section \ref{sec:Equilibrium}. 
 It implements the LinearAutonomousPoolModel class, with methods for the
 symbolic and numerical solutions of the steady state content in the compartments, and the steady state release out of the compartments. For transit time, system age, and pool age, it provides symbolic and numerical computations of distribution densities, cumulative distribution functions, mean, standard deviation,           variance, higher order moments, and Laplace transforms. 
 
-For the analysis of compartmental systems in analogy to absorbing Markov chains, \LAPM provides methods for the computation of the entropy rate per jump, the entropy rate per unit time, and path entropy. It provides the class DTMC (discrete-time Markov chains), with methods to compute the fundamental matrix, stationary distribution, and expected number of jumps of the Markov chain.
+For the analysis of compartmental systems in analogy to absorbing Markov chains, \LAPM{} provides methods for the computation of the entropy rate per jump, the entropy rate per unit time, and path entropy. It provides the class DTMC (discrete-time Markov chains), with methods to compute the fundamental matrix, stationary distribution, and expected number of jumps of the Markov chain.
 
-\subsection{\CompartmentalSystems}
+\subsection{\CompartmentalSystems{}}
 This package deals with non-equilibrium trajectories of compartmental systems.
 In particular, it provides the class smooth\_reservoir\_model to describe
 symbolically the general class of non-autonomous nonlinear compartmental
@@ -563,9 +563,9 @@ provides methods to obtain time dependent densities with corresponding moments a
 
 An additional module provides functions to obtain initial age distributions
 required for the computation of time-dependent age distributions. 
-This module uses \LAPM.
+This module uses \LAPM{}.
 
-\subsection{\ComputabilityGraphs}
+\subsection{\ComputabilityGraphs{}}
 This package was specifically developed for use in \texttt{bgc\_md2} but is also usable in separation.
 It allows a declarative description of results (model properties) i.e. completely abstracting from the way they are obtained as e.g in a \texttt{Make} 
 %\citep{
@@ -583,7 +583,7 @@ Instead of forcing a user of the data base to use a fixed
 description it is much more desirable to allow as many equivalent ones as
 possible \emph{and} make the equivalence explicit by  well defined mappings i.e. \emph{functions}.
 
-\ComputabilityGraphs facilitates exactly this.
+\ComputabilityGraphs{} facilitates exactly this.
 It implements a class \texttt{CMTVS} which stands for 
 {\bf C}onnected {\bf M} ulti {\bf T}yped {\bf V}ariable {\bf S}et. 
 Instances consist of a set of variables with unique type (only one variable per type) and a set of type annotated functions that exclusively 
@@ -634,7 +634,7 @@ This rigorous description actually defines computability graphs that we exploit 
       A lack of the automatic combination would however make it much more difficult to
       guide a user through the often purely technical conversions to the
       targeted result and massively increase the amount of necessary
-      handwritten documentation.  In this sense \ComputabilityGraphs can be
+      handwritten documentation.  In this sense \ComputabilityGraphs{} can be
       used as computable documentation or a much simpler API.  
       \label{fig:closure}
     \end{figure}
@@ -700,13 +700,13 @@ of the compartmental graph or flow diagram, symbolic matrices and vectors and is
 
 
 \subsection{The biogeochemical model database \texttt{bgc\_md2}} This is the
-central package and can be seen as a front end to \CompartmentalSystems and
-\LAPM facilitated by \ComputabilityGraphs.  For the following discussion it is
+central package and can be seen as a front end to \CompartmentalSystems{} and
+\LAPM{} facilitated by \ComputabilityGraphs{}.  For the following discussion it is
 important to note that \texttt{bgc\_md2} is a library, rather than a framework,
 since there is no `inversion of control', i.e. \texttt{bgc\_md2} as well as all
 the other packages are called from normal python code, rather than
 \texttt{bgc\_md2} calling user code in a restricted execution environment as a
-framework would do.  Although internally \ComputabilityGraphs acts like an
+framework would do.  Although internally \ComputabilityGraphs{} acts like an
 extended  compiler  (not only testing type consistency of function calls but
 actually suggesting them) for a DSL tailored to the domain of compartmental
 models, it is technically represented by \texttt{bgc\_md2}'s API (consisting of
@@ -722,7 +722,7 @@ since we can use absolutely unrestricted python code to create the model
 building blocks.  Imagine for example a model that includes pools in many soil
 layers with similar connecting fluxes. A model description code using
 \texttt{bgc\_md2} could use loops to express this.  This also applies to
-postprocessing. Some of the functionality in \LAPM and \CompartmentalSystems is
+postprocessing. Some of the functionality in \LAPM{} and \CompartmentalSystems{} is
 not generally applicable to \emph{all} models in \texttt{bgc\_md2}'s collection
 and therefore cannot (and should not) 
 be offered by the `computers'. 
@@ -778,8 +778,8 @@ In particular \texttt{bgc\_md2} provides:
       
     \item
       A set of type annotated functions (from now on called computers) operating on those types,  which combined
-      by \ComputabilityGraphs form a much simplified 
-      interface to \emph{many  algorithms} in \texttt{CompartmentalSystems} and \LAPM to compute diagnostic variables
+      by \ComputabilityGraphs{} form a much simplified 
+      interface to \emph{many  algorithms} in \texttt{CompartmentalSystems} and \LAPM{} to compute diagnostic variables
       for \emph{many models} in \texttt{bgc\_md2}.
       %A very simple example is depicted in \figref{fig:subsystems}.
     \item
@@ -791,7 +791,7 @@ In particular \texttt{bgc\_md2} provides:
 It is also interesting to note what \texttt{bgc\_md2} intentionally does not implement:
 A trivial example is that the computation of equilibria is missing from \texttt{bgc\_md2}'s set of strictly typed functions. 
 While we can easily compute the uniquely defined fixed point of a linear
-autonomous system, and indeed provide functions to do so in \LAPM, we have to
+autonomous system, and indeed provide functions to do so in \LAPM{}, we have to
 resist the temptation to make them available via \texttt{bgc\_md2}'s set of
 types and computers for \emph{all} compartmental systems. 
 This restriction also pertains to equilibrium start age distributions. 
@@ -799,17 +799,17 @@ If they simulation is to be started from an equilibrium this is reflected not on
 but also a specific age distribution.  
 At the moment neither equilibria nor the start age distributions 
 are inferred automatically, but have to be provided per model by 
-user code to clearly define responsibilities (although, thanks to \LAPM, the user code amounts to only three lines).
+user code to clearly define responsibilities (although, thanks to \LAPM{}, the user code amounts to only three lines).
 While we could in the future provide special types for liner matrices or
 fluxes, constant rates, along with their appropriate constructors implementing
 automatically testable criteria for accidental misdeclaration, implement
 computers for them and thus formalize comparisons between linear models
 this has not been done yet and such results are not suggested automatically by \texttt{bgc\_md2}.
-Users can however use the many functions in \LAPM or \CompartmentalSystems directly.
+Users can however use the many functions in \LAPM{} or \CompartmentalSystems{} directly.
 
 We also avoid `computers' depending directly or indirectly on ambiguously defined matrix factorizations, 
 as we mentioned above and in explained in detail in \appendixref{appendix:MatrixDerivation}. 
-These computations can still be performed aided by  \LAPM or \CompartmentalSystems on intermediate results
+These computations can still be performed aided by  \LAPM{} or \CompartmentalSystems{} on intermediate results
 provides by \texttt{bgc\_md2} computers but also not automatically, since results would be ambiguous (in contradiction to the mathematical definition of a function which is our criteria  for admission). 
 
 
@@ -828,13 +828,13 @@ The examples demonstrate how \texttt{bgc_md2}:
   Simplifies and unifies the creation of a new model from scratch while using the
   symbolic and graphic diagnostic capabilities to inspect it while we build it
   and use 
-  \ComputabilityGraphs to point out what missing information we have to
+  \ComputabilityGraphs{} to point out what missing information we have to
   provide to make desired results computable.
   This is demonstrated in
     \href{https://github.com/MPIBGC-TEE/bgc_md2/blob/binder/binder_notebooks/illustrativeExamples/createModel.py}{binder_notebooks/illustrativeExamples/createModel.py}
     
 \item 
-  aided by \ComputabilityGraphs 's ability to compute which properties are computable
+  aided by \ComputabilityGraphs{} 's ability to compute which properties are computable
   allows to query the collection of models that are already part of
   \texttt{bgc\_md2}.
   This is demonstrated in
@@ -980,7 +980,7 @@ The short version of the mathematical description is as follows:
 
 
 We could have implemented a separate function to do all this (which we actually did in the beginning),
-but we broke it down in to much smaller functions that only compute one step and now \ComputabilityGraphs 
+but we broke it down in to much smaller functions that only compute one step and now \ComputabilityGraphs{} 
 reconstructs the whole computation from these smaller bits.  
 This has several consequences:
 \begin{enumerate}
@@ -999,7 +999,7 @@ This has several consequences:
     The code is \emph{declarative} i.e only describes the result not the computation.
     In particular the result would have been obtained by the same line of code if the model had been described
     using other building blocks, (\texttt{CompartmentalMatrix} and \texttt{InputTuple})
-    because \ComputabilityGraphs would have looked for, found and applied the additional 
+    because \ComputabilityGraphs{} would have looked for, found and applied the additional 
     conversion functions automatically.
   \item
     Because the code is declarative we could even have iterated over all the models (implemented as python modules)
@@ -1091,12 +1091,12 @@ E.g. we implemented the two types \texttt{VegetationCarbonStateVariableTuple} an
 \texttt{SoilCarbonStateVariableTuple}. It would have been easy to created something similar for e.g. Nitrogen. However the number of types would quickly become large since their
 are also related types that would have to be duplicated, i.e. \texttt{NumericVegetationCarbonSolutionArray} or \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution} ...
 To combat this `combinatoric explosion' it would be more elegant to express these relationships between types by a concept called
-algebraic data types which is used e.g. in  \texttt{Haskell} but also available in \python 's type hint syntax but not yet implemented in \ComputabilityGraphs{}.
+algebraic data types which is used e.g. in  \texttt{Haskell} but also available in \python{} 's type hint syntax but not yet implemented in \ComputabilityGraphs{}.
 The concept is actually very simple as e.g. a type that uses another type as parameter like a list of integers \texttt{List[int]}. Algebraic types would give us a bigger namespace 
 for less awkward type names and also avoid some boilerplate code for the `computers'.
 \footnote{R does allow polymorphism in all arguments by means of \texttt{S4} classes, but does not allow algebraic types. So in SoilR the combinatoric explosion also lead to longer and longer type names.
 }
-Another related extension of \ComputabilityGraphs is to allow `computers' that return tuples . 
+Another related extension of \ComputabilityGraphs{} is to allow `computers' that return tuples . 
 This could be used to minimize the number of recursive computer application for sets of desired results.   
 
 \subsubsection{Automatic Code Generation and Integration into Earth System Models}
@@ -1111,7 +1111,7 @@ A possible application of this ability would be to automatically compile differe
 Our packages have hundreds of unit test cases. If the integration of transit time computations into an existing earth system model was desired, these test could be adapted
 much faster than created from scratch. For nonlinear and nonautonomous systems, where analytical tests are hard to come by, \texttt{bgc\_md} can be used as a benchmark for any desired model (which could be implemented much more quickly there and then used as a reference in a set of tests for the new implementation.
 \subsubsection{Documentation and Error Messages}
-Our software tools are written in \python. 
+Our software tools are written in \python{}. 
 This has advantages:
 \begin{itemize}
   \item
@@ -1125,13 +1125,13 @@ This 'fail early and hard' philosophy , facilitates the creation of 'fool proof'
 'software', whereas interactive environments, notably  R and python follow
 almost the opposite approach.  They try their best to make sense of anything
 thrown at them which can delay the detection of an error and thereby remove the effects from the cause.
-Complex libraries like \texttt{bgc\_md2} which sits on top of \CompartmentalSystems which sits on top of \LAPM which sits on top of \texttt{numpy}, \texttt{SciPy} and \sympy{}
+Complex libraries like \texttt{bgc\_md2} which sits on top of \CompartmentalSystems{} which sits on top of \LAPM{} which sits on top of \texttt{numpy}, \texttt{SciPy} and \sympy{}
 need extra care to filter out user input that could cause trouble further down the call stack. 
 \footnote{E.g. in some corner cases the underlying libraries might treat a matrix of dimensions n,1 differently than an array of dimension (n,), while users usually do not anticipate this.} This becomes more important the less obvious the computation in question is. 
 While an example makes the user aware of her responsibility for correct adaptation, the same user will expect the API of a `black box' to be 'fool proof'. 
-This is an ongoing task: While \LAPM and \CompartmentalSystems are pretty well documented 
+This is an ongoing task: While \LAPM{} and \CompartmentalSystems{} are pretty well documented 
 \todo{Big Thanks to Holger!!!} 
-\texttt{bgc\_md} and \ComputabilityGraphs are not yet and none of the packages is `fool proof'. 
+\texttt{bgc\_md} and \ComputabilityGraphs{} are not yet and none of the packages is `fool proof'. 
 
 
 
@@ -1140,8 +1140,8 @@ This is an ongoing task: While \LAPM and \CompartmentalSystems are pretty well d
 %The four packages are managed under version control in GitHub, and are publicly available for their evaluation, use, and further modification. 
 %
 %The four packages can be installed following the instructions provided for the
-%installation of \texttt{bgc\_md2}, which depends on \LAPM and
-%\CompartmentalSystems and \ComputabilityGraphs. 
+%installation of \texttt{bgc\_md2}, which depends on \LAPM{} and
+%\CompartmentalSystems{} and \ComputabilityGraphs{}. 
 %Several installation scripts exist that installs all packages at once. 
 %the standard one using Conda. 
 %All packages have extensive testsuites which are triggered by every commit but
@@ -1165,7 +1165,7 @@ This is an ongoing task: While \LAPM and \CompartmentalSystems are pretty well d
 %It shows the interplay of all four packages on the collection of predefined
 %models in \texttt{bgc\_md2} and ways to extend this collection by defining a new model
 %that can be compared with respect to diagnostic variables that are computed
-%using \LAPM and \CompartmentalSystems.  The best way to use the example is to
+%using \LAPM{} and \CompartmentalSystems{}.  The best way to use the example is to
 %install the packages and explore the example interactively.
 %\section{Impact}
 
