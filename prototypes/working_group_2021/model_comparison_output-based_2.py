@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.15.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -28,7 +28,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from functools import lru_cache
-import general_helpers as gh
+from trendy9helpers import general_helpers as gh
 import MIP_output_helpers as moh
 from bgc_md2.resolve.mvars import (
     CompartmentalMatrix,
@@ -39,24 +39,24 @@ from bgc_md2.resolve.mvars import (
 # ### Selecting models to compare
 
 model_names={
-    "ab_classic":"CLASSIC",  
-    "clm5":"CLM5.0",
-    "kv_ft_dlem": "DLEM", 
-    "bian_ibis2":"IBIS",    
-    "cj_isam": "ISAM",    
-    "isba-ctrip":"ISBA-CTRIP",    
-    "jsbach":"JSBACH",
-    "yz_jules": "JULES-ES-1p0",    
-    "lpj-guess":"LPJ-GUESS",
-    "lpjwsl":"LPJ",
-    "lpx-bern":"LPX-Bern",
-    "ORCHIDEE-V2":"OCN",    
-    "ORCHIDEE":"ORCHIDEE",
-    "ORCHIDEE-CNP":"ORCHIDEE-CNP",    
-    "ORCHIDEEv3":"ORCHIDEEv3",
-    "Aneesh_SDGVM":"SDGVM",
+    #"ab_classic":"CLASSIC",  
+    #"clm5":"CLM5.0",
+    #"kv_ft_dlem": "DLEM", 
+    #"bian_ibis2":"IBIS",    
+    #"cj_isam": "ISAM",    
+    #"isba-ctrip":"ISBA-CTRIP",    
+    #"jsbach":"JSBACH",
+    #"yz_jules": "JULES-ES-1p0",    
+    #"lpj-guess":"LPJ-GUESS",
+    #"lpjwsl":"LPJ",
+    #"lpx-bern":"LPX-Bern",
+    #"ORCHIDEE-V2":"OCN",    
+    #"ORCHIDEE":"ORCHIDEE",
+    #"ORCHIDEE-CNP":"ORCHIDEE-CNP",    
+    #"ORCHIDEEv3":"ORCHIDEEv3",
+    #"Aneesh_SDGVM":"SDGVM",
     "kv_visit2": "VISIT",
-    "jon_yib": "YIBs"    
+    #"jon_yib": "YIBs"    
 }
 model_folders=[(k) for k in model_names]
 m_names=list(model_names.values())
@@ -73,7 +73,8 @@ for name in m_names:
 vars_all_list_S2=moh.get_vars_all_list(model_folders, experiment_names_S2)
 vars_all_list_S3=moh.get_vars_all_list(model_folders, experiment_names_S3)
 
-np.mean(vars_all_list_S2[2].npp)
+#np.mean(vars_all_list_S2[2].npp)
+np.mean(vars_all_list_S2[0].npp)
 #vars_all_list_S3[2].ra
 
 # define same step size for all models (in days)
@@ -145,7 +146,7 @@ model_cols = {m_names[i]: cols[i] for i in range(len(m_names))}
 # )
 # -
 
-all_comp_dict_S3["ISAM"]["cVeg"][38:43]
+all_comp_dict_S3["VISIT"]["cVeg"][38:43]
 
 x1,sigma_x1=moh.plot_traceable_component(
     all_comp_dict_S2,
@@ -421,6 +422,7 @@ all_comp_dict_S2
 # ### Uncertainty attribution
 
 plt.rcParams.update({'font.size': 12})
+all_comp_dict_S3['VISIT']['rt']
 
 moh.plot_attribution_sum (
     all_comp_dict=all_comp_dict_S2,

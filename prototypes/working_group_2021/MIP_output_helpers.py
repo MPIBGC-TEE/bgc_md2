@@ -6,7 +6,7 @@ from scipy.stats import gaussian_kde
 from pathlib import Path
 import json
 import netCDF4 as nc    
-import general_helpers as gh
+from trendy9helpers import general_helpers as gh
 
 def average_and_resample_nc(
             model_names, # dictionary e.g. "ab_classic":"CLASSIC"
@@ -121,7 +121,7 @@ def traceability_iterator_instance(
         epa=epa_t,
         delta_t_val=delta_t_val,
     )
-    
+
 def get_traceable_components(
     model_names,  # dictionary (folder name : model name)
     test_arg_list,  # a list of test_args from all models involved
@@ -211,7 +211,7 @@ def get_traceable_components(
     all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}      
 
     return all_comp_dict 
-    
+
 def plot_traceable_component(
     all_comp_dict,
     comp_name,
@@ -360,8 +360,8 @@ def plot_traceable_component(
     plt.show()
     plt.rcParams.update(plt.rcParamsDefault)
     return(vals_mean, st_dev)
-    
-         
+
+
 def plot_attribution (
     times,
     delta_x_pos,
@@ -668,6 +668,8 @@ def plot_attribution (
             else:
                 labels = '$\Delta$ RT','$\Delta$ NPP', '$\Delta$ X_p'
                 sizes = [np.mean(percent_rt), np.mean(percent_u), np.mean(percent_x_p)]
+                #from IPython import embed; embed()
+                
                 ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
                     startangle=90, counterclock=False, colors=("darkorange", "green", "blue"))        
             ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.       
@@ -925,7 +927,7 @@ def plot_single_trend(var, times, polynom_order,title):
 
 
 
-    
+
 def get_vars_all_list(model_folders, experiment_names):
     vars_all_list = []
     i=0
@@ -937,7 +939,7 @@ def get_vars_all_list(model_folders, experiment_names):
         i+=1
     print("Done!")
     return vars_all_list        
-    
+
 def get_components_from_output(
     model_names,  # dictionary (folder name : model name)
     vars_all_list,  # a list of test_args from all models involved
@@ -1073,7 +1075,7 @@ def get_components_from_output(
     print ("Getting traceable components for all models...")
     for mf in model_folders:
         #print ("Getting traceable components for "+mf+"...")
-        start_date=gh.msh(mf).start_date()       
+        #start_date=gh.msh(mf).start_date()       
         
         stop=len(vars_all_list[k].cVeg)-end_shift
         start=len(vars_all_list[k].cVeg)-start_shift
@@ -1801,7 +1803,7 @@ def add_gridded_vars (
             print('X_p_soil '+str(np.ma.max(var_X_p_soil)))              
             
     print('\033[1m'+'Done!')
-    
+
 def uncertainty_grids (
         model_names,
         experiment_names,
@@ -2506,7 +2508,7 @@ def rgba_map (mask, grid_red, grid_green, grid_blue, grid_alpha, labels, title, 
        
         #plt.rcParams.update({'font.size': 15})
         return ()  
-      
+
 def get_global_mean_uncertainty(dataPath,  
                             experiment_name, # string, e.g. "S2"
                             data_str, # named tuple
@@ -2843,8 +2845,8 @@ def get_global_mean_uncertainty(dataPath,
         # f_v2s_neg=sum_f_v2s_neg,        
         # percent=percent,        
     # )      
-    
-    
+
+
 # def plot_attribution_2 (
         # times,
         # delta_nep_pos,
@@ -3159,7 +3161,7 @@ def get_global_mean_uncertainty(dataPath,
             # ax1.legend(labels, bbox_to_anchor =(1,1))
         
         # plt.show()              
-        
+
 def subset_and_resample_nc(
             model_names, # dictionary e.g. "ab_classic":"CLASSIC"
             experiment_names, # e.g. ['S2', 'S3']
@@ -3478,7 +3480,7 @@ def subset_and_resample_nc(
     # write updated mask
     target_mask.write_netCDF4(Path("common_mask_expanded.nc"))
     #return (target_mask)
-        
+
 def find_global_outliers (
         model_names,
         experiment_names,
@@ -3617,7 +3619,7 @@ def find_global_outliers (
     out_mask.write_netCDF4("Outlier_mask.nc")      
     print('Done!')
     #return(final_mask)
-    
+
 def ensamble_uncertainty (
         model_names,
         experiment_names,
@@ -3918,7 +3920,7 @@ def ensamble_uncertainty (
 
         
     print('\033[1m'+'Done!')                
-    
+
 # def crop_data_by_sd (data, tolerance=3):    
         # data_mean=np.mean(data)
         # data_sd=np.std(data)
@@ -3927,7 +3929,7 @@ def ensamble_uncertainty (
         # data=data[np.where(data>=lower_lim)]                    
         # data=data[np.where(data<=upper_lim)] 
         # return data
-                
+
 def mask_add_wrong_values(mask, data):
     new_mask_index=mask.index_mask
     new_mask_index=np.logical_or(new_mask_index,data.mask)
@@ -3979,7 +3981,7 @@ def mask_add_wrong_values(mask, data):
         
     # #return gh.CoordMask(index_mask=new_mask_index, tr=mask.tr)                 
     # return mask
-    
+
 def global_mean_var_2d(
     gcm,
     var: nc._netCDF4.Variable,
@@ -3996,7 +3998,7 @@ def global_mean_var_2d(
     res2 = (weight_mask * var[:, :]).sum() / wms2
     
     return res2  
-    
+
 # removing outliers
 # def remove_outliers (x, tolerance = 3): # default 1.5
     # Q1 = np.quantile(x, 0.25)
@@ -4005,7 +4007,7 @@ def global_mean_var_2d(
     # x = x[np.where(x >= Q1 - tolerance * IQR)]
     # x = x[np.where(x <= Q3 + tolerance * IQR)]
     # return(x) 
-    
+
 # def mask_outliers (var, global_mask, tolerance = 3, keep_outliers=False): # default 1.5
     # mask=np.array(global_mask.index_mask)
     # x = var[np.where(mask==0)].flatten()
@@ -4071,7 +4073,7 @@ def read_uncert_file(data_path, experiment, var, mask):
     var_avd=np.ma.array(var_avd, mask=mask)
     ds.close()
     return (var_mean, var_avd)     
-    
+
 def biome_masks_aggregated (mask_file, output_path, var_name, classes, global_mask):
     g_mask=global_mask.index_mask
     ds = nc.Dataset(mask_file)    
@@ -4102,7 +4104,7 @@ def biome_masks_aggregated (mask_file, output_path, var_name, classes, global_ma
     mask_tropical=gh.CoordMask(np.logical_and(mask_list[12],mask_list[13]), global_mask.tr) 
     mask_tropical.write_netCDF4(Path(output_path).joinpath("mask_tropical.nc"))      
     print("Done!")
-    
+
 def C_sink_uncertainty_attribution (
         experiment_names,
         global_mask,    
@@ -4545,7 +4547,7 @@ def C_sink_uncertainty_attribution (
                         font_size_change=[[2,14],[3,14],[4,14],[5,14]])    
         plt.show() 
         plt.rcParams.update(plt.rcParamsDefault)
-                        
+
 def C_storage_uncertainty_attribution (
         experiment_names,
         global_mask,    
@@ -4803,7 +4805,7 @@ def C_storage_uncertainty_attribution (
                  
         plt.show() 
         plt.rcParams.update(plt.rcParamsDefault)
-     
+
 def abc_to_rgb(A=0.0,B=0.0,C=0.0, enhance=1):
     ''' Map values A, B, C (all in domain [0,1]) to
     suitable red, green, blue values.'''
@@ -4834,7 +4836,7 @@ def abc_to_rgb(A=0.0,B=0.0,C=0.0, enhance=1):
     #return(A,B,C)
     #return (min(B+C,1.0),min(A+C,1.0),min(A+B,1.0))
     #return min(A*3,1), min(B*3,1), min(C*3,1)
-            
+
 def subset_and_resample_nc_2(
             model_names, # dictionary e.g. "ab_classic":"CLASSIC"
             experiment_names, # e.g. ['S2', 'S3']
@@ -5180,7 +5182,7 @@ def mask_inverse_sum (model_names, experiment_names, global_mask, output_path, t
     combined_global_mask=gh.CoordMask(combined_mask, tr=global_mask.tr)
     combined_global_mask.write_netCDF4(Path(output_path).joinpath("combined_global_mask.nc"))    
     print('\033[1m'+"Done!"+'\033[0m')
-    
+
 def ensamble_uncertainty_2 (
         model_names,
         experiment_names,
@@ -5370,7 +5372,7 @@ def get_uncertainty_mask(path, output_path, global_mask):
     corr_mask=gh.CoordMask(mask, global_mask.tr)
     corr_mask.write_netCDF4(Path(output_path).joinpath("mask_corrected.nc"))
     print("Mask written to: " + output_path)
-        
+
 def plot_attribution_C_storage_global_mean (
     all_comp_dict,
     start,
@@ -5427,7 +5429,7 @@ def plot_attribution_C_storage_global_mean (
     rt_soil_contrib_percent=rt_soil_contrib/x_uncert_propagated*100
 
     return (u_contrib_percent, rt_veg_contrib_percent, rt_soil_contrib_percent)
-    
+
 
 def plot_attribution_C_storage_global (all_comp_dict):
     npp_contrib_percent1,tau_veg_contrib_percent1,tau_soil_contrib_percent1=plot_attribution_C_storage_global_mean(
@@ -5486,7 +5488,7 @@ def plot_attribution_C_storage_global (all_comp_dict):
     
     plt.show() 
     plt.rcParams.update(plt.rcParamsDefault)  
-    
+
 def plot_attribution_C_sink_global_mean (
     all_comp_dict,
     start,
@@ -5601,7 +5603,7 @@ def plot_attribution_C_sink_global_mean (
             rt_soil_contrib_percent,
             delta_rt_soil_contrib_percent
             )
-    
+
 
 def plot_attribution_C_sink_global (all_comp_dict):
     npp_0, delta_npp, tau_veg_0, delta_tau_veg, tau_soil_0, delta_tau_soil=plot_attribution_C_sink_global_mean(
@@ -5782,7 +5784,7 @@ def get_global_components_from_output(
     print ("Getting traceable components for all models...")
     for mf in model_folders:
         #print ("Getting traceable components for "+mf+"...")
-        start_date=gh.msh(mf).start_date()       
+        #start_date=gh.msh(mf).start_date()       
         
         stop=len(vars_all_list[k].cVeg)-end_shift
         start=len(vars_all_list[k].cVeg)-start_shift
@@ -5967,8 +5969,8 @@ def get_global_components_from_output(
     all_comp_dict = {mods[i]: all_components[i] for i in range(len(mods))}             
     print("Done!")
     return all_comp_dict           
-    
-    
+
+
 def difference_computation(
             model_names, # dictionary e.g. "ab_classic":"CLASSIC"
             global_mask,
@@ -6156,8 +6158,8 @@ def difference_uncertainty (
             # closing NetCDF file      
             ds_new.close() 
     print('Done!')
-    
-    
+
+
 def C_sink_difference_uncertainty_attribution (
         #experiment_names,
         global_mask,    
@@ -6612,7 +6614,7 @@ def C_sink_difference_uncertainty_attribution (
                     font_size_change=[[2,14],[3,14],[4,14],[5,14]])    
     plt.show() 
     plt.rcParams.update(plt.rcParamsDefault)
-    
+
 # def pie_chart_nested_2 (ax, title, sizes, sizes_2, labels, labels_2, colors, colors_2, 
                         # text_displacement=[[0,0]], 
                         # pct_displacement=[[0,0]],

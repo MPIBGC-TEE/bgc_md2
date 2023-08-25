@@ -366,3 +366,11 @@ def n_months():
         target_path
     )
     return len(dvs.npp)
+
+def get_global_mean_vars_all(experiment_name):
+    return gh.get_global_mean_vars_all(
+        model_folder="kv_visit2",
+        experiment_name=experiment_name,
+        lat_var="lat",
+        lon_var="lon",
+    )
