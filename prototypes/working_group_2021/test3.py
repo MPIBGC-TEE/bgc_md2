@@ -51,6 +51,8 @@ from importlib.resources import files as mod_files
 
 from ComputabilityGraphs.CMTVS import CMTVS
 
+
+
 from bgc_md2.resolve.mvars import (
     NumericParameterization,
     NumericSimulationTimes,
@@ -109,9 +111,10 @@ delta_t_val = 1 #SDGVM needs small timestep since the rates are so high
 # - a start_value_dict (stored as a json file)
 # - a model specific class called CachedParameterization which handles reading, and writing 
 #   the files and building the more abstract ingredients:
-#   -parameter_dict
-#   -func_dict and 
-#   -start_value_dict 
+#   - parameter_dict
+#   - func_dict and 
+#   - start_value_dict 
+#   
 #   from these files 
 #
 # The former distinction in epa and cpa was specific to a certain kind of data assimilation, which is irrelevant for running the model, and had to be abandoned since we now have the
@@ -121,13 +124,15 @@ delta_t_val = 1 #SDGVM needs small timestep since the rates are so high
 # #### How to get such a parameterization for the models?
 # There are three approaches:
 # 1. from data assimilation 
-# - We specify a da module (implemented in the trendy9helpers package) which implies a 
-#   certain definition of estimated parameters and constants and assumes the existence of  
-#   directories and files containing the such parameters including hyper parameters for the 
-#   mcmc runs. 
-#   (detailes explained below)
-#   Although the results of different data assimilation schemes imply different optimized parameters (not only values) there is always a way to combine the constants and estimated 
-#   parameters to build a parameterization. The da functions now return not only a specific epa_opt but also a parameterization.
+#    We specify a da module (implemented in the trendy9helpers package) which implies a 
+#    certain definition of estimated parameters and constants and assumes the existence of  
+#    directories and files containing the such parameters including hyper parameters for the 
+#    mcmc runs. 
+#    (detailes explained below)
+#    Although the results of different data assimilation schemes imply different optimized parameters 
+#    (not only values) there is always a way to combine the constants and estimated 
+#    parameters to build a parameterization. The da functions now return not only a specific epa_opt 
+#    but also a parameterization.
 #
 # 1. from (possibly hand tuned) model specific parameter files (which assumes the existence of directories containing the json files for the parameter_dicts and X_0_dicts, and constructing the CachedParameterization instance from the global_means which are part of the trendy9helpers package.
 #
@@ -189,10 +194,12 @@ for i in range(n_par):
     ax.plot(Cs[i,:])
     ax.set_title(f"accepted {epa_opt._fields[i]}")
 
+mf,da_scheme
+
 # +
 # look at the output of the param2res function (for da_2) for epa0 and epa_opt
 # and compare it to the observations
-cpa = gh.da_mod(mf,da_scheme).Constants(
+cpa = gh.da_mod(mf,da_scheme).FreeConstants(
     **h.load_dict_from_json_path(gh.da_param_path(p,mf,da_scheme,par_dir).joinpath("cpa.json"))
 )
 epa_0 = gh.da_mod(mf,da_scheme).EstimatedParameters(

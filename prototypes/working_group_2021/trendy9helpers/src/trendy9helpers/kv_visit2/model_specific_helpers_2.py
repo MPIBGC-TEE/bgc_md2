@@ -204,14 +204,14 @@ def get_global_mean_vars_2(conf_dict,targetPath=None):
     return get_global_mean_vars(dataPath,targetPath)    
 
 
-def ivp_from_cache_dir(path):
-    par_dict = gh.load_dict_from_json_path(dirPath.joinpath("parameter_dict.json"))
-    func_dict = load_funcdict(path)
-    #x0 =load(
-    return 
+#def ivp_from_cache_dir(path):
+#    par_dict = gh.load_dict_from_json_path(dirPath.joinpath("parameter_dict.json"))
+#    func_dict = load_funcdict(path)
+#    #x0 =load(
+#    return 
 
-def key2path(path,k):
-    return path.joinpath(f"{k}.nc")
+#def key2path(path,k):
+#    return path.joinpath(f"{k}.nc")
 
 def make_da_iterator(
         mvs,

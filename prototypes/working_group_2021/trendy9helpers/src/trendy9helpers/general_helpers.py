@@ -447,7 +447,10 @@ def gm_da_from_folder_names(
     )
     # create a parameterization for convinience and return it
     param_dict = make_param_dict(mvs(mf), cpa, epa_opt)
-    X_0 = da_mod(mf, da_scheme).numeric_X_0(mvs(mf), dvs, cpa, epa_opt)
+
+    apa = {**cpa._asdict(), **epa_opt._asdict()}
+    X_0 = da_mod(mf, da_scheme).numeric_X_0(mvs(mf), dvs, apa) #, cpa, epa_opt)
+
     X_0_dict = {
         str(sym): X_0[i, 0] for i, sym in enumerate(mvs(mf).get_StateVariableTuple())
     }
@@ -1793,7 +1796,7 @@ def all_timelines_starting_at_steady_state(
     par_dict,
     t_min,  # time of equilibrium computation in days after the start of the simulation
     index_slice: slice,  # making up the iterator slice to be output start_ind =0 refers to the
-    delta_t_val: int = 1,  # defaults to 1day timestep
+    delta_t_val: int = 1,  # iterator timestep defaults to 1day timestep
 ):
     # We want to compute a steady state from driver values in the
     # spring and start our computation from there

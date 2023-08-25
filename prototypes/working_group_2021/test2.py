@@ -139,10 +139,6 @@ all_values2 = {mf : timelines_from_model_folder(mf) for mf in model_folders}
 mf="jon_yib"
 model_mod=f'bgc_md2.models.{mf}'
 #
-mvs = import_module(f"{model_mod}.source").mvs
-fig=plt.figure()
-ax=fig.subplots(1,1)
-g=mvs.closure_graph_plot(ax)
 
 #smr = mvs.get_SmoothModelRun()
 #smr.initialize_state_transition_operator_cache(lru_maxsize=None)
@@ -175,7 +171,6 @@ def yearly_averages(vals):
     #print(parts)
     return vals.averaged_values(parts)
 all_averaged_values2 = {mf : yearly_averages(vals) for mf,vals in all_values2.items()}
-
 
 
 def plot_time_lines_one_plot_per_model(

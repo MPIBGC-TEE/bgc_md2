@@ -57,7 +57,7 @@ t_max= t0 + number_of_months * days_per_month
 times = np.linspace(t0, t_max, number_of_months)
 
 # For this example we assume that the system was in steady state 
-# at t_0 with X_fix given by X_fix = -M^{-1} I 
+# at t_0 with X_fix given by X_fix = -M(t_0)^{-1} I(t_0) 
 # since we know that the system is linear we can easily compute the steady state
 # (in general (nonlinear fluxes) it is not clear that a steady state even exists
 

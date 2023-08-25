@@ -27,7 +27,7 @@ mathematics does not quarantee the existence of equilibria even for this
 autonomous case, we are in a better position  for linear output connected
 compartmental systems (to which this method should be restricted) A unique
 equilibrium can be shown to exist and computed by the inversion of the
-compartmental matrix multiplied by the (also constant) Input B^{-1}*I(t).
+compartmental matrix multiplied by the (also constant) Input B(t_0)^{-1}*I(t_0).
 (Rasmussen 2016)
 
 Note that:
