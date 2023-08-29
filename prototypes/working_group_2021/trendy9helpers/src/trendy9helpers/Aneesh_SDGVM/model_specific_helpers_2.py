@@ -21,6 +21,9 @@ make_func_dict = import_module(f"{model_mod}.CachedParameterization").make_func_
 Drivers=cp_mod.Drivers
 CachedParameterization=cp_mod.CachedParameterization
 
+lat_var_name="latitude"
+lon_var_name="longitude"
+template_var_name="cSoil"
 
 def spatial_mask(dataPath)->'CoorMask':
     mask=nc.Dataset(dataPath.joinpath("SDGVM_S2_cSoil.nc")).variables['cSoil'][0,:,:].mask

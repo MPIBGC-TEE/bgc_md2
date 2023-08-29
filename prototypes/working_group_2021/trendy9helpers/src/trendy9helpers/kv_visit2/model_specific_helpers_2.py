@@ -29,6 +29,10 @@ cp_mod=import_module(f"{model_mod}.CachedParameterization")
 
 mvs=import_module(f"{model_mod}.source").mvs
 
+lat_var_name="lat"
+lon_var_name="lon"
+template_var_name="cSoil"
+
 # some classes (not instances) as arguments for 
 # functions that can produce output of different type
 Drivers=cp_mod.Drivers 
@@ -366,7 +370,3 @@ def n_months():
         target_path
     )
     return len(dvs.npp)
-
-
-lat_var_name="lat"
-lon_var_name="lon"

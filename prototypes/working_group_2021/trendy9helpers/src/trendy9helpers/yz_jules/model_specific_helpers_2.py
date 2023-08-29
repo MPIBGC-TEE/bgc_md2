@@ -22,6 +22,11 @@ model_mod = 'bgc_md2.models.yz_jules'
 cp_mod=import_module(f"{model_mod}.CachedParameterization")
 Drivers=cp_mod.Drivers
 CachedParameterization=cp_mod.CachedParameterization
+
+lat_var_name="latitude"
+lon_var_name="longitude"
+template_var_name="cSoil"
+
 file_name_from_var_name = {
    "npp_nlim": "JULES-ES-1p0_S2_npp.nc",
    **{
@@ -32,7 +37,7 @@ file_name_from_var_name = {
 	 "cVeg",
 	 "cSoil",
 	 "rh",
-	    "fVegSoil" ]
+	 "fVegSoil" ]
    }
 }
 # global dictionary to link var names to var names in files

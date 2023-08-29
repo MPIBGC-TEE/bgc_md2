@@ -2817,32 +2817,19 @@ def get_global_mean_vars_all(
 
     else:
         gm = globalMask(file_name="common_mask_expanded.nc")
-        # load an example file with mask
-        # special case for YIBS that doesn't have a mask in all files ecept tas
-        if model_folder == "jon_yib":
-            template = (
-                nc.Dataset(
-                    dataPath.joinpath(
-                        msh(model_folder).nc_file_name(
-                            "tas", experiment_name=experiment_name
-                        )
+        msh_mod = msh(model_folder)
+        tvm = msh_mod.template_var_name
+        template = (
+            nc.Dataset(
+                dataPath.joinpath(
+                    msh(model_folder).nc_file_name(
+                        tvm, experiment_name=experiment_name
                     )
                 )
-                .variables["tas"][0, :, :]
-                .mask
             )
-        else:
-            template = (
-                nc.Dataset(
-                    dataPath.joinpath(
-                        msh(model_folder).nc_file_name(
-                            "cSoil", experiment_name=experiment_name
-                        )
-                    )
-                )
-                .variables["cSoil"][0, :, :]
-                .mask
-            )
+            .variables[tvm][0, :, :]
+            .mask
+        )
         # gcm=project_2(
         # source=gm,
         # target=CoordMask(

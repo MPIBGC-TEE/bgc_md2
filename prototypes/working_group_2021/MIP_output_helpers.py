@@ -937,9 +937,9 @@ def get_vars_all_list(model_folders, experiment_names):
         msh_mod = gh.msh(mf)
         current_var_list = gh.get_global_mean_vars_all(
             model_folder=mf,
-            experiment_name=experiment_names[i])
-            lat=msh_mod.lat_var_name,   
-            lon=msh_mod.lon_var_name   
+            experiment_name=experiment_names[i],
+            lat_var=msh_mod.lat_var_name,   
+            lon_var=msh_mod.lon_var_name   
         )
         vars_all_list.append(current_var_list)
         i+=1

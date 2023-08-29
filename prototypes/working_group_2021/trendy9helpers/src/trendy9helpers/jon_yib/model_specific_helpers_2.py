@@ -22,6 +22,10 @@ make_func_dict=import_module(f"{model_mod}.CachedParameterization").make_func_di
 Drivers=cp_mod.Drivers
 CachedParameterization=cp_mod.CachedParameterization
 
+lat_var_name="latitude"
+lon_var_name="longitude"
+template_var_name="tas"
+
 from .. import general_helpers as gh
 
 def spatial_mask(dataPath)->'CoorMask':
