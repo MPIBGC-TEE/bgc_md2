@@ -72,7 +72,7 @@ from trendy9helpers import general_helpers as gh
 model_folders = [
     "kv_visit2",
     "jon_yib",
-    "Aneesh_SDGVM", # very fast drop in soil and system tot
+    #"Aneesh_SDGVM", # very fast drop in soil and system tot
     ##"cable-pop", # has not EstimatedParameters
     ##"cj_isam", # msh.numericX0 also yields a negative pool value for the last pool
     "yz_jules",
@@ -100,7 +100,7 @@ model_names = {
 # models in days since THIS MODELS start
 start_shift = 120
 #start_sAD, stop_sAD = gh.t_min_tmax_overlap_gm(model_folders, delta_t_val, start_shift=start_shift)
-delta_t_val = 1 #SDGVM needs small timestep since the rates are so high
+delta_t_val = 15 #SDGVM needs small timestep since the rates are so high
 
 # ### @Kostia:
 # #### To run any model we only need a parameterization which consists of 
@@ -246,8 +246,6 @@ def cp_from_parameter_dir(p,mf,sub_dir_path):
 
 test_cp2A=cp_from_parameter_dir(p,"kv_visit2",Path("hand_tuned_1").joinpath("in"))
 test_cp2A.X_0_dict,test_cp2A.parameter_dict
-
-
 # +
 def cp_from_model_dir(mf):
     # alternatively method 2B reads a complete Parameterization which 
@@ -255,14 +253,15 @@ def cp_from_model_dir(mf):
     # (here from the folder in which the source.py file resides)
     # this is usefull for ONE example complete parameterization
     # and does not need the trendy9helper package.
-    cpp=Path(f"/home/mm/bgc_md2/src/bgc_md2/models/{mf}/parameterization_from_test_args/")
-#cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
+
+    cpp=mod_files("bgc_md2.models").joinpath(mf,"parameterization_from_test_args")
+    #cp.write(cpp) #uncomment if the parameterization should be available without the original driver data (which would be duplicated)
     CP=import_module(f"bgc_md2.models.{mf}.CachedParameterization").CachedParameterization
     return CP.from_path(cpp)
 
 test_cp2B=cp_from_model_dir("kv_visit2")
 # -
-
+test_cp2B
 
 
 
@@ -276,23 +275,23 @@ cp=test_cp2A
 
 mvs=import_module(f"bgc_md2.models.{mf}.source").mvs
 synth_obs=gh.msh(mf).synthetic_observables(
-    mvs,
-    np.array([cp.X_0_dict[v] for v in mvs.get_StateVariableTuple()]),
-    cp.parameter_dict,
-    cp.func_dict,
-    dvs
+   mvs,
+   np.array([cp.X_0_dict[v] for v in mvs.get_StateVariableTuple()]),
+   cp.parameter_dict,
+   cp.func_dict,
+   dvs
 )
 
 
 fig = plt.figure(figsize=(10,50))
 axs=fig.subplots(len(svs._fields),1)
 for ind,f in enumerate(svs._fields):
-    val_sim=synth_obs.__getattribute__(f)
-    val_obs=svs.__getattribute__(f)
-    axs[ind].plot(range(len(val_sim)),val_sim,label=f+"_sim")
-    axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
-    axs[ind].legend()
-    
+   val_sim=synth_obs.__getattribute__(f)
+   val_obs=svs.__getattribute__(f)
+   axs[ind].plot(range(len(val_sim)),val_sim,label=f+"_sim")
+   axs[ind].plot(range(len(val_obs)),val_obs,label=f+"_obs")
+   axs[ind].legend()
+   
 fig.savefig(p.joinpath(mf,'sythetic_observables.pdf'))
 # -
 
@@ -300,11 +299,11 @@ fig.savefig(p.joinpath(mf,'sythetic_observables.pdf'))
 import bgc_md2.resolve.mvars as mvars
 mvs.provided_mvar_types
 mvs=mvs.remove(
-    [
-        mvars.NumericParameterization,
-        mvars.StartConditionMaker,
-        mvars.NumericSimulationTimes
-    ]
+   [
+       mvars.NumericParameterization,
+       mvars.StartConditionMaker,
+       mvars.NumericSimulationTimes
+   ]
 )
 dpy = h.date.days_per_year
 dpm = h.date.days_per_month
@@ -315,14 +314,14 @@ td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
 ad_days= td_AD + times
 ad_times= ad_days / dpy 
 mvs=mvs.update(
-    {
-        mvars.NumericParameterization(
-            par_dict=cp.parameter_dict,
-            func_dict=cp.func_dict
-        ),
-        mvars.NumericStartValueDict(cp.X_0_dict),
-        mvars.NumericSimulationTimes(times)
-    }    
+   {
+       mvars.NumericParameterization(
+           par_dict=cp.parameter_dict,
+           func_dict=cp.func_dict
+       ),
+       mvars.NumericStartValueDict(cp.X_0_dict),
+       mvars.NumericSimulationTimes(times)
+   }    
 )
 sv = mvs.get_StateVariableTuple()
 n_pools = len(sv)
@@ -334,10 +333,10 @@ sol_arr2 = mvs.get_NumericSolutionArray()
 #start_ind=200
 start_ind=0
 for i in range(n_pools):
-    ax = axs[i,]
-    ax.plot(ad_times, sol_arr2[:, i], label="sol")
-    ax.legend()
-    ax.set_title(f"{sv[i]} solution")
+   ax = axs[i,]
+   ax.plot(ad_times, sol_arr2[:, i], label="sol")
+   ax.legend()
+   ax.set_title(f"{sv[i]} solution")
 
 
 
@@ -345,28 +344,28 @@ for i in range(n_pools):
 
 
 def timelines(mf,cp):
-    stride = 1  # this does not affect the precision of the iterator but of the averages
-    ## but makes it more effiecient (the values in between the strides
+   stride = 1  # this does not affect the precision of the iterator but of the averages
+   ## but makes it more effiecient (the values in between the strides
 #
-    ## Every model has it's own timeline counted from start_shift in days 
-    ## till 
-    n_days = 30 * gh.msh(mf).n_months()
+   ## Every model has it's own timeline counted from start_shift in days 
+   ## till 
+   n_days = 30 * gh.msh(mf).n_months()
 #
-    
-    vals = gh.all_timelines_starting_at_steady_state(
-        gh.mvs(mf),
-        cp.func_dict,
-        cp.parameter_dict,
-        t_min=start_shift,
-        index_slice=slice(0, int((n_days-start_shift)/delta_t_val), stride),
-        delta_t_val=delta_t_val,
-    )
-    return vals
+   
+   vals = gh.all_timelines_starting_at_steady_state(
+       gh.mvs(mf),
+       cp.func_dict,
+       cp.parameter_dict,
+       t_min=start_shift,
+       index_slice=slice(0, int((n_days-start_shift)/delta_t_val), stride),
+       delta_t_val=delta_t_val,
+   )
+   return vals
 
 
 all_values2 = {
-    mf : timelines(mf,cp_from_parameter_dir(p,mf,Path("hand_tuned_1").joinpath("in"))) 
-    for mf in model_folders
+   mf : timelines(mf,cp_from_parameter_dir(p,mf,Path("hand_tuned_1").joinpath("in"))) 
+   for mf in model_folders
 }
 
 # +
@@ -392,9 +391,9 @@ td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
 c_times = [(td_AD + mt) / 360 for mt in all_values2[mf]['t']]
 sl=slice(0,None,None)
 for i in range(n):
-    ax=axs[i]
-    ax.plot(c_times[sl], Xs[sl,i])
-    ax.set_title(str(svt[i]))
+   ax=axs[i]
+   ax.plot(c_times[sl], Xs[sl,i])
+   ax.set_title(str(svt[i]))
 Xs.shape,len(c_times)    
 
 
@@ -405,10 +404,10 @@ obs_0._fields
 
 
 def yearly_averages(vals):
-    n_days = vals.t.shape[0]
-    step = int(365.25 / delta_t_val)
-    parts = hr.partitions(0, n_days, step)
-    return vals.averaged_values(parts)
+   n_days = vals.t.shape[0]
+   step = int(365.25 / delta_t_val)
+   parts = hr.partitions(0, n_days, step)
+   return vals.averaged_values(parts)
 
 #- 
 # If you can afford the memory you can cache all the averages
@@ -422,73 +421,73 @@ all_averaged_values2 = {mf : yearly_averages(vals) for mf,vals in all_values2.it
 #
 from bgc_md2 import helper as h
 def plot_time_lines_one_plot_per_model(
-    value_dict,
-    title_dict,
-    desired_keys,
-    style_dict,
-    fig,
-    limit=None
+   value_dict,
+   title_dict,
+   desired_keys,
+   style_dict,
+   fig,
+   limit=None
 ):
-    title_keys = title_dict.keys()
-    axs = fig.subplots(len(value_dict.keys()), 1)  # Different timelines no sharing, sharex=True)
-    for i, mf in enumerate(value_dict.keys()):
-        vals=value_dict[mf]
-        try:
-            ax=axs[i]
-        except:
-            IndexError
-            ax=axs
+   title_keys = title_dict.keys()
+   axs = fig.subplots(len(value_dict.keys()), 1)  # Different timelines no sharing, sharex=True)
+   for i, mf in enumerate(value_dict.keys()):
+       vals=value_dict[mf]
+       try:
+           ax=axs[i]
+       except:
+           IndexError
+           ax=axs
 
-        ax.set_title(title_dict[mf] if mf in title_keys else mf)
-        # from IPython import embed; embed()
-        # transform the times of the individual iterators back to
-        # the common format (days since aD and then to years)
-        td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
-        c_times = [(td_AD + mt) / 360 for mt in vals.t]
-        for i,key in enumerate(desired_keys):
-            y=vals[key]
-            if limit is not None:
-                y=y[0:limit]
-                c_times=c_times[0:limit]
-            ax.plot(
-                c_times,
-                y,
-                label=key,
-                **style_dict[key]
-            )
-    
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        #loc='upper center'
-        loc='upper left'
-    )
+       ax.set_title(title_dict[mf] if mf in title_keys else mf)
+       # from IPython import embed; embed()
+       # transform the times of the individual iterators back to
+       # the common format (days since aD and then to years)
+       td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
+       c_times = [(td_AD + mt) / 360 for mt in vals.t]
+       for i,key in enumerate(desired_keys):
+           y=vals[key]
+           if limit is not None:
+               y=y[0:limit]
+               c_times=c_times[0:limit]
+           ax.plot(
+               c_times,
+               y,
+               label=key,
+               **style_dict[key]
+           )
+   
+   handles, labels = ax.get_legend_handles_labels()
+   fig.legend(
+       handles,
+       labels,
+       #loc='upper center'
+       loc='upper left'
+   )
 
 sub_system_cols= {
-   "veg" : "green",
-   "soil" : "brown",
-   "system" : "black",
+  "veg" : "green",
+  "soil" : "brown",
+  "system" : "black",
 }
 
 marker_dict = {
-    "RT_sum": "*",
-    "continuous_mean_btt": "+", 
-    "tot": "o"
+   "RT_sum": "*",
+   "continuous_mean_btt": "+", 
+   "tot": "o"
 }
 style_dict = {
-    f"{k1}_{k2}": {'color': v1, 'marker': v2} 
-    for k1,v1 in sub_system_cols.items()
-    for k2,v2 in marker_dict.items()
+   f"{k1}_{k2}": {'color': v1, 'marker': v2} 
+   for k1,v1 in sub_system_cols.items()
+   for k2,v2 in marker_dict.items()
 }
 desired_keys = [
-    "system_continuous_mean_btt",
-    #"veg_continuous_mean_btt",
-    #"soil_continuous_mean_btt",
-    "system_RT_sum",
-    "system_tot", 
-    #"veg_tot",   
-    #"soil_tot",   
+   "system_continuous_mean_btt",
+   #"veg_continuous_mean_btt",
+   #"soil_continuous_mean_btt",
+   "system_RT_sum",
+   "system_tot", 
+   #"veg_tot",   
+   #"soil_tot",   
 ]
 fontsize=16
 fsx=15
@@ -496,20 +495,20 @@ fsy=25
 fig = plt.figure(figsize=(fsx,fsy))
 fig.suptitle("Daily timelines of Transit Times and Approximations", fontsize=fontsize)
 plot_time_lines_one_plot_per_model(
-    value_dict=all_values2, 
-    title_dict=model_names,    
-    desired_keys=desired_keys,
-    style_dict=style_dict,
-    fig=fig,
-    limit=int(5*360/delta_t_val) # 5 years
+   value_dict=all_values2, 
+   title_dict=model_names,    
+   desired_keys=desired_keys,
+   style_dict=style_dict,
+   fig=fig,
+   limit=int(5*360/delta_t_val) # 5 years
 )
 fig.subplots_adjust(
-    left=0.1,
-    bottom=0.1,
-    right=0.9,
-    top=0.95,
-    wspace=0.4,
-    hspace=0.3
+   left=0.1,
+   bottom=0.1,
+   right=0.9,
+   top=0.95,
+   wspace=0.4,
+   hspace=0.3
 )
 fig.savefig(p.joinpath("fine.pdf"))
 style_dict
@@ -522,97 +521,97 @@ all_averaged_values3['kv_visit2'].system_tot[0:5]
 all_averaged_values4 = {}
 #print({mf : vals for mf,vals in all_averaged_values3.items()})
 for mf,vals in all_averaged_values3.items():
-    if mf=='kv_visit2': 
-        start=60
-        end=159
-    else: 
-        start=220
-        end=319        
-    vals.system_tot=vals.system_tot[start:end]
-    vals2={'system_tot':vals.system_tot[start:end]/365, # in yr
-           'system_RT_sum':vals.system_RT_sum[start:end]/365, # in yr
-           'system_continuous_mean_btt':vals.system_continuous_mean_btt[start:end]/365, # in yr
-           't':vals.t[start:end],
-           'x':vals.x[start:end]*148.94, # Pg C global
-           'x_c':vals.x_c[start:end]*148.94, # Pg C global
-           'x_approx':vals.u[start:end]*vals.system_tot[start:end]*148.94, # Pg C global
-          }
-    print(type(vals))
-    print(type(vals2))
-    all_averaged_values4[mf] = vals2
+   if mf=='kv_visit2': 
+       start=60
+       end=159
+   else: 
+       start=220
+       end=319        
+   vals.system_tot=vals.system_tot[start:end]
+   vals2={'system_tot':vals.system_tot[start:end]/365, # in yr
+          'system_RT_sum':vals.system_RT_sum[start:end]/365, # in yr
+          'system_continuous_mean_btt':vals.system_continuous_mean_btt[start:end]/365, # in yr
+          't':vals.t[start:end],
+          'x':vals.x[start:end]*148.94, # Pg C global
+          'x_c':vals.x_c[start:end]*148.94, # Pg C global
+          'x_approx':vals.u[start:end]*vals.system_tot[start:end]*148.94, # Pg C global
+         }
+   print(type(vals))
+   print(type(vals2))
+   all_averaged_values4[mf] = vals2
 
 
 # -
 
 def plot_time_lines_one_plot_per_model2(
-    value_dict,
-    title_dict,
-    desired_keys,
-    style_dict,
-    fig,
-    limit=None
+   value_dict,
+   title_dict,
+   desired_keys,
+   style_dict,
+   fig,
+   limit=None
 ):
-    title_keys = title_dict.keys()
-    axs = fig.subplots(len(value_dict.keys()), 1)  # Different timelines no sharing, sharex=True)
-    for i, mf in enumerate(value_dict.keys()):
-        vals=value_dict[mf]
-        try:
-            ax=axs[i]
-        except:
-            IndexError
-            ax=axs
-        ax.grid()
-        ax.set_title(title_dict[mf] if mf in title_keys else mf)
-        # from IPython import embed; embed()
-        # transform the times of the individual iterators back to
-        # the common format (days since aD and then to years)
-        td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
-        c_times = [(td_AD + mt) / 360 for mt in vals['t']]
-        for i,key in enumerate(desired_keys):
-            y=vals[key]
-            if limit is not None:
-                y=y[0:limit]
-                c_times=c_times[0:limit]
-            if key in ['system_RT_sum','system_tot','system_continuous_mean_btt']:
-                ax.set_ylabel('$yr$')
-            elif key in ['x', 'x_c', 'x_approx']:
-                ax.set_ylabel('$Pg$ $C$')
-            ax.plot(
-                c_times,
-                y,
-                label=key,
-                **style_dict[key]
-            )
-    
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        #loc='upper center'
-        loc='upper left'
-    )
+   title_keys = title_dict.keys()
+   axs = fig.subplots(len(value_dict.keys()), 1)  # Different timelines no sharing, sharex=True)
+   for i, mf in enumerate(value_dict.keys()):
+       vals=value_dict[mf]
+       try:
+           ax=axs[i]
+       except:
+           IndexError
+           ax=axs
+       ax.grid()
+       ax.set_title(title_dict[mf] if mf in title_keys else mf)
+       # from IPython import embed; embed()
+       # transform the times of the individual iterators back to
+       # the common format (days since aD and then to years)
+       td_AD = h.date.days_since_AD(gh.msh(mf).start_dt())
+       c_times = [(td_AD + mt) / 360 for mt in vals['t']]
+       for i,key in enumerate(desired_keys):
+           y=vals[key]
+           if limit is not None:
+               y=y[0:limit]
+               c_times=c_times[0:limit]
+           if key in ['system_RT_sum','system_tot','system_continuous_mean_btt']:
+               ax.set_ylabel('$yr$')
+           elif key in ['x', 'x_c', 'x_approx']:
+               ax.set_ylabel('$Pg$ $C$')
+           ax.plot(
+               c_times,
+               y,
+               label=key,
+               **style_dict[key]
+           )
+   
+   handles, labels = ax.get_legend_handles_labels()
+   fig.legend(
+       handles,
+       labels,
+       #loc='upper center'
+       loc='upper left'
+   )
 
 
 for mf in ['kv_visit2']:
-    print(mf)
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['system_RT_sum'], all_averaged_values4[mf]['system_tot'])
-    print("system_RT_sum vs system_tot")
-    print("r2 = "+str(r_value*r_value))
-    print("std_err = "+str(std_err))
-    print("slope = "+str(slope))
-    print("intercept = "+str(intercept))
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['system_RT_sum'], all_averaged_values4[mf]['system_continuous_mean_btt'])
-    print("system_RT_sum vs system_continuous_mean_btt")
-    print("r2 = "+str(r_value*r_value))
-    print("std_err = "+str(std_err))
-    print("slope = "+str(slope))
-    print("intercept = "+str(intercept))
-    slope3, intercept3, r_value3, p_value3, std_err3 = scipy.stats.linregress(all_averaged_values4[mf]['system_tot'], all_averaged_values4[mf]['system_continuous_mean_btt'])
-    print("system_tot vs system_continuous_mean_btt")
-    print("r2 = "+str(r_value3*r_value3))
-    print("std_err = "+str(std_err3))
-    print("slope = "+str(slope3))
-    print("intercept = "+str(intercept3))
+   print(mf)
+   slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['system_RT_sum'], all_averaged_values4[mf]['system_tot'])
+   print("system_RT_sum vs system_tot")
+   print("r2 = "+str(r_value*r_value))
+   print("std_err = "+str(std_err))
+   print("slope = "+str(slope))
+   print("intercept = "+str(intercept))
+   slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['system_RT_sum'], all_averaged_values4[mf]['system_continuous_mean_btt'])
+   print("system_RT_sum vs system_continuous_mean_btt")
+   print("r2 = "+str(r_value*r_value))
+   print("std_err = "+str(std_err))
+   print("slope = "+str(slope))
+   print("intercept = "+str(intercept))
+   slope3, intercept3, r_value3, p_value3, std_err3 = scipy.stats.linregress(all_averaged_values4[mf]['system_tot'], all_averaged_values4[mf]['system_continuous_mean_btt'])
+   print("system_tot vs system_continuous_mean_btt")
+   print("r2 = "+str(r_value3*r_value3))
+   print("std_err = "+str(std_err3))
+   print("slope = "+str(slope3))
+   print("intercept = "+str(intercept3))
 
 fig = plt.figure(figsize=(15, 5))
 axs = fig.subplots(1, 3)
@@ -657,59 +656,59 @@ ax2.set_xlabel('$τ,$ $yr$')
 ax2.set_ylabel('$TR,$ $yr$')
 
 desired_keys = [
-    "system_continuous_mean_btt",
-    "system_RT_sum",
-    "system_tot",      
+   "system_continuous_mean_btt",
+   "system_RT_sum",
+   "system_tot",      
 ]
 style_dict = {'veg_RT_sum': {'color': 'green', 'marker': '*'},
- 'veg_continuous_mean_btt': {'color': 'green', 'marker': '+'},
- 'veg_tot': {'color': 'green', 'marker': 'o'},
- 'soil_RT_sum': {'color': 'brown', 'marker': '*'},
- 'soil_continuous_mean_btt': {'color': 'brown', 'marker': '+'},
- 'soil_tot': {'color': 'brown', 'marker': 'o'},
- 'system_RT_sum': {'color': 'orange', 'marker': '.'},
- 'system_continuous_mean_btt': {'color': 'green', 'marker': '.'},
- 'system_tot': {'color': 'blue', 'marker': '.'}}
+'veg_continuous_mean_btt': {'color': 'green', 'marker': '+'},
+'veg_tot': {'color': 'green', 'marker': 'o'},
+'soil_RT_sum': {'color': 'brown', 'marker': '*'},
+'soil_continuous_mean_btt': {'color': 'brown', 'marker': '+'},
+'soil_tot': {'color': 'brown', 'marker': 'o'},
+'system_RT_sum': {'color': 'orange', 'marker': '.'},
+'system_continuous_mean_btt': {'color': 'green', 'marker': '.'},
+'system_tot': {'color': 'blue', 'marker': '.'}}
 fig = plt.figure(figsize=(fsx,fsy))
 fig.suptitle("Yearly averages of Transit Times and Approximations", fontsize=fontsize)
 plot_time_lines_one_plot_per_model2(
-    value_dict=all_averaged_values4, #all_averaged_values2,
-    title_dict=model_names,
-    desired_keys=desired_keys,
-    style_dict=style_dict,
-    fig=fig,
+   value_dict=all_averaged_values4, #all_averaged_values2,
+   title_dict=model_names,
+   desired_keys=desired_keys,
+   style_dict=style_dict,
+   fig=fig,
 )
 fig.subplots_adjust(
-    left=0.1,
-    bottom=0.1,
-    right=0.9,
-    top=0.95,
-    wspace=0.4,
-    hspace=0.3
+   left=0.1,
+   bottom=0.1,
+   right=0.9,
+   top=0.95,
+   wspace=0.4,
+   hspace=0.3
 )
 fig.savefig(p.joinpath("yearly.pdf"))
 
 # +
 for mf in ['kv_visit2']:
-    print(mf)
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['x_c'], all_averaged_values4[mf]['x_approx'])
-    print("x_c vs x_approx")
-    print("r2 = "+str(r_value*r_value))
-    print("std_err = "+str(std_err))
-    print("slope = "+str(slope))
-    print("intercept = "+str(intercept))
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['x_c'], all_averaged_values4[mf]['x'])
-    print("x_c vs x")
-    print("r2 = "+str(r_value*r_value))
-    print("std_err = "+str(std_err))
-    print("slope = "+str(slope))
-    print("intercept = "+str(intercept))
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['x_approx'], all_averaged_values4[mf]['x'])
-    print("x_approx vs x")
-    print("r2 = "+str(r_value*r_value))
-    print("std_err = "+str(std_err))
-    print("slope = "+str(slope))
-    print("intercept = "+str(intercept))
+   print(mf)
+   slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['x_c'], all_averaged_values4[mf]['x_approx'])
+   print("x_c vs x_approx")
+   print("r2 = "+str(r_value*r_value))
+   print("std_err = "+str(std_err))
+   print("slope = "+str(slope))
+   print("intercept = "+str(intercept))
+   slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['x_c'], all_averaged_values4[mf]['x'])
+   print("x_c vs x")
+   print("r2 = "+str(r_value*r_value))
+   print("std_err = "+str(std_err))
+   print("slope = "+str(slope))
+   print("intercept = "+str(intercept))
+   slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4[mf]['x_approx'], all_averaged_values4[mf]['x'])
+   print("x_approx vs x")
+   print("r2 = "+str(r_value*r_value))
+   print("std_err = "+str(std_err))
+   print("slope = "+str(slope))
+   print("intercept = "+str(intercept))
 
 # slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(all_averaged_values4['jon_yib']['x_c'], all_averaged_values4['jon_yib']['x_approx'])
 # print(r_value)
@@ -761,36 +760,40 @@ ax2.set_xlabel('$X_{approx}$, $Pg$ $C$')
 ax2.set_ylabel('$X_{ecosystem},$ $Pg$ $C$')
 
 desired_keys = [
-    "x",
-    "x_c",
-    "x_approx"
+   "x",
+   "x_c",
+   "x_approx"
 ]
 style_dict = {'veg_RT_sum': {'color': 'green', 'marker': '*'},
- 'veg_continuous_mean_btt': {'color': 'green', 'marker': '+'},
- 'veg_tot': {'color': 'green', 'marker': 'o'},
- 'soil_RT_sum': {'color': 'brown', 'marker': '*'},
- 'soil_continuous_mean_btt': {'color': 'brown', 'marker': '+'},
- 'soil_tot': {'color': 'brown', 'marker': 'o'},
- 'x_c': {'color': 'orange', 'marker': '.'},
- 'x': {'color': 'green', 'marker': '.'},
- 'x_approx': {'color': 'blue', 'marker': '.'}}
+'veg_continuous_mean_btt': {'color': 'green', 'marker': '+'},
+'veg_tot': {'color': 'green', 'marker': 'o'},
+'soil_RT_sum': {'color': 'brown', 'marker': '*'},
+'soil_continuous_mean_btt': {'color': 'brown', 'marker': '+'},
+'soil_tot': {'color': 'brown', 'marker': 'o'},
+'x_c': {'color': 'orange', 'marker': '.'},
+'x': {'color': 'green', 'marker': '.'},
+'x_approx': {'color': 'blue', 'marker': '.'}}
 fig = plt.figure(figsize=(fsx,fsy))
 fig.suptitle("Yearly averages of Transit Times and Approximations", fontsize=fontsize)
 plot_time_lines_one_plot_per_model2(
-    value_dict=all_averaged_values4, #all_averaged_values2,
-    title_dict=model_names,
-    desired_keys=desired_keys,
-    style_dict=style_dict,
-    fig=fig,
+   value_dict=all_averaged_values4, #all_averaged_values2,
+   title_dict=model_names,
+   desired_keys=desired_keys,
+   style_dict=style_dict,
+   fig=fig,
 )
 fig.subplots_adjust(
-    left=0.1,
-    bottom=0.1,
-    right=0.9,
-    top=0.95,
-    wspace=0.4,
-    hspace=0.3
+   left=0.1,
+   bottom=0.1,
+   right=0.9,
+   top=0.95,
+   wspace=0.4,
+   hspace=0.3
 )
 fig.savefig(p.joinpath("yearly2.pdf"))
 
 1* 148940000* 1000000 * 0.000000000001
+
+
+
+
