@@ -71,8 +71,16 @@
 \newcommand{\python}{\texttt{Python}}
 \newcommand{\CompartmentalSystems}{\texttt{CompartmentalSystems}}
 \newcommand{\ComputabilityGraphs}{\texttt{ComputabilityGraphs}}
-\newcommand{\todo}[1]{{\color{red} comment:\\
-#1} }
+\newcommand{\comment}[4]{
+  {
+    \color{#1} #2 @#3:\\
+    #4
+  } 
+}
+\newcommand{\kv}[2]{\comment{purple}{Kostia}{#1}{#2} }
+\newcommand{\mm}[2]{\comment{red}{Markus}{#1}{#2} }
+\newcommand{\HM}[2]{\comment{orange}{Holger}{#1}{#2} }
+\newcommand{\todo}[1]{\comment{blue}{comment:}{}{#1} }
 %\newcommand{\bgc_md2}{\texttt{bgc \textunderscore md2}}
 \newcommand{\RT}{\mathbf{RT}}
 \newcommand{\bv}{\bm{\beta}}
