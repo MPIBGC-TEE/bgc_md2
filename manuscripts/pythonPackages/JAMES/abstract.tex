@@ -1,31 +1,30 @@
 
 Compartmental systems are a particular class of dynamical systems that describe
 the flow of conserved quantities such as mass and energy through a network of
-interconnected compartments.  The main purpose and greatest challenge of this
+interconnected compartments. The main purpose and greatest challenge of this
 work is to make such models {\bf transparent} by  facilitating  comparisons
-between them.  The scientific challenge is to find the common
-diagnostics by which we can compare models. The technical challenges are,
+between them. \hmm{Why are they intransparent?} The scientific challenge is to find the common
+diagnostics by which we can compare models. The technical challenges are
 firstly to implement the diagnostics in a way that makes them applicable to all collected
 models, secondly how to \emph{describe} models comparably to allow queries but flexibly enough 
 to formulate them in the many different
-ways in which they appear in the literature and thirdly compactly enough to facilitate a maintainable collection of reasonable size 
+ways in which they appear in the literature, and thirdly to describe models compactly enough to facilitate a maintainable collection of reasonable size.
 
 We enhance the common diagnostics of pool contents and fluxes by the 
 computations of age and transit time distributions for whole models and
-especially subsystems like vegation or soil which is essential 
-to compare models with conceptually different pools, i.e. two ecosystem models
-w.r.t the vegetation part , consisting however of two pools
-(i.e. leaf and root) in one but three pools (i.e. leaf, wood, root) in the
+especially subsystems like vegetation or soil, which is essential 
+to compare models with conceptually different pools, \ie two ecosystem models
+w.r.t. the vegetation part, consisting however of two pools
+(\ie leaf and root) in one but three pools (\ie leaf, wood, root) in the
 other.  
-We provide an extensible, declarative domain specific language (DSL) to enable (data base) queries and reduce the amount of model specific code by orders of magnitude. 
-avoiding duplication in two novel ways: It defines an extensible set of 
-building blocks common to all models and implemented in symbolic math via \texttt{sympy} as special types, and an extensible set of type annotated functions operating on these types as 
-building blocks which can be combined automatically by a graph library to compute every result,
+We provide an extensible, declarative domain specific language (DSL) to enable (database) queries and reduce the amount of model specific code by orders of magnitude, avoiding duplication in two novel ways: It \hmm{What is ``It''?} defines an extensible set of 
+building blocks common to all models and implemented in symbolic math via \sympy\ as special types, and an extensible set of type annotated functions operating on these types as 
+building blocks which can be combined automatically by a graph library to compute every result
 reachable by any recursive combination of these functions. 
 This allows us to formulate models compactly and
-flexibly in different equivalent ways i.e. via fluxes, flowdiagrams, or
+flexibly in different equivalent ways, \ie via fluxes, flow diagrams, or
 matrices and at the same time to avoid the implementation of many similar
-functions for the same result.  Thus we can also not only query and compare
+functions for the same result.  Thus, we can not only query and compare
 what is \emph{provided}, as in the model description records of a conventional data
 base, but also what is \emph{computable} from them.  
 
@@ -33,10 +32,10 @@ Apart from the technical aspects the rigorous description of models via a
 strictly typed functional DSL also informs the choice of diagnostics variables by
 excluding ambigously defined candidates that have been proposed in the literature. 
 The combination of these capabilities is implemented in open source python
-packages \texttt{bgc\_md2} (Biogeochemical Model Database ), 
+packages \texttt{bgc\_md2} (Biogeochemical Model Database), 
 \LAPM (Linear Autonomous Pool Models),
-\CompartmentalSystems  and \ComputabilityGraphs, available on GitHub and for testing even without installation on binder. 
-We proof the above mentioned concepts by comparing four global land carbon models with respect to transient ages and transit times.
+\CompartmentalSystems\ and \ComputabilityGraphs, available on GitHub and for testing even without installation on binder. 
+We prove the above mentioned concepts by comparing four global land carbon models with respect to transient ages and transit times.
 %implemented analysis tools include symbolic computations  of model
 %decomposition into subsystems, flowdiagrams, transformation and reformulation
 %with respect to different building blocks e.g. matrix versus flux equations and

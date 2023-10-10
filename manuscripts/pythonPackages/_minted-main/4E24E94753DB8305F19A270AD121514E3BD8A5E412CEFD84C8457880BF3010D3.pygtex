@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+pdflatex\PYG{+w}{ }main.tex
+bibtex\PYG{+w}{ }main.aux
+pdflatex\PYG{+w}{ }main.tex
+pdflatex\PYG{+w}{ }main.tex
+\end{Verbatim}

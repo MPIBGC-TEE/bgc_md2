@@ -9,7 +9,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Example: \title{This is a test title}
-\title{The biogeochemichal model database \texttt{bgc\_md2} and python
+\title{The biogeochemichal model database \texttt{bgc\_md2} and the \Python\ 
 packages  \LAPM, \CompartmentalSystems, \ComputabilityGraphs{} for the analysis of compartmental dynamical systems}
 %\date{\today}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -57,38 +57,38 @@ packages  \LAPM, \CompartmentalSystems, \ComputabilityGraphs{} for the analysis 
 \section*{Plain Language Summary} 
 Imagine a bucket standing on a table under a water tap. Now drill some small
 holes in the bottom and attach some short pipes that lead to other buckets
-standing on some chairs and drill holes in their bottom to attach pipes to even
+standing on some chairs and drill holes in their bottoms to attach pipes to even
 more buckets standing on the ground. Drill holes again in the bottom so that
-water can leak out...  It turns out that regardless of the number of buckets
-pipes or taps, the amount of water in the buckets at any time in the future can
+water can leak out. It turns out that, regardless of the number of buckets,
+pipes, or taps, the amount of water in the buckets at any time in the future can
 be predicted very accurately without knowing the details of how exactly the
-water flows through the buckets, for instance where the holes in the bottom are
-or which path a single water molecule takes through the bucket.  Actually it is
+water flows through the buckets, for instance where the holes in the bottoms are
+or which path a single water molecule takes through the buckets.  Actually, it is
 enough to know three things: how much water is in the buckets at the start, how
-much water comes out of the tap at any time and how the outflux through the
-holes depends on the amount of water in the bucket i.e. how big the holes are.
+much water comes out of the tap at any time and how the outfluxes through the
+holes depend on the amount of water in the bucket, \ie how big the holes are.
 The simplicity of this description is extremely attractive and has made bucket
 or pool models prolific in many branches of science, describing, apart from the
 obvious physical examples, phenomena including  chemical reactors or
-ecological earth system models for the carbon cycle, essential for estimating
+ecological Earth System Models (ESMs) for the carbon cycle, essential for estimating
 future climate change.  All these models are called \emph{compartmental
 models}.  We developed a set of software tools that makes it much easier to
 describe, translate, collect, inspect, and ultimately compare such models.
 While the tools are as widely applicable as compartmental models, the example
 applications we present are inspired by our own work in the global carbon cycle
 where the reduction of uncertainty of model predictions is a major goal for
-climate change mitigation and a strong motivation for model inter comparisons
+climate change mitigation and a strong motivation for model inter-comparisons
 and the increased transparency facilitating them.  Our tools can translate the
 simple description given above into a system of ordinary differential equations
 and vice versa visualize such a matrix  equation as system of interconnected
-buckets. They can compute complex numerical results that can in principle
-be compared to measurable physical quantities.  The ability to do this for a
+buckets. They can compute complex numerical results that can be compared to 
+measurable physical quantities.  The ability to do this for a
 large number of models, made possible by a parsimonious description, is
 unprecedented and makes every single model much more transparent.  Our software
-tools are free to use, change and extend.  The aim of this article is to make
-them available to researchers who want to use them, show the way how they can
-be extended but also to discuss what more fundamental lessons we have learned
-in the process of their creation e.g. w.r.t which criteria compartmental models
+tools are free to use, change, and extend.  The aim of this article is to make
+them available to researchers who want to use them, show how they can
+be extended, but also to discuss what more fundamental lessons we have learned
+in the process of their creation, \eg w.r.t. which criteria compartmental models
 should be compared.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -124,15 +124,13 @@ should be compared.
 \section{Introduction}
 The principle of mass conservation plays a central role in mathematical models
 of natural systems in a variety of scientific fields such as systems biology,
-toxicology, pharmacokinetics \cite{Anderson1983} , ecology
-\cite{Eriksson1971ARoEaS, Rodhe1979Tellus, Matis1979, Manzoni2009SBB},
-hydrology \cite{Nash1957IASH, Botter2011GRL, Harman2014GRL}, biogeochemistry
-\cite{Manzoni2009SBB, Sierra2015EM}, and epidemiology \cite{Jacquez1993SIAM}.
+toxicology, pharmacokinetics \citep{Anderson1983}, ecology
+\citep{Eriksson1971ARoEaS, Rodhe1979Tellus, Matis1979, Manzoni2009SBB},
+hydrology \citep{Nash1957IASH, Botter2011GRL, Harman2014GRL}, biogeochemistry
+\citep{Manzoni2009SBB, Sierra2015EM}, and epidemiology \citep{Jacquez1993SIAM}.
 In most cases such models are non negative dynamical systems that can be
 described by systems of ordinary differential equations (ODEs) with
-strong structural constraints.  Such systems are called compartmental systems
-\cite{Anderson1983, Jacquez1993SIAM, Walter1999, Haddad2010}
-, and have
+strong structural constraints.  Such systems are called compartmental systems \citep{Anderson1983, Jacquez1993SIAM, Walter1999, Haddad2010}, and have
 important mathematical properties that aid in their analysis and study.
 \kv{Markus}{I removed ``first order'' from the paragraph above - the features discussed in this paper are not limited to first-order models, are they?}\\
 \mm{Kostia}{All equations are first order in the mathematical sense: only first derivatives occur. 
@@ -140,79 +138,78 @@ important mathematical properties that aid in their analysis and study.
 }
 \subsection{Diagnostics of age and persistance} 
 \kv{Markus}{I rephrased a few things, including the subtitle }
-Characterizing dynamics of compartmental systems often includes content of the pools,
+Characterizing dynamics of compartmental systems often includes content of the pools
 and the fluxes between the pools as functions of time.
 As mass moves across a compartmental system, it is often also of interest to study
-properties like the \emph{age} of mass in a pool, the entire system
-or a subsystem, and the \emph{transit time} of mass 
+properties like the \emph{age} of mass in a pool, in the entire system,
+or in a subsystem, and the \emph{transit time} of mass 
 across the entire network of compartments or parts of it until its
-final exit. These diagnostics are especially important for the studies of biogeochemical cycles 
-related to persistence of carbon or nutrients in ecosystems \cite{schmidt_persistence_2011, friedlingstein_uncertainties_2014, woolf_microbial_2019, kyker-snowman_stoichiometrically_2020}
-As we will see later for compartmental systems ages and transit times are characterized by
-distributions that are time dependent. 
-However, methods traditionally used in the literature, to compute these metrics for
+final exit. \emph{Age} describes here the time that has elapsed since a certain portion of mass has entered the system. These diagnostics are especially important for the studies of biogeochemical cycles 
+related to persistence of carbon or nutrients in ecosystems \citep{schmidt_persistence_2011, friedlingstein_uncertainties_2014, woolf_microbial_2019, kyker-snowman_stoichiometrically_2020}.
+As we will see later, for compartmental systems ages and transit times are characterized by
+time-dependent distributions.
+However, methods traditionally used in the literature to compute these metrics for
 compartmental systems depended on specific assumptions imposed on the system
-of equations \cite{Sierra2017GCB} and restricted either the applicability 
+of equations \citep{Sierra2017GCB} and restricted either the applicability 
 of the procedures or the interpretability of the results if applied to situations 
-where those conditions where not fulfilled exactly. 
+where those conditions where not exactly fulfilled. 
 \mm{Kostia}{
   The following sentences are important for the ``red thread'' (narrativ) of the paper that stresses 
   \emph{automated} and therefore \emph{implementable} computability over vague verbal statements.  
   I rephrased ahd moved them here (You had deleted them from the next chapter.)
 }
-This becomes a challenge when they are implemented in software
--particularly if this software is a data base that needs to accept \emph{queries}. The result of a query must be implemented by a function and therefore unambigiously defined. If the conditions are not met the misapplication of the function must be preventable \emph{automatically}.
-As we will show, we fulfill this much stricter requirement which is much more difficult to achieve than a verbal warning about the limits of an approximation or it's interpretation.
+This becomes a challenge when they \hmm{What is they?} are implemented in software
+-- particularly, if this software is a database that needs to accept \emph{queries}. The result of a query must be implemented by a function and therefore unambiguously defined. If the conditions are not met, the misapplication of the function must be preventable \emph{automatically}.
+As we will show, we fulfill this much stricter requirement, which is much more difficult to achieve than a verbal warning about the limits of an approximation or its interpretation.
 
 
-\subsection{Analysis and Intercomparizon of Multiple Models}
+\subsection{Analysis and inter-comparison of multiple models}
 
 Development of compartmental models for studying ecological processes has
-greatly increased in the recent decades \cite{le_noe_soil_2023,
+greatly increased in the recent decades \citep{le_noe_soil_2023,
 chandel_microbial_2023, MANZONI20091355}.  This presented the researches with
-opportunities to analyse the differences between different model structures,
+opportunities to analyze the differences between different model structures,
 compare the assumptions behind them, and their impact on the predictions.  In
-terms of analysing and comparing multiple models, two main approaches have been
-used so far.  First approach would entail a single modelling group implementing
-several models, parametrising and running them with specific drivers, then
-analysing the results based on metrics implemented in the modelling
-``testbed'' \cite{WalkerMultiAssumption2018, SulmanMultiple2018,
+terms of analyzing and comparing multiple models, two main approaches have been
+used so far.  The first approach entails a single modeling group implementing
+several models, parameterizing and running them with specific drivers, then
+analyzing the results based on metrics implemented in the modeling
+``testbed'' \citep{WalkerMultiAssumption2018, SulmanMultiple2018,
 LiaoDisentangling2022}. The main benefit of this approach is that it gives
 researchers full control over the models and flexibility to implement and
-analyse them in any preferred way. However, such efforts usually include a
-limited number of models, and a limited scope - both in in terms of geograophy,
-and in terms of inclusion of biogeochemical processes.  The reasons for this
+analyze them in any preferred way. However, such efforts usually include a
+limited number of models, and a limited scope -- both in in terms of geography,
+and in terms of inclusion of biogeochemical processes. The reasons for this
 are the time and technical complexity needed to implement complex models and
-their diagnostics in the code. Hense, the setup of such model testbeds is
+their diagnostics in the code. Hence, the setup of such model testbeds is
 usually project-specific, and the attempt to use them for another study with
 different model composition and different diagnostics would usually require a
-substaintial code re-writing.  On the other hand, projects that analyse a large
-number of complex global models \cite{sitch_recent_2015, eyring_overview_2016,
-collier_international_2018} would use the second approach, where different
-modelling groups take care of running their own models based on prescribed
-drivers, and deliver agreed-upon outputs, which are subsequently analysed.
+substantial code re-writing. On the other hand, projects that analyze a large
+number of complex global models \citep{Manzoni2009SBB, sitch_recent_2015, eyring_overview_2016, collier_international_2018} would use the second approach, where different
+modeling groups take care of running their own models based on prescribed
+drivers, and deliver agreed-upon outputs, which are subsequently analyzed.
 While this approach allows distributing the responsibility of handling the
-coding, it considerably limits the ways in which models can be jointly analysed
-- comparison is limited to certain generalised model outputs.  The package we
-present here aims at facilitating the benefits of both approaches, i.e.
-flexibility in the choice of model diagnostic, parametrizations and drivers,
-distributed coding, while at the same time minimizing the drawbacks, i.e.
+coding, it considerably limits the ways in which models can be jointly analyzed
+-- comparison is limited to certain generalized model outputs. The package we
+present here aims at facilitating the benefits of both approaches, \ie 
+flexibility in the choice of model diagnostic, parameterizations and drivers,
+distributed coding, while at the same time minimizing the drawbacks, \ie 
 complexity of coding, incompatibility between codes, difficulty in reproducing
-and expanding modelling studies.
+and expanding modeling studies.
 
 Over the course of more than ten years and with the help of contributions of
-several people we have developed  practically usable tools to create, inspect
-and query a collection of compartmental models, i.e. a model data base.  We
-have learned some hard lessons in the process.  While coding has become a major
+several people we have developed practically usable tools to create, inspect,
+and query a collection of compartmental models, \ie a model data base.  We
+have learned some hard lessons in the process. While coding has become a major
 part of science, and greatly enhances our ability of prediction, it has also
-obscured the ways to obtain them.  A way to apply the \emph{same} tools to
+obscured the ways to obtain them. \hmm{What is ``them''?}  A way to apply the \emph{same} tools to
 \emph{many} models is a very attractive proposition to regain some of the
 transparency by well defined comparisons.  As the number of models and the
-number of applicable diagnostics grow the the number of combinations grows
-bilinearly, and with it the technical challenges to maintain both collections.
-A 'copy and paste' approach becomes unmaintainable very quickly, in our case
+number of applicable diagnostics grow, the number of combinations grows
+bilinearly \hmm{Quadratically?}, and with it the technical challenges to maintain both collections.
+A copy-and-paste approach becomes unmaintainable very quickly, in our case
 definitely before the present number of about 30+ models had been reached.
-Ideally we want to turn the bilinear growth of combinations of models and
+Ideally, we want to turn the bilinear \hmm{quadratic?} growth of combinations of models and
 diagnostic tools into an advantage and make all diagnostics, and especially new ones, instantly
 available to all models.  To make this possible the right abstractions have to be found, just to
 keep the size of the code base in check.  At the outset it is very easy to
@@ -220,64 +217,63 @@ overlook that the right abstractions are an emerging feature and \emph{change}
 with the addition of more models and new methods with unforeseen properties.  To
 be able to repeatedly refactor the code base w.r.t better abstractions requires
 software engineering techniques like unit testing and more specifically a 'test
-hull' i.e. a comprehensive set of tests to provide coverage for the
+hull', \ie a comprehensive set of tests to provide coverage for the
 features, so that their implementation can be changed with confidence.  Apart
-from the benefit of inducing better engeneering practices the work on a model
+from the benefit of inducing better engineering practices the work on a model
 data base has the benefit of \emph{unveiling} these abstractions.  Their choice
 is not accidental but the result of a decade of refinement and a major outcome
 of the project.  An example for this clarifying feedback of software
-development to science is  the basic requirement, to be able to  define  a
+development to science is the basic requirement to be able to define a
 result of a computation by a function implementing this computation.
-Astonishingly this excludes some metrics for compartmental systems that have
+Astonishingly, this excludes some metrics for compartmental systems that have
 been proposed, as we will see.
 
 Our first encounter with the challenge of a model collection was the
-development of \SoilR{} \cite{Sierra2012GeosciModelDev}, a \texttt{R} package
-that collects a number of compartmental models specialized on soil models.  The
+development of \SoilR{} \citep{Sierra2012GeosciModelDev}, an \texttt{R} package
+that collects a number of compartmental models, specialized on soil carbon cycling models.  The
 software we are going to present can be seen as the result of countless
 refactoring and two major design iterations of this initial project, the result
-of contributions of many codevelopers, user input,  and a decade of critical
+of contributions of many co-developers, user input,  and a decade of critical
 evaluation and resulting change.  The result not only far
 exceeds \SoilR's capabilities but also constitutes our best proposal for an
-extendable community tool so far.  In particular the new approach
+extendable community tool so far.  In particular, the new approach
 \begin{enumerate}
   \item
     is based on symbolic math, which allows users to look at models
     as they appear in publications, in the form of equations and flow diagrams,
-    and enables symbolic analysis (e.g. computing derivatives for sensitivity analysis)
+    and enables symbolic analysis (\eg computing derivatives for sensitivity analysis);
   \item 
-    describes compartmental models as graphs, \emph{or} matrix equations and enables the \emph{automatic conversions} between them, thereby enable ling the definition of subsystems by simply naming their pools.
+    describes compartmental models as graphs, \emph{or} matrix equations and enables the \emph{automatic conversions} between them, thereby enabling the definition of subsystems by simply naming their pools;
   \item
-    adds diagnostics (transit time and age distributions) not present in \SoilR{}.
+    adds diagnostics (transit time and age distributions) not present in \SoilR{};
   \item
     provides a much simpler user interface 
-    to the vast number of analytical tools that had already made the creation of a navigable documentation an overwhelming job for \SoilR. 
+    to the vast number of analytical tools that had already made the creation of a navigable documentation an overwhelming job for \SoilR.;
 
   \item
     simplifies the description of models by much smaller building blocks that are combined
-    \emph{automatically}, and combination of few or many such building blocks into a `model record',
-    rather than forcing the developers to implement (and a user to choose) a
-    huge number of model constructing functions.
+    \emph{automatically}, and combination of few or many of such building blocks into a `model record',
+    rather than forcing the developers to implement (and a user to choose from) a
+    huge number of model-constructing functions;
   \item 
-    \emph{automatically combines functions} to compute results recursively
+    \emph{automatically combines functions} to compute results recursively.
 \end{enumerate}
 
-We developed three python packages for the representation, classification, collection and analysis  of compartmental systems, implementing methods for the computation of age and transit times, that can be performed for particular systems under given assumptions, and tools to automatically \emph{restrict} their use.
+We developed three \python\ packages for the representation, classification, collection, and analysis  of compartmental systems, implementing methods for the computation of age and transit times, that can be performed for particular systems under given assumptions, and tools to automatically \emph{restrict} their use.
 These open source packages are called: 
 \LAPM{} (Linear Autonomous Pool Models),
-\CompartmentalSystems{}  and
+\CompartmentalSystems, and
 \texttt{bgc\_md2} (Biogeochemical Model Database).
 This manuscript provides a general introduction to these packages 
 with emphasis of their combined use via \texttt{bgc\_md2}.
-The latter implements a set of model describing properties that form the (exclusive) arguments and return values of strictly typed functions, forming a network of computability which we use 
-to implement a declarative domain specific language for model creation, inspection, querying and thus comparison.
-To facilitate this we implemented a fourth package \ComputabilityGraphs{} based upon the  type hinting syntax of modern \python{} versions, extending its use to predicting what is computable.   
+The latter implements a set of model-describing properties that form the (exclusive) arguments and return values of strictly typed functions, forming a network of computability which we use 
+to implement a declarative DSL for model creation, inspection, querying and thus comparison.
+To facilitate this we implemented a fourth package, \ComputabilityGraphs, based upon the type hinting syntax of modern \python{} versions, extending its use to predicting what is computable.   
 The requirement to define every model property as a variable of a specific
-type, and to provide a function to compute it from other model property (i.e.
-variable of well defined \emph{types}) also provides a rigorous filter for what
+type and to provide a function to compute it from other model property (\ie a variable of well defined \emph{types}) also provides a rigorous filter for what
 constitutes a diagnostic variable or model property. 
 We use it as such to discuss why we implemented or excluded some diagnostics proposed in the literature.
-Practically we use this language to create a small
+Practically, we use this language to create a small
 (30+) collection of models, motivated by our own work on the terrestrial carbon
 cycle.  Some screenshots of the software are shown in \figref{fig:overview}. 
 \kv{Markus}{ Figure reference didn't work here}
@@ -301,36 +297,35 @@ It's much harder to erase them later, since latex error messages are sometimes n
 \begin{figure}[h]
 \includegraphics[width=\columnwidth]{TabScreenCombined.pdf}
   \caption{
-      Figure description, top row, left to right: Interactive Jupiter widget
+      Top row (left to right): Interactive Jupiter widget
       with a table of models (orange buttons can be clicked to expand or
-      collapse a more detailed view of the particular model), Model inspection
+      collapse a more detailed view of the particular model); model inspection
       with pool connection graph, which can be derived from the symbolic
       description along other symbolic properties as flux equations and the
-      compartmental matrix, Zoom into IPython/Jupyter UI, showing methods
-      automatically added by the computability graph library.  \\ Bottom row:
+      compartmental matrix; zoom into IPython/Jupyter UI, showing methods
+      automatically added by the computability graph library.  \\ Bottom row (left to right):
       Data assimilation with an automatically created numeric model (from
-      symbolic description), Computability graph for a desired diagnostic
-      (aggregated Flux from the vegetation to soil part, showing the
-      additionally needed information to compute the desired result)
+      symbolic description); computability graph for a desired diagnostic
+      (aggregated flux from the vegetation to soil part, showing the
+      additionally needed information to compute the desired result).
   }
   \label{fig:overview}
 \end{figure}
 
 %\subsection{Examples}
 As a conceptual proof of the  approach implemented by \texttt{bgc\_md2}
-we demonstrate it on the example of four biogeochemical models from the TRENDYv9 \cite{GCB2020} model intercomparison project, that we reconstructed in a simplified form from their description in the literature.
-We express the models symbolically, provide some parameters run them with some TRENDYv9 driver data and
+we demonstrate it on the example of four biogeochemical models from the TRENDYv9 \cite{GCB2020} model inter-comparison project, that we reconstructed in a simplified form from their description in the literature.
+We express the models symbolically, provide some parameters, run them with some TRENDYv9 driver data, and
 compare them with respect to transient mean ages and transit times of carbon
-trough the vegetation and soil subsystems.  
+through the vegetation and soil subsystems.  \hmm{Where exactly is this done? In the notebooks? In which one?}
 While some of the implemented algorithms for compartmental subsystems are novel 
-and yet unpublished, this work focuses on the algorithmic and structural proposal for a model collection
-i.e. a model data base to facilitate their use for model intercomparison. 
+and yet unpublished, this work focuses on the algorithmic and structural proposal for a model collection, \ie a model data base to facilitate their use for model inter-comparison. 
 We provide examples based on the global carbon cycle, but the
 packages can be used for a large variety of systems in which mass or energy
 conservation is required.
-The remainder of the article is structured as follows.
+The remainder of the manuscript is structured as follows.
 In \sectionref{sec:ConceptualFramework} we briefly describe compartmental systems, with some of the details
-relegated to \appendixref{appendix:MatrixDerivation}.
+relegated to \Appendixref{appendix:MatrixDerivation}.
 We then provide an overview over the main role of the implemented packages in 
 \sectionref{sec:PythonPackages}. A brief introduction to example applications
 is given in \sectionref{sec:ExampleApplications} followed by a discussion of
@@ -340,146 +335,146 @@ possible present and future use cases in
 
 
 
-%:
+:
 \section{Conceptual framework}
 \label{sec:ConceptualFramework}
 \subsection{Definition and classification of compartmental systems} 
 
 The most parsimonious and general description of a compartmental system is a graph in
-the mathematical sense, which is a tuple of two sets, the set of nodes, and the
-set of edges.  In the particular graphs that describe compartmental systems the
-compartments (or pools) form the nodes and the fluxes between them and the
-exterior the edges.  The fluxes are allowed to be functions of time and the
-contents of the pools exclusively. This is usually referred to as `well mixed' or
+the mathematical sense, which is a tuple of two sets: the set of nodes and the
+set of edges. \hmm{Just for describing the structure, let's say equivalent to the adjacency matrix, because a graph $G=(V, E)$ is just a pair of vertices and edges.
+The compartmental matrix additionally contains numbers, which would lead to at least a graph with weights at the edges. Then the initial condition \vec{x}^0 would still be missing in the graph.}
+In the particular graphs that describe compartmental systems the
+compartments (or pools) form the nodes, while the fluxes between them and the
+exterior form the edges. The fluxes are allowed to be functions of time and the
+contents of the pools exclusively. This property is usually referred to as `well-mixed' or
 `kinetically homogeneous' compartments.  
 
-If we assume any arbitrary ordering of the pools we can represent the mass (content of the pools)
+\hmm{Currently it makes no sense to change the notation in each place for me. It seems mostly arbitrary. There are several versions of $x$ and $X$, the matrix sometimes is $B$, sometimes $M$, the input vector is sometimes $u$ (which in the appendix is used to denote the total input), sometimes $I$. Please try to get some system into that, otherwise proof-reading of any formula throughout the manuscript is impossible.}
+If we assume any arbitrary ordering of the pools, we can represent the mass (content of the pools)
 by an ordered tuple $\vec{x}$.
 Because mass is a non-negative quantity, this vector of mass contents can
-only occupy the non-negative orthant of the state-space; i.e. $x \in
+only occupy the non-negative orthant of the state-space, \ie $x \in
 \mathbb{R}^n_+$. 
-Likewise the mass, that the system receives from outside is represented
+Likewise, the mass that the system receives from outside is represented
 by a tuple of mass input fluxes (mass over time) $u \in \mathbb{R}^n_+$.
 It has been shown in \cite{Jacquez1993SIAM}
-that for smooth enough fluxes, mass is transferred among compartments and released back to the external
-environment can be according to rates encoded in a compartmental matrix $B \in
+that for sufficiently smooth fluxes, rates of mass transferred among compartments and released back to the external
+environment can be encoded in a compartmental matrix $B \in
 \mathbb{R}^{n \times n}$. 
 Therefore, we can write the dynamics of a
 compartmental system as a set of ordinary differential equations of the form
 \begin{equation} \label{eq:CompartmentalSystem}
 \dot{\X} = \frac{d\X}{dt} = \I(\X, t) + M(\X, t) \, \X
 \end{equation}
-The key property of compartmental systems is, in order for the system to balance mass, that the square matrix $M=(M_{ij})$ exhibits three main properties
+The key property of compartmental systems is, in order for the system to balance mass, that the square matrix $M=(M_{ij})$ exhibits three main properties:
 \begin{enumerate}
   \item $M_{ii}\leq0\text{ for all }i$,
   \item $M_{ij}\geq0\text{ for all }i\neq j$, and
   \item $\suml_i M_{ij}\leq 0\text{ for all }j$.
 \end{enumerate}
 {\todo @Markus Please add the description of notations you use in formulas throughout the paper}
-Then, $\tens{M}$ is called \emph{compartmental} and governs all internal cycling of material as well as the exit of material from the system.
-We describe the relationship between the graph and matrix based descriptions in \appendixref{appendix:MatrixDerivation}.
+Then $\tens{M}$ is called \emph{compartmental} and governs all internal cycling of material as well as the exit of material from the system.
+We describe the relationship between graph- and matrix-based descriptions in \Appendixref{appendix:MatrixDerivation}.
 
-We distinguish between different types of compartmental systems, according to linearity and autonomy. If the vector of inputs and the compartmental matrix depend on the vector of states in system \eqref{eq:CompartmentalSystem}, we call it non-linear, and linear otherwise. Similarly, if the vector of inputs and the compartmental matrix depend on time, we call the system non-autonomous, and autonomous otherwise. 
-Both descriptions of compartmental system, the intuitive graph of pools and fluxes and the 
-matrix based formulation as an ODE system have advantages for some applications. 
-While the graph based description allows for composition of subgraphs and decomposition of models into e.g vegetation and soil part, the ODE description facilitates the description and implementation of some advanced numerical algorithms as explained below.
+We distinguish between different types of compartmental systems, according to linearity and autonomy. If the vector of inputs or the compartmental matrix depend on the vector of states in system \eqref{eq:CompartmentalSystem}, we call it non-linear \hmm{Actually, in the appendix you allow the input to depend on the state vector in a specific way for the system still to be called linear. I would exclude this case. Even though the ODE might still be linear, we can DEFINE the compartmental system to be nonlinear in this case, because as you explain this special case comes with some complications.}, and linear otherwise. Similarly, if the vector of inputs or the compartmental matrix depend on time, we call the system non-autonomous, and autonomous otherwise. 
+Both descriptions of compartmental systems, the intuitive graph of pools and fluxes and the 
+matrix based formulation as an ODE system, have advantages for some applications. 
+While the graph-based description allows the composition of subgraphs and decomposition of models into, \eg vegetation and soil part, the ODE description supports the implementation of some advanced numerical algorithms, as explained below.
 In our approach both formulations are converted into each other automatically as need arises.
-This effortless switching between the viewpoints is the main facilitator of the new level of transparency of our approach, their combination enables the computation of transit time and mean age systems for subsystems of selected pools with no more effort than defining the pools constituting them.
+This effortless switching between the viewpoints is the main facilitator of the new level of transparency of our approach. Their combination enables the computation of transit time and mean age systems for subsystems of selected pools with no more effort than defining the pools constituting them.
 
 \subsection{System and sub-system level metrics: contents, fluxes, age, transit time}
 Compartmental systems can be described by a set of building blocks and metrics. 
-Scientific inference regarding modelling results, as well as model evaluation and intercomparison, often depends on the metrics that are used to describe model output.
-Depending on the chosen metric, results can be both informative of model peformance and useful for a real-world question of the study, or, they can be overly reliant on artificial assumptions and therefore uninformative for a study of natural, rather than modelling, mechanisms.
-Hense, we consider a scientific discussion on what is to be regarded as a proper metric to be particularly relevant.
+Scientific inference regarding modeling results, as well as model evaluation and inter-comparison, often depends on the metrics that are used to describe model output.
+Depending on the chosen metric, results can be both informative of model performance and useful for a real-world question of the study, or they can be overly reliant on artificial assumptions and therefore uninformative for a study of natural rather than mere modeling mechanisms.
+Hence, we consider a scientific discussion on what is to be regarded a proper metric to be particularly relevant.
 In this study we propose the following four criteria for compartmental system metrics:
 \begin{enumerate}
   \item
     \label{enum:function}
-    In our definition we require that a metric must be unambiguously computable by a function of other metrics or building blocks of a model. 
+    A metric must be unambiguously computable by a function of other metrics or building blocks of a model. 
   \item
     \label{enum:general}
     Preferably metrics should be applicable to all (nonautonomous, nonlinear) compartmental systems, i.e. not rely on e.g. equilibrium conditions.
   \item
     \label{enum:measurable}
-  Preferably metrics should also be physical properties
-  i.e. have a clearly defined way to measure them at least in principle.
+  Preferably \hmm{Should we use this word in a hard criterion?} metrics should also be physical properties, \ie have a clearly defined way to measure them at least in principle.
   \item
     \label{enum:meaningful}
-  Preferably metrics should be relevant to answer research questions related to real-world phenomena
+  Preferably \hmm{Same question.} metrics should be relevant to answer research questions related to real-world phenomena.
 \end{enumerate}
 
-The first criterium can be implemented through the formulation of metrics as return values of
-strictly typed functions. We will show later that this makes the creation, inspection and
+The first criterion can be implemented through the formulation of metrics as return values of
+strictly typed functions. We will show later that this makes the creation, inspection, and
 comparison of compartmental systems much more feasible by software tools. 
 
-The commonly used metrics to characterise compartmental system behavoir are the
+The commonly used metrics to characterize compartmental system behavior are the
 contents of the pools and fluxes between them. While they are general and
-unambiguousely defined, the last two criteria - ability to measure and
-meaningfully interpret them - depend on model formulation. For example, a
-photosynthesis flux can in principle be measured \textit{in-situ} or estimate
-from remote sensing \cite{jez_emerging_2021, sun_remotely_2023}, however soil
+unambiguously defined, the last two criteria -- ability to measure and
+meaningfully interpret them -- depend on model formulation. For example, a
+photosynthesis flux can in principle be measured \textit{in-situ} or estimated
+from remote sensing \citep{jez_emerging_2021, sun_remotely_2023}. However, soil
 carbon pools and fluxes are conceptualized quite differently in existing
 models, in many cases without a possibility to measure them or a clear physical interpretation 
-%\cite{abramoff_millennial_2018}
+\cite{abramoff_millennial_2018}
 .  In the latter situation,
-aggregated pools or fluxes become more interpretable, e.g. total soil carbon,
-or a litter decomposition flux, hense to satisfy all the criteria we may need
+aggregated pools or fluxes become more interpretable, \eg total soil carbon 
+or a litter decomposition flux. To satisfy all the criteria we may need
 to define a sub-system for which a metric is meaningful.   
 
-Beside the content of pools the whole system or subsystem and fluxes between
-them, ages, and transit times are key quantities of compartmental systems that
-fulfill all of these criteria. While age describes how old material in the system is, transit time describes how
+Beside the content of pools, the whole system, or subsystems and fluxes between
+them, ages and transit times are key quantities of compartmental systems that
+fulfill all of these criteria. While age describes how old material in the system is (\ie the time elapsed since entry into the system), transit time describes how
 long material needs to travel through the entire system from entry to exit
 \cite{bolin1973Tellus, Sierra2017GCB} 
 \todo {@Markus something didn't work here with enumref} %: \enumref{enum:function}, \enumref{enum:general} and \enumref{enum:measurable}.
-Both age and transit time distributions can be unambiguosely computed for every pool at every time point, given inital distributions at the start of the simulation.
+Both age and transit time distributions can be unambiguously computed for every pool at every time point, given initial distributions at the start of the simulation.
 They are applicable to general nonautonomous nonlinear systems, and help to better understand underlying system dynamics and to compare models
-with different sizes or structures. They can in principle be measured: radiosotopic studies have shown the ways to measure age distributions e.g. of carbon in soils, and to constrain models  \cite{Trumbore2016, shi_age_2020} 
-
-And finally, they are very relevant for the studies of biogeochemical cycles, e.g. looking at the ability of soils to retain carbon and nutrients in such contexts as soil health or climate change. 
-This makes them the first choice for model
-comparisons. 
+with different sizes or structures. They can in principle be measured: radio-isotopic studies have shown ways to measure age distributions, \eg of carbon in soils, and to constrain models \citep{Trumbore2016, shi_age_2020}.
+Finally, age and transit time are very relevant for the studies of biogeochemical cycles, \eg investigating the ability of soils to retain carbon and nutrients in such contexts as soil health or climate change. 
+This makes them the first choice for model comparisons. \hmm{I would just omit this very bold last sentence.}
 
 
-There are metrics that are not suitable to compare \emph{all} compartmental systems because they make further assumptions, e.g. the existence of equilibria. 
+There are metrics that are not suitable to compare \emph{all} compartmental systems because they make further assumptions, \eg the existence of equilibria. 
 General compartmental systems can be nonlinear and nonautonomous, in the latter case making the concept of equilibrium itself meaningless and in the former the computation of the possibly empty set of fixed points by far to difficult to attempt (by a function).
 If we wanted to include a strictly typed function to do it, its argument would
 have to be of a new type for a linear autonomous system.  Achieving the same flexibility
-and complete transparency w.r.t. flux, rate, or matrix centered description
+and complete transparency w.r.t. flux-, rate-, or matrix-centered description
 will necessitate additional types for constant rates or linear fluxes.
-We note that metrics build upon equilibrium assumptions fail to meet criteria \enumref{enum:general}
+We note that metrics build upon equilibrium assumptions fail to meet criterion \enumref{enum:general}
 
 Another class that fails at least one of the criteria
 are properties that can still be unambiguously defined by a function and
-therefore computed but are not physical quantities and are therefore to be
+therefore computed, but are not physical quantities and are therefore to be
 considered properties of the model rather than reality. 
 \footnote{
   That a flux `rate' should be considered a model property (or latent variable)
   rather than a physical property becomes more apparent when we consider
   processes that treat material of different age or position in the pool
-  differently.  In this case the assumption that the material in the pools is
+  differently.  In this case, the assumption that the material in the pools is
   `well mixed', and can therefore be treated by the \emph{same} exit `rate'
   would be violated, and the model no longer 'compartmental.  However such
   processes clearly exist and fluxes and mass are still measurable.  The
   concept of a single 'rate' applied to all material in a pool is implied by
   the definition of compartmental systems.
 } 
+\hmm{The footnote does not connect to the previous sentence but the the next one.}
 Flux rates and compartmental matrices, and more importantly (some) properties derived from them, fall into  this category. 
-One example is a commonly used metric `turnover time' which is defined as the quotient between content of and outflux from a pool, or as the inverse of the rate. 
-`Turnover time' is an interesting example as it violates either, \enumref{enum:measurable} or \enumref{enum:general}, 
-because it turns out that for a one pool system in equilibrium it actually coincides with the mean backward transit time
-which could be approximated by many measurements but loses this interpretation in any non-equilibrium state \cite{Sierra2016GlobChangBiol, Lu2018Biogeosciences}.
+One example is a commonly used metric called `turnover time' which is defined as the quotient between content of and outflux from a pool, or as the inverse of the rate. 
+`Turnover time' is an interesting example as it violates either criterion \enumref{enum:measurable} or criterion \enumref{enum:general} \hmm{Or both?}, 
+because it turns out that for a one-pool system in equilibrium it actually coincides with the mean transit time,
+which could be approximated by many measurements. Unfortunately, `turnover time' loses this interpretation in any non-equilibrium state \citep{Sierra2016GlobChangBiol, Lu2018Biogeosciences}.
 
-More recently proposed way to compute `residence time' through inverting a compartmental matrix \cite{Xia2013GCB, Luo2017Biogeosciences, Luo2022, luo_land_2022} suffers from the same issue \cite{Sierra2016GlobChangBiol}  
-Consequently, other proposed metrics derived from the equilibrium assumption, such as `carbon storage capacity', `carbon storage potential' \cite{Luo2017Biogeosciences, Huang2017GCB, zhou_traceability_2021, LiaoDisentangling2022, Luo2022, luo_land_2022},
-have a physical meaningful interpretation only in equilibrium but lose it if their formal definition is extended to the transient case (nonautonomous compartmental systems) \cite{Sierra2018JAMES}.
+More recently proposed ways to compute a quantity called `residence time' through inverting a compartmental matrix \citep{Xia2013GCB, Luo2017Biogeosciences, Luo2022, luo_land_2022} suffer from the same issue \citep{Sierra2016GlobChangBiol}.
+Consequently, other proposed metrics derived from the equilibrium assumption, such as `carbon storage capacity' or `carbon storage potential' \citep{Luo2017Biogeosciences, Huang2017GCB, zhou_traceability_2021, LiaoDisentangling2022, Luo2022, luo_land_2022} have a physical meaningful interpretation only in equilibrium but lose it if their formal definition is extended to the transient case (nonautonomous compartmental systems) \citep{Sierra2018JAMES}.
 
-While we could implement a function applying such a definition, it would not be general, and therefore its interpretation would be project-specific.
-In particular, equilibrium-based metrics would have different interpretations when applied to an assumed steady state system as in \cite{Xia2013GCB}, or to an approximation of a transient system as a sequence of quazi-equilibria as in
+If we implemented a function applying such a definition, it would not be general, and therefore its interpretation would be project-specific.
+In particular, equilibrium-based metrics would have different interpretations when applied to an assumed steady-state system as in \cite{Xia2013GCB}, or to an approximation of a transient system as a sequence of quasi-equilibria as in
 \cite{Koven2015Biogeosciences, osullivan_process-oriented_2022}, and hardly any meaningful interpretation when the study is focused on the transient nature of the system \textit{per se}, as in \cite{Luo2017Biogeosciences} 
-In the latter case, a user asking for 'Residence Time' (by applying such a function) would reasonably expect the transient 'time of residence' of material, but would actually receive the time of residence the material  
-\emph{would} have \emph{if} the system was frozen at this moment \emph{and} allowed (infinite) time to reach its equilibrium. Therefore, to avoid possible misleading interpretations, in our package we only implemented metrics 
-that are general and unambiguous, thus leaving it for the users to, if necessary, implement and justify additional assumptions or approximations used for their metrics. 
+In the latter case, a user asking for \texttt{ResidenceTime} (by applying such a function) would reasonably expect the transient 'time of residence' of material, but would actually receive the time of residence the material  
+\emph{would} have \emph{if} the system was frozen at this moment \emph{and} allowed (infinite) time to reach its equilibrium. Therefore, to avoid possibly misleading interpretations, in our package we only implemented metrics 
+that are general and unambiguous, thus leaving it for the users to implement and justify additional assumptions or approximations used for their desired metrics. \hmm{Last word: ``quantities'' instead? Because it's not proper metrics following our criteria.}
 
 \todo{@Holger\\
 In the following paragraph I played it save. Carlos had mentioned entropy in an old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
@@ -487,17 +482,18 @@ In the following paragraph I played it save. Carlos had mentioned entropy in an 
 A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
 of dynamical systems \cite{Ebeling1998}. 
 For 
-%non? 
+non? 
 autonomous linear systems it has 
 been used to describe the uncertainty of a particle's path through a
 compartmental system, quantifying how difficult it is to predict this path. 
 and to compare path properties of models with different number of
 compartments and connections among them \cite{Metzler2020}. 
 It's use can be extended to systems in equilibrium.
+\hmm{I recommend not to mention entropy at all. I'm just in the process of generalizing path entropy to nonautonomous systems, but this is still a bit ambiguous in my head and I need to think about it a bit more. There are definitely ways to compute the path entropy for a nonautononmous system such we could call it a metric, same for entropy rates.}
 
-Surprisingly the literature even contains proposals for metrics that can not be defined as functions because they are ambiguously defined like the following matrix factorization approach.  
-It has been claimed that for most Carbon cycle models the linear version of \eqref{eq:CompartmentalSystem} can be written in product form 
-\cite{Xia2013GCB, Luo2017Biogeosciences, zhou_sources_2018, zhou_traceability_2021, LiaoDisentangling2022,Luo2022, luo_land_2022}.
+Surprisingly, the literature even contains proposals for metrics that cannot be defined as functions because they are ambiguously defined based on the following matrix factorization approach.  
+It has been claimed that for most carbon cycle models the linear version of \eqref{eq:CompartmentalSystem} can be written in product form 
+\citep{Xia2013GCB, Luo2017Biogeosciences, zhou_sources_2018, zhou_traceability_2021, LiaoDisentangling2022,Luo2022, luo_land_2022}.
 \begin{eqnarray} 
   \frac{d\X}{dt} &=& \I(t) + M(t) \, \X 
   \label{eq:LinCompartmentalSystem} 
@@ -505,17 +501,18 @@ It has been claimed that for most Carbon cycle models the linear version of \eqr
                 &=& \I(t) + A \xi K(t) \, \X
   \label{eq:AxiK}
 \end{eqnarray}
+\hmm{Actually, $\xi$ is often considered a time-dependent environmental rate modifier (real value)}.
 
-While it is certainly possible to derive \eqref{eq:LinCompartmentalSystem} unambiguously from \eqref{eq:AxiK} the opposite direction is not possible. Neither is the form \eqref{eq:AxiK} as general as \eqref{eq:LinCompartmentalSystem} 
+While it is certainly possible to derive \eqref{eq:LinCompartmentalSystem} unambiguously from \eqref{eq:AxiK}, the opposite direction is not possible. Neither is the form \eqref{eq:AxiK} as general as \eqref{eq:LinCompartmentalSystem} 
 nor is the decomposition uniquely defined.
 While the issue with generality could be solved similarly to the equilibrium
-issue by introducing subtypes of decomposable matrices and fluxes the issue of
+issue by introducing subtypes of decomposable matrices and fluxes, the issue of
 ambiguity prevents the implementation of a function in the mathematical sense, which requires the return value to be unambiguously defined by the arguments.
 This actually shows that any analysis built upon the decomposition is not
 suited to discuss compartmental systems in general, not even if they can be
-written in the form or \eqref{eq:AxiK}. This is relevant since such results have been published without discussion of the inherent ambiguity. We show in detail why this is the case in \appendixref{appendix:MatrixDerivation}.
+written in the form \eqref{eq:LinCompartmentalSystem} or \eqref{eq:AxiK}. This is relevant since such results have been published without discussion of the inherent ambiguity. We show in detail why this is the case in \Appendixref{appendix:MatrixDerivation}. \hmm{What is actually the case?}
 
-todo{@Markus In the following paragraph the 1st sentence doesn't flow...rephrase a bit? Besides, I'm not sure all what you list axtually fulfills all th 3 criteria. E.g. contents of pools and fluxes between the pools may not be measurable at all,
+\todo{@Markus In the following paragraph the 1st sentence doesn't flow...rephrase a bit? Besides, I'm not sure all what you list actually fulfills all the 3 criteria. E.g. contents of pools and fluxes between the pools may not be measurable at all,
 especially if they are defined as \"fast\", \"medium\", \"slow\" soil pools. Maybe we need to find more some precise wording here.}
 To summarize, among the traditionally proposed 
 metrics for compartmental systems fulfill our conditions of unambiguous definition, general applicability to nonautonomous nonlinear, physical interpretability as principally measurable, and meaningful interpretability in the context of the study. 
@@ -527,164 +524,168 @@ are made much more accessible.
 
 \subsection{Compartmental systems in equilibrium} \label{sec:Equilibrium}
 The concept of equilibrium is restricted to autonomous systems. 
-It does not even make sense to ask the question otherwise. \todo{@Markus quazi-equilibria as approximations? Can we mention something about that?}
-If the autonomous system is nonlinear it is possible but not certain that an
-equilibrium exists. The only case where we can expect an equilibrium are
-linear, autonomous, pool models, 
+It does not even make sense to ask the question otherwise. \hmm{Which question, I cannot see any?} \todo{@Markus quazi-equilibria as approximations? Can we mention something about that?}
+If the autonomous system is nonlinear it is possible but not certain that one or more
+equilibria exist. The only case where a unique equilibrium is guaranteed is for
+linear autonomous pool models given by
 \begin{equation} \label{eq:LS}
-\dot{\X} = \I + M \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
+\dot{\X} = \I + M \, \X \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
 \end{equation}
 for which interesting properties can be
-obtained by the \LAPM{} package.  The equilibrium $x^*$ is defined by the
-condition  $\dot{\X}=0$ which translates to $-M \X^*= \I$ which means that for
-pool contents $\X^*$ the influxes $\I$ match the outfluxes $M \X^*$ exactly.  It is
-straightforward to see that for this to happen all 
+obtained by the \LAPM{} package. \hmm{From now on the notation gets messy again. I corrected just a few things.} The equilibrium $x^\ast$ is defined by the
+condition  $\dot{\X}^\ast=0$, which translates to $-M \X^\ast= \I$, which in turn means that for
+pool contents $\X^\ast$ the influxes $\I$ match the outfluxes $M \X^\ast$ exactly.  It is
+straightforward to see that for this to happen, all 
 pools with influxes must be connected (possibly via other pools) to an outflux of
 the system, and that the (constant) rates for all the flux rates out of all
-pools along this paths are greater than zero, since an input receiving pool $p$
-without these conditions would necessarily grow over time, violation the
-equilibrium condition $\dot{\X}_p=0$. Interestingly these conditions also
-guarantee that $M$ is invertible and the equilibrium therefore uniquely
-determined by: 
+pools along these paths are greater than zero, since an input receiving pool $p$
+without these conditions would necessarily grow over time, violating the
+equilibrium condition $\dot{\X}_p=0$. Interestingly, these conditions also
+guarantee that $M$ is invertible and the equilibrium is therefore uniquely
+determined by 
 \begin{equation} 
 \label{eq:x_Minv_I}
-\X^* = - {M^*}^{-1} \, \I^*.  
+\X^* = - ({M^\ast})^{-1} \, \I^\ast.  
 \end{equation}
+\hmm{Why does $I$ get an asterisk here?}
 Although at different times different material moves through the system, the
-size of the pools does not depend on time if the system is in
-equilibrium: $\X(t)=\X^*$ 
+sizes of the pools do not depend on time if the system is in
+equilibrium: $\X(t)=\X^\ast$. 
 This is also true for other properties such as the
 age distribution of mass in particular compartments and in the entire system
 and the transit time distribution, which is defined as the time it takes masses
 in the input flux to appear in the output flux. 
 Although the material moving through the system does change the amount, age and transit
-time distributions do not. 
-They are in fact characterized by the Phase Type
-distribution, which depends on compartmental matrix $B$ and the equilibrium
-solution $x^*$ for the system age distribution and the $B$ and the input $u$
-for the transit time distribution \cite{Metzler2018MGS}.
-Compartmental systems at equilibrium have similar properties as continuous-time absorbing Markov Chains \cite{Metzler2018MGS}.
-Therefore, we can obtain other quantities of interest such as  the path entropy of particles that travel across the system and the occupation time of particles inside compartments \cite{Metzler2020}. These properties of linear autonomous compartmental systems at equilibrium can be obtained with the \LAPM{} package.
+time distributions do not. \hmm{The amount of what is changed?}
+They are in fact characterized by a phase type
+distribution that depends on the compartmental matrix $B$ and the equilibrium
+solution $x^\ast$ for the system age distribution and $B$ and the input $u$
+for the transit time distribution \citep{Metzler2018MGS}. \hmm{NOTATION!!!!!, B, M, u, I, x, X!!}
+Compartmental systems in equilibrium have similar properties as continuous-time absorbing Markov chains \citep{Metzler2018MGS}.
+Therefore, we can obtain other quantities of interest such as the occupation time of particles inside compartments \cite{Metzler2020}. Such properties of linear autonomous compartmental systems in equilibrium can be obtained with the \LAPM{} package.
 
-Interestingly the properties of linear autonomous systems in equilibrium can
+Interestingly, the properties of linear autonomous systems in equilibrium can
 also be computed for nonlinear systems in equilibrium if such an equilibrium
 exists.
 \begin{equation} \label{eq:NLS}
-\dot{\X} = \I(\X) + M(\X) \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0,
+\dot{\X} = \I(\X) + M(\X) \, \X \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
 \end{equation}
 In equilibrium the system is indistinguishable from a linear autonomous one
 \begin{align} 
-  0= \dot{\X} = \I^* + M^* \, \X^*
+  0= \dot{\X} = \I^ast + M^* \, \X^\ast
 \end{align}
-with $M^*=M(\X^*)$ and $\I^*=\I(\X^*)$ 
-If the inverse ${M^*}^{-1}$ exists transit time and age distributions can be computed 
-\cite{Metzler2018MGS}.
-and therefore also  nonlinear autonomous
-systems at equilibrium can be analyzed with the by the
+with $M^\ast=M(\X^\ast)$ and $\I^\ast=\I(\X^\ast)$.
+If the inverse $(M^\ast)^{-1}$ exists, transit time and age distributions can be computed 
+\citep{Metzler2018MGS}.
+Therefore also  nonlinear autonomous
+systems in equilibrium can be analyzed with the
 \LAPM{} package.
-Note however,that 
-\eqref{eq:x_Minv_I} is useless to determine $\X^*$ and 
-no such $\X^*$ might exist for some systems
-while others may have multiple fixed points and the age and
-transit time distribution may be very different for these different equilibria.
+Note, however, that 
+\eqref{eq:x_Minv_I} is useless to determine $\X^\ast$ and 
+no such $\X^\ast$ might exist for some systems,
+while others may have multiple fixed points and age- and
+transit-time distributions may be very different for different equilibria.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Time Evolution} \label{sec:trajectory}
-We consider now linear non-autonomous systems of the form
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Time evolution} \label{sec:trajectory}
+Now, we consider linear non-autonomous systems of the form
 \begin{equation} \label{eq:NALS}
-\dot{\X}(t) = \I(t) + M(t) \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
+\dot{\X}(t) = \I(t) + M(t) \, \X \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
 \end{equation}
 In this case, the inputs and the compartmental matrix are time-dependent and
 the system never converges to a fixed-point solution. In most cases, an
 analytical solution cannot be obtained, but the solution can be 
 obtained numerically. In particular, the solution for systems of the form of equation \eqref{eq:NALS} can be written as
 \begin{equation}
-(t, t_0, \X_0) = \Phi(t, t_0) \X_0 + \int_{t_0}^{t} \Phi(t, \tau) \I(\tau) \mathrm{d}\tau.
+\X(t, t_0, \X_0) = \Phi(t, t_0) \X_0 + \int_{t_0}^{t} \Phi(t, \tau) \I(\tau) \mathrm{d}\tau.
   \label{eqn:Phi}
 \end{equation}
-The state transition operator $\Phi(t,t_0)$ is a matrix-valued function that
-multiplied with the state $x_0$ at $t_0$ transitions it to the state $x(t)$
-subsequent time $t > t_0$. It is numerically computable by solving an matrix
-ode derived from \eqref{sec:trajectory} 
-From $\Phi(t,t_0)$ we can obtain not only the temporal evolution of the
-solution $\X(t)$ but also of the distributions of ages of the mass in the compartments and in the entire system \cite{Metzler2018PNAS}.
-The \CompartmentalSystems{} package provides all the functionality necessary to do these computations, which rely on a description of the time-dependent input vector $u(t)$ and the compartmental matrix $B(t)$, as well as initial age distributions for the compartments.
+The state transition operator $\Phi(t,t_0)$ is a matrix-valued function that $\Phi(t, t_0)\,\X_0$ describes the location at time $t$ of the initial pool contents at time $t0$.
+It is numerically computable by solving an matrix-valued
+ODE derived from \eqref{sec:trajectory}.
+From $\Phi(t,t_0)$ we can not only obtain the temporal evolution of the
+solution $\X(t)$, but also of the distributions of ages of the mass in the compartments and in the entire system \citep{Metzler2018PNAS}.
+The \CompartmentalSystems{} package provides all the functionality to do these computations, which rely on a description of the time-dependent input vector $u(t)$ \hmm{NOTATION!} and the compartmental matrix $B(t)$ \hmm{NOTATION!}, as well as on the initial age distributions for the compartments.
 {todo @Markus, again, legend for notations is really necessary. E.g. matrix B(t) was never intorduced before, instead M(t) was used as a compartmental matrix. A person reading the paper will be very confused}
 Furthermore, these computations can also be obtained for nonlinear systems of the form
 \begin{equation} \label{eq:NANLS}
-\dot{\X}(t) = \I(t, \X) + M(t, \X) \, \X(t), \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
+\dot{\X}(t) = \I(t, \X) + M(t, \X) \, \X(t) \qquad  \mathrm{with} \quad \X(t_0) = \X_0,
 \end{equation}
-by numerically solving \eqref{eq:NANLS} and plugging the solution $x(t, t_0,
-x_0)$ back into it, which results in $\tilde{M}(t)=B(t, \X(t, t_0,\X_0))$ and
-$\tilde{\I}(t)=\I(t,\X(t, t_0,x_0)$  i.e a linear system in the form
+by numerically solving \eqref{eq:NANLS} and plugging the solution $\X(t, t_0,
+x_0)$ back into it, which results in $\tilde{M}(t)=B(t, \X(t, t_0,\X_0))$ \hmm{That's my favorite equation so far, notation wise.} and
+$\tilde{\I}(t)=\I(t,\X(t, t_0,x_0)$, \ie a linear system in the form
 \eqref{eq:NALS}. 
 {@Markus, please fix the next sentence - it is broken}
-Therefore,  age and transit time
-distributions can be obtained for nonlinear non-autonomous systemreimplements along the
-specific trajectory. Detailed methods for the computation are provided in
+\hmm{Repaired it.}
+Therefore,  age- and transit-time
+distributions can be obtained for nonlinear non-autonomous systems along a
+specific solution trajectory. Detailed methods for the computations are provided in
 \cite{Metzler2018PNAS}
 
-%\section{Software description}
+\hmm{In general, something seems to have happened to the citep command, it seems to have been replaced everywhere. So be careful when to use cite and citep. I'm trying to correct it, but I will surely miss some occurrences.}
+
+\section{Software description}
 \section{The \python{} packages}
 \label{sec:PythonPackages}
 \subsection{\LAPM{}}
-Linear Autonomous Pool Models (\LAPM{}) is a python 3 package for the study of autonomous compartmental systems at equilibrium such as those described in section \ref{sec:Equilibrium}. 
-It implements the LinearAutonomousPoolModel class, with methods for the
-symbolic and numerical solutions of the steady state content in the compartments, and the steady state release out of the compartments. For transit time, system age, and pool age, it provides symbolic and numerical computations of distribution densities, cumulative distribution functions, mean, standard deviation,           variance, higher order moments, and Laplace transforms. 
+Linear Autonomous Pool Models (\LAPM{}) is a \python\ 3 package for the study of autonomous compartmental systems in equilibrium such as those described in \sectionref{sec:Equilibrium}. 
+It implements the LinearAutonomousPoolModel class with methods for the
+symbolic and numerical solutions of the steady-state content in the compartments, and the steady-state release out of the compartments. For transit time, system age, and pool age it provides symbolic and numerical computations of distribution densities, cumulative distribution functions, mean, standard deviation, variance, higher order moments, and Laplace transforms. 
 
-For the analysis of compartmental systems in analogy to absorbing Markov chains, \LAPM{} provides methods for the computation of the entropy rate per jump, the entropy rate per unit time, and path entropy. It provides the class DTMC (discrete-time Markov chains), with methods to compute the fundamental matrix, stationary distribution, and expected number of jumps of the Markov chain.
+For the analysis of compartmental systems in analogy to absorbing Markov chains, \LAPM{} provides methods for the computation of the entropy rate per jump, the entropy rate per unit time, and path entropy. It provides the class \texttt{DTMC} (discrete-time Markov chains), with methods to compute the fundamental matrix, stationary distribution, and expected number of jumps of the Markov chain.
 
 \subsection{\CompartmentalSystems{}}
 This package deals with non-equilibrium trajectories of compartmental systems.
-In particular, it provides the class smooth\_reservoir\_model to describe
+In particular, it provides the class \texttt{smooth\_reservoir\_model} to describe
 symbolically the general class of non-autonomous nonlinear compartmental
 dynamical systems of equation \eqref{eq:CompartmentalSystem}. It does not
 require code for numerical computations or model simulations, but rather defines the underlying structure of the respective model. 
-All fluxes or matrix entries are expected to be \sympy{} 
-expressions. 
+All fluxes or matrix entries are expected to be \sympy{} expressions.
 
 To obtain numerical results, the package
-provides the class smooth\_model\_run, which is initialized with the initial
+provides the class \texttt{smooth\_model\_run}, which is initialized with the initial
 conditions of the system of equations, a set of parameter values, and a time
 sequence. It computes the solution trajectory for the given initial conditions and
-parameter values , finds the corresponding linear system with the same solution
-following the strategy described in section \ref{sec:trajectory} computes the
-state transition operator $\Phi(t, t_0)$ for these solution trajectories and 
+parameter values, finds the corresponding linear system with the same solution
+following the strategy described in \sectionref{sec:trajectory}, computes the
+state transition operator $\Phi(t, t_0)$ for these solution trajectories, and 
 provides methods to obtain time dependent densities with corresponding moments and quantiles for system age, compartment age, and transit time. 
 
 An additional module provides functions to obtain initial age distributions
 required for the computation of time-dependent age distributions. 
-This module uses \LAPM{}.
+This module uses \LAPM{}. \hmm{Which module is that?}
 
 \subsection{\ComputabilityGraphs{}}
 This package was specifically developed for use in \texttt{bgc\_md2} but is also usable in separation.
-It allows a declarative description of results (model properties) i.e. completely abstracting from the way they are obtained as e.g in a \texttt{Make} 
-%\cite{
-%Feldman, S. I. (April 1979). "Make --- A Program for Maintaining Computer Programs". Software: Practice and Experience. 9 (4): 255–265. CiteSeerX 10.1.1.39.7058. doi:10.1002/spe.4380090402. S2CID 33059412
-%} 
-\footnote{Which won the ACM software system award in 2002} file.  This
+It allows a declarative description of results (model properties), \ie completely abstracting from the way they are obtained as, \eg in a \texttt{Make} 
+% \cite{
+% Feldman, S. I. (April 1979). "Make --- A Program for Maintaining Computer Programs". Software: Practice and Experience. 9 (4): 255–265. CiteSeerX 10.1.1.39.7058. doi:10.1002/spe.4380090402. S2CID 33059412
+% }
+\footnote{Which won the ACM software system award in 2002.} file.  This
 abstraction is the precondition for queries as in other declarative languages
-like e.g. \texttt{SQL}, whose purpose is the comparison of data, as opposed to
-the implementation of data base software.  Comparison of models w.r.t. their
-predictions poses a similar challenge: The amount of e.g. Carbon or Nitrogen in
+such as \texttt{SQL}, whose purpose is the comparison of data as opposed to
+the implementation of database software.  Comparison of models w.r.t. their
+predictions poses a similar challenge: The amount of, \eg carbon or nitrogen in
 a compartmental system or their ages or transit times through it are (in
 principle) measurable quantities. They do not change if the description of the
 model is changed from a graph (pools and fluxes) to a matrix or a product of matrices.
-Instead of forcing a user of the data base to use a fixed
-description it is much more desirable to allow as many equivalent ones as
-possible \emph{and} make the equivalence explicit by  well defined mappings i.e. \emph{functions}.
+Instead of forcing a user of the database to use a fixed
+description, it is much more desirable to allow as many equivalent descriptions as
+possible \emph{and} make the equivalence explicit by  well defined mappings, \ie \emph{functions}.
 
 \ComputabilityGraphs{} facilitates exactly this.
 It implements a class \texttt{CMTVS} which stands for 
-{\bf C}onnected {\bf M} ulti {\bf T}yped {\bf V}ariable {\bf S}et. 
-Instances consist of a set of variables with unique type (only one variable per type) and a set of type annotated functions that exclusively 
+{\bf C}onnected {\bf M}ulti {\bf T}yped {\bf V}ariable {\bf S}et. 
+Instances consist of a set of variables with unique type (only one variable per type) \hmm {Or one type per variable?} and a set of type-annotated functions that exclusively 
 use these types in their signature (as arguments or return values) which we call \emph{computers} from now on.
 This combination implicitly implements a declarative model description language to describe results of computations by requesting the type of the result. 
 
-It also confines what we consider a model property, building block or
+\hmm{General question: If I define two identical models, just changing the pool order, can we automatically figure out that they are identical?}
+
+It \hmm{What is ``it''?} also confines what we consider a model property, building block, or
 metric. The network of functions using these types as arguments or return values
 enforces an unambiguous definition, which prevents the description of models to
-become vague, e.g. the compartmental matrix is a function of the internal and outgoing fluxes and the ordering of the state variables.  
+become vague, \eg the compartmental matrix is a function of the internal and outgoing fluxes and the ordering of the state variables.  
 This rigorous description actually defines computability graphs that we exploit mainly in the following ways.
 \begin{enumerate}
   \item
@@ -699,10 +700,10 @@ This rigorous description actually defines computability graphs that we exploit 
 
       The left hand side picture shows a first step in the computation of the
       computable types.  
-      The dark green nodes on the left represent the types of the given variables.
-      (in this case describing the YIBS model)
-      We find a first applicable (i.e. all its arguments are
-      given) function (grey node on the right), infer the result type from its
+      The dark green nodes on the left represent the types of the given variables
+      (in this case describing the YIBS model).
+      We find a first applicable (\ie all its arguments are
+      given) function (gray node on the right), infer the result type from its
       type annotation and add it to the set of given types (new light green
       node).  Now we have more arguments and thus more possibly applicable
       functions.
@@ -713,16 +714,16 @@ This rigorous description actually defines computability graphs that we exploit 
       compute (30 light green nodes) from the 11 provided variables (dark
       green), some of them in different ways via intermediate results
       (as explained in  \figref{fig:dep_graph} below).  This
-      information is used to automatically add methods to an \texttt{CMTVS}
-      instance, so that interactive python environments suggest computable
+      information is used to automatically add methods to a \texttt{CMTVS}
+      instance, so that interactive \python\ environments suggest computable
       results to the user. In this case 30 new methods appear automatically, including very complex results like the pool specific transient 
-      mean age solution for the vegetation carbon sub system witch appears as \texttt{get_NumericVegetationCarbonMeanAgeSolutionArray()}
-      It is also the basis for queries, e.g. "for which
-      models can we compute the mean transit time through the 
-      the vegetation subsystem?"  Note that the applicable functions (in this
-      example 45 represented by the grey nodes) can also be used
+      mean age solution for the vegetation carbon subsystem which appears as \texttt{get_NumericVegetationCarbonMeanAgeSolutionArray()}.
+      It is also the basis for queries, \eg ``for which
+      models can we compute the mean transit time through
+      the vegetation subsystem?''  Note that the applicable functions (in this
+      example 45, represented by the gray nodes) can also be used
       independently of the \texttt{CMTVS} class, explicitly by the user. 
-      A lack of the automatic combination would however make it much more difficult to
+      A lack of the automatic combination would, however, make it much more difficult to
       guide a user through the often purely technical conversions to the
       targeted result and massively increase the amount of necessary
       handwritten documentation.  In this sense \ComputabilityGraphs{} can be
@@ -743,11 +744,11 @@ This rigorous description actually defines computability graphs that we exploit 
   The green nodes are the building blocks that we have provided in the
   model description so far.
   The light red nodes show that are not provided but have to be 
-  computed via the function represented by the grey nodes. 
+  computed via the function represented by the gray nodes. \hmm{What is not provided?}
   This is possible if all their (ultimate recursive) dependencies
   are green nodes. 
-  In this example this is the case except for nodes  T70 and T38 ,
-  \texttt{StartConditionMaker} \footnote{Variables of this type are actually a functions that can compute a set of consistent start conditions (mass, age density, mean age), which we note here to show that the concept of type is not confined to a traditional data types.  
+  In this example this is the case except for nodes T70 and T38,
+  \texttt{StartConditionMaker} \footnote{Variables of this type are actually functions that can compute a set of consistent start conditions (mass, age density, mean age), which we note here to show that the concept of type is not confined to traditional data types.  
   } and 
   \texttt{VegetationCarbonStateVariableTuple} 
   respectively. 
@@ -759,22 +760,23 @@ This rigorous description actually defines computability graphs that we exploit 
   at the given nodes and ending in the final result.
 \begin{figure}[h]
   \includegraphics[width=\textwidth]{dep_graph.pdf}
-  \caption{ Dependency graph}
+  \caption{Dependency graph}
   {
     \small
     \input{TypeLegend}
+    \hmm{What about the f nodes in the caption?}
   }  
   \label{fig:dep_graph}
 \end{figure}  
 \end{enumerate} 
-Using \enumref{enum:computable} and \enumref{enum:compute} together a
+Using \enumref{enum:computable} and \enumref{enum:compute} together, a
 \texttt{CMTVS} can add get methods for computable results dynamically.  This
-is very useful for the user interface in interactive python sessions,
-including Jupyter notebooks since on pressing the tab key, the python
-interpreter suggest available method calls as autocompletion options for any
-object followed by a "." For an \texttt{CMTVS} object these methods become
+is very useful for the user interface in interactive \python\ sessions,
+including Jupyter notebooks since on pressing the tab key, the \python\
+interpreter suggests available method calls as autocompletion options for any
+object followed by a "." For a \texttt{CMTVS} object these methods become
 more numerous automatically as more and more information is added to it.
-Apart from the user interface \enumref{enum:computable} is necessary for queries.
+Apart from the user interface, \enumref{enum:computable} is necessary for queries.
 If we have a (large) set of different \texttt{CMTVS} objects and want to
 compare them with respect to a certain property, we must first find out for
 which of them this property is actually computable.  A welcome side effect
@@ -784,9 +786,9 @@ record would most likely be incomplete, whereas here we just get offered
 fewer computable results.  
 This is especially useful for the creation of new
 models, in the process of which one naturally starts with a small set of
-variables that is gradually extended.
+variables which is gradually extended.
 Typically one of the first steps is a dictionary of symbolic flux equations, which already allows the visualization
-of the compartmental graph or flow diagram, symbolic matrices and vectors and is extremely useful for debugging.
+of the compartmental graph or flow diagram, symbolic matrices, and vectors and is extremely useful for debugging.
 
 
 
@@ -794,8 +796,8 @@ of the compartmental graph or flow diagram, symbolic matrices and vectors and is
 central package and can be seen as a front end to \CompartmentalSystems{} and
 \LAPM{} facilitated by \ComputabilityGraphs{}.  For the following discussion it is
 important to note that \texttt{bgc\_md2} is a library, rather than a framework,
-since there is no `inversion of control', i.e. \texttt{bgc\_md2} as well as all
-the other packages are called from normal python code, rather than
+since there is no `inversion of control', \ie \texttt{bgc\_md2} as well as all
+the other packages are called from normal \python\ code, rather than
 \texttt{bgc\_md2} calling user code in a restricted execution environment as a
 framework would do. \todo { @Markus, DSL (sentence below) was explained in the abstract, but not in the main text. PLease add a sentence here to introduce this concept.} Although internally \ComputabilityGraphs{} acts like an
 extended  compiler  (not only testing type consistency of function calls but
@@ -804,59 +806,59 @@ models, it is technically represented by \texttt{bgc\_md2}'s API (consisting of
 the provided types, functions, and the dynamically created methods of the
 \texttt{CMTVS} objects for computable properties).  This makes it much more
 flexible to use than a framework. We can use the full tool set of the
-\emph{python} ecosystem to create instances of the model building blocks and to
-postprocess results afterwards.  While any comparison requires standards i.e.
-rigorously defined properties which can be formulated for all models and
+\python\ ecosystem to create instances of the model building blocks and to
+post-process results afterwards.  While any comparison requires standards, \ie
+rigorously defined properties which can be formulated for all models, and
 therefore naturally suppresses idiosyncrasies of models, it can be very helpful
 to use these idiosyncrasies for the creation of a model.  This is possible
-since we can use absolutely unrestricted python code to create the model
+since we can use absolutely unrestricted \python\ code to create the model
 building blocks.  Imagine for example a model that includes pools in many soil
 layers with similar connecting fluxes. A model description code using
 \texttt{bgc\_md2} could use loops to express this.  This also applies to
-postprocessing. Some of the functionality in \LAPM{} and \CompartmentalSystems{} is
+post-processing. Some of the functionality in \LAPM{} and \CompartmentalSystems{} is
 not generally applicable to \emph{all} models in \texttt{bgc\_md2}'s collection
 and therefore cannot (and should not) 
 be offered by the `computers'. 
-This very deliberate restriction is however no problem since 
+This very deliberate restriction is, however, no problem since 
 nothing prevents a user to apply them (or any other bit of code) to the results of a
-\texttt{bgc\_md2} computations.  
-Armed with this flexibility we know that our
-DSL does not have to provide everything and can restrict it to sensible categories
+\texttt{bgc\_md2} computation.  
+Armed with this flexibility, we know that our
+DSL does not have to provide everything and can restrict it \hmm{What is ``it''?} to sensible categories
 for comparisons.
-%\subsubsection{Provided Types and Computers}
+\subsubsection{Provided Types and Computers}
 In particular \texttt{bgc\_md2} provides:
   \begin{enumerate}
     \item
       Types defining {\bf building blocks and comparable diagnostic results} 
       specifically tailored to compartmental models, 
-      e.g.\ \texttt{CompartmentalMatrix}, \texttt{InternalFluxesBySymbol},
-      \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution} \dots  
-      \footnote{A complete list can be produced by a single command}
-  %and is added to \appendixref{appendix:listing}
-      specifically including the symbolic expressions for pool contents, in- out- and internal-fluxes for
-      subsystems, single pools or the entire model, as well as their numerical counterparts obtained from 
-      by solving the parameterized IVPs and the most general diagnostics e.g. transient mean-age and transit time solutions.
+      \eg \texttt{CompartmentalMatrix}, \texttt{InternalFluxesBySymbol},
+      \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution}, \dots,  
+      \footnote{A complete list can be produced by a single command. \hmm{Which command would that be?}}
+  and is added to \appendixref{appendix:listing}
+      specifically including the symbolic expressions for pool contents, in-, out,-, and internal fluxes for
+      subsystems, single pools or the entire model, as well as their numerical counterparts obtained 
+      by solving the parameterized IVPs \hmm{Has this abbreviation been introduced already?} and the most general diagnostics, \eg transient mean-age and transit time solutions. \hmm{The previous sentence is very long and confusing.}
       Since many of these types are based on a symbolic
       mathematical representation, using \sympy{}, many symbolic results are computable 
       without the need to know parameters or data to run the
       models.  Using the underlying graph representation as sets
       of pools and fluxes, we can reorder pools and thereby
       automatically transform the compartmental matrices, group
-      them into different subsets (e.g. vegetation, soil, litter,
-      carbon, nitrogen \dots ), substitute pool names, get
-      mathematical expression for cumulative fluxes e.g. from
-      vegetation to soil or simply plot the graphs (\figref{fig:subsystems}).
-      Using this symbolic transformations we can compare models that might
+      them into different subsets (\eg vegetation, soil, litter,
+      carbon, nitrogen, \dots), substitute pool names, get
+      mathematical expressions for cumulative fluxes, \eg from
+      vegetation to soil, or simply plot the graphs (\figref{fig:subsystems}).
+      Using this symbolic transformations, we can compare models that might
       have looked very different initially, simply due to
-      arbitrary choices of pool names or their even more arbitrary
+      arbitrary choices of pool names or the even more arbitrary
       order in which they appear. 
       \begin{figure}[h]
-      \includegraphics[width=\textwidth]{"kv_visit2_veg_soil_decomposition.pdf}
+      \includegraphics[width=\textwidth]{kv_visit2_veg_soil_decomposition.pdf}
       \caption{Automatic decomposition into subsystems} 
-      Assuming that a compartmental system has been defined symbolically e.g. by providing expressions for input,  output and internal fluxes different flow diagrams can be created automatically. 
+      Assuming that a compartmental system has been defined symbolically, \eg by providing expressions for input, output, and internal fluxes, different flow diagrams can be created automatically. 
       The additional information for the decomposition into subsystems just consists of a set of pool names for each subsystem.
-      (Here vegetation and soil part for the visit model reconstruction).
-      For special subsystems like vegetation or soil that frequently occur in Carbon cycle models a declaration of a set of e.g. soil pools has far reaching consequences. 
+      (Here vegetation and soil part for the visit model reconstruction) \hmm{I don't get the previous sentence}.
+      For special subsystems like vegetation or soil which frequently occur in carbon cycle models a declaration of a set of, \eg soil pools, has far reaching consequences. 
         Apart from the graph shown here, such a statement immediately makes
         several new diagnostics available, including matrix descriptions for
         the vegetation subsystem as in \cite{Ceballos2018Biogeosciences} or
@@ -868,19 +870,19 @@ In particular \texttt{bgc\_md2} provides:
       \end{figure}
       
     \item
-      A set of type annotated functions (from now on called computers) operating on those types,  which combined
+      A set of type annotated functions (called computers) operating on those types, which combined
       by \ComputabilityGraphs{} form a much simplified 
-      interface to \emph{many  algorithms} in \texttt{CompartmentalSystems} and \LAPM{} to compute diagnostic variables
+      interface to \emph{many algorithms} in \texttt{CompartmentalSystems} and \LAPM{} to compute diagnostic variables
       for \emph{many models} in \texttt{bgc\_md2}.
-      %A very simple example is depicted in \figref{fig:subsystems}.
+      A very simple example is depicted in \figref{fig:subsystems}.
     \item
-    $30+$ vegetation, soil or ecosystem models for carbon and nitrogen cycling
-      as reusable python modules using the building blocks in a flexible way. 
+    A collection of $30+$ vegetation, soil, or ecosystem models for carbon and nitrogen cycling
+      as reusable \python\ modules using the building blocks in a flexible way. 
   \end{enumerate}
 
-\subsubsection{Intentionally Missing Computers}
-\todo {Comment from Kostia: I'm not sure this paragraph is neccessary the way it is framed. There is already an idea in the previous paragraph that non-universal things should not be in 'computers'.
-I don't think we should dwell on this too much. Unless it can be re-phrazed in a positive manner, e.g. \"Although certain features are not implemented in computers, they are demonstraited in the example notebooks...\" In this case it can be merged with the following Section 4}
+\subsubsection{Intentionally missing computers}
+\todo {Comment from Kostia: I'm not sure this paragraph is necessary the way it is framed. There is already an idea in the previous paragraph that non-universal things should not be in 'computers'.
+I don't think we should dwell on this too much. Unless it can be re-phrased in a positive manner, e.g. \"Although certain features are not implemented in computers, they are demonstrated in the example notebooks...\" In this case it can be merged with the following Section 4}
 It is also interesting to note what \texttt{bgc\_md2} intentionally does not implement:
 A trivial example is that the computation of equilibria is missing from \texttt{bgc\_md2}'s set of strictly typed functions. 
 While we can easily compute the uniquely defined fixed point of a linear
@@ -888,27 +890,28 @@ autonomous system, and indeed provide functions to do so in \LAPM{}, we have to
 resist the temptation to make them available via \texttt{bgc\_md2}'s set of
 types and computers for \emph{all} compartmental systems. 
 This restriction also pertains to equilibrium start age distributions. 
-If they simulation is to be started from an equilibrium this is reflected not only by the correct equilibrium
+If the simulation is to be started from an equilibrium, this is reflected not only by the correct equilibrium
 but also a specific age distribution.  
-At the moment neither equilibria nor the start age distributions 
+At the moment, neither equilibria nor the start age distributions 
 are inferred automatically, but have to be provided per model by 
 user code to clearly define responsibilities (although, thanks to \LAPM{}, the user code amounts to only three lines).
 While we could in the future provide special types for liner matrices or
 fluxes, constant rates, along with their appropriate constructors implementing
 automatically testable criteria for accidental misdeclaration, implement
-computers for them and thus formalize comparisons between linear models
+computers for them and thus formalize comparisons between linear models,
 this has not been done yet and such results are not suggested automatically by \texttt{bgc\_md2}.
-Users can however use the many functions in \LAPM{} or \CompartmentalSystems{} directly.
+Users can, however, use the many functions in \LAPM{} or \CompartmentalSystems{} directly.
 
 We also avoid `computers' depending directly or indirectly on ambiguously defined matrix factorizations, 
-as we mentioned above and in explained in detail in \appendixref{appendix:MatrixDerivation}. 
-These computations can still be performed aided by  \LAPM{} or \CompartmentalSystems{} on intermediate results
-provides by \texttt{bgc\_md2} computers but also not automatically, since results would be ambiguous (in contradiction to the mathematical definition of a function which is our criteria  for admission). 
+as we mentioned above and explained in detail in \Appendixref{appendix:MatrixDerivation}. 
+These computations can still be performed aided by \LAPM{} or \CompartmentalSystems{} on intermediate results
+provides by \texttt{bgc\_md2} computers, but also not automatically, since results would be ambiguous (in contradiction to the mathematical definition of a function, which is one of our our criteria for admission). 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Example Applications}  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Example applications}  
 \label{sec:ExampleApplications}
+\hmm{I have to admit that I basically do not understand much anymore from here on.}
 It is impossible to fully exhibit the potential of this approach without
 examples.
 To this end we created some illustrative \texttt{Jupyter} notebooks that are
@@ -918,44 +921,43 @@ and some example plots from them.
 The examples demonstrate how \texttt{bgc_md2}:
 \begin{enumerate}
 \item 
-  Simplifies and unifies the creation of a new model from scratch while using the
+  Simplifies and unifies the creation of a new model from scratch using the
   symbolic and graphic diagnostic capabilities to inspect it while we build it
   and use 
   \ComputabilityGraphs{} to point out what missing information we have to
   provide to make desired results computable.
   This is demonstrated in
-    \href{https://github.com/MPIBGC-TEE/bgc_md2/blob/binder/binder_notebooks/illustrativeExamples/createModel.py}{binder_notebooks/illustrativeExamples/createModel.py}
+    \href{https://github.com/MPIBGC-TEE/bgc_md2/blob/binder/binder_notebooks/illustrativeExamples/createModel.py}{binder\_notebooks/illustrativeExamples/createModel.py}
     
 \item 
-  aided by \ComputabilityGraphs{} 's ability to compute which properties are computable
+  Aided by \ComputabilityGraphs{}'s ability to compute which properties are computable
   allows to query the collection of models that are already part of
   \texttt{bgc\_md2}.
   This is demonstrated in
-    \href{https://github.com/MPIBGC-TEE/bgc_md2/blob/binder/binder_notebooks/illustrativeExamples/databaseAspects.py}{binder_notebooks/illustrativeExamples/databaseAspects.py}
-%\item 
-%  How a model that is already part of the database can be
-%  inspected w.r.t complex diagnostics like the transient mean transit time that
-%  would take years to implement in stand alone model code but are now available
-%  for all models with sufficient information.
-%  This is demonstrated in
-%  %\url{}
+    \href{https://github.com/MPIBGC-TEE/bgc_md2/blob/binder/binder_notebooks/illustrativeExamples/databaseAspects.py}{binder\_notebooks/illustrativeExamples/databaseAspects.py}
+\item 
+ How a model that is already part of the database can be
+ inspected w.r.t complex diagnostics like the transient mean transit time that
+ would take years to implement in stand alone model code but are now available
+ for all models with sufficient information.
+ This is demonstrated in
+ %\url{}
 \item 
   \label{enum:trendy}
-  Several Models for which numeric parameter values and driver data are
+  Several models for which numeric parameter values and driver data are
   available can be compared w.r.t. abstract properties.
   We chose the mean age and transit time of the vegetation and soil subsystems
   since they are defined for all models while the concrete pools of the models
   differ and not only have different names but also different meaning.
   \todo{@Markus Fig. 6: we talked about a problem of period in transit time computation.
   Also, I would point out the magnitude: soil transit time is only 2 times higher than vegetation, while I would expect at least 10 times higher. This is probably due to poor parametrization.
-  Fig. 7: Ensabmle mean is not visible in the image}
-  (\figref{fig:btt_4models}, \figref{fig:stock_mean} )
+  Fig. 7: Ensebmle mean is not visible in the image}
+  (\figref{fig:btt_4models}, \figref{fig:stock_mean}) \hmm{I couldn't find this part in the notebooks. This is what people probably would like to see.}
 \end{enumerate}
 We will look closer at  
-  \enumref{enum:trendy}. It is interesting to see how only the same 10 variables 
+  \enumref{enum:trendy} It is interesting to see how only the same ten variables 
   as shown in \figref{fig:closure} 
-      (
-          T18: InFluxesBySymbol, 
+      (T18: InFluxesBySymbol, 
         	T20: InternalFluxesBySymbol, 
         	T31: NumericParameterization, 
         	T35: NumericSimulationTimes, 
@@ -964,13 +966,12 @@ We will look closer at
         	T57: StartConditionMaker, 
         	T59: StateVariableTuple, 
         	T60: TimeSymbol, 
-        	T69: VegetationCarbonStateVariableTuple
-      )
+        	T69: VegetationCarbonStateVariableTuple)
   are actually given,
   and how it is possible to compute such a relative complex result
   like the mean backward transit time for the vegetation part automatically
   \figref{fig:dep_graph_2}.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[ht]
 	\includegraphics[width=\columnwidth]{bak_dep_graph_2.pdf}
     \caption{
@@ -980,7 +981,7 @@ We will look closer at
     }
     \begin{itemize}
       \item
-      Many \emph{labels} (e.g. T59)  appear more than once in the graph, while of
+      Many \emph{labels} (\eg T59) appear more than once in the graph, while of
         course a node itself cannot.  The reason is that the nodes in this
         search tree are actually tuples of which we only show the first part in
         the label. The second part, \emph{which is invisible here}, is a set of
@@ -990,8 +991,7 @@ We will look closer at
         \emph{trees} which can be traversed much faster.
       \item
         There are actually only nine variables necessary (\figref{fig:closure} dark green)
-        (
-          T18: InFluxesBySymbol, 
+        (T18: InFluxesBySymbol, 
         	T20: InternalFluxesBySymbol, 
         	T31: NumericParameterization, 
         	T35: NumericSimulationTimes, 
@@ -999,17 +999,16 @@ We will look closer at
         	T57: StartConditionMaker, 
         	T59: StateVariableTuple, 
         	T60: TimeSymbol, 
-        	T69: VegetationCarbonStateVariableTuple
-       ) to compute the result.
+        	T69: VegetationCarbonStateVariableTuple) to compute the result.
       \item
-        There are actually different ways to compute the result. Some of the red nodes (e.g. T41)         could be computed by different functions (here f44 and f59)  which have different arguments which are compute by different functions \dots so the tree branches out. 
-        At the moment the algorithm chooses the first path but we could use this feature to
+        There are actually different ways to compute the result. Some of the red nodes (\eg T41) could be computed by different functions (here f44 and f59)  which have different arguments which are computed by different functions. So the tree branches out. 
+        At the moment, the algorithm chooses the first path but we could use this feature to
         remove hidden duplication in the model description (remove some of the given variables since they are computable) and 
-        if it is unavoidable to automatically test its consistency. 
+        if duplication is unavoidable to automatically test its consistency. 
     \end{itemize}
   \label{fig:dep_graph_2}
 \end{figure}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \todo{@Holger, Kostia: \\
 We should try to publish the following in PNAS as an unexpected short Corollary to \cite{Metzler2018PNAS} called `Inverse Pool Algebra', because it is generalizable to any subsystem.
 The actual computation can be made more elegant: 
@@ -1020,6 +1019,9 @@ One special case is the computation of "pool" ages (age w.r.t. entry into a pool
  Its actually quite surprising that we can compute the age with respect to a set of pools in the middle with an IVP since the whole well mixed approach has no explicit 
  concept of crossing a pool boundary for a single particle (only implicitly by the Markov Chain Interpretation...)     
  The connection is the start condition (does not have to be equilibrium based, pinup or empty would also do) and the Input Age of zero for the flux into the subsystems, Crazy sh...}\\
+ \hmm{If I understand right, we can compute the ages of arbitrary subsystems more elegantly than done in the PNAS paper? That does not seem to be worth a publication to me.}
+ 
+\hmm{Is the next part still comment or already manuscript text? I ignore it for now and continue with ``Conclusions''.}
 The short version of the mathematical description is as follows:
 \begin{enumerate} 
   \item 
@@ -1060,7 +1062,7 @@ The short version of the mathematical description is as follows:
     Extend the vegetation IVP by the first age moment (mean) equations.
   \item 
     \label{enum:meanAgeVeg} Solve the mean age vegetation IVP. 
-    % (including the matrix ODE for $\Phi$ from \eqnref{eqn:Phi}, which
+    (including the matrix ODE for $\Phi$ from Eq. \ref{eqn:Phi}, which
     While this (unnecessarily) reproduces the solution for the vegetation
     pool contents as function of time, the mean age solution differs because
     influx into the vegetation system (that actually comes from other pools) now
@@ -1107,40 +1109,43 @@ This has several consequences:
 
 \begin{figure}[t] \includegraphics[width=\columnwidth]{test_veg_soil.pdf}
   \caption{
-    Figure above: Comparing the transient backward transit time through
-    subsystems, across different models.
+    Comparing the transient backward transit time through
+    subsystems, across different models. \hmm{What is plotted? Medians? Means?}
   } 
   \label{fig:btt_4models} 
 \end{figure}  
 
 \begin{figure}[t] \includegraphics[width=\columnwidth]{test_stock_mean.pdf}
   \caption{
-    Cumulative change of Carbon %\(C\) 
-    stock since pre-industrial conditions predicted by 5 models from the \texttt{bgc\_md2} database. Grey area indicates $\pm$ one standard deviation around the ensamble mean.
-    Top panel: total C stock; middle panel: vegetation C; bottom panel: soil C.  \texttt{bgc\_md2} can automatically compute diagnostics for sub-systems: the user just needs to specify which pools
-    belong to which subsystem.
+    Cumulative change of carbon %\(C\) 
+    stock since pre-industrial conditions predicted by 5 models from the \texttt{bgc\_md2} database. Gray area indicates $\pm$ one standard deviation around the ensemble mean.
+    Top panel: total carbon stock; middle panel: vegetation carbon; bottom panel: soil carbon.  \texttt{bgc\_md2} can automatically compute diagnostics for sub-systems: the user just needs to specify which pools
+    belong to which subsystem. \hmm{The titles of the subplots could be improved.}
   }
   \label{fig:stock_mean} 
 \end{figure}  
 
 
+
 \section{Conclusions} \label{sec:ConclusionsAndOutlook}
+\hmm{A ``Conclusions'' section should be short. All the subsections that follow should go to a section called ``Discussion'', which is completely missing so far (should be between ``Results'' and ``Conclusions'').}
+\hmm{I did not see any code for a transit time or age computation. Further, there was no explanation as to how add models to the database. This actually happens only later, but should definitely come AFTER the conclusion.}
 We implemented a
 practically usable tool for the creation, collection, inspection and comparison
 of compartmental models and demonstrated how it could be applied quickly to the
-practical problem, of comparing several models with respect to a numerical
+practical problem of comparing several models with respect to a numerical
 result complex enough to make its implementation on a per model basis
 prohibitively expensive.  We created examples to teach new users how to use the
 existing capabilities, how to query the collection and how to add models to it.
 These immediate practical benefits are sufficient for many simple applications and
-are to our knowledge unprecedented.  In the process some lessons have been
-learned, that could be valuable to anybody undertaking a similar project or
+are to our knowledge unprecedented.  In the process \hmm{In the process of what?} some lessons have been
+learned that could be valuable to anybody undertaking a similar project or
 interested in extending our work. \todo{@Markus I cannot understand the following sentence at all. Please consider refrasing:} An important one is the fertile feedback of
-the self imposed restriction to properties that are either results or arguments
+the self-imposed restriction to properties that are either results or arguments
 of computations on the clarity of the description of features.  Another one is
 the implementation of all the tools as libraries rather than a framework, which
 allows the use of the provided tools in situations that we do not anticipate yet
-and allows us to be strict in the data base part without creating a bottleneck.
+and allows us to be strict in the database part \hmm{What do you mean by ``part''?} without creating a bottleneck.
 We have also collected some more general observations: Creating collections of
 many models and many metrics consistently applicable to all of them is hard,
 finding well defined ways to allow users to contribute even harder, documenting
@@ -1152,81 +1157,83 @@ software, implementation of new features will likely
 require the permanent attention of a technical project lead for 
 the lifetime of the project, since occasional refactoring is likely to be necessary
 to keep the code base maintainable.
-\subsection{Possible Extensions and Improvements}
-\subsubsection{More Models}
+\subsection{Possible extensions and improvements}
+\subsubsection{More models}
 The easiest way to extend the data base is to contribute new models.
 We have created an example notebook as an interactive tutorial.
 Since very few building blocks are necessary, adding a new model is actually very simple.
 The symbolic part takes usually much less than a day, 
 and adding parameters much less time than finding them in the literature.
-Since \texttt{CMTVS} instances are normal python objects and have update and remove methods, models can use other models as source and extend them dynamically.
-The already stored models descriptions are \python{} modules and can import others or be imported by them.
-When you are happy with your code a pull request will put your model into the default location 
+Since \texttt{CMTVS} instances are normal \python\ objects and have update and remove methods, models can use other models as source and extend them dynamically.
+The already stored model descriptions are \python{} modules and can import others or be imported by them.
+When you are happy with your code \hmm{Tha's too informal.} a pull request will put your model into the default location 
 and make it subject to the tests. 
-\subsubsection{More Real Parametrizations and Driver data}
+\subsubsection{More real parametrizations and driver data}
 Many of the model descriptions contain a variable of type \texttt{NumericParameterization} 
 which contains dictionaries for parameter values and functions, mapping the symbolic description to a runnable model.
 These \texttt{NumericParameterization} instances are usually extremely small example data sets, whose purpose is to give users some arguments to test the numerical results with.
 This is intended. \texttt{bgc\_md2} is not a place to store data.
 However we would like to apply models to real data. Usually via model and data set specific code that makes available data accessible to our models.
 It is surprisingly tedious \todo{Big THANKS to Veronika, for doing it for many models} and for some models impossible to find scientifically meaningful parameters in the literature.
-In the case of earth system models we would need such a set of parameters and driver functions for each spatial pixel.
-Even for model intercomparison projects such as TRENDY \cite{sitch_recent_2015} these parameters are usually not publicly available and it is 
+In the case of Earth System Models we would need such a set of parameters and driver functions for each spatial pixel.
+Even for model inter-comparison projects such as TRENDY \cite{sitch_recent_2015} these parameters are usually not publicly available and it is 
 often not possible to estimate them accurately even from synthetic model output. 
 \footnote{
   Usually due to identifiability issues. 
-  30 or more parameters can hardly be expected to be estimable from much fewer data streams
+  30 or more parameters can hardly be expected to be estimable from much fewer data streams.
 }
 We have created a small trendy9 specific package for gluing the data to \texttt{bgc\_md}'s models, with parameter estimation code for four models.
-It would be very beneficial to have more gluing code for more data sets available...
+It would be very beneficial to have more gluing code for more data sets available.
+\emph{This entire section seems very informal to me. Is this supposed to me a comment?}
 
 
-\subsubsection{New Metrics and Building Blocks}
+\subsubsection{New metrics and building blocks}
 Adding `computers' is technically very simple. It will make you think though.
 In the `language' of \texttt{bgc\_md2} anything worth saying about a compartmental model is the result of a computation, or an argument that influences other computations or most likely both.
-Adding a new computer is the simplest case, since one has only to make sure that for \emph{any} arguments that fit the type signature a unique result can be computed. If new argument types or new result types have to be introduced it is usually worth asking if these arguments could be computed from something simpler. The reiteration of this process can lead to astonishing results.
+Adding a new computer is the simplest case, since one has only to make sure that for \emph{any} arguments that fit the type signature a unique result can be computed. If new argument types or new result types have to be introduced, it is usually worth asking if these arguments could be computed from something simpler. The reiteration of this process can lead to astonishing results.
 At some point we wanted to add information about the vegetation subsystems of some ecosystem models. 
 We needed the related subsystem compartmental matrix as in \cite{Ceballos2018Biogeosciences}. 
 Adding it as a model property would have been very error prone, adding a projection operation on the matrix would have been possible but far more complicated
 than the graph description that is now implemented and allows to specify a
 vegetation state variable tuple from which not only the vegetation
-compartmental matrix can be computed but any other vegetation related result too. 
+compartmental matrix can be computed, but any other vegetation related result too. 
 Adding a new word to the vocabulary is a very powerful extension.
 
-\subsubsection{Algebraic Types}
+\subsubsection{Algebraic types}
 The sets of `computers' and their argument and result types is by no means comprehensive.
 In fact there are many results that could be implemented quite easily. 
-E.g. we implemented the two types \texttt{VegetationCarbonStateVariableTuple} and 
-\texttt{SoilCarbonStateVariableTuple}. It would have been easy to created something similar for e.g. Nitrogen. However the number of types would quickly become large since their
-are also related types that would have to be duplicated, i.e. \texttt{NumericVegetationCarbonSolutionArray} or \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution}...
+For instance, we implemented the two types \texttt{VegetationCarbonStateVariableTuple} and 
+\texttt{SoilCarbonStateVariableTuple}. It would have been easy to create something similar for \eg. nitrogen. However, the number of types would quickly become large since there
+are also related types that would have to be duplicated, \ie \texttt{NumericVegetationCarbonSolutionArray} or \texttt{NumericVegetationCarbonMeanBackwardTransitTimeSolution}...
 To combat this `combinatoric explosion' it would be more elegant to express these relationships between types by a concept called
-algebraic data types which is used e.g. in  \texttt{Haskell} but also available in \python{} 's type hint syntax but not yet implemented in \ComputabilityGraphs{}.
-The concept is actually very simple as e.g. a type that uses another type as parameter like a list of integers \texttt{List[int]}. Algebraic types would give us a bigger namespace 
+algebraic data types, which is used, \eg in  \texttt{Haskell}, but also available in \python's type hint syntax but not yet implemented in \ComputabilityGraphs{}.
+The concept is actually very simple as, \eg a type that uses another type as parameter like a list of integers: \texttt{List[int]}. Algebraic types would give us a bigger namespace 
 for less awkward type names and also avoid some boilerplate code for the `computers'.
 \footnote{R does allow polymorphism in all arguments by means of \texttt{S4} classes, but does not allow algebraic types. So in SoilR the combinatoric explosion also lead to longer and longer type names.
 }
 Another related extension of \ComputabilityGraphs{} is to allow `computers' that return tuples. 
-This could be used to minimize the number of recursive computer application for sets of desired results.   
+This could be used to minimize the number of recursive computer applications for sets of desired results.   
 
-\subsubsection{Automatic Code Generation, Other Languages and Integration into Earth System Models}
+\subsubsection{Automatic code generation, other languages and integration into Earth System Models}
 \texttt{bgc\_md2} uses symbolic math to describe the model equations. It then
 uses \sympy{}'s facilities to first translate these expressions into regular python code and execute it in a special environment that can be influenced.
 \sympy{}
 provides a printer module that allows the translation of \sympy{} 
 expressions to many different programming languages including but not limited to C, Fortran, Java, R and Julia.
 So that models could also be translated to these languages automatically. 
-A possible application of this ability would be to automatically compile different land-carbon models from \texttt{bgc\_md2}'s collection into an earth system model without the need to reimplement them in the targeted language. 
+A possible application of this ability would be to automatically compile different land-carbon models from \texttt{bgc\_md2}'s collection into an earth system model without the need to re-implement them in the targeted language. 
 Remarkably \ComputabilityGraphs could also easily be extended to use collections of `computers' in other languages. 
 It acts much like a compiler and could use the graphs to automatically create code calling the `computers' recursively in the right order. 
-\footnote{At the moment this is not necessary since the computations traversing the graph in reverse are all performed immediately in python with with a growing intermediate result dictionary}  
+\footnote{At the moment this is not necessary since the computations traversing the graph in reverse are all performed immediately in python with with a growing intermediate result dictionary.}  
 This is extremely useful for the next possible extension.
 
-\subsubsection{Benchmarking Testbed and Stepping Stone for the Implementations of Diagnostics in Other Projects}
+\subsubsection{Benchmarking testbed and stepping stone for the implementations of diagnostics in other projects}
 Our packages have hundreds of unit test cases. If the integration of transit time computations into an existing earth system model was desired, these test could be adapted
 much faster than created from scratch. For nonlinear and nonautonomous systems, where analytical tests are hard to come by, \texttt{bgc\_md} can be used as a benchmark for any desired model (which could be implemented much more quickly there and then used as a reference in a set of tests for the new implementation.
 
-\subsubsection{Documentation, Error Messages}
+\subsubsection{Documentation, error messages}
 Our software tools are written in \python{}. 
+\hmm{The next sentences is half a bullet point list and a sentence.}
 This has advantages:
 \begin{itemize}
   \item
@@ -1235,21 +1242,23 @@ This has advantages:
   The flexibility of a very permissive dynamically typed language which allows for rapid prototyping and interactive use of the tools we created.
 \end{itemize}
 but also disadvantages: The same permissiveness that allows for rapid prototyping and interactive use can also make the detection of unintended misuse harder.
-In strictly typed languages like Haskell many unintended usecases are already detected at compile time and reported as errors.
-This 'fail early and hard' philosophy, facilitates the creation of 'fool proof'
-'software', whereas interactive environments, notably  R and python follow
+In strictly typed languages like Haskell many unintended use-cases are already detected at compile time and reported as errors.
+This fail-early-and-hard philosophy facilitates the creation of 'fool proof'
+software, whereas interactive environments, notably \texttt{R} and \python\ follow
 almost the opposite approach.  They try their best to make sense of anything
 thrown at them which can delay the detection of an error and thereby remove the effects far from the cause.
-Complex libraries like \texttt{bgc\_md2} which sits on top of \CompartmentalSystems{} which sits on top of \LAPM{} which sits on top of \texttt{numpy}, \texttt{SciPy} and \sympy{}
+Complex libraries such as \texttt{bgc\_md2} which sits on top of \CompartmentalSystems{}, which sits on top of \LAPM{}, which in turn sits on top of \texttt{numpy}, \texttt{SciPy} and \sympy,
 need extra care to filter out user input that could cause trouble further down the call stack. 
-\footnote{E.g. in some corner cases the underlying libraries might treat a matrix of dimensions n,1 differently than an array of dimension (n,), while users usually do not anticipate this.} This becomes more important the less obvious the computation in question is. 
+\footnote{For instance, in some corner cases the underlying libraries might treat a matrix of dimensions $(n,1)$ differently than an array of dimension $(n,)$, while users usually do not anticipate this.} This becomes more important the less obvious the computation in question is. 
 While an example makes the user aware of their responsibility for correct adaptation, the same user will expect the API of a `black box' to be 'fool proof'. 
 This is an ongoing task: While \LAPM{} and \CompartmentalSystems{} are pretty well documented 
 \todo{Big Thanks to Holger!!!} 
 \texttt{bgc\_md} and \ComputabilityGraphs{} are not yet and none of the packages is `fool proof'. 
+\hmm{I'm not sure this is publication as a software package then - referring to the documentation. Should we write this here?}
 
-\subsubsection{Polished UI, Web Interface}
-We implemented some widgets to use in \texttt{Jupyter} notebooks (e.g. to show a subset
+\subsubsection{Polished UI, web interface}
+\hmm{The table notebook has no comments and is basically useless this way. Furthermore, I no not think we should emphasize all the time what is totally not ready yet and can be done by others.}
+We implemented some widgets to use in \texttt{Jupyter} notebooks (\eg to show a subset
 of the models in an interactive table or to explore the computability graphs).
 These widgets are absolutely basic  proofs of concept, mainly intended to icite a skilled web developer 
 (or enthusiastic student in need of a project) to transform them into something much
@@ -1257,9 +1266,9 @@ more useful (a click on an edge in a computability graph could generate and prin
 This is especially true for the graph visualizations. 
 Plotting (mathematical) graphs is a surprisingly hard problem and
 standard plotting libraries like \texttt{matplotlib} or
-\texttt{igrap} support only basic graph layout algorithms.  
+\texttt{igrap} \hmm{Is it ``igraph``} support only basic graph layout algorithms.  
 Widgets or web applications using \texttt{javascript} would allow to use more specialized libraries like \texttt{Cytoscape.js} 
-and make the interactive exploration or publications- ready printing of the compartmental model (as well as the computability graphs) 
+and make the interactive exploration or publication-ready printing of the compartmental model (as well as the computability graphs) 
 much more beautiful. 
 It would also be relatively easy to host \texttt{bgc\_md2} based on a server, preferably with access to many datasets.
 A \texttt{Jupyter} server would be the most flexible option for scientific users, 
@@ -1404,10 +1413,11 @@ easily be build using the existing example widgets as a starting points.
 %           sympy.physics.units.quantities.Quantity})
 %\end{lstlisting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Derivation of Matrix equations}
+\section{Derivation of matrix equations}
 \label{appendix:MatrixDerivation}
-Mathematically Compartmental Models are most economically described as graphs, where the set of compartments $\mathcal{P}$ and the set of non-negative fluxes $\mathcal{F}$ form the the nodes and edges respectively. 
+Mathematically, compartmental models are most economically described as graphs, where the set of compartments $\mathcal{P}$ and the set of non-negative fluxes $\mathcal{F}$ form the the nodes and edges, respectively. 
 Choosing one of $n!$ possible ways to enumerate  the set of pools $\mathcal{P}=\{p_0,\dots,p_n\}$ where $p_0$ is the outside world, we write the contents of the pools as $x_i \text{ for } i \in \{1,\dots,n\} $ and the fluxes as
+\hmm{Not all influxes and internal fluxes need to be strictly positive. Why is this requirement then missing for the outfluxes?}
 \begin{align*}
 %\X  &=(x_1,\dots x_n)^T
 %\\
@@ -1422,7 +1432,7 @@ I_{0 \rightarrow j} > 0
 \{
 F_{i \rightarrow j} > 0
 \text{ for } i \in \{1,\dots ,n\} 
-\text{ and } j \in \{1,\dots ,n\} j\ne i
+\text{ and } j \in \{1,\dots ,n\},\, j\ne i
 \}
 \text{ with }
 F_{i \rightarrow j}=0 \text{ for }  x_{i} = 0 
@@ -1435,7 +1445,7 @@ F_{i \rightarrow 0}
 \text{ for } i \in \{1,\dots ,n\} 
 \text{ with }
 F_{i \rightarrow 0}=0 \text{ for }  x_{i} = 0 
-\}
+\},
 \end{align*}
 \label{massbalance} 
 %back into a set of equations for single fluxes from which
@@ -1444,38 +1454,39 @@ where
 $ 
 I_{0 \rightarrow j} 
 $
-are influxes from the outside into the system 
+are influxes from the outside into the system, 
 $
 F_{i \rightarrow j} 
 $
-are fluxes between pools 
+are fluxes between pools, 
 and 
 $
 F_{i \rightarrow 0} 
 $
 are fluxes out of the system.
 
-In general all fluxes can depend on all the $x_i$  and time $t$ (trough environmental factors like  Temperature $T(t)$ and moisture $W(t)$.
+In general, all fluxes can depend on all the $x_i$  and time $t$ (trough environmental factors like temperature $T(t)$ and moisture $W(t)$).
 
-The influxes don't have to depend on the $x_i$  but internal and out fluxes must at least depend on their source pool content to guarantee the 
+The influxes do not have to depend on the $x_i$  but internal and outfluxes must at least depend \hmm{multiplicatively?} on their source pool content to guarantee the 
 condition that there is no outflux from an empty pool. 
 % $
 % F_{i \rightarrow * }=0 \text{ for }  \X_{i} = 0 
 % $.
 % Where we used the $*$ to indicate either another pool or the outside.
 \newcommand{\xnt}{(x_1, \dots, x_n, t)}
-For every pool we have a mass balance equation.
+For every pool we have a mass balance equation given by
 \begin{align}
   \frac{d}{d t} x_i 
     &= 
     \sum_{j\ne i} (-F_{i\rightarrow j}\xnt
-    +F_{j\rightarrow j}\xnt ) 
+    +F_{j\rightarrow i}\xnt ) 
     + I_{0 \rightarrow i}\xnt 
-    - F_{i \rightarrow 0} \quad \forall i \in \{1,\dots n\}
+    - F_{i \rightarrow 0} \quad \forall i \in \{1,\dots n\}.
 \end{align}
-Assuming continuity of the fluxes with respect to their source pool 
-$F \in \mathcal C^1$ we can write them in product form. 
-$F_{i \rightarrow j} = r_{j,i} x_i \text{ for } i \in \{1, \dots n\} , j \in \{ 0, 1,\dots ,n\} \text{ and } j \ne i $ 
+Assuming continuity of the fluxes with respect to their source pool, 
+$F \in \mathcal C^1$, \hmm{This means $F$ is one time continuously differentiable, not just continuity. I think we need the stronger one.} we can write them in product form,
+$F_{i \rightarrow j} = r_{j,i} x_i \text{ for } i \in \{1, \dots n\} , j \in \{ 0, 1,\dots ,n\}, \text{ and } j \ne i $. Then
+\hmm{Why introduce $r$ now, when it becomes $M$ anyway? Why is it $r_{t \rightarrow}$ and not $r_{i \rightarrow 0}$? Same for $I$, where did the $0$ go? Later we even have $r_{i\rightarrow *}$. I'm heavily confused and cannot continue checking the formulas with unclear notation.}
 \begin{align}
   \frac{d}{d t} x_i 
     &= - \underbrace{
@@ -1499,34 +1510,37 @@ $\X=(x_1,\dots x_n)^T$ for the ordered tuple of all pool contents, and $\I=(I_{\
 \begin{align}
   \frac{d}{d t} \X &= \I(\X,t) - M(\X,t) \X \label{massbalance_0}
 \end{align}
-$-M$ is called the Compartmental Matrix. \footnote{Because the enumeration of the set of pools is arbitrary there are, for a model with $n$ pools actually $n!$ such matrix equations, that all describe the same model.}  
+$-M$ is called the Compartmental Matrix. \footnote{Because the enumeration of the set of pools is arbitrary there are, for a model with $n$ pools, actually $n!$ such matrix equations that all describe the same model.} 
+\hmm{Why is the compartmental matrix $-M$ now? It was already $B$ and $M$.}
 
 \subsubsection{Matrix decomposition} 
-Together with a start-value $\X_0$ \eqref{massbalance_0}  constitutes an "initial value problem" (ivp) which can be solved numerically by moving step by step forward in time.
+Together with a start value $\X_0$, \eqref{massbalance_0} constitutes an ''initial value problem`` (IVP) which can be solved numerically by moving step by step forward in time.
 
 %Note: 
 %
 %It is mathematical standard notation to use $X$ in the *formulation* of the ivp (representing the momentary value) althoug *after we have solved it* the solution is expressed as function of time $X(t)$. This avoids confusion since everything appering with arguments is recognizable as explicitly calculable *before* we have solved the ivp.
 
-Without further assumptions the system is "nonautonomous" (since either of $\I$ or $M$ can depend on time $t$) 
-and "nonlinear" since either $M$ can depend on $\X$ or $\I$ can depend on $\X$ in a way that cannot be expressed in the form $\I(\X,t)=\tilde{\I(t)}+I_{mat}(t)\X$ with the matrix $I_{mat}(t)$ independent of $X$.
+Without further assumptions, the system is ''nonautonomous`` (since either of $\I$ or $M$ can depend on time $t$) 
+and ''nonlinear`` since either $M$ can depend on $\X$ or $\I$ can depend on $\X$ in a way that cannot be expressed in the form $\I(\X,t)=\tilde{\I}(t)+I_{mat}(t)\X$ with the matrix $I_{mat}(t)$ independent of $X$.
+\hmm{I think ''either or`` is wrong here. Furthermore, I think it just becomes too technical allowing I to depend on X and still call the compartmental system linear, as mentioned earlier.}
 
-If $m_{i,i}(\X,t) \ne 0$ 
+If $m_{i,i}(\X,t) \ne 0$\hmm{For all $i$?}, 
 \footnote{
-  If $m_{i,i}(\X,t) = 0 $ for some $i$ then some elements of $A$ become
+  If $m_{i,i}(\X,t) = 0$ for some $i$, then some elements of $A$ become
   undefined. However, this does not mean that we could not write $M$ as a
   product, just that $A$ cannot be inferred and we have to pretend to know the
   $a_{j,i}\xnt \text{ for } j\ne i \text{ and } \forall \xnt \text{ with }
-  k_{ii}\xnt=0 $ although we could never learn them from any observed fluxes.
+  k_{ii}\xnt=0$, although we could never learn them from any observed fluxes.
   The same arguments holds for $\bv$.
 }
 it is possible to factorize $M(X,t)$ into a product $M=A(\X,t) K(\X,t)$ where $K$ is
 a diagonal matrix and the matrix $A$ has only ones on it's main diagonal. 
 
-If $u=\sum_{k=1\dots n} \I_k \ne 0$ it is possible to determine the dimensionless vector $\bv = \I/u$ where $\sum_{k=1\dots n} \beta_k =1$ and write $\I(\X,t)=\bv(\X,t)u(\X,t)$ 
+\hmm{$u$ has been used very differently early in the manuscript.}
+If $u=\sum_{k=1\dots n} \I_k \ne 0$, it is possible to determine the dimensionless vector $\bv = \I/u$ where $\sum_{k=1\dots n} \beta_k =1$ and write $\I(\X,t)=\bv(\X,t)u(\X,t)$.
 Using these terms  we arrive at 
 \begin{align*}
-\frac{d \X}{d t}&=B(\X,t) u(\X,t) - A(\X,t) K(\X,t) \X   
+\frac{d \X}{d t}&=\beta(\X,t) u(\X,t) - A(\X,t) K(\X,t) \X   
 \end{align*}
 \newcommand{\kiixt}{
       \left(
@@ -1543,21 +1557,21 @@ with:
   &=\frac{r_{j,i}\xnt}{k_{i,i}\xnt}=
   \left\{
   \begin{matrix}
-    =\frac{
+    \frac{
     r_{i,j}\xnt 
   }{
     \kiixt
-  } \text{ for } j \ne i
+  }, \text{ for } j \ne i,
   \\
-  1 \text{ for } j=i
+  1, \text{ for } j=i.
   \end{matrix}
   \right.
   \label{aij}
 \end{align}
-The $k_{i,i}$ can be interpreted as the rate of the total flux out of pool $i$. The elements of column $i$ of $A$ describe then which fractions of this total outflux is transferred to pool $j$. 
+The $k_{i,i}$ can be interpreted as the rate of the total flux out of pool $i$. The elements of column $i$ of $A$ describe then then fraction of this total outflux that is transferred to pool $j$. 
 
-\subsubsection{Assumption of Linearity}
-If we assume the model to be linear and nonautonomous the dependency on $\X$ vanishes and we have
+\subsubsection{Assumption of linearity}
+If we assume the model to be linear and nonautonomous, the dependency on $\X$ vanishes and we have
 either
 \begin{align}
 \frac{d \X}{d t}
@@ -1566,31 +1580,32 @@ either
   &=\underbrace{\tilde{\mathbf{I}}(t)+(I_{mat}(t) - M(t))}_{L(t)} \X \label{massbalance_linear} \\
   &=\tilde{\mathbf{I}}(t)+L(t) \X \nonumber
 \end{align}
-or if we insist on a non-state-dependent inputs 
+or, if we insist on non-state-dependent inputs ,
 \begin{align}
 \frac{d \X}{d t}
   &=\I(t) - M(t) \X \label{massbalance_linear_no_state_dependent}
   \\
   &= \bv(t)u(t) - A(t) K(t) \X \nonumber.
 \end{align} 
-Eq. \eqref{mass-balance_linear} allows for influxes to be dependent on the receiving pool, e.g. for the influx of carbon through photosynthesis to depend on the the size of the leaf pool. Note that $L$ does not have to be compartmental and therefore not factorizable into $A$ and $K$.
+Eq. \eqref{mass-balance_linear} allows for influxes to be dependent on the receiving pool, \eg for the influx of carbon through photosynthesis to depend on the the size of the leaf pool. Note that $L$ does not have to be compartmental and therefore not factorizable into $A$ and $K$.
 Eq. \eqref{massbalance_linear_no_state_dependent} is that 
-Both  exclude certain compartmental models e.g. some with interactions between chemical species. 
-Imagine that some of the pools contain Nitrogen and others Carbon.
+Both  exclude certain compartmental models e.g. some with interactions between chemical species. \hmm{I do not understand the previous sentence.}
+Imagine that some of the pools contain nitrogen and others carbon.
 It is likely that some fluxes out of carbon pools are controlled by the
-available Nitrogen.  
-Imagine a compartmental system where the startvector
-consist of Carbon and Nitrogen pool contents: $\X=(c_1,c_2,\dots,
+available nitrogen.  
+Imagine a compartmental system where the start vector
+consist of carbon and nitrogen pool contents: $\X=(c_1,c_2,\dots,
 n_1,n_2,\dots )^T$, then a flux between carbon pools $a$ and $b$ that
-depends of the content of nitrogen pool $c$ depends on (a part of) the
-statevector, which makes it nonlinear.
+depends on the content of nitrogen pool $c$ depends on (a part of) the
+state vector, which makes it nonlinear. \hmm{Try to build a sentence around the equation.}
 \begin{align*}
 F_{a \rightarrow b} (\X,t)  &= r_{c_i \rightarrow *}(n_c,t) \X_a \\
                             &= r_{c_i \rightarrow *}(\X,t) \X_a
 \end{align*}
 
 
-\subsubsection{Assumption of Factorizability, substrate centered versus flux centered description}
+\subsubsection{Assumption of factorizability, substrate centered versus flux centered description}
+\hmm{Actually, $\xi$ is often real-valued, for instance in \texttt{smooth\_reservoir\_model.py:xi\_T\_N\_u\_representation}.}
 For many published models the nonautonomous part  can be further localized into a diagonal matrix $\xi(t)$ so that we can achieve constant $A$ and $K$. It is important to realize two points here:
 \begin{enumerate}
 \item \label{substrate_xi}
@@ -1609,7 +1624,7 @@ We can discuss (\ref{substrate_xi}) from a mathematical and a modeling viewpoint
 }
 The linear version of \eqref{aij} is: 
 \begin{align}
-  k_{i,i}(t) &=\kiit \nonumber
+  k_{i,i}(t) &=\kiit, \nonumber
   \\
   a_{j,i}(t) &=\left\{
   \begin{matrix}
@@ -1617,20 +1632,20 @@ The linear version of \eqref{aij} is:
     r_{j,i} (t)
   }{
     \kiit
-  } \text{ for } j \ne i
+  }, \text{ for } j \ne i,
   \\
-  1 \text{ for } j=i
+  1, \text{ for } j=i.
   \end{matrix}
   \right.
   \label{aij}
 \end{align}
 
-From this representation it is clear that the $a_{i,j}$ are only constant if all rates $r_{j,i} \text{ for } j \in \{0,\dots ,n \}$ contain the \emph{same} time dependent factor $\xi(t)$ , which makes the existence of constant $A$ and $K$ 
+From this representation it is clear that the $a_{i,j}$ \hmm{or $a_{j,i}$?} are only constant if all rates $r_{j,i} \text{ for } j \in \{0,\dots ,n \}$ contain the \emph{same} time dependent factor $\xi(t)$, which makes the existence of constant $A$ and $K$ 
 an \emph{assumption}.
-From a modeling point of view the $\xi_{i,i}$ can be seen as a ``substrate'' dependent rate modifier since it affects everything that leaves the same pool in the same way, whereas $r_{i,*}(t)$ is specific to a single flux an so could be different for different ``processes'' even if they use the same substrate.
+From a modeling point of view the $\xi_{i,i}$ can be seen as a ``substrate'' dependent rate modifier since it affects everything that leaves the same pool in the same way, whereas $r_{i,*}(t)$ is specific to a single flux and so could be different for different ``processes'', even if they use the same substrate.
 
-
-In order to discuss (\ref{define_xi}) we note that the assumption that we can write 
+\hmm{Matrices used to be in capital letters, why now $d$?}
+In order to discuss (\ref{define_xi}), we note that the assumption that we can write 
 $M=A \xi K$ implies that we can also write it as $M=A \tilde{\xi} \tilde{K}$
 where $\tilde{\xi}=d\xi$ , $\tilde{K}=d^{-1} K$ for any diagonal matrix $d$.
 This implies that without further assumptions it is not possible to compute $\xi$
@@ -1640,6 +1655,7 @@ is only defined up to the above mentioned diagonal matrix $d$.
 This fact becomes very important when certain properties of models are attributed to either $\xi$ or the {\it baseline residence time}.
 Any sensible attribution of this kind has to be shown to be robust to changes of $d$.
 \ref{xi_examples}
+\hmm{Here's a reference not working.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Optional Glossary, Notation or Acronym section goes here:
 %
@@ -1687,7 +1703,7 @@ Any sensible attribution of this kind has to be shown to be robust to changes of
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section*{Open Research Section}
+\section*{Open research section}
 The data used for the example could be obtained from several servers that offer TRENDYv9 data. \todo{Comment from Kostia: TRENDYv9 data is not publicly available \(unlike CMIP6\). We did get a password from the TRENDY group to access it. 
 Besides, TRENDYv9 server is offline now, I suspect because they already released TRENDYv10 and are working on TRENDYv11. So, we should mention it that the example data can be obtained from the TRENDY group.
 On the other hand, we can just add one more sentence that the codes are open source, that we aim at transparency and reproduceability and invite collaboration for the development of the packages. Maybe mention CCBY license, etc.
@@ -1696,6 +1712,8 @@ The example is however not intended to answer a `real' research question, but to
 if we \emph{had} access to the parameter sets used in the original trendy9 model runs.
 We chose `reasonable' parameters for the models as \emph{if} we knew them for a pixel.
 All code is available on GitHub and the example notebooks can be interactively explored on \href{https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder}{binder}.
+
+\hmm{I don't know where they are hidden, but the ``Acknowledgements'' need to be done. Probably also the author contributions.}
 
 %This section MUST contain a statement that describes where the data supporting the conclusions can be obtained. Data cannot be listed as ''Available from authors'' or stored solely in supporting information. Citations to archived data should be included in your reference list. Wiley will publish it as a separate section on the paper’s page. Examples and complete information are here:
 %https://www.agu.org/Publish with AGU/Publishing/Author Resources/Data for Authors

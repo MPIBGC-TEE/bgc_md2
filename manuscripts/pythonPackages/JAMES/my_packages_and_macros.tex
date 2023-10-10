@@ -29,8 +29,12 @@
 \DeclareRobustCommand{\enumref}[1]{\ref{#1}.}
 \DeclareRobustCommand{\appendixref}[1]{appendix \ref{#1}}
 \DeclareRobustCommand{\Appendixref}[1]{Appendix \ref{#1}}
-\DeclareRobustCommand{\sectionref}[1]{ section \ref{#1}}
+\DeclareRobustCommand{\sectionref}[1]{Section \ref{#1}}
 \DeclareRobustCommand{\tupelref}[2]{\enumref{#1} \enumref{#2}}
+
+\newcommand{\ie}{i.e.,\ }
+\newcommand{\eg}{e.g.,\ }
+
 %\definecolor{dark-green}{rgb}{0,0.25,0}
 % vectors and matrices
 \renewcommand{\vec}[1]{\boldsymbol{\mathbf{#1}}}
@@ -80,6 +84,7 @@
 \newcommand{\kv}[2]{\comment{purple}{Kostia}{#1}{#2} }
 \newcommand{\mm}[2]{\comment{red}{Markus}{#1}{#2} }
 \newcommand{\HM}[2]{\comment{orange}{Holger}{#1}{#2} }
+\newcommand{\hmm}[1]{\HM{Markus}{#1}}
 \newcommand{\todo}[1]{\comment{blue}{comment:}{}{#1} }
 %\newcommand{\bgc_md2}{\texttt{bgc \textunderscore md2}}
 \newcommand{\RT}{\mathbf{RT}}
