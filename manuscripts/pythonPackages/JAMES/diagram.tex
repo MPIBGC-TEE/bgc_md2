@@ -1,0 +1,36 @@
+%\begin{tikzpicture}
+%\draw (0,0) node [draw=black] {My text};
+%\end{tikzpicture}
+\newcommand{\fargs}{(t,\bar{A},\bar{B})}
+\begin{tikzpicture}[
+      > = stealth, % arrow head style
+      shorten > = 1pt, % don't touch arrow head to node
+      auto,
+      node distance = 3cm, % distance between nodes
+      semithick % line style
+  ]
+  
+  \tikzstyle{every state}=[
+      draw = black,
+      thick,
+      fill = white,
+      minimum size = 4mm
+  ]
+  
+  \node[state, draw=none] (s) {$ $};
+  \node[state] (A) [right of=s] {$A$};
+  \node[state] (B) [below right of=A] {$B$};
+  \node[state, draw=none] (t_A) [above right of=B] {$ $};
+  \node[state, draw=none] (t_B) [right of=B] {$ $};
+  
+  %\path[->] (s) edge node {18} (A);
+  \path[->] (s) edge[blue] node {$F_{\rightarrow A}\fargs$} (A);
+  %\path[->] (s) edge node {1} (C);
+  \path[->] (A) edge[bend left] node {$F_{A \rightarrow B}\fargs$} (B);
+  \path[->] (B) edge[bend left] node {$F_{B \rightarrow A}\fargs$} (A);
+  \path[->] (A) edge[red] node {$F_{A \rightarrow}\fargs$} (t_A);
+  \path[->] (B) edge[red] node {$F_{B \rightarrow}\fargs$} (t_B);
+  
+  %\draw[blue, dashed] (1, 2) -- (1, -2);
+  %\draw[red, dashed] (6, 2) -- (6, -2);
+\end{tikzpicture}

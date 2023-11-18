@@ -1,0 +1,124 @@
+\begin{enumerate}
+\item
+  Make crystal clear what is the main purpose of the paper.
+  It is in the abstract but not obvious in the paper for Holger to find after reading the paper twice ...
+  
+  \emph{The main purpose of the paper is to describe a conceptually new and much more abstract software tool for model comparison.
+  The quest to really implement it, enforces rigorous mathematical definitions and thereby determines the scope of scientific synthesis}
+  The challenges are manyfold: 
+  \begin{enumerate}
+    \item 
+    The scientific non-technical task to compare different models to each other and real world measurements \emph{automatically by software} requires the unambigous definition of the terms to describe the properties we can compare, and compute.
+    This set of terms and their computable connections sets the scope of the possible scientific model synthesis.
+    \item 
+     Practical applicability and maintainability of a real software tool:
+    The software should improve existing tools in the following ways:
+    \begin{enumerate}
+      \item
+      quick, interactive model creation (checking while creating)
+      \item
+      sparse description to make a maintainable collection 
+      \item
+      rigorous comprehensive testing by automatic derivation of computable parts, exceeding standard unittesting. 
+    \end{enumerate}
+  \end{enumerate}
+  Done, when
+  \begin{itemize}
+    \item
+    all places where this is mentioned in the paper are collected and
+    \item
+    the above is moved to a prominent position of the paper 
+    (beginning of the introduction) and guiding the reading process
+    like the short James Bond trailers at the beginning of the movies
+    \item
+    removed from other places.
+  \end{itemize}
+ \item 
+  \begin{enumerate}
+  \item
+    Unify nomenclatue (B or M, I or u) 
+  \item
+    create a glossary (at least inofficially for us)  and make sure that every term  that is used in a specific way is properly defined beforehand.
+
+    \begin{enumerate}
+    \item
+      \label{glossary:bilinear} 
+      bilinear function: A function that is linear in each of two arguments.
+    \item
+      \label{glossary:physProp} 
+      physical property: measurable (clearly defined measuring process)
+    \item
+      \label{glossary:latentVar} 
+      latent variable: a model parameter that could be both nonphysical and modelspecific 
+    \item
+    \label{glossary:flux}
+    flux: Qoutient of content over time, where content is a placeholder for mass, concentration, mass per area.
+    The unit of flux is thus unit of content over unit of time.
+    Outside this paper fluxes are sometimes called flux-rates     which is a term we reserve for something else.
+    
+    \item
+    \label{glossary:rate}
+    rate or flux-rate: In the context of compartmental models the qoutient of flux\ref{glossary:flux}  over content.
+    Accordingly the unit is 1 over unit of time.
+    For donor controlled autonomous linear models this is a constant (for every flux) while the flux itself varies, which makes it a very informative model parameter. In the general case of non-autonomous nonlinear models it is generally a function of time and the contents of all pools.
+    \item
+    \label{glossary:subSystemAge}
+    (sub)system age: If a system of connected pools has at least one flux that
+    does not originate from a pool of the system , this flux must come from
+    \emph{outside} and the system and it is then possible to define a
+    \emph{time of entry} for an imaginary small packet of material. If we
+    attach an imaginary clock to this small packet it will show the
+    \emph{system age} of this packet. Of course we can divide the system into
+    mutually exclusiv subsets of pools and start another imaginary
+    packet-attached clock when a subsystem boundary is crossed. The smallest
+    subsystem is a single pool, making the \emph{pool age} a special case of
+    the sub system age. Imaginary packets could of course cycle trough
+    subsystems and visit the same subsystem multiple times. It is important to
+    note that in this definition the imaginary clock would be set to zero every time a subsystem boundary is crossed.
+    While an implementation of the intuitive picture of packets with clocks as a particle simulation would allow to collect all sub system boundary crossings in an imaginary packet passport this is not possible if the pools are modeled by compartmental (ODE) systems as in this work.  
+    \item
+    \label{glossary:meanSubSystemAge}
+    mean (sub)system age: content weighted average over the ages of all the packages in the (sub)system. 
+    \item
+    \label{glossary:DSL}
+    DSL, domain specific language: 
+    \end{enumerate}
+  \end{enumerate}
+  \item
+  orhographic consistency:
+    \begin{enumerate}
+    \item hypen use:
+     sub system or sub-system
+     system boundary crossing or ...
+    \end{enumerate}
+  \item
+    organize the subsections in such a way that the definitions of the glossary appear in order. A candidate is the subsection about equilibrium that should possibly be before the discussion of candidates of the criteria, since they use the terms equilibrium and linear before this distinction is made.
+ \item
+  improve the connection between the example notebooks and the
+  article: Done if the text of the article is neither
+  \begin{itemize} \item a repetition of the notebook code nor \item
+  just a link that forces the reader to switch to binder or install
+  the software.  \end{itemize}
+  
+  The issue should possibly be addressed in the introduction in a systematic way to 
+  avoid frustration for the readers and especially the referees when the find themselfes forced to look at the notebooks.
+  As part of the introduction I will suggest a procedure to minimize pain.
+  read the paper first completely and then look at the notebooks and make the text informative enough to be able to do that.
+  \item
+  Check that the references and describe the build procedure.
+  For me everything works fine (I used the Makefile) but the correct sequence of commands is here, which should avoid the many failures you have experienced (possibly because you did not run all of the commands? ).
+  \begin{minted}{bash}
+  pdflatex main.tex
+  bibtex main.aux
+  pdflatex main.tex
+  pdflatex main.tex
+  \end{minted}
+  Sometimes it is neccessary to delete the helper files latex and bibtex created...
+
+  \begin{minted}{bash}
+	rm *.aux *.bbl *.blg
+  \end{minted}
+  Please commnent here if you still have problems after following the following instructions:
+  \item inconsistent capitalization in the section/subsection headings (Idea only first letter capitalized)
+
+\end{enumerate}
