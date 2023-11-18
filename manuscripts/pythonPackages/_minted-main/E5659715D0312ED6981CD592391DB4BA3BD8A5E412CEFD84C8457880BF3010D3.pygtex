@@ -1,0 +1,3 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+rm\PYG{+w}{ }*.aux\PYG{+w}{ }*.bbl\PYG{+w}{ }*.blg
+\end{Verbatim}
