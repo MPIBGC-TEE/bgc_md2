@@ -13,7 +13,7 @@ from bgc_md2.resolve.mvars import (
     StateVariableTuple,
 )
 
-# one wood product pool
+# two wood product pools
 WP_S, WP_L = symbols("WP_S WP_L")
 
 state_vector = Matrix([WP_S, WP_L])
