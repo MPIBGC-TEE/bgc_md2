@@ -2758,34 +2758,13 @@ def write_data_streams_cache(gm_path, gm):
 
 
 # fixme mm 4-7-2023:
-# see deprecation warning
+# A lot of duplication with get_global_mean_vars
 def get_global_mean_vars_all(
     model_folder,  # string e.g. "ab_classic"
     experiment_name,  # string, e.g. "CLASSIC_S2_"
     lat_var,
     lon_var,
 ):
-    print(
-        """Deprecation Warning:
-        This function does presently NOT separate concerns (model specific vs.
-        'general' as in general_helpers.py).  Much of its code does not belong
-        here. If a new model was added to the
-        collection some new special cases would likely have to be addressed
-        HERE instead of in the model_specific_helpers_2.py where they belong...
-        This makes the present implementation fragile.  (It can break for all
-        models if a single model changes).  Anything that assumes model
-        specific information does actually NOT belong in general helpers....
-        The most obvious give away is code like: if mf ="AneeshSDGVM"...in the functions
-        that call it from various model_specific_helpers_2.py modules.
-        Less obvious but equally problematic are model specific variable names that
-        are assumed here ...  This function should not be used anymore but
-        replaced a.s.a.p by a new function with different arguments which are
-        computed by the model specific functions ... 
-        """
-    )
-
-    # def nc_file_name(nc_var_name, experiment_name):
-    # return experiment_name+"{}.nc".format(nc_var_name) if nc_var_name!="npp_nlim" else experiment_name+"npp.nc"
 
     def nc_global_mean_file_name(experiment_name):
         return experiment_name + "gm_all_vars.nc"
@@ -2816,7 +2795,8 @@ def get_global_mean_vars_all(
         return output
 
     else:
-        gm = globalMask(file_name="common_mask_expanded.nc")
+        #gm = globalMask(file_name="common_mask_expanded.nc")
+        gm = common_global_mask_expanded 
         msh_mod = msh(model_folder)
         tvm = msh_mod.template_var_name
         template = (
@@ -2857,12 +2837,6 @@ def get_global_mean_vars_all(
             path = dataPath.joinpath(
                 msh(model_folder).nc_file_name(vn, experiment_name=experiment_name)
             )
-            if vn == "npp_nlim":
-                path = dataPath.joinpath(
-                    msh(model_folder).nc_file_name(
-                        "npp", experiment_name=experiment_name
-                    )
-                )
             print(path)
             ds = nc.Dataset(str(path))
             vs = ds.variables
@@ -2884,58 +2858,43 @@ def get_global_mean_vars_all(
                 gcm.index_mask,
                 var,
             )
-            return gm * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm
+            # project to yearly averages for some fields 
+            avg_candidates=["cVeg","cLitter", "cSoil", "gpp", "npp", "npp_nlim", "ra"]
+            gm_y = gm if (var in avg_candidates) & gm.shape[0] < 500 else avg_timeline(gm ,12)
+            return gm_y * 86400 if vn in ["gpp", "npp", "npp_nlim", "rh", "ra"] else gm_y
 
         # map variables to data
         print(data_str._fields)
         print("computing means, this may take some minutes...")
         output = data_str(*map(compute_and_cache_global_mean, data_str._fields))
-        cVeg = (
-            output.cVeg if output.cVeg.shape[0] < 500 else avg_timeline(output.cVeg, 12)
-        )
-        if "cLitter" in names:
-            cLitter = (
-                output.cLitter
-                if output.cLitter.shape[0] < 500
-                else avg_timeline(output.cLitter, 12)
-            )
-        cSoil = (
-            output.cSoil
-            if output.cSoil.shape[0] < 500
-            else avg_timeline(output.cSoil, 12)
-        )
-        gpp = output.gpp if output.gpp.shape[0] < 500 else avg_timeline(output.gpp, 12)
-        if "npp" in names:
-            npp = (
-                output.npp
-                if output.npp.shape[0] < 500
-                else avg_timeline(output.npp, 12)
-            )
-        if "npp_nlim" in names:
-            npp = (
-                output.npp_nlim
-                if output.npp_nlim.shape[0] < 500
-                else avg_timeline(output.npp_nlim, 12)
-            )
-        if "ra" in names:
-            ra = output.ra if output.ra.shape[0] < 500 else avg_timeline(output.ra, 12)
-        rh = output.rh if output.rh.shape[0] < 500 else avg_timeline(output.rh, 12)
+        
+        # fixme mm: 
+        # hidden desing flaw (this is a model specific thing)
         # for models like SDGVM where pool data starts earlier than gpp data
-        if cVeg.shape[0] > gpp.shape[0]:
-            cVeg = cVeg[cVeg.shape[0] - gpp.shape[0] :]
-            # what if gpp is monthly and cVeg yearly?
-        if "cLitter" in names and cLitter.shape[0] > gpp.shape[0]:
-            cLitter = cLitter[cLitter.shape[0] - gpp.shape[0] :]
-        if cSoil.shape[0] > gpp.shape[0]:
-            cSoil = cSoil[cSoil.shape[0] - gpp.shape[0] :]
+        # this should be handled in model_specific helpers
+        time_cut_candidates=frozenset(["cVeg","cLitter", "cSoil"]).intersection(
+                data_str._fields
+        )
+        for var in time_cut_candidates:
+             gm=output.__getattribute__(var)
+             gms=gm.shape[0]
+             gpps= output.gpp.shape[0]
+             if gms > gpps:
+                gm = gm[(gms - gpps): ]
+        #if cVeg.shape[0] > gpp.shape[0]:
+        #    cVeg = cVeg[cVeg.shape[0] - gpp.shape[0] :]
+        #if "cLitter" in names and cLitter.shape[0] > gpp.shape[0]:
+        #    cLitter = cLitter[cLitter.shape[0] - gpp.shape[0] :]
+        #if cSoil.shape[0] > gpp.shape[0]:
+        #    cSoil = cSoil[cSoil.shape[0] - gpp.shape[0] :]
 
         output_final = data_streams(
-            cVeg=cVeg,
-            cSoil=cLitter + cSoil if "cLitter" in names else cSoil,
-            gpp=gpp,
-            npp=npp if ("npp" in names) or ("npp_nlim" in names) else gpp - ra,
-            ra=ra if "ra" in names else gpp - npp,
-            rh=rh,
+            cVeg=output.cVeg,
+            cSoil=output.cLitter + output.cSoil if "cLitter" in names else output.cSoil,
+            gpp=output.gpp,
+            npp=output.npp if ("npp" in names) or ("npp_nlim" in names) else output.gpp - output.ra,
+            ra=output.ra if "ra" in names else output.gpp - output.npp,
+            rh=output.rh,
         )
         gm_path = dataPath.joinpath(
             nc_global_mean_file_name(experiment_name=experiment_name)

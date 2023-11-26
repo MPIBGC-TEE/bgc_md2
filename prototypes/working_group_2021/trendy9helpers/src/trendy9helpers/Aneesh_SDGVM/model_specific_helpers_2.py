@@ -179,12 +179,23 @@ def compute_global_mean_arr_var_dict(dataPath):
             for vn in ['cLitter', 'cSoil', 'cVeg', 'cRoot']
         }, 
         **{vn: gm_func(var(vn))*86400 # kg/m2/s kg/m2/day;
-            for vn in  ['npp', 'rh']
+            for vn in  ["gpp", "npp", "npp_nlim", "rh", "ra"]
         } 
     }
     #from IPython import embed;embed()
     return arr_dict
 
+
+def compute_global_mean_arr_var_dict_yearly(dataPath):
+    #from IPython import embed;embed()
+    arr_dict = compute_global_mean_arr_var_dict(data_path)
+    
+    # project to yearly averages for some fields 
+    avg_candidates=["cVeg","cLitter", "cSoil", "gpp", "npp", "npp_nlim", "ra"]
+    def y_avg(gm):
+        return gm if var in avg_candiates & gm.shape[0] < 500 else avg_timeline(gm ,12)
+    arr_dict_y={k: y_avg(v) for k,v in arr_dict.items()}
+    return arr_dict_y
 
 def get_global_mean_vars(dataPath, targetPath=None, flash_cache=False):
     if targetPath is None:
@@ -210,6 +221,27 @@ def get_global_mean_vars_2(conf_dict, targetPath=None):
         download_my_TRENDY_output(conf_dict)
         return get_global_mean_vars(dataPath, targetPath)    
 
+#def get_global_mean_vars_yearly(dataPath, experiment_name=targetPath=None, flash_cache=False):
+#    if targetPath is None:
+#        targetPath = dataPath
+#
+#    arr_dict= gh.cached_var_dict(
+#        dataPath,
+#        targetPath,
+#        nc_global_mean_file_name_yearly,
+#        compute_global_mean_arr_var_dict_yearly,
+#        names=data_str.__fields__,
+#        flash_cache=flash_cache
+#    )
+#    output_final = data_streams(
+#        cVeg=cVeg,
+#        cSoil=cLitter + cSoil if "cLitter" in names else cSoil,
+#        gpp=gpp,
+#        npp=npp if ("npp" in names) or ("npp_nlim" in names) else gpp - ra,
+#        ra=ra if "ra" in names else gpp - npp,
+#        rh=rh,
+#    )
+#    return (obs, dvs)
 
 #def make_StartVector(mvs):
 #    return namedtuple(
@@ -348,9 +380,17 @@ def nc_file_name(nc_var_name, experiment_name="SDGVM_S2_"):
     return experiment_name+"{}.nc".format(nc_var_name)
 
 
-def nc_global_mean_file_name(nc_var_name, experiment_name="SDGVM_S2_"):
+def nc_global_mean_file_name(
+        nc_var_name, 
+        experiment_name="SDGVM_S2_"
+    ):
     return experiment_name+"{}_gm.nc".format(nc_var_name)
 
+def nc_global_mean_file_name_yearly(
+        nc_var_name, 
+        experiment_name="SDGVM_S2_"
+    ):
+    return f"{experiment_name}{nc_var_name}_gm_yearly.nc"
 
 def monthly_recording_times_nc_var():
     ds=nc.Dataset(str(Path(gh.confDict(Path(__file__).parent.name)['dataPath']).joinpath("SDGVM_S2_npp.nc")))

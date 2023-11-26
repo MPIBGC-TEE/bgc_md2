@@ -40,6 +40,18 @@ file_name_from_var_name = {
 	 "fVegSoil" ]
    }
 }
+
+def nc_file_name(
+        var_name: str,
+        experiment_name: str,
+    )-> str:
+    suffix = "npp" if var_name == "npp_nlim" else var_name 
+    #return f"JULES-ES-1p0_{experiment_name}_{suffix}.nc"
+    return f"{experiment_name}{suffix}.nc"
+
+#def nc_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
+#    return experiment_name + "{}.nc".format(nc_var_name)
+    
 # global dictionary to link var names to var names in files
 d_name2varname_in_file = {
     "npp": 'npp_nlim',
@@ -691,13 +703,10 @@ def start_dt():
     )
 
 
-def nc_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
-    return experiment_name + "{}.nc".format(nc_var_name)
-    
 def nc_global_mean_file_name(nc_var_name, experiment_name="JULES-ES-1p0_S2_"):
     return experiment_name + "{}_gm.nc".format(nc_var_name)
 
-
+data_str = namedtuple("data_str", ["npp_nlim","cVeg", "cSoil", "gpp", "rh"])    
 
 def lats_lons():
     conf_dict = gh.confDict(

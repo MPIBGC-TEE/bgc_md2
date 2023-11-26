@@ -428,19 +428,6 @@ data_str = namedtuple( # data streams available in the model
     )
     
 
-## fixme mm 7-4 2023:
-## model_folder="..." is self referential and would
-## break if we rename the model folder. This is a design flaw (anty pattern)
-## If there is any model specific information it should be computed
-## by model specific functions here and included transmitted in the function call
-#def get_global_mean_vars_all(experiment_name):
-#        return(
-#            gh.get_global_mean_vars_all(model_folder="jon_yib", 
-#                            experiment_name=experiment_name,
-#                            lat_var="latitude",
-#                            lon_var="longitude",
-#                            ) 
-#        )       
 
 
 def lats_lons():

@@ -941,6 +941,11 @@ def get_vars_all_list(model_folders, experiment_names):
             lat_var=msh_mod.lat_var_name,   
             lon_var=msh_mod.lon_var_name   
         )
+        #current_var_list_2 = msh_mod.get_global_mean_vars_yearly(
+        #    data_path=gh.data_path(mf),
+        #    target_path=None,
+        #    experiment_name=experiment_names[i],
+        #)    
         vars_all_list.append(current_var_list)
         i+=1
     print("Done!")
