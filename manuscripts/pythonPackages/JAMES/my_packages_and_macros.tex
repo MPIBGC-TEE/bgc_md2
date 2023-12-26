@@ -32,7 +32,7 @@
 \DeclareRobustCommand{\revref}[1]{Comment: \ref{#1}}
 \DeclareRobustCommand{\Theoref}[1]{Theorem \ref{#1}}
 \DeclareRobustCommand{\Defref}[1]{\mbox{Definition \ref{#1}}}
-\DeclareRobustCommand{\enumref}[1]{\ref{#1}.}
+\DeclareRobustCommand{\enumref}[1]{\ref{#1}}
 \DeclareRobustCommand{\glref}[1]{$^{\ref{#1}}$}
 \DeclareRobustCommand{\appendixref}[1]{\ref{#1}}
 %\DeclareRobustCommand{\Appendixref}[1]{Appendix \ref{#1}}
@@ -90,8 +90,10 @@
 \newcommand{\kv}[2]{\comment{purple}{Kostia}{#1}{#2} }
 \newcommand{\mm}[2]{\comment{red}{Markus}{#1}{#2} }
 \newcommand{\mmh}[1]{\mm{Holger}{#1}}
+\newcommand{\mmk}[1]{\mm{Kostia}{#1}}
 \newcommand{\HM}[2]{\comment{orange}{Holger}{#1}{#2} }
 \newcommand{\hmm}[1]{\HM{Markus}{#1}}
+\newcommand{\kmm}[1]{\kv{Markus}{#1}}
 
 \newcommand{\todo}[1]{\comment{blue}{comment:}{}{#1} }
 %\newcommand{\bgc_md2}{\texttt{bgc \textunderscore md2}}

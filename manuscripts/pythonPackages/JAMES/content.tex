@@ -394,6 +394,120 @@ While the graph based description allows for composition of subgraphs and decomp
 In our approach both formulations are converted into each other automatically as need arises.
 This effortless switching between the viewpoints is the main facilitator of the new level of transparency of our approach, their combination enables the computation of transit time and mean age systems for subsystems of selected pools with no more effort than defining the pools constituting them.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Time Evolution} \label{sec:trajectory}
+\mm{@all}{This whole subsection is a leftover from Carlos's first draft. It would only make sense to keep it if we use the state transition operator $\Phi$ later in some formulas}
+%We consider now linear non-autonomous systems of the form
+%\begin{equation} \label{eq:NALS}
+%\dot{\X}(t) = \I(t) + M(t) \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
+%\end{equation}
+%In this case, the inputs and the compartmental matrix are time-dependent and
+%the system never converges to a fixed-point solution. In most cases, an
+%analytical solution cannot be obtained, but the solution can be 
+%obtained numerically. In particular, the solution for systems of the form of equation \eqref{eq:NALS} can be written as
+%\begin{equation}
+%(t, t_0, \X_0) = \Phi(t, t_0) \X_0 + \int_{t_0}^{t} \Phi(t, \tau) \I(\tau) \mathrm{d}\tau.
+%  \label{eqn:Phi}
+%\end{equation}
+%The state transition operator $\Phi(t,t_0)$ is a matrix-valued function that
+%multiplied with the state $x_0$ at $t_0$ transitions it to the state $x(t)$
+%subsequent time $t > t_0$. It is numerically computable by solving an matrix
+%ode derived from \eqref{sec:trajectory} 
+%From $\Phi(t,t_0)$ we can obtain not only the temporal evolution of the
+%solution $\X(t)$ but also of the distributions of ages of the mass in the compartments and in the entire system \cite{Metzler2018PNAS}.
+%The \CompartmentalSystems{} package provides all the functionality necessary to do these computations, which rely on a description of the time-dependent input vector $u(t)$ and the compartmental matrix $B(t)$, as well as initial age distributions for the compartments.
+%\begin{equation} \label{eq:NANLS}
+%\dot{\X}(t) = \I(t, \X) + M(t, \X) \, \X(t), \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
+%\end{equation}
+%by numerically solving \eqref{eq:NANLS} and plugging the solution $x(t, t_0,
+%x_0)$ back into it, which results in $\tilde{M}(t)=B(t, \X(t, t_0,\X_0))$ and
+%$\tilde{\I}(t)=\I(t,\X(t, t_0,x_0)$  i.e a linear system in the form
+%\eqref{eq:NALS}. 
+%Therefore,  age and transit time
+%distributions can be obtained for nonlinear non-autonomous system along the
+%specific trajectory. Detailed methods for the computation are provided in
+%\cite{Metzler2018PNAS}
+\subsection{Compartmental systems in equilibrium} \label{sec:Equilibrium}
+ \kmm{quasi-equilibria as approximations? Can we mention something about that?}
+ \mmk{rewrote the whole paragraph subdividing it to deal with the different cases, including the quasi-static approximation}
+Traditionally some metrics for compartmental systems such as maean transit time mean age or have been based on the assumption of linearity of the underlying system, which implies the existence of a unique equilibrium that can also be computed conveniently.
+This approach \emph{cannot}be extended to our most general situation of non-autonomuous nonlinear systems, the most obvious reasons being firstly the impossibility to even \emph{define} ``equilibrium'' or ``fixed point'  for non-autonomous systems and secondly the impossibility to assure the existence of fixed points for non-linear systems even if they are autonomous. We will explore these limitations and \emph{some} approaches to either approximate equilibrium or alltogether replace the concept.  
+\subsubsection{Linear autonomous systems}
+This is the traditional \emph{least} general case and the only one
+where we can acertain the existence of an equilibrium based on some addtional assumbptions.
+Equation \eqref{eq:CompartmentalSystem} simplifies to
+\begin{equation} \label{eq:LS}
+\dot{\X} = \I + M \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
+\end{equation}
+The equilibrium $\X^*$ is defined by the
+condition  $\dot{\X}=0$ which translates to $-M \X^*= \I$ which means that for
+pool contents $\X^*$ the influxes $\I$ match the outfluxes $M \X^*$ exactly.  It is
+straightforward to see that for this to happen all 
+pools with influxes must be connected (possibly via other pools) to an outflux of
+the system, and that the (constant) rates for all the fluxes out of all
+pools along this paths are greater than zero, since an input receiving pool $p$
+without these conditions would necessarily grow over time, violation the
+equilibrium condition $\dot{\X}_p=0$. Interestingly these conditions also
+guarantee that $M$ is invertible and the equilibrium therefore uniquely
+determined by: 
+\begin{equation} 
+\label{eq:x_Minv_I}
+\X^* = - {M^*}^{-1} \, \I.  
+\end{equation}
+Although at different times different material moves through the system, the
+size of the pools does not depend on time if the system is in
+equilibrium: $\X(t)=\X^*$ 
+This is also true for other properties such as the
+age distribution of mass in particular compartments and in the entire system
+and the transit time distribution, which is defined as the time it takes masses
+in the input flux to appear in the output flux. 
+Although the material moving through the system does change the amount, age and transit
+time distributions do not. 
+They are in fact characterized by the Phase Type
+distribution, which depends on compartmental matrix $B$ and the equilibrium
+solution $x^*$ for the system age distribution and the $B$ and the input $u$
+for the transit time distribution \cite{Metzler2018MGS}.
+Compartmental systems at equilibrium have similar properties as continuous-time absorbing Markov Chains \cite{Metzler2018MGS}.
+Therefore, we can obtain other quantities of interest such as  the path entropy of particles that travel across the system and the occupation time of particles inside compartments \cite{Metzler2020}. These properties of linear autonomous compartmental systems at equilibrium can be obtained with the \LAPM{} package.
+
+\subsubsection{Non-linear autonomous systems}
+Interestingly the properties of linear autonomous systems in equilibrium can
+also be computed for nonlinear systems in equilibrium \emph{if} such an equilibrium
+\emph{exists} and is known. Note that in general we can neither guarantee the existence of equilibria nor implement a function to compute them. It is possible that no equilibrium exists or many. We can however check candidates. 
+For nonlinear autonomous systems equation \eqref{eq:CompartmentalSystem} simplifies to
+\begin{equation} \label{eq:NLS}
+\dot{\X} = \I(\X) + M(\X) \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0,
+\end{equation}
+In equilibrium the system is indistinguishable from a linear autonomous one
+\begin{align} 
+  0= \dot{\X} = \I^* + M^* \, \X^*
+\end{align}
+with $M^*=M(\X^*)$ and $\I^*=\I(\X^*)$ 
+If the inverse ${M^*}^{-1}$ exists transit time and age distributions can be computed 
+\cite{Metzler2018MGS}.
+and therefore also  nonlinear au:w
+tonomous
+systems at equilibrium can be analyzed with the by the
+\LAPM{} package.
+Note however,that 
+\eqref{eq:x_Minv_I} is useless to determine $\X^*$ and 
+no such $\X^*$ might exist for some systems
+while others may have multiple fixed points and the age and
+transit time distribution may be very different for these different equilibria.
+
+\subsubsection{Non-autonomous systems}
+Looking at the explicit time dependent right-hand side of equation \eqref{eq:CompartmentalSystem} shows that a `fixed point' $\X^*$ with $\dot{\X^*}=0$ is not a sensible \emph{concept} for the general situation.
+To see this consider that the right hand side (RHS) of the ODE \eqref{eq:NLS}
+which does not depend on time. Geometrically the RHS constitutes a
+\emph{static} `directional field'. A`fixed point' is a place in this field
+where the derivative vanishes and so its position also does not dependent on
+time. Neither does the region in which the system has to be started to end up
+in the vicinity of the fixed point (basin of attraction). One consequence for a
+system at position $\X_0$ inside such a basin of attraction is that it has `all
+the time in the world' to approach $\X^*$. If it does, depends only on its start position $\X_0$
+
+However if the RHS does depend on time, many things can change `in an instant'. Not only will the roots of the RHS change position while the system is moving towards them, but the whole concept of a predictable destination collapses.
+
 \subsection{System and sub-system level metrics: contents, fluxes, age, transit time}
 Compartmental systems can be described by a set of building blocks and metrics. 
 Scientific inference regarding modelling results, as well as model evaluation and intercomparison, often depends on the metrics that are used to describe model output.
@@ -403,13 +517,20 @@ In this study we propose the following criteria for compartmental system metrics
 \begin{enumerate}
   \item
     \label{enum:function}
-    In our definition we require that a metric must be unambiguously computable by a function of other metrics or building blocks of a model.    This is not only essential to \emph{implement} a software tool but also to interpret its results without knowledge of model specific idiosyncrasies.
+    In our definition we require that a metric must be unambiguously computable by a function of other metrics or building blocks of a model.    This is a exclusive condtion since it is not only essential to \emph{implement} a software tool but also to interpret its results without knowledge of model specific idiosyncrasies.
   \item
     \label{enum:general}
-    Preferably metrics should be applicable to all (nonautonomous, nonlinear) compartmental systems, i.e. not rely on e.g. equilibrium conditions. While some metrics describe models under special conditions we want metrics that can be applied to as many models as possible. 
+    Preferably 
+    \hmm{Should we use this word in a hard criterion?}
+    \mmh{The second and third criteria are not as hard as the first one, which is really an excluding condition.
+    We \emph{can} compute more specific metrics, but they are not the \emph{first} choice.}
+    metrics should be applicable to all (nonautonomous, nonlinear) compartmental systems, i.e. not rely on e.g. equilibrium conditions. While some metrics describe models under special conditions we want metrics that can be applied to as many models as possible. 
   \item
     \label{enum:measurable}
-  Preferably metrics should also be physical properties i.e. have a clearly
+  Preferably 
+ \hmm{Same question.}
+    \mmh{Since the pools of many models are not well defined in a physically measurable sense we cannot even compare pool contents with real-world measurements. If we make this a \emph{hard} criterion it excludes almost everything... }
+    metrics should also be physical properties i.e. have a clearly
     defined way to measure them at least in principle, and thus are relevant to
     answer research questions related to real-world phenomena as opposed to
     theoretical surrogates. This is important for interaction with measurement data, obviously for driving and benchmarking them but also less obviously to compare model output for which no measurements exist.  
@@ -424,11 +545,11 @@ In this study we propose the following criteria for compartmental system metrics
 
 We demonstrate the criteria for different proposed metrics
 
-\subsubsection{Contents of the pools }
-The tuple of pool contents as function of time is the solution of \eqref{eq:CompartmentalSystem} . This takes care of \ref{enum:function}.
+\subsubsection{Contents of the pools}
+The tuple of pool contents as function of time is the solution of \eqref{eq:CompartmentalSystem}.
 In a mathematical sense they are thus unambiguousely defined. Since the numerical solution of the ODE system is not even harder if the system is nonlinear and its righthandside time dependent the computation is also very general and does not require any further assumptions.
-So \ref{enum:general} is fulfilled too.
-However the last criteria - the ability to measure and
+So criteria \enumref{enum:function} and \enumref{enum:general} are fulfilled. 
+However the last criterion - the ability to measure and
 meaningfully interpret them - depends on the formulation of the concrete model under investigation since the definition of carbon pools differ conceptually between models. If we assume that we can clearly distinguish the material contained in one pool from the material contained in another by measurement we are fine. 
 However in many cases pools are defined without a possibility to measure them or a clear physical interpretation 
 \cite{abramoff_millennial_2018}. 
@@ -457,7 +578,7 @@ or a litter decomposition flux, hence to satisfy all the criteria we may need
 to define a sub-system for which a metric is meaningful.   
 
 \subsubsection{Fluxes between pools}
-Formulas for the fluxes  either have preceded the matrix description or can be reverse engineered from it. They are fully determined by the trajectory of the pool contents and thus fulfill \ref{enum:function}.
+Formulas for the fluxes  either have preceded the matrix description or can be reverse engineered from it. They are fully determined by the trajectory of the pool contents and thus fulfill criteria \enumref{enum:function}.
 They are in principal measurable, the unambigous definition of their source and target pools being an obvious necessary condition. If the pools cannot be clearly identified neither can be the fluxes between them. 
 This might also necessitate the definition of aggregate pools and fluxes.
 For example, a photosynthesis flux can be measured \textit{in-situ} or estimated from remote sensing \cite{jez_emerging_2021, sun_remotely_2023}, or the influx into a litter pool, but maybe not the flux between litter to fast soil.
@@ -466,11 +587,12 @@ For example, a photosynthesis flux can be measured \textit{in-situ} or estimated
 While age describes how old material in the system is, transit time describes how
 long material needs to travel through the entire system from entry to exit
 \cite{bolin1973Tellus, Sierra2017GCB}.
-Both age and transit time distributions can be unambiguosely computed for every pool at every time point, given inital distributions at the start of the simulation.
-They are applicable to general nonautonomous nonlinear systems, and help to better understand underlying system dynamics and to compare models
-with different sizes or structures.  Ages and (backward) transit time
+Both age and transit time distributions can be unambiguosely computed for every pool at every time point, given inital distributions at the start of the simulation, so that criteria \enumref{enum:function} is fulfilled.
+They are applicable to general nonautonomous nonlinear systems, thus fulfilling criteria \enumref{enum:general}.
+Fullfillment of criteria \enumref{enum:measurable} is again conditional on a measurable destinction between pools, again possibly necessitating the definition of aggregate pools.
+If the pool boundaries are clear, ages and (backward) transit time
 distributions at time $t$ could in principle be measured directly by the time
-dependent abundance of different markers $c_{m_1}(t),\dots, c_{m_n}(t)$ that
+dependent abundance of (many) different markers $c_{m_1}(t),\dots, c_{m_n}(t)$ that
 had been injected into the input stream at different previous times $t_1,\dots
 t_n$. Forward transit time distributions can even be measured observing the
 abundance of a single marker injected at $t_0$ and observed over the whole interval $[t_0,t]$ from injection till present, which is of course much easier to do.
@@ -481,39 +603,40 @@ age distributions e.g. of carbon in soils, and to constrain models
 \mm{Kostia}{Unfortunately I do not know a single experiments where an age distribution for a nonautonomous system out of equilibrium has been actually been measured \emph{directly}. } 
 
 And finally, they are very relevant for the studies of biogeochemical cycles, e.g. looking at the ability of soils to retain carbon and nutrients in such contexts as soil health or climate change. 
-This makes them the first choice for model comparisons. 
-
+Concludingly ages and transit-times of the whole system or physically distinguishable subsystems fulfill the conditions as well as contents or fluxes, placing them in the catagory of most desirable metrics so far.\mmh{Changed the wording and made the argument more specific}
 \subsubsection{Flux rates, turnover times, residence times, storage capacity and potential}.
 The definitions of these properties would technically allow to compute them as function of the pool contents and fluxes that 
 we mentioned above.
 However they are not interpretable or measurable for \emph{all} compartmental systems because they make further assumptions, e.g. linearity of the model or the existence of equilibria. 
 
-General compartmental systems can be nonlinear and nonautonomous, in the latter case making the concept of equilibrium itself meaningless and in the former the computation of the possibly empty set of fixed points by far to difficult to attempt (automatically by a function).
-If we wanted to include a strictly typed function to do it, its argument would
+General compartmental systems can be nonautonomous, in this case making the concept of equilibrium itself meaningless.
+We note that metrics build upon equilibrium assumptions fail to meet criterion \enumref{enum:general}.
+They can also be nonlinear, making the computation of the possibly empty set of fixed points by far to difficult to attempt automatically by a function, failing criterion \enumref{enum:function}.
+\footnote{
+If we wanted to include a strictly typed function to compute equilibria for those systems for which this is possible, its argument would
 have to be of a new type for a linear autonomous system.  Achieving the same flexibility
 and complete transparency w.r.t. flux, rate, or matrix centered description
-will necessitate additional types for constant rates or linear fluxes.
-We note that metrics build upon equilibrium assumptions fail to meet criteria \enumref{enum:general}
+will necessitate additional types for constant rates or linear fluxes.}
 
 Another class that fails at least one of the criteria
 are properties that can still be unambiguously defined by a function and
-therefore computed but are not physical quantities and are therefore to be
+therefore computed but are not directly open to measurement and are therefore to be
 considered properties of the model rather than reality. 
-\footnote{
-  That a flux `rate' should be considered a model property (or latent variable)
-  rather than a physical property becomes more apparent when we consider
-  processes that treat material of different age or position in the pool
-  differently.  In this case the assumption that the material in the pools is
-  `well mixed', and can therefore be treated by the \emph{same} exit `rate'
-  would be violated, and the model no longer 'compartmental.  However such
-  processes clearly exist and fluxes and mass are still measurable.  The
-  concept of a single 'rate' applied to all material in a pool is implied by
-  the definition of compartmental systems.
-} 
-Flux rates and compartmental matrices, and more importantly (some) properties derived from them, fall into  this category. 
+%\footnote{
+%  That a flux `rate' should be considered a model property (or latent variable)
+%  rather than a physical property becomes more apparent when we consider
+%  processes that treat material of different age or position in the pool
+%  differently.  In this case the assumption that the material in the pools is
+%  `well mixed', and can therefore be treated by the \emph{same} exit `rate'
+%  would be violated, and the model no longer 'compartmental.  However such
+%  processes clearly exist and fluxes and mass are still measurable.  The
+%  concept of a single 'rate' applied to all material in a pool is implied by
+%  the definition of compartmental systems.
+%} 
+%Flux rates and compartmental matrices, and more importantly (some) properties derived from them, fall into  this category. 
 One example is a commonly used metric `turnover time' which is defined as the quotient between content of and outflux from a pool, or as the inverse of the rate. 
-`Turnover time' is an interesting example as it violates either, \enumref{enum:measurable} or \enumref{enum:general}, 
-because it turns out that for a one pool system in equilibrium it actually coincides with the mean backward transit time
+`Turnover time' is an interesting example as it violates at least one of criteria \enumref{enum:measurable} and \enumref{enum:general}. 
+It turns out that for a one pool system in equilibrium `turnover time' actually coincides with the mean backward transit time
 which could be approximated by many measurements but loses this interpretation in any non-equilibrium state \cite{Sierra2016GlobChangBiol, Lu2018Biogeosciences}.
 
 More recently proposed way to compute `residence time' through inverting a compartmental matrix \cite{Xia2013GCB, Luo2017Biogeosciences, Luo2022, luo_land_2022} suffers from the same issue \cite{Sierra2016GlobChangBiol}  
@@ -525,21 +648,22 @@ In particular, equilibrium-based metrics would have different interpretations wh
 \cite{Koven2015Biogeosciences, osullivan_process-oriented_2022}, and hardly any meaningful interpretation when the study is focused on the transient nature of the system \textit{per se}, as in \cite{Luo2017Biogeosciences} 
 In the latter case, a user asking for 'Residence Time' (by applying such a function) would reasonably expect the transient 'time of residence' of material, but would actually receive the time of residence the material  
 \emph{would} have \emph{if} the system was frozen at this moment \emph{and} allowed (infinite) time to reach its equilibrium. Therefore, to avoid possible misleading interpretations, in our package we only implemented metrics 
-that are general and unambiguous, thus leaving it for the users to, if necessary, implement and justify additional assumptions or approximations used for their metrics. 
+that are general and unambiguous, thus leaving it for the users to, if necessary, implement and justify additional assumptions or approximations used for their proposed metrics. 
+\mmh{I didm't consider the word metric strictly defined as fulfilling our criteria but as some proposed numerical measure, to compare models by. Is there any part of the text left , where I particularly created this misleading impression?}
 
-\todo{@Holger\\
-In the following paragraph I played it save. Carlos had mentioned entropy in an old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
-}
-A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
-of dynamical systems \cite{Ebeling1998}. 
-For 
-%non? 
-autonomous linear systems it has 
-been used to describe the uncertainty of a particle's path through a
-compartmental system, quantifying how difficult it is to predict this path. 
-and to compare path properties of models with different number of
-compartments and connections among them \cite{Metzler2020}. 
-It's use can be extended to systems in equilibrium.
+%\todo{@Holger\\
+%In the following paragraph I played it save. Carlos had mentioned entropy in an old draft, but I don't know if the restriction to autonomous is a feature of the theorie or of \LAPM{}
+%}
+%A similar restriction of generality applies to applications of Shannon's information entropy as a complexity measure 
+%of dynamical systems \cite{Ebeling1998}. 
+%For 
+%%non? 
+%autonomous linear systems it has 
+%been used to describe the uncertainty of a particle's path through a
+%compartmental system, quantifying how difficult it is to predict this path. 
+%and to compare path properties of models with different number of
+%compartments and connections among them \cite{Metzler2020}. 
+%It's use can be extended to systems in equilibrium.
 
 Surprisingly the literature even contains proposals for metrics that can not be defined as functions because they are ambiguously defined like the following matrix factorization approach.  
 It has been claimed that for most Carbon cycle models the linear version of \eqref{eq:CompartmentalSystem} can be written in product form 
@@ -548,115 +672,22 @@ It has been claimed that for most Carbon cycle models the linear version of \eqr
   \frac{d\X}{dt} &=& \I(t) + M(t) \, \X 
   \label{eq:LinCompartmentalSystem} 
   \\
-                &=& \I(t) + A \xi K(t) \, \X
+                &=& \I(t) + A \xi(t) K \, \X
   \label{eq:AxiK}
 \end{eqnarray}
 
 While it is certainly possible to derive \eqref{eq:LinCompartmentalSystem} unambiguously from \eqref{eq:AxiK} the opposite direction is not possible. Neither is the form \eqref{eq:AxiK} as general as \eqref{eq:LinCompartmentalSystem} 
 nor is the decomposition uniquely defined.
+We show in detail why this is the case in \appendixref{appendix:MatrixDerivation}.
 While the issue with generality could be solved similarly to the equilibrium
 issue by introducing subtypes of decomposable matrices and fluxes the issue of
 ambiguity prevents the implementation of a function in the mathematical sense, which requires the return value to be unambiguously defined by the arguments.
 This actually shows that any analysis built upon the decomposition is not
 suited to discuss compartmental systems in general, not even if they can be
-written in the form or \eqref{eq:AxiK}. This is relevant since such results have been published without discussion of the inherent ambiguity. We show in detail why this is the case in \appendixref{appendix:MatrixDerivation}.
+written in the form or \eqref{eq:AxiK}. This is relevant since such results have been published without discussion of the inherent ambiguity. 
 
 
-\subsection{Compartmental systems in equilibrium} \label{sec:Equilibrium}
-The concept of equilibrium is restricted to autonomous systems. 
-It does not even make sense to ask the question otherwise. \todo{@Markus quazi-equilibria as approximations? Can we mention something about that?}
-If the autonomous system is nonlinear it is possible but not certain that an
-equilibrium exists. The only case where we can expect an equilibrium are
-linear, autonomous, pool models, 
-\begin{equation} \label{eq:LS}
-\dot{\X} = \I + M \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
-\end{equation}
-for which interesting properties can be
-obtained by the \LAPM{} package.  The equilibrium $x^*$ is defined by the
-condition  $\dot{\X}=0$ which translates to $-M \X^*= \I$ which means that for
-pool contents $\X^*$ the influxes $\I$ match the outfluxes $M \X^*$ exactly.  It is
-straightforward to see that for this to happen all 
-pools with influxes must be connected (possibly via other pools) to an outflux of
-the system, and that the (constant) rates for all the flux rates out of all
-pools along this paths are greater than zero, since an input receiving pool $p$
-without these conditions would necessarily grow over time, violation the
-equilibrium condition $\dot{\X}_p=0$. Interestingly these conditions also
-guarantee that $M$ is invertible and the equilibrium therefore uniquely
-determined by: 
-\begin{equation} 
-\label{eq:x_Minv_I}
-\X^* = - {M^*}^{-1} \, \I^*.  
-\end{equation}
-Although at different times different material moves through the system, the
-size of the pools does not depend on time if the system is in
-equilibrium: $\X(t)=\X^*$ 
-This is also true for other properties such as the
-age distribution of mass in particular compartments and in the entire system
-and the transit time distribution, which is defined as the time it takes masses
-in the input flux to appear in the output flux. 
-Although the material moving through the system does change the amount, age and transit
-time distributions do not. 
-They are in fact characterized by the Phase Type
-distribution, which depends on compartmental matrix $B$ and the equilibrium
-solution $x^*$ for the system age distribution and the $B$ and the input $u$
-for the transit time distribution \cite{Metzler2018MGS}.
-Compartmental systems at equilibrium have similar properties as continuous-time absorbing Markov Chains \cite{Metzler2018MGS}.
-Therefore, we can obtain other quantities of interest such as  the path entropy of particles that travel across the system and the occupation time of particles inside compartments \cite{Metzler2020}. These properties of linear autonomous compartmental systems at equilibrium can be obtained with the \LAPM{} package.
 
-Interestingly the properties of linear autonomous systems in equilibrium can
-also be computed for nonlinear systems in equilibrium if such an equilibrium
-exists.
-\begin{equation} \label{eq:NLS}
-\dot{\X} = \I(\X) + M(\X) \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0,
-\end{equation}
-In equilibrium the system is indistinguishable from a linear autonomous one
-\begin{align} 
-  0= \dot{\X} = \I^* + M^* \, \X^*
-\end{align}
-with $M^*=M(\X^*)$ and $\I^*=\I(\X^*)$ 
-If the inverse ${M^*}^{-1}$ exists transit time and age distributions can be computed 
-\cite{Metzler2018MGS}.
-and therefore also  nonlinear autonomous
-systems at equilibrium can be analyzed with the by the
-\LAPM{} package.
-Note however,that 
-\eqref{eq:x_Minv_I} is useless to determine $\X^*$ and 
-no such $\X^*$ might exist for some systems
-while others may have multiple fixed points and the age and
-transit time distribution may be very different for these different equilibria.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Time Evolution} \label{sec:trajectory}
-We consider now linear non-autonomous systems of the form
-\begin{equation} \label{eq:NALS}
-\dot{\X}(t) = \I(t) + M(t) \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
-\end{equation}
-In this case, the inputs and the compartmental matrix are time-dependent and
-the system never converges to a fixed-point solution. In most cases, an
-analytical solution cannot be obtained, but the solution can be 
-obtained numerically. In particular, the solution for systems of the form of equation \eqref{eq:NALS} can be written as
-\begin{equation}
-(t, t_0, \X_0) = \Phi(t, t_0) \X_0 + \int_{t_0}^{t} \Phi(t, \tau) \I(\tau) \mathrm{d}\tau.
-  \label{eqn:Phi}
-\end{equation}
-The state transition operator $\Phi(t,t_0)$ is a matrix-valued function that
-multiplied with the state $x_0$ at $t_0$ transitions it to the state $x(t)$
-subsequent time $t > t_0$. It is numerically computable by solving an matrix
-ode derived from \eqref{sec:trajectory} 
-From $\Phi(t,t_0)$ we can obtain not only the temporal evolution of the
-solution $\X(t)$ but also of the distributions of ages of the mass in the compartments and in the entire system \cite{Metzler2018PNAS}.
-The \CompartmentalSystems{} package provides all the functionality necessary to do these computations, which rely on a description of the time-dependent input vector $u(t)$ and the compartmental matrix $B(t)$, as well as initial age distributions for the compartments.
-\begin{equation} \label{eq:NANLS}
-\dot{\X}(t) = \I(t, \X) + M(t, \X) \, \X(t), \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
-\end{equation}
-by numerically solving \eqref{eq:NANLS} and plugging the solution $x(t, t_0,
-x_0)$ back into it, which results in $\tilde{M}(t)=B(t, \X(t, t_0,\X_0))$ and
-$\tilde{\I}(t)=\I(t,\X(t, t_0,x_0)$  i.e a linear system in the form
-\eqref{eq:NALS}. 
-Therefore,  age and transit time
-distributions can be obtained for nonlinear non-autonomous system along the
-specific trajectory. Detailed methods for the computation are provided in
-\cite{Metzler2018PNAS}
 
 %\section{Software description}
 \section{The \python{} packages}
