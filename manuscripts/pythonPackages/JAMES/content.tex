@@ -124,22 +124,162 @@ should be compared.
 
 %\section{Motivation and significance}
 \section{Introduction}
+\subsection{Outline}
+\mm{Kostia and Holger}{
+  This section had been missing which made the following sections almost
+  unreadable. (partly also due to the different purpose they served in Carlos's
+  original draft, from which I pasted them, without removing the duplication
+  ...) I have completely rearranged the content now along the main argument.
+}
+The point of this work is to present computable properties of compartmental
+systems by which they can be compared and provide a software tool that
+implements them.  The main scientific point is to organize these properties
+hierarchically by the generality of their applicability. This is also the
+ordering principle behind the following exposition. 
+
+\mm{all}{remove itemization when the sections are properly arranged}
+\begin{itemize}
+  \item
+    In \sectionref{sec:ConceptualFramework} We define the scope by choosing 'Compartmental models' as the most general class of model we consider in terms of their 
+    \begin{enumerate}
+      \item underlying assumptions, 
+      \item significance, i.e the possible questions that can be asked \mm{all}{(citations)}
+      \item equivalent ways of representations, and 
+      \item solution methods 
+    \end{enumerate}
+    Some of the details will be relegated to \appendixref{appendix:MatrixDerivation}.
+  \item 
+    In \sectionref{sec:} we briefly discuss the limits of the concept of equilibria and fixed points in the general context its approximations and generalizations since this provides the context for many traditionally and newly proposed less general metrics.
+  \item
+Scientific inference regarding modelling results, as well as model evaluation and intercomparison, often depends on the metrics that are used to describe model output.
+Depending on the chosen metric, results can be both informative of model peformance and useful for a real-world question of the study, or, they can be overly reliant on artificial assumptions and therefore uninformative for a study of natural, rather than modelling, mechanisms.
+Hence, we proceed with a scientific discussion on what is to be regarded as a proper metric in \sectionref{sec:criteria} and formulate criteria for by which we evaluate proposed properties for intercomparison.
+  \item
+    We present all implemented metrics in the 
+    context of limited their applicability. 
+  \item 
+    In \sectionref{sec:Intercomparison} we briefly describe the state of intercomparison frameworks
+\end{itemize}
+
+\subsection{Conceptual framework}
+\label{sec:ConceptualFramework}
+%\subsection{Definition and classification of compartmental systems} 
+\begin{figure}
+  \label{fig:modelGraph}
+  \input{diagram}
+\end{figure}
+
+\figref{fig:modelGraph} represents compartments $A$ and $B$ by circles and the flux from $A$ to $B$ as an arrow with the annotation $F_{a\rightarrow b}{t,\bar{A},\bar{B},...}$   
+where we use $\bar{A}$ as ``content of $A$''. 
+The assumption that the flux is a function of time $t$, the contents of (possibly all) the pools \emph{and nothing else} is the defining property of compartmental models.  
+This independence of the fluxes from other variables except the contents of the pools, is usually referred to as `well mixed' or `kinetically homogeneous' compartments. 
+It is very attractive since it implies that future pool contents can be predicted from the present pool contents alone, without the necessity to track other properties like e.g. the position inside the pool.  
+
+\mm{mm}{Check that the citations all refer to compartmental models as the original text was:
 The principle of mass conservation plays a central role in mathematical models
-of natural systems in a variety of scientific fields such as systems biology,
+of natural systems...}
+The models play an important role
+in a variety of scientific fields such as systems biology,
 toxicology, pharmacokinetics \cite{Anderson1983} , ecology
 \cite{Eriksson1971ARoEaS, Rodhe1979Tellus, Matis1979, Manzoni2009SBB},
-hydrology \cite{Nash1957IASH, Botter2011GRL, Harman2014GRL}, biogeochemistry
+%hydrology \cite{Nash1957IASH, Botter2011GRL, Harman2014GRL}, 
+biogeochemistry
 \cite{Manzoni2009SBB, Sierra2015EM}, and epidemiology \cite{Jacquez1993SIAM}.
-In most cases such models are non negative dynamical systems that can be
-described by systems of ordinary differential equations (ODEs) with
-strong structural constraints.  Such systems are called compartmental systems
-\cite{Anderson1983, Jacquez1993SIAM, Walter1999, Haddad2010}
-, and have
-important mathematical properties that aid in their analysis and study.
+%In most cases such models are non negative dynamical systems that can be
+%described by systems of ordinary differential equations (ODEs) with
+%strong structural constraints.  Such systems are called compartmental systems
+%\cite{Anderson1983, Jacquez1993SIAM, Walter1999, Haddad2010}
+This description is also `graphical' in the mathematical sense. 
+A a compartmental system can be represented by a graph $G=(\mathcal{V}, \mathcal{E})$  which is a tuple of two sets, the set of vertices $\mathcal{V}$ , and the
+set of edges $\mathcal{E}$ which we specify as follows: 
+Let $A,B,\dots,$ represent the names of compartments or pools, then we can write the set of vertices as $V=\{A,B,C\dots\}$. 
+
+We show in detail in \appendixref{appendix:MatrixDerivation} how this intuitive graph can be translated into a system of ordinary differential equations in matrix form. 
 \kv{Markus}{I removed ``first order'' from the paragraph above - the features discussed in this paper are not limited to first-order models, are they?}\\
 \mm{Kostia}{All equations are first order in the mathematical sense: only first derivatives occur. 
 (That does not mean they are linear or have ``first order kinetics''... which is not a mathematical but rather an (unnecessary) ecological definition. ``linear'' would have been sufficient.) 
 }
+%\mm{all}{The following should go into the appendix or removed if it is already there:
+%If we assume any arbitrary ordering of the pools we can represent the mass (content of the pools)
+%by an ordered tuple $\vec{x}$.
+%Because mass is a non-negative quantity, this tuple of mass contents can
+%only occupy the non-negative orthant of the state-space; i.e. $x \in
+%\mathbb{R}^n_+$. 
+%Likewise the mass, that the system receives from outside is represented
+%by a tuple of mass input fluxes (mass over time) $u \in \mathbb{R}^n_+$.
+%It has been shown in \cite{Jacquez1993SIAM}
+%that for smooth enough fluxes, mass is transferred among compartments and released back to the external
+%environment can be according to rates encoded in a compartmental matrix $B \in
+%\mathbb{R}^{n \times n}$. 
+%Therefore, we can write the dynamics of a
+%compartmental system as a set of ordinary differential equations of the form
+%}
+\begin{equation} \label{eq:CompartmentalSystem}
+\dot{\X} = \frac{d\X}{dt} = \I(\X, t) + M(\X, t) \, \X
+\end{equation}
+%The key property of compartmental systems is, in order for the system to balance mass, that the square matrix $M=(M_{ij})$ exhibits three main properties
+%\begin{enumerate}
+%  \item $M_{ii}\leq0\text{ for all }i$,
+%  \item $M_{ij}\geq0\text{ for all }i\neq j$, and
+%  \item $\suml_i M_{ij}\leq 0\text{ for all }j$.
+%\end{enumerate}
+%\kv{Markus}{ Please add the description of notations you use in formulas throughout the paper}
+%\mm{Kostia}{What concretely do you mean by that? Do you think there should be an index of notation here?
+%I have started a glossary that we could make part of the document. 
+%}
+%Then, $\tens{M}$ is called \emph{compartmental} and governs all internal cycling of material as well as the exit of material from the system.
+We describe the relationship between the graph and matrix based descriptions in \appendixref{appendix:MatrixDerivation}.
+
+We distinguish between different types of compartmental systems, according to linearity and autonomy. If the vector of inputs and the compartmental matrix depend on the vector of states in system \eqref{eq:CompartmentalSystem}, we call it non-linear, and linear otherwise. Similarly, if the vector of inputs and the compartmental matrix depend on time, we call the system non-autonomous, and autonomous otherwise. 
+Both descriptions of compartmental system, the intuitive graph of pools and fluxes and the 
+matrix based formulation as an ODE system have advantages for some applications. 
+While the graph based description allows for composition of subgraphs and decomposition of models into e.g vegetation and soil part, the ODE description facilitates the description and implementation of some advanced numerical algorithms as explained below.
+In our approach both formulations are converted into each other automatically as need arises.
+This effortless switching between the viewpoints is the main facilitator of the new level of transparency of our approach, their combination enables the computation of transit time and mean age systems for subsystems of selected pools with no more effort than defining the pools constituting them.
+
+\subsection{Criteria for metrics to compare models \label{sec:criteria}}
+
+In this study we propose the following criteria for compartmental system metrics:
+\begin{enumerate}
+  \item
+    \label{enum:function}
+    In our definition we require that a metric must be unambiguously computable by a function of other metrics or building blocks of a model.    This is an exclusive condtion since it is not only essential to \emph{implement} a software tool but also to interpret its results without knowledge of model specific idiosyncrasies.
+  \item
+    \label{enum:general}
+    \hmm{
+      "Preferably" Should we use this word in a hard criterion?
+    }
+    \mmh{
+      The second and third criteria are not as hard as the first one, which is really an excluding condition.
+      We \emph{can} compute more specific metrics, but they are not the \emph{first} choice.
+    }
+    We prefer metrics applicable to all (nonautonomous, nonlinear) compartmental systems, and those that do not rely on e.g. equilibrium conditions. While some metrics describe models under special conditions we want metrics that can be applied to as many models as possible.  
+  \item
+    \label{enum:measurable}
+  
+    \hmm{"Preferably" Same question.}
+    \mmh{
+      Since the pools of many models are not well defined in a physically
+      measurable sense we cannot even compare pool contents with real-world
+      measurements. If we make this a \emph{hard} criterion it excludes almost
+      \emph{every} soil model
+    }
+    We very much prefer metrics should also be physical properties i.e. have a clearly
+    defined way to measure them at least in principle, and thus are relevant to
+    answer research questions related to real-world phenomena as opposed to
+    theoretical surrogates. 
+    This is important for interaction with measurement data, obviously for driving them with measured data  and benchmarking 
+    but also less obviously to compare model output for which no measurements exist.  
+    Model parameters that are not physical i.e. latent variables \ref{glossary:latentvar} 
+    can easily be specific to ONE model i.e. impossible to compare. 
+    There are different ways for a metric to fail this
+    test. For once its computation might rely on mathematical assumptions that
+    are never present in the real world. But it might also fail because
+    components of the model are not defined as physical properties in the first
+    place.
+   
+\end{enumerate}
+
 \subsection{Diagnostics of age and persistance} 
 \kv{Markus}{I rephrased a few things, including the subtitle }
 Characterizing dynamics of compartmental systems often includes content of the pools,
@@ -162,7 +302,7 @@ This becomes a challenge when these methods are implemented in software
 As we will show, we fulfill this much stricter requirement which is much more difficult to achieve than a verbal warning about the limits of an approximation or it's interpretation.
 
 
-\subsection{Analysis and Intercomparizon of Multiple Models}
+\subsection{Analysis and Intercomparison of Multiple Models \label{sec:Intercomparison}}
 
 Development of compartmental models for studying ecological processes has
 greatly increased in the recent decades \cite{le_noe_soil_2023,
@@ -340,60 +480,6 @@ possible present and future use cases in
 
 
 
-%:
-\section{Conceptual framework}
-\label{sec:ConceptualFramework}
-\subsection{Definition and classification of compartmental systems} 
-
-\input{diagram}
-A very parsimonious and general description of a compartmental system can be achieved by a graph $G=(\mathcal{V}, \mathcal{E})$ in
-the mathematical sense, which is a tuple of two sets, the set of vertices $\mathcal{V}$ , and the
-set of edges $\mathcal{E}$ which we specify as follows: 
-Let $a,b,\dots,$ represent the names of compartments or pools, then we can write the set of vertices as $V=\{a,b,c\dots\}$. We represent a flux between pools $a$ and $b$ by $F_{a\rightarrow b}$.
-If we assume the flux to be a function of time $t$ and the contents of (possibly all) the pools \footnote{
-This is usually referred to as `well mixed' or
-`kinetically homogeneous' compartments and is means that the flux does not depend on more things, \eg age or position in the pool.
-}
-we can write $F_{a\rightarrow b}=F_{a\rightarrow b}{t,a,b,...}$   
-where we abbreviated ``content of $a$''on the right hand side by $a$.
-
-We show in detail in \appendixref{appendix:MatrixDerivation} how this intuitive graph can be translated into an equation system in matrix form. 
-If we assume any arbitrary ordering of the pools we can represent the mass (content of the pools)
-by an ordered tuple $\vec{x}$.
-Because mass is a non-negative quantity, this vector of mass contents can
-only occupy the non-negative orthant of the state-space; i.e. $x \in
-\mathbb{R}^n_+$. 
-Likewise the mass, that the system receives from outside is represented
-by a tuple of mass input fluxes (mass over time) $u \in \mathbb{R}^n_+$.
-It has been shown in \cite{Jacquez1993SIAM}
-that for smooth enough fluxes, mass is transferred among compartments and released back to the external
-environment can be according to rates encoded in a compartmental matrix $B \in
-\mathbb{R}^{n \times n}$. 
-Therefore, we can write the dynamics of a
-compartmental system as a set of ordinary differential equations of the form
-\begin{equation} \label{eq:CompartmentalSystem}
-\dot{\X} = \frac{d\X}{dt} = \I(\X, t) + M(\X, t) \, \X
-\end{equation}
-The key property of compartmental systems is, in order for the system to balance mass, that the square matrix $M=(M_{ij})$ exhibits three main properties
-\begin{enumerate}
-  \item $M_{ii}\leq0\text{ for all }i$,
-  \item $M_{ij}\geq0\text{ for all }i\neq j$, and
-  \item $\suml_i M_{ij}\leq 0\text{ for all }j$.
-\end{enumerate}
-\kv{Markus}{ Please add the description of notations you use in formulas throughout the paper}
-\mm{Kostia}{What concretely do you mean by that? Do you think there should be an index of notation here?
-I have started a glossary that we could make part of the document.
-}
-Then, $\tens{M}$ is called \emph{compartmental} and governs all internal cycling of material as well as the exit of material from the system.
-We describe the relationship between the graph and matrix based descriptions in \appendixref{appendix:MatrixDerivation}.
-
-We distinguish between different types of compartmental systems, according to linearity and autonomy. If the vector of inputs and the compartmental matrix depend on the vector of states in system \eqref{eq:CompartmentalSystem}, we call it non-linear, and linear otherwise. Similarly, if the vector of inputs and the compartmental matrix depend on time, we call the system non-autonomous, and autonomous otherwise. 
-Both descriptions of compartmental system, the intuitive graph of pools and fluxes and the 
-matrix based formulation as an ODE system have advantages for some applications. 
-While the graph based description allows for composition of subgraphs and decomposition of models into e.g vegetation and soil part, the ODE description facilitates the description and implementation of some advanced numerical algorithms as explained below.
-In our approach both formulations are converted into each other automatically as need arises.
-This effortless switching between the viewpoints is the main facilitator of the new level of transparency of our approach, their combination enables the computation of transit time and mean age systems for subsystems of selected pools with no more effort than defining the pools constituting them.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Time Evolution} \label{sec:trajectory}
 \mm{@all}{This whole subsection is a leftover from Carlos's first draft. It would only make sense to keep it if we use the state transition operator $\Phi$ later in some formulas}
@@ -431,10 +517,11 @@ This effortless switching between the viewpoints is the main facilitator of the 
  \kmm{quasi-equilibria as approximations? Can we mention something about that?}
  \mmk{rewrote the whole paragraph subdividing it to deal with the different cases, including the quasi-static approximation}
 Traditionally some metrics for compartmental systems such as maean transit time mean age or have been based on the assumption of linearity of the underlying system, which implies the existence of a unique equilibrium that can also be computed conveniently.
-This approach \emph{cannot}be extended to our most general situation of non-autonomuous nonlinear systems, the most obvious reasons being firstly the impossibility to even \emph{define} ``equilibrium'' or ``fixed point'  for non-autonomous systems and secondly the impossibility to assure the existence of fixed points for non-linear systems even if they are autonomous. We will explore these limitations and \emph{some} approaches to either approximate equilibrium or alltogether replace the concept.  
+However both, existence and computability of equilibria are not only 
+The difficulties range from the lack of guarantee for the existence of ``fixed points'' for sytems that are autonomous but nonlinear to their \emph{systematic} absence from non-autonomous systems, which requires \emph{conceptually} new definitions of stability, or approximations. 
 \subsubsection{Linear autonomous systems}
 This is the traditional \emph{least} general case and the only one
-where we can acertain the existence of an equilibrium based on some addtional assumbptions.
+where we can acertain the existence of an equilibrium based on some addtional assumptions.
 Equation \eqref{eq:CompartmentalSystem} simplifies to
 \begin{equation} \label{eq:LS}
 \dot{\X} = \I + M \, \X, \qquad  \mathrm{with} \quad \X(t_0) = \X_0.
@@ -507,41 +594,6 @@ system at position $\X_0$ inside such a basin of attraction is that it has `all
 the time in the world' to approach $\X^*$. If it does, depends only on its start position $\X_0$
 
 However if the RHS does depend on time, many things can change `in an instant'. Not only will the roots of the RHS change position while the system is moving towards them, but the whole concept of a predictable destination collapses.
-
-\subsection{System and sub-system level metrics: contents, fluxes, age, transit time}
-Compartmental systems can be described by a set of building blocks and metrics. 
-Scientific inference regarding modelling results, as well as model evaluation and intercomparison, often depends on the metrics that are used to describe model output.
-Depending on the chosen metric, results can be both informative of model peformance and useful for a real-world question of the study, or, they can be overly reliant on artificial assumptions and therefore uninformative for a study of natural, rather than modelling, mechanisms.
-Hence, we consider a scientific discussion on what is to be regarded as a proper metric to be particularly relevant.
-In this study we propose the following criteria for compartmental system metrics:
-\begin{enumerate}
-  \item
-    \label{enum:function}
-    In our definition we require that a metric must be unambiguously computable by a function of other metrics or building blocks of a model.    This is a exclusive condtion since it is not only essential to \emph{implement} a software tool but also to interpret its results without knowledge of model specific idiosyncrasies.
-  \item
-    \label{enum:general}
-    Preferably 
-    \hmm{Should we use this word in a hard criterion?}
-    \mmh{The second and third criteria are not as hard as the first one, which is really an excluding condition.
-    We \emph{can} compute more specific metrics, but they are not the \emph{first} choice.}
-    metrics should be applicable to all (nonautonomous, nonlinear) compartmental systems, i.e. not rely on e.g. equilibrium conditions. While some metrics describe models under special conditions we want metrics that can be applied to as many models as possible. 
-  \item
-    \label{enum:measurable}
-  Preferably 
- \hmm{Same question.}
-    \mmh{Since the pools of many models are not well defined in a physically measurable sense we cannot even compare pool contents with real-world measurements. If we make this a \emph{hard} criterion it excludes almost everything... }
-    metrics should also be physical properties i.e. have a clearly
-    defined way to measure them at least in principle, and thus are relevant to
-    answer research questions related to real-world phenomena as opposed to
-    theoretical surrogates. This is important for interaction with measurement data, obviously for driving and benchmarking them but also less obviously to compare model output for which no measurements exist.  
-    Model parameters that are not physical i.e. latent variables \ref{glossary:latentvar} can easily be specific to ONE model i.e. impossible to compare. 
-    There are different ways for a metric to fail this
-    test. For once its computation might rely on mathematical assumptions that
-    are never present in the real world. But it might also fail because
-    components of the model are not defined as physical properties in the first
-    place.
-   
-\end{enumerate}
 
 We demonstrate the criteria for different proposed metrics
 
