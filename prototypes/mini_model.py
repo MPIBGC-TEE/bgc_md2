@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.16.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -26,7 +26,7 @@ from bgc_md2.resolve.mvars import (
 
 # +
 # obtain dictionary of symbols for equations from txt file
-params_in = open(r"mini_model_sym_dict.txt", 'r')
+params_in = open(r"mini_model_sym_dict_24.txt", 'r')
 sym_dict = {}
 for line in params_in:
     k, v = line.strip().split('=')
@@ -38,22 +38,26 @@ params_in.close()
 #define all the symbols you are going to use in the equations
 
 for k in sym_dict.keys():
-    code=k+" = Symbol('{0}')".format(k)
+    code = k+" = Symbol('{0}')".format(k)
     exec(code)
     
 func_dict = {
-    "Gpp_grass": "Total C production for grass in g/m^2*month FIXME"
+    "gpdf": "function for calculating temperature effect on production",
+    "scale": "function called in treemix.F and cropmix.F"
 }
 for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)    
+    code = k+" = Function('{0}')".format(k)
+    exec(code)  
     
-#I_wood=Function("I_wood") 
-t=TimeSymbol("t") # the symbol used for time since it has a special role
+gpdf = Function("gpdf")
+scale = Function("scale") 
+t = TimeSymbol("t") # the symbol used for time since it has a special role
 e = Symbol("e")   # for exponential functions
 
-agprod = prdx_1*f_stemp_ppdf_1*((avh2o_1 + (ppt_m * 0.1)) / pet)*biof*shdmod*sdlng
-bgprod = agprod * rtsh
+potprd = c3c4*gpdf(stemp,ppdf1_C3,ppdf2_C3,ppdf3_C3,ppdf4_C3) + (1-c3c4)*gpdf(stemp,ppdf1_C4,ppdf2_C4,ppdf3_C4,ppdf4_C4)
+prdx_1 = scale(c3c4, prdx_C3, prdx_C4)
+agprod = prdx_1*potprd*((avh2o_1 + (ppt_m * 0.1)) / pet)*biof*shdmod*sdlng
+bgprod = agprod*rtsh
 cprodc = (agprod + bgprod) * 0.4
 cprodf = ((prdx_2*f_stemp_ppdf_2*((avh2o_2 + (ppt_m * 0.1)) / pet)*f_lait_laitop*0.5) - sumrsp)
 
@@ -188,7 +192,7 @@ from bgc_md2.display_helpers import mass_balance_equation
 mass_balance_equation(mvs)
 
 # +
-##for comparison the century model as found in our database
+# for comparison the century model as found in our database
 #from bgc_md2.models.Parton1987SoilSciSocAmJ.source_by_name import mvs as mvs_century
 #mvs.computable_mvar_types
 #mvs_century.get_InputTuple()
@@ -211,103 +215,21 @@ srm=mvs.get_SmoothReservoirModel()
 srm.free_symbols
 # Of course you would probably know this but this little test is useful half way through 
 # to check which parameters are still in need of a value...
+
+# +
+# In real live you would probably read this from a textfile
+# ... yes, read parameter dictionary from a txt file
+import ast
+par_dict_in = open(r"mini_model_params_dict_24.txt", 'r')
+par_dict = {}
+for line in par_dict_in:
+    k, v = line.strip().split('=')
+    par_dict[k.strip()] = ast.literal_eval(v)
+    
+par_dict_in.close()
 # -
 
-# In real live you would probably read this from a textfile
-par_dict={
-    AGLIVC:1,
-    BGLIVC:1,
-    CROOTC:1,
-    FBRCHC:1,
-    FROOTC:1,
-    METABC_1:1,
-    METABC_2:1,
-    RLEAVC:1,
-    RLWODC:1,
-    SOM1C_1:1,
-    SOM1C_2:1,
-    SOM2C:1,
-    SOM3C:1,
-    STDEDC:1,
-    STRUCC_1:1,
-    STRUCC_2:1,
-    WOOD1C:1,
-    WOOD2C:1,
-    WOOD3C:1,
-    arain:1,
-    avh2o_1:1,
-    avh2o_2:1,
-    bglivc_1:1,
-    bglive_1:1,
-    biof:1,
-    dec1_1:1,
-    dec1_2:1,
-    dec2_1:1,
-    dec2_2:1,
-    dec3_1:1,
-    dec3_2:1,
-    dec4:1,
-    dec5:1,
-    deck5:1,
-    decw1:1,
-    decw2:1,
-    decw3:1,
-    defac:1,
-    dthppt:1,
-    e:1,
-    eftext:1,
-    f_asmos2:1,
-    f_lait_laitop:1,
-    f_stemp_ppdf_1:1,
-    f_stemp_ppdf_2:1,
-    fallrt:1,
-    fcfrac_1_1:1,
-    fcfrac_2_1:1,
-    fcfrac_3_1:1,
-    fcfrac_4_1:1,
-    fcfrac_5_1:1,
-    fligni1_1:1,
-    fligni1_2:1,
-    fligni2_1:1,
-    fligni2_2:1,
-    fps1s3:1,
-    fps2s3:1,
-    frootc_1:1,
-    froote_1:1,
-    fsdeth_i:1,
-    fsdeth_s:1,
-    leafdr_d_mo:1,
-    leafdr_e_mo:1,
-    orglch:1,
-    p1co2_2:1,
-    pet:1,
-    ppt_m:1,
-    prdx_1:1,
-    prdx_2:1,
-    rdr:1,
-    rleavc_1:1,
-    rleave_1:1,
-    rtsh:1,
-    sdlng:1,
-    shdmod:1,
-    spl_I:1,
-    spl_S:1,
-    stdedc_1:1,
-    stdede_1:1,
-    strlig_1:1,
-    strlig_2:1,
-    sumrsp:1,
-    wdlig_1:1,
-    wdlig_2:1,
-    wdlig_3:1,
-    wdlig_4:1,
-    wdlig_5:1,
-    wooddr_1:1,
-    wooddr_2:1,
-    wooddr_3:1,
-    wooddr_4:1,
-    wooddr_5:1,
-}
+par_dict
 
 # The functions are a bit more obvious since we only expressed a view of them explicitly 
 # but we could also find them as the little example schows...
@@ -315,7 +237,6 @@ test_f = Function("test_f")
 x = Symbol("x")
 expr = x**2*test_f(x)
 expr, expr.atoms(Function)
-
 
 # Now for our real model, where functions could be in the  
 mvs.get_InputTuple().atoms(Function).union(mvs.get_CompartmentalMatrix().atoms(Function))
@@ -335,32 +256,56 @@ ts=np.array(range(730))
 ax=plt.plot(ts,num_G_pp_grass(ts))
 #func_dict={Gpp_grass(t): num_G_pp_grass}
 # but since we have not functions left we define an empty func_dict
-func_dict=dict()
+#func_dict=dict()
+
+# +
+# functions from century
+import numpy as np
+
+def gpdf(x,a,b,c,d):
+    frac = (b-x)/(b-a)
+    if frac>0:
+        return (pow(frac,c))*np.exp((c/d)*(1-pow(frac,d)))
+    else:
+        return 0
+
+def scale(fac, val1, val2):
+    return (fac*val1) + ((1-fac) * val2)
+
+func_dict = {
+    gpdf(stemp,ppdf1_C3,ppdf2_C3,ppdf3_C3,ppdf4_C3): gpdf,
+    gpdf(stemp,ppdf1_C4,ppdf2_C4,ppdf3_C4,ppdf4_C4): gpdf,
+    scale(c3c4, prdx_C3, prdx_C4): scale
+}
+
+# -
 
 # The last thing we need to run the model are the startvalues
+# These are found in the .100 files in the ModelParameters_MC2 directory by veg type; see sumcar.F for equivalent parameter names.
+# METABC and STRUCC are initialized in calciv.F.
 svd={
-    AGLIVC:10, 
-    BGLIVC:10, 
-    STDEDC:1.1, 
-    STRUCC_1:10, 
-    STRUCC_2:10, 
-    SOM1C_1:10,
-    SOM1C_2:10,
-    SOM2C:10,
-    SOM3C:10,
-    METABC_1:10,
-    METABC_2:10,
-    CROOTC:10,
-    FBRCHC:10,
-    FROOTC:10,
-    RLEAVC:10,
-    RLWODC:10,
-    WOOD1C:10,
-    WOOD2C:10,
-    WOOD3C:10
+    AGLIVC:0, 
+    BGLIVC:200, 
+    STDEDC:50, 
+    STRUCC_1:0, 
+    STRUCC_2:0, 
+    SOM1C_1:25,
+    SOM1C_2:35,
+    SOM2C:2400,
+    SOM3C:1400,
+    METABC_1:0,
+    METABC_2:0,
+    CROOTC:500,
+    FBRCHC:150,
+    FROOTC:524,
+    RLEAVC:28,
+    RLWODC:300,
+    WOOD1C:180,
+    WOOD2C:100,
+    WOOD3C:100
 }
 svt=mvs.get_StateVariableTuple()
-svt
+#svt
 
 # We make a small test that we have all startvalues of them by substituting the values  for the symbols
 svt.subs(svd)
@@ -387,3 +332,18 @@ for i in range(n_pools):
 # -
 
 
+
+
+
+x=Symbol("x")
+
+# +
+s=x**2-x
+
+s
+# -
+
+type(s)
+
+from sympy import Rational
+Rational(45,100)
