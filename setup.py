@@ -23,7 +23,7 @@ setup(
     long_description=readme(),  # avoid duplication
     author="MarkusHolger, Veronika, Thomas,  ",
     author_email="markus.mueller.1.g@gmail.com",
-   url="https://github.com/MPIBGC-TEE/bgc_md2",
+    url="https://github.com/MPIBGC-TEE/bgc_md2",
     packages=find_packages('src'),  # find all packages (multifile modules) recursively
     package_dir={'': 'src'},
     include_package_data=True,
