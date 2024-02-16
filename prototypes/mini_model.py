@@ -13,6 +13,7 @@
 #     name: python3
 # ---
 
+from IPython.display import display, Markdown, Math
 from sympy import var,Function,Symbol,Rational
 from ComputabilityGraphs.CMTVS import CMTVS
 from bgc_md2.helper import bgc_md2_computers
@@ -26,7 +27,7 @@ from bgc_md2.resolve.mvars import (
 
 # +
 # obtain dictionary of symbols for equations from txt file
-params_in = open(r"mini_model_sym_dict_24.txt", 'r')
+params_in = open(r"mini_model_sym_dict.txt", 'r')
 sym_dict = {}
 for line in params_in:
     k, v = line.strip().split('=')
@@ -220,7 +221,7 @@ srm.free_symbols
 # In real live you would probably read this from a textfile
 # ... yes, read parameter dictionary from a txt file
 import ast
-par_dict_in = open(r"mini_model_params_dict_24.txt", 'r')
+par_dict_in = open(r"mini_model_params_dict.txt", 'r')
 par_dict = {}
 for line in par_dict_in:
     k, v = line.strip().split('=')
@@ -247,7 +248,7 @@ import matplotlib.pyplot as plt
 # but I demonstrate how to build a concrete numeric version of this symbolic function,
 # which will in real live in all likelyhood be an interpolation from data (probably from a netcdf file)
 # We can build such a function later when you tell me about your data format.
-# Here invented  a seasonal function with a peak in the middle of the year
+# Here I invented  a seasonal function with a peak in the middle of the year
 def num_G_pp_grass(t):
     omega=2*np.pi/365 #period of 365 days  
     phi=np.pi # phaseshift to start at the lowest value at t=0
@@ -262,23 +263,61 @@ ax=plt.plot(ts,num_G_pp_grass(ts))
 # functions from century
 import numpy as np
 
-def gpdf(x,a,b,c,d):
+# I was a bit suspicious of the functions, in particular that they are proper nuerical functions, that we could plot.
+# This turned out not to be the problem which was due to naming...
+# In fact the symbolic version and the numeric one are different objects but referred to by the same name 
+# (which is a problem only if the two objects are in the same namespace which in this notebook they were)
+# So the real problem was solved by renaming the numeric version. (I choose the arbritrary suffix "_num")
+
+
+# But plotting is a good test anyway... since pythons leniency to accept everything is a bit of a problem when it fails much later...
+# Of course plotting a function over a five dimensionsal domain would earn you the Fields Medal but we can
+# at least try to plot the restrictions of the function to one of the variables.
+def gpdf_num(x,a,b,c,d):
     frac = (b-x)/(b-a)
     if frac>0:
         return (pow(frac,c))*np.exp((c/d)*(1-pow(frac,d)))
     else:
         return 0
 
-def scale(fac, val1, val2):
-    return (fac*val1) + ((1-fac) * val2)
+fig=plt.figure()
+axs=fig.subplots(5,1)
+xs=np.linspace(-10,10,210) # made up values, you should put something realistic here
+ys=[gpdf_num(x=x,a=2,b=3,c=4,d=5) for x in xs] # dito....
+axs[0].plot(xs,ys)
 
+a_s=np.linspace(-5,5,210) #dito
+ys=[gpdf_num(x=2,a=a,b=3,c=4,d=5) for a in a_s]
+axs[1].plot(a_s,ys)
+
+
+# etc.....(plot other restrictions, maybe also a 3d plot of two parameters...)
+# -
+
+def scale_num(fac, val1, val2):
+    return (fac*val1) + ((1-fac) * val2)
+fig2=plt.figure()
+axs=fig2.subplots(3,1)
+facs=np.linspace(-10,10,210)
+ys=[scale_num(fac,1,2) for fac in facs]
+axs[0].plot(facs,ys)
+# etc..
+
+#actually sympy figures out the arguments by position (I could have ommitted them in my example) 
 func_dict = {
-    gpdf(stemp,ppdf1_C3,ppdf2_C3,ppdf3_C3,ppdf4_C3): gpdf,
-    gpdf(stemp,ppdf1_C4,ppdf2_C4,ppdf3_C4,ppdf4_C4): gpdf,
-    scale(c3c4, prdx_C3, prdx_C4): scale
+    gpdf: gpdf_num,
+    scale: scale_num
 }
 
+# +
+#func_dict = {
+#    gpdf(stemp,ppdf1_C3,ppdf2_C3,ppdf3_C3,ppdf4_C3): gpdf,
+#    gpdf(stemp,ppdf1_C4,ppdf2_C4,ppdf3_C4,ppdf4_C4): gpdf, 
+#    scale(c3c4, prdx_C3, prdx_C4): scale
+#}
 # -
+
+
 
 # The last thing we need to run the model are the startvalues
 # These are found in the .100 files in the ModelParameters_MC2 directory by veg type; see sumcar.F for equivalent parameter names.
