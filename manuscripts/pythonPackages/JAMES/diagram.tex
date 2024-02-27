@@ -1,15 +1,24 @@
 %\begin{tikzpicture}
 %\draw (0,0) node [draw=black] {My text};
 %\end{tikzpicture}
-\newcommand{\fargs}{(t,\bar{A},\bar{B})}
+%\newcommand{\fargs}{(t,\bar{A},\bar{B})}
+\newcommand{\fargs}{}
+\usetikzlibrary {backgrounds}
+
 \begin{tikzpicture}[
       > = stealth, % arrow head style
       shorten > = 1pt, % don't touch arrow head to node
       auto,
-      node distance = 3cm, % distance between nodes
+      node distance = 1.5cm, % distance between nodes
       semithick % line style
   ]
   
+
+  \begin{scope}[on background layer={color=yellow}]
+    \fill[blue!25] (1.5,-2.5) circle (1.5cm);
+    %\fill (-1,-1) rectangle (1,1);
+  \end{scope}
+
   \tikzstyle{every state}=[
       draw = black,
       thick,
@@ -17,19 +26,79 @@
       minimum size = 4mm
   ]
   
-  \node[state, draw=none] (s) {$ $};
-  \node[state] (A) [right of=s] {$A$};
-  \node[state] (B) [below right of=A] {$B$};
-  \node[state, draw=none] (t_A) [above right of=B] {$ $};
-  \node[state, draw=none] (t_B) [right of=B] {$ $};
+  \node[state, draw=none] (s_a) {$ $};
+  \node[state] (a) [right of=s_a] {$a$};
   
-  %\path[->] (s) edge node {18} (A);
-  \path[->] (s) edge[blue] node {$F_{\rightarrow A}\fargs$} (A);
+  \node[state] (d) [below of=a] {$d$};
+  \node[state] (e) [below right of=d] {$e$};
+  \node[state] (f) [below left of=d] {$f$};
+  \node[state] (c) [below left of=f] {$c$};
+  \node[state] (b) [below right of=e] {$b$};
+  \node[state, draw=none] (s_c) [left of=c] {$ $};
+  \node[state, draw=none] (t_a) [right of=a] {$ $};
+  \node[state, draw=none] (t_b) [right of=b] {$ $};
+
+
+  \path[->] (s_a) edge[blue] node {$F_{\rightarrow a}\fargs$} (a);
+  \path[->] (s_c) edge[blue] node {$F_{\rightarrow c}\fargs$} (c);
   %\path[->] (s) edge node {1} (C);
-  \path[->] (A) edge[bend left] node {$F_{A \rightarrow B}\fargs$} (B);
-  \path[->] (B) edge[bend left] node {$F_{B \rightarrow A}\fargs$} (A);
-  \path[->] (A) edge[red] node {$F_{A \rightarrow}\fargs$} (t_A);
-  \path[->] (B) edge[red] node {$F_{B \rightarrow}\fargs$} (t_B);
+  \path[->] (a) edge[bend left] node {$F_{a \rightarrow d}\fargs$} (d);
+  \path[->] (d) edge	        node {$F_{d \rightarrow e}\fargs$} (e);
+  \path[->] (f) edge	        node {$F_{f \rightarrow e}\fargs$} (e);
+  \path[->] (d) edge[bend left] node {$F_{d \rightarrow a}\fargs$} (a);
+  \path[->] (c) edge            node {$F_{c \rightarrow f}\fargs$} (f);
+  \path[->] (e) edge            node {$F_{e \rightarrow b}\fargs$} (b);
+  \path[->] (a) edge[red] node {$F_{a \rightarrow}\fargs$} (t_a);
+  \path[->] (b) edge[red] node {$F_{b \rightarrow}\fargs$} (t_b);
+  
+  %\draw[blue, dashed] (1, 2) -- (1, -2);
+  %\draw[red, dashed] (6, 2) -- (6, -2);
+\end{tikzpicture}
+\begin{tikzpicture}[
+      > = stealth, % arrow head style
+      shorten > = 1pt, % don't touch arrow head to node
+      auto,
+      node distance = 1.5cm, % distance between nodes
+      semithick % line style
+  ]
+  
+
+  \begin{scope}[on background layer={color=yellow}]
+    \fill[blue!25] (1.5,-2.5) circle (1.5cm);
+    %\fill (-1,-1) rectangle (1,1);
+  \end{scope}
+
+  \tikzstyle{every state}=[
+      draw = black,
+      thick,
+      fill = white,
+      minimum size = 4mm
+  ]
+  
+  \node[state, draw=none] (s_a) {$ $};
+  \node[state] (a) [right of=s_a] {$a$};
+  
+  \node[state] (d) [below of=a] {$d$};
+  \node[state] (e) [below right of=d] {$e$};
+  \node[state] (f) [below left of=d] {$f$};
+  \node[state] (c) [below left of=f] {$c$};
+  \node[state] (b) [below right of=e] {$b$};
+  \node[state, draw=none] (s_c) [left of=c] {$ $};
+  \node[state, draw=none] (t_a) [right of=a] {$ $};
+  \node[state, draw=none] (t_b) [right of=b] {$ $};
+
+
+  \path[->] (s_a) edge[blue] node {$F_{\rightarrow a}\fargs$} (a);
+  \path[->] (s_c) edge[blue] node {$F_{\rightarrow c}\fargs$} (c);
+  %\path[->] (s) edge node {1} (C);
+  \path[->] (a) edge[bend left] node {$F_{a \rightarrow d}\fargs$} (d);
+  \path[->] (d) edge	        node {$F_{d \rightarrow e}\fargs$} (e);
+  \path[->] (f) edge	        node {$F_{f \rightarrow e}\fargs$} (e);
+  \path[->] (d) edge[bend left] node {$F_{d \rightarrow a}\fargs$} (a);
+  \path[->] (c) edge            node {$F_{c \rightarrow f}\fargs$} (f);
+  \path[->] (e) edge            node {$F_{e \rightarrow b}\fargs$} (b);
+  \path[->] (a) edge[red] node {$F_{a \rightarrow}\fargs$} (t_a);
+  \path[->] (b) edge[red] node {$F_{b \rightarrow}\fargs$} (t_b);
   
   %\draw[blue, dashed] (1, 2) -- (1, -2);
   %\draw[red, dashed] (6, 2) -- (6, -2);
