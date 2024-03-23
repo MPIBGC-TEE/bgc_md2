@@ -6,33 +6,6 @@ import matplotlib.pyplot as plt
 from functools import reduce
 from typing import List
 
-ifbs = ["a","c","e"]
-ofbs = ["f","b"]
-intfbs=[
-    ("a","d"),
-    ("a","e"),
-    ("d","f"),
-    ("e","b"),
-    ("e","f"),
-    ("c","f"),
-]
-swoss = {"a","b","c"}
-ss = {"d","e","f"}
-s = swoss.union(ss)
-# first add the inner node
-G=nx.DiGraph()
-G.add_nodes_from(ss)
-f=plt.figure(figsize=(10,10))
-axs=f.subplots(2,1)
-ax=axs[0]
-#pos_ss=nx.circular_layout(G,center=np.array([0,0]))
-leftb = -3
-rightb = 3
-pos_ss={
- 'd': np.array([-1.00000000e+00, 1.98682151e-08]),
- 'e': np.array([0.50000007,  0.86602542]),
- 'f': np.array([0.49999993, -0.86602544]),
-}
 def project_in(arr):
     x,y=arr
     return np.array([leftb, y])
@@ -171,6 +144,30 @@ def plot(
     for circ in circs:
         ax.add_patch(circ)
 
+ifbs = ["a","c","e"]
+ofbs = ["f","b"]
+intfbs=[
+    ("a","d"),
+    ("a","e"),
+    ("d","f"),
+    ("e","b"),
+    ("e","f"),
+    ("c","f"),
+]
+swoss = {"a","b","c"}
+ss = {"d","e","f"}
+s = swoss.union(ss)
+# first add the inner node
+G=nx.DiGraph()
+G.add_nodes_from(ss)
+#pos_ss=nx.circular_layout(G,center=np.array([0,0]))
+leftb = -3
+rightb = 3
+pos_ss={
+ 'd': np.array([-1.00000000e+00, 1.98682151e-08]),
+ 'e': np.array([0.50000007,  0.86602542]),
+ 'f': np.array([0.49999993, -0.86602544]),
+}
 G.add_nodes_from(swoss)
 pos_swoss = {
     "a":2*pos_ss["d"],
@@ -195,6 +192,10 @@ r_ss = 1.3
 r_s = 2.3
 circ_s_b = plt.Circle((0,0),r_s,color='black',alpha=black_alpha)
 circ_s = plt.Circle((0,0),r_s,color='red',alpha=red_alpha)
+
+f=plt.figure(figsize=(4.5,9))
+axs=f.subplots(2,1)
+ax=axs[0]
 plot(
     G,
 	axs[0],
@@ -214,5 +215,5 @@ plot(
 	ss,
 	[circ_s_b, circ_ss]
 )
-f.savefig("abstract_subsystems.pdf")
+f.savefig("abstract_subsystems.pdf", bbox_inches='tight')
 
