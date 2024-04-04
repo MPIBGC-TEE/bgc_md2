@@ -1,7 +1,7 @@
-![test_conda/mamba_ubuntu](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
 ![test_binder_pinned](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
 ![test_binder_free](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
 
+[![test_conda_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml)
 [![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml)
 [![test_windows_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_windows_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_windows_developer_install.yml)
 
