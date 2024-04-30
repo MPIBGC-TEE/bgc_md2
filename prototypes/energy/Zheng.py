@@ -1,9 +1,10 @@
+# +
 # To do:
 # - check corner cases for empty Influx dict in the plot
 # - check the corner case for no flux from a node in the matplotlib_plot
 # +
 # adjust the output to full width
-from IPython.display import HTML
+#from IPython.display import HTML
 #display(HTML("<style>.container { width:100% !important; }</style>"))
 
 # make changes to imported files immidiately available 
@@ -12,20 +13,22 @@ from IPython.display import HTML
 # #%autoreload 2
 
 # +
-from sympy import var, Symbol, Function, Tuple, lambdify
-from ComputabilityGraphs.CMTVS import CMTVS
-from ComputabilityGraphs.helpers import module_computers
-#from bgc_md2.helper import module_computers
+from pathlib import Path
+from sympy import var, Symbol, Function, Tuple, lambdify, exp, Abs, Matrix, diff
+#from ComputabilityGraphs.CMTVS import CMTVS
+#from ComputabilityGraphs.helpers import module_computers
+##from bgc_md2.helper import module_computers
 from bgc_md2.resolve.mvars import (
-    InFluxesBySymbol,
-    OutFluxesBySymbol,
-    InternalFluxesBySymbol,
+#    InFluxesBySymbol,
+#    OutFluxesBySymbol,
+#    InternalFluxesBySymbol,
     TimeSymbol,
-    StateVariableTuple,
+#    StateVariableTuple,
 )
-from importlib import import_module
+#from importlib import import_module
 from scipy.integrate import solve_ivp
-
+import matplotlib.pyplot as plt
+import numpy as np
 # the substrates
 # in our example only C (OC_1 =OC_C)
 i_s=[1,2]
@@ -111,15 +114,14 @@ for k in sym_dict.keys():
 # ...
 # we do it this way, because we want the dictionary for documentation later...
 
-# We will also use some symbolic functions ("symbols" with an argument) 
-func_dict={
-    "I_B_1": "Influx into B_1 pool",
-}
-for k in func_dict.keys():
-    code=k+" = Function('{0}')".format(k)
-    exec(code)
-# Note:
-# Again we want the dictionary for later
+## We will also use some symbolic functions ("symbols" with an argument) 
+#sym_func_dict={
+#}
+#for k in sym_func_dict.keys():
+#    code=k+" = Function('{0}')".format(k)
+#    exec(code)
+## Note:
+## Again we want the dictionary for later
 
 t=TimeSymbol("t")
 state_var_tuple=Tuple(
@@ -153,7 +155,7 @@ rhs_sym=Tuple(
                 [
                     (
                         Symbol(f"y_OC_{i}_{j}")
-                        * Symbol(f"mu_{i}_{j}_{k}")
+                        *Symbol(f"mu_{i}_{j}_{k}")
                         * Symbol(f"B_{k}")
                     )
                     for j in js
@@ -254,8 +256,94 @@ par_dict = {
         for j in js
     }
 }        
+
 solve_ivp(
     fun=lambdify((t,state_var_tuple),rhs_sym.subs(par_dict),"numpy"),
     t_span=(0,5),
     y0=y0,
 )
+# until now we treated the mu's as parameters 
+# now we use eq 6 and 7 to replace them
+subs_dict_2 = {
+    **{
+        Symbol(f"mu_{i}_{j}_{k}"): 
+        (
+            Symbol(f"mu_max_{i}_{j}_{k}")
+            *
+            exp(
+                -Abs(Symbol(f"y_OC_{i}_{j}"))
+                /
+                (
+                    Symbol(f"V_h")
+                    *Symbol(f"OC_{i}")
+                )
+            )
+            *
+            exp(
+                -Abs(Symbol(f"y_EA_{i}_{j}"))
+                /
+                (
+                    Symbol(f"V_h")
+                    *Symbol(f"EA_{j}")
+                )
+            )
+        )
+        for i in i_s
+        for j in js
+        for k in ks
+    }
+}
+rhs_sym_2=rhs_sym.subs(subs_dict_2)
+# instead of the mus we now have mu_max_{i}_{j}_{k} and Vh
+par_dict_2 = {
+    Symbol("V_h"):5 # fake value
+    ,
+    **{
+        Symbol(f"mu_max_{i}_{j}_{k}"): 0.1 # fake value
+        for i in i_s
+        for j in js
+        for k in ks
+    }
+    ,
+    **{
+        Symbol(f"y_OC_{i}_{j}"): -0.1 # fake value, negative because it is a reactant
+        for i in i_s
+        for j in js
+    }
+    ,
+    **{
+        Symbol(f"y_EA_{i}_{j}"): -0.1 # fake value, negative because it is a reactant
+        for i in i_s
+        for j in js
+    }
+    ,
+    **{
+        Symbol(f"y_HCO3_{i}_{j}"): -0.1 ## fake value
+        for i in i_s
+        for j in js
+    }
+}        
+sol2=solve_ivp(
+    fun=lambdify((t,state_var_tuple),rhs_sym_2.subs(par_dict_2),"numpy"),
+    t_span=(0,50),
+    y0=y0,
+    dense_output=True
+).sol
+# -
+
+plot_times=np.linspace(sol2.t_min,sol2.t_max,100)
+fig=plt.figure()
+ax=fig.add_subplot()
+values=sol2(plot_times)
+for i in range(values.shape[0]):
+    ax.plot(
+        plot_times,
+        values[i,:],
+        label=str(state_var_tuple[i])
+    ) 
+ax.legend()
+fig.savefig(f"{Path(__file__).stem}.pdf")
+
+
+
+
