@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 def solve_and_plot(mod_name):
     name=f"{Path(__file__).stem}_{mod_name}"
     mod=import_module(mod_name)
+    # print(mod.rhs_sym.subs(mod.par_dict).free_symbols)
+    # from IPython import embed; embed()
     sol_Monod=solve_ivp(
         fun=lambdify(
             (
@@ -15,7 +17,7 @@ def solve_and_plot(mod_name):
                 mod.state_var_tuple
             ),
             mod.rhs_sym.subs(mod.par_dict),"numpy"),
-        t_span=(0,500),
+        t_span=(0,250),
         y0=mod.state_var_tuple.subs(mod.start_value_dict),
         dense_output=True
     ).sol
@@ -30,12 +32,18 @@ def solve_and_plot(mod_name):
             values[i,:],
             label=str(mod.state_var_tuple[i])
         ) 
-    ax.legend()
+    ax.legend(loc="upper right")
     ax.set_title(label=name)
     fig_path=Path("figures") 
     if not fig_path.exists():
         fig_path.mkdir()
     fig.savefig(fig_path.joinpath(f"{name}.pdf"))
 
-solve_and_plot("P2TherMic_dormancy_2_Monod")
-solve_and_plot("P2TherMic_dormancy_2_MTS")
+for mod_name in [
+        "P2TherMic_dormancy_2_Monod",
+        "P2TherMic_dormancy_2_MTS",
+        "P2TherMic_dormancy_3_Monod",
+        "P2TherMic_dormancy_3_MTS"
+    ]:    
+    solve_and_plot(mod_name)
+
