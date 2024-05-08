@@ -11,6 +11,7 @@ from sbi.utils.user_input_checks import (
 )
 from scipy.integrate import solve_ivp
 import P2TherMic_dormancy_2_Monod as mod 
+#from P2TherMic_dormancy_2_Monod import state_var_tuple
 
 estimated_parameters=namedtuple(
     "estimated_parameters",
@@ -19,23 +20,27 @@ estimated_parameters=namedtuple(
         "X",
         "mu_max",
         "m_max",
-       # "K_S",
-       # "V_h",
-       # "Y_X_S",
-       # "Y_X_N",
-       # "rho_B",
-       # "Theta",
-       # "alpha",
-       # "S_T", 
-       # "Delta_C", 
-       # "H_X", 
-       # "H_S", 
-       # "H_NH3", 
+        # "K_S",
+        # "V_h",
+        # "Y_X_S",
+        # "Y_X_N",
+        # "rho_B",
+        # "Theta",
+        # "alpha",
+        # "S_T", 
+        # "Delta_C", 
+        # "H_X", 
+        # "H_S", 
+        # "H_NH3", 
     ]
 )
 consts=namedtuple(
     "consts",
     [ 
+        #"S",
+        #"X",
+        #"mu_max",
+        #"m_max",
         "K_S",
         "R",
 		"XN",
@@ -53,10 +58,15 @@ consts=namedtuple(
         "H_NH3", 
     ]
 )
-#all_parameter={**estimated_parameters._
-## create pardict
-#par_dict={
-#            Symbol(k)
+
+
+def simulation_times(obs):
+    # at the moment fake 
+    t_min=0
+    t_max=100
+    n=50
+    return np.linspace(t_min,t_max,n)
+
 def simulation_wrapper(params: np.array):
     """
     Returns summary statistics from conductance values in `params`.
@@ -81,12 +91,7 @@ def simulation_wrapper(params: np.array):
             "H_S": 1, # fixme mm": unknown
             "H_NH3": 1, # fixme mm": unknown
         }
-    
-        )
-    #params=torch.reshape(
-    #    params,
-    #    (len(estimated_parameters._fields),)
-    #)
+    )
     #from IPython import embed;embed()
     ep=estimated_parameters(
         *params
@@ -109,18 +114,17 @@ def simulation_wrapper(params: np.array):
                 mod.state_var_tuple
             ),
             mod.rhs_sym.subs(par_dict),"numpy"),
-        t_span=(0,500),
+        t_span=(0,250),
         y0=y0,
         dense_output=True
     ).sol
     
-    plot_times=np.linspace(sol.t_min,sol.t_max,100)
+    plot_times=simulation_times("fake")
     values=sol(plot_times)
-
-    #obs = run_HH_model(params)
-    #summstats = torch.as_tensor(calculate_summary_statistics(obs))
-    #return summstats
-    return torch.as_tensor(values.reshape(-1))
+    # sbi can only handle one dimensional results 
+    # so we have to flatten the result.
+    flat_values = values.reshape(-1)
+    return torch.as_tensor(flat_values)
 
 
 prior_ranges= {
@@ -139,7 +143,19 @@ prior_ranges= {
     #"H_X": (0,2) , # fixme mm: unknown  
     #"H_S": (0,2) , # fixme mm: unknown  
     #"H_NH3": (0,2) , # fixme mm: unknown  
-}
+} 
+#from IPython import embed;embed()
+ep0 = np.array( 
+    estimated_parameters(
+        **{
+            k: {
+                    **mod.start_value_dict,
+                    **mod.par_dict
+            }[Symbol(k)] 
+            for k in estimated_parameters._fields
+        }
+    )
+)
 prior_min = np.array(
     estimated_parameters(
         **{ 
@@ -156,6 +172,7 @@ prior_max = np.array(
         }
     )
 )
+
 prior=utils.torchutils.BoxUniform(
         low=torch.as_tensor(prior_min),
         high=torch.as_tensor(prior_max)
