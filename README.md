@@ -1,8 +1,9 @@
-![test_conda/mamba_ubuntu](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_developer_installation/badge.svg)
-![test_conda/mamba_windows](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_windows_developer_installation/badge.svg)
 ![test_binder_pinned](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
 ![test_binder_free](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
-![test_ubuntu_pip_only](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_debian_pip_install/badge.svg)
+
+[![test_conda_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml)
+[![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml)
+[![test_windows_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_windows_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_windows_developer_install.yml)
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder)
 ## Installation
@@ -97,25 +98,41 @@ In the second case the same assistance is required for queries, which are best d
 * ...
 
 # Contribution
+## Green master
 We try to keep the master green and develop new features or bug fixes in short lived branches that are then 
 merged back into the master https://nvie.com/posts/a-successful-git-branching-model/
 See also https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell
-https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependencies.
-
 * Example workflow to work on a feature branch `iss26-non-importable-models` you are asked to review 
   * `git branch -a` (shows all branches including remotes)
   * `git checkout --track origin/iss26-non-importable-models` (creates a local copy that you can test)
 * Example to create your own feature branch (here to fix an issue )
   * `git checkout -b iss53`
 
-## various notes on implementation
 
-* The 'Computers' and 'MVars' represent a set of types and strictly typed
-  functions (including the return values).
-  This has been implemented with the new python type annotations.  
-  An advantage is that we can express our
-  idea in a well defined and well documented way and avoid extra effort for the
-  user..  
-* The computibility graph is expensive to create and only changes if new
-  `Computers` and `MVars` are created.  It should be cached, which encurages
-  the use of immutable data structures. (since we can use functools )
+### To merge into the master:
+* run the testsuites 
+* merge into the branch ```test```
+* merge test into master
+
+The (github) workflows run the testsuites. This is an additional protection against forgotten files or other idiosycracies of your setup, that let the testsuites succeeed locally but brake for other users.
+
+## Green Binder
+Another important branch is ```binder```. It contains a smaller version of the repository to meet the binder requirements of total size<2GB which is deployed by mybinder.org to allow exploration without installation (the binder button on top).
+It relies on the smaller binder branch of ```CompartmentalSystems```   
+(see https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependencies)
+and therefore has a ```.gitmodules``` file that is permanently different from ```test``` and ```master``` branches.
+If you merge something to the binder branch the workflow is similar to merges to the master.
+
+### Before you try to merge into binder :
+* run the testsuites 
+* merge into the branch ```test```.
+* merge test into binder
+* make sure that your merge dosn't overwrite the branch specific files
+  These are listed in the (version controlled) ```.gitattributes``` file with the special merge strategie "ours".
+  You can automate this by configuring git to use the merge driver ```true``` (a posix command line tool that always exits with 0)
+  by the command 
+  ```git config merge.ours.driver true```    
+  https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes#_merge_strategies 
+
+
+

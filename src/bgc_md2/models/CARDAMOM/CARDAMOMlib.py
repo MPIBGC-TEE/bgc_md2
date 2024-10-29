@@ -62,9 +62,9 @@ def prepare_cluster(
     # ...
     worker_kwargs = {
         "memory_limit": "2G",
-        "memory_target_fraction": 0.95,
-        "memory_spill_fraction": 0.95,
-        "memory_pause_fraction": 0.95,
+#        "memory_target_fraction": 0.95,
+#        "memory_spill_fraction": 0.95,
+#        "memory_pause_fraction": 0.95,
         #"memory_terminate_fraction": False, # leads to errors if commented in
     }
 
@@ -72,7 +72,7 @@ def prepare_cluster(
         dashboard_address="localhost:"+str(my_dashboard_port),
         n_workers=n_workers,
         threads_per_worker=1,
-#        **worker_kwargs # seem to be ignored
+        **worker_kwargs # seem to be ignored
     )
     print("default dashboard port (might change if busy):", my_dashboard_port)
 
@@ -408,10 +408,10 @@ def compute_start_values(single_site_dict, time_step_in_days):
 def compute_start_values_14C(
     mr,
     nr_time_steps,
-    CARDAMOM_path=Path("/home/data/CARDAMOM/")
+    intcal20_path
 ):
 #    CARDAMOM_path = Path("/home/hmetzler/Desktop/CARDAMOM/")
-    intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
+#    intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
 
     intcal20 = np.loadtxt(
         intcal20_path,
@@ -450,7 +450,7 @@ def compute_start_values_14C(
     return start_values_14C
 
 
-def _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path):
+def _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path, intcal20_path):
     if not isinstance(dmr, DMR):
         raise(TypeError("wrong type of model run"))
 
@@ -480,7 +480,8 @@ def _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path):
 
     start_values_14C = compute_start_values_14C(
         dmr,
-        nr_time_steps
+        nr_time_steps,
+        intcal20_path
     )
 
     dmr_14C = DMR_14C(
@@ -493,7 +494,7 @@ def _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path):
     return dmr_14C
 
 
-def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
+def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path, intcal20_path):
     if not isinstance(dmr, DMR):
         raise(TypeError("wrong type of model run"))
 
@@ -533,16 +534,16 @@ def compute_solution_14C(dmr, nr_time_steps, Delta14C_atm_path):
 #        DECAY_RATE_14C_DAILY
 #    )
 
-    dmr_14C = _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path)
+    dmr_14C = _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path, intcal20_path)
     soln_dmr_14C = dmr_14C.solve()
     return soln_dmr_14C
 
 
-def compute_acc_net_external_output_vector_14C(dmr, nr_time_steps, Delta14C_atm_path):
+def compute_acc_net_external_output_vector_14C(dmr, nr_time_steps, Delta14C_atm_path, intcal20_path):
     if not isinstance(dmr, DMR):
         raise(TypeError("wrong type of model run"))
 
-    dmr_14C =  _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path)
+    dmr_14C =  _construct_DMR14C_from_DMR12C(dmr, nr_time_steps, Delta14C_atm_path, intcal20_path)
 
     data = np.nan * np.ones((len(dmr.times), dmr.nr_pools))
     data[:-1] = dmr_14C.acc_net_external_output_vector()
