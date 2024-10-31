@@ -34,9 +34,15 @@ tasks = [
     ),
     Task(
         args=[
+            "pip","install","-e", "." 
+        ],
+        cwd=Path("prototypes").joinpath("working_group_2021","trendy9helpers")
+    ),
+    Task(
+        args=[
             "python", "-m", "unittest", "Test_general_helpers.py" 
         ],
-        cwd=Path("prototypes").joinpath("working_group_2021")
+        cwd=Path("prototypes").joinpath("working_group_2021","trendy9helpers","tests")
     )
 ]
 results = [run(**t._asdict()) for t in tasks]
