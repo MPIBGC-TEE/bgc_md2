@@ -2,37 +2,96 @@
 import numpy as np
 import netCDF4 as nc
 from unittest import TestCase, skip
-#from numpy.core.fromnumeric import shape
+from numpy.core.fromnumeric import shape
 from pathlib import Path
 from time import time, sleep
 from scipy.interpolate import interp1d
 from testinfrastructure.InDirTest import InDirTest
-from trendy9helpers import general_helpers as gh
+import general_helpers as gh
 import matplotlib.pyplot as plt
 
 
 class Test_general_helpers(InDirTest):
 
-    #def test_date_2_trendy_days_since_AD(self):
-    #    tups = [
-    #        # January first AD 
-    #        (gh.date(0,1,1), 0), 
+    #def test_Pint(self):
+    #    x=np.linspace(0,1,10)
+    #    y=np.sin(x)
+    #    intp=interp1d(x,y)
+    #    f=gh.Pint1d(x,y)
+    #    p=Path("f.nc")
+    #    f.cache_netcdf(p)
+    #    
+    #    fff=gh.Pint1d.from_netcdf(p)
+    #    ffintp=gh.Pint1d.from_interp1d(intp)
 
-    #        # January 12 th AD
-    #        (gh.date(0,1,12), 11),
-    #       
-    #        # February 12 th AD
-    #        (gh.date(0,2,12), 41),
-    #        
-    #        # February 12 th 1 AD 
-    #        (gh.date(1,2,12), 401)
-    #    ]    
-    #    for tup in tups:
-    #        with self.subTest(tup=tup):
-    #            date, days = tup 
-    #            self.assertEqual(date.trendy_days_since_AD, days)
-    #            # test inverse
-    #            self.assertEqual(gh.date.from_trendy_days_since_AD(days),date)
+    #    x_test=np.linspace(0,1,100)
+    #    self.assertTrue(
+    #        np.allclose(
+    #            intp(x_test),
+    #            ffintp(x_test)
+    #        )    
+    #    )        
+    #    self.assertTrue(
+    #        np.allclose(
+    #            intp(x_test),
+    #            f(x_test)
+    #        )    
+    #    )        
+    #    self.assertTrue(
+    #        np.allclose(
+    #            f(x_test),
+    #            fff(x_test)
+    #        )    
+    #    )        
+        
+        
+
+
+    # the test is now obsolete since we 
+    # decided to work with a continuous function
+    # and a constant factor of 30 between days and months.
+    #def test_month_2_day_index(self):
+    #    self.assertEqual(month_2_day_index([0]), [0])
+    #    self.assertEqual(month_2_day_index([1]), [31])
+    #    self.assertEqual(month_2_day_index([2]), [59])
+    #    self.assertEqual(month_2_day_index([3]), [90])
+    #    self.assertEqual(month_2_day_index([1, 3]), [31, 90])
+
+    #def test_day_2_month_index(self):
+    #    # note that days are counted from zero so day 29 is January 30.
+    #    self.assertEqual(gh.day_2_month_index(0), 0)
+    #    self.assertEqual(gh.day_2_month_index(30), 1)
+    #    self.assertEqual(gh.day_2_month_index(31), 1)
+    #    self.assertEqual(gh.day_2_month_index(60), 2)
+
+    # def test_month_2_day_index_vm(self):
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([0]),
+    #            [0]
+    #    )
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([1]),
+    #            [31]
+    #    )
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([2]),
+    #            [59]
+    #    )
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([3]),
+    #            [90]
+    #    )
+    #    self.assertEqual(
+    #            gh.month_2_day_index_vm([1,3]),
+    #            [31,90]
+    #    )
+
+    # def test_day_2_month_index_vm(self):
+    #    # note that days are counted from zero so day 30 is January 31.
+    #    self.assertEqual(gh.day_2_month_index_vm( 0), 0)
+    #    self.assertEqual(gh.day_2_month_index_vm(30), 0)
+    #    self.assertEqual(gh.day_2_month_index_vm(31), 1)
+    #    self.assertEqual(gh.day_2_month_index_vm(60), 2)
 
     def test_pixel_area_on_unit_sphere(self):
         # we test that the pixel areas for a whole
@@ -387,15 +446,15 @@ class Test_general_helpers(InDirTest):
         self.assertTrue((res_arr == res_var).all())
         cache_path = Path("{}_gm.nc".format(trunk))
 
-        #gh.write_global_mean_cache(cache_path, res_var, vn)
-        ## def get_cached_global_mean(gm_path, vn):
-        ##    return nc.Dataset(str(gm_path)).variables[vn].__array__()
+        gh.write_global_mean_cache(cache_path, res_var, vn)
+        # def get_cached_global_mean(gm_path, vn):
+        #    return nc.Dataset(str(gm_path)).variables[vn].__array__()
 
-        #res_cache = gh.get_nc_array(cache_path, vn)
-        ## from IPython import embed;embed()
-        #self.assertTrue((res_cache == res_var).all())
+        res_cache = gh.get_nc_array(cache_path, vn)
+        # from IPython import embed;embed()
+        self.assertTrue((res_cache == res_var).all())
 
-        #ds.close()
+        ds.close()
 
         # now we test the same properties with a masked array
         # as e.g the CMIP6 files that Kostia uses
@@ -431,9 +490,9 @@ class Test_general_helpers(InDirTest):
         self.assertTrue((res_arr == res_var).all())
         cache_path = Path("{}_gm.nc".format(trunk))
 
-        #gh.write_global_mean_cache(cache_path, res_var, vn)
-        #res_cache = gh.get_nc_array(cache_path, vn)
-        #self.assertTrue((res_cache == res_var).all())
+        gh.write_global_mean_cache(cache_path, res_var, vn)
+        res_cache = gh.get_nc_array(cache_path, vn)
+        self.assertTrue((res_cache == res_var).all())
 
         ds.close()
 
@@ -458,13 +517,13 @@ class Test_general_helpers(InDirTest):
         res_arr = gh.global_mean(lats, lons, arr)
         res_var = gh.global_mean_var(lats, lons, mask.sum(axis=0), arr)
         self.assertTrue((res_arr == res_var).all())
-        #cache_path = Path("{}_gm.nc".format(trunk))
+        cache_path = Path("{}_gm.nc".format(trunk))
 
-        #gh.write_global_mean_cache(cache_path, res_var, vn)
-        #res_cache = gh.get_nc_array(cache_path, vn)
-        #self.assertTrue((res_cache == res_var).all())
+        gh.write_global_mean_cache(cache_path, res_var, vn)
+        res_cache = gh.get_nc_array(cache_path, vn)
+        self.assertTrue((res_cache == res_var).all())
 
-        #ds.close()
+        ds.close()
 
     # def test_common_mask(self):
     #    def i2c_maker(lat_0,lon_0,step_lat,step_lon):
@@ -843,3 +902,106 @@ class Test_general_helpers(InDirTest):
         ##        ).all()
         ##)
 
+    def test_InfiniteIterator(self):
+        I = (np.array([1, 1]).reshape(2, 1),)
+        k = 0.5
+
+        def f(i, X):
+            return X + (I - k * X)
+
+        itr = gh.InfiniteIterator(x0=np.array([1, 1]).reshape(2, 1), func=f)
+
+        # make sure that [] has no side effects
+
+        # first we get a single value
+        # the results will be tuples of length 1
+        # of 2,1 arrays
+        result_1 = itr[0]
+        result_2 = itr[0]
+        self.assertTrue(np.all((np.all(result_1[0] == result_2[0]))))
+
+        # tuples of arrays
+        results_1 = np.stack(itr[0:10])
+        results_2 = np.stack(itr[0:10])
+        self.assertTrue(np.all(results_1 == results_2))
+
+    def test_TraceTupleIterator(self):
+        def B_func(it, X):
+            return -0.5 * np.eye(2)
+
+        def I_func(it, X):
+            return 2 * np.ones(shape=(2, 1))
+
+        X_0 = np.array([2, 1]).reshape(2, 1)
+        traced_functions = {
+            # in our case X has
+            "test": lambda i, x1, x2: x1
+            ** 2
+        }
+        trace_tuple_instance = gh.make_trace_tuple_func(traced_functions)
+        V_init = trace_tuple_instance(
+            X_0,
+            # in Yiqi's nomenclature: dx/dt=I-Bx
+            # instead of           : dx/dt=I+Bx
+            # as assumed by B_u_func
+            -B_func(0, X_0),
+            I_func(0, X_0),
+            0,
+        )
+
+        # define the function with V_{i+1}=f(i,V_i)
+        def f(it: int, V: gh.TraceTuple) -> gh.TraceTuple:
+            X = V.X
+            I = I_func(it, X)
+            B = B_func(it, X)
+            X_new = X + I + B @ X
+            return trace_tuple_instance(X_new, -B, I, it)
+
+        itr = gh.TraceTupleIterator(x0=V_init, func=f)
+        # assert side effect free [ ] application
+        results_1 = itr[0:10]
+        results_2 = itr[0:10]
+        self.assertTrue(
+            np.all(
+                tuple(
+                    np.all(
+                        results_1.__getattribute__(name)
+                        == results_2.__getattribute__(name)
+                    )
+                    for name in results_1._fields
+                )
+            )
+        )
+        # test correct averaging
+        parts = gh.partitions(0, 10, 2)
+        res = itr.averaged_values(parts)
+        ref = results_1.averages(parts)
+        self.assertTrue(res == ref)
+
+    def test_make_cached_func(self):
+        cachePath = Path("cache.nc")
+        var_name = "test"
+
+        def caw(path,x,n):
+            sleep(2)
+            ds = nc.Dataset(path, "w", persist=True)
+            lat = ds.createDimension("lat", size=n)
+            lon = ds.createDimension("lon", size=n)
+            test = ds.createVariable(var_name, np.float64, ["lat", "lon"])
+            var = x*np.diag(np.arange(0, n))
+            test[:, :] = var
+            return var
+
+        def r(path):
+            ds = nc.Dataset(path)
+            return ds.variables[var_name][:, :].data
+
+        path = Path("cache", "test")
+        before = time()
+        read_or_create=gh.make_cached_func(create_and_write=caw, read=r)
+        res_1 = read_or_create(path,2,5)
+        after_1 = time()
+        res_2 = read_or_create(path,2,5)
+        after_2 = time()
+        self.assertTrue((res_1 == res_2).all())
+        self.assertTrue(after_1 - before > after_2 - after_1)

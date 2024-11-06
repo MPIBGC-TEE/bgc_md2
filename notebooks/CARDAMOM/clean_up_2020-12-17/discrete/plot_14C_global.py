@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -38,11 +38,12 @@ data_combinations = [
     ("yearly", 6, "continuous")
 ]
 
-#data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+#CARDAMOM_path = Path("/home/data/CARDAMOM/")
+CARDAMOM_path = Path("/mnt/c/Users/hrme0001/data/CARDAMOM/")
+#data_path = CARDAMOM_path.joinpath("Greg_2020_10_26/")
+data_path = CARDAMOM_path.joinpath("Greg_2021_10_09/")
 netCDF_filestem = "global_14C_"
 
-CARDAMOM_path = Path("/home/data/CARDAMOM/")
 
 dc = data_combinations[0]
 time_resolution, delay_in_months, model_type = dc
@@ -119,8 +120,7 @@ plt.draw()
 fig, ax = plt.subplots(figsize=(18, 12))
 
 for pool in ds.pool:
-    C_weight = ds.solution.sel(pool=pool).fillna(0)
-    ds["solution_Delta_14C"].sel(pool=pool).weighted(C_weight*ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon", "prob"]).plot(
+    ds["solution_Delta_14C"].sel(pool=pool).weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon", "prob"]).plot(
         ax=ax,
         lw=4,
         label=pool.values,
@@ -137,13 +137,12 @@ ax.set_title(r"Global avergage $\Delta^{14}$C (mean over total ensemble)")
 # + tags=[]
 fig, ax = plt.subplots(figsize=(18, 12))
 
-prob_slices = [slice(0, 6, 1), slice(6, 22, 1), slice(22, 50, 1)]
+lat_slices = [slice(0, 6, 1), slice(6, 22, 1), slice(22, None, 1)]
 colors = ["blue", "green", "red"]
 labels = ["Southern Hemisphere", "Tropics", "Northern Hemisphere"]
                
-for prob_slice, color in zip(prob_slices, colors):
-    C_weight = ds.solution.isel(prob=prob_slice).sum(dim="pool").fillna(0)
-    ds["system_solution_Delta_14C"].isel(prob=prob_slice).weighted(C_weight * ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"]).plot.line(
+for lat_slice, color in zip(lat_slices, colors):
+    ds["system_solution_Delta_14C"].isel(lat=lat_slice).weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"]).plot.line(
         ax=ax,
         x="time",
         add_legend=False,
@@ -162,37 +161,19 @@ _ = ax.legend(lines, labels)
 # -
 # ## Plot radiocarbon of the external outputs
 
-# +
-fig, ax = plt.subplots(figsize=(8, 8))
-
-var = ds["acc_net_external_output_vector"].sum(dim="pool")
-var = var * ds_area_lf_adapted.area_sphere * ds_area_lf_adapted.landfrac
-var = var.mean(dim=["prob", "time"])
-    
-(var/1e15).plot(
-    ax=ax,
-    cbar_kwargs={"label": "PgC"},
-    robust=True
-)
-ax.set_title("Total C external outputs")
-
-plt.tight_layout()
-plt.draw()
-
 # + tags=[]
 fig, ax = plt.subplots(figsize=(18, 12))
 
-prob_slices = [slice(0, 6, 1), slice(6, 22, 1), slice(22, 50, 1)]
+lat_slices = [slice(0, 6, 1), slice(6, 22, 1), slice(22, None, 1)]
 colors = ["blue", "green", "red"]
 labels = ["Southern Hemisphere", "Tropics", "Northern Hemisphere"]
                
-for prob_slice, color in zip(prob_slices, colors):
-    C14_weight = ds.solution_14C.isel(prob=prob_slice).sum(dim="pool").fillna(0)
-    ds["system_solution_Delta_14C"].isel(prob=prob_slice).weighted(C14_weight * ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"]).plot.line(
+for lat_slice, color in zip(lat_slices, colors):
+    ds["system_external_output_Delta_14C"].isel(lat=lat_slice).weighted(ds_area_lf.area_sphere * ds_area_lf.landfrac).mean(dim=["lat", "lon"]).plot.line(
         ax=ax,
         x="time",
         add_legend=False,
-        alpha=0.1,
+        alpha=0.2,
         lw=4,
         c=color
 )

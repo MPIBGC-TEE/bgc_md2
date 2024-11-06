@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.1
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -36,8 +36,10 @@ from dask.distributed import Client
 # -
 
 my_cluster = CARDAMOMlib.prepare_cluster(
-    n_workers=48,
-    alternative_dashboard_port=8791
+#    n_workers=48,
+    n_workers=10,
+#    alternative_dashboard_port=8791,
+    my_user_name="hmetzler"
 )
 Client(my_cluster)
 
@@ -71,10 +73,11 @@ time_resolution, delay_in_months, model_type = "monthly", None, "discrete"
 # +
 params = CARDAMOMlib.load_params(time_resolution, delay_in_months)
 
-CARDAMOM_path = Path("/home/data/CARDAMOM/")
-#intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
+#CARDAMOM_path = Path("/home/data/CARDAMOM/")
+CARDAMOM_path = Path("/mnt/c/Users/hrme0001/data/CARDAMOM/")
+intcal20_path = CARDAMOM_path.joinpath("IntCal20_Year_Delta14C.csv")
 #data_path = Path("/home/data/CARDAMOM/Greg_2020_10_26/")
-data_path = Path("/home/data/CARDAMOM/Greg_2021_10_09/")
+data_path = CARDAMOM_path.joinpath("Greg_2021_10_09/")
 output_path = data_path.joinpath(params["output_folder"])
 
 project_path = output_path.joinpath(model_type)
@@ -107,7 +110,7 @@ nr_lats_total, nr_lons_total, nr_probs_total, nr_times_total
 slices = {
     "lat": slice(0, None, 1),
     "lon": slice(0, None, 1),
-    "prob": slice(0, None, 1), 
+    "prob": slice(0, None, 1),
     "time": slice(0, None, 1) # don't change the time entry
 }
 
@@ -116,6 +119,16 @@ nr_lons = len(np.arange(nr_lons_total)[slices["lon"]])
 nr_probs = len(np.arange(nr_probs_total)[slices["prob"]])
 nr_times = len(np.arange(nr_times_total)[slices["time"]])
 nr_lats, nr_lons, nr_probs, nr_times
+
+# +
+# divide probs in N subarrays for memory reasons on local machine
+N = 10
+
+s = slices["prob"]
+arrs = np.split(np.arange(s.start, 50, s.step), N)
+slices_prob = [slice(arr[0], arr[-1]+1, 1) for arr in arrs]
+slices_prob
+# -
 
 # ## Compute 14C start_values
 #
@@ -126,7 +139,10 @@ task = {
     "model_type": model_type,
     "overwrite": False,
     "func": CARDAMOMlib.compute_start_values_14C,
-    "func_args": {"nr_time_steps": params["nr_time_steps"]}, # nr_months for fake eq_model
+    "func_args": {
+        "nr_time_steps": params["nr_time_steps"], # nr_months for fake eq_model
+        "intcal20_path": intcal20_path,
+    }, 
     "timeouts": [np.inf],
     "batch_size": 500,
     "result_shape": (nr_lats_total, nr_lons_total, nr_probs_total, nr_pools),
@@ -141,17 +157,20 @@ task = {
 # +
 # %%time
 
-CARDAMOMlib.run_task_with_mr(
-    project_path,
-    task,
-    nr_pools,
-    params["time_step_in_days"],
-    times_da,
-    start_values_zarr,
-    Us_zarr, # note capital U
-    Bs_zarr,
-    slices
-)
+for slice_prob in slices_prob[5:]:
+    print(slice_prob)
+    slices["prob"] = slice_prob
+    CARDAMOMlib.run_task_with_mr(
+        project_path,
+        task,
+        nr_pools,
+        params["time_step_in_days"],
+        times_da,
+        start_values_zarr,
+        Us_zarr, # note capital U
+        Bs_zarr,
+        slices
+    )
 # -
 
 
@@ -180,10 +199,11 @@ hemispheres = [
 task = {
     "computation": "solution_14C",
     "model_type": model_type,
-    "overwrite": True,
+    "overwrite": False,
     "func": CARDAMOMlib.compute_solution_14C,
     "func_args": {
         "nr_time_steps": params["nr_time_steps"], # nr_months for fake eq_model
+        "intcal20_path": intcal20_path,
     },
     "timeouts": [np.inf],
     "batch_size": 500,
@@ -214,17 +234,21 @@ for nr, d in enumerate(hemispheres):
     print(Delta14C_atm_path)
     task["func_args"]["Delta14C_atm_path"] = Delta14C_atm_path
 
-    CARDAMOMlib.run_task_with_mr(
-        project_path,
-        task,
-        nr_pools,
-        params["time_step_in_days"],
-        times_da,
-        start_values_zarr,
-        Us_zarr, # note capital U
-        Bs_zarr,
-        slices_sub
-    )
+    for slice_prob in slices_prob[1:]:
+        print(slice_prob)
+        slices_sub["prob"] = slice_prob
+
+        CARDAMOMlib.run_task_with_mr(
+            project_path,
+            task,
+            nr_pools,
+            params["time_step_in_days"],
+            times_da,
+            start_values_zarr,
+            Us_zarr, # note capital U
+            Bs_zarr,
+            slices_sub
+        )
 # -
 
 
@@ -235,10 +259,11 @@ for nr, d in enumerate(hemispheres):
 task = {
     "computation": "acc_net_external_output_vector_14C",
     "model_type": model_type,
-    "overwrite": True,
+    "overwrite": False,
     "func": CARDAMOMlib.compute_acc_net_external_output_vector_14C,
     "func_args": {
-        "nr_time_steps": params["nr_time_steps"], # nr_months for fake eq_model
+        "nr_time_steps": params["nr_time_steps"], # nr_months for fake eq_model,
+        "intcal20_path": intcal20_path,
     },
     "timeouts": [np.inf],
     "batch_size": 500,
@@ -269,17 +294,21 @@ for nr, d in enumerate(hemispheres):
     print(Delta14C_atm_path)
     task["func_args"]["Delta14C_atm_path"] = Delta14C_atm_path
 
-    CARDAMOMlib.run_task_with_mr(
-        project_path,
-        task,
-        nr_pools,
-        params["time_step_in_days"],
-        times_da,
-        start_values_zarr,
-        Us_zarr, # note capital U
-        Bs_zarr,
-        slices_sub
-    )
+    for slice_prob in slices_prob[5:]:
+        print(slice_prob)
+        slices_sub["prob"] = slice_prob
+
+        CARDAMOMlib.run_task_with_mr(
+            project_path,
+            task,
+            nr_pools,
+            params["time_step_in_days"],
+            times_da,
+            start_values_zarr,
+            Us_zarr, # note capital U
+            Bs_zarr,
+            slices_sub
+        )
 # -
 
 
@@ -296,7 +325,7 @@ times_da = da.from_zarr(str(project_path.joinpath("time")))
 # dimensions: lat x lon x prob x time x pool
 
 start_values_da = da.from_zarr(str(project_path.joinpath("start_values")))
-data_da = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_2")))
+data_da = da.from_zarr(str(project_path.joinpath("age_moment_vectors_up_to_4")))
 solution_da = data_da[:, :, :, :, 0, :]
 
 solution_14C_da = da.from_zarr(str(project_path.joinpath("solution_14C")))
@@ -389,47 +418,37 @@ ds = xr.Dataset(
         "time_resolution": time_resolution,
         "delay_in_months": delay_in_months if delay_in_months is not None else 0
     }
-)
+).chunk({"lat": len(lats_da), "lon": len(lons_da), "prob": 1, "time": len(times_da), "pool": 6})
 ds
 
-
 # +
-# compression takes forever, better zip it "manually" afterwards
+import itertools
 
-def delayed_to_netcdf(prob, netCDF_filename, compute=False):
-    ds_sub = ds.sel(prob=[prob])
-    ds_sub.to_netcdf(
-        netCDF_filename,
-        compute=compute
-    )
-    del ds_sub
 
-arr = ds.prob
-print(arr)
+def split_by_chunks(dataset):
+    chunk_slices = {}
+    for dim, chunks in dataset.chunks.items():
+        slices = []
+        start = 0
+        for chunk in chunks:
+            if start >= dataset.sizes[dim]:
+                break
+            stop = start + chunk
+            slices.append(slice(start, stop))
+            start = stop
+        chunk_slices[dim] = slices
+    for slices in itertools.product(*chunk_slices.values()):
+        selection = dict(zip(chunk_slices.keys(), slices))
+        yield dataset[selection]
+
+
 # -
 
-# For whatever reason we create two netCDF files, which will be read in at the same time later.
-
-# +
-# %%time
-
-# first half of computation
-
-for prob in tqdm(arr[:25]):
-    netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
-    print(netCDF_filename)
-    delayed_to_netcdf(prob, netCDF_filename, compute=True)
-    
-# +
-# %%time
-
-# second half of computation
-
-for prob in tqdm(arr[25:]):
-    netCDF_filename = project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob)
-    print(netCDF_filename)
-    delayed_to_netcdf(prob, netCDF_filename, compute=True)
-    
-# -
+for slice_prob in tqdm(slices_prob[:1]):
+    print(slice_prob)
+    sub_ds = ds.isel(prob=slice_prob)
+    datasets = list(split_by_chunks(sub_ds))
+    paths = [project_path.joinpath(netCDF_filestem + "_%05d.nc" % prob) for prob in sub_ds.prob]
+    xr.save_mfdataset(datasets=datasets, paths=paths)
 
 
