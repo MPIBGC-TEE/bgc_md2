@@ -1,6 +1,7 @@
-from dask_jobqueue import PBSCluster,SLURMCluster
+#from dask_jobqueue import PBSCluster
+from dask_jobqueue import SLURMCluster
+from dask.distributed import LocalCluster
 import dask.array as da
-from dask.distributed import Client, LocalCluster
 import numpy as np
 from scipy.optimize import least_squares
 
