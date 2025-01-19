@@ -18,11 +18,11 @@ netCDF4
 networkx
 notebook
 paramiko
-plotly >=3.3.0
+plotly
 pycairo
 pyresample
 python-igraph
-scipy>=1.4.1
+scipy
 sympy
 xarray
 zarr
