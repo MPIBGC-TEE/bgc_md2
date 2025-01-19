@@ -75,6 +75,7 @@ from .mvars import (
     QuantityModelRun,
     QuantitySolutionArray,
     StateVarUnitTuple,
+    PoolRhsTuple,
     AggregatedVegetationCarbon,
     AggregatedSoilCarbon,
     AggregatedVegetationCarbonInFlux,
@@ -89,6 +90,10 @@ from .mvars import (
     StartConditionMaker
 
 )
+def pool_rhs(
+    srm: SmoothReservoirModel,
+    )->PoolRhsTuple:
+    return srm.F
 
 def mean_age_start_value_tuple_1(
     scm: StartConditionMaker,

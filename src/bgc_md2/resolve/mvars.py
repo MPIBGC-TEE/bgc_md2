@@ -289,12 +289,28 @@ class LuoXiDiagonalMatrix(MatrixLike):
 
 
 class StateVariableTuple(ColumnVectorLike):
+    """Defines the ordering of the state variables.
+    This defines the coordinate system and thereby
+    the interpretation of all tuple or matrix related variables.
+    Although two models with identical fluxes between their pools are identical on a physical
+    level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
+    on the ordering and have to be consistent."""
+    pass
+
+
+class PoolRhsTuple(ColumnVectorLike):
+    """Defines the right hand side ode resulting from the compartmental system.
+    If derived from the system it will be in the order of the PoolStateVariableTuple and compatible with the CompartmentalMatrix. 
+    If provided by the user it is expected to be compatible."""
+    pass
+
+class StateVariableTuple(ColumnVectorLike):
     # fixme mm 02/14/2021
     # Check that we only allow column vectors
     """Defines the ordering of the state variables.
     This defines the coordinate system and thereby
     the interpretation of all tuple or matrix related variables.
-    Although two models with identical fluxes between there pools are identical on a physical
+    Although two models with identical fluxes between their pools are identical on a physical
     level the coordinate based variables like the InputTuple or the CompartmentalMatrix depend 
     on the ordering and have to be consistent."""
     pass
