@@ -19,7 +19,7 @@ class TestCableUtils(unittest.TestCase):
                 batches = [testarr[s] for s in batchSlices(nland, nproc)]
                 combined = reduce(lambda cum,el:np.append(cum,el),batches)
                 self.assertTrue(
-                        np.alltrue(
+                        np.all(
                             combined==testarr
                         )
                 )
@@ -34,7 +34,7 @@ class TestCableUtils(unittest.TestCase):
                 batches = [testarr[:,s] for s in batchSlices(nland, nproc)]
                 combined = reduce(lambda cum,el:np.append(cum,el,axis=1),batches)
                 self.assertTrue(
-                        np.alltrue(
+                        np.all(
                             combined==testarr
                         )
                 )
