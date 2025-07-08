@@ -17,6 +17,7 @@ t=Template(#"""
 #
 # We install as much as we can via ${command} and leave only the src packages for pip.
 ${command} install -y -c conda-forge --file requirements.test --file requirements.doc --file requirements.non_src pip
+pip install -r requirements.only_pip
 pip install -r requirements.src
 """)
 for suffix in ["sh","bat"]:

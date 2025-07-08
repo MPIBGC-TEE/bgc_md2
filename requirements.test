@@ -5,5 +5,4 @@ nbformat
 nbmake
 notebook
 pytest
-unittest-parallel
 zarr
