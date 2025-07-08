@@ -5,6 +5,7 @@ on:
     branches:
       - binder
       - master
+      - test
 jobs:
   build:
 
