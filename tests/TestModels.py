@@ -1,4 +1,5 @@
 from time import time as now
+import dask.bag as db
 from unittest import TestCase, skip
 from ComputabilityGraphs.rec_graph_helpers import fast_graph
 from ComputabilityGraphs.helpers import all_mvars
@@ -24,8 +25,17 @@ class TestModels(TestCase):
                 mvars = mvs.computable_mvar_types()
                 list_str = "\n".join(["<li> " + str(var.__name__) + " </li>" for var in mvars])
                 print(list_str)
-                for var in mvars:
+                b = db.from_sequence(mvars, npartitions=16)
+                def func(var):
                     print("########################################")
                     print(str(var.__name__))
+                    print(mvs._get_single_value_by_TypeTree(var))
+                    #print(mvs._get_single_value_by_depgraph(var))
                     #print(mvs._get_single_value(var))
-                    print(mvs._get_single_value_by_depgraph(var))
+                db.map(func,b).compute()
+                #for var in mvars:
+                #    print("########################################")
+                #    print(str(var.__name__))
+                #    #print(mvs._get_single_value(var))
+                #    #print(mvs._get_single_value_by_depgraph(var))
+                #    print(mvs._get_single_value_by_TypeTree(var))

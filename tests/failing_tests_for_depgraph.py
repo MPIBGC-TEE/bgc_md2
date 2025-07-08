@@ -1,5 +1,6 @@
 from time import time as now
 import dask.bag as db
+import networkx as nx
 import bgc_md2.helper as h 
 from bgc_md2.resolve.mvars import *
 
@@ -58,7 +59,8 @@ model_names=[
     #"CARDAMOM",
     "Aneesh_SDGVM",
     "jon_yib",
-    "kv_visit2"
+    "kv_visit2",
+    "yz_jules"
 ]
 ######################################################################
 ####### MODELS NOT TRANSLATED FROM .YAML TO SOURCE.PY
@@ -71,8 +73,8 @@ model_names=[
 if __name__ == '__main__':
     for mn in model_names:
         mvs = h.CMTVS_from_model_name(mn)
-        mvars = mvs.computable_mvar_types()
-        #mvars = [NumericMeanAgeSolutionArray]
+        #mvars = mvs.computable_mvar_types()
+        mvars = [NumericMeanAgeSolutionArray]
         list_str = "\n".join(["<li> " + str(var.__name__) + " </li>" for var in mvars])
         print(list_str)
     
@@ -81,8 +83,12 @@ if __name__ == '__main__':
             print("########################################")
             print(str(var.__name__))
             #print(mvs._get_single_value(var))
-            print(mvs._get_single_value_by_TypeTree(var))
-            #print(mvs._get_single_value_by_depgraph(var))
+            #print(mvs._get_single_value_by_TypeTree(var))
+            try:
+                print(mvs._get_single_value_by_depgraph(var))
+            except nx.NetworkXUnfeasible as e:
+                print(e)
+
         db.map(func,b).compute()
         
         #alternative without dask 
