@@ -1,20 +1,21 @@
-
 \usepackage[utf8]{inputenc}
 \usepackage[round]{natbib}
 %Information to be included in the title page:
 \title{The Biogeochemical Model Database}
-\subtitle{A set of python packages for model intercomparison}
+\subtitle{Python packages for \alert{model intercomparison}}
 \author{Markus Müller}
 %\institute{Overleaf}
-\date{11-16-2021}
+%\date{11-16-2021}
+\date{\today}
 \usepackage{tikz}
 \usetikzlibrary{positioning}
 \begin{document}
+\titlepage
 \begin{frame}
 \frametitle{Overview}
 \tableofcontents
 \end{frame}
-\section{\texttt{bgc\_md2} in Action}
+\section{\texttt{bgc\_md2} Screenshots}
 \subsection{Views}
 \begin{frame}
 \frametitle{Jupyterwidget for a subset of models \texttt{bgc\_md2} }
@@ -22,7 +23,7 @@
 \note{
 	\begin{enumerate}
 	\item
-	bgc\_md2 is an open source python package availabe on GitHub, developed at the Max-Planck-Institut for BioGeoChemistry in Jena and more recently  in Yiqi Luo's Ecolab at NAU in Flagstaff
+	bgc\_md2 is an open source python package availabe on GitHub, developed at the Max-Planck-Institut for BioGeoChemistry in Jena and more recently  in Yiqi Luo's Ecolab at NAU in Flagstaff in Cornell and now in the Research Center Juelich
 	\item
 	A set of libraries that can be used in other python scripts or interactively (jupyter or IPython )
 	The picture shows a jupiter widget showing a table of models. The orange buttons can be clicked to 
@@ -65,21 +66,21 @@
 	}
 \end{frame}
 
-\begin{frame}
-	\frametitle{Diagnostic Variables implemented once, available for all models}
-	\begin{figure}
-	\includegraphics[width=\textwidth]{TracebilityAnalysis.png}
-	\caption{pool content + Tracebility Analysis: carbon storage potential , carbon storage capacity and residence time}
-	\end{figure}
-	\note{
-	\begin{enumerate}
-	\item 
-	Diagnostic Variables can be computed for any model  
-	\item The picture shows the Leaf pool
-
-	\end{enumerate}
-	}
-\end{frame}
+%\begin{frame}
+%	\frametitle{Diagnostic Variables implemented once, available for all models}
+%	\begin{figure}
+%	\includegraphics[width=\textwidth]{TracebilityAnalysis.png}
+%	\caption{pool content + Tracebility Analysis: carbon storage potential , carbon storage capacity and residence time}
+%	\end{figure}
+%	\note{
+%	\begin{enumerate}
+%	\item 
+%	Diagnostic Variables can be computed for any model  
+%	\item The picture shows the Leaf pool
+%
+%	\end{enumerate}
+%	}
+%\end{frame}
 
 \section{User Interface and Queries}
 \subsection{Invisible Graphs}
@@ -251,7 +252,8 @@
   \end{enumerate}
 }
 \end{frame}
-\section{Applications}
+\section{Non trivial diagnaostic variables}
+\subsection{Transient age and transit time distributions for nonlinear nonautonomous compartmental models}
 \begin{frame}
 	\frametitle{Applications}
 	\begin{figure}
@@ -294,20 +296,170 @@
   \end{enumerate}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Application to  model intercomparison}
+\subsection{Goals}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}
-	\frametitle{Links}
+  \frametitle{We might want to know ...}
   \begin{itemize}
-    \item
-      The README of the package on github (wiht installation instructions):
-      \url{https://github.com/MPIBGC-TEE/bgc_md2}
-    \item
-      Work in progress using and extending the package:
-      \url{https://github.com/MPIBGC-TEE/bgc_md2/tree/master/prototypes/working_group_2021}
-    \item
-      An incomplete tutorial (jupyter notebook) for the creation of a new model.
-      The package has to be installed.
-      \url{https://github.com/MPIBGC-TEE/bgc_md2/blob/master/prototypes/working_group_2021/kv_visit2/createModel.py}
+  \item 
+   If two or more (published) models are possibly possibly { \it identical}.
+   \item
+   If not, if they have some things in common and which.
+   \item
+   How they differ.
+   \item
+   If one is a generalization of another.
+   \item
+   If there are 'normal forms' e.g. views that hide incosequential details.
+   \item
+   Which model fits the data better.
+   \item
+   What constitutes a model. (Definitions may depend on the questions.)
   \end{itemize}
 \end{frame}
+
+\begin{frame}
+  \frametitle{Three Soil Models} 
+  \includegraphics[height=0.3\textheight]{physIndex.pdf}
+  \includegraphics[height=0.3\textheight]{dormancy_2_Monod_compartmental.pdf}
+  \includegraphics[height=0.5\textheight]{dormancy_4_Monod_compartmental}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Symbolic comparison (pools) } 
+
+\only<1>{
+  \includegraphics[width=\textwidth]{Dormancy2_metamorphosis.pdf}
+}
+\only<2>{
+  \includegraphics[width=\textwidth]{Dormancy2_metamorphosis_2.pdf}
+}
+Can be done by \texttt{bgc\_md2} with a (python) dictionary for the variable names and a definition of the sets of pools that form the new superpools 
+$\{ X_a, X_d \} \rightarrow X$
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Symbolic comparison (equations) } 
+\begin{itemize}
+  \item
+  Translation of the ODE
+  can also be assisted by \texttt{bgc\_md2} with  sympy. 
+  \begin{align*}
+  \left.
+  \begin{matrix}
+    \dot{X_a}=f(X_a,X_d,X_n,S,\mathbf{p}) \\
+    \dot{X_d}=g(X_a,X_d,X_n,S,\mathbf{p}) \\
+    \vdots \\
+    X_a(t_0)={X_a}_0 \\
+    X_d(t_0)={X_d}_0 \\
+    \vdots \\
+  \end{matrix}
+  \right \} 
+  \underbrace{\rightarrow}_{R=\frac{X_a}{X_a+X_d}} 
+  \left \{
+  \begin{matrix}
+    \dot{X}=h(X,R,N,S,\mathbf{p}) \\
+    \dot{R}=j(X,R,N,S,\mathbf{p}) \\
+    \vdots \\
+    X(t_0)={X}_0 \\
+    R(t_0)={R}_0 \\
+    \vdots \\
+  \end{matrix}
+  \right.
+  \end{align*}
+  %\item
+  %Translation of the constraints.
+  %\alert{Cannot} be done yet, because the constraints are not explicitly available in the model database. 
+\end{itemize}
+The constraints are an essential part of the model. (As we will see later)
+\end{frame}
+%
+\subsection{Numeric comparison}
+\begin{frame}
+\frametitle{Forward simulations with given parameters (easy)} 
+  \includegraphics[width=\textwidth]{Numeric1.pdf}
+  Automatic unit conversion (different models have different units)
+\end{frame}
+
+\begin{frame}
+\frametitle{Forward simulations with given parameters (easy) II} 
+  \includegraphics[width=\textwidth]{NumericII.pdf}
+ Lots of derived "diagnostic" variables, which can be computed for both models and allow comparison on a meta level.  
+\end{frame}
+
+\begin{frame}
+\frametitle{Parameter estimation (hard)} 
+  \includegraphics[width=\textwidth]{NumericIII.pdf}
+  Hard because we have to be fair. Both models must have the same chance to hit the data.
+\end{frame}
+
+\begin{frame}
+\frametitle{Parameter estimation (hard) II} 
+  \includegraphics[width=\textwidth]{BestFitI.pdf}
+  \alert{Two} "best" fit\alert{s}. 
+\end{frame}
+
+\begin{frame}
+\frametitle{Parameter estimation (hard) III} 
+  \includegraphics[width=\textwidth]{BestFitII.pdf}
+  But very different behavior... 
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Possible reasons for unfairness} 
+  \begin{itemize}
+  \item 
+   Insufficient definition of model. E.g. \alert{constraints}. 
+  \item 
+  Numerical instability. Two very different parameter combinations fit the data nearly equally well.
+  (Identifiability problems)
+  \item 
+  Dependence of qualitative results on hyperparameters. 
+  \begin{itemize}
+    \item 
+    Second best fit catches up and overtakes the best fit if we increase the number of iteration steps. 
+    \item 
+  \end{itemize}
+  \end{itemize}
+
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{} 
+\end{frame}
+%
+%\begin{frame}
+%\frametitle{Forward simulations with given parameters (easy)} 
+%\begin{itemize}
+%  \item
+%  Translation of the ODE
+%  Could be done by \texttt{bgc\_md2} with a (python) dictionary for the variable names and adefinition of the sets of pools that form the new superpools 
+%  $\left{ X_a, X_d \right} \rightarrow X$
+%  \item
+%  Translation of the constraints.
+%  \alert{Cannot} be done yet. because the constraints are not  
+%\end{itemize}
+%\end{frame}
+
+%\begin{frame}
+%	\frametitle{Links}
+%  \begin{itemize}
+%    \item
+%      The README of the package on github (wiht installation instructions):
+%      \url{https://github.com/MPIBGC-TEE/bgc_md2}
+%    \item
+%      Work in progress using and extending the package:
+%      \url{https://github.com/MPIBGC-TEE/bgc_md2/tree/master/prototypes/working_group_2021}
+%    \item
+%      An incomplete tutorial (jupyter notebook) for the creation of a new model.
+%      The package has to be installed.
+%      \url{https://github.com/MPIBGC-TEE/bgc_md2/blob/master/prototypes/working_group_2021/kv_visit2/createModel.py}
+%  \end{itemize}
+%\end{frame}
 
 \end{document}
