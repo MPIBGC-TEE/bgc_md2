@@ -4,7 +4,8 @@
 %
 \documentclass[t]{beamer}
 \usetheme{Juelich}
-
+\usepackage{listings}
+\usepackage{xcolor}
 \title{Caching computation results accross multiple machines}
 %\subtitle{Application to a testproject }
 \author{Markus Müller}
@@ -19,27 +20,76 @@
 \maketitle
 
 \begin{frame}
-\frametitle{Overview} 
+\frametitle{Overview}
 \tableofcontents
 \end{frame}
 
 \section{Matching pairs of parentheses (...(..)..)  and the Chomsky hierarchie}
 
 \begin{frame}
+\frametitle{Have you been there?} 
+\begin{itemize}
+\pause
+\item
+You make a plot on your laptop that involves a (result-)file on the cluster
+\pause
+\item
+The computation on the cluster depends on config file(s)
+\pause
+\item
+There are subclasses of subclasses ...of computations (configurations and results) possibly in subfolders of subfolders
+\pause
+\item
+If a colleage asks you after 2 years where a particular result resides you always find it immediately.
+\pause
+\item 
+\alert{ ;-)} How do \alert{you} do it? 
+\pause
+\item 
+Especially if \texttt{sh..} happens in between starting the job and presenting the results:
+  \begin{itemize}
+  \item
+  code changes
+  \item
+  predicting the future  has always been a hard business... 
+  \item 
+  $\rightarrow$ e.g to write down  what would be helpful later \dots $\rightarrow$ usually insufficient labeling
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Overlooking things that become important later \dots (in the talk)} 
+Important things on the previous slide that you probably missed:
+\\
+\begin{itemize}
+  \item
+  \texttt{sh.. } in ``sh.. happens'' is a ``regular expression'' 
+
+  \item
+  matching a string with 4 symbols that starts with \texttt{sh} 
+
+  \item
+  if you cannot guess  we can make it more specifc -;):
+  \texttt{sh[a-z][a-z]} or \texttt{sh[a-z]\textbackslash \{2\}}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
 \frametitle{Mundane questions, deep answers}
 Question:
-Is it possible to create a regular expression to find a \alert{matching} paranthesis in text\alert{?}
+Is it possible to create a regular expression to find \alert{any matching} paranthesis in text\alert{?}
 
-E.g. in source code replace all occurences of call of $f_{I}$ by $f_{II}$:
+E.g. in source code replace all occurences of call of $f_{I}$ by $f_{II}$ with one argument less:
 
 \[
-f_I(a,b,c) \rightarrow  f_{II}(a,b,c)
+f_I(a,b,c) \rightarrow  f_{II}(a,b)
 \]
 
-but also include nested calls like
+but also include (arbitraryly deeply) nested calls like
 
 \[
-f_I(g(x,y),b,c) \rightarrow  f_{II}(g(x,y),b,c)
+f_I(g(x,y),b,c) \rightarrow  f_{II}(g(x,y),b)
 \]
 \pause
 \begin{center}
@@ -51,7 +101,7 @@ Answer: \alert{\Large{No!}}
 \begin{frame}
 \frametitle{Chomsky hierarchy} 
 %\includegraphics[height=.7\textheight]{Chomsky-hierarchy}
-\includegraphics[height=.7\textheight]{Chomsky_types.png}
+\includegraphics[height=.6\textheight]{Chomsky_types.png}
 
 regular expressions are Type 3 whereas matching parenthesis require at least Type 2. 
 \end{frame}
@@ -74,18 +124,24 @@ Alonzo Church (PhD. adviser of Alan Turing):
 Fun facts:
 \begin{itemize}
   \pause
-    \item All modern programming languages are Turing complete (can simulate a Turing machine).
+    \item All modern programming languages are Turing complete 
   \pause
-    \item Even minimal languages (e.g. only a while loop) are Turing complete.
+    \item Even minimal languages (e.g. only a while loop) are 
   \pause
-    \item In particular the extremely minimal $\lambda$ calculus is. (proven not only according to the Church Turing Conjecture )\\
+    \item In particular $\lambda$ calculus is. 
           e.g. in python: \texttt{lambda x: x**2}
   \pause
-    \item As a corollary ``functional languages'' (which have no variables but only expressions) like Haskell, jax, or julia are. 
+    \item ``functional languages'' are 
+    (no variables only expressions like Haskell or  jax) 
+
   \pause
 \end{itemize}
-Take home: According to Gödel not all things are computable, but the class of Computable problems is the same regardless of the definition (or language they are expressed in)
-In particular: \alert{According to C.T it is worth trying to express any result that we can compute somehow  as a nested function call. }
+Take home: \\
+Not all things are computable (Gödel) , 
+but the class of computable problems is the same regardless of the language they are expressed in.
+
+In particular: \\
+\alert{Any result} that we can compute at all \alert{can} also \alert{be expressed as a nested function call}. 
 \end{frame}
 
 \begin{frame}
@@ -163,6 +219,59 @@ and compare the results and the performance.
   permanently memoized on disk.
 \end{itemize}
 \end{frame}
+
+\begin{frame}
+\frametitle{Expressions as trees} 
+\includegraphics[height=.7\paperheight]{expression_as_trees.pdf}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{JSON} 
+\tiny{
+\begin{verbatim}
+{
+  "cls": "FuncCallSerialization",
+  "kwargs": {
+    "f1": {
+      "cls": "FuncCallSerialization",
+      "kwargs": {
+        "s1": {
+          "cls": "FuncCallSerialization",
+          "kwargs": {
+            "base": x,
+            "exponent": 2
+          },
+          "func_name": "pow",
+          "mod_name": "test_cache_helpers"
+        },
+        "s2": y
+      },
+      "func_name": "add",
+      "mod_name": "test_cache_helpers"
+    },
+    "f2" : z
+  },
+  "func_name": "mult",
+  "mod_name": "test_cache_helpers"
+}
+\end{verbatim}
+}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{inside the cache directory} 
+\vdots 
+\texttt{ get\_states\_1\_0be388b414fffaec075c61b0b0 \dots}     
+\texttt{get\_states\_1\_1f4621c53c3f968a2751b7d51b3 \dots}      
+\texttt{get\_states\_1\_fc7a44812196492d1e1a34d035b \dots}      
+\texttt{get\_states\_4\_3694273931c6af49781f72f4410 \dots}      
+\texttt{get\_states\_4\_70b16b9d98c4b6fb9d19951289c \dots}      
+\texttt{get\_states\_4\_c5de139f6b2e40e85998d8da7e9 \dots} 
+
+\vdots
+\end{frame}
+
 
 \begin{frame}
 \frametitle{Implemented solution II} 
