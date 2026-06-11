@@ -386,17 +386,17 @@ mvs.jupyter_widget(
     root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution
 )
 from pathlib import Path
-p=Path("/home/mm/bgc_md2/manuscripts/pythonPackages/JAMES")
+p=Path("~/bgc_md2/manuscripts/pythonPackages/JAMES")
 tl, fig, fl = mvs.dep_graph_figure(
     root_type=bgc_md2.resolve.mvars.NumericVegetationCarbonMeanBackwardTransitTimeSolution,
-    targetPaths=[
-        p.joinpath(*names) 
-        for names in [
-            ["TypeLegend.tex"],
-            ["figures", "dep_graph.pdf"],
-            ["ComputerLegend.tex"]
-        ]
-    ]
+    #targetPaths=[
+    #    p.joinpath(*names) 
+    #    for names in [
+    #        ["TypeLegend.tex"],
+    #        ["figures", "dep_graph.pdf"],
+    #        ["ComputerLegend.tex"]
+    #    ]
+    #]
 )
 print(tl)
 print(fl)
