@@ -1,6 +1,6 @@
 dask[distributed]
 python-igraph # needed for igraph plots in some of the notebooks
-pycariro # needed for igraph plots in some of the notebooks
+pycairo # needed for igraph plots in some of the notebooks
 jupyterlab
 jupytext
 nbformat 
