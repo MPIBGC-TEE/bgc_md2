@@ -27,7 +27,9 @@ setup(
     packages=find_packages('src'),  # find all packages (multifile modules) recursively
     package_dir={'': 'src'},
     package_data={'bgc_md2':[
-        'src/bgc_md2/models/Aneesh_SDGVM/parameterization_from_test_args/*'
+        'src/bgc_md2/models/Aneesh_SDGVM/parameterization_from_test_args/Drivers.nc',
+        'src/bgc_md2/models/Aneesh_SDGVM/parameterization_from_test_args/X_0.json',
+        'src/bgc_md2/models/Aneesh_SDGVM/parameterization_from_test_args/param_dict.json',
         ]
     },
     include_package_data=True,
