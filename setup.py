@@ -25,7 +25,7 @@ setup(
     author_email="markus.mueller.1.g@gmail.com",
     url="https://github.com/MPIBGC-TEE/bgc_md2",
     packages=find_packages('src'),  # find all packages (multifile modules) recursively
-    package_dir={'': 'src'},
+    package_dir={'': 'src/bgc_md2/src'},
     package_data={'bgc_md2.models':[
         '*.nc',
         '*.json',
