@@ -29,7 +29,7 @@ setup(
     package_data={'bgc_md2':[
         'src/bgc_md2/models/Aneesh_SDGVM/parameterization_from_test_args/*'
         ]
-    }
+    },
     include_package_data=True,
     zip_safe=False,
     classifiers=[
