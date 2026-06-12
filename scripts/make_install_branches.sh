@@ -21,6 +21,10 @@ fi
 # create new branch
 git checkout --orphan ${branch_name}
 # remove the large directories
+rm -rf src/CompartmentalSystems
+rm -rf src/ComputabilityGraphs/
+rm -rf src/LAPM/
+rm -rf src/testinfrastructure/
 rm .gitmodules
 git commit -m "automatically created by ${0}  branch ${branch_name} from branch ${parent}. This branch has .gitmodules removed
 and has been created without history to provide a minimial source for installation directly via pip from github."
