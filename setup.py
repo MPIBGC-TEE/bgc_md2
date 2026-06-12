@@ -26,6 +26,10 @@ setup(
     url="https://github.com/MPIBGC-TEE/bgc_md2",
     packages=find_packages('src'),  # find all packages (multifile modules) recursively
     package_dir={'': 'src'},
+    package_data={'bgc_md2':[
+        'src/bgc_md2/models/Aneesh_SDGVM/parameterization_from_test_args/*'
+        ]
+    }
     include_package_data=True,
     zip_safe=False,
     classifiers=[
