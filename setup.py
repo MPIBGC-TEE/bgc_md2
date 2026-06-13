@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # vim:set ff=unix expandtab ts=4 sw=4:
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, find_namespace_packages
 
 
 def readme():
@@ -24,8 +24,30 @@ setup(
     author="MarkusHolger, Veronika, Thomas,  ",
     author_email="markus.mueller.1.g@gmail.com",
     url="https://github.com/MPIBGC-TEE/bgc_md2",
-    packages=find_packages('src'),  # find all packages (multifile modules) recursively
+    packages=find_namespace_packages(where='src'),  # find all packages (multifile modules) recursively
     package_dir={'': 'src'},
+    package_data={
+        'bgc_md2.models.Aneesh_SDGVM.parameterization_from_test_args':[
+            '*.nc',
+            '*.json',
+            ]
+        ,
+        'bgc_md2.models.jon_yib.parameterization_from_test_args':[
+            '*.nc',
+            '*.json',
+            ]
+        ,
+        'bgc_md2.models.yz_jules.parameterization_from_test_args':[
+            '*.nc',
+            '*.json',
+            ]
+        ,
+        'bgc_md2.models.kv_visit2.parameterization_from_test_args':[
+            '*.nc',
+            '*.json',
+            ]
+        ,
+    },
     include_package_data=True,
     zip_safe=False,
     classifiers=[

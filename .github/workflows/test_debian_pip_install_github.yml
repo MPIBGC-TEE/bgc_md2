@@ -1,4 +1,4 @@
-name: test_debian_pip_install
+name: test_debian_pip_install_github
 
 on: 
   push:
@@ -14,7 +14,6 @@ jobs:
     strategy:
       matrix:
         python-version: [3.x]
-        #python-version: [3.6]
         #python-version: [3.6,3.7, 3.8]
 
     steps:
@@ -34,7 +33,7 @@ jobs:
           sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev
           #python -m pip install --upgrade pip
           #pip install -r requirements.test -r requirements.doc -r requirements.src
-          ./install_developer_pip.sh
+          ./pip_only_install_from_github.sh
 
 
 

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.19.3
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -58,7 +58,6 @@ model_inspection
 # * There are no examples for the computation of a transit time or age density computation. Not even a variable with that name exists (in bgc_md2) yet.
 
 from bgc_md2.resolve.mvars import VegetationCarbonInputPartitioningTuple, NumericSolutionArray
-from bgc_md2.resolve.MVarSet import MVarSet
 
 li = h.list_target_models(
     target_classes=frozenset(
@@ -81,3 +80,7 @@ li
 # Now that we actually have two records (MVarSets) we can exlore what we can comptute from them.
 # Just add a dot "." behind the variable in the next cell and press the tab key!
 #
+
+
+
+

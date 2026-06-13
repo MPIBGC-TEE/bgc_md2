@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.19.3
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -53,7 +53,8 @@ internal_connections
 
 
 import CompartmentalSystems.helpers_reservoir as hr
-Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
+import CompartmentalSystems.optional_helpers as oh
+Gnx = oh.nxgraphs(mvs_mm.get_StateVariableTuple(),in_fluxes,internal_fluxes,out_fluxes)
 #[Gnx.get_edge_data(s,t) for s,t in Gnx.edges]
 
 # +
@@ -100,7 +101,7 @@ internal_fluxes_veg, in_fluxes_soil
 import igraph as ig
 import matplotlib.pyplot as plt
 #g = ig.Graph(n=10, edges=[[0, 1], [0, 5]])
-Gnx = hr.nxgraphs(mvs_mm.get_StateVariableTuple(), in_fluxes, internal_fluxes, out_fluxes)
+Gnx = oh.nxgraphs(mvs_mm.get_StateVariableTuple(), in_fluxes, internal_fluxes, out_fluxes)
 g=ig.Graph.from_networkx(Gnx)
 type(Gnx)
 l=g.layout_sugiyama()
@@ -114,7 +115,7 @@ part_dict =  {
     sv_set_soil:'brown',
 }
 
-hr.igraph_part_plot(
+oh.igraph_part_plot(
     mvs_mm.get_StateVariableTuple(),
     in_fluxes,
     internal_fluxes,
@@ -141,3 +142,5 @@ hr.compartmental_matrix_2(
     internal_fluxes_soil,
     state_vector_soil
 )
+
+

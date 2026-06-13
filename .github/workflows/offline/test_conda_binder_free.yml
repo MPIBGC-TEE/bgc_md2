@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repo and submodules
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           # remote: # optional
@@ -26,7 +26,7 @@ jobs:
           token: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Set up conda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
           #channels: anaconda, conda-forge
@@ -44,6 +44,7 @@ jobs:
       - name: install test requirements 
         run: |
            conda install -y -c conda-forge  --file requirements.test
+
 
       - name: run setup.py scripts
         run: |

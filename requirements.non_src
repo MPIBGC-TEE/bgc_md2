@@ -1,5 +1,4 @@
 bokeh
-cf-units
 frozendict
 ipycanvas
 ipyevents
@@ -19,7 +18,6 @@ networkx
 notebook
 paramiko
 plotly
-pycairo
 pyresample
 python-igraph
 scipy

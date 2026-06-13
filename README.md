@@ -1,16 +1,27 @@
+
+<!--
 ![test_binder_pinned](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
 ![test_binder_free](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
-
 [![test_conda_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml)
+ -->
 [![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml)
-[![test_windows_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_windows_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_windows_developer_install.yml)
+[![test_debian_pip_install_github](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml)
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder_orphan_no_subrepos)
 ## Installation
 
-Please read carefully before you  "Copy and paste", since some instructions only make sense for certain platforms.
+Please read carefully before you  "Copy and paste", since some instructions only make sense for very specific use cases.
+The main options are between just installing or deveoloping the package.
 
-* For developers who work with CompartmentalSystems LAPM and testinfrastructure simultaneously: 
+### Installation without intent to develop
+
+We do not have a pypi package yet, but the closest thing is to instruct pip to download directly from github.
+You do not have to checkout the repo to do so but only run the script:![pip_only_install_from_github.sh]((https:/github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml)
+This also works on windows in wsl2. This installation is tested by a workflow (which before running pip also installs some debian packages that you might want to check out from the workflow) 
+To install directly from github, we provide a branch without history and some of the larger examples (automatically from the master).
+
+### Installation for developer
+For developers who work with CompartmentalSystems, LAPM, ComputabilityGraphs  and testinfrastructure simultaneously: 
    * Clone the repository and its [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
      Note: 
      If you have forked the repository you probably want to put your forks ulr here.
@@ -33,6 +44,8 @@ Please read carefully before you  "Copy and paste", since some instructions only
           git submodule init
           git submodule update
           ```
+     
+<!--
    * Update conda
      ```
      conda update --all
@@ -50,7 +63,7 @@ Please read carefully before you  "Copy and paste", since some instructions only
      ```
      This will install the dependencies and run ```python setup.py develop``` for every subpackage so that your code changes 
      in one of these packages take immediate effect.
-     
+-->     
    * Run the tests.
       ```
       cd tests
@@ -62,10 +75,14 @@ Please read carefully before you  "Copy and paste", since some instructions only
      ```
       If you can run this script successfully, you have a working installation of bgc_md and can run all functions. 
   
+    Take a look at the workflow and the install script it calls.
+    [![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml)
+<!--
    * Troubleshooting:
       * We noticed that in MacOS, it is necessary to update packages in the conda environment before running the tests successfully.
         Try to update conda ( ```conda update --all)``` and run the tests again.
         
+-->     
    * Working with the installation:
       * pulling:
         Since you will nearly always pull with the ```--recurse-submodules``` flag   
@@ -82,21 +99,22 @@ Please read carefully before you  "Copy and paste", since some instructions only
 * The latest build of the package documentation can be found [here:](https://mpibgc-tee.github.io/bgc_md2/).
 
 
-## Objectives
-The package is supposed to assist in the creation of 'reports' in the form of jupyter notebooks.
-The notebooks will be of the following types.
-1. Investigations of a single model (or modelrun).
-1. Comparisons between models/modelruns.
-
-In the first case the role of the `bgc_md` package is to guide the user (=author of a particular notebook concerned with a particular model, and simultaniously author of the `source.py` of that model) by using the computability graph (as represented by `bgc_md/resolve/MvarsAndComputers.py`) to either
-* show which addidional results can be computed, given the information already present in the models `source.py' or
-* show which additional information has to be provided in the models `source.py` to be able to obtain a desired result.
-
-In the second case the same assistance is required for queries, which are best described by examples. 
-* Create a table including all the models for which we can compute the compartmental matrix (from whatever Mvars are provided, in the different model files)
-* Compute the maximum set of `Mvars` we can compute for a given set of models
-* ...
-
+<!--
+    ## Objectives
+    The package is supposed to assist in the creation of 'reports' in the form of jupyter notebooks.
+    The notebooks will be of the following types.
+    1. Investigations of a single model (or modelrun).
+    1. Comparisons between models/modelruns.
+    
+    In the first case the role of the `bgc_md` package is to guide the user (=author of a particular notebook concerned with a particular model, and simultaniously author of the `source.py` of that model) by using the computability graph (as represented by `bgc_md/resolve/MvarsAndComputers.py`) to either
+    * show which addidional results can be computed, given the information already present in the models `source.py' or
+    * show which additional information has to be provided in the models `source.py` to be able to obtain a desired result.
+    
+    In the second case the same assistance is required for queries, which are best described by examples. 
+    * Create a table including all the models for which we can compute the compartmental matrix (from whatever Mvars are provided, in the different model files)
+    * Compute the maximum set of `Mvars` we can compute for a given set of models
+    * ...
+-->     
 # Contribution
 ## Green master
 We try to keep the master green and develop new features or bug fixes in short lived branches that are then 
@@ -116,23 +134,8 @@ See also https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell
 
 The (github) workflows run the testsuites. This is an additional protection against forgotten files or other idiosycracies of your setup, that let the testsuites succeeed locally but brake for other users.
 
-## Green Binder
-Another important branch is ```binder```. It contains a smaller version of the repository to meet the binder requirements of total size<2GB which is deployed by mybinder.org to allow exploration without installation (the binder button on top).
-It relies on the smaller binder branch of ```CompartmentalSystems```   
-(see https://git-scm.com/book/en/v2/Git-Tools-Submodules for the work on the dependencies)
-and therefore has a ```.gitmodules``` file that is permanently different from ```test``` and ```master``` branches.
-If you merge something to the binder branch the workflow is similar to merges to the master.
-
-### Before you try to merge into binder :
-* run the testsuites 
-* merge into the branch ```test```.
-* merge test into binder
-* make sure that your merge dosn't overwrite the branch specific files
-  These are listed in the (version controlled) ```.gitattributes``` file with the special merge strategie "ours".
-  You can automate this by configuring git to use the merge driver ```true``` (a posix command line tool that always exits with 0)
-  by the command 
-  ```git config merge.ours.driver true```    
-  https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes#_merge_strategies 
+## Binder 
+The branch used for the installation on binder is automatically created from master or test by a script. It has no history and is not intended to be ever merged back.
 
 
 

@@ -28,7 +28,13 @@ tasks = [
     ),
     Task(
         args=[
-            "python", "-m", "unittest", "discover", "-t", ".", "-p", "Test*",
+            "unittest-parallel", "--level", "test", "-p", "Test*",
+        ],
+        cwd=Path("tests")
+    ),
+    Task(
+        args=[
+            "python", "-m", "unittest", "discover", "-t", ".", "-p", "NpTest*",
         ],
         cwd=Path("tests")
     ),
