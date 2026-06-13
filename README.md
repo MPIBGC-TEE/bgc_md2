@@ -7,7 +7,7 @@
 [![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml)
 [![test_debian_pip_install_github](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml)
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MPIBGC-TEE/bgc_md2/binder_orphan_no_subrepos)
 ## Installation
 
 Please read carefully before you  "Copy and paste", since some instructions only make sense for very specific use cases.
