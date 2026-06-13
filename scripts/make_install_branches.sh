@@ -1,4 +1,5 @@
 #!/bin/bash
+# To avoid unintentional removal of subrepos do this in an extra directory where you have clondes bgc_md2 (typically test branch) without recursion to submodules
 branch_name="binder_orphan_no_subrepos"
 
 parent=$(git branch --show-current)
@@ -24,6 +25,7 @@ git checkout --orphan ${branch_name}
 rm .gitmodules
 rm -rf talks
 rm -rf posters
+rm -rf manuscripts
 git commit -am "automatically created by ${0}  branch ${branch_name} from branch ${parent}. This branch has .gitmodules removed
 and has been created without history to provide a minimial source for installation directly via pip from github."
 git push --set-upstream origin ${branch_name}
