@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
 #  - python <3.11.0 does not work yet on binder
-  - python <3.10.0
+  - python 
   - pip
   - cf-units
   - pycairo
@@ -11,5 +11,5 @@ dependencies:
   - nbmake
   - networkx
   - netCDF4
-  - IPython<=8.7.0
+  - IPython 
   - jupytext
