@@ -1,6 +1,7 @@
+
+<!--
 ![test_binder_pinned](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_pinned/badge.svg)
 ![test_binder_free](https://github.com/MPIBGC-TEE/bgc_md2/workflows/test_conda_binder_free/badge.svg)
-<!--
 [![test_conda_developer_installation](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_conda_developer_install.yml)
  -->
 [![test_debian_pip_install](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install.yml)
@@ -16,7 +17,7 @@ The main options are between just installing or deveoloping the package.
 
 We do not have a pypi package yet, but the closest thing is to instruct pip to download directly from github.
 You do not have to checkout the repo to do so but only run the script:![pip_only_install_from_github.sh]((https:/github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml/badge.svg)](https://github.com/MPIBGC-TEE/bgc_md2/actions/workflows/test_debian_pip_install_github.yml)
-This also works on windows in wsl2. This installation is tested by a workflow (which before running pip also installs some debian packages that you might want ot check out from the workflow) 
+This also works on windows in wsl2. This installation is tested by a workflow (which before running pip also installs some debian packages that you might want to check out from the workflow) 
 To install directly from github, we provide a branch without history and some of the larger examples (automatically from the master).
 
 ### Installation for developer
