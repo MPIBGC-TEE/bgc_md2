@@ -1,0 +1,7 @@
+{
+  "nsimu": 2000,
+  "acceptance_rate": 10,   
+  "chunk_size": 100,
+  "D_init": 5,
+  "K": 1.5
+}

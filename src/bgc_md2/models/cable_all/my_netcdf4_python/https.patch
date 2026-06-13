@@ -1,0 +1,89 @@
+Only in netCDF4-1.5.3.new/build: bdist.linux-x86_64
+Only in netCDF4-1.5.3.new/build/lib.linux-x86_64-3.8/netCDF4: _netCDF4.cpython-38-x86_64-linux-gnu.so
+Only in netCDF4-1.5.3.new/build/temp.linux-x86_64-3.8/netCDF4: _netCDF4.o
+Only in netCDF4-1.5.3.new: dist
+Only in netCDF4-1.5.3.new: .mypy_cache
+diff -cr netCDF4-1.5.3.new/netCDF4.egg-info/SOURCES.txt netCDF4-1.5.3/netCDF4.egg-info/SOURCES.txt
+*** netCDF4-1.5.3.new/netCDF4.egg-info/SOURCES.txt	2020-05-28 00:11:43.559717088 +0200
+--- netCDF4-1.5.3/netCDF4.egg-info/SOURCES.txt	2019-10-21 18:38:19.000000000 +0200
+***************
+*** 3,9 ****
+  Changelog
+  MANIFEST.in
+  README.md
+- nix_run_setup
+  setup.cfg
+  setup.py
+  docs/index.html
+--- 3,8 ----
+***************
+*** 29,35 ****
+  man/nc4tonc3.1
+  man/ncinfo.1
+  netCDF4/__init__.py
+- netCDF4/_netCDF4.c
+  netCDF4/_netCDF4.pyx
+  netCDF4/utils.py
+  netCDF4.egg-info/PKG-INFO
+--- 28,33 ----
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_atts.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_atts.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_cdf5.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_cdf5.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_compound_alignment.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_compound_alignment.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_compoundatt.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_compoundatt.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_compoundvar.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_compoundvar.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_compression.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_compression.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_create_mem.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_create_mem.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_dap.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_dap.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_dims.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_dims.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_diskless.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_diskless.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_endian.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_endian.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_enum.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_enum.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_fancyslicing.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_fancyslicing.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_get_variables_by_attributes.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_get_variables_by_attributes.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_grps2.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_grps2.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_grps.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_grps.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_issue908.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_issue908.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_masked2.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_masked2.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_masked3.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_masked3.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_masked4.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_masked4.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_masked5.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_masked5.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_masked6.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_masked6.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_masked.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_masked.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_multifile2.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_multifile2.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_multifile.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_multifile.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_open_mem.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_open_mem.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_refcount.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_refcount.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_rename.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_rename.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_scalarvar.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_scalarvar.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_scaled.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_scaled.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_shape.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_shape.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_slicing.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_slicing.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_stringarr.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_stringarr.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_types.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_types.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_unicode3.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_unicode3.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_unicodeatt.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_unicodeatt.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_unicode.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_unicode.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_unlimdim.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_unlimdim.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_utils.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_utils.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_vars.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_vars.cpython-38.pyc differ
+Binary files netCDF4-1.5.3.new/test/__pycache__/tst_vlen.cpython-38.pyc and netCDF4-1.5.3/test/__pycache__/tst_vlen.cpython-38.pyc differ
+diff -cr netCDF4-1.5.3.new/test/tst_dap.py netCDF4-1.5.3/test/tst_dap.py
+*** netCDF4-1.5.3.new/test/tst_dap.py	2020-05-28 01:12:24.639769308 +0200
+--- netCDF4-1.5.3/test/tst_dap.py	2020-05-28 02:05:36.154256665 +0200
+***************
+*** 4,10 ****
+  
+  # test accessing data over http with opendap.
+  
+! URL = "https://remotetest.unidata.ucar.edu/thredds/dodsC/testdods/testData.nc"
+  varname = 'Z_sfc'
+  varmin = 0
+  varmax = 3292
+--- 4,10 ----
+  
+  # test accessing data over http with opendap.
+  
+! URL = "http://remotetest.unidata.ucar.edu/thredds/dodsC/testdods/testData.nc"
+  varname = 'Z_sfc'
+  varmin = 0
+  varmax = 3292

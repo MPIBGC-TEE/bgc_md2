@@ -1,0 +1,12 @@
+We want to make each rank write a different amount of data to the file in parallel
+This is the situation in cable
+
+To build and run the fortran code
+and print the results with a python script
+
+type: make testFortran 
+
+
+To write and read a testfile with python
+
+type: make testPython

@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Structure &#8212; Biogeochemical model database 2.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="bgc_md2.models.Williams2005GCB" href="../_autosummary/bgc_md2.models.Williams2005GCB.html" />
+    <link rel="prev" title="Usecases / Objectives" href="usage.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="structure">
+<h1>Structure<a class="headerlink" href="#structure" title="Permalink to this headline">¶</a></h1>
+<blockquote>
+<div><ul>
+<li><p>Schema
+The package represents domain knowledge by two sets:</p>
+<ul class="simple">
+<li><p>A set of variables called <cite>MVars</cite> and</p></li>
+<li><p>A set of functions called <cite>Computers</cite>, operating on sets of instaces of these types.</p></li>
+</ul>
+<p>Sets of <cite>MVars</cite> form the nodes and the computers the edges of a directed graph G.
+We call G the computability graph because a desired <cite>Mvar</cite> (target) can be computed from
+a set of <cite>Mvars</cite> (src) if there is a path from src to target.</p>
+<p><cite>MVars</cite> are instanciated and combined into <cite>MVarSets</cite> by user provided python code, typically placed in a file <cite>models/NameOfTheModel/source.py</cite>.
+This is however just a convention (with some support by helper functions). It is also possible to place the code elsewhere.
+The <cite>models</cite> submodule of <cite>bgc_md2</cite> can thus be seen as a set of examples
+The (minimal) purpose of the model file is usually that an instance of
+either a CompartmentalModel or a ModelRun can be created.
+This can be done
+* directly, by calling one of the constructors (of a CompartmentalModels) or</p>
+<ul class="simple">
+<li><p>indirectly by some definitions of variables with special names from which the ingredients for the constructor calls can be infered.</p></li>
+</ul>
+<p>The set of computers represented by the <cite>bgc_md/resolve/MvarsAndComputers.py</cite></p>
+<p>The package does not use standard database technology like SQL but stores available data connected to a model as a set of
+variables of predefined types (from now on called MVars).
+In terms of a database one can think of every Mvar type as a table
+with two columns model_id</p>
+</li>
+<li><p>Models</p></li>
+<li><p>Notebooks</p>
+<ul class="simple">
+<li><p>For single models</p></li>
+<li><p>For model comparisons</p></li>
+</ul>
+</li>
+<li><p>Notes on implementation</p>
+<ul class="simple">
+<li><p>Library vs. Framework
+CompartmentalSystems and LAPM can be considered
+libraries that can be called in different parallelisation scenarios and with
+different data.
+bgc-md has both library and framework characteristics.</p>
+<ul>
+<li><p>The (types) of MVars and computers (functions) connecting them represents a domain knowledge
+in form of a library.</p></li>
+<li><p>The collection of different models enforces some rules on the way a
+single model has to be formulated in order to be comparable to other
+models.
+In this sense it comprises a framework into which different models can be
+plugged.</p></li>
+<li><p>Viewed from a high level of abstraction (symbolic) models and (climatic driver) data seem to be orthogonal to each other.
+but they are also connected by a mapping between the dataset and the models realized by model specific data preparation code.
+A model with more pools and connections we will
+need more data and will connect the data to different pools or fluxes.
+The data representation code  will reference one model but will be used for different (similar datasets).</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></blockquote>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Biogeochemical model database</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usecases / Objectives</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Structure</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/bgc_md2.models.Williams2005GCB.html">bgc_md2.models.Williams2005GCB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/bgc_md2.models.ELM.html">bgc_md2.models.ELM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/bgc_md2.models.CARDAMOM.html">bgc_md2.models.CARDAMOM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usecases / Objectives</a></li>
+      <li>Next: <a href="../_autosummary/bgc_md2.models.Williams2005GCB.html" title="next chapter">bgc_md2.models.Williams2005GCB</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Markus Müller, Holger Metzler, Veronica Ceballos, Thomas Lotze, Carlos Sierra.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/manual/structure.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

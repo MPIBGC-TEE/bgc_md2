@@ -1,0 +1,124 @@
+CONDA_SHLVL=0
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+CONDA_EXE=/home/mm/miniconda3/bin/conda
+LC_MEASUREMENT=de_DE.UTF-8
+NIX_DEBUG=1
+SSH_CONNECTION=195.37.229.10 36850 141.5.17.105 22
+LESSCLOSE=/usr/bin/lesspipe %s %s
+LC_PAPER=de_DE.UTF-8
+LC_MONETARY=de_DE.UTF-8
+propagatedBuildInputs=/nix/store/862vg5879mrv0ysx4wdsx36flciz461m-python3.8-cftime-1.1.2 /nix/store/jmznhkzqcz4jpb16kp1qrrs0ld6wg61g-python3.8-numpy-1.18.3 /nix/store/afwkyx0h1whgggbz4gclx6d6iyz4sv2w-zlib-1.2.11-dev /nix/store/b41ll383lf0pm8h0n19321phvzhk75r5-netcdf-4.7.4 /nix/store/g95kc89ylbwfdnbiba6fn9g4zrx0ypw7-hdf5-1.10.6-dev /nix/store/fldvyvl7lrs4nlz3c9rix1vz9xlm2jc8-curl-7.69.1-dev /nix/store/78zkj5rkgm140n3rvmxall7qn613jhh5-libjpeg-turbo-2.0.4-dev /nix/store/yjj17ji5gkzb0avvj4zzrkrbmq60z50d-python3.8-mpi4py-3.0.3 /nix/store/rd6dn4jljlb5418lqxmwdimy6s9sawwg-openmpi-4.0.3 /nix/store/wdbg7kyylmvg48w0wklrjdhvgya4lcgi-openssh-8.2p1 /nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2
+stdenv=/nix/store/ba8fhbmvfyh439606lni91y420yflmlc-stdenv-linux
+LANG=C.UTF-8
+DISPLAY=localhost:12.0
+version=1.5.3
+OLDPWD=/home/mm/bgc_md2/bgc_md2/models/cable_all
+EDITOR=nvim
+installCheckPhase=echo "################################################################"
+cd test
+ls
+py.test tst_*.py
+#python -m unittest *.py
+echo "################################################################"
+
+out=/nix/store/r7ba5fqs3380h8rbsdvxmmki5yrrvx04-python3.8-netCDF4-1.5.3
+src=/nix/store/zi52r5r3i360j4fcmbwn4i6yfcwb58b8-netCDF4-1.5.3.tar.gz
+CONFIG_SHELL=/nix/store/81wybawvkr95c7j8gj5ab3y740mq1fli-bash-4.4-p23/bin/bash
+buildInputs=/nix/store/a9jhaz43b3ygh7flg17b9fv08qzp9gb3-python3.8-Cython-0.29.14 /nix/store/rd6dn4jljlb5418lqxmwdimy6s9sawwg-openmpi-4.0.3
+builder=/nix/store/81wybawvkr95c7j8gj5ab3y740mq1fli-bash-4.4-p23/bin/bash
+_CE_M=
+CC=gcc
+READELF=readelf
+LC_NAME=de_DE.UTF-8
+XDG_SESSION_ID=2017
+USER=mm
+PYTHONHASHSEED=0
+STRIP=strip
+depsBuildTarget=
+OBJCOPY=objcopy
+propagatedNativeBuildInputs=
+NIX_CORES=8
+NIX_PROFILES=/nix/var/nix/profiles/default /home/mm/.nix-profile
+PYTHONNOUSERSITE=1
+postFixup=wrapPythonPrograms
+
+depsTargetTarget=
+disallowedReferences=
+system=x86_64-linux
+PWD=/home/mm/bgc_md2/bgc_md2/models/cable_all/my_netcdf4_python
+NIX_PATH=/home/mm/.nix-defexpr/channels:nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixpkgs:/nix/var/nix/profiles/per-user/root/channels
+HOME=/home/mm
+TMP=/run/user/1000
+CONDA_PYTHON_EXE=/home/mm/miniconda3/bin/python
+strictDeps=1
+pname=netCDF4
+SSH_CLIENT=195.37.229.10 36850 22
+NIX_ENFORCE_NO_NATIVE=1
+XDG_DATA_DIRS=/usr/local/share:/usr/share:/var/lib/snapd/desktop
+JPEG_DIR=/nix/store/78zkj5rkgm140n3rvmxall7qn613jhh5-libjpeg-turbo-2.0.4-dev
+RANLIB=ranlib
+CURL_DIR=/nix/store/fldvyvl7lrs4nlz3c9rix1vz9xlm2jc8-curl-7.69.1-dev
+OBJDUMP=objdump
+AS=as
+AR=ar
+NIX_CC=/nix/store/2ddwl0cyff2cd4dkb2nqf1xich7halj0-gcc-wrapper-9.3.0
+NIX_CFLAGS_COMPILE= -isystem /nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/include -isystem /nix/store/rd6dn4jljlb5418lqxmwdimy6s9sawwg-openmpi-4.0.3/include -isystem /nix/store/afwkyx0h1whgggbz4gclx6d6iyz4sv2w-zlib-1.2.11-dev/include -isystem /nix/store/b41ll383lf0pm8h0n19321phvzhk75r5-netcdf-4.7.4/include -isystem /nix/store/g95kc89ylbwfdnbiba6fn9g4zrx0ypw7-hdf5-1.10.6-dev/include -isystem /nix/store/fldvyvl7lrs4nlz3c9rix1vz9xlm2jc8-curl-7.69.1-dev/include -isystem /nix/store/il86a3n8p3v3a73y5lmkisywi2w53a7s-nghttp2-1.40.0-dev/include -isystem /nix/store/6mki7mkrvmcm4hqznkcbc2z9l5kkc0mq-libkrb5-1.18-dev/include -isystem /nix/store/hya0y6slws66h99njc2yiz02irfv4n62-openssl-1.1.1g-dev/include -isystem /nix/store/ngllbka7cjb4wkyqxbq26qlvcas9gkqk-libssh2-1.9.0-dev/include -isystem /nix/store/78zkj5rkgm140n3rvmxall7qn613jhh5-libjpeg-turbo-2.0.4-dev/include
+depsBuildBuild=
+NIX_STORE=/nix/store
+_CE_CONDA=
+outputs=out
+NIX_CC_WRAPPER_x86_64_unknown_linux_gnu_TARGET_HOST=1
+configureFlags=
+DETERMINISTIC_BUILD=1
+LC_ADDRESS=de_DE.UTF-8
+TMPDIR=/run/user/1000
+LC_NUMERIC=de_DE.UTF-8
+name=python3.8-netCDF4-1.5.3
+NIX_BINTOOLS_WRAPPER_x86_64_unknown_linux_gnu_TARGET_HOST=1
+doInstallCheck=1
+doCheck=
+IN_NIX_SHELL=impure
+NIX_BINTOOLS=/nix/store/a8ch2rmpp6bkz5i63rca55cm8m5w9vv4-binutils-wrapper-2.31.1
+HDF5_DIR=/nix/store/g95kc89ylbwfdnbiba6fn9g4zrx0ypw7-hdf5-1.10.6-dev
+NM=nm
+SSH_TTY=/dev/pts/5
+MAIL=/var/mail/mm
+depsHostHostPropagated=
+CXX=g++
+depsBuildBuildPropagated=
+NETCDF4_DIR=/nix/store/b41ll383lf0pm8h0n19321phvzhk75r5-netcdf-4.7.4
+NIX_USER_PROFILE_DIR=/nix/var/nix/profiles/per-user/mm
+TERM=xterm-256color
+SHELL=/nix/store/xmsf9n4bbxjrrpvr2x56jjzyc3xm9j9x-bash-interactive-4.4-p23/bin/bash
+NIX_LDFLAGS=-rpath /nix/store/r7ba5fqs3380h8rbsdvxmmki5yrrvx04-python3.8-netCDF4-1.5.3/lib64 -rpath /nix/store/r7ba5fqs3380h8rbsdvxmmki5yrrvx04-python3.8-netCDF4-1.5.3/lib  -L/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/lib -L/nix/store/rd6dn4jljlb5418lqxmwdimy6s9sawwg-openmpi-4.0.3/lib -L/nix/store/a6sbfdmqnw16i0giiv2dnwfg83gznnfj-zlib-1.2.11/lib -L/nix/store/b41ll383lf0pm8h0n19321phvzhk75r5-netcdf-4.7.4/lib -L/nix/store/b22044hn408lb7bfcwln4szvjc52b0fm-hdf5-1.10.6/lib -L/nix/store/3wwi17hszkg9jr12q2cy3d8q7vfqvp3i-nghttp2-1.40.0-lib/lib -L/nix/store/mi6i4ifqzj4afyzp12lhbgzbqqw9x9sa-libkrb5-1.18/lib -L/nix/store/b9yc1faqr159pwbrg9kabhl4zkpnk2v5-openssl-1.1.1g/lib -L/nix/store/8l6knfgrr33vagcw9y40dwlsihwvpq3q-libssh2-1.9.0/lib -L/nix/store/f0bj15hsyxp8zql86i75wi483zgldzy0-curl-7.69.1/lib -L/nix/store/zzg90fipwmmj60v12qwm69hq7vimarl1-libjpeg-turbo-2.0.4/lib
+TEMPDIR=/run/user/1000
+shell=/nix/store/81wybawvkr95c7j8gj5ab3y740mq1fli-bash-4.4-p23/bin/bash
+NIX_HARDENING_ENABLE=fortify stackprotector pic strictoverflow format relro bindnow
+NIX_INDENT_MAKE=1
+preBuild=makeFlagsArray+=( CC=mpicc CXX=mpicxx )
+
+NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+SHLVL=2
+PYTHONPATH=/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/lib/python3.8/site-packages:/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/lib/python3.8/site-packages:/nix/store/cgwb0d6sn027cn8iqsgvwc0affxavd89-python3.8-setuptools-45.2.0/lib/python3.8/site-packages:/nix/store/cgwb0d6sn027cn8iqsgvwc0affxavd89-python3.8-setuptools-45.2.0/lib/python3.8/site-packages:/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/lib/python3.8/site-packages:/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/lib/python3.8/site-packages:/nix/store/agg6sv178wgh8fhyfxf7cz02nxs4qwpd-python3.8-wheel-0.33.6/lib/python3.8/site-packages:/nix/store/agg6sv178wgh8fhyfxf7cz02nxs4qwpd-python3.8-wheel-0.33.6/lib/python3.8/site-packages:/nix/store/9nxn5411v2z0jqmlhi2g23bhb85f5nzl-python3.8-pip-20.0.2/lib/python3.8/site-packages:/nix/store/9nxn5411v2z0jqmlhi2g23bhb85f5nzl-python3.8-pip-20.0.2/lib/python3.8/site-packages:/nix/store/napz3qp9nf3f2533cyyz2z56cf3z1n5s-python3.8-pytest-runner-5.2/lib/python3.8/site-packages:/nix/store/napz3qp9nf3f2533cyyz2z56cf3z1n5s-python3.8-pytest-runner-5.2/lib/python3.8/site-packages:/nix/store/q5wyf15ymsq73ny992c3aiy5fh0qsbdl-python3.8-pytest-5.3.5/lib/python3.8/site-packages:/nix/store/q5wyf15ymsq73ny992c3aiy5fh0qsbdl-python3.8-pytest-5.3.5/lib/python3.8/site-packages:/nix/store/2cjj3zynq0dx6dd0vdh8j8ipaschwmkf-python3.8-attrs-19.3.0/lib/python3.8/site-packages:/nix/store/2cjj3zynq0dx6dd0vdh8j8ipaschwmkf-python3.8-attrs-19.3.0/lib/python3.8/site-packages:/nix/store/bbhyfzcpvschl37py46mpfrnx3br5gqs-python3.8-py-1.8.1/lib/python3.8/site-packages:/nix/store/bbhyfzcpvschl37py46mpfrnx3br5gqs-python3.8-py-1.8.1/lib/python3.8/site-packages:/nix/store/bn1dasvg7bpjly5avcj8ld5qg5gk7ak4-python3.8-six-1.14.0/lib/python3.8/site-packages:/nix/store/bn1dasvg7bpjly5avcj8ld5qg5gk7ak4-python3.8-six-1.14.0/lib/python3.8/site-packages:/nix/store/3fbi321bfvh1hyg5si7h1v38xj13gxy0-python3.8-pluggy-0.13.1/lib/python3.8/site-packages:/nix/store/3fbi321bfvh1hyg5si7h1v38xj13gxy0-python3.8-pluggy-0.13.1/lib/python3.8/site-packages:/nix/store/m134g54b8i0g0gh0riddw0xi1jddpkc7-python3.8-importlib-metadata-1.5.0/lib/python3.8/site-packages:/nix/store/m134g54b8i0g0gh0riddw0xi1jddpkc7-python3.8-importlib-metadata-1.5.0/lib/python3.8/site-packages:/nix/store/cd7xkm8q3cisy1rry9d7y4frcpx5dp44-python3.8-zipp-0.6.0/lib/python3.8/site-packages:/nix/store/cd7xkm8q3cisy1rry9d7y4frcpx5dp44-python3.8-zipp-0.6.0/lib/python3.8/site-packages:/nix/store/q185cxcrpq4n28lmgzq9limk6sira4ph-python3.8-more-itertools-8.0.2/lib/python3.8/site-packages:/nix/store/q185cxcrpq4n28lmgzq9limk6sira4ph-python3.8-more-itertools-8.0.2/lib/python3.8/site-packages:/nix/store/q185cxcrpq4n28lmgzq9limk6sira4ph-python3.8-more-itertools-8.0.2/lib/python3.8/site-packages:/nix/store/q185cxcrpq4n28lmgzq9limk6sira4ph-python3.8-more-itertools-8.0.2/lib/python3.8/site-packages:/nix/store/l3rrz4nl31gj8w3a4pq5cp9c03zlrgac-python3.8-atomicwrites-1.3.0/lib/python3.8/site-packages:/nix/store/l3rrz4nl31gj8w3a4pq5cp9c03zlrgac-python3.8-atomicwrites-1.3.0/lib/python3.8/site-packages:/nix/store/005r264ysmr01jbxkbc5zml4mv3zv8m7-python3.8-wcwidth-0.1.7/lib/python3.8/site-packages:/nix/store/005r264ysmr01jbxkbc5zml4mv3zv8m7-python3.8-wcwidth-0.1.7/lib/python3.8/site-packages:/nix/store/ny3xgp1smj1in40qrarrksh8h3pg6a8b-python3.8-packaging-20.1/lib/python3.8/site-packages:/nix/store/ny3xgp1smj1in40qrarrksh8h3pg6a8b-python3.8-packaging-20.1/lib/python3.8/site-packages:/nix/store/l83yzcwssfj7hdwpllx8vsg50r4znm2w-python3.8-pyparsing-2.4.6/lib/python3.8/site-packages:/nix/store/l83yzcwssfj7hdwpllx8vsg50r4znm2w-python3.8-pyparsing-2.4.6/lib/python3.8/site-packages:/nix/store/a9jhaz43b3ygh7flg17b9fv08qzp9gb3-python3.8-Cython-0.29.14/lib/python3.8/site-packages:/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/lib/python3.8/site-packages:/nix/store/862vg5879mrv0ysx4wdsx36flciz461m-python3.8-cftime-1.1.2/lib/python3.8/site-packages:/nix/store/jmznhkzqcz4jpb16kp1qrrs0ld6wg61g-python3.8-numpy-1.18.3/lib/python3.8/site-packages:/nix/store/jmznhkzqcz4jpb16kp1qrrs0ld6wg61g-python3.8-numpy-1.18.3/lib/python3.8/site-packages:/nix/store/yjj17ji5gkzb0avvj4zzrkrbmq60z50d-python3.8-mpi4py-3.0.3/lib/python3.8/site-packages
+NIX_BUILD_CORES=96
+SOURCE_DATE_EPOCH=1
+TEMP=/run/user/1000
+LC_TELEPHONE=de_DE.UTF-8
+USE_NCCONFIG=0
+STRINGS=strings
+LOGNAME=mm
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+XDG_RUNTIME_DIR=/run/user/1000
+depsHostHost=
+PATH=/nix/store/xmsf9n4bbxjrrpvr2x56jjzyc3xm9j9x-bash-interactive-4.4-p23/bin:/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/bin:/nix/store/cgwb0d6sn027cn8iqsgvwc0affxavd89-python3.8-setuptools-45.2.0/bin:/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2/bin:/nix/store/agg6sv178wgh8fhyfxf7cz02nxs4qwpd-python3.8-wheel-0.33.6/bin:/nix/store/9nxn5411v2z0jqmlhi2g23bhb85f5nzl-python3.8-pip-20.0.2/bin:/nix/store/q5wyf15ymsq73ny992c3aiy5fh0qsbdl-python3.8-pytest-5.3.5/bin:/nix/store/58vavyggrv0s48l5fshif4c8vswlhp5x-patchelf-0.9/bin:/nix/store/2ddwl0cyff2cd4dkb2nqf1xich7halj0-gcc-wrapper-9.3.0/bin:/nix/store/25g1sxj2fpyfrwfa3vzcplqbi2xnvjhw-gcc-9.3.0/bin:/nix/store/vc5mnj00winiysrry3fyjjyh6jsqjdqf-glibc-2.30-bin/bin:/nix/store/3qgzqqamhnwm178amyb46pdrzx2nakl5-coreutils-8.31/bin:/nix/store/a8ch2rmpp6bkz5i63rca55cm8m5w9vv4-binutils-wrapper-2.31.1/bin:/nix/store/a57856fs4m8ir6vlv14h3gq3sv9aq2lb-binutils-2.31.1/bin:/nix/store/vc5mnj00winiysrry3fyjjyh6jsqjdqf-glibc-2.30-bin/bin:/nix/store/3qgzqqamhnwm178amyb46pdrzx2nakl5-coreutils-8.31/bin:/nix/store/3qgzqqamhnwm178amyb46pdrzx2nakl5-coreutils-8.31/bin:/nix/store/hd2bn6gccjdwl1diikqvjjgvkz94rgk7-findutils-4.7.0/bin:/nix/store/d4hjldzdfg2msya68ym50fvbq6a0a6k0-diffutils-3.7/bin:/nix/store/932zigmrsz9lmds70l4ajbaci4wa073b-gnused-4.8/bin:/nix/store/hi5655s7r4p82blynf5s0xzavjw36mgn-gnugrep-3.4/bin:/nix/store/8kk107mbrs5xjil56hfzh3wwqqdmsvid-gawk-5.1.0/bin:/nix/store/kvdl1dd9q9mdwp2gipyvwrs16i4w75lq-gnutar-1.32/bin:/nix/store/v7c7pmlsln31dal7fjpkw7i73hvadzws-gzip-1.10/bin:/nix/store/25p58pc4cb5gxqx0kd3p9blkc29cfa1s-bzip2-1.0.6.0.1-bin/bin:/nix/store/a1zak2h51s5f2b8cfir98q4kgbrdr9ik-gnumake-4.2.1/bin:/nix/store/81wybawvkr95c7j8gj5ab3y740mq1fli-bash-4.4-p23/bin:/nix/store/ihv6ws6wwpribvfvyzg9swhp84y1qnih-patch-2.7.6/bin:/nix/store/b5jplc769pcsxy3ay1b75cwk6ca8r594-xz-5.2.5-bin/bin:/home/mm/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/home/mm/miniconda3/condabin:/home/mm/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+NIX_BUILD_TOP=/run/user/1000
+LC_IDENTIFICATION=de_DE.UTF-8
+depsBuildTargetPropagated=
+SIZE=size
+nativeBuildInputs=/nix/store/081w0sp7jnh33548cihj3a9y9jpn9b3s-python3-3.8.2 /nix/store/5n3qllydbx10v43l2i83pbs8y84kb7zs-hook /nix/store/r57kdznqgh99q5z5cs9ns2w3y7mj444p-hook /nix/store/vgasfwpq2ki6dx6nmzjhrbphvy7zdnn0-python-remove-tests-dir-hook /nix/store/cgwb0d6sn027cn8iqsgvwc0affxavd89-python3.8-setuptools-45.2.0 /nix/store/r3gmfisv9nvr7rpb8sihnsq3x2xjh0s0-python-catch-conflicts-hook /nix/store/vlryd0mfls9h0ki90c0nvay7qh2rj5i5-python-remove-bin-bytecode-hook /nix/store/mbvidh535cg75svq9zbh5jihwdx1k974-setuptools-setup-hook /nix/store/x04gb1qrn6wqv4z7s9f4wgjyj6xwi568-pip-install-hook /nix/store/5wxg80r6lsdw3c2ca290cx672qi4sknz-python-imports-check-hook.sh /nix/store/scnm7v83h693iwv4710n3n851pphi2qg-python-namespaces-hook.sh /nix/store/napz3qp9nf3f2533cyyz2z56cf3z1n5s-python3.8-pytest-runner-5.2 /nix/store/aaz7ha2ghzysh8srfg1d5cvgdl441d3m-setuptools-check-hook /nix/store/q5wyf15ymsq73ny992c3aiy5fh0qsbdl-python3.8-pytest-5.3.5
+LD=ld
+patches=
+LESSOPEN=| /usr/bin/lesspipe %s
+depsTargetTargetPropagated=
+LC_TIME=de_DE.UTF-8
+_=/nix/store/3qgzqqamhnwm178amyb46pdrzx2nakl5-coreutils-8.31/bin/env

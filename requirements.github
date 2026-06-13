@@ -1,0 +1,5 @@
+git+https://github.com/MPIBGC-TEE/testinfrastructure.git#egg=testinfrastructure 
+git+https://github.com/MPIBGC-TEE/LAPM.git#egg=LAPM 
+git+https://github.com/MPIBGC-TEE/ComputabilityGraphs.git#egg=ComputabilityGraphs 
+git+https://github.com/MPIBGC-TEE/CompartmentalSystems.git@binder_orphan
+git+https://github.com/MPIBGC-TEE/bgc_md2.git@binder_orphan_no_subrepos

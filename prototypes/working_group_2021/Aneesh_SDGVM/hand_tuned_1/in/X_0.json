@@ -1,0 +1,13 @@
+{
+  "C_leaf": 1.985045516644238,
+  "C_wood": 1.985045516644238,
+  "C_root": 1.2531923059905539,
+  "C_abvstrlit": 0.59,
+  "C_abvmetlit": 0.24,
+  "C_belowstrlit": 0.00287261,
+  "C_belowmetlit": 0.21697518214480488,
+  "C_surface_microbe": 9.4e-05,
+  "C_soil_microbe": 0.049,
+  "C_slowsom": 0.29828058,
+  "C_passsom": 11.002608961789614
+}

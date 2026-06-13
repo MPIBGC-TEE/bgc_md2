@@ -1,0 +1,104 @@
+%\usepackage{listings}
+\usepackage{minted}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amscd}
+\usepackage{tikz}
+\usetikzlibrary{snakes,arrows,shapes}
+\usepackage{graphicx}
+%\usepackage{caption}
+\usepackage{appendix}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[round]{natbib}
+\usepackage{bm}
+%\usepackage{chemist}
+%\usepackage{chemformula}
+\usepackage{breqn}
+\usepackage{enumitem}
+\usepackage{setspace} %needed for preprint in doublelinespace 
+%\usepackage[colorinlistoftodos, textwidth=4cm, shadow]{todonotes} %comments and
+\usepackage[normalem]{ulem} % provides strike out
+\usepackage{caption}
+
+% tikz
+\usepackage{pgf, tikz}
+\usetikzlibrary{arrows, automata}
+\DeclareRobustCommand{\figref}[1]{Fig. \ref{#1}}
+% end tikz
+
+\DeclareRobustCommand{\revref}[1]{Comment: \ref{#1}}
+\DeclareRobustCommand{\Theoref}[1]{Theorem \ref{#1}}
+\DeclareRobustCommand{\Defref}[1]{\mbox{Definition \ref{#1}}}
+\DeclareRobustCommand{\enumref}[1]{\ref{#1}}
+\DeclareRobustCommand{\glref}[1]{$^{\ref{#1}}$}
+\DeclareRobustCommand{\appendixref}[1]{\ref{#1}}
+%\DeclareRobustCommand{\Appendixref}[1]{Appendix \ref{#1}}
+\DeclareRobustCommand{\sectionref}[1]{ section \ref{#1}}
+\DeclareRobustCommand{\tupelref}[2]{\enumref{#1} \enumref{#2}}
+\newcommand{\ie}{i.e.,\ }
+\newcommand{\eg}{e.g.,\ }
+
+%\definecolor{dark-green}{rgb}{0,0.25,0}
+% vectors and matrices
+\renewcommand{\vec}[1]{\boldsymbol{\mathbf{#1}}}
+\newcommand{\tens}[1]{\mathrm{#1}}
+
+% d/dt not italic, dt in integrals d upright, even putting the space before
+\newcommand{\deriv}[1]{\frac{\mathrm{d}}{\mathrm{d}#1}}
+\newcommand{\dd}[1]{\,\mathrm{d}#1}
+\newcommand{\pderiv}[1]{\frac{\partial}{\partial #1}}
+
+
+% numbers
+\newcommand{\N}{numbersystem:N}
+\newcommand{\R}{numbersystem:R}
+\newcommand{\CN}{numbersystem:C}
+\newcommand{\Rpd}{numbersystem:Rpd}
+\newcommand{\Rp}{numbersystem:Rp}
+
+\newcommand{\tnot}{\gls{symb:t0}}
+\newcommand{\transpose}{symb:transpose}
+
+\newcommand{\om}[1]{{\color{red} objection $^{#1}$}: }
+\newcommand{\cm}[1]{{\color{green} statement $^{#1}$} }
+\newcommand{\oc}[2]{{\color{red} #1  $^{#2}$}}
+\newcommand{\cc}[2]{{\color{green} #1  $^{#2}$}}
+\newcommand{\rt}[1]{{\color{red} #1}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\I}{\mathbf{I}}
+\renewcommand{\O}{\mathbf{O}}
+\newcommand{\suml}{\sum\limits}
+\newcommand{\prodl}{\prod\limits}
+\newcommand{\intl}{\int\limits}
+\newcommand{\liml}{\lim\limits}
+\newcommand{\LAPM}{\texttt{LAPM}}
+\newcommand{\SoilR}{\texttt{SoilR}}
+%\newcommand{\R}{\texttt{R} }
+\newcommand{\sympy}{\texttt{SymPy}}
+\newcommand{\python}{\texttt{Python}}
+\newcommand{\CompartmentalSystems}{\texttt{CompartmentalSystems}}
+\newcommand{\ComputabilityGraphs}{\texttt{ComputabilityGraphs}}
+\newcommand{\comment}[4]{
+  {
+    \color{#1} #2 @#3:\\
+    #4
+  } 
+}
+\newcommand{\kv}[2]{\comment{purple}{Kostia}{#1}{#2} }
+\newcommand{\mm}[2]{\comment{red}{Markus}{#1}{#2} }
+\newcommand{\mmh}[1]{\mm{Holger}{#1}}
+\newcommand{\mmk}[1]{\mm{Kostia}{#1}}
+\newcommand{\HM}[2]{\comment{orange}{Holger}{#1}{#2} }
+\newcommand{\hmm}[1]{\HM{Markus}{#1}}
+\newcommand{\kmm}[1]{\kv{Markus}{#1}}
+
+\newcommand{\todo}[1]{\comment{blue}{comment:}{}{#1} }
+%\newcommand{\bgc_md2}{\texttt{bgc \textunderscore md2}}
+\newcommand{\RT}{\mathbf{RT}}
+\newcommand{\bv}{\bm{\beta}}
+\DeclareMathOperator{\sign}{sign}
+
+\graphicspath{{./figures/}}

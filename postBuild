@@ -1,0 +1,2 @@
+pip install -r requirements.only_pip -r requirements.github
+jupyter labextension enable jupyterlab-jupytext

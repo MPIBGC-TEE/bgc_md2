@@ -1,0 +1,13 @@
+This is (nearly) the original example from  https://github.com/Unidata/netcdf-fortran
+The purpose is to check the nix expression (to make sure that the libraries are in place and
+compiled with parallel support)
+
+To build and run the fortran code
+and print the results with a python script
+
+type: make testFortran 
+
+
+To write and read a testfile with python
+
+type: make testPython

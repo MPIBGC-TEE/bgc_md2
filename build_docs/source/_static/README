@@ -1,0 +1,4 @@
+This directory is intended for static html or javascript.
+It should not be used for manually created *.rst files
+put them in source/manual. 
+

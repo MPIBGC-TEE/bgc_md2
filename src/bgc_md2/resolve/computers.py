@@ -1,0 +1,922 @@
+from sympy import Symbol, ImmutableMatrix, Function, sympify
+from functools import lru_cache
+import numpy as np
+from typing import Tuple
+from sympy.physics.units import Quantity
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+import CompartmentalSystems.helpers_reservoir as hr
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
+import CompartmentalSystems.start_distributions as sd
+from . import computer_helpers as ch
+from .mvars import (
+    InFluxesBySymbol,
+    OutFluxesBySymbol,
+    #LuoXiBySymbol,
+    InternalFluxesBySymbol,
+    CarbonInFluxesBySymbol,
+    CarbonOutFluxesBySymbol,
+    CarbonInternalFluxesBySymbol,
+    CarbonInputPartitioningTuple,
+    NitrogenInFluxesBySymbol,
+    NitrogenOutFluxesBySymbol,
+    NitrogenInternalFluxesBySymbol,
+    TimeSymbol,
+    StateVariableTuple,
+    StateVariableTupleTimeDerivative,
+    CarbonStateVariableTuple,
+    NitrogenStateVariableTuple,
+    CompartmentalMatrix,
+    #LuoXiDiagonalMatrix,
+    CarbonCompartmentalMatrix,
+    NitrogenCompartmentalMatrix,
+    # CompartmentalMatrixStructure,
+    InputTuple,
+    OutputTuple,
+    CarbonInputTuple,
+    CarbonInputScalar,
+    NitrogenInputTuple,
+    VegetationCarbonInputScalar,
+    VegetationCarbonSmoothModelRun,
+    SoilCarbonSmoothModelRun,
+    VegetationCarbonInputPartitioningTuple,
+    VegetationCarbonInputTuple,
+    VegetationCarbonStateVariableTuple,
+    VegetationCarbonCompartmentalMatrix,
+    VegetationCarbonInFluxesBySymbol,
+    VegetationCarbonOutFluxesBySymbol,
+    VegetationCarbonInternalFluxesBySymbol,
+    NumericSimulationTimes,
+    NumericParameterization,
+    NumericStartValueArray,
+    NumericStartValueDict,
+    NumericParameterizedSmoothReservoirModel,
+    NumericSolutionArray,
+    NumericMeanAgeSolutionArray,
+    NumericCompartmentalMatrixFunc,
+    NumericStartAgeDensityFunc,
+    NumericCompartmentalMatrixSolutionTuple,
+    NumericStartMeanAgeTuple,
+    NumericVegetationCarbonStartMeanAgeTuple,
+    NumericSoilCarbonStartMeanAgeTuple,
+    NumericMeanBackwardTransitTimeSolution,
+    NumericVegetationCarbonMeanBackwardTransitTimeSolution,
+    NumericSoilCarbonMeanBackwardTransitTimeSolution,
+    NumericVegetationCarbonMeanAgeSolutionArray,
+    NumericSoilCarbonMeanAgeSolutionArray,
+    NumericParameterizedVegetationCarbonSmoothReservoirModel,
+    NumericParameterizedSoilCarbonSmoothReservoirModel,
+    # NumericCarbonStoragePotentialSolutionList,
+    # NumericCarbonStorageCapacitySolutionList,
+    QuantityParameterization,
+    QuantitySimulationTimes,
+    QuantityParameterizedSmoothReservoirModel,
+    QuantityStartValueDict,
+    QuantityStartValueArray,
+    QuantityModelRun,
+    QuantitySolutionArray,
+    StateVarUnitTuple,
+    PoolRhsTuple,
+    AggregatedVegetationCarbon,
+    AggregatedSoilCarbon,
+    AggregatedVegetationCarbonInFlux,
+    AggregatedVegetationCarbonOutFlux,
+    AggregatedSoilCarbonInFlux,
+    AggregatedSoilCarbonOutFlux,
+    AggregatedVegetation2SoilCarbonFlux,
+    AggregatedSoil2VegetationCarbonFlux,
+    SoilCarbonStateVariableTuple,
+    #LuoTau,
+    #LuoRT,
+    StartConditionMaker
+
+)
+def pool_rhs(
+    srm: SmoothReservoirModel,
+    )->PoolRhsTuple:
+    return srm.F
+
+def mean_age_start_value_tuple_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedSmoothReservoirModel
+    )-> NumericStartMeanAgeTuple:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericStartMeanAgeTuple(ma0)
+
+def mean_age_vegetation_carbon_start_value_tuple_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedVegetationCarbonSmoothReservoirModel
+    )-> NumericVegetationCarbonStartMeanAgeTuple:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericVegetationCarbonStartMeanAgeTuple(ma0)
+
+
+def start_value_array_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedSmoothReservoirModel
+    )->NumericStartValueArray:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericStartValueArray(x0)
+
+
+def mean_age_soil_carbon_start_value_tuple_1(
+    scm: StartConditionMaker,
+    npsrm: NumericParameterizedSoilCarbonSmoothReservoirModel
+    )-> NumericSoilCarbonStartMeanAgeTuple:
+    x0,ma0,ad_func0=scm(npsrm)
+    return NumericSoilCarbonStartMeanAgeTuple(ma0)
+
+def numeric_mean_age_solution_array(
+        smr: SmoothModelRun,
+        start_mean_age_vec: NumericStartMeanAgeTuple,
+    ) -> NumericMeanAgeSolutionArray:
+    n_pools = len(start_mean_age_vec)
+    order = 1
+    arr, func = smr._solve_age_moment_system(order, start_mean_age_vec.reshape(1, n_pools)) 
+    # unfortunately the solution is a wasted byproduct
+    #sol_arr = arr[:,0:n_pools] of the sol
+    m_a_arr = arr[:,n_pools:2*n_pools]
+    return m_a_arr
+
+
+def numeric_mean_btt_solution(
+        smr: SmoothModelRun,
+        start_mean_age_vec: NumericStartMeanAgeTuple,
+    ) -> NumericMeanBackwardTransitTimeSolution:
+    n_pools = len(start_mean_age_vec)
+    order = 1
+    return smr.backward_transit_time_moment(order, start_mean_age_vec.reshape(1, n_pools)) 
+
+
+def numeric_vegetation_carbon_mean_btt_array(
+        veg_smav: NumericVegetationCarbonStartMeanAgeTuple,
+        veg_smr: VegetationCarbonSmoothModelRun
+    ) -> NumericVegetationCarbonMeanBackwardTransitTimeSolution:
+
+    n_pools = len(veg_smav)
+    return veg_smr.backward_transit_time_moment(
+         order=1, 
+         start_age_moments=veg_smav.reshape(1,n_pools)
+    )
+
+def numeric_soil_carbon_mean_btt_array(
+        sub_smav: NumericSoilCarbonStartMeanAgeTuple,
+        sub_smr: SoilCarbonSmoothModelRun
+    ) -> NumericSoilCarbonMeanBackwardTransitTimeSolution:
+
+    n_pools = len(sub_smav)
+    return NumericSoilCarbonMeanBackwardTransitTimeSolution(
+        sub_smr.backward_transit_time_moment(
+             order=1, 
+            start_age_moments=sub_smav.reshape(1,n_pools)
+        )
+    )    
+
+def vegetation_carbon_smr(
+        smr: SmoothModelRun,
+        veg_sv: VegetationCarbonStateVariableTuple
+    )-> VegetationCarbonSmoothModelRun: 
+    return  VegetationCarbonSmoothModelRun.from_smr(
+        ch.sub_mr_smav(
+            smr,
+            veg_sv,
+        )
+    )
+
+def soil_carbon_smr(
+        smr: SmoothModelRun,
+        soil_sv: SoilCarbonStateVariableTuple
+    )-> SoilCarbonSmoothModelRun: 
+    return  SoilCarbonSmoothModelRun.from_smr(
+        ch.sub_mr_smav(
+            smr,
+            soil_sv,
+        )
+    )
+
+
+def numeric_vegetation_carbon_mean_age_array(
+        veg_smav: NumericVegetationCarbonStartMeanAgeTuple,
+        veg_smr:  VegetationCarbonSmoothModelRun
+    ) -> NumericVegetationCarbonMeanAgeSolutionArray:
+
+    n_pools = len(veg_smav)
+    arr, func = veg_smr._solve_age_moment_system(
+         max_order=1, 
+         start_age_moments=veg_smav
+    )
+    # unfortunately the solution is a wasted byproduct
+    #sol_arr = arr[:,0:n_pools] of the sol
+    m_a_arr = arr[:,n_pools:2*n_pools]
+    return NumericVegetationCarbonMeanAgeSolutionArray(m_a_arr)
+
+
+def numeric_soil_carbon_mean_age_array(
+        soil_smav: NumericSoilCarbonStartMeanAgeTuple,
+        soil_smr: SoilCarbonSmoothModelRun
+    ) -> NumericSoilCarbonMeanAgeSolutionArray:
+
+    n_pools = len(soil_smav)
+    arr, func = soil_smr._solve_age_moment_system(
+         max_order=1, 
+         start_age_moments=soil_smav
+    )
+    # unfortunately the solution is a wasted byproduct
+    #sol_arr = arr[:,0:n_pools] of the sol
+    m_a_arr = arr[:,n_pools:2*n_pools]
+    return NumericSoilCarbonMeanAgeSolutionArray(m_a_arr)
+
+
+def aggregated_vegetation_carbon(
+        vcsvt: VegetationCarbonStateVariableTuple,
+    ) -> AggregatedVegetationCarbon:
+    return sum(vcsvt)
+
+def aggregated_soil_carbon(
+        scsvt: SoilCarbonStateVariableTuple,
+    ) -> AggregatedSoilCarbon:
+    return sum(scsvt)
+
+#def luo_rt_vec(
+#        tau: LuoTau,
+#        beta: CarbonInputPartitioningTuple
+#    ) -> LuoRT:
+#   return tau*beta         
+
+#def luo_Tau(
+#        ccm: CarbonCompartmentalMatrix
+#    ) -> LuoTau:
+#    # very expensive (symbolic inverse)    
+#    print("start")
+#    return LuoTau(-ccm.inv())
+
+#def temperature_derivative_of_RT(
+#    rt:LuoRT
+#    T: Temperature
+#) -> TemperatureDerivativeOfRT:    
+
+
+def aggregated_vegetation_carbon_influx(
+        in_fluxes: InFluxesBySymbol,
+        vcsvt: VegetationCarbonStateVariableTuple,
+) -> AggregatedVegetationCarbonInFlux:
+    return sum(
+            [v for k, v in in_fluxes.items() if k in vcsvt] 
+    )
+
+
+def aggregated_vegetation_carbon_outflux(
+        out_fluxes: OutFluxesBySymbol,
+        vcsvt: VegetationCarbonStateVariableTuple,
+) -> AggregatedVegetationCarbonOutFlux:
+    return sum(
+            [v for k, v in out_fluxes.items() if k in vcsvt] 
+    )
+
+
+def aggregated_soil_carbon_outflux(
+        out_fluxes: OutFluxesBySymbol,
+        vcsvt: SoilCarbonStateVariableTuple,
+) -> AggregatedSoilCarbonOutFlux:
+    return sum(
+            [v for k, v in out_fluxes.items() if k in vcsvt] 
+    )
+
+def aggregated_vegetation_to_soil_carbon_flux(
+        internal_fluxes: InternalFluxesBySymbol,
+        svt: StateVariableTuple,
+        vcsvt: VegetationCarbonStateVariableTuple,
+        scsvt: SoilCarbonStateVariableTuple
+    ) -> AggregatedVegetation2SoilCarbonFlux:
+    # find the internal fluxes that have a vegetation pool as source and a soil
+    # pool target
+    v2sfls = {
+        k: v
+        for k, v in internal_fluxes.items()
+        if (k[0] in vcsvt and k[1] in scsvt)
+    }
+
+    # now we can sum those fluxes up
+    return sum(
+        v2sfls.values()
+    )
+
+
+#NitrogenCompartmentalMatrix,
+    # CompartmentalMatrixStructure,
+#@lru_cache
+def aggregated_soil_to_vegetation_carbon_fluxes(
+        internal_fluxes: InternalFluxesBySymbol,
+        svt: StateVariableTuple,
+        vcsvt: VegetationCarbonStateVariableTuple,
+        scsvt: SoilCarbonStateVariableTuple,
+    ) -> AggregatedSoil2VegetationCarbonFlux:
+    # find the internal fluxes that have a vegetation pool as source and a soil
+    # pool target
+    s2vfls = {
+        k: v 
+        for k, v in internal_fluxes.items()
+        if (k[0] in scsvt and k[1] in vcsvt)
+    }
+
+    # now we can sum those fluxes up
+    return  sum (
+        s2vfls.values()
+    )
+
+
+#@lru_cache
+def vegetation_carbon_in_fluxes_by_symbol_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple,
+) -> VegetationCarbonInFluxesBySymbol:
+    svt_set = frozenset({v for v in svt})
+    vcsvt_set = frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _, in_fluxes_veg, out_fluxes_veg, internal_fluxes_veg = hr.extract(
+        combined, vcsvt_set
+    )
+
+    return VegetationCarbonInFluxesBySymbol(in_fluxes_veg)
+
+
+#@lru_cache
+def carbon_in_fluxes_by_symbol_2(
+    fl: InFluxesBySymbol, svt: CarbonStateVariableTuple
+) -> CarbonInFluxesBySymbol:
+    return CarbonInFluxesBySymbol({v: f for v, f in fl.items() if v in svt})
+
+
+#@lru_cache
+def vegetation_carbon_out_fluxes_by_symbol_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple,
+) -> VegetationCarbonOutFluxesBySymbol:
+    svt_set = frozenset({v for v in svt})
+    vcsvt_set = frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _, in_fluxes_veg, out_fluxes_veg, internal_fluxes_veg = hr.extract(
+        combined, vcsvt_set
+    )
+
+    return VegetationCarbonOutFluxesBySymbol(out_fluxes_veg)
+
+
+#@lru_cache
+def vegetation_carbon_internal_fluxes_by_symbol_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple,
+) -> VegetationCarbonInternalFluxesBySymbol:
+    svt_set = frozenset({v for v in svt})
+    vcsvt_set = frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _, in_fluxes_veg, out_fluxes_veg, internal_fluxes_veg = hr.extract(
+        combined, vcsvt_set
+    )
+
+    return VegetationCarbonInternalFluxesBySymbol(internal_fluxes_veg)
+
+
+# #@lru_cache
+def vegetation_carbon_compartmental_matrix_1(
+    in_fluxes: InFluxesBySymbol,
+    out_fluxes: OutFluxesBySymbol,
+    internal_fluxes: InternalFluxesBySymbol,
+    svt: StateVariableTuple,
+    vcsvt: VegetationCarbonStateVariableTuple,
+) -> VegetationCarbonCompartmentalMatrix:
+    svt_set = frozenset({v for v in svt})
+    vcsvt_set = frozenset({v for v in vcsvt})
+    combined = (
+        svt_set,
+        in_fluxes,
+        out_fluxes,
+        internal_fluxes,
+    )
+
+    _, in_fluxes_veg, out_fluxes_veg, internal_fluxes_veg = hr.extract(
+        combined, vcsvt_set
+    )
+    cm = hr.compartmental_matrix_2(out_fluxes_veg, internal_fluxes_veg, vcsvt)
+    return VegetationCarbonCompartmentalMatrix(cm)
+
+
+# #@lru_cache
+# def stateVariableTupleTimeDerivative(
+#    u: InputTuple,
+#    B: CompartmentalMatrix,
+#    #time_symbol: TimeSymbol,
+#    state_variable_tuple: StateVariableTuple,
+# ) -> StateVariableTupleTimeDerivative:
+#    return u + B * state_variable_tuple
+#
+# #@lru_cache
+# def stateVariableTupleTimeDerivative(
+#    u: InputTuple,
+#    B: CompartmentalMatrix,
+#    #time_symbol: TimeSymbol,
+#    state_variable_tuple: StateVariableTuple,
+# ) -> StateVariableTupleTimeDerivative:
+#    return u + B * state_variable_tuple
+
+# sympolic version takes very long because of the symbolic matrix inversion
+# def carbonStorageCapacity(
+#    M :CompartmentalMatrix,
+#    I: InputTuple
+# )->CarbonStorageCapacity:
+#    # see doi:10.5194/bg-14-145-2017
+#    # equation (2) first term
+#    # in Yiqi's nomenclature the
+#    # pool contents X(t) can be expressed as
+#    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+#    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+#    # I(t)  = B u(t)
+#    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+#    # so the first term is
+#    # C_s =M_inv(t) I(t)
+#    return CarbonStorageCapacity(M.inv()*I)
+#
+# sympolic version takes very long because of the symbolic matrix inversion
+# def carbonStoragePotential(
+#    M :CompartmentalMatrix,
+#    dXdT: StateVariableTupleTimeDerivative
+#    )->CarbonStoragePotential:
+#    # see doi:10.5194/bg-14-145-2017
+#    # equation (2) second term
+#    # in Yiqi's nomenclature the
+#    # pool contents X(t) can be expressed as
+#    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+#    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+#    # I(t)  = B u(t)
+#    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+#    # so the second term is
+#    # C_p=M_inv(t) dx/dt
+#    return CarbonStoragePotential(M.inv()*dXdT)
+
+
+def numericCompartmentalMatrixFunc(
+    sym_B: CompartmentalMatrix,
+    state_vector: StateVariableTuple,
+    time_symbol: TimeSymbol,
+    par_num: NumericParameterization,
+) -> NumericCompartmentalMatrixFunc:
+
+    B_func = hr.numerical_array_func(
+        state_vector=state_vector,
+        time_symbol=time_symbol,
+        expr=sym_B,
+        parameter_dict=par_num.par_dict,
+        func_dict=par_num.func_dict,
+    )
+    return NumericCompartmentalMatrixFunc(B_func)
+
+
+def numericCompartmentalMatrixSolutionTuple(
+    xs: NumericSolutionArray,
+    ts: NumericSimulationTimes,
+    B_fun: NumericCompartmentalMatrixFunc,
+) -> NumericCompartmentalMatrixSolutionTuple:
+    def f(tup):
+        t, x = tup
+        return B_fun(t, x)
+
+    Bs = tuple(map(f, zip(ts, xs)))
+    return NumericCompartmentalMatrixSolutionTuple(Bs)
+
+
+# def numericCarbonStoragePotentialSolutionList(
+#    Ms :NumericCompartmentalMatrixSolutionTuple,
+#    dXdTs: NumericStateVariableTupleTimeDerivativeSolutionList
+#    )->NumericCarbonStoragePotentialSolutionList:
+#    # see doi:10.5194/bg-14-145-2017
+#    # equation (2) second term
+#    # in Yiqi's nomenclature the
+#    # pool contents X(t) can be expressed as
+#    # X(t) =(A \xsi(t) K)i^−1 Bu(t) − (A \ksi(tv(t)) K)^-1  dx/dt(t)
+#    # if we call M =(A \xsi(t) K) and M_inv= M^-1
+#    # I(t)  = B u(t)
+#    # x(t) = M_inv(t) * I(t)  + M_inv(t) dx/dt(t)
+#    # so the second term is
+#    # C_p=M_inv(t) dx/dt
+#    def f(tup):
+#        M,dXdT = tup
+#        return M.inv()*dXdT
+#    results = list(map(f,zip(Ms,dXdTs))
+#    return NumericCarbonStoragePotentialSolutionList(results)
+
+# this computer is obsolete since there is at least one other computer with the same result
+# whose arguments can be computed from the arguments of this one.
+# #@lru_cache
+# def smooth_reservoir_model_from_fluxes(
+#    in_fluxes: InFluxesBySymbol,
+#    out_fluxes: OutFluxesBySymbol,
+#    internal_fluxes: InternalFluxesBySymbol,
+#    time_symbol: TimeSymbol,
+#    state_variable_tuple: StateVariableTuple,
+# ) -> SmoothReservoirModel:
+#    return SmoothReservoirModel.from_state_variable_indexed_fluxes(
+#        state_vector=list(state_variable_tuple),
+#        time_symbol=time_symbol,
+#        input_fluxes=in_fluxes,
+#        output_fluxes=out_fluxes,
+#        internal_fluxes=internal_fluxes,
+#    )
+#
+#@lru_cache
+def smooth_reservoir_model_from_input_tuple_and_matrix(
+    u: InputTuple,
+    B: CompartmentalMatrix,
+    time_symbol: TimeSymbol,
+    state_variable_tuple: StateVariableTuple,
+) -> SmoothReservoirModel:
+    return SmoothReservoirModel.from_B_u(
+        state_vector=ImmutableMatrix(state_variable_tuple),
+        time_symbol=time_symbol,
+        B=B,
+        u=ImmutableMatrix(u),
+    )
+
+
+#@lru_cache
+def in_fluxes_by_symbol_1(u: InputTuple, svt: StateVariableTuple) -> InFluxesBySymbol:
+    return InFluxesBySymbol(hr.in_fluxes_by_symbol(svt, u))
+
+
+#@lru_cache
+def internal_fluxes_by_symbol_1(
+    cm: CompartmentalMatrix, svt: StateVariableTuple
+) -> InternalFluxesBySymbol:
+    return InternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt, cm))
+
+
+#@lru_cache
+def out_fluxes_by_symbol_1(
+    cm: CompartmentalMatrix, svt: StateVariableTuple
+) -> OutFluxesBySymbol:
+    return OutFluxesBySymbol(hr.out_fluxes_by_symbol(svt, cm))
+
+
+#@lru_cache
+def carbon_in_fluxes_by_symbol_1(
+    u: CarbonInputTuple, svt: CarbonStateVariableTuple
+) -> CarbonInFluxesBySymbol:
+    return CarbonInFluxesBySymbol(hr.in_fluxes_by_symbol(svt, u))
+
+
+#@lru_cache
+def nitrogen_out_fluxes_by_symbol_1(
+    cm: NitrogenCompartmentalMatrix, svt: NitrogenStateVariableTuple
+) -> NitrogenOutFluxesBySymbol:
+    return NitrogenOutFluxesBySymbol(hr.out_fluxes_by_symbol(svt, cm))
+
+
+#@lru_cache
+def nitrogen_in_fluxes_by_symbol_1(
+    u: NitrogenInputTuple, svt: NitrogenStateVariableTuple
+) -> NitrogenInFluxesBySymbol:
+    return NitrogenInFluxesBySymbol(hr.in_fluxes_by_symbol(svt, u))
+
+
+#@lru_cache
+def nitrogen_in_fluxes_by_symbol_2(
+    fl: InFluxesBySymbol, svt: NitrogenStateVariableTuple
+) -> NitrogenInFluxesBySymbol:
+    return NitrogenInFluxesBySymbol({v: f for v, f in fl.items() if v in svt})
+
+
+#@lru_cache
+def nitrogen_out_fluxes_by_symbol_2(
+    fl: OutFluxesBySymbol, svt: NitrogenStateVariableTuple
+) -> NitrogenOutFluxesBySymbol:
+    return NitrogenOutFluxesBySymbol({v: f for v, f in fl.items() if v in svt})
+
+
+#@lru_cache
+def nitrogen_internal_fluxes_by_symbol_2(
+    fl: InternalFluxesBySymbol, svt: NitrogenStateVariableTuple
+) -> NitrogenInternalFluxesBySymbol:
+    return NitrogenInternalFluxesBySymbol(
+        {t: f for t, f in fl.items() if set(t).issubset(svt)}
+    )
+
+
+# projection
+#@lru_cache
+def carbon_internal_fluxes_by_symbol_1(
+    cm: CarbonCompartmentalMatrix, svt: CarbonStateVariableTuple
+) -> CarbonInternalFluxesBySymbol:
+    return CarbonInternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt, cm))
+
+
+#@lru_cache
+def carbon_internal_fluxes_by_symbol_2(
+    fl: InternalFluxesBySymbol, svt: CarbonStateVariableTuple
+) -> CarbonInternalFluxesBySymbol:
+    return CarbonInternalFluxesBySymbol(
+        {t: f for t, f in fl.items() if set(t).issubset(svt)}
+    )
+
+
+#@lru_cache
+def nitrogen_internal_fluxes_by_symbol_1(
+    cm: NitrogenCompartmentalMatrix, svt: NitrogenStateVariableTuple
+) -> NitrogenInternalFluxesBySymbol:
+    return NitrogenInternalFluxesBySymbol(hr.internal_fluxes_by_symbol(svt, cm))
+
+
+# projection but argument directly used in some models
+#@lru_cache
+def carbon_out_fluxes_by_symbol_1(
+    cm: CarbonCompartmentalMatrix, svt: CarbonStateVariableTuple
+) -> CarbonOutFluxesBySymbol:
+    return CarbonOutFluxesBySymbol(hr.out_fluxes_by_symbol(svt, cm))
+
+
+#@lru_cache
+def carbon_out_fluxes_by_symbol_2(
+    fl: OutFluxesBySymbol, svt: CarbonStateVariableTuple
+) -> CarbonOutFluxesBySymbol:
+    return CarbonOutFluxesBySymbol({v: f for v, f in fl.items() if v in svt})
+
+
+# this computer is obsolete since there is at least one other computer with the same result
+# whose arguments can be computed from the arguments of this one.
+# #@lru_cache
+# def compartmental_matrix_from_smooth_reservoir_model(
+#    smr: SmoothReservoirModel,
+# ) -> CompartmentalMatrix:
+#    return CompartmentalMatrix(smr.compartmental_matrix)
+
+
+#@lru_cache
+def compartmental_matrix_2(
+    ofl: OutFluxesBySymbol, ifl: InternalFluxesBySymbol, svt: StateVariableTuple
+) -> CompartmentalMatrix:
+    return CompartmentalMatrix(hr.compartmental_matrix_2(ofl, ifl, svt))
+
+##@lru_cache
+#def luo_xi_diagonal_matrix(
+#    ofl: LuoXiBySymbol,  svt: StateVariableTuple
+#) -> LuoXiDiagonalMatrix:
+#    return LuoXiDiagonalMatrix()
+
+
+#@lru_cache
+def carbon_compartmental_matrix(
+    ofl: CarbonOutFluxesBySymbol, ifl: CarbonInternalFluxesBySymbol, svt: StateVariableTuple
+) -> CarbonCompartmentalMatrix:
+    return CarbonCompartmentalMatrix(hr.compartmental_matrix_2(ofl, ifl, svt))
+
+
+#@lru_cache
+def input_tuple(ifl: InFluxesBySymbol, svt: StateVariableTuple) -> InputTuple:
+    in_fluxes_by_index = hr.to_int_keys_1(ifl, svt)
+    ks = in_fluxes_by_index.keys()
+    v = ImmutableMatrix(
+        list(
+            map(
+                lambda ind: in_fluxes_by_index[ind] if ind in ks else 0, range(len(svt))
+            )
+        )
+    )
+    return InputTuple(v)
+
+#@lru_cache
+def out_tuple(ofl: OutFluxesBySymbol, svt: StateVariableTuple) -> OutputTuple:
+    out_fluxes_by_index = hr.to_int_keys_1(ofl, svt)
+    ks = out_fluxes_by_index.keys()
+    v = ImmutableMatrix(
+        list(
+            map(
+                lambda ind: out_fluxes_by_index[ind] if ind in ks else 0, range(len(svt))
+            )
+        )
+    )
+    return OutputTuple(v)
+
+
+#@lru_cache
+def nitrogen_compartmental_matrix_2(
+    ofl: NitrogenOutFluxesBySymbol,
+    ifl: NitrogenInternalFluxesBySymbol,
+    svt: NitrogenStateVariableTuple,
+) -> NitrogenCompartmentalMatrix:
+    return NitrogenCompartmentalMatrix(hr.compartmental_matrix_2(ofl, ifl, svt))
+
+
+#@lru_cache
+def vegetation_carbon_input_tuple_1(
+    u: VegetationCarbonInputScalar, b: VegetationCarbonInputPartitioningTuple
+) -> VegetationCarbonInputTuple:
+    return VegetationCarbonInputTuple(b * u)
+
+#@lru_cache
+def carbon_input_tuple_1(
+    u: CarbonInputScalar,
+    b: CarbonInputPartitioningTuple
+) -> CarbonInputTuple:
+    return CarbonInputTuple(b * u)
+
+
+#@lru_cache
+def vegetation_carbon_input_tuple_2(
+    ifls: VegetationCarbonInFluxesBySymbol, vcsv: VegetationCarbonStateVariableTuple
+) -> VegetationCarbonInputTuple:
+    return VegetationCarbonInputTuple(hr.in_or_out_flux_tuple(vcsv, ifls))
+
+
+# projector
+#@lru_cache
+def vegetation_carbon_input_scalar_1(
+    t: VegetationCarbonInputTuple,
+) -> VegetationCarbonInputScalar:
+    return VegetationCarbonInputScalar(sum(t))
+
+#@lru_cache
+def carbon_input_tuple_2(
+    ifls: CarbonInFluxesBySymbol, vcsv: CarbonStateVariableTuple
+) -> CarbonInputTuple:
+    return CarbonInputTuple(hr.in_or_out_flux_tuple(vcsv, ifls))
+
+#@lru_cache
+def carbon_input_scalar_1(
+    t: CarbonInputTuple,
+) -> CarbonInputScalar:
+    return CarbonInputScalar(sum(t))
+
+#@lru_cache
+def vegetation_carbon_input_partitioning_tuple_1(
+    t: VegetationCarbonInputTuple,
+) -> VegetationCarbonInputPartitioningTuple:
+    u = sum(t)
+    return VegetationCarbonInputPartitioningTuple([tc / u for tc in t])
+
+#@lru_cache
+def carbon_input_partitioning_tuple_1(
+    t: CarbonInputTuple,
+) -> CarbonInputPartitioningTuple:
+    u = sum(t)
+    return CarbonInputPartitioningTuple([tc / u for tc in t])
+
+
+# #@lru_cache
+def numeric_model_run_1(
+    npsrm: NumericParameterizedSmoothReservoirModel,
+    start_values_num: NumericStartValueArray,
+    times_num: NumericSimulationTimes,
+) -> SmoothModelRun:
+    return SmoothModelRun(
+        npsrm.srm,
+        npsrm.parameterization.par_dict,
+        start_values_num,
+        times_num,
+        npsrm.parameterization.func_dict,
+    )
+
+#@lru_cache
+def numeric_parameterized_smooth_reservoir_model_1(
+    srm: SmoothReservoirModel,
+    para_num: NumericParameterization,
+) -> NumericParameterizedSmoothReservoirModel:
+    return NumericParameterizedSmoothReservoirModel(srm, para_num)
+
+
+#@lru_cache
+def numeric_parameterized_smooth_reservoir_model_2(
+    smr: SmoothModelRun,
+) -> NumericParameterizedSmoothReservoirModel:
+    para_num=NumericParameterization(
+        par_dict=smr.parameter_dict,
+        func_dict=smr.func_set
+    )    
+    return NumericParameterizedSmoothReservoirModel(smr.model, para_num)
+
+
+#@lru_cache
+def numeric_soil_carbon_parameterized_smooth_reservoir_model_2(
+    smr: SoilCarbonSmoothModelRun,
+) -> NumericParameterizedSoilCarbonSmoothReservoirModel:
+# this should actually use an algebraic type # but Computability graphs does not yet 
+# work with this type of generics
+    para_num=NumericParameterization(
+        par_dict=smr.parameter_dict,
+        func_dict=smr.func_set
+    )    
+    return NumericParameterizedSoilCarbonSmoothReservoirModel(smr.model, para_num)
+
+
+#@lru_cache
+def numeric_vegetation_carbon_parameterized_smooth_reservoir_model_2(
+    smr: VegetationCarbonSmoothModelRun,
+) -> NumericParameterizedVegetationCarbonSmoothReservoirModel:
+# this should actually use an algebraic type # but Computability graphs does not yet 
+# work with this type of generics
+    para_num=NumericParameterization(
+        par_dict=smr.parameter_dict,
+        func_dict=smr.func_set
+    )    
+    return NumericParameterizedVegetationCarbonSmoothReservoirModel(smr.model, para_num)
+
+
+#@lru_cache
+def numeric_start_value_array_1(
+    nsvd: NumericStartValueDict, svt: StateVariableTuple
+) -> NumericStartValueArray:
+    tup = tuple(nsvd[k] for k in svt)
+    return NumericStartValueArray(tup)
+
+
+# this computer is obsolete since there is at least one other computer with the same result
+# whose arguments can be computed from the arguments of this one.
+# #@lru_cache
+# def numeric_start_value_array_2(
+#    smr: SmoothModelRun
+# ) -> NumericStartValueArray:
+#    return NumericStartValueArray(smr.start_values)
+
+
+#@lru_cache
+def numeric_start_value_dict(
+    nsva: NumericStartValueArray, svt: StateVariableTuple
+) -> NumericStartValueDict:
+    return NumericStartValueDict({sv: nsva[i] for i, sv in enumerate(svt)})
+
+
+#@lru_cache
+def numeric_solution_array_1(smr: SmoothModelRun) -> NumericSolutionArray:
+    return NumericSolutionArray(smr.solve())
+
+
+#@lru_cache
+def quantity_parameterization_1(
+    npar: NumericParameterization,
+    state_var_units: StateVarUnitTuple,
+    time_unit: Quantity,
+) -> QuantityParameterization:
+    return QuantityParameterization(
+        npar.par_dict, npar.func_dict, state_var_units, time_unit
+    )
+
+
+#@lru_cache
+def quantity_parameterized_smooth_reservoir_model_1(
+    srm: SmoothReservoirModel, para_q: QuantityParameterization
+) -> QuantityParameterizedSmoothReservoirModel:
+    return QuantityParameterizedSmoothReservoirModel(srm, para_q)
+
+
+#@lru_cache
+def quantity_start_value_array_1(
+    qsvd: QuantityStartValueDict, svt: StateVariableTuple
+) -> QuantityStartValueArray:
+    tup = tuple(qsvd[k] for k in svt)
+    return QuantityStartValueArray(tup)
+
+
+# #@lru_cache
+def quantity_model_run_1(
+    qpsrm: QuantityParameterizedSmoothReservoirModel,
+    start_values_q: QuantityStartValueArray,
+    times_q: QuantitySimulationTimes,
+) -> QuantityModelRun:
+    return QuantityModelRun(
+        qpsrm,
+        start_values_q,
+        times_q,
+    )
+
+
+#@lru_cache
+def quantity_solution_array_1(qmr: QuantityModelRun) -> QuantitySolutionArray:
+    return QuantitySolutionArray(qmr.solve())
+
+
+#@lru_cache
+def smooth_reservoir_model_2(smr: SmoothModelRun) -> SmoothReservoirModel:
+    return smr.model

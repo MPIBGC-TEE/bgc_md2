@@ -1,0 +1,10 @@
+dask[distributed]
+python-igraph # needed for igraph plots in some of the notebooks
+pycairo # needed for igraph plots in some of the notebooks
+jupyterlab
+jupytext
+nbformat 
+nbmake
+notebook
+pytest
+zarr

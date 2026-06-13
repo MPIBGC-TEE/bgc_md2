@@ -1,0 +1,5 @@
+-e src/testinfrastructure/
+-e src/LAPM/
+-e src/CompartmentalSystems/
+-e src/ComputabilityGraphs/
+-e .
